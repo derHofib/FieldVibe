@@ -1,0 +1,81 @@
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
+from uuid import UUID
+
+import jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import decode_token
+from app.db.session import system_session, tenant_session
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+@dataclass(frozen=True)
+class AuthContext:
+    user_id: UUID
+    mandant_id: UUID | None
+    role: str
+    impersonated_by: UUID | None = None
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AuthContext:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert"
+        )
+    try:
+        payload = decode_token(credentials.credentials)
+    except jwt.PyJWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token"
+        ) from exc
+
+    if payload.get("type") not in ("access", "impersonation"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token-Typ nicht für API-Zugriff zulässig",
+        )
+
+    mandant_id = UUID(payload["mandant_id"]) if payload.get("mandant_id") else None
+    impersonated_by = (
+        UUID(payload["impersonated_by"]) if payload.get("impersonated_by") else None
+    )
+    return AuthContext(
+        user_id=UUID(payload["sub"]),
+        mandant_id=mandant_id,
+        role=payload["role"],
+        impersonated_by=impersonated_by,
+    )
+
+
+async def get_db(
+    auth: AuthContext = Depends(get_current_user),
+) -> AsyncIterator[AsyncSession]:
+    """Tenant-scoped DB session. super_admin gets an RLS-bypassing session
+    reserved for cross-tenant platform administration; every other role is
+    hard-pinned to its own mandant_id via Row Level Security."""
+    is_super_admin = auth.role == "super_admin"
+    ctx = (
+        system_session()
+        if is_super_admin
+        else tenant_session(mandant_id=auth.mandant_id, is_super_admin=False)
+    )
+    async with ctx as session:
+        yield session
+
+
+def require_roles(*roles: str):
+    async def checker(auth: AuthContext = Depends(get_current_user)) -> AuthContext:
+        if auth.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Keine Berechtigung für diese Aktion",
+            )
+        return auth
+
+    return checker

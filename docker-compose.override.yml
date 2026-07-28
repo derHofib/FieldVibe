@@ -1,0 +1,28 @@
+# Local development overrides: hot reload, exposed ports, source mounted in.
+# Applied automatically by `docker compose up` alongside docker-compose.yml.
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  backend:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - ./backend/tests:/app/tests
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    ports:
+      - "5173:5173"
