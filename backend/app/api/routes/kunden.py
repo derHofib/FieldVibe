@@ -6,8 +6,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.tag import Tag, TagAssignment
+from app.models.vorgang import Vorgang
 from app.schemas.kunde import KundeCreate, KundeRead, KundeUpdate
+from app.schemas.profile import KundeProfil
 from app.services.numbering_service import next_kundennummer
 
 # super_admin is deliberately excluded: fachliche Daten sind immer
@@ -70,6 +74,35 @@ async def get_kunde(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> 
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     return kunde
+
+
+@router.get("/{kunde_id}/profil", response_model=KundeProfil)
+async def get_kunde_profil(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> KundeProfil:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+
+    anlagen_result = await session.execute(
+        select(Anlage).where(Anlage.kunde_id == kunde_id).order_by(Anlage.bezeichnung)
+    )
+    vorgaenge_result = await session.execute(
+        select(Vorgang)
+        .where(Vorgang.kunde_id == kunde_id)
+        .order_by(Vorgang.last_activity_at.desc())
+        .limit(50)
+    )
+    tags_result = await session.execute(
+        select(Tag)
+        .join(TagAssignment, TagAssignment.tag_id == Tag.id)
+        .where(TagAssignment.entity_type == "kunde", TagAssignment.entity_id == kunde_id)
+    )
+
+    return KundeProfil(
+        **KundeRead.model_validate(kunde).model_dump(),
+        anlagen=list(anlagen_result.scalars().all()),
+        vorgaenge=list(vorgaenge_result.scalars().all()),
+        tags=list(tags_result.scalars().all()),
+    )
 
 
 @router.patch(

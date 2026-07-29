@@ -13,7 +13,7 @@ Stand:
 |---|---|
 | 1 – Fundament | ✅ siehe [`docs/phases/PHASE_1.md`](docs/phases/PHASE_1.md) |
 | 2 – Fachlicher Kern | ✅ siehe [`docs/phases/PHASE_2.md`](docs/phases/PHASE_2.md) |
-| 3 – Social-UX | offen |
+| 3 – Social-UX | ✅ siehe [`docs/phases/PHASE_3.md`](docs/phases/PHASE_3.md) |
 | 4 – Feld-Tauglichkeit | offen |
 | 5 – Steuerung | offen |
 | 6 – Geschäftsprozesse | offen |
@@ -48,7 +48,7 @@ Details, Test-Anleitung und Anmeldedaten für die Beispieldaten stehen in
 
 ```
 backend/    FastAPI-App, Alembic-Migrationen, pytest-Tests
-frontend/   React-Dashboard (aktuell: Super-Admin-Oberfläche)
+frontend/   React-App: Super-Admin-Dashboard + Feld-App (Feed/Chat/Suche/...)
 docs/phases/  Phasen-spezifische READMEs
 docker-compose.yml            Basis-Stack (Postgres, Backend, Frontend)
 docker-compose.override.yml   Lokale Entwicklung (Hot-Reload, offene Ports)

@@ -1,30 +1,23 @@
 import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import { ImpersonationBanner } from "./ImpersonationBanner";
 
-const ADMIN_NAV_ITEMS = [
+const NAV_ITEMS = [
   { to: "/mandanten", label: "Mandanten" },
   { to: "/accounts", label: "Accounts" },
   { to: "/audit-log", label: "Audit-Log" },
 ];
 
-// /api/admin/mandanten and /api/admin/audit-log are super_admin-only and
-// 403 under an impersonation token, so only Accounts stays reachable.
-const IMPERSONATION_NAV_ITEMS = [{ to: "/accounts", label: "Accounts" }];
-
 export function Layout() {
-  const { currentUser, isImpersonating, logout } = useAuth();
-  const navItems = isImpersonating ? IMPERSONATION_NAV_ITEMS : ADMIN_NAV_ITEMS;
+  const { currentUser, logout } = useAuth();
 
   return (
     <div className="min-h-screen">
-      <ImpersonationBanner />
       <div className="flex min-h-screen">
         <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-4">
           <div className="mb-8 text-lg font-bold text-slate-800">SocialCRM</div>
           <nav className="flex flex-col gap-1">
-            {navItems.map((item) => (
+            {NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}

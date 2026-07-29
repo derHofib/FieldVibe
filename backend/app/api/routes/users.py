@@ -11,22 +11,30 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services.audit_service import log_action
 
-router = APIRouter(
-    prefix="/api/users",
-    tags=["users"],
-    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+@router.get(
+    "",
+    response_model=list[UserRead],
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin", "disponent", "techniker"))],
 )
-
-
-@router.get("", response_model=list[UserRead])
 async def list_users(session: AsyncSession = Depends(get_db)) -> list[User]:
     # RLS restricts a mandant_admin's session to their own mandant already;
     # super_admin sessions bypass RLS and therefore see every account.
+    # Read-only for disponent/techniker too: colleagues' names are needed
+    # for the @-mention picker in the Vorgangs-Chat (Phase 3) and aren't
+    # sensitive the way account management (create/patch below) is.
     result = await session.execute(select(User).order_by(User.name))
     return list(result.scalars().all())
 
 
-@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=UserRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
 async def create_user(
     body: UserCreate,
     auth: AuthContext = Depends(get_current_user),
@@ -71,7 +79,11 @@ async def create_user(
     return user
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch(
+    "/{user_id}",
+    response_model=UserRead,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
 async def update_user(
     user_id: UUID,
     body: UserUpdate,

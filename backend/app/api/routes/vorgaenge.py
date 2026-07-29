@@ -13,6 +13,7 @@ from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang import VorgangCreate, VorgangRead, VorgangUpdate
+from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 
 router = APIRouter(
@@ -118,6 +119,10 @@ async def create_vorgang(
     )
     await session.flush()
     await session.refresh(vorgang)
+
+    await event_bus.publish(
+        auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "erstellt"}
+    )
     return vorgang
 
 
@@ -162,4 +167,7 @@ async def update_vorgang(
     await session.flush()
     if changes:
         await session.refresh(vorgang)
+        await event_bus.publish(
+            auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
+        )
     return vorgang

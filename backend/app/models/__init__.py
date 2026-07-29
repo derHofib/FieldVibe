@@ -3,6 +3,7 @@ from app.models.audit_log import AuditLog
 from app.models.integration import MandantIntegration
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
+from app.models.notification import Notification
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
 from app.models.vertrag import Vertrag
@@ -15,6 +16,7 @@ __all__ = [
     "MandantIntegration",
     "Kunde",
     "Mandant",
+    "Notification",
     "Tag",
     "TagAssignment",
     "User",

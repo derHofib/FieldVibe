@@ -6,9 +6,14 @@ from app.api.routes import (
     anlagen,
     audit_log,
     auth,
+    feed,
     impersonation,
     kunden,
     mandanten,
+    notifications,
+    search,
+    stories,
+    stream,
     tags,
     users,
     vertraege,
@@ -24,9 +29,9 @@ app = FastAPI(
     title="SocialCRM API",
     description=(
         "Mandantenfähiges Auftragsmanagement- und CRM-System für den "
-        "Elektro-Handwerksbetrieb – Phase 2: Fachlicher Kern."
+        "Elektro-Handwerksbetrieb – Phase 3: Social-UX."
     ),
-    version="0.2.0",
+    version="0.3.0",
 )
 
 app.add_middleware(
@@ -48,6 +53,11 @@ app.include_router(vertraege.router)
 app.include_router(vorgaenge.router)
 app.include_router(vorgang_events.router)
 app.include_router(tags.router)
+app.include_router(feed.router)
+app.include_router(stories.router)
+app.include_router(search.router)
+app.include_router(notifications.router)
+app.include_router(stream.router)
 
 
 @app.get("/healthz")

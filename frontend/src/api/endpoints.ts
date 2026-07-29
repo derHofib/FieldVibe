@@ -1,11 +1,23 @@
 import { apiFetch } from "./client";
 import type {
+  Anlage,
+  AnlageProfil,
   AuditLogEntry,
   CurrentUser,
+  FeedResponse,
   ImpersonateResponse,
+  Kunde,
+  KundeProfil,
   Mandant,
+  NotificationEntry,
+  SearchResponse,
+  StoriesResponse,
+  Tag,
   TokenPair,
   User,
+  Vorgang,
+  VorgangEvent,
+  VorgangEventType,
 } from "../types";
 
 export const authApi = {
@@ -57,4 +69,84 @@ export const usersApi = {
 
 export const auditLogApi = {
   list: () => apiFetch<AuditLogEntry[]>("/api/admin/audit-log"),
+};
+
+export const feedApi = {
+  get: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<FeedResponse>(`/api/feed${qs ? `?${qs}` : ""}`);
+  },
+};
+
+export const storiesApi = {
+  get: () => apiFetch<StoriesResponse>("/api/stories"),
+};
+
+export const searchApi = {
+  search: (q: string) => apiFetch<SearchResponse>(`/api/search?q=${encodeURIComponent(q)}`),
+};
+
+export const notificationsApi = {
+  list: (nurUngelesen = false) =>
+    apiFetch<NotificationEntry[]>(`/api/notifications?nur_ungelesen=${nurUngelesen}`),
+  markRead: (id: number) =>
+    apiFetch<NotificationEntry>(`/api/notifications/${id}/gelesen`, { method: "POST" }),
+  markAllRead: () => apiFetch<void>("/api/notifications/gelesen", { method: "POST" }),
+};
+
+export const kundenApi = {
+  list: (q?: string) => apiFetch<Kunde[]>(`/api/kunden${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  get: (id: string) => apiFetch<Kunde>(`/api/kunden/${id}`),
+  profil: (id: string) => apiFetch<KundeProfil>(`/api/kunden/${id}/profil`),
+  create: (body: { name: string; typ?: string; kundennummer?: string }) =>
+    apiFetch<Kunde>("/api/kunden", { method: "POST", body: JSON.stringify(body) }),
+};
+
+export const anlagenApi = {
+  list: (kundeId?: string) =>
+    apiFetch<Anlage[]>(`/api/anlagen${kundeId ? `?kunde_id=${kundeId}` : ""}`),
+  profil: (id: string) => apiFetch<AnlageProfil>(`/api/anlagen/${id}/profil`),
+};
+
+export const vorgaengeApi = {
+  get: (id: string) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`),
+  create: (body: {
+    kunde_id: string;
+    anlage_id?: string | null;
+    titel: string;
+    beschreibung?: string;
+    abrechnungsart: string;
+    leistungstyp: string;
+    prioritaet?: number;
+  }) => apiFetch<Vorgang>("/api/vorgaenge", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<Pick<Vorgang, "status" | "titel" | "beschreibung" | "prioritaet">>) =>
+    apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+};
+
+export const vorgangEventsApi = {
+  list: (vorgangId: string) => apiFetch<VorgangEvent[]>(`/api/vorgaenge/${vorgangId}/events`),
+  create: (
+    vorgangId: string,
+    body: {
+      event_type: VorgangEventType;
+      body?: string;
+      kundensichtbar?: boolean;
+      client_uuid?: string;
+    },
+  ) =>
+    apiFetch<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const tagsApi = {
+  list: () => apiFetch<Tag[]>("/api/tags"),
+  create: (label: string) =>
+    apiFetch<Tag>("/api/tags", { method: "POST", body: JSON.stringify({ label }) }),
+  assign: (tagId: string, entityType: "kunde" | "anlage" | "vorgang", entityId: string) =>
+    apiFetch(`/api/tags/${tagId}/assignments`, {
+      method: "POST",
+      body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
+    }),
 };

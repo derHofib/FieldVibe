@@ -74,13 +74,29 @@ async def test_mandant_admin_cannot_create_super_admin(
 
 
 @pytest.mark.asyncio
-async def test_techniker_cannot_manage_users(client, make_mandant, make_user):
+async def test_techniker_can_list_but_not_create_users(client, make_mandant, make_user):
+    """Listing is allowed (needed for the @-mention picker in Phase 3's
+    Vorgangs-Chat, and RLS keeps it scoped to the technician's own
+    mandant); creating/patching accounts remains admin-only."""
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     token = await login(client, techniker.email, "pw-123456")
 
-    resp = await client.get("/api/users", headers=auth_headers(token))
-    assert resp.status_code == 403
+    list_resp = await client.get("/api/users", headers=auth_headers(token))
+    assert list_resp.status_code == 200
+
+    create_resp = await client.post(
+        "/api/users",
+        headers=auth_headers(token),
+        json={
+            "mandant_id": str(mandant.id),
+            "email": "verboten@example.de",
+            "password": "supersecret1",
+            "role": "techniker",
+            "name": "Verboten",
+        },
+    )
+    assert create_resp.status_code == 403
 
 
 @pytest.mark.asyncio

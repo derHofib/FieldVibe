@@ -1,0 +1,48 @@
+import { useAuth } from "../../context/AuthContext";
+
+const ROLE_LABEL: Record<string, string> = {
+  mandant_admin: "Mandanten-Admin",
+  disponent: "Disponent",
+  techniker: "Techniker",
+};
+
+export function ProfilePage() {
+  const { currentUser, logout } = useAuth();
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-bold text-slate-600">
+            {currentUser?.name?.slice(0, 1)}
+          </div>
+          <div>
+            <div className="font-semibold text-slate-800">{currentUser?.name}</div>
+            <div className="text-sm text-slate-500">{currentUser && ROLE_LABEL[currentUser.role]}</div>
+          </div>
+        </div>
+        <dl className="mt-4 space-y-1 text-sm">
+          <div className="flex justify-between">
+            <dt className="text-slate-500">E-Mail</dt>
+            <dd className="text-slate-800">{currentUser?.email}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-slate-500">Mandant</dt>
+            <dd className="text-slate-800">{currentUser?.mandant_name}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <p className="text-center text-sm text-slate-400">
+        Termine, erfasste Zeiten und zugewiesene Prüfmittel folgen mit Phase 4/5.
+      </p>
+
+      <button
+        onClick={logout}
+        className="btn-touch w-full rounded-md bg-white py-2 font-medium text-slate-600 shadow-sm"
+      >
+        Abmelden
+      </button>
+    </div>
+  );
+}

@@ -8,7 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.tag import Tag, TagAssignment
+from app.models.vorgang import Vorgang
 from app.schemas.anlage import AnlageCreate, AnlageRead, AnlageUpdate
+from app.schemas.kunde import KundeRead
+from app.schemas.profile import AnlageProfil
 
 router = APIRouter(
     prefix="/api/anlagen",
@@ -84,6 +88,35 @@ async def get_anlage(anlage_id: UUID, session: AsyncSession = Depends(get_db)) -
     if anlage is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
     return anlage
+
+
+@router.get("/{anlage_id}/profil", response_model=AnlageProfil)
+async def get_anlage_profil(
+    anlage_id: UUID, session: AsyncSession = Depends(get_db)
+) -> AnlageProfil:
+    anlage = await session.get(Anlage, anlage_id)
+    if anlage is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
+    kunde = await session.get(Kunde, anlage.kunde_id)
+
+    vorgaenge_result = await session.execute(
+        select(Vorgang)
+        .where(Vorgang.anlage_id == anlage_id)
+        .order_by(Vorgang.last_activity_at.desc())
+        .limit(50)
+    )
+    tags_result = await session.execute(
+        select(Tag)
+        .join(TagAssignment, TagAssignment.tag_id == Tag.id)
+        .where(TagAssignment.entity_type == "anlage", TagAssignment.entity_id == anlage_id)
+    )
+
+    return AnlageProfil(
+        **AnlageRead.model_validate(anlage).model_dump(),
+        kunde=KundeRead.model_validate(kunde),
+        vorgaenge=list(vorgaenge_result.scalars().all()),
+        tags=list(tags_result.scalars().all()),
+    )
 
 
 @router.patch(

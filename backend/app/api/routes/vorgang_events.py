@@ -9,6 +9,8 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang_event import VorgangEventCreate, VorgangEventRead
+from app.services.event_bus import event_bus
+from app.services.mention_service import extract_and_notify_mentions
 
 router = APIRouter(
     prefix="/api/vorgaenge/{vorgang_id}/events",
@@ -43,7 +45,7 @@ async def create_event(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorgangEvent:
-    await _require_own_vorgang(session, vorgang_id)
+    vorgang = await _require_own_vorgang(session, vorgang_id)
 
     if body.client_uuid is not None:
         # Checked up front rather than caught as an IntegrityError after the
@@ -78,5 +80,24 @@ async def create_event(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Event-Konflikt"
         ) from exc
+
+    if body.body:
+        await extract_and_notify_mentions(
+            session,
+            mandant_id=auth.mandant_id,
+            vorgang=vorgang,
+            body=body.body,
+            actor_user_id=auth.user_id,
+        )
+
+    await event_bus.publish(
+        auth.mandant_id,
+        "vorgang_event",
+        {
+            "vorgang_id": str(vorgang_id),
+            "event_id": event.id,
+            "event_type": event.event_type,
+        },
+    )
 
     return event
