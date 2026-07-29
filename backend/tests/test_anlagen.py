@@ -25,6 +25,24 @@ async def test_create_anlage_for_own_kunde(client, make_mandant, make_user, make
 
 
 @pytest.mark.asyncio
+async def test_create_anlage_ohne_adresse(client, make_mandant, make_user, make_kunde):
+    """Minimal-Anlage wie beim Inline-Formular in der Kunden-Profilseite/
+    "Neuer Vorgang" -- nur Bezeichnung und optional ein Typ, keine Adresse."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "bezeichnung": "Wallbox Stellplatz 3"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["adresse"] == {}
+
+
+@pytest.mark.asyncio
 async def test_cannot_create_anlage_for_foreign_kunde(
     client, make_mandant, make_user, make_kunde
 ):
@@ -130,3 +148,79 @@ async def test_qr_scan_does_not_leak_other_mandants_anlage(
 
     resp = await client.get("/api/anlagen/by-qr/QR-FREMD-1", headers=auth_headers(token))
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_anlage_profil_auswertung(
+    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
+):
+    """AnlageProfil zaehlt Vorgaenge nach Status und summiert die erfasste
+    Zeit -- ueber ALLE Vorgaenge der Anlage, nicht nur die (auf 50) begrenzte
+    Liste."""
+    from datetime import datetime, timedelta, timezone
+
+    from app.db.session import system_session
+    from app.models.zeiterfassung import Zeiterfassung
+
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    vorgang1 = await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage.id, status="neu")
+    vorgang2 = await make_vorgang(
+        mandant=mandant, kunde=kunde, anlage_id=anlage.id, status="abgeschlossen"
+    )
+
+    start = datetime(2026, 1, 1, 8, 0, tzinfo=timezone.utc)
+    async with system_session() as session:
+        session.add(
+            Zeiterfassung(
+                mandant_id=mandant.id,
+                vorgang_id=vorgang1.id,
+                techniker_id=techniker.id,
+                start_at=start,
+                ende_at=start + timedelta(hours=2, minutes=30),
+            )
+        )
+        session.add(
+            Zeiterfassung(
+                mandant_id=mandant.id,
+                vorgang_id=vorgang2.id,
+                techniker_id=techniker.id,
+                start_at=start,
+                ende_at=start + timedelta(hours=1),
+            )
+        )
+        await session.flush()
+
+    token = await login(client, admin.email, "pw-123456")
+    resp = await client.get(f"/api/anlagen/{anlage.id}/profil", headers=auth_headers(token))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["vorgaenge_nach_status"] == {"neu": 1, "abgeschlossen": 1}
+    assert body["zeiterfassung_stunden_gesamt"] == "3.5"
+
+
+@pytest.mark.asyncio
+async def test_vorgaenge_und_feed_filterbar_nach_anlage(
+    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage1 = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Anlage 1")
+    anlage2 = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Anlage 2")
+    await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage1.id, titel="V-Anlage-1")
+    await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage2.id, titel="V-Anlage-2")
+    token = await login(client, admin.email, "pw-123456")
+
+    vorgaenge_resp = await client.get(
+        "/api/vorgaenge", headers=auth_headers(token), params={"anlage_id": str(anlage1.id)}
+    )
+    assert [v["titel"] for v in vorgaenge_resp.json()] == ["V-Anlage-1"]
+
+    feed_resp = await client.get(
+        "/api/feed", headers=auth_headers(token), params={"anlage_id": str(anlage1.id)}
+    )
+    assert [i["titel"] for i in feed_resp.json()["items"]] == ["V-Anlage-1"]

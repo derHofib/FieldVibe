@@ -49,6 +49,7 @@ class VorgangRead(BaseModel):
     anlage_id: UUID | None
     vertrag_id: UUID | None
     parent_vorgang_id: UUID | None
+    dauerauftrag_id: UUID | None
     titel: str
     beschreibung: str | None
     abrechnungsart: VorgangAbrechnungsart

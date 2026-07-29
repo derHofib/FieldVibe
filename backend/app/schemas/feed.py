@@ -18,6 +18,7 @@ class FeedCard(BaseModel):
     letztes_event_vorschau: str | None
     tags: list[str]
     timer_laeuft: bool = False
+    dauerauftrag_id: UUID | None = None
 
 
 class FeedResponse(BaseModel):

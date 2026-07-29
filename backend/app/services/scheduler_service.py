@@ -8,6 +8,7 @@ from app.core.config import get_settings
 from app.db.session import system_session
 from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
+from app.models.dauerauftrag import Dauerauftrag
 from app.models.mandant import Mandant
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
@@ -19,6 +20,7 @@ from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 
 SCHEDULER_AKTION = "pruefzyklen_scheduler_run"
+DAUERAUFTRAEGE_SCHEDULER_AKTION = "dauerauftraege_scheduler_run"
 
 
 async def mandanten_faellig_um(session: AsyncSession, stunde_utc: int) -> list[UUID]:
@@ -191,6 +193,96 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
                 mandant_id=None,
                 actor_user_id=None,
                 aktion=SCHEDULER_AKTION,
+                entity_type="scheduler",
+                payload=ergebnis,
+            )
+        )
+        await session.flush()
+
+    return ergebnis
+
+
+async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
+    """Stuendlicher Lauf: legt fuer faellige Dauerauftraege (wiederkehrende
+    Auftraege, siehe app/models/dauerauftrag.py) einen neuen Vorgang an --
+    pro Dauerauftrag nur einen gleichzeitig offenen (offener_vorgang_id),
+    bis der zuletzt erzeugte Vorgang abgeschlossen wird (siehe
+    app/api/routes/vorgaenge.py, der die naechste Faelligkeit dann relativ
+    zum tatsaechlichen Abschlussdatum fortschreibt). Anders als bei
+    Pruefzyklen kein Vorlauf-Horizont -- die Erzeugung erfolgt erst, wenn
+    naechste_faelligkeit_am tatsaechlich erreicht ist.
+
+    `mandant_ids` grenzt den Lauf wie beim Pruefzyklen-Scheduler auf die
+    gerade faelligen Mandanten ein (siehe app/worker.py); None bearbeitet
+    alle Mandanten."""
+    heute = date.today()
+    erstellte_vorgaenge = 0
+
+    async with system_session() as session:
+        stmt = select(Dauerauftrag).where(
+            Dauerauftrag.aktiv.is_(True),
+            Dauerauftrag.naechste_faelligkeit_am <= heute,
+            Dauerauftrag.offener_vorgang_id.is_(None),
+        )
+        if mandant_ids is not None:
+            stmt = stmt.where(Dauerauftrag.mandant_id.in_(mandant_ids))
+        dauerauftraege = (await session.execute(stmt)).scalars().all()
+
+        for auftrag in dauerauftraege:
+            vorgangsnummer = await next_vorgangsnummer(session, auftrag.mandant_id)
+            vorgang = Vorgang(
+                mandant_id=auftrag.mandant_id,
+                vorgangsnummer=vorgangsnummer,
+                kunde_id=auftrag.kunde_id,
+                anlage_id=auftrag.anlage_id,
+                dauerauftrag_id=auftrag.id,
+                titel=auftrag.titel,
+                beschreibung=auftrag.beschreibung,
+                abrechnungsart=auftrag.abrechnungsart,
+                leistungstyp=auftrag.leistungstyp,
+            )
+            session.add(vorgang)
+            await session.flush()
+
+            auftrag.offener_vorgang_id = vorgang.id
+
+            session.add(
+                VorgangEvent(
+                    mandant_id=auftrag.mandant_id,
+                    vorgang_id=vorgang.id,
+                    event_type="system",
+                    is_system=True,
+                    body="Automatisch angelegt durch den Dauerauftrag-Scheduler",
+                    payload={"dauerauftrag_id": str(auftrag.id)},
+                )
+            )
+
+            for empfaenger in await _admins_und_disponenten(session, auftrag.mandant_id):
+                session.add(
+                    Notification(
+                        mandant_id=auftrag.mandant_id,
+                        user_id=empfaenger.id,
+                        typ="frist",
+                        titel=f"Dauerauftrag fällig: {auftrag.titel}",
+                        ref_entity_type="vorgang",
+                        ref_entity_id=vorgang.id,
+                    )
+                )
+            await session.flush()
+
+            await event_bus.publish(
+                auftrag.mandant_id,
+                "feed_update",
+                {"vorgang_id": str(vorgang.id), "reason": "erstellt"},
+            )
+            erstellte_vorgaenge += 1
+
+        ergebnis = {"vorgaenge_erstellt": erstellte_vorgaenge}
+        session.add(
+            AuditLog(
+                mandant_id=None,
+                actor_user_id=None,
+                aktion=DAUERAUFTRAEGE_SCHEDULER_AKTION,
                 entity_type="scheduler",
                 payload=ergebnis,
             )

@@ -72,6 +72,9 @@ class Vorgang(TimestampMixin, Base):
     parent_vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=True
     )
+    dauerauftrag_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dauerauftraege.id"), nullable=True
+    )
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text)
     abrechnungsart: Mapped[str] = mapped_column(Text, nullable=False)

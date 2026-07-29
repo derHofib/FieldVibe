@@ -48,8 +48,46 @@ export function NewVorgangPage() {
   const [newKundeName, setNewKundeName] = useState("");
   const [newKundeTyp, setNewKundeTyp] = useState<KundeTyp | "">("");
   const [newKundeError, setNewKundeError] = useState<string | null>(null);
+  const [showNewAnlage, setShowNewAnlage] = useState(false);
+  const [newAnlageBezeichnung, setNewAnlageBezeichnung] = useState("");
+  const [newAnlageTyp, setNewAnlageTyp] = useState("");
+  const [newAnlageError, setNewAnlageError] = useState<string | null>(null);
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: anlagenListe } = useQuery({
+    queryKey: ["anlagen", kundeId],
+    queryFn: () => anlagenApi.list(kundeId),
+    enabled: !!kundeId,
+  });
+
+  const createAnlageMutation = useMutation({
+    mutationFn: () =>
+      anlagenApi.create({
+        kunde_id: kundeId,
+        bezeichnung: newAnlageBezeichnung,
+        anlagentyp: newAnlageTyp || undefined,
+      }),
+    onSuccess: (neueAnlage) => {
+      queryClient.invalidateQueries({ queryKey: ["anlagen", kundeId] });
+      setAnlage(neueAnlage);
+      setShowNewAnlage(false);
+      setNewAnlageBezeichnung("");
+      setNewAnlageTyp("");
+      setNewAnlageError(null);
+    },
+    onError: (err) =>
+      setNewAnlageError(err instanceof ApiError ? err.message : "Anlage konnte nicht angelegt werden"),
+  });
+
+  function handleCreateAnlage(e: FormEvent) {
+    e.preventDefault();
+    setNewAnlageError(null);
+    if (!newAnlageBezeichnung.trim()) {
+      setNewAnlageError("Bitte eine Bezeichnung eingeben");
+      return;
+    }
+    createAnlageMutation.mutate();
+  }
 
   const createKundeMutation = useMutation({
     mutationFn: () =>
@@ -242,6 +280,79 @@ export function NewVorgangPage() {
                 onClick={() => {
                   setShowNewKunde(false);
                   setNewKundeError(null);
+                }}
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {kundeId && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Anlage (optional)</label>
+            <select
+              value={anlage?.id ?? ""}
+              onChange={(e) =>
+                setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)
+              }
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            >
+              <option value="">Keine Anlage</option>
+              {anlagenListe?.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.bezeichnung}
+                </option>
+              ))}
+            </select>
+            {!showNewAnlage && (
+              <button
+                type="button"
+                onClick={() => setShowNewAnlage(true)}
+                className="btn-touch mt-1 text-xs text-blue-700 underline"
+              >
+                + Neue Anlage anlegen
+              </button>
+            )}
+          </div>
+        )}
+
+        {showNewAnlage && (
+          <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Bezeichnung</label>
+              <input
+                autoFocus
+                value={newAnlageBezeichnung}
+                onChange={(e) => setNewAnlageBezeichnung(e.target.value)}
+                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Typ (optional)</label>
+              <input
+                value={newAnlageTyp}
+                onChange={(e) => setNewAnlageTyp(e.target.value)}
+                placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
+                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+              />
+            </div>
+            {newAnlageError && <p className="text-sm text-red-700">{newAnlageError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleCreateAnlage}
+                disabled={createAnlageMutation.isPending}
+                className="btn-touch flex-1 rounded-md bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Anlage anlegen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewAnlage(false);
+                  setNewAnlageError(null);
                 }}
                 className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700"
               >

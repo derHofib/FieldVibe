@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
+from app.models.dauerauftrag import Dauerauftrag
 from app.models.kunde import Kunde
 from app.models.mangel import Mangel
 from app.models.pruefzyklus import Pruefzyklus
@@ -31,6 +32,7 @@ router = APIRouter(
 async def list_vorgaenge(
     status_filter: str | None = Query(default=None, alias="status"),
     kunde_id: UUID | None = Query(default=None),
+    anlage_id: UUID | None = Query(default=None),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -42,6 +44,8 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.status == status_filter)
     if kunde_id:
         stmt = stmt.where(Vorgang.kunde_id == kunde_id)
+    if anlage_id:
+        stmt = stmt.where(Vorgang.anlage_id == anlage_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
@@ -228,6 +232,22 @@ async def update_vorgang(
                     zyklus.letzte_pruefung_am, zyklus.intervall_monate
                 )
                 zyklus.offener_vorgang_id = None
+
+            # Schliesst dieser Vorgang einen Dauerauftrag ab (wiederkehrender
+            # Auftrag, siehe app/models/dauerauftrag.py), naechste
+            # Faelligkeit relativ zum tatsaechlichen Abschlussdatum
+            # fortschreiben -- nicht ab einem festen Kalenderdatum, sonst
+            # wuerden liegen gebliebene Auftraege sich selbst "einholen".
+            dauerauftrag = (
+                await session.execute(
+                    select(Dauerauftrag).where(Dauerauftrag.offener_vorgang_id == vorgang.id)
+                )
+            ).scalar_one_or_none()
+            if dauerauftrag is not None:
+                dauerauftrag.naechste_faelligkeit_am = vorgang.abgeschlossen_am.date() + timedelta(
+                    days=dauerauftrag.intervall_tage
+                )
+                dauerauftrag.offener_vorgang_id = None
 
             # Schliesst dieser Vorgang eine aus einem angenommenen Angebot
             # entstandene Reparatur ab, gelten die zugehoerigen Maengel als

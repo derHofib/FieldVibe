@@ -1,0 +1,60 @@
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+
+import { dauerauftraegeApi, kundenApi } from "../../api/endpoints";
+
+export function DauerauftraegePage() {
+  const navigate = useNavigate();
+  const { data: dauerauftraege, isLoading } = useQuery({
+    queryKey: ["dauerauftraege"],
+    queryFn: () => dauerauftraegeApi.list(),
+  });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const kundeNameById = new Map((kunden ?? []).map((k) => [k.id, k.name]));
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-lg font-bold text-slate-800">Dauer-Aufträge</h1>
+      <p className="text-sm text-slate-500">
+        Wiederkehrende Aufträge im Überblick -- die daraus erzeugten Vorgänge erscheinen zusätzlich
+        ganz normal im Feed.
+      </p>
+
+      {isLoading ? (
+        <p className="text-center text-slate-500">Lädt…</p>
+      ) : !dauerauftraege || dauerauftraege.length === 0 ? (
+        <p className="text-sm text-slate-400">Noch keine Dauer-Aufträge angelegt.</p>
+      ) : (
+        <div className="space-y-2">
+          {dauerauftraege.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => navigate(`/dauerauftraege/${d.id}`)}
+              className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm"
+            >
+              <div>
+                <div className="text-sm font-medium text-slate-800">{d.titel}</div>
+                <div className="text-xs text-slate-400">
+                  {kundeNameById.get(d.kunde_id) ?? "–"} · alle {d.intervall_tage} Tage · nächste
+                  Fälligkeit {d.naechste_faelligkeit_am}
+                </div>
+              </div>
+              {!d.aktiv && (
+                <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-600">
+                  pausiert
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button
+        onClick={() => navigate("/dauerauftraege/neu")}
+        className="btn-touch w-full rounded-md bg-slate-900 py-2 font-medium text-white"
+      >
+        + Neuer Dauer-Auftrag
+      </button>
+    </div>
+  );
+}

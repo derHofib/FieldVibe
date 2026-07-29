@@ -1,16 +1,16 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AnlageCreate(BaseModel):
     kunde_id: UUID
     bezeichnung: str
-    adresse: dict
+    adresse: dict = Field(default_factory=dict)
     anlagentyp: str | None = None
     qr_code: str | None = None
-    stammdaten: dict = {}
+    stammdaten: dict = Field(default_factory=dict)
     geo_lat: float | None = None
     geo_lng: float | None = None
 

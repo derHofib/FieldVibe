@@ -113,6 +113,7 @@ export interface Vorgang {
   anlage_id: string | null;
   vertrag_id: string | null;
   parent_vorgang_id: string | null;
+  dauerauftrag_id: string | null;
   titel: string;
   beschreibung: string | null;
   abrechnungsart: VorgangAbrechnungsart;
@@ -181,6 +182,7 @@ export interface FeedCard {
   letztes_event_vorschau: string | null;
   tags: string[];
   timer_laeuft: boolean;
+  dauerauftrag_id: string | null;
 }
 
 export interface FeedResponse {
@@ -244,6 +246,30 @@ export interface AnlageProfil extends Anlage {
   kunde: Kunde;
   vorgaenge: Vorgang[];
   tags: Tag[];
+  vorgaenge_nach_status: Record<string, number>;
+  zeiterfassung_stunden_gesamt: string;
+}
+
+// --- Dauerauftraege (wiederkehrende Auftraege) ---------------------------
+
+export interface Dauerauftrag {
+  id: string;
+  kunde_id: string;
+  anlage_id: string | null;
+  titel: string;
+  beschreibung: string | null;
+  abrechnungsart: VorgangAbrechnungsart;
+  leistungstyp: Leistungstyp;
+  intervall_tage: number;
+  naechste_faelligkeit_am: string;
+  aktiv: boolean;
+  offener_vorgang_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DauerauftragMitVerlauf extends Dauerauftrag {
+  vorgaenge: Vorgang[];
 }
 
 // --- Feld-Tauglichkeit (Phase 4) -----------------------------------------

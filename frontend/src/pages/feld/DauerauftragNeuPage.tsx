@@ -1,0 +1,225 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import type { Leistungstyp, VorgangAbrechnungsart } from "../../types";
+
+const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
+  { value: "wartung", label: "Wartung" },
+  { value: "pruefung", label: "Prüfung" },
+  { value: "stoerung", label: "Störung" },
+  { value: "installation", label: "Installation" },
+  { value: "beratung", label: "Beratung" },
+  { value: "planung", label: "Planung" },
+];
+
+const ABRECHNUNGSARTEN: { value: VorgangAbrechnungsart; label: string }[] = [
+  { value: "wartungsvertrag", label: "Wartungsvertrag" },
+  { value: "aufwand", label: "Nach Aufwand" },
+  { value: "pauschale", label: "Pauschale" },
+  { value: "festpreis", label: "Festpreis" },
+  { value: "gewaehrleistung", label: "Gewährleistung" },
+];
+
+export function DauerauftragNeuPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const vorausgewaehlterKundeId = searchParams.get("kunde_id") ?? "";
+
+  const [kundeId, setKundeId] = useState(vorausgewaehlterKundeId);
+  const [anlageId, setAnlageId] = useState("");
+  const [titel, setTitel] = useState("");
+  const [beschreibung, setBeschreibung] = useState("");
+  const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("wartung");
+  const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("wartungsvertrag");
+  const [intervallTage, setIntervallTage] = useState("7");
+  const [naechsteFaelligkeit, setNaechsteFaelligkeit] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: anlagenListe } = useQuery({
+    queryKey: ["anlagen", kundeId],
+    queryFn: () => anlagenApi.list(kundeId),
+    enabled: !!kundeId,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      dauerauftraegeApi.create({
+        kunde_id: kundeId,
+        anlage_id: anlageId || undefined,
+        titel,
+        beschreibung: beschreibung || undefined,
+        abrechnungsart,
+        leistungstyp,
+        intervall_tage: Number(intervallTage),
+        naechste_faelligkeit_am: naechsteFaelligkeit,
+      }),
+    onSuccess: (dauerauftrag) => navigate(`/dauerauftraege/${dauerauftrag.id}`),
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!kundeId) {
+      setError("Bitte einen Kunden auswählen");
+      return;
+    }
+    if (!titel.trim()) {
+      setError("Bitte einen Titel eingeben");
+      return;
+    }
+    if (Number(intervallTage) < 1) {
+      setError("Intervall muss mindestens 1 Tag sein");
+      return;
+    }
+    createMutation.mutate();
+  }
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500">
+        ← Zurück
+      </button>
+      <h1 className="text-lg font-bold text-slate-800">Neuer Dauer-Auftrag</h1>
+      <p className="text-sm text-slate-500">
+        Erzeugt automatisch einen neuen Vorgang, sobald das eingestellte Intervall ab dem Abschluss
+        des jeweils letzten erzeugten Vorgangs erreicht ist.
+      </p>
+
+      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg bg-white p-4 shadow-sm">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Kunde</label>
+          <select
+            value={kundeId}
+            onChange={(e) => {
+              setKundeId(e.target.value);
+              setAnlageId("");
+            }}
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+          >
+            <option value="">Bitte wählen…</option>
+            {kunden?.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.name} ({k.kundennummer})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {kundeId && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Anlage (optional)</label>
+            <select
+              value={anlageId}
+              onChange={(e) => setAnlageId(e.target.value)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            >
+              <option value="">Keine Anlage</option>
+              {anlagenListe?.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.bezeichnung}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Titel</label>
+          <input
+            required
+            value={titel}
+            onChange={(e) => setTitel(e.target.value)}
+            placeholder="z.B. Monatliche Wartung Lüftungsanlage"
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
+          <textarea
+            value={beschreibung}
+            onChange={(e) => setBeschreibung(e.target.value)}
+            rows={3}
+            className="w-full resize-none rounded-md border border-slate-300 p-2"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Leistungstyp</label>
+            <select
+              value={leistungstyp}
+              onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            >
+              {LEISTUNGSTYPEN.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Abrechnungsart</label>
+            <select
+              value={abrechnungsart}
+              onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            >
+              {ABRECHNUNGSARTEN.map((a) => (
+                <option key={a.value} value={a.value}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Intervall (Tage)
+            </label>
+            <input
+              type="number"
+              min={1}
+              required
+              value={intervallTage}
+              onChange={(e) => setIntervallTage(e.target.value)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Erste Fälligkeit
+            </label>
+            <input
+              type="date"
+              required
+              value={naechsteFaelligkeit}
+              onChange={(e) => setNaechsteFaelligkeit(e.target.value)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </div>
+        </div>
+
+        {error && <p className="text-sm text-red-700">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={createMutation.isPending}
+          className="btn-touch w-full rounded-md bg-slate-900 py-2 font-medium text-white disabled:opacity-50"
+        >
+          Dauer-Auftrag anlegen
+        </button>
+      </form>
+    </div>
+  );
+}

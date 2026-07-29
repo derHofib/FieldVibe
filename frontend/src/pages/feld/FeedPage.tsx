@@ -78,6 +78,11 @@ function FeedCardView({ card }: { card: FeedCard }) {
           {card.timer_laeuft && (
             <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" title="Timer läuft" />
           )}
+          {card.dauerauftrag_id && (
+            <span title="Dauerauftrag" className="text-sm">
+              🔁
+            </span>
+          )}
           <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[card.status]}`}>
             {STATUS_LABEL[card.status]}
           </span>

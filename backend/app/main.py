@@ -9,6 +9,7 @@ from app.api.routes import (
     anlagen,
     audit_log,
     auth,
+    dauerauftraege,
     feed,
     highlights,
     impersonation,
@@ -77,6 +78,7 @@ app.include_router(impersonation.router)
 app.include_router(audit_log.router)
 app.include_router(kunden.router)
 app.include_router(anlagen.router)
+app.include_router(dauerauftraege.router)
 app.include_router(vertraege.router)
 app.include_router(vorgaenge.router)
 app.include_router(vorgang_events.router)

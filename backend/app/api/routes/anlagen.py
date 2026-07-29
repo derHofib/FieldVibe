@@ -1,7 +1,8 @@
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.tag import Tag, TagAssignment
 from app.models.vorgang import Vorgang
+from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.anlage import AnlageCreate, AnlageRead, AnlageUpdate
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import AnlageProfil
@@ -156,11 +158,31 @@ async def get_anlage_profil(
         .where(TagAssignment.entity_type == "anlage", TagAssignment.entity_id == anlage_id)
     )
 
+    # Auswertung ueber ALLE Vorgaenge dieser Anlage, nicht nur die oben auf
+    # 50 begrenzte Liste -- sonst waeren Status-Zaehlung und Stundensumme
+    # bei einer langlebigen Anlage falsch.
+    status_result = await session.execute(
+        select(Vorgang.status, func.count())
+        .where(Vorgang.anlage_id == anlage_id)
+        .group_by(Vorgang.status)
+    )
+    vorgaenge_nach_status = {status: count for status, count in status_result.all()}
+
+    sekunden_gesamt = await session.scalar(
+        select(func.coalesce(func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)), 0))
+        .select_from(Zeiterfassung)
+        .join(Vorgang, Vorgang.id == Zeiterfassung.vorgang_id)
+        .where(Vorgang.anlage_id == anlage_id, Zeiterfassung.ende_at.isnot(None))
+    )
+    stunden_gesamt = (Decimal(sekunden_gesamt or 0) / Decimal(3600)).quantize(Decimal("0.1"))
+
     return AnlageProfil(
         **AnlageRead.model_validate(anlage).model_dump(),
         kunde=KundeRead.model_validate(kunde),
         vorgaenge=list(vorgaenge_result.scalars().all()),
         tags=list(tags_result.scalars().all()),
+        vorgaenge_nach_status=vorgaenge_nach_status,
+        zeiterfassung_stunden_gesamt=stunden_gesamt,
     )
 
 

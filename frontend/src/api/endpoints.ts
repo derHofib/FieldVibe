@@ -8,6 +8,8 @@ import type {
   AuditLogEntry,
   CurrentKunde,
   CurrentUser,
+  Dauerauftrag,
+  DauerauftragMitVerlauf,
   FeedResponse,
   Highlight,
   ImpersonateResponse,
@@ -138,6 +140,37 @@ export const anlagenApi = {
     apiFetch<Anlage[]>(`/api/anlagen${kundeId ? `?kunde_id=${kundeId}` : ""}`),
   profil: (id: string) => apiFetch<AnlageProfil>(`/api/anlagen/${id}/profil`),
   byQrCode: (qrCode: string) => apiFetch<Anlage>(`/api/anlagen/by-qr/${encodeURIComponent(qrCode)}`),
+  create: (body: { kunde_id: string; bezeichnung: string; anlagentyp?: string }) =>
+    apiFetch<Anlage>("/api/anlagen", { method: "POST", body: JSON.stringify(body) }),
+};
+
+export const dauerauftraegeApi = {
+  list: (kundeId?: string) =>
+    apiFetch<Dauerauftrag[]>(`/api/dauerauftraege${kundeId ? `?kunde_id=${kundeId}` : ""}`),
+  get: (id: string) => apiFetch<DauerauftragMitVerlauf>(`/api/dauerauftraege/${id}`),
+  create: (body: {
+    kunde_id: string;
+    anlage_id?: string;
+    titel: string;
+    beschreibung?: string;
+    abrechnungsart: string;
+    leistungstyp: string;
+    intervall_tage: number;
+    naechste_faelligkeit_am: string;
+  }) => apiFetch<Dauerauftrag>("/api/dauerauftraege", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<{
+      titel: string;
+      beschreibung: string;
+      anlage_id: string;
+      abrechnungsart: string;
+      leistungstyp: string;
+      intervall_tage: number;
+      naechste_faelligkeit_am: string;
+      aktiv: boolean;
+    }>
+  ) => apiFetch<Dauerauftrag>(`/api/dauerauftraege/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };
 
 export const vorgaengeApi = {

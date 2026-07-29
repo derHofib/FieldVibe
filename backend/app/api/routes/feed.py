@@ -69,6 +69,7 @@ async def get_feed(
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=100),
     status_filter: str | None = Query(default=None, alias="status"),
     kunde_id: UUID | None = Query(default=None),
+    anlage_id: UUID | None = Query(default=None),
     tag: str | None = Query(default=None, description="Tag-Label ohne '#'"),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
@@ -81,6 +82,8 @@ async def get_feed(
         stmt = stmt.where(Vorgang.status == status_filter)
     if kunde_id:
         stmt = stmt.where(Vorgang.kunde_id == kunde_id)
+    if anlage_id:
+        stmt = stmt.where(Vorgang.anlage_id == anlage_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
@@ -160,6 +163,7 @@ async def get_feed(
                 letztes_event_vorschau=_preview_text(last_event),
                 tags=tags,
                 timer_laeuft=timer_laeuft,
+                dauerauftrag_id=vorgang.dauerauftrag_id,
             )
         )
 

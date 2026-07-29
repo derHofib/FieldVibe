@@ -16,7 +16,11 @@ from datetime import datetime, timedelta, timezone
 
 from app.db.session import system_session
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
-from app.services.scheduler_service import mandanten_faellig_um, run_pruefzyklen_scheduler
+from app.services.scheduler_service import (
+    mandanten_faellig_um,
+    run_dauerauftraege_scheduler,
+    run_pruefzyklen_scheduler,
+)
 from app.services.worker_lock import worker_lock
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -55,6 +59,15 @@ async def _run_hourly_tick() -> None:
             )
         except Exception:
             logger.exception("Scheduler-Lauf fehlgeschlagen")
+
+        try:
+            dauerauftraege_ergebnis = await run_dauerauftraege_scheduler(mandant_ids)
+            logger.info(
+                "Dauerauftraege-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
+                jetzt.hour, len(mandant_ids), dauerauftraege_ergebnis,
+            )
+        except Exception:
+            logger.exception("Dauerauftraege-Lauf fehlgeschlagen")
 
         try:
             mahn_ergebnis = await run_mahnwesen_eskalation(mandant_ids)

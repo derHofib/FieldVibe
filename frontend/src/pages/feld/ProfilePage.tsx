@@ -72,6 +72,15 @@ export function ProfilePage() {
         </button>
       )}
 
+      {(currentUser?.role === "mandant_admin" || currentUser?.role === "disponent") && (
+        <button
+          onClick={() => navigate("/dauerauftraege")}
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
+        >
+          🔁 Dauer-Aufträge
+        </button>
+      )}
+
       <button
         onClick={logout}
         className="btn-touch w-full rounded-md bg-white py-2 font-medium text-slate-600 shadow-sm"

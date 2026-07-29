@@ -9,6 +9,9 @@ import { MandantenPage } from "./pages/MandantenPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
+import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
+import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
+import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
 import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { FeedPage } from "./pages/feld/FeedPage";
 import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
@@ -73,6 +76,9 @@ export function App() {
           <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
           <Route path="/kunden/:id" element={<KundeProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
+          <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
+          <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
+          <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
           <Route path="/dispo" element={<DispoBoardPage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
           <Route path="/geschaeft" element={<GeschaeftPage />} />

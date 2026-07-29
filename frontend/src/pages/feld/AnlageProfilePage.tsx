@@ -101,6 +101,23 @@ export function AnlageProfilePage() {
         )}
       </div>
 
+      <div className="rounded-lg bg-white p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-semibold text-slate-500">Auswertung</h2>
+        <div className="flex flex-wrap gap-2">
+          {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
+            <span
+              key={status}
+              className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[status] ?? "bg-slate-100 text-slate-600"}`}
+            >
+              {anzahl}× {status}
+            </span>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-slate-600">
+          Erfasste Zeit gesamt: <span className="font-medium">{profil.zeiterfassung_stunden_gesamt} Std.</span>
+        </p>
+      </div>
+
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500">Vorgänge</h2>
         {profil.vorgaenge.length === 0 ? (
@@ -114,7 +131,10 @@ export function AnlageProfilePage() {
                 className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm"
               >
                 <div>
-                  <div className="text-xs text-slate-400">{v.vorgangsnummer}</div>
+                  <div className="text-xs text-slate-400">
+                    {v.vorgangsnummer}
+                    {v.dauerauftrag_id && " · 🔁"}
+                  </div>
                   <div className="text-sm font-medium text-slate-800">{v.titel}</div>
                 </div>
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
