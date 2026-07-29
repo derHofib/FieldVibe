@@ -232,6 +232,12 @@ export interface KundeProfil extends Kunde {
   anlagen: Anlage[];
   vorgaenge: Vorgang[];
   tags: Tag[];
+  techniker: User[];
+}
+
+export interface TechnikerZuweisungUebersicht {
+  techniker: User;
+  kunden: Kunde[];
 }
 
 export interface AnlageProfil extends Anlage {

@@ -34,6 +34,7 @@ from app.db.session import engine, system_session
 from app.main import app
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vertrag import Vertrag
@@ -109,7 +110,7 @@ async def _clean_tables():
                 "TRUNCATE audit_log, notifications, tag_assignments, tags, zeiterfassung, "
                 "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
                 "rechnung_positionen, rechnungen, highlights, material_verwendungen, material, "
-                "kundenportal_zugaenge, "
+                "kundenportal_zugaenge, kunde_zuweisungen, "
                 "vorgang_events, vorgaenge, vertraege, "
                 "anlagen, kunden, mandant_integrationen, users, mandanten "
                 "RESTART IDENTITY CASCADE"
@@ -249,6 +250,21 @@ async def make_vorgang():
             await session.flush()
             await session.refresh(vorgang)
             return vorgang
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_kunde_zuweisung():
+    async def _make(*, mandant: Mandant, kunde: Kunde, techniker: User) -> KundeZuweisung:
+        async with system_session() as session:
+            zuweisung = KundeZuweisung(
+                mandant_id=mandant.id, kunde_id=kunde.id, user_id=techniker.id
+            )
+            session.add(zuweisung)
+            await session.flush()
+            await session.refresh(zuweisung)
+            return zuweisung
 
     return _make
 

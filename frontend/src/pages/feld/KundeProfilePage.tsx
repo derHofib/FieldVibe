@@ -1,7 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { kundenApi } from "../../api/endpoints";
+import { kundenApi, usersApi } from "../../api/endpoints";
+import { useAuth } from "../../context/AuthContext";
+import type { User } from "../../types";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "bg-blue-100 text-blue-800",
@@ -13,9 +16,102 @@ const STATUS_BADGE: Record<string, string> = {
   storniert: "bg-red-100 text-red-800",
 };
 
+function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewiesen: User[] }) {
+  const queryClient = useQueryClient();
+  const [bearbeiten, setBearbeiten] = useState(false);
+  const [auswahl, setAuswahl] = useState<string[]>([]);
+
+  const { data: alleUser } = useQuery({
+    queryKey: ["users"],
+    queryFn: usersApi.list,
+    enabled: bearbeiten,
+  });
+  const techniker = alleUser?.filter((u) => u.role === "techniker") ?? [];
+
+  const speichernMutation = useMutation({
+    mutationFn: () => kundenApi.technikerSetzen(kundeId, auswahl),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
+      setBearbeiten(false);
+    },
+  });
+
+  function toggle(userId: string) {
+    setAuswahl((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  }
+
+  if (!bearbeiten) {
+    return (
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-slate-500">Zugewiesene Techniker</h2>
+        {zugewiesen.length === 0 ? (
+          <p className="text-sm text-slate-400">Kein Techniker zugewiesen.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1">
+            {zugewiesen.map((t) => (
+              <span key={t.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                {t.name}
+              </span>
+            ))}
+          </div>
+        )}
+        <button
+          onClick={() => {
+            setAuswahl(zugewiesen.map((t) => t.id));
+            setBearbeiten(true);
+          }}
+          className="btn-touch mt-2 text-xs text-blue-700 underline"
+        >
+          Bearbeiten
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg bg-slate-50 p-3">
+      <h2 className="mb-2 text-sm font-semibold text-slate-500">Zugewiesene Techniker</h2>
+      {techniker.length === 0 ? (
+        <p className="text-sm text-slate-400">Keine Techniker in diesem Mandanten angelegt.</p>
+      ) : (
+        <div className="space-y-1">
+          {techniker.map((u) => (
+            <label key={u.id} className="btn-touch flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={auswahl.includes(u.id)}
+                onChange={() => toggle(u.id)}
+              />
+              {u.name}
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="mt-2 flex gap-2">
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={speichernMutation.isPending}
+          className="btn-touch flex-1 rounded-md bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        <button
+          onClick={() => setBearbeiten(false)}
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function KundeProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
 
   const { data: profil, isLoading } = useQuery({
     queryKey: ["kunde-profil", id],
@@ -24,6 +120,9 @@ export function KundeProfilePage() {
   });
 
   if (isLoading || !profil) return <p className="text-center text-slate-500">Lädt…</p>;
+
+  const kannZuweisen =
+    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
 
   return (
     <div className="space-y-4">
@@ -45,6 +144,8 @@ export function KundeProfilePage() {
           </div>
         )}
       </div>
+
+      {kannZuweisen && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
 
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500">Anlagen</h2>

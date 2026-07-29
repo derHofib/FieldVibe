@@ -18,6 +18,7 @@ from app.schemas.vorgang import VorgangCreate, VorgangRead, VorgangUpdate
 from app.services.date_utils import add_months
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
+from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/vorgaenge",
@@ -33,6 +34,7 @@ async def list_vorgaenge(
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Vorgang]:
     stmt = select(Vorgang).order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc()).limit(limit)
@@ -44,16 +46,27 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
         stmt = stmt.where(Vorgang.abrechnungsart == abrechnungsart)
+    if auth.role == "techniker":
+        stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
-async def _validate_references(session: AsyncSession, body: VorgangCreate) -> None:
+async def _validate_references(
+    session: AsyncSession, auth: AuthContext, body: VorgangCreate
+) -> None:
     kunde = await session.get(Kunde, body.kunde_id)
     if kunde is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if auth.role == "techniker" and body.kunde_id not in await assigned_kunde_ids(
+        session, auth.user_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dieser Kunde ist dir nicht zugewiesen",
         )
     if body.anlage_id is not None:
         anlage = await session.get(Anlage, body.anlage_id)
@@ -101,7 +114,7 @@ async def create_vorgang(
             response.status_code = status.HTTP_200_OK
             return existing_vorgang
 
-    await _validate_references(session, body)
+    await _validate_references(session, auth, body)
 
     vorgangsnummer = body.vorgangsnummer or await next_vorgangsnummer(session, auth.mandant_id)
     vorgang = Vorgang(
@@ -146,11 +159,25 @@ async def create_vorgang(
     return vorgang
 
 
+async def _require_vorgang_zugriff(
+    session: AsyncSession, auth: AuthContext, vorgang: Vorgang
+) -> None:
+    if auth.role == "techniker" and vorgang.kunde_id not in await assigned_kunde_ids(
+        session, auth.user_id
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+
+
 @router.get("/{vorgang_id}", response_model=VorgangRead)
-async def get_vorgang(vorgang_id: UUID, session: AsyncSession = Depends(get_db)) -> Vorgang:
+async def get_vorgang(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Vorgang:
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
     return vorgang
 
 
@@ -164,6 +191,7 @@ async def update_vorgang(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
 
     changes = body.model_dump(exclude_unset=True)
     alter_status = vorgang.status

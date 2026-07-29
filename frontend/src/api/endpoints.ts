@@ -29,6 +29,7 @@ import type {
   SearchResponse,
   StoriesResponse,
   Tag,
+  TechnikerZuweisungUebersicht,
   Termin,
   TerminCreateResult,
   TokenPair,
@@ -119,6 +120,17 @@ export const kundenApi = {
   profil: (id: string) => apiFetch<KundeProfil>(`/api/kunden/${id}/profil`),
   create: (body: { name: string; typ?: string; kundennummer?: string }) =>
     apiFetch<Kunde>("/api/kunden", { method: "POST", body: JSON.stringify(body) }),
+  technikerListe: (id: string) => apiFetch<User[]>(`/api/kunden/${id}/techniker`),
+  technikerSetzen: (id: string, userIds: string[]) =>
+    apiFetch<User[]>(`/api/kunden/${id}/techniker`, {
+      method: "PUT",
+      body: JSON.stringify({ user_ids: userIds }),
+    }),
+};
+
+export const technikerZuweisungenApi = {
+  uebersicht: () =>
+    apiFetch<TechnikerZuweisungUebersicht[]>("/api/techniker-zuweisungen"),
 };
 
 export const anlagenApi = {

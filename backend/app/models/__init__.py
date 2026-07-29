@@ -4,6 +4,7 @@ from app.models.audit_log import AuditLog
 from app.models.highlight import Highlight
 from app.models.integration import MandantIntegration
 from app.models.kunde import Kunde
+from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
@@ -28,6 +29,7 @@ __all__ = [
     "Highlight",
     "MandantIntegration",
     "Kunde",
+    "KundeZuweisung",
     "KundenportalZugang",
     "Mandant",
     "Mangel",

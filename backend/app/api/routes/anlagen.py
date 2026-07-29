@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.tag import Tag, TagAssignment
@@ -13,6 +13,7 @@ from app.models.vorgang import Vorgang
 from app.schemas.anlage import AnlageCreate, AnlageRead, AnlageUpdate
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import AnlageProfil
+from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/anlagen",
@@ -39,11 +40,14 @@ async def _require_own_kunde(session: AsyncSession, kunde_id: UUID) -> Kunde:
 @router.get("", response_model=list[AnlageRead])
 async def list_anlagen(
     kunde_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Anlage]:
     stmt = select(Anlage).order_by(Anlage.bezeichnung)
     if kunde_id:
         stmt = stmt.where(Anlage.kunde_id == kunde_id)
+    if auth.role == "techniker":
+        stmt = stmt.where(Anlage.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -82,8 +86,19 @@ async def create_anlage(
     return anlage
 
 
+async def _require_anlage_zugriff(session: AsyncSession, auth: AuthContext, anlage: Anlage) -> None:
+    if auth.role == "techniker" and anlage.kunde_id not in await assigned_kunde_ids(
+        session, auth.user_id
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
+
+
 @router.get("/by-qr/{qr_code}", response_model=AnlageRead)
-async def get_anlage_by_qr(qr_code: str, session: AsyncSession = Depends(get_db)) -> Anlage:
+async def get_anlage_by_qr(
+    qr_code: str,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Anlage:
     # Registered before "/{anlage_id}" so "by-qr" isn't swallowed as a UUID
     # path param. qr_code is globally unique (Abschnitt 4.2), but RLS still
     # scopes this SELECT to the caller's own mandant -- scanning a QR code
@@ -95,24 +110,38 @@ async def get_anlage_by_qr(qr_code: str, session: AsyncSession = Depends(get_db)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
         )
+    if auth.role == "techniker" and anlage.kunde_id not in await assigned_kunde_ids(
+        session, auth.user_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
+        )
     return anlage
 
 
 @router.get("/{anlage_id}", response_model=AnlageRead)
-async def get_anlage(anlage_id: UUID, session: AsyncSession = Depends(get_db)) -> Anlage:
+async def get_anlage(
+    anlage_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Anlage:
     anlage = await session.get(Anlage, anlage_id)
     if anlage is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
+    await _require_anlage_zugriff(session, auth, anlage)
     return anlage
 
 
 @router.get("/{anlage_id}/profil", response_model=AnlageProfil)
 async def get_anlage_profil(
-    anlage_id: UUID, session: AsyncSession = Depends(get_db)
+    anlage_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> AnlageProfil:
     anlage = await session.get(Anlage, anlage_id)
     if anlage is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
+    await _require_anlage_zugriff(session, auth, anlage)
     kunde = await session.get(Kunde, anlage.kunde_id)
 
     vorgaenge_result = await session.execute(

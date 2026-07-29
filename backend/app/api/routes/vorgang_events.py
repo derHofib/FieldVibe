@@ -14,6 +14,7 @@ from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
 from app.services.photo_service import make_thumbnail
 from app.services.vorgang_event_service import to_read_model as _to_read_model
+from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/vorgaenge/{vorgang_id}/events",
@@ -24,16 +25,26 @@ router = APIRouter(
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 
 
-async def _require_own_vorgang(session: AsyncSession, vorgang_id: UUID) -> Vorgang:
+async def _require_own_vorgang(
+    session: AsyncSession, auth: AuthContext, vorgang_id: UUID
+) -> Vorgang:
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    if auth.role == "techniker" and vorgang.kunde_id not in await assigned_kunde_ids(
+        session, auth.user_id
+    ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
 
 
 @router.get("", response_model=list[VorgangEventRead])
-async def list_events(vorgang_id: UUID, session: AsyncSession = Depends(get_db)) -> list[VorgangEventRead]:
-    await _require_own_vorgang(session, vorgang_id)
+async def list_events(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[VorgangEventRead]:
+    await _require_own_vorgang(session, auth, vorgang_id)
     result = await session.execute(
         select(VorgangEvent)
         .where(VorgangEvent.vorgang_id == vorgang_id)
@@ -50,7 +61,7 @@ async def create_event(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorgangEventRead:
-    vorgang = await _require_own_vorgang(session, vorgang_id)
+    vorgang = await _require_own_vorgang(session, auth, vorgang_id)
 
     if body.client_uuid is not None:
         # Checked up front rather than caught as an IntegrityError after the
@@ -117,7 +128,7 @@ async def upload_foto(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorgangEventRead:
-    await _require_own_vorgang(session, vorgang_id)
+    await _require_own_vorgang(session, auth, vorgang_id)
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(

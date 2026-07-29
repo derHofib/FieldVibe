@@ -61,12 +61,13 @@ async def test_techniker_cannot_create_or_update_material(client, make_mandant, 
 
 @pytest.mark.asyncio
 async def test_techniker_can_record_verwendung_and_stock_decrements(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     material = await _make_material(mandant, bestand=Decimal("10"))
     token = await login(client, techniker.email, "pw-123456")
 

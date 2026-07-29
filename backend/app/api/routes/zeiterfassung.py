@@ -12,6 +12,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZeiterfassungRead, ZeiterfassungStart
 from app.services.event_bus import event_bus
+from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/zeiterfassung",
@@ -23,11 +24,20 @@ router = APIRouter(
 @router.get("", response_model=list[ZeiterfassungRead])
 async def list_zeiterfassung(
     vorgang_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Zeiterfassung]:
     stmt = select(Zeiterfassung).order_by(Zeiterfassung.start_at.desc())
     if vorgang_id:
         stmt = stmt.where(Zeiterfassung.vorgang_id == vorgang_id)
+    if auth.role == "techniker":
+        stmt = stmt.where(
+            Zeiterfassung.vorgang_id.in_(
+                select(Vorgang.id).where(
+                    Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id))
+                )
+            )
+        )
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -55,6 +65,12 @@ async def start_timer(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if auth.role == "techniker" and vorgang.kunde_id not in await assigned_kunde_ids(
+        session, auth.user_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
         )
 
     eintrag = Zeiterfassung(

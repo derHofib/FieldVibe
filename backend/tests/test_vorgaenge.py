@@ -6,10 +6,13 @@ from tests.conftest import auth_headers, login
 
 
 @pytest.mark.asyncio
-async def test_techniker_can_create_vorgang(client, make_mandant, make_user, make_kunde):
+async def test_techniker_can_create_vorgang(
+    client, make_mandant, make_user, make_kunde, make_kunde_zuweisung
+):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     resp = await client.post(
@@ -38,7 +41,7 @@ async def test_techniker_can_create_vorgang(client, make_mandant, make_user, mak
 
 @pytest.mark.asyncio
 async def test_create_vorgang_mit_client_uuid_ist_idempotent(
-    client, make_mandant, make_user, make_kunde
+    client, make_mandant, make_user, make_kunde, make_kunde_zuweisung
 ):
     """Simuliert einen Offline-Outbox-Sync-Retry: derselbe client_uuid darf
     nie einen zweiten Vorgang anlegen, egal wie oft der Request wiederholt
@@ -46,6 +49,7 @@ async def test_create_vorgang_mit_client_uuid_ist_idempotent(
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
     client_uuid = str(uuid.uuid4())
 

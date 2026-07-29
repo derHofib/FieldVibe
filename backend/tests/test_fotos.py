@@ -15,12 +15,13 @@ def _make_test_image_bytes(size=(600, 600)) -> bytes:
 
 @pytest.mark.asyncio
 async def test_upload_foto_creates_event_with_urls(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     resp = await client.post(
@@ -39,11 +40,14 @@ async def test_upload_foto_creates_event_with_urls(
 
 
 @pytest.mark.asyncio
-async def test_upload_rejects_non_image(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_upload_rejects_non_image(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     resp = await client.post(
@@ -56,12 +60,13 @@ async def test_upload_rejects_non_image(client, make_mandant, make_user, make_ku
 
 @pytest.mark.asyncio
 async def test_uploaded_foto_appears_in_event_list(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     await client.post(

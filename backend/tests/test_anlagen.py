@@ -92,11 +92,14 @@ async def test_list_anlagen_filtered_by_kunde(
 
 
 @pytest.mark.asyncio
-async def test_qr_scan_finds_own_anlage(client, make_mandant, make_user, make_kunde, make_anlage):
+async def test_qr_scan_finds_own_anlage(
+    client, make_mandant, make_user, make_kunde, make_anlage, make_kunde_zuweisung
+):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     anlage = await make_anlage(mandant=mandant, kunde=kunde, qr_code="QR-SCAN-TEST-1")
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     resp = await client.get("/api/anlagen/by-qr/QR-SCAN-TEST-1", headers=auth_headers(token))

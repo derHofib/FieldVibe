@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.tag import Tag, TagAssignment
@@ -14,6 +14,7 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.feed import FeedCard, FeedResponse
+from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/feed",
@@ -71,6 +72,7 @@ async def get_feed(
     tag: str | None = Query(default=None, description="Tag-Label ohne '#'"),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
     stmt = select(Vorgang).order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
@@ -83,6 +85,8 @@ async def get_feed(
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
         stmt = stmt.where(Vorgang.abrechnungsart == abrechnungsart)
+    if auth.role == "techniker":
+        stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     if tag:
         stmt = stmt.where(
             Vorgang.id.in_(

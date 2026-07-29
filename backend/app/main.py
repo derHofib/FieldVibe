@@ -35,6 +35,7 @@ from app.api.routes import (
     vorgaenge,
     vorgang_events,
     zeiterfassung,
+    zuweisungen,
 )
 from app.core.config import get_settings
 from app.db.session import engine
@@ -98,6 +99,7 @@ app.include_router(material.router)
 app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
+app.include_router(zuweisungen.router)
 
 
 @app.get("/healthz")

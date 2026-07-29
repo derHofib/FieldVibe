@@ -4,11 +4,14 @@ from tests.conftest import auth_headers, login
 
 
 @pytest.mark.asyncio
-async def test_start_and_stop_timer(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_start_and_stop_timer(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     start_resp = await client.post(
@@ -41,12 +44,15 @@ async def test_start_and_stop_timer(client, make_mandant, make_user, make_kunde,
 
 
 @pytest.mark.asyncio
-async def test_cannot_start_second_timer(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_cannot_start_second_timer(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang1 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V1")
     vorgang2 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V2")
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     first = await client.post(
@@ -62,13 +68,15 @@ async def test_cannot_start_second_timer(client, make_mandant, make_user, make_k
 
 @pytest.mark.asyncio
 async def test_different_technikers_can_each_run_a_timer(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     tech1 = await make_user(mandant=mandant, role="techniker", password="pw-123456", name="Tech1")
     tech2 = await make_user(mandant=mandant, role="techniker", password="pw-123456", name="Tech2")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=tech1)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=tech2)
     token1 = await login(client, tech1.email, "pw-123456")
     token2 = await login(client, tech2.email, "pw-123456")
 
@@ -84,13 +92,15 @@ async def test_different_technikers_can_each_run_a_timer(
 
 @pytest.mark.asyncio
 async def test_cannot_stop_someone_elses_timer(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     tech1 = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     tech2 = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=tech1)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=tech2)
     token1 = await login(client, tech1.email, "pw-123456")
     token2 = await login(client, tech2.email, "pw-123456")
 
@@ -107,12 +117,13 @@ async def test_cannot_stop_someone_elses_timer(
 
 @pytest.mark.asyncio
 async def test_timer_laeuft_reflected_in_feed(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, techniker.email, "pw-123456")
 
     before = await client.get("/api/feed", headers=auth_headers(token))

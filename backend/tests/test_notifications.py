@@ -5,7 +5,7 @@ from tests.conftest import auth_headers, login
 
 @pytest.mark.asyncio
 async def test_mention_in_comment_creates_notification(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     author = await make_user(mandant=mandant, role="techniker", password="pw-123456", name="Ali")
@@ -14,6 +14,7 @@ async def test_mention_in_comment_creates_notification(
     )
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=author)
     author_token = await login(client, author.email, "pw-123456")
 
     resp = await client.post(
@@ -38,12 +39,13 @@ async def test_mention_in_comment_creates_notification(
 
 @pytest.mark.asyncio
 async def test_self_mention_does_not_notify(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     author = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=author)
     token = await login(client, author.email, "pw-123456")
 
     await client.post(
@@ -58,13 +60,14 @@ async def test_self_mention_does_not_notify(
 
 @pytest.mark.asyncio
 async def test_mark_notification_as_read(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     author = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     mentioned = await make_user(mandant=mandant, role="disponent", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=author)
     author_token = await login(client, author.email, "pw-123456")
 
     await client.post(
@@ -92,7 +95,7 @@ async def test_mark_notification_as_read(
 
 @pytest.mark.asyncio
 async def test_cannot_mark_other_users_notification_as_read(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     author = await make_user(mandant=mandant, role="techniker", password="pw-123456")
@@ -100,6 +103,7 @@ async def test_cannot_mark_other_users_notification_as_read(
     bystander = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=author)
     author_token = await login(client, author.email, "pw-123456")
 
     await client.post(
