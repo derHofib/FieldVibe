@@ -48,13 +48,24 @@ mit `docker compose up`; er läuft täglich um 03:00 UTC.
 Details, Test-Anleitung und Anmeldedaten für die Beispieldaten stehen in
 [`docs/phases/PHASE_1.md`](docs/phases/PHASE_1.md).
 
+## Produktions-Deployment
+
+Für einen eigenen vServer mit TLS (Caddy + Let's Encrypt) und
+Backup-Automatisierung siehe [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Der obige Schnellstart mit `docker-compose.override.yml` ist **nur** für
+lokale Entwicklung gedacht (offene DB/MinIO-Ports, kein TLS).
+
 ## Struktur
 
 ```
 backend/    FastAPI-App, Alembic-Migrationen, pytest-Tests
 frontend/   React-App: Super-Admin-Dashboard + Feld-App (Feed/Chat/Suche/...)
 docs/phases/  Phasen-spezifische READMEs
-docker-compose.yml            Basis-Stack (Postgres, Backend, Frontend)
-docker-compose.override.yml   Lokale Entwicklung (Hot-Reload, offene Ports)
-.env.example                  Dokumentierte Umgebungsvariablen
+docs/DEPLOYMENT.md             Produktions-Deployment (Abschnitt 15)
+scripts/backup.sh, restore.sh  Backup-Automatisierung (siehe docs/DEPLOYMENT.md)
+docker-compose.yml             Basis-Stack (Postgres, MinIO, Backend, Frontend, Worker)
+docker-compose.override.yml    Lokale Entwicklung (Hot-Reload, offene Ports)
+docker-compose.prod.yml        Produktions-Overlay (Caddy-Reverse-Proxy, TLS)
+Caddyfile                       Reverse-Proxy-Konfiguration für docker-compose.prod.yml
+.env.example                    Dokumentierte Umgebungsvariablen
 ```

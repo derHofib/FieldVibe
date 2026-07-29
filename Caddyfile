@@ -1,0 +1,24 @@
+{
+	email {$CADDY_EMAIL}
+}
+
+# Feld-App / Super-Admin-Dashboard (React-Build, ausgeliefert vom
+# "frontend"-Container via `serve`).
+{$DOMAIN_APP} {
+	reverse_proxy frontend:4173
+}
+
+# Backend-API. Eigene Subdomain statt Pfad-Praefix, damit CORS_ORIGINS im
+# Backend einfach bleibt (ein Origin pro Domain) und Anfragen 1:1 an
+# uvicorn durchgereicht werden koennen.
+{$DOMAIN_API} {
+	reverse_proxy backend:8000
+}
+
+# MinIO (Fotos). Eigene Subdomain, nicht ein Pfad unter DOMAIN_APP/API --
+# S3-Presigned-URLs signieren Host UND Pfad, ein nachtraeglich
+# strippbarer Praefix wuerde die Signatur brechen. S3_PUBLIC_URL_BASE muss
+# exakt auf diese Domain zeigen (siehe .env.example).
+{$DOMAIN_S3} {
+	reverse_proxy minio:9000
+}

@@ -24,6 +24,7 @@ frontend/dev-dist/
 postgres-data/
 minio-data/
 uploads/
+backups/
 
 # IDE / OS
 .vscode/

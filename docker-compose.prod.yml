@@ -1,0 +1,31 @@
+# Produktions-Overlay (Abschnitt 15): Caddy als einziger nach außen
+# publizierter Dienst (TLS via Let's Encrypt, automatisch erneuert).
+# Anwendung zusammen mit der Basis-Datei, NICHT mit docker-compose.override.yml
+# (das ist reine Lokalentwicklung -- Hot-Reload, offene DB/MinIO-Ports):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN_APP: ${DOMAIN_APP}
+      DOMAIN_API: ${DOMAIN_API}
+      DOMAIN_S3: ${DOMAIN_S3}
+      CADDY_EMAIL: ${CADDY_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - backend
+      - frontend
+      - minio
+
+volumes:
+  caddy-data:
+  caddy-config:
