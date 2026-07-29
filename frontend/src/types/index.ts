@@ -252,6 +252,8 @@ export interface AnlageProfil extends Anlage {
 
 // --- Dauerauftraege (wiederkehrende Auftraege) ---------------------------
 
+export type DauerauftragModus = "rollierend" | "fest";
+
 export interface Dauerauftrag {
   id: string;
   kunde_id: string;
@@ -262,6 +264,9 @@ export interface Dauerauftrag {
   leistungstyp: Leistungstyp;
   intervall_tage: number;
   naechste_faelligkeit_am: string;
+  modus: DauerauftragModus;
+  toleranz_frueh_tage: number | null;
+  toleranz_spaet_tage: number | null;
   aktiv: boolean;
   offener_vorgang_id: string | null;
   created_at: string;

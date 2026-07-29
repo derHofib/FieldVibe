@@ -49,6 +49,14 @@ export function DauerauftragDetailPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => dauerauftraegeApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dauerauftraege"] });
+      navigate("/dauerauftraege");
+    },
+  });
+
   if (isLoading || !dauerauftrag) return <p className="text-center text-slate-500">Lädt…</p>;
 
   return (
@@ -128,6 +136,24 @@ export function DauerauftragDetailPage() {
             <dd className="text-slate-800">{dauerauftrag.naechste_faelligkeit_am}</dd>
           </div>
           <div className="flex justify-between">
+            <dt className="text-slate-500">Modus</dt>
+            <dd className="text-slate-800">
+              {dauerauftrag.modus === "rollierend"
+                ? "Rollierend ab Abschluss"
+                : "Fest ab geplantem Termin"}
+            </dd>
+          </div>
+          {(dauerauftrag.toleranz_frueh_tage !== null || dauerauftrag.toleranz_spaet_tage !== null) && (
+            <div className="flex justify-between">
+              <dt className="text-slate-500">Toleranz</dt>
+              <dd className="text-slate-800">
+                {dauerauftrag.toleranz_frueh_tage !== null && `-${dauerauftrag.toleranz_frueh_tage} Tage`}
+                {dauerauftrag.toleranz_frueh_tage !== null && dauerauftrag.toleranz_spaet_tage !== null && " / "}
+                {dauerauftrag.toleranz_spaet_tage !== null && `+${dauerauftrag.toleranz_spaet_tage} Tage`}
+              </dd>
+            </div>
+          )}
+          <div className="flex justify-between">
             <dt className="text-slate-500">Leistungstyp</dt>
             <dd className="text-slate-800">{dauerauftrag.leistungstyp}</dd>
           </div>
@@ -138,13 +164,26 @@ export function DauerauftragDetailPage() {
         </dl>
 
         {kannVerwalten && (
-          <button
-            onClick={() => toggleAktivMutation.mutate()}
-            disabled={toggleAktivMutation.isPending}
-            className="btn-touch mt-3 w-full rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-          >
-            {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
-          </button>
+          <div className="mt-3 space-y-2">
+            <button
+              onClick={() => toggleAktivMutation.mutate()}
+              disabled={toggleAktivMutation.isPending}
+              className="btn-touch w-full rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+            >
+              {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm("Dauer-Auftrag wirklich löschen? Bereits erzeugte Vorgänge bleiben erhalten.")) {
+                  deleteMutation.mutate();
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              className="btn-touch w-full rounded-md border border-red-300 py-2 text-sm font-medium text-red-700 disabled:opacity-50"
+            >
+              Dauer-Auftrag löschen
+            </button>
+          </div>
         )}
       </div>
 

@@ -234,19 +234,62 @@ async def update_vorgang(
                 zyklus.offener_vorgang_id = None
 
             # Schliesst dieser Vorgang einen Dauerauftrag ab (wiederkehrender
-            # Auftrag, siehe app/models/dauerauftrag.py), naechste
-            # Faelligkeit relativ zum tatsaechlichen Abschlussdatum
-            # fortschreiben -- nicht ab einem festen Kalenderdatum, sonst
-            # wuerden liegen gebliebene Auftraege sich selbst "einholen".
+            # Auftrag, siehe app/models/dauerauftrag.py): naechste
+            # Faelligkeit fortschreiben und offener_vorgang_id leeren, damit
+            # der naechste Scheduler-Lauf ueberhaupt erst einen Folge-Vorgang
+            # anlegen darf -- solange dieser hier offen war, geschah das nie.
             dauerauftrag = (
                 await session.execute(
                     select(Dauerauftrag).where(Dauerauftrag.offener_vorgang_id == vorgang.id)
                 )
             ).scalar_one_or_none()
             if dauerauftrag is not None:
-                dauerauftrag.naechste_faelligkeit_am = vorgang.abgeschlossen_am.date() + timedelta(
-                    days=dauerauftrag.intervall_tage
+                geplante_faelligkeit = dauerauftrag.naechste_faelligkeit_am
+                abgeschlossen_datum = vorgang.abgeschlossen_am.date()
+                tage_abweichung = (abgeschlossen_datum - geplante_faelligkeit).days
+
+                if (
+                    dauerauftrag.toleranz_frueh_tage is not None
+                    and tage_abweichung < -dauerauftrag.toleranz_frueh_tage
+                ):
+                    session.add(
+                        VorgangEvent(
+                            mandant_id=vorgang.mandant_id,
+                            vorgang_id=vorgang.id,
+                            event_type="system",
+                            is_system=True,
+                            body=(
+                                f"Hinweis: {-tage_abweichung} Tage vor der geplanten "
+                                f"Fälligkeit ({geplante_faelligkeit.isoformat()}) abgeschlossen."
+                            ),
+                        )
+                    )
+                elif (
+                    dauerauftrag.toleranz_spaet_tage is not None
+                    and tage_abweichung > dauerauftrag.toleranz_spaet_tage
+                ):
+                    session.add(
+                        VorgangEvent(
+                            mandant_id=vorgang.mandant_id,
+                            vorgang_id=vorgang.id,
+                            event_type="system",
+                            is_system=True,
+                            body=(
+                                f"Hinweis: {tage_abweichung} Tage nach der geplanten "
+                                f"Fälligkeit ({geplante_faelligkeit.isoformat()}) abgeschlossen."
+                            ),
+                        )
+                    )
+
+                # "rollierend" (Default): Frist wandert mit dem tatsaechlichen
+                # Abschlussdatum, damit liegen gebliebene Auftraege sich nicht
+                # selbst einholen. "fest": Frist bleibt an einem festen
+                # Kalenderrhythmus verankert, unabhaengig davon, wann
+                # tatsaechlich abgeschlossen wurde.
+                basis = (
+                    abgeschlossen_datum if dauerauftrag.modus == "rollierend" else geplante_faelligkeit
                 )
+                dauerauftrag.naechste_faelligkeit_am = basis + timedelta(days=dauerauftrag.intervall_tage)
                 dauerauftrag.offener_vorgang_id = None
 
             # Schliesst dieser Vorgang eine aus einem angenommenen Angebot

@@ -8,14 +8,27 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, TimestampMixin
 from app.models.vorgang import ABRECHNUNGSARTEN_VORGANG, LEISTUNGSTYPEN
 
+DAUERAUFTRAG_MODI = ("rollierend", "fest")
+
 
 class Dauerauftrag(TimestampMixin, Base):
-    """Wiederkehrender Auftrag: erzeugt in festen Abstaenden (in Tagen,
-    gerechnet ab Abschluss des jeweils letzten erzeugten Vorgangs, nicht ab
-    einem festen Kalenderdatum) automatisch einen neuen Vorgang fuer denselben
-    Kunden/dieselbe Anlage -- siehe app/services/scheduler_service.py fuer
-    die Erzeugung und app/api/routes/vorgaenge.py fuer den Abschluss-Hook,
-    der naechste_faelligkeit_am fortschreibt."""
+    """Wiederkehrender Auftrag: erzeugt automatisch einen neuen Vorgang fuer
+    denselben Kunden/dieselbe Anlage, sobald der jeweils zuletzt erzeugte
+    Vorgang abgeschlossen wird -- nie waehrend ein Vorgang noch offen ist
+    (siehe app/api/routes/vorgaenge.py, Abschluss-Hook).
+
+    modus="rollierend" (Default): naechste_faelligkeit_am = tatsaechliches
+    Abschlussdatum + intervall_tage -- die Frist "wandert" mit, wenn ein
+    Vorgang frueher oder spaeter als geplant erledigt wird.
+    modus="fest": naechste_faelligkeit_am = bisherige naechste_faelligkeit_am
+    + intervall_tage -- die Frist bleibt an einem festen Kalenderrhythmus
+    verankert, unabhaengig vom tatsaechlichen Abschlussdatum.
+
+    toleranz_frueh_tage/toleranz_spaet_tage (beide optional, NULL = kein
+    Hinweis): wird ein Vorgang mehr als diese Anzahl Tage vor bzw. nach
+    seiner geplanten Faelligkeit abgeschlossen, entsteht dazu lediglich ein
+    Hinweis-Event im Vorgangs-Chat -- der Abschluss selbst wird nie
+    blockiert."""
 
     __tablename__ = "dauerauftraege"
     __table_args__ = (
@@ -26,6 +39,15 @@ class Dauerauftrag(TimestampMixin, Base):
         ),
         CheckConstraint(
             f"leistungstyp IN {LEISTUNGSTYPEN}", name="ck_dauerauftraege_leistungstyp_valid"
+        ),
+        CheckConstraint(f"modus IN {DAUERAUFTRAG_MODI}", name="ck_dauerauftraege_modus_valid"),
+        CheckConstraint(
+            "toleranz_frueh_tage IS NULL OR toleranz_frueh_tage >= 0",
+            name="ck_dauerauftraege_toleranz_frueh_positiv",
+        ),
+        CheckConstraint(
+            "toleranz_spaet_tage IS NULL OR toleranz_spaet_tage >= 0",
+            name="ck_dauerauftraege_toleranz_spaet_positiv",
         ),
     )
 
@@ -47,6 +69,9 @@ class Dauerauftrag(TimestampMixin, Base):
     leistungstyp: Mapped[str] = mapped_column(Text, nullable=False)
     intervall_tage: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     naechste_faelligkeit_am: Mapped[date] = mapped_column(Date, nullable=False)
+    modus: Mapped[str] = mapped_column(Text, nullable=False, default="rollierend")
+    toleranz_frueh_tage: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    toleranz_spaet_tage: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     offener_vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=True

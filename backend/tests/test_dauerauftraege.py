@@ -253,3 +253,229 @@ async def test_feed_zeigt_dauerauftrag_kennzeichnung(client, make_mandant, make_
     items = feed_resp.json()["items"]
     assert len(items) == 1
     assert items[0]["dauerauftrag_id"] == str(auftrag.id)
+
+
+@pytest.mark.asyncio
+async def test_modus_fest_schreibt_faelligkeit_ab_geplantem_termin_fort(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """modus="fest": die naechste Faelligkeit haengt am urspruenglich
+    geplanten Termin, nicht am tatsaechlichen Abschlussdatum -- der
+    Kalenderrhythmus bleibt fest, auch wenn frueher oder spaeter
+    abgeschlossen wird."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    geplante_faelligkeit = date.today() - timedelta(days=3)
+
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    async with system_session() as session:
+        auftrag = Dauerauftrag(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            titel="Feste Wartung",
+            abrechnungsart="wartungsvertrag",
+            leistungstyp="wartung",
+            intervall_tage=7,
+            naechste_faelligkeit_am=geplante_faelligkeit,
+            modus="fest",
+            offener_vorgang_id=vorgang.id,
+        )
+        session.add(auftrag)
+        await session.flush()
+        auftrag_id = auftrag.id
+
+    token = await login(client, admin.email, "pw-123456")
+    await client.patch(
+        f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token), json={"status": "abgeschlossen"}
+    )
+
+    detail_resp = await client.get(f"/api/dauerauftraege/{auftrag_id}", headers=auth_headers(token))
+    detail = detail_resp.json()
+    assert detail["naechste_faelligkeit_am"] == (geplante_faelligkeit + timedelta(days=7)).isoformat()
+    assert detail["offener_vorgang_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_zu_frueher_abschluss_erzeugt_hinweis_event(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    geplante_faelligkeit = date.today() + timedelta(days=10)
+
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    async with system_session() as session:
+        auftrag = Dauerauftrag(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            titel="Toleranz-Test frueh",
+            abrechnungsart="wartungsvertrag",
+            leistungstyp="wartung",
+            intervall_tage=7,
+            naechste_faelligkeit_am=geplante_faelligkeit,
+            toleranz_frueh_tage=3,
+            offener_vorgang_id=vorgang.id,
+        )
+        session.add(auftrag)
+        await session.flush()
+
+    token = await login(client, admin.email, "pw-123456")
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token), json={"status": "abgeschlossen"}
+    )
+    assert resp.status_code == 200
+
+    events_resp = await client.get(
+        f"/api/vorgaenge/{vorgang.id}/events", headers=auth_headers(token)
+    )
+    hinweise = [e for e in events_resp.json() if "zu frueh" in (e["body"] or "").lower() or "vor der geplanten" in (e["body"] or "")]
+    assert len(hinweise) == 1
+
+
+@pytest.mark.asyncio
+async def test_zu_spaeter_abschluss_erzeugt_hinweis_event(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    geplante_faelligkeit = date.today() - timedelta(days=10)
+
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    async with system_session() as session:
+        auftrag = Dauerauftrag(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            titel="Toleranz-Test spaet",
+            abrechnungsart="wartungsvertrag",
+            leistungstyp="wartung",
+            intervall_tage=7,
+            naechste_faelligkeit_am=geplante_faelligkeit,
+            toleranz_spaet_tage=3,
+            offener_vorgang_id=vorgang.id,
+        )
+        session.add(auftrag)
+        await session.flush()
+
+    token = await login(client, admin.email, "pw-123456")
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token), json={"status": "abgeschlossen"}
+    )
+    assert resp.status_code == 200
+
+    events_resp = await client.get(
+        f"/api/vorgaenge/{vorgang.id}/events", headers=auth_headers(token)
+    )
+    hinweise = [e for e in events_resp.json() if "nach der geplanten" in (e["body"] or "")]
+    assert len(hinweise) == 1
+
+
+@pytest.mark.asyncio
+async def test_innerhalb_toleranz_kein_hinweis_event(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    async with system_session() as session:
+        auftrag = Dauerauftrag(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            titel="Innerhalb Toleranz",
+            abrechnungsart="wartungsvertrag",
+            leistungstyp="wartung",
+            intervall_tage=7,
+            naechste_faelligkeit_am=date.today(),
+            toleranz_frueh_tage=2,
+            toleranz_spaet_tage=2,
+            offener_vorgang_id=vorgang.id,
+        )
+        session.add(auftrag)
+        await session.flush()
+
+    token = await login(client, admin.email, "pw-123456")
+    await client.patch(
+        f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token), json={"status": "abgeschlossen"}
+    )
+
+    events_resp = await client.get(
+        f"/api/vorgaenge/{vorgang.id}/events", headers=auth_headers(token)
+    )
+    hinweise = [
+        e
+        for e in events_resp.json()
+        if "geplanten" in (e["body"] or "")
+    ]
+    assert hinweise == []
+
+
+@pytest.mark.asyncio
+async def test_dauerauftrag_loeschen(client, make_mandant, make_user, make_kunde, make_vorgang):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    async with system_session() as session:
+        auftrag = Dauerauftrag(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            titel="Zu loeschen",
+            abrechnungsart="wartungsvertrag",
+            leistungstyp="wartung",
+            intervall_tage=7,
+            naechste_faelligkeit_am=date.today(),
+            offener_vorgang_id=vorgang.id,
+        )
+        session.add(auftrag)
+        await session.flush()
+        auftrag_id = auftrag.id
+        vorgang.dauerauftrag_id = auftrag_id
+        await session.flush()
+
+    token = await login(client, admin.email, "pw-123456")
+    delete_resp = await client.delete(f"/api/dauerauftraege/{auftrag_id}", headers=auth_headers(token))
+    assert delete_resp.status_code == 204
+
+    get_resp = await client.get(f"/api/dauerauftraege/{auftrag_id}", headers=auth_headers(token))
+    assert get_resp.status_code == 404
+
+    # Der Vorgang selbst bleibt bestehen, verliert nur die Rueckverknuepfung.
+    vorgang_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
+    assert vorgang_resp.status_code == 200
+    assert vorgang_resp.json()["dauerauftrag_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_techniker_darf_dauerauftrag_nicht_loeschen(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    admin_token = await login(client, admin.email, "pw-123456")
+
+    create_resp = await client.post(
+        "/api/dauerauftraege",
+        headers=auth_headers(admin_token),
+        json={
+            "kunde_id": str(kunde.id),
+            "titel": "Test",
+            "abrechnungsart": "wartungsvertrag",
+            "leistungstyp": "wartung",
+            "intervall_tage": 7,
+            "naechste_faelligkeit_am": date.today().isoformat(),
+        },
+    )
+    auftrag_id = create_resp.json()["id"]
+
+    techniker_token = await login(client, techniker.email, "pw-123456")
+    resp = await client.delete(
+        f"/api/dauerauftraege/{auftrag_id}", headers=auth_headers(techniker_token)
+    )
+    assert resp.status_code == 403

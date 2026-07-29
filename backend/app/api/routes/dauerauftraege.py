@@ -78,6 +78,9 @@ async def create_dauerauftrag(
         leistungstyp=body.leistungstyp,
         intervall_tage=body.intervall_tage,
         naechste_faelligkeit_am=body.naechste_faelligkeit_am,
+        modus=body.modus,
+        toleranz_frueh_tage=body.toleranz_frueh_tage,
+        toleranz_spaet_tage=body.toleranz_spaet_tage,
     )
     session.add(dauerauftrag)
     await session.flush()
@@ -151,3 +154,23 @@ async def update_dauerauftrag(
     if changes:
         await session.refresh(dauerauftrag)
     return dauerauftrag
+
+
+@router.delete(
+    "/{dauerauftrag_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def delete_dauerauftrag(
+    dauerauftrag_id: UUID, session: AsyncSession = Depends(get_db)
+) -> None:
+    # Bereits erzeugte Vorgaenge bleiben unangetastet -- sie verlieren nur
+    # ihre dauerauftrag_id (ON DELETE SET NULL, siehe Migration 0013), sind
+    # aber ganz normale Vorgaenge und werden nicht geloescht.
+    dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
+    if dauerauftrag is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
+        )
+    await session.delete(dauerauftrag)
+    await session.flush()

@@ -1,9 +1,12 @@
 from datetime import date, datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.vorgang import Leistungstyp, VorgangAbrechnungsart, VorgangRead
+
+DauerauftragModus = Literal["rollierend", "fest"]
 
 
 class DauerauftragCreate(BaseModel):
@@ -15,6 +18,9 @@ class DauerauftragCreate(BaseModel):
     leistungstyp: Leistungstyp
     intervall_tage: int = Field(gt=0)
     naechste_faelligkeit_am: date
+    modus: DauerauftragModus = "rollierend"
+    toleranz_frueh_tage: int | None = Field(default=None, ge=0)
+    toleranz_spaet_tage: int | None = Field(default=None, ge=0)
 
 
 class DauerauftragUpdate(BaseModel):
@@ -25,6 +31,9 @@ class DauerauftragUpdate(BaseModel):
     leistungstyp: Leistungstyp | None = None
     intervall_tage: int | None = Field(default=None, gt=0)
     naechste_faelligkeit_am: date | None = None
+    modus: DauerauftragModus | None = None
+    toleranz_frueh_tage: int | None = Field(default=None, ge=0)
+    toleranz_spaet_tage: int | None = Field(default=None, ge=0)
     aktiv: bool | None = None
 
 
@@ -40,6 +49,9 @@ class DauerauftragRead(BaseModel):
     leistungstyp: Leistungstyp
     intervall_tage: int
     naechste_faelligkeit_am: date
+    modus: DauerauftragModus
+    toleranz_frueh_tage: int | None
+    toleranz_spaet_tage: int | None
     aktiv: bool
     offener_vorgang_id: UUID | None
     created_at: datetime

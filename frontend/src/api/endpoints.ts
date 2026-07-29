@@ -10,6 +10,7 @@ import type {
   CurrentUser,
   Dauerauftrag,
   DauerauftragMitVerlauf,
+  DauerauftragModus,
   FeedResponse,
   Highlight,
   ImpersonateResponse,
@@ -157,6 +158,9 @@ export const dauerauftraegeApi = {
     leistungstyp: string;
     intervall_tage: number;
     naechste_faelligkeit_am: string;
+    modus?: DauerauftragModus;
+    toleranz_frueh_tage?: number;
+    toleranz_spaet_tage?: number;
   }) => apiFetch<Dauerauftrag>("/api/dauerauftraege", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
@@ -168,9 +172,13 @@ export const dauerauftraegeApi = {
       leistungstyp: string;
       intervall_tage: number;
       naechste_faelligkeit_am: string;
+      modus: DauerauftragModus;
+      toleranz_frueh_tage: number | null;
+      toleranz_spaet_tage: number | null;
       aktiv: boolean;
     }>
   ) => apiFetch<Dauerauftrag>(`/api/dauerauftraege/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  delete: (id: string) => apiFetch<void>(`/api/dauerauftraege/${id}`, { method: "DELETE" }),
 };
 
 export const vorgaengeApi = {

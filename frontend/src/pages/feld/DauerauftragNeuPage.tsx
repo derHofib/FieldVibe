@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
-import type { Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import type { DauerauftragModus, Leistungstyp, VorgangAbrechnungsart } from "../../types";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "wartung", label: "Wartung" },
@@ -38,6 +38,9 @@ export function DauerauftragNeuPage() {
   const [naechsteFaelligkeit, setNaechsteFaelligkeit] = useState(
     new Date().toISOString().slice(0, 10)
   );
+  const [modus, setModus] = useState<DauerauftragModus>("rollierend");
+  const [toleranzFrueh, setToleranzFrueh] = useState("");
+  const [toleranzSpaet, setToleranzSpaet] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
@@ -58,6 +61,9 @@ export function DauerauftragNeuPage() {
         leistungstyp,
         intervall_tage: Number(intervallTage),
         naechste_faelligkeit_am: naechsteFaelligkeit,
+        modus,
+        toleranz_frueh_tage: toleranzFrueh ? Number(toleranzFrueh) : undefined,
+        toleranz_spaet_tage: toleranzSpaet ? Number(toleranzSpaet) : undefined,
       }),
     onSuccess: (dauerauftrag) => navigate(`/dauerauftraege/${dauerauftrag.id}`),
     onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
@@ -209,6 +215,60 @@ export function DauerauftragNeuPage() {
             />
           </div>
         </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">
+            Wann wird die nächste Fälligkeit berechnet?
+          </label>
+          <select
+            value={modus}
+            onChange={(e) => setModus(e.target.value as DauerauftragModus)}
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+          >
+            <option value="rollierend">
+              Rollierend -- ab dem tatsächlichen Abschlussdatum (empfohlen)
+            </option>
+            <option value="fest">Fest -- ab dem ursprünglich geplanten Termin</option>
+          </select>
+          <p className="mt-1 text-xs text-slate-400">
+            {modus === "rollierend"
+              ? "Wird ein Vorgang früher oder später abgeschlossen, verschiebt sich die nächste Fälligkeit entsprechend mit."
+              : "Der Kalenderrhythmus bleibt fest, unabhängig davon, wann tatsächlich abgeschlossen wird."}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Toleranz zu früh (Tage)
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={toleranzFrueh}
+              onChange={(e) => setToleranzFrueh(e.target.value)}
+              placeholder="kein Limit"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Toleranz zu spät (Tage)
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={toleranzSpaet}
+              onChange={(e) => setToleranzSpaet(e.target.value)}
+              placeholder="kein Limit"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+          </div>
+        </div>
+        <p className="-mt-2 text-xs text-slate-400">
+          Wird außerhalb dieser Toleranz abgeschlossen, entsteht dazu nur ein Hinweis im
+          Vorgangs-Chat -- der Abschluss selbst wird nie blockiert.
+        </p>
 
         {error && <p className="text-sm text-red-700">{error}</p>}
 
