@@ -8,10 +8,12 @@ import { LoginPage } from "./pages/LoginPage";
 import { MandantenPage } from "./pages/MandantenPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
+import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { FeedPage } from "./pages/feld/FeedPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
+import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { SearchPage } from "./pages/feld/SearchPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
@@ -57,6 +59,8 @@ export function App() {
           <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
           <Route path="/kunden/:id" element={<KundeProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
+          <Route path="/dispo" element={<DispoBoardPage />} />
+          <Route path="/pruefmittel" element={<PruefmittelPage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       )}

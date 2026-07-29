@@ -13,10 +13,13 @@ from app.api.routes import (
     kunden,
     mandanten,
     notifications,
+    pruefmittel,
+    pruefzyklen,
     search,
     stories,
     stream,
     tags,
+    termine,
     users,
     vertraege,
     vorgaenge,
@@ -25,6 +28,7 @@ from app.api.routes import (
 )
 from app.core.config import get_settings
 from app.db.session import engine
+from app.services.scheduler_service import get_last_scheduler_run
 from app.services.storage_service import ensure_bucket
 
 settings = get_settings()
@@ -40,9 +44,9 @@ app = FastAPI(
     title="SocialCRM API",
     description=(
         "Mandantenfähiges Auftragsmanagement- und CRM-System für den "
-        "Elektro-Handwerksbetrieb – Phase 4: Feld-Tauglichkeit."
+        "Elektro-Handwerksbetrieb – Phase 5: Steuerung."
     ),
-    version="0.4.0",
+    version="0.5.0",
     lifespan=lifespan,
 )
 
@@ -71,6 +75,9 @@ app.include_router(search.router)
 app.include_router(notifications.router)
 app.include_router(stream.router)
 app.include_router(zeiterfassung.router)
+app.include_router(termine.router)
+app.include_router(pruefzyklen.router)
+app.include_router(pruefmittel.router)
 
 
 @app.get("/healthz")
@@ -78,4 +85,10 @@ async def healthz() -> dict:
     async with engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
     await ensure_bucket()
-    return {"status": "ok"}
+    letzter_scheduler_lauf = await get_last_scheduler_run()
+    return {
+        "status": "ok",
+        "scheduler_letzter_lauf": letzter_scheduler_lauf.isoformat()
+        if letzter_scheduler_lauf
+        else None,
+    }

@@ -5,16 +5,18 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import {
   kundenApi,
+  termineApi,
   usersApi,
   vorgangEventsApi,
   vorgaengeApi,
   zeiterfassungApi,
 } from "../../api/endpoints";
 import { MentionText } from "../../components/MentionText";
+import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
 import { getOutboxItems, queueFoto, queueKommentar } from "../../offline/outbox";
 import type { OutboxItem } from "../../offline/db";
-import type { VorgangEvent, VorgangStatus } from "../../types";
+import type { TerminWarnung, VorgangEvent, VorgangStatus } from "../../types";
 
 const STATUS_OPTIONS: VorgangStatus[] = [
   "neu",
@@ -104,10 +106,16 @@ function OutboxBubble({ item }: { item: OutboxItem }) {
   );
 }
 
+function toLocalInputValue(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function VorgangDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [comment, setComment] = useState("");
@@ -115,6 +123,15 @@ export function VorgangDetailPage() {
   const [kundenansicht, setKundenansicht] = useState(false);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [taetigkeit, setTaetigkeit] = useState("");
+  const [showTerminForm, setShowTerminForm] = useState(false);
+  const [terminWarnungen, setTerminWarnungen] = useState<TerminWarnung[]>([]);
+  const [terminTechnikerId, setTerminTechnikerId] = useState("");
+  const [terminTitel, setTerminTitel] = useState("");
+  const [terminStart, setTerminStart] = useState("");
+  const [terminEnde, setTerminEnde] = useState("");
+
+  const kannDisponieren =
+    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
 
   const { data: vorgang } = useQuery({
     queryKey: ["vorgang", id],
@@ -161,6 +178,28 @@ export function VorgangDetailPage() {
   const { data: laufenderTimer } = useQuery({
     queryKey: ["zeiterfassung-laufend"],
     queryFn: zeiterfassungApi.laufend,
+  });
+  const { data: termine } = useQuery({
+    queryKey: ["termine", "vorgang", id],
+    queryFn: () => termineApi.list({ vorgang_id: id! }),
+    enabled: !!id,
+  });
+
+  const terminMutation = useMutation({
+    mutationFn: () =>
+      termineApi.create({
+        vorgang_id: id!,
+        techniker_id: terminTechnikerId,
+        titel: terminTitel,
+        start_at: new Date(terminStart).toISOString(),
+        ende_at: new Date(terminEnde).toISOString(),
+      }),
+    onSuccess: (result) => {
+      setTerminWarnungen(result.warnungen);
+      setShowTerminForm(false);
+      setTerminTitel("");
+      queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] });
+    },
   });
 
   const statusMutation = useMutation({
@@ -314,6 +353,112 @@ export function VorgangDetailPage() {
             >
               Zeit starten
             </button>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg bg-white p-3 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-500">Termine</h2>
+          {kannDisponieren && (
+            <button
+              onClick={() => {
+                setShowTerminForm((v) => !v);
+                if (!terminStart) {
+                  const start = new Date();
+                  start.setMinutes(0, 0, 0);
+                  start.setHours(start.getHours() + 1);
+                  const ende = new Date(start.getTime() + 60 * 60 * 1000);
+                  setTerminStart(toLocalInputValue(start));
+                  setTerminEnde(toLocalInputValue(ende));
+                  setTerminTechnikerId(users?.find((u) => u.role === "techniker")?.id ?? "");
+                }
+              }}
+              className="btn-touch text-xs font-medium text-blue-700"
+            >
+              {showTerminForm ? "Abbrechen" : "+ Termin planen"}
+            </button>
+          )}
+        </div>
+
+        {terminWarnungen.length > 0 && (
+          <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+            {terminWarnungen.map((w, i) => (
+              <p key={i}>⚠️ {w.meldung}</p>
+            ))}
+          </div>
+        )}
+
+        {showTerminForm && (
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2">
+            <input
+              value={terminTitel}
+              onChange={(e) => setTerminTitel(e.target.value)}
+              placeholder="Titel"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <select
+              value={terminTechnikerId}
+              onChange={(e) => setTerminTechnikerId(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              {(users ?? [])
+                .filter((u) => u.role === "techniker")
+                .map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+            </select>
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={terminStart}
+                onChange={(e) => setTerminStart(e.target.value)}
+                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+              <input
+                type="datetime-local"
+                value={terminEnde}
+                onChange={(e) => setTerminEnde(e.target.value)}
+                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <button
+              disabled={!terminTitel || !terminTechnikerId || terminMutation.isPending}
+              onClick={() => terminMutation.mutate()}
+              className="btn-touch w-full rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Anlegen
+            </button>
+          </div>
+        )}
+
+        {(termine ?? []).length === 0 ? (
+          <p className="text-sm text-slate-400">Keine Termine geplant.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {termine!.map((t) => (
+              <div key={t.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm">
+                <div>
+                  <div className="font-medium text-slate-700">{t.titel}</div>
+                  <div className="text-xs text-slate-400">
+                    {new Date(t.start_at).toLocaleString("de-DE", {
+                      timeZone: "Europe/Berlin",
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
+                  </div>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    t.status === "abgesagt" ? "bg-slate-200 text-slate-500" : "bg-blue-50 text-blue-700"
+                  }`}
+                >
+                  {t.status}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>

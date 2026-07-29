@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { NavLink } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
+import { useAuth } from "../context/AuthContext";
 
 const items = [
   { to: "/feed", label: "Feed", icon: "📋" },
@@ -11,16 +12,26 @@ const items = [
   { to: "/profil", label: "Profil", icon: "👤" },
 ];
 
+const dispoItem = { to: "/dispo", label: "Dispo", icon: "📅" };
+
 export function BottomNav() {
+  const { currentUser } = useAuth();
   const { data: unread } = useQuery({
     queryKey: ["notifications", "unread"],
     queryFn: () => notificationsApi.list(true),
   });
   const unreadCount = unread?.length ?? 0;
 
+  // Dispo-Board ist Disposition, nicht Kommunikation -- bewusst kein
+  // Feed-Ersatz, aber trotzdem ueber die Hauptnavigation erreichbar statt
+  // in einem versteckten Menue, da es fuer Disponent/Admin Kernarbeit ist.
+  const canDisponieren =
+    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+  const sichtbareItems = canDisponieren ? [...items, dispoItem] : items;
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white">
-      {items.map((item) => (
+      {sichtbareItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

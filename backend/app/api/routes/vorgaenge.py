@@ -9,10 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.pruefzyklus import Pruefzyklus
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang import VorgangCreate, VorgangRead, VorgangUpdate
+from app.services.date_utils import add_months
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 
@@ -163,6 +165,23 @@ async def update_vorgang(
                 payload={"von": alter_status, "nach": changes["status"]},
             )
         )
+        if changes["status"] == "abgeschlossen":
+            # Schliesst dieser Vorgang einen vom Pruefzyklen-Scheduler
+            # angelegten Auftrag ab, gilt die Pruefung als durchgefuehrt:
+            # Faelligkeit fortschreiben, offener_vorgang_id leeren -- sonst
+            # wuerde der naechste Scheduler-Lauf sofort einen neuen Vorgang
+            # fuer denselben (jetzt erledigten) Zyklus anlegen.
+            zyklus = (
+                await session.execute(
+                    select(Pruefzyklus).where(Pruefzyklus.offener_vorgang_id == vorgang.id)
+                )
+            ).scalar_one_or_none()
+            if zyklus is not None:
+                zyklus.letzte_pruefung_am = vorgang.abgeschlossen_am.date()
+                zyklus.naechste_pruefung_am = add_months(
+                    zyklus.letzte_pruefung_am, zyklus.intervall_monate
+                )
+                zyklus.offener_vorgang_id = None
 
     await session.flush()
     if changes:

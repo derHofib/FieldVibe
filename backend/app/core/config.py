@@ -37,6 +37,17 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
     s3_bucket_fotos: str = "socialcrm-fotos"
 
+    # --- Dispo (Abschnitt 4.5): Fahrzeit-Heuristik per Luftlinie ---------
+    # Kein Routendienst -- eine grobe Schaetzung (Haversine-Distanz durch
+    # eine angenommene Durchschnittsgeschwindigkeit) reicht, um Techniker
+    # vor offensichtlich zu knapp geplanten Terminen zu warnen (Warnung,
+    # kein Hard-Block).
+    dispo_puffer_minuten: int = 30
+    dispo_geschwindigkeit_kmh: float = 40.0
+
+    # --- Pruefzyklen-Scheduler (Abschnitt 4.5/12, Phase 5) ---------------
+    pruefzyklus_vorlauf_tage: int = 30
+
 
 @lru_cache
 def get_settings() -> Settings:

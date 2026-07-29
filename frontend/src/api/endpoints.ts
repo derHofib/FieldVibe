@@ -10,9 +10,13 @@ import type {
   KundeProfil,
   Mandant,
   NotificationEntry,
+  Pruefmittel,
+  Pruefzyklus,
   SearchResponse,
   StoriesResponse,
   Tag,
+  Termin,
+  TerminCreateResult,
   TokenPair,
   User,
   Vorgang,
@@ -111,6 +115,10 @@ export const anlagenApi = {
 };
 
 export const vorgaengeApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<Vorgang[]>(`/api/vorgaenge${qs ? `?${qs}` : ""}`);
+  },
   get: (id: string) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`),
   create: (body: {
     kunde_id: string;
@@ -166,6 +174,75 @@ export const zeiterfassungApi = {
     apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/stop`, { method: "POST" }),
   list: (vorgangId: string) =>
     apiFetch<Zeiterfassung[]>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
+};
+
+export const termineApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<Termin[]>(`/api/termine${qs ? `?${qs}` : ""}`);
+  },
+  create: (body: {
+    vorgang_id: string;
+    techniker_id: string;
+    titel: string;
+    start_at: string;
+    ende_at: string;
+    notiz?: string;
+  }) => apiFetch<TerminCreateResult>("/api/termine", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<Pick<Termin, "titel" | "techniker_id" | "start_at" | "ende_at" | "status" | "notiz">>,
+  ) =>
+    apiFetch<TerminCreateResult>(`/api/termine/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const pruefzyklenApi = {
+  list: (anlageId?: string) =>
+    apiFetch<Pruefzyklus[]>(`/api/pruefzyklen${anlageId ? `?anlage_id=${anlageId}` : ""}`),
+  create: (body: {
+    anlage_id: string;
+    bezeichnung: string;
+    intervall_monate: number;
+    letzte_pruefung_am?: string;
+  }) => apiFetch<Pruefzyklus>("/api/pruefzyklen", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<
+      Pick<Pruefzyklus, "bezeichnung" | "intervall_monate" | "letzte_pruefung_am" | "aktiv">
+    >,
+  ) =>
+    apiFetch<Pruefzyklus>(`/api/pruefzyklen/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const pruefmittelApi = {
+  list: (zugewiesenAn?: string) =>
+    apiFetch<Pruefmittel[]>(`/api/pruefmittel${zugewiesenAn ? `?zugewiesen_an=${zugewiesenAn}` : ""}`),
+  create: (body: {
+    bezeichnung: string;
+    seriennummer?: string;
+    zugewiesen_an?: string | null;
+    kalibrierintervall_monate: number;
+    letzte_kalibrierung_am?: string;
+  }) => apiFetch<Pruefmittel>("/api/pruefmittel", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<
+      Pick<
+        Pruefmittel,
+        "bezeichnung" | "seriennummer" | "zugewiesen_an" | "kalibrierintervall_monate" | "letzte_kalibrierung_am" | "status"
+      >
+    >,
+  ) =>
+    apiFetch<Pruefmittel>(`/api/pruefmittel/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 };
 
 export const tagsApi = {

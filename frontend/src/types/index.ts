@@ -254,3 +254,60 @@ export interface Zeiterfassung {
   created_at: string;
   updated_at: string;
 }
+
+// --- Steuerung (Phase 5) --------------------------------------------------
+
+export type TerminStatus = "geplant" | "bestaetigt" | "abgeschlossen" | "abgesagt";
+
+export interface Termin {
+  id: string;
+  vorgang_id: string;
+  techniker_id: string;
+  erstellt_von: string;
+  titel: string;
+  start_at: string;
+  ende_at: string;
+  status: TerminStatus;
+  notiz: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TerminWarnung {
+  typ: "ueberschneidung" | "fahrzeit";
+  meldung: string;
+  anderer_termin_id: string;
+}
+
+export interface TerminCreateResult {
+  termin: Termin;
+  warnungen: TerminWarnung[];
+}
+
+export interface Pruefzyklus {
+  id: string;
+  anlage_id: string;
+  bezeichnung: string;
+  intervall_monate: number;
+  letzte_pruefung_am: string | null;
+  naechste_pruefung_am: string;
+  aktiv: boolean;
+  offener_vorgang_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PruefmittelStatus = "aktiv" | "defekt" | "ausser_betrieb";
+
+export interface Pruefmittel {
+  id: string;
+  bezeichnung: string;
+  seriennummer: string | null;
+  zugewiesen_an: string | null;
+  kalibrierintervall_monate: number;
+  letzte_kalibrierung_am: string | null;
+  naechste_kalibrierung_am: string;
+  status: PruefmittelStatus;
+  created_at: string;
+  updated_at: string;
+}

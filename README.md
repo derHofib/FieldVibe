@@ -15,7 +15,7 @@ Stand:
 | 2 – Fachlicher Kern | ✅ siehe [`docs/phases/PHASE_2.md`](docs/phases/PHASE_2.md) |
 | 3 – Social-UX | ✅ siehe [`docs/phases/PHASE_3.md`](docs/phases/PHASE_3.md) |
 | 4 – Feld-Tauglichkeit | ✅ siehe [`docs/phases/PHASE_4.md`](docs/phases/PHASE_4.md) |
-| 5 – Steuerung | offen |
+| 5 – Steuerung | ✅ siehe [`docs/phases/PHASE_5.md`](docs/phases/PHASE_5.md) |
 | 6 – Geschäftsprozesse | offen |
 | 7 – Ausbau | offen |
 
@@ -38,6 +38,9 @@ docker compose up -d --build
 docker compose run --rm backend alembic upgrade head
 docker compose run --rm backend python -m app.seed   # Beispieldaten
 ```
+
+Der `worker`-Container (Prüfzyklen-Scheduler, Phase 5) startet automatisch
+mit `docker compose up`; er läuft täglich um 03:00 UTC.
 
 - Frontend: http://localhost:5173
 - Backend/Swagger: http://localhost:8000/docs
