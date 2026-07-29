@@ -1,0 +1,22 @@
+# IP-basiertes Deployment ohne eigene Domain -- nur fuer Tests oder ein
+# internes Netz gedacht, siehe docs/DEPLOYMENT.md ("Ohne Domain"). Kein
+# Caddy, kein TLS: Backend, Frontend und MinIO werden direkt auf dem
+# Server-Port veroeffentlicht. Anfragen laufen unverschluesselt -- nicht
+# fuer echten Betrieb mit Kundendaten ueber das offene Internet gedacht.
+#
+# Anwendung ANSTELLE von docker-compose.prod.yml (nicht zusammen mit ihr):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ip.yml up -d --build
+#
+services:
+  backend:
+    ports:
+      - "8000:8000"
+
+  frontend:
+    ports:
+      - "4173:4173"
+
+  minio:
+    ports:
+      - "9000:9000"

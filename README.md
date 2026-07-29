@@ -81,6 +81,7 @@ scripts/backup.sh, restore.sh  Backup-Automatisierung (siehe docs/DEPLOYMENT.md)
 docker-compose.yml             Basis-Stack (Postgres, MinIO, Backend, Frontend, Worker)
 docker-compose.override.yml    Lokale Entwicklung (Hot-Reload, offene Ports)
 docker-compose.prod.yml        Produktions-Overlay (Caddy-Reverse-Proxy, TLS)
+docker-compose.ip.yml          Produktions-Overlay ohne Domain (kein TLS, siehe docs/DEPLOYMENT.md)
 Caddyfile                       Reverse-Proxy-Konfiguration für docker-compose.prod.yml
 .env.example                    Dokumentierte Umgebungsvariablen
 ```

@@ -27,9 +27,10 @@ brechen (siehe Kommentar in `app/services/storage_service.py`).
 
 Führt die Schritte 1–5 unten (bis auf DNS/Firewall-Freigabe auf
 Provider-Seite) automatisiert aus: Docker installieren, `.env` mit
-generierten Secrets und abgefragten Domains anlegen, Stack starten,
-Migrationen anwenden, ersten Superadmin anlegen, Backup-Cron einrichten.
-Idempotent – kann später erneut ausgeführt werden, um zu aktualisieren.
+generierten Secrets und abgefragten Domains (oder Server-IP, siehe unten)
+anlegen, Stack starten, Migrationen anwenden, ersten Superadmin anlegen,
+Backup-Cron einrichten. Idempotent – kann später erneut ausgeführt werden,
+um zu aktualisieren.
 
 ```bash
 git clone https://github.com/derHofib/SocialCRM.git
@@ -37,11 +38,55 @@ cd SocialCRM
 sudo ./scripts/deploy.sh
 ```
 
-Setzt eine interaktive Shell voraus (fragt Domains und die
+Setzt eine interaktive Shell voraus (fragt Domains/IP und die
 Admin-Zugangsdaten ab) – **nicht** per `curl | bash` ausführen, sondern
 das Repo erst klonen. Die restlichen Abschnitte dieses Dokuments erklären
 dieselben Schritte manuell, falls du mehr Kontrolle brauchst oder etwas
 schiefgeht.
+
+## Ohne eigene Domain
+
+Drei Wege, wenn (noch) keine Domain vorhanden ist:
+
+1. **Kostenlose IP-Domain** (z. B. [sslip.io](https://sslip.io)): bei
+   Server-IP `203.0.113.5` funktionieren `app.203.0.113.5.sslip.io`,
+   `api.203.0.113.5.sslip.io`, `s3.203.0.113.5.sslip.io` als ganz normale
+   DNS-Namen, ohne dass DNS-Einträge angelegt werden müssen – Let's
+   Encrypt stellt dafür ein echtes Zertifikat aus. In `scripts/deploy.sh`
+   (oder manuell unten) einfach diese Namen als Domains eintragen.
+   Nachteil: bindet die Adresse an diese eine Server-IP.
+2. **Echte Domain kaufen** (z. B. bei INWX, Namecheap, Cloudflare) – für
+   dauerhaften Betrieb die sauberste Lösung, wenige Euro pro Jahr.
+3. **Nur über die Server-IP, ohne TLS** – schnellster Weg, aber
+   **unverschlüsselt**: Passwörter und Kundendaten laufen im Klartext
+   übers Netz. Nur für einen kurzen Test oder ein abgeschottetes internes
+   Netz vertretbar, nicht für echten Betrieb mit Kundendaten über das
+   offene Internet.
+
+Für Weg 3 gibt es `docker-compose.ip.yml` als Ersatz für
+`docker-compose.prod.yml` (kein Caddy, Backend/Frontend/MinIO werden
+direkt auf dem Server-Port veröffentlicht):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ip.yml up -d --build
+```
+
+Dabei in der `.env` setzen (Server-IP statt der Domains):
+- `CORS_ORIGINS=["http://<server-ip>:4173"]`
+- `VITE_API_BASE_URL=http://<server-ip>:8000`
+- `S3_PUBLIC_URL_BASE=http://<server-ip>:9000`
+- `FRONTEND_BASE_URL=http://<server-ip>:4173`
+
+Firewall dann auf 22, 4173, 8000 und 9000 statt 22/80/443 begrenzen –
+idealerweise zusätzlich auf bestimmte Quell-IPs, statt für das ganze
+Internet zu öffnen:
+
+```bash
+ufw allow from <deine-ip> to any port 4173,8000,9000 proto tcp
+```
+
+`scripts/deploy.sh` fragt das beim ersten Lauf ab (Betriebsart "nur
+Server-IP") und übernimmt genau diese Schritte automatisch.
 
 ## 1. Voraussetzungen
 
