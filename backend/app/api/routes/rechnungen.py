@@ -8,12 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
-from app.models.rechnung import Rechnung
+from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
-from app.schemas.rechnung import RechnungCreate, RechnungRead, RechnungUpdate
+from app.schemas.rechnung import RechnungCreate, RechnungPositionCreate, RechnungRead, RechnungUpdate
 from app.services.numbering_service import next_rechnungsnummer
 from app.services.pdf_service import generate_rechnung_pdf
+from app.services.rechnung_service import positionen_fuer, to_read_model
 
 router = APIRouter(
     prefix="/api/rechnungen",
@@ -33,7 +34,7 @@ async def list_rechnungen(
     vorgang_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     session: AsyncSession = Depends(get_db),
-) -> list[Rechnung]:
+) -> list[RechnungRead]:
     stmt = select(Rechnung).order_by(Rechnung.created_at.desc())
     if kunde_id:
         stmt = stmt.where(Rechnung.kunde_id == kunde_id)
@@ -42,15 +43,32 @@ async def list_rechnungen(
     if status_filter:
         stmt = stmt.where(Rechnung.status == status_filter)
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return [await to_read_model(session, r) for r in result.scalars().all()]
 
 
 @router.get("/{rechnung_id}", response_model=RechnungRead)
-async def get_rechnung(rechnung_id: UUID, session: AsyncSession = Depends(get_db)) -> Rechnung:
+async def get_rechnung(rechnung_id: UUID, session: AsyncSession = Depends(get_db)) -> RechnungRead:
     rechnung = await session.get(Rechnung, rechnung_id)
     if rechnung is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
-    return rechnung
+    return await to_read_model(session, rechnung)
+
+
+def _neue_positionen(
+    rechnung_id: UUID, mandant_id: UUID, eintraege: list[RechnungPositionCreate]
+) -> list[RechnungPosition]:
+    return [
+        RechnungPosition(
+            mandant_id=mandant_id,
+            rechnung_id=rechnung_id,
+            position=i + 1,
+            beschreibung=e.beschreibung,
+            menge=e.menge,
+            einheit=e.einheit,
+            einzelpreis=e.einzelpreis,
+        )
+        for i, e in enumerate(eintraege)
+    ]
 
 
 @router.post(
@@ -63,7 +81,7 @@ async def create_rechnung(
     body: RechnungCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Rechnung:
+) -> RechnungRead:
     if await session.get(Kunde, body.kunde_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -95,6 +113,10 @@ async def create_rechnung(
     )
     session.add(rechnung)
     await session.flush()
+
+    for p in _neue_positionen(rechnung.id, auth.mandant_id, body.positionen):
+        session.add(p)
+    await session.flush()
     await session.refresh(rechnung)
 
     if vorgang is not None:
@@ -109,7 +131,43 @@ async def create_rechnung(
             )
         )
         await session.flush()
-    return rechnung
+    return await to_read_model(session, rechnung)
+
+
+@router.post(
+    "/{rechnung_id}/positionen",
+    response_model=RechnungRead,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def add_position(
+    rechnung_id: UUID,
+    body: RechnungPositionCreate,
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status != "entwurf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf ergänzt werden"
+        )
+
+    bestehende = await positionen_fuer(session, rechnung_id)
+    naechste_position = max((p.position for p in bestehende), default=0) + 1
+    session.add(
+        RechnungPosition(
+            mandant_id=rechnung.mandant_id,
+            rechnung_id=rechnung_id,
+            position=naechste_position,
+            beschreibung=body.beschreibung,
+            menge=body.menge,
+            einheit=body.einheit,
+            einzelpreis=body.einzelpreis,
+        )
+    )
+    await session.flush()
+    await session.refresh(rechnung)
+    return await to_read_model(session, rechnung)
 
 
 @router.patch(
@@ -122,7 +180,7 @@ async def update_rechnung(
     body: RechnungUpdate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> Rechnung:
+) -> RechnungRead:
     rechnung = await session.get(Rechnung, rechnung_id)
     if rechnung is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
@@ -131,6 +189,12 @@ async def update_rechnung(
         if rechnung.status != "entwurf":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Betrag kann nur im Entwurf geändert werden"
+            )
+        bestehende_positionen = await positionen_fuer(session, rechnung_id)
+        if bestehende_positionen:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Diese Rechnung hat eigene Positionen -- der Betrag ergibt sich aus deren Summe",
             )
         rechnung.betrag_netto = body.betrag_netto
     if body.faellig_am is not None:
@@ -169,7 +233,7 @@ async def update_rechnung(
 
     await session.flush()
     await session.refresh(rechnung)
-    return rechnung
+    return await to_read_model(session, rechnung)
 
 
 @router.get("/{rechnung_id}/pdf")
@@ -183,8 +247,9 @@ async def rechnung_pdf(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
+    positionen = await positionen_fuer(session, rechnung.id)
 
-    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde)
+    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde, positionen)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

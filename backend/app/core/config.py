@@ -47,6 +47,33 @@ class Settings(BaseSettings):
 
     # --- Pruefzyklen-Scheduler (Abschnitt 4.5/12, Phase 5) ---------------
     pruefzyklus_vorlauf_tage: int = 30
+    # Default-Uhrzeit (UTC) fuer Mandanten ohne eigene
+    # scheduler_stunde_utc-Konfiguration in ihren mandant_integrationen
+    # (siehe app/services/scheduler_service.py, Phase-8-Nacharbeit).
+    scheduler_default_stunde_utc: int = 3
+
+    # --- Mandant-Integrationen (Abschnitt 7.4, Phase-1-Slot) -------------
+    # Verschluesselt secret_ref app-seitig (Fernet) statt im Klartext zu
+    # speichern -- kein Ersatz fuer echtes Vault/KMS, aber besser als
+    # Klartext-Secrets in der DB, solange keine echte Integration eine
+    # produktive Vault-Anbindung braucht. In Produktion unbedingt einen
+    # eigenen, von JWT_SECRET verschiedenen Wert setzen.
+    integration_secret_key: str | None = None
+
+    # --- Kundenportal Passwort-Reset (Phase-8-Nacharbeit) ----------------
+    # Basis-URL des Frontends fuer den Reset-Link in der Mail; produktiv
+    # https://<DOMAIN_APP> (siehe docs/DEPLOYMENT.md).
+    frontend_base_url: str = "http://localhost:5173"
+    kundenportal_reset_token_expire_minutes: int = 30
+
+    # --- Mahnwesen (Nacharbeit): Tage nach Faelligkeit bis zur jeweiligen
+    # Mahnstufe. Drei Stufen statt eines konfigurierbaren Katalogs -- fuer
+    # den abgedeckten Anwendungsfall (Handwerksbetrieb, keine komplexen
+    # Inkasso-Prozesse) ausreichend, ohne eine eigene Konfigurations-UI zu
+    # brauchen.
+    mahnstufe_1_tage: int = 14
+    mahnstufe_2_tage: int = 28
+    mahnstufe_3_tage: int = 42
 
 
 @lru_cache

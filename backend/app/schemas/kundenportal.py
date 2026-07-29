@@ -21,10 +21,23 @@ class KundenportalZugangCreate(BaseModel):
 class KundenportalZugangUpdate(BaseModel):
     name: str | None = None
     aktiv: bool | None = None
+    # Fallback ohne konfiguriertes SMTP (siehe app/services/email_service.py):
+    # ein Mitarbeiter kann das Passwort direkt neu setzen, statt den Zugang
+    # deaktivieren und neu anlegen zu muessen.
+    password: str | None = None
 
 
 class KundenAngebotAntwort(BaseModel):
     status: str
+
+
+class KundenPasswortVergessenRequest(BaseModel):
+    email: EmailStr
+
+
+class KundenPasswortResetRequest(BaseModel):
+    token: str
+    new_password: str
 
 
 class KundenportalZugangRead(BaseModel):

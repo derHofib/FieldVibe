@@ -24,6 +24,9 @@ class VorgangCreate(BaseModel):
     abrechnungsart: VorgangAbrechnungsart
     leistungstyp: Leistungstyp
     prioritaet: int = Field(default=3, ge=1, le=5)
+    # Von der Offline-Outbox vergeben (Nacharbeit): macht einen Sync-Retry
+    # sicher idempotent, dasselbe Muster wie VorgangEventCreate.client_uuid.
+    client_uuid: UUID | None = None
 
 
 class VorgangUpdate(BaseModel):

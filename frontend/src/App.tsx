@@ -14,6 +14,7 @@ import { FeedPage } from "./pages/feld/FeedPage";
 import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
+import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
@@ -78,6 +79,7 @@ export function App() {
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
+          <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       )}

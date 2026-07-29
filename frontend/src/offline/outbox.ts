@@ -1,5 +1,5 @@
 import { apiFetch, apiFetchForm } from "../api/client";
-import type { VorgangEvent } from "../types";
+import type { Vorgang, VorgangEvent } from "../types";
 import { getDb, type OutboxItem } from "./db";
 
 type Listener = () => void;
@@ -55,6 +55,32 @@ export async function queueFoto(
   return clientUuid;
 }
 
+export async function queueVorgang(payload: {
+  kunde_id: string;
+  anlage_id?: string | null;
+  titel: string;
+  beschreibung?: string;
+  abrechnungsart: string;
+  leistungstyp: string;
+}): Promise<string> {
+  const clientUuid = crypto.randomUUID();
+  const db = await getDb();
+  await db.put("outbox", {
+    client_uuid: clientUuid,
+    vorgang_id: null,
+    kind: "vorgang",
+    vorgangKundeId: payload.kunde_id,
+    vorgangAnlageId: payload.anlage_id ?? null,
+    vorgangTitel: payload.titel,
+    vorgangBeschreibung: payload.beschreibung,
+    vorgangAbrechnungsart: payload.abrechnungsart,
+    vorgangLeistungstyp: payload.leistungstyp,
+    created_at: new Date().toISOString(),
+  });
+  notify();
+  return clientUuid;
+}
+
 export async function getOutboxItems(vorgangId?: string): Promise<OutboxItem[]> {
   const db = await getDb();
   const items = await db.getAll("outbox");
@@ -94,7 +120,22 @@ export async function syncOutbox(): Promise<void> {
   }
 }
 
-async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent> {
+async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang> {
+  if (item.kind === "vorgang") {
+    return apiFetch<Vorgang>("/api/vorgaenge", {
+      method: "POST",
+      body: JSON.stringify({
+        kunde_id: item.vorgangKundeId,
+        anlage_id: item.vorgangAnlageId ?? null,
+        titel: item.vorgangTitel,
+        beschreibung: item.vorgangBeschreibung,
+        abrechnungsart: item.vorgangAbrechnungsart,
+        leistungstyp: item.vorgangLeistungstyp,
+        client_uuid: item.client_uuid,
+      }),
+    });
+  }
+
   if (item.kind === "kommentar") {
     return apiFetch<VorgangEvent>(`/api/vorgaenge/${item.vorgang_id}/events`, {
       method: "POST",

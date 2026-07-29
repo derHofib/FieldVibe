@@ -16,6 +16,8 @@ import type {
   KundeProfil,
   KundenportalZugang,
   Mandant,
+  MandantEinstellungen,
+  MandantIntegration,
   Mangel,
   Material,
   MaterialVerwendung,
@@ -23,6 +25,7 @@ import type {
   Pruefmittel,
   Pruefzyklus,
   Rechnung,
+  RechnungPosition,
   SearchResponse,
   StoriesResponse,
   Tag,
@@ -139,6 +142,7 @@ export const vorgaengeApi = {
     abrechnungsart: string;
     leistungstyp: string;
     prioritaet?: number;
+    client_uuid?: string;
   }) => apiFetch<Vorgang>("/api/vorgaenge", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: Partial<Pick<Vorgang, "status" | "titel" | "beschreibung" | "prioritaet">>) =>
     apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -296,8 +300,17 @@ export const rechnungenApi = {
     return apiFetch<Rechnung[]>(`/api/rechnungen${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}`),
-  create: (body: { kunde_id: string; vorgang_id?: string | null; betrag_netto: string; faellig_am?: string }) =>
-    apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: {
+    kunde_id: string;
+    vorgang_id?: string | null;
+    betrag_netto?: string;
+    faellig_am?: string;
+    positionen?: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
+  }) => apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
+  addPosition: (
+    id: string,
+    body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">,
+  ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   pdf: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/pdf`),
@@ -350,7 +363,11 @@ export const kundenportalZugaengeApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (kundeId: string, zugangId: string, body: { name?: string; aktiv?: boolean }) =>
+  update: (
+    kundeId: string,
+    zugangId: string,
+    body: { name?: string; aktiv?: boolean; password?: string },
+  ) =>
     apiFetch<KundenportalZugang>(`/api/kunden/${kundeId}/portal-zugaenge/${zugangId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -364,6 +381,43 @@ export const kundenportalAuthApi = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => kundenApiFetch<CurrentKunde>("/api/kundenportal/auth/me"),
+  passwortVergessen: (email: string) =>
+    kundenApiFetch<void>("/api/kundenportal/auth/passwort-vergessen", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  passwortZuruecksetzen: (token: string, newPassword: string) =>
+    kundenApiFetch<void>("/api/kundenportal/auth/passwort-zuruecksetzen", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+};
+
+export const mandantEinstellungenApi = {
+  get: () => apiFetch<MandantEinstellungen>("/api/mandant/einstellungen"),
+  update: (schedulerStundeUtc: number | null) =>
+    apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
+      method: "PATCH",
+      body: JSON.stringify({ scheduler_stunde_utc: schedulerStundeUtc }),
+    }),
+};
+
+export const integrationenApi = {
+  list: () => apiFetch<MandantIntegration[]>("/api/integrationen"),
+  create: (body: { typ: string; config?: Record<string, unknown>; secret?: string; aktiv?: boolean }) =>
+    apiFetch<MandantIntegration>("/api/integrationen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (
+    id: string,
+    body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean },
+  ) =>
+    apiFetch<MandantIntegration>(`/api/integrationen/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) => apiFetch<void>(`/api/integrationen/${id}`, { method: "DELETE" }),
 };
 
 export const kundenportalApi = {

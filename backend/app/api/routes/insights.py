@@ -12,6 +12,7 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.insights import Insights, TechnikerAuslastung
+from app.services.rechnung_service import netto_betrag, positionen_fuer
 
 router = APIRouter(
     prefix="/api/insights",
@@ -38,10 +39,14 @@ async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
             select(Rechnung).where(Rechnung.status.in_(("entwurf", "versendet")))
         )
     ).scalars().all()
-    offene_rechnungssumme = sum(
-        (r.betrag_netto * (Decimal("1") + r.mwst_satz / Decimal("100")) for r in offene_rechnungen),
-        Decimal("0"),
-    ).quantize(Decimal("0.01"))
+    # netto_betrag() statt r.betrag_netto direkt: bei Teil-/Sammelrechnungen
+    # mit eigenen Positionen (Nacharbeit) ist deren Summe die Quelle der
+    # Wahrheit, nicht das (dann ungenutzte) Feld auf der Rechnung selbst.
+    offene_rechnungssumme = Decimal("0")
+    for r in offene_rechnungen:
+        netto = netto_betrag(r, await positionen_fuer(session, r.id))
+        offene_rechnungssumme += netto * (Decimal("1") + r.mwst_satz / Decimal("100"))
+    offene_rechnungssumme = offene_rechnungssumme.quantize(Decimal("0.01"))
 
     angebote_versendet = (
         await session.scalar(select(func.count()).select_from(Angebot).where(Angebot.versendet_am.isnot(None)))

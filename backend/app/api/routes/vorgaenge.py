@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,9 +82,25 @@ async def _validate_references(session: AsyncSession, body: VorgangCreate) -> No
 @router.post("", response_model=VorgangRead, status_code=status.HTTP_201_CREATED)
 async def create_vorgang(
     body: VorgangCreate,
+    response: Response,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Vorgang:
+    if body.client_uuid is not None:
+        # Checked up front statt als IntegrityError abgefangen: ein
+        # Sync-Retry aus der Offline-Outbox (App wurde waehrend des Syncs
+        # beendet, oder eine Antwort ging verloren, obwohl der Request
+        # serverseitig ankam) soll denselben Vorgang zurueckgeben statt
+        # einen zweiten anzulegen -- dasselbe Muster wie bei
+        # VorgangEvent.client_uuid (vorgang_events.py).
+        existing = await session.execute(
+            select(Vorgang).where(Vorgang.client_uuid == body.client_uuid)
+        )
+        existing_vorgang = existing.scalar_one_or_none()
+        if existing_vorgang is not None:
+            response.status_code = status.HTTP_200_OK
+            return existing_vorgang
+
     await _validate_references(session, body)
 
     vorgangsnummer = body.vorgangsnummer or await next_vorgangsnummer(session, auth.mandant_id)
@@ -100,6 +116,7 @@ async def create_vorgang(
         abrechnungsart=body.abrechnungsart,
         leistungstyp=body.leistungstyp,
         prioritaet=body.prioritaet,
+        client_uuid=body.client_uuid,
     )
     session.add(vorgang)
     try:

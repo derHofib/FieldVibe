@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { anlagenApi, kundenApi, vorgaengeApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { QrScanner } from "../../components/QrScanner";
+import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, Leistungstyp, VorgangAbrechnungsart } from "../../types";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
@@ -40,18 +41,30 @@ export function NewVorgangPage() {
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      vorgaengeApi.create({
+    mutationFn: async () => {
+      const payload = {
         kunde_id: kundeId,
         anlage_id: anlage?.id ?? null,
         titel,
         beschreibung,
         abrechnungsart,
         leistungstyp,
-      }),
-    onSuccess: (vorgang) => {
+      };
+      try {
+        return { online: true as const, vorgang: await vorgaengeApi.create(payload) };
+      } catch (err) {
+        if (err instanceof ApiError) throw err; // echte Ablehnung, nicht queuen
+        await queueVorgang(payload); // Netzwerkfehler -> offline
+        return { online: false as const };
+      }
+    },
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
-      navigate(`/vorgaenge/${vorgang.id}`);
+      if (result.online) {
+        navigate(`/vorgaenge/${result.vorgang.id}`);
+      } else {
+        navigate("/feed");
+      }
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
   });
@@ -118,7 +131,8 @@ export function NewVorgangPage() {
 
       <p className="text-sm text-slate-500">
         Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
-        Vorgangs-Chat.
+        Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
+        sich automatisch, sobald wieder eine Verbindung besteht.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-3 rounded-lg bg-white p-4 shadow-sm">

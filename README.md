@@ -18,6 +18,7 @@ Stand:
 | 5 – Steuerung | ✅ siehe [`docs/phases/PHASE_5.md`](docs/phases/PHASE_5.md) |
 | 6 – Geschäftsprozesse | ✅ siehe [`docs/phases/PHASE_6.md`](docs/phases/PHASE_6.md) |
 | 7 – Ausbau | ✅ siehe [`docs/phases/PHASE_7.md`](docs/phases/PHASE_7.md) |
+| Nacharbeiten (kein Lastenheft-Abschnitt) | ✅ siehe [`docs/phases/PHASE_8.md`](docs/phases/PHASE_8.md) |
 
 ## Tech-Stack
 
@@ -39,8 +40,10 @@ docker compose run --rm backend alembic upgrade head
 docker compose run --rm backend python -m app.seed   # Beispieldaten
 ```
 
-Der `worker`-Container (Prüfzyklen-Scheduler, Phase 5) startet automatisch
-mit `docker compose up`; er läuft täglich um 03:00 UTC.
+Der `worker`-Container (Prüfzyklen-Scheduler + Mahnwesen, Phase 5/Nacharbeit)
+startet automatisch mit `docker compose up`; er prüft stündlich, welche
+Mandanten gerade ihre konfigurierte tägliche Uhrzeit erreichen (Default
+03:00 UTC, pro Mandant einstellbar über `PATCH /api/mandant/einstellungen`).
 
 - Frontend: http://localhost:5173
 - Backend/Swagger: http://localhost:8000/docs

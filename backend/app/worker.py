@@ -1,6 +1,8 @@
-"""Hintergrund-Worker: führt den Prüfzyklen-Scheduler einmal täglich aus.
+"""Hintergrund-Worker: prueft stuendlich, welche Mandanten gerade ihre
+konfigurierte taegliche Scheduler-Stunde erreicht haben, und fuehrt fuer
+genau diese den Pruefzyklen-Scheduler und die Mahnwesen-Eskalation aus.
 
-Läuft als eigener Compose-Service (siehe docker-compose.yml, Service
+Laeuft als eigener Compose-Service (siehe docker-compose.yml, Service
 "worker") -- getrennt vom Backend-Container, damit ein API-Neustart/Deploy
 den Scheduler-Takt nicht stört und umgekehrt ein hängender Scheduler-Lauf
 nie die API blockiert.
@@ -10,37 +12,70 @@ Usage:
 """
 import asyncio
 import logging
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
-from app.services.scheduler_service import run_pruefzyklen_scheduler
+from app.db.session import system_session
+from app.services.mahnwesen_service import run_mahnwesen_eskalation
+from app.services.scheduler_service import mandanten_faellig_um, run_pruefzyklen_scheduler
+from app.services.worker_lock import worker_lock
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("app.worker")
 
-# Nachts, wenn kein Techniker aktiv im Feed arbeitet -- automatisch
-# angelegte Vorgaenge tauchen dann am naechsten Morgen frisch im Feed auf.
-LAUFZEIT_UTC = time(hour=3, minute=0)
 
-
-def _seconds_until_next_run(now: datetime | None = None) -> float:
+def _seconds_until_next_full_hour(now: datetime | None = None) -> float:
     now = now or datetime.now(timezone.utc)
-    target = datetime.combine(now.date(), LAUFZEIT_UTC, tzinfo=timezone.utc)
-    if target <= now:
-        target += timedelta(days=1)
-    return (target - now).total_seconds()
+    next_hour = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    return (next_hour - now).total_seconds()
+
+
+async def _run_hourly_tick() -> None:
+    jetzt = datetime.now(timezone.utc)
+    async with system_session() as session:
+        mandant_ids = await mandanten_faellig_um(session, jetzt.hour)
+
+    if not mandant_ids:
+        logger.info("Keine Mandanten für Stunde %02d:00 UTC fällig", jetzt.hour)
+        return
+
+    async with worker_lock() as acquired:
+        if not acquired:
+            # Ein anderer Worker-Container haelt den Lock bereits fuer
+            # diesen Tick -- kein Grund zur Sorge, der naechste stuendliche
+            # Tick greift wieder (der Zustand in der DB, nicht der Timer,
+            # ist die Quelle der Wahrheit dafuer, was faellig ist).
+            logger.info("Ein anderer Worker hält den Lock bereits, dieser Tick wird übersprungen")
+            return
+
+        try:
+            ergebnis = await run_pruefzyklen_scheduler(mandant_ids)
+            logger.info(
+                "Scheduler-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
+                jetzt.hour, len(mandant_ids), ergebnis,
+            )
+        except Exception:
+            logger.exception("Scheduler-Lauf fehlgeschlagen")
+
+        try:
+            mahn_ergebnis = await run_mahnwesen_eskalation(mandant_ids)
+            logger.info(
+                "Mahnwesen-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
+                jetzt.hour, len(mandant_ids), mahn_ergebnis,
+            )
+        except Exception:
+            logger.exception("Mahnwesen-Lauf fehlgeschlagen")
 
 
 async def main() -> None:
-    logger.info("Prüfzyklen-Scheduler-Worker gestartet (täglich %s UTC)", LAUFZEIT_UTC)
+    logger.info("Worker gestartet -- prüft stündlich, welche Mandanten fällig sind")
     while True:
-        wartezeit = _seconds_until_next_run()
-        logger.info("Nächster Lauf in %.0f Sekunden", wartezeit)
+        wartezeit = _seconds_until_next_full_hour()
+        logger.info("Nächster Tick in %.0f Sekunden", wartezeit)
         await asyncio.sleep(wartezeit)
         try:
-            ergebnis = await run_pruefzyklen_scheduler()
-            logger.info("Scheduler-Lauf abgeschlossen: %s", ergebnis)
+            await _run_hourly_tick()
         except Exception:
-            logger.exception("Scheduler-Lauf fehlgeschlagen")
+            logger.exception("Stündlicher Tick fehlgeschlagen")
 
 
 if __name__ == "__main__":

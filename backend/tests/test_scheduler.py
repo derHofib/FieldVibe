@@ -4,11 +4,12 @@ import pytest
 from sqlalchemy import select
 
 from app.db.session import system_session
+from app.models.mandant import Mandant
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.vorgang import Vorgang
-from app.services.scheduler_service import run_pruefzyklen_scheduler
+from app.services.scheduler_service import mandanten_faellig_um, run_pruefzyklen_scheduler
 from tests.conftest import auth_headers, login
 
 
@@ -139,3 +140,48 @@ async def test_scheduler_notifies_for_due_pruefmittel_without_duplicate(
         ).scalars().all()
         # trotz zwei Laeufen nur eine ungelesene Erinnerung, kein Spam
         assert len(notifications) == 1
+
+
+@pytest.mark.asyncio
+async def test_scheduler_scoped_to_mandant_ids_ignores_others(
+    make_mandant, make_user, make_kunde, make_anlage
+):
+    mandant1 = await make_mandant(name="Betrieb1")
+    mandant2 = await make_mandant(name="Betrieb2")
+    kunde1 = await make_kunde(mandant=mandant1)
+    kunde2 = await make_kunde(mandant=mandant2)
+    anlage1 = await make_anlage(mandant=mandant1, kunde=kunde1)
+    anlage2 = await make_anlage(mandant=mandant2, kunde=kunde2)
+    await _make_pruefzyklus(mandant1, anlage1)
+    await _make_pruefzyklus(mandant2, anlage2)
+
+    ergebnis = await run_pruefzyklen_scheduler(mandant_ids=[mandant1.id])
+    assert ergebnis["vorgaenge_erstellt"] == 1
+
+    async with system_session() as session:
+        zyklen = (
+            await session.execute(select(Pruefzyklus).order_by(Pruefzyklus.mandant_id))
+        ).scalars().all()
+        offen = {z.mandant_id: z.offener_vorgang_id for z in zyklen}
+        assert offen[mandant1.id] is not None
+        assert offen[mandant2.id] is None
+
+
+@pytest.mark.asyncio
+async def test_mandanten_faellig_um_respects_override_and_default(make_mandant):
+    mandant_default = await make_mandant(name="DefaultStunde")
+    mandant_eigene = await make_mandant(name="EigeneStunde")
+
+    async with system_session() as session:
+        eigene = await session.get(Mandant, mandant_eigene.id)
+        eigene.scheduler_stunde_utc = 5
+        await session.commit()
+
+    async with system_session() as session:
+        um_3_uhr = await mandanten_faellig_um(session, 3)
+        um_5_uhr = await mandanten_faellig_um(session, 5)
+
+    assert mandant_default.id in um_3_uhr
+    assert mandant_eigene.id not in um_3_uhr
+    assert mandant_eigene.id in um_5_uhr
+    assert mandant_default.id not in um_5_uhr

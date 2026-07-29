@@ -365,6 +365,16 @@ export interface Angebot {
 
 export type RechnungStatus = "entwurf" | "versendet" | "bezahlt" | "storniert";
 
+export interface RechnungPosition {
+  id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  gesamt: string;
+}
+
 export interface Rechnung {
   id: string;
   kunde_id: string;
@@ -377,8 +387,11 @@ export interface Rechnung {
   erstellt_von: string;
   versendet_am: string | null;
   bezahlt_am: string | null;
+  mahnstufe: number;
+  letzte_mahnung_am: string | null;
   created_at: string;
   updated_at: string;
+  positionen: RechnungPosition[];
   betrag_brutto: string;
 }
 
@@ -442,6 +455,26 @@ export interface KundenportalZugang {
   email: string;
   name: string;
   aktiv: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- Mandant-Einstellungen (Nacharbeit) -------------------------------------
+
+export interface MandantEinstellungen {
+  scheduler_stunde_utc: number | null;
+  effektive_scheduler_stunde_utc: number;
+}
+
+// --- Mandant-Integrationen (Nacharbeit) -------------------------------------
+
+export interface MandantIntegration {
+  id: string;
+  mandant_id: string;
+  typ: string;
+  config: Record<string, unknown>;
+  aktiv: boolean;
+  hat_secret: boolean;
   created_at: string;
   updated_at: string;
 }

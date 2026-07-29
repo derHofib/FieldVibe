@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { useKundenAuth } from "../../context/KundenAuthContext";
@@ -59,6 +59,10 @@ export function PortalLoginPage() {
         >
           {submitting ? "Anmelden…" : "Anmelden"}
         </button>
+
+        <Link to="/portal/passwort-vergessen" className="mt-4 block text-center text-sm text-slate-500">
+          Passwort vergessen?
+        </Link>
       </form>
     </div>
   );

@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from tests.conftest import auth_headers, login
@@ -32,6 +34,39 @@ async def test_techniker_can_create_vorgang(client, make_mandant, make_user, mak
     assert events.status_code == 200
     assert len(events.json()) == 1
     assert events.json()[0]["is_system"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_vorgang_mit_client_uuid_ist_idempotent(
+    client, make_mandant, make_user, make_kunde
+):
+    """Simuliert einen Offline-Outbox-Sync-Retry: derselbe client_uuid darf
+    nie einen zweiten Vorgang anlegen, egal wie oft der Request wiederholt
+    wird (z.B. weil die App zwischen Senden und Antwort beendet wurde)."""
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, techniker.email, "pw-123456")
+    client_uuid = str(uuid.uuid4())
+
+    payload = {
+        "kunde_id": str(kunde.id),
+        "titel": "Offline angelegt",
+        "abrechnungsart": "aufwand",
+        "leistungstyp": "stoerung",
+        "client_uuid": client_uuid,
+    }
+
+    first = await client.post("/api/vorgaenge", headers=auth_headers(token), json=payload)
+    assert first.status_code == 201
+    vorgang_id = first.json()["id"]
+
+    retry = await client.post("/api/vorgaenge", headers=auth_headers(token), json=payload)
+    assert retry.status_code == 200
+    assert retry.json()["id"] == vorgang_id
+
+    list_resp = await client.get("/api/vorgaenge", headers=auth_headers(token))
+    assert len([v for v in list_resp.json() if v["id"] == vorgang_id]) == 1
 
 
 @pytest.mark.asyncio

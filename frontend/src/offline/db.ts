@@ -4,8 +4,12 @@ import type { Anlage, FeedCard, Kunde, VorgangEvent } from "../types";
 
 export interface OutboxItem {
   client_uuid: string;
-  vorgang_id: string;
-  kind: "kommentar" | "foto";
+  // "vorgang" hat noch keinen Server-Vorgang und damit keine vorgang_id --
+  // die entsteht erst beim erfolgreichen Sync (siehe app/api/routes/
+  // vorgaenge.py::create_vorgang, das denselben client_uuid als
+  // Idempotenz-Schluessel nutzt wie VorgangEvent.client_uuid).
+  vorgang_id: string | null;
+  kind: "kommentar" | "foto" | "vorgang";
   created_at: string;
   // "kommentar": JSON-Body fuer POST .../events
   body?: string;
@@ -13,6 +17,13 @@ export interface OutboxItem {
   // "foto": Blob wird lokal gehalten, bis online gesendet werden kann
   fotoBlob?: Blob;
   fotoName?: string;
+  // "vorgang": Felder fuer die komplette Neuanlage eines Vorgangs offline
+  vorgangKundeId?: string;
+  vorgangAnlageId?: string | null;
+  vorgangTitel?: string;
+  vorgangBeschreibung?: string;
+  vorgangAbrechnungsart?: string;
+  vorgangLeistungstyp?: string;
 }
 
 interface SocialCrmDB extends DBSchema {

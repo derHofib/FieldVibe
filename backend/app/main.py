@@ -13,10 +13,12 @@ from app.api.routes import (
     highlights,
     impersonation,
     insights,
+    integrationen,
     kunden,
     kundenportal,
     kundenportal_auth,
     maengel,
+    mandant_einstellungen,
     mandanten,
     material,
     notifications,
@@ -52,9 +54,9 @@ app = FastAPI(
     title="SocialCRM API",
     description=(
         "Mandantenfähiges Auftragsmanagement- und CRM-System für den "
-        "Elektro-Handwerksbetrieb – Phase 6: Geschäftsprozesse."
+        "Elektro-Handwerksbetrieb – Phase 7: Ausbau."
     ),
-    version="0.6.0",
+    version="0.7.0",
     lifespan=lifespan,
 )
 
@@ -94,6 +96,8 @@ app.include_router(kundenportal.router)
 app.include_router(highlights.router)
 app.include_router(material.router)
 app.include_router(insights.router)
+app.include_router(integrationen.router)
+app.include_router(mandant_einstellungen.router)
 
 
 @app.get("/healthz")

@@ -8,7 +8,7 @@ from app.models.angebot import Angebot, AngebotPosition
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
-from app.models.rechnung import Rechnung
+from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.vorgang import Vorgang
 
 # fpdf2s core fonts (Helvetica/Times/Courier) sind Windows-1252-kodiert --
@@ -105,7 +105,9 @@ def generate_angebot_pdf(
     return bytes(pdf.output())
 
 
-def generate_rechnung_pdf(mandant: Mandant, rechnung: Rechnung, kunde: Kunde) -> bytes:
+def generate_rechnung_pdf(
+    mandant: Mandant, rechnung: Rechnung, kunde: Kunde, positionen: list[RechnungPosition] | None = None
+) -> bytes:
     pdf = FPDF()
     pdf.add_page()
     _kopf(pdf, mandant, "Rechnung", rechnung.rechnungsnummer, kunde)
@@ -114,7 +116,12 @@ def generate_rechnung_pdf(mandant: Mandant, rechnung: Rechnung, kunde: Kunde) ->
     if rechnung.faellig_am:
         pdf.cell(0, 6, f"Faellig am: {_fmt_datum(rechnung.faellig_am)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
-    _summenblock(pdf, rechnung.betrag_netto, rechnung.mwst_satz)
+
+    if positionen:
+        gesamt_netto = _positionen_tabelle(pdf, positionen)
+    else:
+        gesamt_netto = rechnung.betrag_netto
+    _summenblock(pdf, gesamt_netto, rechnung.mwst_satz)
     return bytes(pdf.output())
 
 

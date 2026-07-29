@@ -143,9 +143,10 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
 - **`/healthz` liefert Fehler**: prüft DB-Verbindung und
   Objektspeicher-Erreichbarkeit sowie den Zeitstempel des letzten
   Prüfzyklen-Scheduler-Laufs (`scheduler_letzter_lauf`, `null` bedeutet,
-  der `worker`-Container ist noch nie erfolgreich um 03:00 UTC gelaufen –
-  bei einem frischen Deployment normal, sollte spätestens am nächsten Tag
-  einen Wert haben).
+  der `worker`-Container hat noch keinen erfolgreichen Lauf gehabt – bei
+  einem frischen Deployment normal, sollte spätestens einen Tag nach der
+  konfigurierten Scheduler-Stunde des ersten Mandanten (Default 03:00 UTC,
+  siehe `PATCH /api/mandant/einstellungen`) einen Wert haben).
 - **Fotos laden nicht (403/404 auf presigned URLs)**: `S3_PUBLIC_URL_BASE`
   muss exakt `https://<DOMAIN_S3>` sein (Schema + Host, kein Pfad-Suffix,
   kein Port) – sonst weicht die Signatur vom tatsächlich aufgerufenen URL

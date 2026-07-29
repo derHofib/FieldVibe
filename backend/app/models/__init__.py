@@ -11,7 +11,7 @@ from app.models.material import Material, MaterialVerwendung
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
-from app.models.rechnung import Rechnung
+from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.tag import Tag, TagAssignment
 from app.models.termin import Termin
 from app.models.user import User
@@ -37,6 +37,7 @@ __all__ = [
     "Pruefmittel",
     "Pruefzyklus",
     "Rechnung",
+    "RechnungPosition",
     "Tag",
     "TagAssignment",
     "Termin",

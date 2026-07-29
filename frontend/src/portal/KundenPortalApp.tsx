@@ -4,8 +4,10 @@ import { PortalLayout } from "../components/PortalLayout";
 import { KundenAuthProvider, useKundenAuth } from "../context/KundenAuthContext";
 import { PortalAngebotDetailPage } from "../pages/portal/PortalAngebotDetailPage";
 import { PortalAngebotePage } from "../pages/portal/PortalAngebotePage";
+import { PortalForgotPasswordPage } from "../pages/portal/PortalForgotPasswordPage";
 import { PortalLoginPage } from "../pages/portal/PortalLoginPage";
 import { PortalRechnungenPage } from "../pages/portal/PortalRechnungenPage";
+import { PortalResetPasswordPage } from "../pages/portal/PortalResetPasswordPage";
 import { PortalVorgangDetailPage } from "../pages/portal/PortalVorgangDetailPage";
 import { PortalVorgaengePage } from "../pages/portal/PortalVorgaengePage";
 
@@ -20,6 +22,8 @@ function KundenPortalRoutes() {
         path="login"
         element={isAuthenticated ? <Navigate to="/portal/vorgaenge" replace /> : <PortalLoginPage />}
       />
+      <Route path="passwort-vergessen" element={<PortalForgotPasswordPage />} />
+      <Route path="passwort-zuruecksetzen" element={<PortalResetPasswordPage />} />
 
       {!isAuthenticated && <Route path="*" element={<Navigate to="/portal/login" replace />} />}
 

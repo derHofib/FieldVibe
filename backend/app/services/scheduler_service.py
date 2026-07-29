@@ -1,4 +1,5 @@
 from datetime import date, datetime, timedelta
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from app.core.config import get_settings
 from app.db.session import system_session
 from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
+from app.models.mandant import Mandant
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
@@ -17,6 +19,23 @@ from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 
 SCHEDULER_AKTION = "pruefzyklen_scheduler_run"
+
+
+async def mandanten_faellig_um(session: AsyncSession, stunde_utc: int) -> list[UUID]:
+    """Welche aktiven Mandanten haben genau jetzt (`stunde_utc`, 0-23) ihre
+    taegliche Scheduler-Stunde erreicht? NULL (kein eigener Wert gesetzt)
+    faellt auf den globalen Default zurueck (siehe Mandant.scheduler_stunde_utc
+    und Settings.scheduler_default_stunde_utc)."""
+    settings = get_settings()
+    result = await session.execute(
+        select(Mandant.id, Mandant.scheduler_stunde_utc).where(Mandant.status == "aktiv")
+    )
+    return [
+        mandant_id
+        for mandant_id, konfigurierte_stunde in result.all()
+        if (konfigurierte_stunde if konfigurierte_stunde is not None else settings.scheduler_default_stunde_utc)
+        == stunde_utc
+    ]
 
 
 async def _admins_und_disponenten(session: AsyncSession, mandant_id) -> list[User]:
@@ -44,14 +63,19 @@ async def _hat_offene_notification(session: AsyncSession, *, user_id, ref_entity
     return result.scalar_one_or_none() is not None
 
 
-async def run_pruefzyklen_scheduler() -> dict:
+async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
     """Taeglicher Lauf (Abschnitt 12): legt fuer faellige Pruefzyklen einen
     Vorgang an und benachrichtigt Admin/Disponent -- pro Zyklus nur einmal,
     bis die zugehoerige Pruefung tatsaechlich durchgefuehrt wurde (siehe
     Pruefzyklus.offener_vorgang_id, der beim Abschluss des Vorgangs wieder
     geleert wird, app/api/routes/vorgaenge.py). Faellige Pruefmittel
     erzeugen keinen Vorgang (Kalibrierung ist kein Kundenauftrag), nur eine
-    wiederkehrende Erinnerung, solange keine ungelesene dazu offen ist."""
+    wiederkehrende Erinnerung, solange keine ungelesene dazu offen ist.
+
+    `mandant_ids` grenzt den Lauf auf die Mandanten ein, deren konfigurierte
+    Scheduler-Stunde gerade erreicht ist (siehe app/worker.py) -- None (z.B.
+    aus Tests oder einem manuellen Voll-Lauf) bearbeitet weiterhin alle
+    Mandanten."""
     settings = get_settings()
     heute = date.today()
     horizont = heute + timedelta(days=settings.pruefzyklus_vorlauf_tage)
@@ -60,15 +84,14 @@ async def run_pruefzyklen_scheduler() -> dict:
     faellige_pruefmittel = 0
 
     async with system_session() as session:
-        pruefzyklen = (
-            await session.execute(
-                select(Pruefzyklus).where(
-                    Pruefzyklus.aktiv.is_(True),
-                    Pruefzyklus.naechste_pruefung_am <= horizont,
-                    Pruefzyklus.offener_vorgang_id.is_(None),
-                )
-            )
-        ).scalars().all()
+        pruefzyklen_stmt = select(Pruefzyklus).where(
+            Pruefzyklus.aktiv.is_(True),
+            Pruefzyklus.naechste_pruefung_am <= horizont,
+            Pruefzyklus.offener_vorgang_id.is_(None),
+        )
+        if mandant_ids is not None:
+            pruefzyklen_stmt = pruefzyklen_stmt.where(Pruefzyklus.mandant_id.in_(mandant_ids))
+        pruefzyklen = (await session.execute(pruefzyklen_stmt)).scalars().all()
 
         for zyklus in pruefzyklen:
             anlage = await session.get(Anlage, zyklus.anlage_id)
@@ -125,14 +148,13 @@ async def run_pruefzyklen_scheduler() -> dict:
             )
             erstellte_vorgaenge += 1
 
-        pruefmittel_faellig = (
-            await session.execute(
-                select(Pruefmittel).where(
-                    Pruefmittel.status == "aktiv",
-                    Pruefmittel.naechste_kalibrierung_am <= horizont,
-                )
-            )
-        ).scalars().all()
+        pruefmittel_stmt = select(Pruefmittel).where(
+            Pruefmittel.status == "aktiv",
+            Pruefmittel.naechste_kalibrierung_am <= horizont,
+        )
+        if mandant_ids is not None:
+            pruefmittel_stmt = pruefmittel_stmt.where(Pruefmittel.mandant_id.in_(mandant_ids))
+        pruefmittel_faellig = (await session.execute(pruefmittel_stmt)).scalars().all()
 
         for mittel in pruefmittel_faellig:
             empfaenger_liste = list(await _admins_und_disponenten(session, mittel.mandant_id))

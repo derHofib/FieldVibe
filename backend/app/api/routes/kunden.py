@@ -196,9 +196,18 @@ async def update_portal_zugang(
     if zugang is None or zugang.kunde_id != kunde_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zugang nicht gefunden")
 
-    changes = body.model_dump(exclude_unset=True)
+    changes = body.model_dump(exclude_unset=True, exclude={"password"})
     for field, value in changes.items():
         setattr(zugang, field, value)
+    if body.password is not None:
+        if len(body.password) < 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Passwort muss mindestens 10 Zeichen haben",
+            )
+        zugang.password_hash = hash_password(body.password)
+        changes["password_hash"] = zugang.password_hash
+
     await session.flush()
     if changes:
         await session.refresh(zugang)

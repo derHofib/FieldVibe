@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenApi, rechnungenApi } from "../../api/endpoints";
@@ -16,6 +17,8 @@ export function RechnungDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
 
   const { data: rechnung } = useQuery({
     queryKey: ["rechnung", id],
@@ -31,6 +34,21 @@ export function RechnungDetailPage() {
   const statusMutation = useMutation({
     mutationFn: (status: string) => rechnungenApi.updateStatus(id!, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
+  });
+
+  const addPositionMutation = useMutation({
+    mutationFn: () =>
+      rechnungenApi.addPosition(id!, {
+        beschreibung: form.beschreibung,
+        menge: form.menge,
+        einheit: form.einheit,
+        einzelpreis: form.einzelpreis,
+      }),
+    onSuccess: () => {
+      setShowForm(false);
+      setForm({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
+      queryClient.invalidateQueries({ queryKey: ["rechnung", id] });
+    },
   });
 
   const pdfMutation = useMutation({
@@ -61,6 +79,13 @@ export function RechnungDetailPage() {
             Fällig am {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
           </p>
         )}
+        {rechnung.mahnstufe > 0 && (
+          <p className="mt-1 text-xs font-semibold text-red-600">
+            {rechnung.mahnstufe}. Mahnung
+            {rechnung.letzte_mahnung_am &&
+              ` am ${new Date(rechnung.letzte_mahnung_am).toLocaleDateString("de-DE")}`}
+          </p>
+        )}
 
         <div className="mt-3 text-right text-sm">
           <div className="text-slate-500">Netto: {rechnung.betrag_netto} EUR</div>
@@ -74,6 +99,79 @@ export function RechnungDetailPage() {
         >
           📄 PDF anzeigen
         </button>
+      </div>
+
+      <div className="rounded-lg bg-white p-4 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-500">Positionen</h2>
+          {rechnung.status === "entwurf" && (
+            <button onClick={() => setShowForm((v) => !v)} className="btn-touch text-xs font-medium text-blue-700">
+              {showForm ? "Abbrechen" : "+ Position"}
+            </button>
+          )}
+        </div>
+
+        {showForm && (
+          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3">
+            <input
+              value={form.beschreibung}
+              onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
+              placeholder="Beschreibung"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <div className="grid grid-cols-3 gap-2">
+              <input
+                type="number"
+                step="0.01"
+                value={form.menge}
+                onChange={(e) => setForm({ ...form, menge: e.target.value })}
+                placeholder="Menge"
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+              <input
+                value={form.einheit}
+                onChange={(e) => setForm({ ...form, einheit: e.target.value })}
+                placeholder="Einheit"
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+              <input
+                type="number"
+                step="0.01"
+                value={form.einzelpreis}
+                onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
+                placeholder="Preis"
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <button
+              disabled={!form.beschreibung || addPositionMutation.isPending}
+              onClick={() => addPositionMutation.mutate()}
+              className="btn-touch w-full rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Hinzufügen
+            </button>
+          </div>
+        )}
+
+        {rechnung.positionen.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {rechnung.positionen.map((p) => (
+              <div key={p.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm">
+                <div>
+                  <div className="text-slate-700">{p.beschreibung}</div>
+                  <div className="text-xs text-slate-400">
+                    {p.menge} {p.einheit} × {p.einzelpreis} EUR
+                  </div>
+                </div>
+                <div className="font-medium text-slate-700">{p.gesamt} EUR</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {rechnung.status === "entwurf" && (

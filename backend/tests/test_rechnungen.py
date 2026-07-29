@@ -125,3 +125,102 @@ async def test_mandant_isolation_for_rechnungen(client, make_mandant, make_user,
 
     list_resp = await client.get("/api/rechnungen", headers=auth_headers(token2))
     assert list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_rechnung_mit_positionen_summe_ueberschreibt_betrag_netto(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "betrag_netto": "999.00",  # wird von den Positionen ueberschrieben
+            "positionen": [
+                {"beschreibung": "Teilrechnung 1", "menge": "1", "einzelpreis": "100.00"},
+                {"beschreibung": "Teilrechnung 2", "menge": "2", "einzelpreis": "50.00"},
+            ],
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert len(body["positionen"]) == 2
+    assert body["betrag_netto"] == "200.00"
+    assert body["betrag_brutto"] == "238.00"
+
+
+@pytest.mark.asyncio
+async def test_add_position_to_existing_rechnung(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    created = await client.post(
+        "/api/rechnungen", headers=auth_headers(token), json={"kunde_id": str(kunde.id)}
+    )
+    rechnung_id = created.json()["id"]
+
+    resp = await client.post(
+        f"/api/rechnungen/{rechnung_id}/positionen",
+        headers=auth_headers(token),
+        json={"beschreibung": "Material", "menge": "3", "einzelpreis": "20.00"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["betrag_netto"] == "60.00"
+
+    # Nach Versand koennen keine Positionen mehr ergaenzt werden
+    await client.patch(f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token), json={"status": "versendet"})
+    versendet_resp = await client.post(
+        f"/api/rechnungen/{rechnung_id}/positionen",
+        headers=auth_headers(token),
+        json={"beschreibung": "Zu spaet", "einzelpreis": "1"},
+    )
+    assert versendet_resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_betrag_netto_kann_nicht_direkt_geaendert_werden_wenn_positionen_existieren(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    created = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "positionen": [{"beschreibung": "x", "einzelpreis": "10"}]},
+    )
+    rechnung_id = created.json()["id"]
+
+    resp = await client.patch(
+        f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token), json={"betrag_netto": "500.00"}
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_rechnung_pdf_mit_positionen(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    created = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "positionen": [{"beschreibung": "Arbeit", "einzelpreis": "42.00"}]},
+    )
+    rechnung_id = created.json()["id"]
+
+    resp = await client.get(f"/api/rechnungen/{rechnung_id}/pdf", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.content.startswith(b"%PDF")

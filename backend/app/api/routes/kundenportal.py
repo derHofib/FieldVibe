@@ -18,6 +18,10 @@ from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
 from app.services.pdf_service import generate_angebot_pdf, generate_rechnung_pdf
+from app.services.rechnung_service import (
+    positionen_fuer as rechnung_positionen_fuer,
+    to_read_model as rechnung_to_read_model,
+)
 from app.services.vorgang_event_service import to_read_model as event_to_read_model
 
 router = APIRouter(prefix="/api/kundenportal", tags=["kundenportal"])
@@ -147,11 +151,11 @@ async def eigenes_angebot_pdf(
 async def list_eigene_rechnungen(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> list[Rechnung]:
+) -> list[RechnungRead]:
     result = await session.execute(
         select(Rechnung).where(Rechnung.kunde_id == auth.kunde_id).order_by(Rechnung.created_at.desc())
     )
-    return list(result.scalars().all())
+    return [await rechnung_to_read_model(session, r) for r in result.scalars().all()]
 
 
 async def _require_own_rechnung(session: AsyncSession, auth: KundenAuthContext, rechnung_id: UUID) -> Rechnung:
@@ -166,8 +170,9 @@ async def get_eigene_rechnung(
     rechnung_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> Rechnung:
-    return await _require_own_rechnung(session, auth, rechnung_id)
+) -> RechnungRead:
+    rechnung = await _require_own_rechnung(session, auth, rechnung_id)
+    return await rechnung_to_read_model(session, rechnung)
 
 
 @router.get("/rechnungen/{rechnung_id}/pdf")
@@ -179,8 +184,9 @@ async def eigene_rechnung_pdf(
     rechnung = await _require_own_rechnung(session, auth, rechnung_id)
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
+    positionen = await rechnung_positionen_fuer(session, rechnung.id)
 
-    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde)
+    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde, positionen)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

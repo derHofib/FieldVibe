@@ -41,6 +41,7 @@ class Vorgang(TimestampMixin, Base):
         UniqueConstraint(
             "mandant_id", "vorgangsnummer", name="uq_vorgaenge_mandant_vorgangsnummer"
         ),
+        UniqueConstraint("client_uuid", name="uq_vorgaenge_client_uuid"),
         CheckConstraint(
             f"abrechnungsart IN {ABRECHNUNGSARTEN_VORGANG}",
             name="ck_vorgaenge_abrechnungsart_valid",
@@ -83,3 +84,8 @@ class Vorgang(TimestampMixin, Base):
     abgeschlossen_am: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Von der Offline-Outbox vergebene Idempotenz-ID (Nacharbeit): erlaubt
+    # einen sicheren Sync-Retry der Neuanlage eines Vorgangs, ohne bei
+    # doppeltem Versand versehentlich zwei Vorgaenge zu erzeugen -- exakt
+    # dasselbe Muster wie VorgangEvent.client_uuid.
+    client_uuid: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
