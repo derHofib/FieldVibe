@@ -23,8 +23,12 @@ from app.core.config import get_settings
 from app.core.security import hash_password
 from app.db.session import engine, system_session
 from app.main import app
+from app.models.anlage import Anlage
+from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.user import User
+from app.models.vertrag import Vertrag
+from app.models.vorgang import Vorgang
 
 _settings = get_settings()
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -74,7 +78,8 @@ async def _clean_tables():
     async with engine.begin() as conn:
         await conn.execute(
             text(
-                "TRUNCATE audit_log, mandant_integrationen, users, mandanten "
+                "TRUNCATE audit_log, tag_assignments, tags, vorgang_events, vorgaenge, "
+                "vertraege, anlagen, kunden, mandant_integrationen, users, mandanten "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -125,6 +130,93 @@ async def make_user():
             await session.refresh(user)
             user._plaintext_password = password  # convenience for tests
             return user
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_kunde():
+    async def _make(*, mandant: Mandant, name: str = "Testkunde", **kwargs) -> Kunde:
+        async with system_session() as session:
+            kunde = Kunde(
+                mandant_id=mandant.id,
+                kundennummer=kwargs.pop("kundennummer", f"K-{uuid.uuid4().hex[:6]}"),
+                name=name,
+                **kwargs,
+            )
+            session.add(kunde)
+            await session.flush()
+            await session.refresh(kunde)
+            return kunde
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_anlage():
+    async def _make(*, mandant: Mandant, kunde: Kunde, bezeichnung: str = "Hauptverteilung", **kwargs) -> Anlage:
+        async with system_session() as session:
+            anlage = Anlage(
+                mandant_id=mandant.id,
+                kunde_id=kunde.id,
+                bezeichnung=bezeichnung,
+                adresse=kwargs.pop("adresse", {"strasse": "Teststr. 1", "ort": "Musterstadt"}),
+                **kwargs,
+            )
+            session.add(anlage)
+            await session.flush()
+            await session.refresh(anlage)
+            return anlage
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_vertrag():
+    async def _make(
+        *, mandant: Mandant, kunde: Kunde, abrechnungsart: str = "wartungsvertrag", **kwargs
+    ) -> Vertrag:
+        async with system_session() as session:
+            vertrag = Vertrag(
+                mandant_id=mandant.id,
+                kunde_id=kunde.id,
+                bezeichnung=kwargs.pop("bezeichnung", "Wartungsvertrag"),
+                abrechnungsart=abrechnungsart,
+                **kwargs,
+            )
+            session.add(vertrag)
+            await session.flush()
+            await session.refresh(vertrag)
+            return vertrag
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_vorgang():
+    async def _make(
+        *,
+        mandant: Mandant,
+        kunde: Kunde,
+        titel: str = "Testvorgang",
+        abrechnungsart: str = "aufwand",
+        leistungstyp: str = "stoerung",
+        **kwargs,
+    ) -> Vorgang:
+        async with system_session() as session:
+            vorgang = Vorgang(
+                mandant_id=mandant.id,
+                vorgangsnummer=kwargs.pop("vorgangsnummer", f"V-{uuid.uuid4().hex[:6]}"),
+                kunde_id=kunde.id,
+                titel=titel,
+                abrechnungsart=abrechnungsart,
+                leistungstyp=leistungstyp,
+                **kwargs,
+            )
+            session.add(vorgang)
+            await session.flush()
+            await session.refresh(vorgang)
+            return vorgang
 
     return _make
 

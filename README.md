@@ -12,7 +12,7 @@ Stand:
 | Phase | Status |
 |---|---|
 | 1 – Fundament | ✅ siehe [`docs/phases/PHASE_1.md`](docs/phases/PHASE_1.md) |
-| 2 – Fachlicher Kern | offen |
+| 2 – Fachlicher Kern | ✅ siehe [`docs/phases/PHASE_2.md`](docs/phases/PHASE_2.md) |
 | 3 – Social-UX | offen |
 | 4 – Feld-Tauglichkeit | offen |
 | 5 – Steuerung | offen |
