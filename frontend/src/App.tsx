@@ -80,6 +80,7 @@ export function App() {
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
+          <Route path="/accounts" element={<UsersPage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       )}
