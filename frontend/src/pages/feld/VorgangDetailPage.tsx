@@ -211,6 +211,11 @@ export function VorgangDetailPage() {
     queryKey: ["zeiterfassung-laufend"],
     queryFn: zeiterfassungApi.laufend,
   });
+  const { data: zeiterfassungListe } = useQuery({
+    queryKey: ["zeiterfassung", id],
+    queryFn: () => zeiterfassungApi.list(id!),
+    enabled: !!id,
+  });
   const { data: termine } = useQuery({
     queryKey: ["termine", "vorgang", id],
     queryFn: () => termineApi.list({ vorgang_id: id! }),
@@ -345,6 +350,7 @@ export function VorgangDetailPage() {
     onSuccess: () => {
       setTaetigkeit("");
       queryClient.invalidateQueries({ queryKey: ["zeiterfassung-laufend"] });
+      queryClient.invalidateQueries({ queryKey: ["zeiterfassung", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
@@ -354,6 +360,7 @@ export function VorgangDetailPage() {
     mutationFn: (timerId: string) => zeiterfassungApi.stop(timerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["zeiterfassung-laufend"] });
+      queryClient.invalidateQueries({ queryKey: ["zeiterfassung", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
@@ -361,11 +368,19 @@ export function VorgangDetailPage() {
 
   if (!vorgang) return <p className="text-center text-slate-500">Lädt…</p>;
 
-  const eventsChronological = [...(events ?? [])].reverse();
+  // Neuestes Ereignis oben, ältestes unten -- der Backend-Endpunkt liefert
+  // bereits "ORDER BY id DESC" (siehe app/api/routes/vorgang_events.py),
+  // hier also unveraendert uebernehmen statt umzudrehen.
   const sichtbareEvents = kundenansicht
-    ? eventsChronological.filter((e) => e.kundensichtbar)
-    : eventsChronological;
+    ? (events ?? []).filter((e) => e.kundensichtbar)
+    : events ?? [];
   const eigeneOutboxItems = (outboxItems ?? []).filter((i) => i.vorgang_id === id);
+
+  const gesamtSekunden = (zeiterfassungListe ?? []).reduce((summe, e) => {
+    if (!e.ende_at) return summe;
+    return summe + (new Date(e.ende_at).getTime() - new Date(e.start_at).getTime()) / 1000;
+  }, 0);
+  const gesamtStunden = (gesamtSekunden / 3600).toFixed(1);
 
   const timerLaeuftHier = laufenderTimer && laufenderTimer.vorgang_id === id;
   const timerLaeuftAnderswo = laufenderTimer && laufenderTimer.vorgang_id !== id;
@@ -409,6 +424,12 @@ export function VorgangDetailPage() {
       </div>
 
       <div className="rounded-lg bg-white p-3 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-500">Arbeitszeit</h2>
+          <span className="text-sm font-medium text-slate-700">
+            Bisher {gesamtStunden.replace(".", ",")} Std.
+          </span>
+        </div>
         {timerLaeuftHier ? (
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -444,6 +465,35 @@ export function VorgangDetailPage() {
             >
               Zeit starten
             </button>
+          </div>
+        )}
+
+        {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 && (
+          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+            {[...(zeiterfassungListe ?? [])]
+              .filter((e) => e.ende_at)
+              .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
+              .map((e) => {
+                const dauerStunden = (
+                  (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) /
+                  1000 /
+                  3600
+                ).toFixed(1);
+                const techniker = users?.find((u) => u.id === e.techniker_id);
+                return (
+                  <div key={e.id} className="flex items-center justify-between text-xs text-slate-500">
+                    <span>
+                      {techniker?.name ?? "—"}
+                      {e.taetigkeit && ` · ${e.taetigkeit}`}
+                      {" · "}
+                      {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+                    </span>
+                    <span className="shrink-0 font-medium text-slate-600">
+                      {dauerStunden.replace(".", ",")} Std.
+                    </span>
+                  </div>
+                );
+              })}
           </div>
         )}
       </div>
@@ -722,11 +772,13 @@ export function VorgangDetailPage() {
           <p className="text-center text-sm text-slate-400">Noch keine Einträge.</p>
         ) : (
           <>
+            {/* Noch nicht synchronisierte Einträge sind immer die neuesten
+                -- stehen deshalb vor den bereits synchronisierten Events. */}
+            {!kundenansicht &&
+              eigeneOutboxItems.map((item) => <OutboxBubble key={item.client_uuid} item={item} />)}
             {sichtbareEvents.map((event) => (
               <EventBubble key={event.id} event={event} onHighlight={(eventId) => highlightMutation.mutate(eventId)} />
             ))}
-            {!kundenansicht &&
-              eigeneOutboxItems.map((item) => <OutboxBubble key={item.client_uuid} item={item} />)}
           </>
         )}
       </div>
