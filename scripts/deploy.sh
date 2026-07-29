@@ -222,12 +222,26 @@ fi
 # --- 11. Backup-Cron ----------------------------------------------------------
 BACKUP_DIR_VAL="$(get_env BACKUP_DIR)"
 mkdir -p "${BACKUP_DIR_VAL:-/opt/socialcrm-backups}"
+
+if ! command -v crontab &>/dev/null; then
+  if [[ $IS_ROOT -eq 1 ]] && command -v apt-get &>/dev/null; then
+    log "crontab nicht gefunden, installiere cron..."
+    apt-get update -qq && apt-get install -y -qq cron
+    systemctl enable --now cron &>/dev/null || true
+  else
+    warn "crontab nicht gefunden und kann hier nicht automatisch installiert werden -- Backup-Cron wird übersprungen."
+  fi
+fi
+
 CRON_LINE="30 2 * * * ${REPO_DIR}/scripts/backup.sh >> /var/log/socialcrm-backup.log 2>&1"
-if ! crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup.sh"; then
-  log "Richte tägliches Backup per Cron ein (02:30 Uhr)..."
-  (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
-else
-  log "Backup-Cron bereits eingerichtet, überspringe."
+if command -v crontab &>/dev/null; then
+  if ! crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup.sh"; then
+    log "Richte tägliches Backup per Cron ein (02:30 Uhr)..."
+    (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab - \
+      || warn "Cron-Eintrag konnte nicht angelegt werden, bitte manuell eintragen: $CRON_LINE"
+  else
+    log "Backup-Cron bereits eingerichtet, überspringe."
+  fi
 fi
 
 # --- 12. Zusammenfassung ------------------------------------------------------
