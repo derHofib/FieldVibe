@@ -73,7 +73,7 @@ set_env() {
     echo "${key}=${value}" >> .env
   fi
 }
-get_env() { grep "^${1}=" .env 2>/dev/null | head -n1 | cut -d= -f2-; }
+get_env() { grep "^${1}=" .env 2>/dev/null | head -n1 | cut -d= -f2- || true; }
 is_placeholder() { [[ "$(get_env "$1")" == *changeme* ]]; }
 
 # --- 3. Betriebsart: Domain (mit TLS) oder nur Server-IP (ohne TLS) --------
@@ -169,7 +169,7 @@ else
     log "Ermittle die öffentliche Server-IP..."
     DETECTED_IP="$(curl -fsSL -4 --max-time 5 https://api.ipify.org 2>/dev/null || true)"
     [[ -z "$DETECTED_IP" ]] && DETECTED_IP="$(curl -fsSL -4 --max-time 5 https://ifconfig.me 2>/dev/null || true)"
-    [[ -z "$DETECTED_IP" ]] && DETECTED_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+    [[ -z "$DETECTED_IP" ]] && DETECTED_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
 
     if [[ -n "$DETECTED_IP" ]]; then
       read -rp "Server-IP [$DETECTED_IP]: " SERVER_IP
