@@ -199,7 +199,25 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
   run --rm backend alembic upgrade head
 ```
 
-## 7. Troubleshooting
+## 7. Deinstallieren
+
+`scripts/uninstall.sh` entfernt eine Installation vollständig: alle
+Container, die Docker-Volumes (**Postgres-Datenbank und alle
+MinIO-Fotos!**), die gebauten Images und den Backup-Cron-Eintrag. Fragt
+vor der Ausführung eine wörtliche Bestätigung ab und rührt vorhandene
+Backups in `BACKUP_DIR` standardmäßig nicht an.
+
+```bash
+./scripts/uninstall.sh                  # Container + Volumes + Images + Cron
+./scripts/uninstall.sh --keep-images    # Docker-Images behalten
+./scripts/uninstall.sh --purge-backups  # zusätzlich auch alle Backups löschen
+./scripts/uninstall.sh --remove-repo    # zusätzlich das ganze Repo-Verzeichnis löschen
+```
+
+Macht selbst keine Sicherung – vorher `scripts/backup.sh` ausführen, falls
+die Daten noch gebraucht werden könnten.
+
+## 8. Troubleshooting
 
 - **Zertifikat wird nicht ausgestellt**: DNS-A-Records prüfen (müssen
   bereits vor dem ersten Start auf den Server zeigen), Port 80 muss von

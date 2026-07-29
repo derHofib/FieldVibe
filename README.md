@@ -77,6 +77,7 @@ frontend/   React-App: Super-Admin-Dashboard + Feld-App (Feed/Chat/Suche/...) + 
 docs/phases/  Phasen-spezifische READMEs
 docs/DEPLOYMENT.md             Produktions-Deployment (Abschnitt 15)
 scripts/deploy.sh              Automatisiertes Produktions-Deployment (siehe docs/DEPLOYMENT.md)
+scripts/uninstall.sh            Installation vollständig entfernen (siehe docs/DEPLOYMENT.md)
 scripts/backup.sh, restore.sh  Backup-Automatisierung (siehe docs/DEPLOYMENT.md)
 docker-compose.yml             Basis-Stack (Postgres, MinIO, Backend, Frontend, Worker)
 docker-compose.override.yml    Lokale Entwicklung (Hot-Reload, offene Ports)
