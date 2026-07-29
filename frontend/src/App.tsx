@@ -7,14 +7,17 @@ import { AuditLogPage } from "./pages/AuditLogPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantenPage } from "./pages/MandantenPage";
 import { UsersPage } from "./pages/UsersPage";
+import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
 import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { FeedPage } from "./pages/feld/FeedPage";
+import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
+import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { SearchPage } from "./pages/feld/SearchPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
 
@@ -61,6 +64,9 @@ export function App() {
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/dispo" element={<DispoBoardPage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
+          <Route path="/geschaeft" element={<GeschaeftPage />} />
+          <Route path="/angebote/:id" element={<AngebotDetailPage />} />
+          <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       )}

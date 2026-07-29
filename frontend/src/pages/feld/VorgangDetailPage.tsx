@@ -4,7 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import {
+  angeboteApi,
   kundenApi,
+  maengelApi,
   termineApi,
   usersApi,
   vorgangEventsApi,
@@ -15,8 +17,16 @@ import { MentionText } from "../../components/MentionText";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
 import { getOutboxItems, queueFoto, queueKommentar } from "../../offline/outbox";
+import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
-import type { TerminWarnung, VorgangEvent, VorgangStatus } from "../../types";
+import type { MangelSchweregrad, MangelStatus, TerminWarnung, VorgangEvent, VorgangStatus } from "../../types";
+
+const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
+  { value: "niedrig", label: "Niedrig" },
+  { value: "mittel", label: "Mittel" },
+  { value: "hoch", label: "Hoch" },
+  { value: "kritisch", label: "Kritisch" },
+];
 
 const STATUS_OPTIONS: VorgangStatus[] = [
   "neu",
@@ -129,6 +139,9 @@ export function VorgangDetailPage() {
   const [terminTitel, setTerminTitel] = useState("");
   const [terminStart, setTerminStart] = useState("");
   const [terminEnde, setTerminEnde] = useState("");
+  const [showMangelForm, setShowMangelForm] = useState(false);
+  const [mangelBeschreibung, setMangelBeschreibung] = useState("");
+  const [mangelSchweregrad, setMangelSchweregrad] = useState<MangelSchweregrad>("mittel");
 
   const kannDisponieren =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
@@ -200,6 +213,42 @@ export function VorgangDetailPage() {
       setTerminTitel("");
       queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] });
     },
+  });
+
+  const { data: maengel } = useQuery({
+    queryKey: ["maengel", "vorgang", id],
+    queryFn: () => maengelApi.list({ vorgang_id: id! }),
+    enabled: !!id,
+  });
+
+  const mangelMutation = useMutation({
+    mutationFn: () =>
+      maengelApi.create({ vorgang_id: id!, beschreibung: mangelBeschreibung, schweregrad: mangelSchweregrad }),
+    onSuccess: () => {
+      setShowMangelForm(false);
+      setMangelBeschreibung("");
+      queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+  });
+
+  const mangelStatusMutation = useMutation({
+    mutationFn: ({ mangelId, status }: { mangelId: string; status: MangelStatus }) =>
+      maengelApi.update(mangelId, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+  });
+
+  const angebotAusMaengelnMutation = useMutation({
+    mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
+    onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+  });
+
+  const maengelProtokollMutation = useMutation({
+    mutationFn: () => maengelApi.protokollPdf(id!),
+    onSuccess: openPdfBlob,
   });
 
   const statusMutation = useMutation({
@@ -460,6 +509,104 @@ export function VorgangDetailPage() {
               </div>
             ))}
           </div>
+        )}
+      </div>
+
+      <div className="rounded-lg bg-white p-3 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-500">Mängel</h2>
+          <div className="flex items-center gap-3">
+            {(maengel ?? []).length > 0 && (
+              <button
+                onClick={() => maengelProtokollMutation.mutate()}
+                disabled={maengelProtokollMutation.isPending}
+                className="btn-touch text-xs font-medium text-slate-500"
+              >
+                📄 Protokoll
+              </button>
+            )}
+            <button onClick={() => setShowMangelForm((v) => !v)} className="btn-touch text-xs font-medium text-blue-700">
+              {showMangelForm ? "Abbrechen" : "+ Mangel melden"}
+            </button>
+          </div>
+        </div>
+
+        {showMangelForm && (
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2">
+            <textarea
+              value={mangelBeschreibung}
+              onChange={(e) => setMangelBeschreibung(e.target.value)}
+              placeholder="Was ist defekt?"
+              rows={2}
+              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm"
+            />
+            <select
+              value={mangelSchweregrad}
+              onChange={(e) => setMangelSchweregrad(e.target.value as MangelSchweregrad)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              {SCHWEREGRAD_OPTIONEN.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <button
+              disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
+              onClick={() => mangelMutation.mutate()}
+              className="btn-touch w-full rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Erfassen
+            </button>
+          </div>
+        )}
+
+        {(maengel ?? []).length === 0 ? (
+          <p className="text-sm text-slate-400">Keine Mängel erfasst.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {maengel!.map((m) => (
+              <div key={m.id} className="rounded-md bg-slate-50 p-2 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-slate-700">{m.beschreibung}</p>
+                  <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+                    {m.schweregrad}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">{m.status}</span>
+                  {m.status === "offen" && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "behoben" })}
+                        className="btn-touch text-xs font-medium text-green-700"
+                      >
+                        Behoben
+                      </button>
+                      <button
+                        onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "abgelehnt" })}
+                        className="btn-touch text-xs font-medium text-red-700"
+                      >
+                        Verwerfen
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {kannDisponieren && (maengel ?? []).some((m) => m.status === "offen") && (
+          <button
+            onClick={() =>
+              angebotAusMaengelnMutation.mutate(maengel!.filter((m) => m.status === "offen").map((m) => m.id))
+            }
+            disabled={angebotAusMaengelnMutation.isPending}
+            className="btn-touch mt-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50"
+          >
+            Angebot aus offenen Mängeln erstellen
+          </button>
         )}
       </div>
 

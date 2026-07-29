@@ -311,3 +311,73 @@ export interface Pruefmittel {
   created_at: string;
   updated_at: string;
 }
+
+// --- Geschäftsprozesse (Phase 6) ------------------------------------------
+
+export type MangelSchweregrad = "kritisch" | "hoch" | "mittel" | "niedrig";
+export type MangelStatus = "offen" | "in_angebot" | "in_bearbeitung" | "behoben" | "abgelehnt";
+
+export interface Mangel {
+  id: string;
+  vorgang_id: string;
+  anlage_id: string | null;
+  beschreibung: string;
+  schweregrad: MangelSchweregrad;
+  status: MangelStatus;
+  gemeldet_von: string;
+  angebot_id: string | null;
+  reparatur_vorgang_id: string | null;
+  behoben_am: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt";
+
+export interface AngebotPosition {
+  id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  gesamt: string;
+}
+
+export interface Angebot {
+  id: string;
+  kunde_id: string;
+  vorgang_id: string | null;
+  angebotsnummer: string;
+  status: AngebotStatus;
+  mwst_satz: string;
+  gueltig_bis: string | null;
+  erstellt_von: string;
+  versendet_am: string | null;
+  angenommen_am: string | null;
+  abgelehnt_am: string | null;
+  created_at: string;
+  updated_at: string;
+  positionen: AngebotPosition[];
+  gesamt_netto: string;
+  gesamt_brutto: string;
+}
+
+export type RechnungStatus = "entwurf" | "versendet" | "bezahlt" | "storniert";
+
+export interface Rechnung {
+  id: string;
+  kunde_id: string;
+  vorgang_id: string | null;
+  rechnungsnummer: string;
+  betrag_netto: string;
+  mwst_satz: string;
+  status: RechnungStatus;
+  faellig_am: string | null;
+  erstellt_von: string;
+  versendet_am: string | null;
+  bezahlt_am: string | null;
+  created_at: string;
+  updated_at: string;
+  betrag_brutto: string;
+}

@@ -16,7 +16,7 @@ Stand:
 | 3 – Social-UX | ✅ siehe [`docs/phases/PHASE_3.md`](docs/phases/PHASE_3.md) |
 | 4 – Feld-Tauglichkeit | ✅ siehe [`docs/phases/PHASE_4.md`](docs/phases/PHASE_4.md) |
 | 5 – Steuerung | ✅ siehe [`docs/phases/PHASE_5.md`](docs/phases/PHASE_5.md) |
-| 6 – Geschäftsprozesse | offen |
+| 6 – Geschäftsprozesse | ✅ siehe [`docs/phases/PHASE_6.md`](docs/phases/PHASE_6.md) |
 | 7 – Ausbau | offen |
 
 ## Tech-Stack

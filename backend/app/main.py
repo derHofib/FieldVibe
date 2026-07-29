@@ -5,16 +5,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes import (
+    angebote,
     anlagen,
     audit_log,
     auth,
     feed,
     impersonation,
     kunden,
+    maengel,
     mandanten,
     notifications,
     pruefmittel,
     pruefzyklen,
+    rechnungen,
     search,
     stories,
     stream,
@@ -44,9 +47,9 @@ app = FastAPI(
     title="SocialCRM API",
     description=(
         "Mandantenfähiges Auftragsmanagement- und CRM-System für den "
-        "Elektro-Handwerksbetrieb – Phase 5: Steuerung."
+        "Elektro-Handwerksbetrieb – Phase 6: Geschäftsprozesse."
     ),
-    version="0.5.0",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -59,6 +62,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(angebote.router)
 app.include_router(mandanten.router)
 app.include_router(users.router)
 app.include_router(impersonation.router)
@@ -78,6 +82,8 @@ app.include_router(zeiterfassung.router)
 app.include_router(termine.router)
 app.include_router(pruefzyklen.router)
 app.include_router(pruefmittel.router)
+app.include_router(maengel.router)
+app.include_router(rechnungen.router)
 
 
 @app.get("/healthz")

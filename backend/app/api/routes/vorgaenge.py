@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.mangel import Mangel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
@@ -182,6 +183,21 @@ async def update_vorgang(
                     zyklus.letzte_pruefung_am, zyklus.intervall_monate
                 )
                 zyklus.offener_vorgang_id = None
+
+            # Schliesst dieser Vorgang eine aus einem angenommenen Angebot
+            # entstandene Reparatur ab, gelten die zugehoerigen Maengel als
+            # behoben (siehe app/api/routes/angebote.py: dort wird
+            # reparatur_vorgang_id beim Annehmen des Angebots gesetzt).
+            offene_maengel = (
+                await session.execute(
+                    select(Mangel).where(
+                        Mangel.reparatur_vorgang_id == vorgang.id, Mangel.status != "behoben"
+                    )
+                )
+            ).scalars().all()
+            for mangel in offene_maengel:
+                mangel.status = "behoben"
+                mangel.behoben_am = vorgang.abgeschlossen_am
 
     await session.flush()
     if changes:

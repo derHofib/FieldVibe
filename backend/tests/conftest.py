@@ -107,7 +107,8 @@ async def _clean_tables():
         await conn.execute(
             text(
                 "TRUNCATE audit_log, notifications, tag_assignments, tags, zeiterfassung, "
-                "termine, pruefzyklen, pruefmittel, vorgang_events, vorgaenge, vertraege, "
+                "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
+                "rechnungen, vorgang_events, vorgaenge, vertraege, "
                 "anlagen, kunden, mandant_integrationen, users, mandanten "
                 "RESTART IDENTITY CASCADE"
             )

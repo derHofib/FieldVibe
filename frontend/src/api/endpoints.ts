@@ -1,5 +1,7 @@
-import { apiFetch, apiFetchForm } from "./client";
+import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
 import type {
+  Angebot,
+  AngebotPosition,
   Anlage,
   AnlageProfil,
   AuditLogEntry,
@@ -9,9 +11,11 @@ import type {
   Kunde,
   KundeProfil,
   Mandant,
+  Mangel,
   NotificationEntry,
   Pruefmittel,
   Pruefzyklus,
+  Rechnung,
   SearchResponse,
   StoriesResponse,
   Tag,
@@ -243,6 +247,53 @@ export const pruefmittelApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+};
+
+export const maengelApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<Mangel[]>(`/api/maengel${qs ? `?${qs}` : ""}`);
+  },
+  create: (body: { vorgang_id: string; anlage_id?: string | null; beschreibung: string; schweregrad?: string }) =>
+    apiFetch<Mangel>("/api/maengel", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<Pick<Mangel, "beschreibung" | "schweregrad" | "status">>) =>
+    apiFetch<Mangel>(`/api/maengel/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  protokollPdf: (vorgangId: string) => apiFetchBlob(`/api/maengel/protokoll/pdf?vorgang_id=${vorgangId}`),
+};
+
+export const angeboteApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<Angebot[]>(`/api/angebote${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => apiFetch<Angebot>(`/api/angebote/${id}`),
+  create: (body: { kunde_id: string; vorgang_id?: string | null; gueltig_bis?: string }) =>
+    apiFetch<Angebot>("/api/angebote", { method: "POST", body: JSON.stringify(body) }),
+  createFromMaengel: (mangelIds: string[], gueltigBis?: string) =>
+    apiFetch<Angebot>("/api/angebote/from-maengel", {
+      method: "POST",
+      body: JSON.stringify({ mangel_ids: mangelIds, gueltig_bis: gueltigBis }),
+    }),
+  addPosition: (
+    id: string,
+    body: Pick<AngebotPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">,
+  ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
+  updateStatus: (id: string, status: string) =>
+    apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  pdf: (id: string) => apiFetchBlob(`/api/angebote/${id}/pdf`),
+};
+
+export const rechnungenApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<Rechnung[]>(`/api/rechnungen${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}`),
+  create: (body: { kunde_id: string; vorgang_id?: string | null; betrag_netto: string; faellig_am?: string }) =>
+    apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
+  updateStatus: (id: string, status: string) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  pdf: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/pdf`),
 };
 
 export const tagsApi = {

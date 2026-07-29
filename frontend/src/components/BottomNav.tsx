@@ -13,6 +13,7 @@ const items = [
 ];
 
 const dispoItem = { to: "/dispo", label: "Dispo", icon: "📅" };
+const geschaeftItem = { to: "/geschaeft", label: "Geschäft", icon: "💼" };
 
 export function BottomNav() {
   const { currentUser } = useAuth();
@@ -27,7 +28,7 @@ export function BottomNav() {
   // in einem versteckten Menue, da es fuer Disponent/Admin Kernarbeit ist.
   const canDisponieren =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
-  const sichtbareItems = canDisponieren ? [...items, dispoItem] : items;
+  const sichtbareItems = canDisponieren ? [...items, dispoItem, geschaeftItem] : items;
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white">

@@ -123,3 +123,30 @@ export async function apiFetchForm<T>(
 
   return (await resp.json()) as T;
 }
+
+/** For binary responses (PDF-Downloads): plain fetch() ignores the
+ * Authorization header a browser would need for a bare <a href>, so PDF
+ * links go through this instead -- fetch the bytes with the token attached,
+ * then hand the caller an object URL to open/download. */
+export async function apiFetchBlob(path: string, _isRetry = false): Promise<Blob> {
+  const token = authStore.getActiveAccessToken();
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const resp = await fetchWithTimeout(`${BASE_URL}${path}`, { headers });
+
+  if (resp.status === 401 && !_isRetry) {
+    if (authStore.isImpersonating()) {
+      authStore.setImpersonation(null);
+      return apiFetchBlob(path, true);
+    }
+    if (await refreshPrimaryToken()) {
+      return apiFetchBlob(path, true);
+    }
+  }
+
+  if (!resp.ok) {
+    throw new ApiError(resp.status, resp.statusText);
+  }
+  return await resp.blob();
+}
