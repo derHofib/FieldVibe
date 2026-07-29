@@ -23,6 +23,26 @@ einer mit Pfad-Präfixen, weil S3-Presigned-URLs Host *und* Pfad signieren;
 ein nachträglich von Caddy gestripptes Pfad-Präfix würde die Signatur
 brechen (siehe Kommentar in `app/services/storage_service.py`).
 
+## Automatisiert: `scripts/deploy.sh`
+
+Führt die Schritte 1–5 unten (bis auf DNS/Firewall-Freigabe auf
+Provider-Seite) automatisiert aus: Docker installieren, `.env` mit
+generierten Secrets und abgefragten Domains anlegen, Stack starten,
+Migrationen anwenden, ersten Superadmin anlegen, Backup-Cron einrichten.
+Idempotent – kann später erneut ausgeführt werden, um zu aktualisieren.
+
+```bash
+git clone https://github.com/derHofib/SocialCRM.git
+cd SocialCRM
+sudo ./scripts/deploy.sh
+```
+
+Setzt eine interaktive Shell voraus (fragt Domains und die
+Admin-Zugangsdaten ab) – **nicht** per `curl | bash` ausführen, sondern
+das Repo erst klonen. Die restlichen Abschnitte dieses Dokuments erklären
+dieselben Schritte manuell, falls du mehr Kontrolle brauchst oder etwas
+schiefgeht.
+
 ## 1. Voraussetzungen
 
 - Ein vServer mit Docker + Compose-Plugin:

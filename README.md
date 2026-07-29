@@ -58,6 +58,17 @@ Backup-Automatisierung siehe [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 Der obige Schnellstart mit `docker-compose.override.yml` ist **nur** für
 lokale Entwicklung gedacht (offene DB/MinIO-Ports, kein TLS).
 
+Für den schnellen Weg übernimmt `scripts/deploy.sh` die Schritte aus
+`docs/DEPLOYMENT.md` automatisiert (Docker installieren, Secrets
+generieren, Domains abfragen, Stack starten, Migrationen, ersten
+Superadmin anlegen, Backup-Cron einrichten):
+
+```bash
+git clone https://github.com/derHofib/SocialCRM.git
+cd SocialCRM
+sudo ./scripts/deploy.sh
+```
+
 ## Struktur
 
 ```
@@ -65,6 +76,7 @@ backend/    FastAPI-App, Alembic-Migrationen, pytest-Tests
 frontend/   React-App: Super-Admin-Dashboard + Feld-App (Feed/Chat/Suche/...) + Kundenportal (/portal)
 docs/phases/  Phasen-spezifische READMEs
 docs/DEPLOYMENT.md             Produktions-Deployment (Abschnitt 15)
+scripts/deploy.sh              Automatisiertes Produktions-Deployment (siehe docs/DEPLOYMENT.md)
 scripts/backup.sh, restore.sh  Backup-Automatisierung (siehe docs/DEPLOYMENT.md)
 docker-compose.yml             Basis-Stack (Postgres, MinIO, Backend, Frontend, Worker)
 docker-compose.override.yml    Lokale Entwicklung (Hot-Reload, offene Ports)
