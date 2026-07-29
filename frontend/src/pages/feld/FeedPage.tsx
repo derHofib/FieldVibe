@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { feedApi, storiesApi } from "../../api/endpoints";
-import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
+import { cacheFeedItems, getCachedFeedItems } from "../../offline/cache";
+import type { FeedCard, FeedResponse, StoryItem, VorgangStatus } from "../../types";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",
@@ -103,8 +104,25 @@ export function FeedPage() {
     isLoading,
   } = useInfiniteQuery({
     queryKey: ["feed", statusFilter],
-    queryFn: ({ pageParam }: { pageParam: string | undefined }) =>
-      feedApi.get({ ...(statusFilter ? { status: statusFilter } : {}), ...(pageParam ? { cursor: pageParam } : {}) }),
+    queryFn: async ({ pageParam }: { pageParam: string | undefined }): Promise<FeedResponse> => {
+      try {
+        const result = await feedApi.get({
+          ...(statusFilter ? { status: statusFilter } : {}),
+          ...(pageParam ? { cursor: pageParam } : {}),
+        });
+        // Only the first page mirrors into the offline cache -- it's meant
+        // to reflect "the feed as last seen", not accumulate every page a
+        // user has ever scrolled through.
+        if (!pageParam) await cacheFeedItems(result.items);
+        return result;
+      } catch (err) {
+        if (!navigator.onLine && !pageParam) {
+          const cached = await getCachedFeedItems();
+          if (cached.length > 0) return { items: cached, next_cursor: null };
+        }
+        throw err;
+      }
+    },
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });

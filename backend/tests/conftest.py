@@ -10,6 +10,14 @@ os.environ.setdefault(
     "postgresql+psycopg2://socialcrm:socialcrm@localhost:5432/socialcrm_test",
 )
 os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
+# Fixed port (not dynamically chosen) because app.services.storage_service
+# builds its boto3 clients at import time -- these env vars must exist
+# before `from app.main import app` pulls that module in below, so the
+# ThreadedMotoServer fixture further down just has to bind the same port
+# rather than discover and propagate one after the fact.
+os.environ.setdefault("S3_ENDPOINT_URL", "http://localhost:9199")
+os.environ.setdefault("S3_PUBLIC_URL_BASE", "http://localhost:9199")
+os.environ.setdefault("S3_BUCKET_FOTOS", "socialcrm-fotos-test")
 
 import pytest
 import pytest_asyncio
@@ -17,6 +25,7 @@ import sqlalchemy
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
+from moto.moto_server.threaded_moto_server import ThreadedMotoServer
 from sqlalchemy import create_engine, text
 
 from app.core.config import get_settings
@@ -29,6 +38,7 @@ from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.services import storage_service
 
 _settings = get_settings()
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -72,15 +82,33 @@ def _migrated_database():
     yield
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _s3_test_server():
+    """Stands in for MinIO: a real local S3-compatible HTTP server (moto's
+    server mode, not its request-mocking decorator -- the latter only
+    intercepts calls to actual AWS hostnames, not a custom endpoint_url like
+    ours). storage_service's module-level boto3 clients were already built
+    against S3_ENDPOINT_URL/S3_PUBLIC_URL_BASE at import time, so this just
+    has to listen on that same fixed port.
+    """
+    server = ThreadedMotoServer(port=9199)
+    server.start()
+    try:
+        storage_service._internal_client.create_bucket(Bucket=storage_service.BUCKET)
+        yield
+    finally:
+        server.stop()
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def _clean_tables():
     yield
     async with engine.begin() as conn:
         await conn.execute(
             text(
-                "TRUNCATE audit_log, notifications, tag_assignments, tags, vorgang_events, "
-                "vorgaenge, vertraege, anlagen, kunden, mandant_integrationen, users, mandanten "
-                "RESTART IDENTITY CASCADE"
+                "TRUNCATE audit_log, notifications, tag_assignments, tags, zeiterfassung, "
+                "vorgang_events, vorgaenge, vertraege, anlagen, kunden, mandant_integrationen, "
+                "users, mandanten RESTART IDENTITY CASCADE"
             )
         )
 

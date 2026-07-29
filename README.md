@@ -14,7 +14,7 @@ Stand:
 | 1 – Fundament | ✅ siehe [`docs/phases/PHASE_1.md`](docs/phases/PHASE_1.md) |
 | 2 – Fachlicher Kern | ✅ siehe [`docs/phases/PHASE_2.md`](docs/phases/PHASE_2.md) |
 | 3 – Social-UX | ✅ siehe [`docs/phases/PHASE_3.md`](docs/phases/PHASE_3.md) |
-| 4 – Feld-Tauglichkeit | offen |
+| 4 – Feld-Tauglichkeit | ✅ siehe [`docs/phases/PHASE_4.md`](docs/phases/PHASE_4.md) |
 | 5 – Steuerung | offen |
 | 6 – Geschäftsprozesse | offen |
 | 7 – Ausbau | offen |
@@ -23,8 +23,9 @@ Stand:
 
 - **DB**: PostgreSQL 16 (UUID-PKs, JSONB, Row Level Security, `pg_trgm`)
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.x (async), Alembic, Pydantic v2
-- **Frontend**: React 18 + TypeScript, Vite, TanStack Query, Tailwind CSS
+- **Frontend**: React 18 + TypeScript, Vite, TanStack Query, Tailwind CSS, PWA (Service Worker + IndexedDB-Offline-Outbox)
 - **Auth**: JWT (Access + Refresh), Argon2id
+- **Objektspeicher**: MinIO (S3-kompatibel) für Fotos
 - **Deployment (lokal)**: Docker Compose, ein Container je Dienst
 
 ## Schnellstart

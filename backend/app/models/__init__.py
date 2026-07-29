@@ -9,6 +9,7 @@ from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
+from app.models.zeiterfassung import Zeiterfassung
 
 __all__ = [
     "Anlage",
@@ -23,4 +24,5 @@ __all__ = [
     "Vertrag",
     "Vorgang",
     "VorgangEvent",
+    "Zeiterfassung",
 ]

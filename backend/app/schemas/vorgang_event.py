@@ -45,3 +45,8 @@ class VorgangEventRead(BaseModel):
     ref_entity_id: UUID | None
     client_uuid: UUID | None
     created_at: datetime
+    # Nur bei event_type == "foto" gesetzt: bei jedem Lesen frisch aus dem
+    # in payload gespeicherten S3-Key signiert (presigned URLs laufen ab,
+    # koennen also nicht einfach mitgespeichert werden).
+    foto_url: str | None = None
+    foto_thumbnail_url: str | None = None

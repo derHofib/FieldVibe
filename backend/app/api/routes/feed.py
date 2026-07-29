@@ -12,6 +12,7 @@ from app.models.kunde import Kunde
 from app.models.tag import Tag, TagAssignment
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
+from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.feed import FeedCard, FeedResponse
 
 router = APIRouter(
@@ -133,6 +134,13 @@ async def get_feed(
         )
         tags = [row[0] for row in tags_result.all()]
 
+        timer_result = await session.execute(
+            select(Zeiterfassung.id)
+            .where(Zeiterfassung.vorgang_id == vorgang.id, Zeiterfassung.ende_at.is_(None))
+            .limit(1)
+        )
+        timer_laeuft = timer_result.scalar_one_or_none() is not None
+
         items.append(
             FeedCard(
                 id=vorgang.id,
@@ -147,6 +155,7 @@ async def get_feed(
                 last_activity_at=vorgang.last_activity_at,
                 letztes_event_vorschau=_preview_text(last_event),
                 tags=tags,
+                timer_laeuft=timer_laeuft,
             )
         )
 

@@ -89,3 +89,41 @@ async def test_list_anlagen_filtered_by_kunde(
     )
     assert resp.status_code == 200
     assert [a["bezeichnung"] for a in resp.json()] == ["Anlage 1"]
+
+
+@pytest.mark.asyncio
+async def test_qr_scan_finds_own_anlage(client, make_mandant, make_user, make_kunde, make_anlage):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde, qr_code="QR-SCAN-TEST-1")
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.get("/api/anlagen/by-qr/QR-SCAN-TEST-1", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.json()["id"] == str(anlage.id)
+
+
+@pytest.mark.asyncio
+async def test_qr_scan_unknown_code_404(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.get("/api/anlagen/by-qr/DOES-NOT-EXIST", headers=auth_headers(token))
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_qr_scan_does_not_leak_other_mandants_anlage(
+    client, make_mandant, make_user, make_kunde, make_anlage
+):
+    mandant_a = await make_mandant(name="Mandant A")
+    mandant_b = await make_mandant(name="Mandant B")
+    techniker_a = await make_user(mandant=mandant_a, role="techniker", password="pw-123456")
+    kunde_b = await make_kunde(mandant=mandant_b)
+    await make_anlage(mandant=mandant_b, kunde=kunde_b, qr_code="QR-FREMD-1")
+    token = await login(client, techniker_a.email, "pw-123456")
+
+    resp = await client.get("/api/anlagen/by-qr/QR-FREMD-1", headers=auth_headers(token))
+    assert resp.status_code == 404

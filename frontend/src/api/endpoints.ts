@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, apiFetchForm } from "./client";
 import type {
   Anlage,
   AnlageProfil,
@@ -18,6 +18,7 @@ import type {
   Vorgang,
   VorgangEvent,
   VorgangEventType,
+  Zeiterfassung,
 } from "../types";
 
 export const authApi = {
@@ -106,6 +107,7 @@ export const anlagenApi = {
   list: (kundeId?: string) =>
     apiFetch<Anlage[]>(`/api/anlagen${kundeId ? `?kunde_id=${kundeId}` : ""}`),
   profil: (id: string) => apiFetch<AnlageProfil>(`/api/anlagen/${id}/profil`),
+  byQrCode: (qrCode: string) => apiFetch<Anlage>(`/api/anlagen/by-qr/${encodeURIComponent(qrCode)}`),
 };
 
 export const vorgaengeApi = {
@@ -138,6 +140,32 @@ export const vorgangEventsApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  uploadFoto: (
+    vorgangId: string,
+    file: Blob,
+    filename: string,
+    kundensichtbar: boolean,
+    body?: string,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file, filename);
+    formData.append("kundensichtbar", String(kundensichtbar));
+    if (body) formData.append("body", body);
+    return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/foto`, formData);
+  },
+};
+
+export const zeiterfassungApi = {
+  laufend: () => apiFetch<Zeiterfassung | null>("/api/zeiterfassung/laufend"),
+  start: (vorgangId: string, taetigkeit?: string) =>
+    apiFetch<Zeiterfassung>("/api/zeiterfassung/start", {
+      method: "POST",
+      body: JSON.stringify({ vorgang_id: vorgangId, taetigkeit }),
+    }),
+  stop: (id: string) =>
+    apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/stop`, { method: "POST" }),
+  list: (vorgangId: string) =>
+    apiFetch<Zeiterfassung[]>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
 };
 
 export const tagsApi = {

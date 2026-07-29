@@ -152,6 +152,8 @@ export interface VorgangEvent {
   ref_entity_id: string | null;
   client_uuid: string | null;
   created_at: string;
+  foto_url: string | null;
+  foto_thumbnail_url: string | null;
 }
 
 export interface Tag {
@@ -236,4 +238,19 @@ export interface AnlageProfil extends Anlage {
   kunde: Kunde;
   vorgaenge: Vorgang[];
   tags: Tag[];
+}
+
+// --- Feld-Tauglichkeit (Phase 4) -----------------------------------------
+
+export interface Zeiterfassung {
+  id: string;
+  vorgang_id: string;
+  techniker_id: string;
+  start_at: string;
+  ende_at: string | null;
+  taetigkeit: string | null;
+  abrechenbar: boolean;
+  freigegeben: boolean;
+  created_at: string;
+  updated_at: string;
 }

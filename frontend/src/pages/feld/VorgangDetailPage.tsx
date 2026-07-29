@@ -1,9 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { kundenApi, usersApi, vorgangEventsApi, vorgaengeApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import {
+  kundenApi,
+  usersApi,
+  vorgangEventsApi,
+  vorgaengeApi,
+  zeiterfassungApi,
+} from "../../api/endpoints";
 import { MentionText } from "../../components/MentionText";
+import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
+import { getOutboxItems, queueFoto, queueKommentar } from "../../offline/outbox";
+import type { OutboxItem } from "../../offline/db";
 import type { VorgangEvent, VorgangStatus } from "../../types";
 
 const STATUS_OPTIONS: VorgangStatus[] = [
@@ -60,9 +70,36 @@ function EventBubble({ event }: { event: VorgangEvent }) {
           <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-600">Kundensichtbar</span>
         )}
       </div>
-      <p className="whitespace-pre-wrap text-sm text-slate-800">
-        {event.body ? <MentionText text={event.body} /> : EVENT_LABEL[event.event_type] ?? event.event_type}
-      </p>
+      {event.event_type === "foto" && event.foto_url && (
+        <a href={event.foto_url} target="_blank" rel="noreferrer">
+          <img
+            src={event.foto_thumbnail_url ?? event.foto_url}
+            alt="Foto"
+            className="mb-2 max-h-64 rounded-md object-cover"
+          />
+        </a>
+      )}
+      {event.body && (
+        <p className="whitespace-pre-wrap text-sm text-slate-800">
+          <MentionText text={event.body} />
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OutboxBubble({ item }: { item: OutboxItem }) {
+  return (
+    <div className="mb-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
+      <div className="mb-1 flex items-center gap-1 text-xs text-slate-400">
+        <span>🕘</span>
+        <span>Nicht synchronisiert</span>
+      </div>
+      {item.kind === "foto" ? (
+        <p className="text-sm text-slate-600">📷 Foto wartet auf Synchronisierung</p>
+      ) : (
+        <p className="whitespace-pre-wrap text-sm text-slate-700">{item.body}</p>
+      )}
     </div>
   );
 }
@@ -71,11 +108,13 @@ export function VorgangDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [comment, setComment] = useState("");
   const [kundensichtbar, setKundensichtbar] = useState(false);
   const [kundenansicht, setKundenansicht] = useState(false);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
+  const [taetigkeit, setTaetigkeit] = useState("");
 
   const { data: vorgang } = useQuery({
     queryKey: ["vorgang", id],
@@ -84,15 +123,45 @@ export function VorgangDetailPage() {
   });
   const { data: kunde } = useQuery({
     queryKey: ["kunde", vorgang?.kunde_id],
-    queryFn: () => kundenApi.get(vorgang!.kunde_id),
+    queryFn: async () => {
+      try {
+        const result = await kundenApi.get(vorgang!.kunde_id);
+        await cacheKunde(result);
+        return result;
+      } catch (err) {
+        if (!navigator.onLine) {
+          const cached = await getCachedKunde(vorgang!.kunde_id);
+          if (cached) return cached;
+        }
+        throw err;
+      }
+    },
     enabled: !!vorgang,
   });
   const { data: events } = useQuery({
     queryKey: ["vorgang-events", id],
-    queryFn: () => vorgangEventsApi.list(id!),
+    queryFn: async () => {
+      try {
+        const result = await vorgangEventsApi.list(id!);
+        await cacheEvents(result);
+        return result;
+      } catch (err) {
+        if (!navigator.onLine) return getCachedEvents(id!);
+        throw err;
+      }
+    },
+    enabled: !!id,
+  });
+  const { data: outboxItems } = useQuery({
+    queryKey: ["outbox", id],
+    queryFn: () => getOutboxItems(id!),
     enabled: !!id,
   });
   const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: laufenderTimer } = useQuery({
+    queryKey: ["zeiterfassung-laufend"],
+    queryFn: zeiterfassungApi.laufend,
+  });
 
   const statusMutation = useMutation({
     mutationFn: (status: VorgangStatus) => vorgaengeApi.update(id!, { status }),
@@ -103,17 +172,60 @@ export function VorgangDetailPage() {
   });
 
   const commentMutation = useMutation({
-    mutationFn: () =>
-      vorgangEventsApi.create(id!, {
-        event_type: "kommentar",
-        body: comment,
-        kundensichtbar,
-        client_uuid: crypto.randomUUID(),
-      }),
+    mutationFn: async () => {
+      try {
+        return await vorgangEventsApi.create(id!, {
+          event_type: "kommentar",
+          body: comment,
+          kundensichtbar,
+          client_uuid: crypto.randomUUID(),
+        });
+      } catch (err) {
+        if (err instanceof ApiError) throw err; // echte Ablehnung, nicht queuen
+        await queueKommentar(id!, comment, kundensichtbar); // Netzwerkfehler -> offline
+        return null;
+      }
+    },
     onSuccess: () => {
       setComment("");
       setKundensichtbar(false);
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+    },
+  });
+
+  const fotoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      try {
+        return await vorgangEventsApi.uploadFoto(id!, file, file.name, kundensichtbar);
+      } catch (err) {
+        if (err instanceof ApiError) throw err;
+        await queueFoto(id!, file, file.name, kundensichtbar);
+        return null;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+    },
+  });
+
+  const startTimerMutation = useMutation({
+    mutationFn: () => zeiterfassungApi.start(id!, taetigkeit || undefined),
+    onSuccess: () => {
+      setTaetigkeit("");
+      queryClient.invalidateQueries({ queryKey: ["zeiterfassung-laufend"] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+    },
+  });
+
+  const stopTimerMutation = useMutation({
+    mutationFn: (timerId: string) => zeiterfassungApi.stop(timerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zeiterfassung-laufend"] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
   });
 
@@ -123,6 +235,10 @@ export function VorgangDetailPage() {
   const sichtbareEvents = kundenansicht
     ? eventsChronological.filter((e) => e.kundensichtbar)
     : eventsChronological;
+  const eigeneOutboxItems = (outboxItems ?? []).filter((i) => i.vorgang_id === id);
+
+  const timerLaeuftHier = laufenderTimer && laufenderTimer.vorgang_id === id;
+  const timerLaeuftAnderswo = laufenderTimer && laufenderTimer.vorgang_id !== id;
 
   return (
     <div className="space-y-4">
@@ -162,6 +278,46 @@ export function VorgangDetailPage() {
         </div>
       </div>
 
+      <div className="rounded-lg bg-white p-3 shadow-sm">
+        {timerLaeuftHier ? (
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+              Zeit läuft seit{" "}
+              {new Date(laufenderTimer.start_at).toLocaleTimeString("de-DE", {
+                timeZone: "Europe/Berlin",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+            <button
+              onClick={() => stopTimerMutation.mutate(laufenderTimer.id)}
+              disabled={stopTimerMutation.isPending}
+              className="btn-touch rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Stoppen
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              value={taetigkeit}
+              onChange={(e) => setTaetigkeit(e.target.value)}
+              placeholder="Tätigkeit (optional)"
+              className="btn-touch flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <button
+              onClick={() => startTimerMutation.mutate()}
+              disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
+              title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
+              className="btn-touch shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Zeit starten
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-end gap-2">
         <span className="text-sm text-slate-500">
           {kundenansicht ? "Kundenansicht" : "Interne Ansicht"}
@@ -177,10 +333,16 @@ export function VorgangDetailPage() {
       </div>
 
       <div>
-        {sichtbareEvents.length === 0 ? (
+        {sichtbareEvents.length === 0 && eigeneOutboxItems.length === 0 ? (
           <p className="text-center text-sm text-slate-400">Noch keine Einträge.</p>
         ) : (
-          sichtbareEvents.map((event) => <EventBubble key={event.id} event={event} />)
+          <>
+            {sichtbareEvents.map((event) => (
+              <EventBubble key={event.id} event={event} />
+            ))}
+            {!kundenansicht &&
+              eigeneOutboxItems.map((item) => <OutboxBubble key={item.client_uuid} item={item} />)}
+          </>
         )}
       </div>
 
@@ -211,6 +373,18 @@ export function VorgangDetailPage() {
               </div>
             )}
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) fotoMutation.mutate(file);
+              e.target.value = "";
+            }}
+          />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
@@ -218,6 +392,13 @@ export function VorgangDetailPage() {
                 className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600"
               >
                 @ Erwähnen
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={fotoMutation.isPending}
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 disabled:opacity-50"
+              >
+                📷 Foto
               </button>
               <label className="flex items-center gap-1.5 text-sm text-slate-500">
                 <input

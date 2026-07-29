@@ -82,6 +82,22 @@ async def create_anlage(
     return anlage
 
 
+@router.get("/by-qr/{qr_code}", response_model=AnlageRead)
+async def get_anlage_by_qr(qr_code: str, session: AsyncSession = Depends(get_db)) -> Anlage:
+    # Registered before "/{anlage_id}" so "by-qr" isn't swallowed as a UUID
+    # path param. qr_code is globally unique (Abschnitt 4.2), but RLS still
+    # scopes this SELECT to the caller's own mandant -- scanning a QR code
+    # that happens to belong to another tenant's Anlage resolves to 404,
+    # not a cross-tenant leak.
+    result = await session.execute(select(Anlage).where(Anlage.qr_code == qr_code))
+    anlage = result.scalar_one_or_none()
+    if anlage is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
+        )
+    return anlage
+
+
 @router.get("/{anlage_id}", response_model=AnlageRead)
 async def get_anlage(anlage_id: UUID, session: AsyncSession = Depends(get_db)) -> Anlage:
     anlage = await session.get(Anlage, anlage_id)

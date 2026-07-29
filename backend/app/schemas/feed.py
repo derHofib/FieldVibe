@@ -17,8 +17,6 @@ class FeedCard(BaseModel):
     last_activity_at: datetime
     letztes_event_vorschau: str | None
     tags: list[str]
-    # Zeiterfassung landet erst in Phase 4/5 (zeiterfassung-Tabelle existiert
-    # noch nicht) -- bis dahin ist dieses Flag immer False.
     timer_laeuft: bool = False
 
 

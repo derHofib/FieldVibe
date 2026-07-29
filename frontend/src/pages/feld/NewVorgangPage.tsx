@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { kundenApi, vorgaengeApi } from "../../api/endpoints";
+import { anlagenApi, kundenApi, vorgaengeApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
-import type { Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import { QrScanner } from "../../components/QrScanner";
+import type { Anlage, Leistungstyp, VorgangAbrechnungsart } from "../../types";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -28,22 +29,45 @@ export function NewVorgangPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [kundeId, setKundeId] = useState("");
+  const [anlage, setAnlage] = useState<Anlage | null>(null);
   const [titel, setTitel] = useState("");
   const [beschreibung, setBeschreibung] = useState("");
   const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("stoerung");
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("aufwand");
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
 
   const createMutation = useMutation({
     mutationFn: () =>
-      vorgaengeApi.create({ kunde_id: kundeId, titel, beschreibung, abrechnungsart, leistungstyp }),
+      vorgaengeApi.create({
+        kunde_id: kundeId,
+        anlage_id: anlage?.id ?? null,
+        titel,
+        beschreibung,
+        abrechnungsart,
+        leistungstyp,
+      }),
     onSuccess: (vorgang) => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       navigate(`/vorgaenge/${vorgang.id}`);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
   });
+
+  async function handleScan(code: string) {
+    setShowScanner(false);
+    setScanError(null);
+    try {
+      const found = await anlagenApi.byQrCode(code);
+      setAnlage(found);
+      setKundeId(found.kunde_id);
+      if (!titel) setTitel(`Vor-Ort-Termin: ${found.bezeichnung}`);
+    } catch {
+      setScanError(`Keine Anlage mit dem Code "${code}" gefunden.`);
+    }
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -58,8 +82,43 @@ export function NewVorgangPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-slate-800">Neuer Vorgang</h1>
+
+      <button
+        onClick={() => setShowScanner(true)}
+        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-3 text-sm font-medium text-slate-700 shadow-sm"
+      >
+        📷 QR-Code an Anlage scannen
+      </button>
+      {scanError && <p className="text-sm text-red-700">{scanError}</p>}
+      {anlage && (
+        <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
+          <span>
+            Anlage erkannt: <strong>{anlage.bezeichnung}</strong>
+          </span>
+          <span className="flex gap-3">
+            <button
+              onClick={() => navigate(`/anlagen/${anlage.id}`)}
+              className="btn-touch text-xs text-blue-700 underline"
+            >
+              ansehen
+            </button>
+            <button
+              onClick={() => setAnlage(null)}
+              className="btn-touch text-xs text-blue-700 underline"
+            >
+              entfernen
+            </button>
+          </span>
+        </div>
+      )}
+
+      {showScanner && (
+        <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
+      )}
+
       <p className="text-sm text-slate-500">
-        Foto, Zeiterfassung und QR-Scan folgen mit der Feld-Tauglichkeit (Phase 4).
+        Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
+        Vorgangs-Chat.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-3 rounded-lg bg-white p-4 shadow-sm">
@@ -67,7 +126,10 @@ export function NewVorgangPage() {
           <label className="mb-1 block text-sm font-medium text-slate-700">Kunde</label>
           <select
             value={kundeId}
-            onChange={(e) => setKundeId(e.target.value)}
+            onChange={(e) => {
+              setKundeId(e.target.value);
+              setAnlage(null);
+            }}
             className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
           >
             <option value="">Bitte wählen…</option>

@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -19,19 +21,29 @@ from app.api.routes import (
     vertraege,
     vorgaenge,
     vorgang_events,
+    zeiterfassung,
 )
 from app.core.config import get_settings
 from app.db.session import engine
+from app.services.storage_service import ensure_bucket
 
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await ensure_bucket()
+    yield
+
 
 app = FastAPI(
     title="SocialCRM API",
     description=(
         "Mandantenfähiges Auftragsmanagement- und CRM-System für den "
-        "Elektro-Handwerksbetrieb – Phase 3: Social-UX."
+        "Elektro-Handwerksbetrieb – Phase 4: Feld-Tauglichkeit."
     ),
-    version="0.3.0",
+    version="0.4.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -58,10 +70,12 @@ app.include_router(stories.router)
 app.include_router(search.router)
 app.include_router(notifications.router)
 app.include_router(stream.router)
+app.include_router(zeiterfassung.router)
 
 
 @app.get("/healthz")
 async def healthz() -> dict:
     async with engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
+    await ensure_bucket()
     return {"status": "ok"}
