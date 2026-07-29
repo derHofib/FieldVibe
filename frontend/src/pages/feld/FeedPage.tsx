@@ -32,9 +32,19 @@ const AMPEL_COLOR: Record<string, string> = {
   rot: "border-red-500",
 };
 
+const STORY_ZIEL_PFAD: Record<StoryItem["ziel_typ"], (id: string) => string> = {
+  vorgang: (id) => `/vorgaenge/${id}`,
+  anlage: (id) => `/anlagen/${id}`,
+  // Prüfmittel/Material haben keine eigene Detailseite -- die jeweilige
+  // Verwaltungsliste ist das naechstbeste Ziel (besser als eine falsche
+  // ID in eine fremde Detailroute zu stecken).
+  pruefmittel: () => "/pruefmittel",
+  material: () => "/geschaeft",
+};
+
 function StoryChip({ item }: { item: StoryItem }) {
   const navigate = useNavigate();
-  const path = item.ziel_typ === "vorgang" ? `/vorgaenge/${item.ziel_id}` : `/anlagen/${item.ziel_id}`;
+  const path = STORY_ZIEL_PFAD[item.ziel_typ](item.ziel_id);
   return (
     <button
       onClick={() => navigate(path)}
@@ -92,6 +102,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
 }
 
 export function FeedPage() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
@@ -134,6 +145,13 @@ export function FeedPage() {
 
   return (
     <div className="space-y-4">
+      <button
+        onClick={() => navigate("/highlights")}
+        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm"
+      >
+        ⭐ Highlights ansehen
+      </button>
+
       {storyGroups.length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
           {storyGroups.map((item) => (

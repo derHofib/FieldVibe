@@ -13,6 +13,7 @@ from app.services import storage_service
 from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
 from app.services.photo_service import make_thumbnail
+from app.services.vorgang_event_service import to_read_model as _to_read_model
 
 router = APIRouter(
     prefix="/api/vorgaenge/{vorgang_id}/events",
@@ -28,18 +29,6 @@ async def _require_own_vorgang(session: AsyncSession, vorgang_id: UUID) -> Vorga
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
-
-
-def _to_read_model(event: VorgangEvent) -> VorgangEventRead:
-    data = VorgangEventRead.model_validate(event)
-    if event.event_type == "foto" and event.payload:
-        key = event.payload.get("key")
-        thumbnail_key = event.payload.get("thumbnail_key")
-        if key:
-            data.foto_url = storage_service.presigned_get_url(key)
-        if thumbnail_key:
-            data.foto_thumbnail_url = storage_service.presigned_get_url(thumbnail_key)
-    return data
 
 
 @router.get("", response_model=list[VorgangEventRead])

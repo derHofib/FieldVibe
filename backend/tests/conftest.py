@@ -108,7 +108,8 @@ async def _clean_tables():
             text(
                 "TRUNCATE audit_log, notifications, tag_assignments, tags, zeiterfassung, "
                 "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
-                "rechnungen, vorgang_events, vorgaenge, vertraege, "
+                "rechnungen, highlights, material_verwendungen, material, kundenportal_zugaenge, "
+                "vorgang_events, vorgaenge, vertraege, "
                 "anlagen, kunden, mandant_integrationen, users, mandanten "
                 "RESTART IDENTITY CASCADE"
             )

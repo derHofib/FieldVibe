@@ -17,7 +17,7 @@ Stand:
 | 4 – Feld-Tauglichkeit | ✅ siehe [`docs/phases/PHASE_4.md`](docs/phases/PHASE_4.md) |
 | 5 – Steuerung | ✅ siehe [`docs/phases/PHASE_5.md`](docs/phases/PHASE_5.md) |
 | 6 – Geschäftsprozesse | ✅ siehe [`docs/phases/PHASE_6.md`](docs/phases/PHASE_6.md) |
-| 7 – Ausbau | offen |
+| 7 – Ausbau | ✅ siehe [`docs/phases/PHASE_7.md`](docs/phases/PHASE_7.md) |
 
 ## Tech-Stack
 
@@ -59,7 +59,7 @@ lokale Entwicklung gedacht (offene DB/MinIO-Ports, kein TLS).
 
 ```
 backend/    FastAPI-App, Alembic-Migrationen, pytest-Tests
-frontend/   React-App: Super-Admin-Dashboard + Feld-App (Feed/Chat/Suche/...)
+frontend/   React-App: Super-Admin-Dashboard + Feld-App (Feed/Chat/Suche/...) + Kundenportal (/portal)
 docs/phases/  Phasen-spezifische READMEs
 docs/DEPLOYMENT.md             Produktions-Deployment (Abschnitt 15)
 scripts/backup.sh, restore.sh  Backup-Automatisierung (siehe docs/DEPLOYMENT.md)

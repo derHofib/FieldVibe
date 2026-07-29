@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 import { useAuth } from "../../context/AuthContext";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -8,6 +10,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 export function ProfilePage() {
   const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-4">
@@ -33,9 +36,14 @@ export function ProfilePage() {
         </dl>
       </div>
 
-      <p className="text-center text-sm text-slate-400">
-        Termine, erfasste Zeiten und zugewiesene Prüfmittel folgen mit Phase 4/5.
-      </p>
+      {currentUser?.role === "mandant_admin" && (
+        <button
+          onClick={() => navigate("/insights")}
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
+        >
+          📊 Insights ansehen
+        </button>
+      )}
 
       <button
         onClick={logout}

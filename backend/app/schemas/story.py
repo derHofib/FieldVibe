@@ -10,7 +10,7 @@ class StoryItem(BaseModel):
     titel: str
     subtitel: str | None = None
     ampel: Ampel | None = None
-    ziel_typ: Literal["vorgang", "anlage", "pruefmittel"]
+    ziel_typ: Literal["vorgang", "anlage", "pruefmittel", "material"]
     ziel_id: UUID
 
 

@@ -1,17 +1,24 @@
 import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
+import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import type {
   Angebot,
   AngebotPosition,
   Anlage,
   AnlageProfil,
   AuditLogEntry,
+  CurrentKunde,
   CurrentUser,
   FeedResponse,
+  Highlight,
   ImpersonateResponse,
+  Insights,
   Kunde,
   KundeProfil,
+  KundenportalZugang,
   Mandant,
   Mangel,
+  Material,
+  MaterialVerwendung,
   NotificationEntry,
   Pruefmittel,
   Pruefzyklus,
@@ -305,4 +312,72 @@ export const tagsApi = {
       method: "POST",
       body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
     }),
+};
+
+export const highlightsApi = {
+  list: () => apiFetch<Highlight[]>("/api/highlights"),
+  create: (vorgangEventId: number, titel?: string) =>
+    apiFetch<Highlight>("/api/highlights", {
+      method: "POST",
+      body: JSON.stringify({ vorgang_event_id: vorgangEventId, titel }),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/highlights/${id}`, { method: "DELETE" }),
+};
+
+export const materialApi = {
+  list: () => apiFetch<Material[]>("/api/material"),
+  create: (body: { bezeichnung: string; einheit?: string; bestand?: string; mindestbestand?: string; einzelpreis?: string }) =>
+    apiFetch<Material>("/api/material", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<Pick<Material, "bezeichnung" | "einheit" | "bestand" | "mindestbestand" | "einzelpreis">>,
+  ) => apiFetch<Material>(`/api/material/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  verwenden: (materialId: string, vorgangId: string, menge: string) =>
+    apiFetch<MaterialVerwendung>(`/api/material/${materialId}/verwendung`, {
+      method: "POST",
+      body: JSON.stringify({ vorgang_id: vorgangId, menge }),
+    }),
+};
+
+export const insightsApi = {
+  get: () => apiFetch<Insights>("/api/insights"),
+};
+
+export const kundenportalZugaengeApi = {
+  list: (kundeId: string) => apiFetch<KundenportalZugang[]>(`/api/kunden/${kundeId}/portal-zugaenge`),
+  create: (kundeId: string, body: { email: string; password: string; name: string }) =>
+    apiFetch<KundenportalZugang>(`/api/kunden/${kundeId}/portal-zugaenge`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (kundeId: string, zugangId: string, body: { name?: string; aktiv?: boolean }) =>
+    apiFetch<KundenportalZugang>(`/api/kunden/${kundeId}/portal-zugaenge/${zugangId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const kundenportalAuthApi = {
+  login: (email: string, password: string) =>
+    kundenApiFetch<TokenPair>("/api/kundenportal/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => kundenApiFetch<CurrentKunde>("/api/kundenportal/auth/me"),
+};
+
+export const kundenportalApi = {
+  vorgaenge: () => kundenApiFetch<Vorgang[]>("/api/kundenportal/vorgaenge"),
+  vorgang: (id: string) => kundenApiFetch<Vorgang>(`/api/kundenportal/vorgaenge/${id}`),
+  vorgangEvents: (id: string) => kundenApiFetch<VorgangEvent[]>(`/api/kundenportal/vorgaenge/${id}/events`),
+  angebote: () => kundenApiFetch<Angebot[]>("/api/kundenportal/angebote"),
+  angebot: (id: string) => kundenApiFetch<Angebot>(`/api/kundenportal/angebote/${id}`),
+  antwortAufAngebot: (id: string, status: "angenommen" | "abgelehnt") =>
+    kundenApiFetch<Angebot>(`/api/kundenportal/angebote/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  angebotPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/angebote/${id}/pdf`),
+  rechnungen: () => kundenApiFetch<Rechnung[]>("/api/kundenportal/rechnungen"),
+  rechnungPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/rechnungen/${id}/pdf`),
 };

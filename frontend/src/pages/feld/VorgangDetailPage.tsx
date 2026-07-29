@@ -5,8 +5,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import {
   angeboteApi,
+  highlightsApi,
   kundenApi,
   maengelApi,
+  materialApi,
   termineApi,
   usersApi,
   vorgangEventsApi,
@@ -61,7 +63,13 @@ const EVENT_LABEL: Partial<Record<string, string>> = {
   rechnung_status: "Rechnungsstatus aktualisiert",
 };
 
-function EventBubble({ event }: { event: VorgangEvent }) {
+function EventBubble({
+  event,
+  onHighlight,
+}: {
+  event: VorgangEvent;
+  onHighlight: (eventId: number) => void;
+}) {
   if (event.is_system || event.event_type === "status_change") {
     const label =
       event.event_type === "status_change"
@@ -83,13 +91,21 @@ function EventBubble({ event }: { event: VorgangEvent }) {
         )}
       </div>
       {event.event_type === "foto" && event.foto_url && (
-        <a href={event.foto_url} target="_blank" rel="noreferrer">
-          <img
-            src={event.foto_thumbnail_url ?? event.foto_url}
-            alt="Foto"
-            className="mb-2 max-h-64 rounded-md object-cover"
-          />
-        </a>
+        <>
+          <a href={event.foto_url} target="_blank" rel="noreferrer">
+            <img
+              src={event.foto_thumbnail_url ?? event.foto_url}
+              alt="Foto"
+              className="mb-2 max-h-64 rounded-md object-cover"
+            />
+          </a>
+          <button
+            onClick={() => onHighlight(event.id)}
+            className="btn-touch mb-2 text-xs font-medium text-amber-600"
+          >
+            ⭐ Als Highlight markieren
+          </button>
+        </>
       )}
       {event.body && (
         <p className="whitespace-pre-wrap text-sm text-slate-800">
@@ -142,6 +158,9 @@ export function VorgangDetailPage() {
   const [showMangelForm, setShowMangelForm] = useState(false);
   const [mangelBeschreibung, setMangelBeschreibung] = useState("");
   const [mangelSchweregrad, setMangelSchweregrad] = useState<MangelSchweregrad>("mittel");
+  const [showMaterialForm, setShowMaterialForm] = useState(false);
+  const [materialId, setMaterialId] = useState("");
+  const [materialMenge, setMaterialMenge] = useState("");
 
   const kannDisponieren =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
@@ -249,6 +268,29 @@ export function VorgangDetailPage() {
   const maengelProtokollMutation = useMutation({
     mutationFn: () => maengelApi.protokollPdf(id!),
     onSuccess: openPdfBlob,
+  });
+
+  const highlightMutation = useMutation({
+    mutationFn: (eventId: number) => highlightsApi.create(eventId),
+    onError: (err) => {
+      if (err instanceof ApiError && err.status === 409) {
+        window.alert("Dieses Foto ist bereits als Highlight markiert.");
+      }
+    },
+  });
+
+  const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list() });
+
+  const materialVerwendenMutation = useMutation({
+    mutationFn: () => materialApi.verwenden(materialId, id!, materialMenge),
+    onSuccess: () => {
+      setShowMaterialForm(false);
+      setMaterialId("");
+      setMaterialMenge("");
+      queryClient.invalidateQueries({ queryKey: ["material"] });
+      queryClient.invalidateQueries({ queryKey: ["stories"] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
   });
 
   const statusMutation = useMutation({
@@ -610,6 +652,57 @@ export function VorgangDetailPage() {
         )}
       </div>
 
+      <div className="rounded-lg bg-white p-3 shadow-sm">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-500">Material</h2>
+          <button onClick={() => setShowMaterialForm((v) => !v)} className="btn-touch text-xs font-medium text-blue-700">
+            {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
+          </button>
+        </div>
+
+        {showMaterialForm && (
+          <div className="space-y-2 rounded-md bg-slate-50 p-2">
+            <select
+              value={materialId}
+              onChange={(e) => setMaterialId(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="">Material wählen…</option>
+              {(materialListe ?? []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.bezeichnung} ({m.bestand} {m.einheit} verfügbar)
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={materialMenge}
+                onChange={(e) => setMaterialMenge(e.target.value)}
+                placeholder="Menge"
+                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+              <button
+                disabled={!materialId || !materialMenge || materialVerwendenMutation.isPending}
+                onClick={() => materialVerwendenMutation.mutate()}
+                className="btn-touch shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Erfassen
+              </button>
+            </div>
+            {materialVerwendenMutation.isError && (
+              <p className="text-xs text-red-700">
+                {materialVerwendenMutation.error instanceof ApiError
+                  ? materialVerwendenMutation.error.message
+                  : "Fehler beim Erfassen"}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-end gap-2">
         <span className="text-sm text-slate-500">
           {kundenansicht ? "Kundenansicht" : "Interne Ansicht"}
@@ -630,7 +723,7 @@ export function VorgangDetailPage() {
         ) : (
           <>
             {sichtbareEvents.map((event) => (
-              <EventBubble key={event.id} event={event} />
+              <EventBubble key={event.id} event={event} onHighlight={(eventId) => highlightMutation.mutate(eventId)} />
             ))}
             {!kundenansicht &&
               eigeneOutboxItems.map((item) => <OutboxBubble key={item.client_uuid} item={item} />)}

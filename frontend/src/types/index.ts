@@ -192,7 +192,7 @@ export interface StoryItem {
   titel: string;
   subtitel: string | null;
   ampel: "gruen" | "gelb" | "rot" | null;
-  ziel_typ: "vorgang" | "anlage" | "pruefmittel";
+  ziel_typ: "vorgang" | "anlage" | "pruefmittel" | "material";
   ziel_id: string;
 }
 
@@ -380,4 +380,68 @@ export interface Rechnung {
   created_at: string;
   updated_at: string;
   betrag_brutto: string;
+}
+
+// --- Ausbau (Phase 7) -----------------------------------------------------
+
+export interface Highlight {
+  id: string;
+  vorgang_event_id: number;
+  titel: string | null;
+  erstellt_von: string;
+  created_at: string;
+  vorgang_id: string;
+  vorgangsnummer: string;
+  vorgang_titel: string;
+  foto_url: string | null;
+  foto_thumbnail_url: string | null;
+}
+
+export interface Material {
+  id: string;
+  bezeichnung: string;
+  einheit: string;
+  bestand: string;
+  mindestbestand: string;
+  einzelpreis: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MaterialVerwendung {
+  id: string;
+  material_id: string;
+  vorgang_id: string;
+  menge: string;
+  verwendet_von: string;
+  created_at: string;
+}
+
+export interface Insights {
+  vorgaenge_nach_status: Record<string, number>;
+  offene_rechnungssumme: string;
+  angebote_versendet: number;
+  angebote_angenommen: number;
+  angebote_annahmequote: number | null;
+  techniker_auslastung: { techniker_id: string; name: string; stunden_diese_woche: string }[];
+}
+
+// --- Kundenportal (Phase 7) ------------------------------------------------
+
+export interface CurrentKunde {
+  zugang_id: string;
+  kunde_id: string;
+  kunde_name: string;
+  name: string;
+  email: string;
+}
+
+export interface KundenportalZugang {
+  id: string;
+  kunde_id: string;
+  email: string;
+  name: string;
+  aktiv: boolean;
+  created_at: string;
+  updated_at: string;
 }

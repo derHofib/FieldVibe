@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -17,12 +16,11 @@ from app.schemas.angebot import (
     AngebotAusMaengelnCreate,
     AngebotCreate,
     AngebotPositionCreate,
-    AngebotPositionRead,
     AngebotRead,
     AngebotUpdate,
 )
-from app.services.event_bus import event_bus
-from app.services.numbering_service import next_angebotsnummer, next_vorgangsnummer
+from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.services.numbering_service import next_angebotsnummer
 from app.services.pdf_service import generate_angebot_pdf
 
 router = APIRouter(
@@ -30,33 +28,6 @@ router = APIRouter(
     tags=["angebote"],
     dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
 )
-
-
-async def _positionen_fuer(session: AsyncSession, angebot_id: UUID) -> list[AngebotPosition]:
-    result = await session.execute(
-        select(AngebotPosition).where(AngebotPosition.angebot_id == angebot_id).order_by(AngebotPosition.position)
-    )
-    return list(result.scalars().all())
-
-
-_CENT = Decimal("0.01")
-
-
-def _summen(positionen: list[AngebotPosition], mwst_satz: Decimal) -> tuple[Decimal, Decimal]:
-    netto = sum((p.menge * p.einzelpreis for p in positionen), Decimal("0"))
-    brutto = netto + netto * mwst_satz / Decimal("100")
-    return netto.quantize(_CENT), brutto.quantize(_CENT)
-
-
-async def _to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
-    positionen = await _positionen_fuer(session, angebot.id)
-    netto, brutto = _summen(positionen, angebot.mwst_satz)
-    return AngebotRead(
-        **{k: getattr(angebot, k) for k in AngebotRead.model_fields if k not in ("positionen", "gesamt_netto", "gesamt_brutto")},
-        positionen=[AngebotPositionRead.model_validate(p) for p in positionen],
-        gesamt_netto=netto,
-        gesamt_brutto=brutto,
-    )
 
 
 @router.get("", response_model=list[AngebotRead])
@@ -74,7 +45,7 @@ async def list_angebote(
     if status_filter:
         stmt = stmt.where(Angebot.status == status_filter)
     result = await session.execute(stmt)
-    return [await _to_read_model(session, a) for a in result.scalars().all()]
+    return [await to_read_model(session, a) for a in result.scalars().all()]
 
 
 @router.get("/{angebot_id}", response_model=AngebotRead)
@@ -82,7 +53,7 @@ async def get_angebot(angebot_id: UUID, session: AsyncSession = Depends(get_db))
     angebot = await session.get(Angebot, angebot_id)
     if angebot is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
-    return await _to_read_model(session, angebot)
+    return await to_read_model(session, angebot)
 
 
 async def _validate_kunde_vorgang(session: AsyncSession, kunde_id: UUID, vorgang_id: UUID | None) -> None:
@@ -148,7 +119,7 @@ async def create_angebot(
         session.add(p)
     await session.flush()
     await session.refresh(angebot)
-    return await _to_read_model(session, angebot)
+    return await to_read_model(session, angebot)
 
 
 @router.post(
@@ -234,7 +205,7 @@ async def create_angebot_from_maengel(
 
     await session.flush()
     await session.refresh(angebot)
-    return await _to_read_model(session, angebot)
+    return await to_read_model(session, angebot)
 
 
 @router.post(
@@ -255,7 +226,7 @@ async def add_position(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf ergänzt werden"
         )
 
-    bestehende = await _positionen_fuer(session, angebot_id)
+    bestehende = await positionen_fuer(session, angebot_id)
     naechste_position = max((p.position for p in bestehende), default=0) + 1
     session.add(
         AngebotPosition(
@@ -269,7 +240,7 @@ async def add_position(
         )
     )
     await session.flush()
-    return await _to_read_model(session, angebot)
+    return await to_read_model(session, angebot)
 
 
 @router.patch(
@@ -290,90 +261,14 @@ async def update_angebot(
     if body.gueltig_bis is not None:
         angebot.gueltig_bis = body.gueltig_bis
 
-    neuer_status = body.status
-    if neuer_status is not None:
-        _GUELTIGE_UEBERGAENGE = {"entwurf": {"versendet"}, "versendet": {"angenommen", "abgelehnt"}}
-        if neuer_status not in _GUELTIGE_UEBERGAENGE.get(angebot.status, set()):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Statuswechsel von '{angebot.status}' nach '{neuer_status}' nicht erlaubt",
-            )
-
-        maengel = list(
-            (await session.execute(select(Mangel).where(Mangel.angebot_id == angebot.id))).scalars().all()
+    if body.status is not None:
+        await apply_status_transition(
+            session, angebot, body.status, mandant_id=auth.mandant_id, actor_user_id=auth.user_id
         )
-        jetzt = datetime.now(timezone.utc)
-
-        if neuer_status == "versendet":
-            positionen = await _positionen_fuer(session, angebot.id)
-            if not positionen:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST, detail="Angebot ohne Positionen kann nicht versendet werden"
-                )
-            angebot.versendet_am = jetzt
-
-        elif neuer_status == "angenommen":
-            angebot.angenommen_am = jetzt
-            if maengel:
-                vorgangsnummer = await next_vorgangsnummer(session, auth.mandant_id)
-                repair_anlage_id = next((m.anlage_id for m in maengel if m.anlage_id), None)
-                reparatur_vorgang = Vorgang(
-                    mandant_id=auth.mandant_id,
-                    vorgangsnummer=vorgangsnummer,
-                    kunde_id=angebot.kunde_id,
-                    anlage_id=repair_anlage_id,
-                    titel=f"Reparatur aus Angebot {angebot.angebotsnummer}",
-                    beschreibung="Automatisch angelegt nach Annahme des Angebots.",
-                    abrechnungsart="festpreis",
-                    leistungstyp="stoerung",
-                )
-                session.add(reparatur_vorgang)
-                await session.flush()
-
-                session.add(
-                    VorgangEvent(
-                        mandant_id=auth.mandant_id,
-                        vorgang_id=reparatur_vorgang.id,
-                        event_type="system",
-                        is_system=True,
-                        body=f"Angelegt aus angenommenem Angebot {angebot.angebotsnummer}",
-                        payload={"angebot_id": str(angebot.id)},
-                    )
-                )
-                for mangel in maengel:
-                    mangel.status = "in_bearbeitung"
-                    mangel.reparatur_vorgang_id = reparatur_vorgang.id
-
-                await event_bus.publish(
-                    auth.mandant_id, "feed_update", {"vorgang_id": str(reparatur_vorgang.id), "reason": "erstellt"}
-                )
-
-        elif neuer_status == "abgelehnt":
-            angebot.abgelehnt_am = jetzt
-            for mangel in maengel:
-                mangel.status = "offen"
-                mangel.angebot_id = None
-
-        angebot.status = neuer_status
-        betroffene_vorgang_ids = {angebot.vorgang_id} if angebot.vorgang_id else set()
-        betroffene_vorgang_ids |= {m.vorgang_id for m in maengel}
-        for vid in betroffene_vorgang_ids:
-            if vid is None:
-                continue
-            session.add(
-                VorgangEvent(
-                    mandant_id=auth.mandant_id,
-                    vorgang_id=vid,
-                    event_type="angebot",
-                    author_user_id=auth.user_id,
-                    body=f"Angebot {angebot.angebotsnummer}: Status '{neuer_status}'",
-                    payload={"angebot_id": str(angebot.id), "status": neuer_status},
-                )
-            )
 
     await session.flush()
     await session.refresh(angebot)
-    return await _to_read_model(session, angebot)
+    return await to_read_model(session, angebot)
 
 
 @router.get("/{angebot_id}/pdf")
@@ -386,7 +281,7 @@ async def angebot_pdf(
     if angebot is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
     kunde = await session.get(Kunde, angebot.kunde_id)
-    positionen = await _positionen_fuer(session, angebot.id)
+    positionen = await positionen_fuer(session, angebot.id)
     mandant = await session.get(Mandant, auth.mandant_id)
 
     pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde)

@@ -12,6 +12,8 @@ import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
 import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { FeedPage } from "./pages/feld/FeedPage";
 import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
+import { HighlightsPage } from "./pages/feld/HighlightsPage";
+import { InsightsPage } from "./pages/feld/InsightsPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
@@ -20,10 +22,15 @@ import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { SearchPage } from "./pages/feld/SearchPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
+import { KundenPortalApp } from "./portal/KundenPortalApp";
 
 export function App() {
   const { currentUser, isAuthenticated, isImpersonating, isLoading } = useAuth();
 
+  // Das Kundenportal ist unabhaengig vom Staff-Login erreichbar -- diese Route
+  // muss vor der isAuthenticated-Verzweigung ausgewertet werden, sonst wuerde
+  // ein nicht eingeloggter Mitarbeiter-Browser jeden /portal/*-Aufruf auf
+  // /login statt /portal/login umleiten.
   if (isLoading) return <div className="p-6">Lädt…</div>;
 
   // Platform administration (Mandanten/Accounts/Audit-Log, no Social-UX) is
@@ -36,6 +43,8 @@ export function App() {
 
   return (
     <Routes>
+      <Route path="/portal/*" element={<KundenPortalApp />} />
+
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
@@ -67,6 +76,8 @@ export function App() {
           <Route path="/geschaeft" element={<GeschaeftPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
+          <Route path="/highlights" element={<HighlightsPage />} />
+          <Route path="/insights" element={<InsightsPage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       )}

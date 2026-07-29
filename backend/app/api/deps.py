@@ -79,3 +79,52 @@ def require_roles(*roles: str):
         return auth
 
     return checker
+
+
+@dataclass(frozen=True)
+class KundenAuthContext:
+    zugang_id: UUID
+    mandant_id: UUID
+    kunde_id: UUID
+
+
+async def get_current_kunde(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> KundenAuthContext:
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Nicht authentifiziert"
+        )
+    try:
+        payload = decode_token(credentials.credentials)
+    except jwt.PyJWTError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token"
+        ) from exc
+
+    if payload.get("type") != "kundenportal_access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token-Typ nicht für das Kundenportal zulässig",
+        )
+
+    return KundenAuthContext(
+        zugang_id=UUID(payload["sub"]),
+        mandant_id=UUID(payload["mandant_id"]),
+        kunde_id=UUID(payload["kunde_id"]),
+    )
+
+
+async def get_kunden_db(
+    auth: KundenAuthContext = Depends(get_current_kunde),
+) -> AsyncIterator[AsyncSession]:
+    """Tenant-scoped session for the Kundenportal.
+
+    RLS here only enforces the mandant boundary (same as any tenant_session)
+    -- it has no concept of "this row belongs to this one Kunde". Every
+    Kundenportal route MUST additionally filter its queries by
+    `auth.kunde_id` explicitly; this session alone does not prevent one
+    customer from reading another customer's data within the same mandant.
+    """
+    async with tenant_session(mandant_id=auth.mandant_id, is_super_admin=False) as session:
+        yield session

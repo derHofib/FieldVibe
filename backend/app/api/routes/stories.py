@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.core.config import get_settings
 from app.models.anlage import Anlage
+from app.models.material import Material
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.termin import Termin
@@ -120,11 +121,25 @@ async def get_stories(
         for v in result.scalars().all()
     ]
 
+    # "material": Material, dessen Bestand die Mindestmenge erreicht oder
+    # unterschritten hat -- rot, wenn bereits aufgebraucht, sonst gelb.
+    material_result = await session.execute(
+        select(Material).where(Material.bestand <= Material.mindestbestand).order_by(Material.bezeichnung)
+    )
+    material = [
+        StoryItem(
+            titel=m.bezeichnung,
+            subtitel=f"Bestand: {m.bestand:g} {m.einheit} (Mindestbestand {m.mindestbestand:g})",
+            ampel="rot" if m.bestand <= 0 else "gelb",
+            ziel_typ="material",
+            ziel_id=m.id,
+        )
+        for m in material_result.scalars().all()
+    ]
+
     return StoriesResponse(
         heute=heute,
-        # "material" braucht die Materialwirtschaft aus Phase 7 -- bis dahin
-        # bewusst ein leeres, aber typisiertes Array statt erfundener Daten.
         fristen=fristen,
         wartet_kunde=wartet_kunde,
-        material=[],
+        material=material,
     )

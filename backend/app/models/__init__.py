@@ -1,10 +1,13 @@
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
+from app.models.highlight import Highlight
 from app.models.integration import MandantIntegration
 from app.models.kunde import Kunde
+from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
+from app.models.material import Material, MaterialVerwendung
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
@@ -22,10 +25,14 @@ __all__ = [
     "AngebotPosition",
     "Anlage",
     "AuditLog",
+    "Highlight",
     "MandantIntegration",
     "Kunde",
+    "KundenportalZugang",
     "Mandant",
     "Mangel",
+    "Material",
+    "MaterialVerwendung",
     "Notification",
     "Pruefmittel",
     "Pruefzyklus",
