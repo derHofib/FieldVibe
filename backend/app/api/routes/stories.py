@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.core.config import get_settings
 from app.models.anlage import Anlage
+from app.models.inventurzyklus import InventurZyklus
 from app.models.material import Material, MaterialBestand
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
@@ -102,6 +103,27 @@ async def get_stories(
                 ampel=_frist_ampel(mittel.naechste_kalibrierung_am, heute_datum),
                 ziel_typ="pruefmittel",
                 ziel_id=mittel.id,
+            )
+        )
+
+    # Faellige Inventurzyklen (aktiv, siehe app/models/inventurzyklus.py) --
+    # ziel_typ="anlage" fuehrt direkt zum Lagerort-Profil (dort liegt die
+    # Inventur-Verwaltung), eine eigene Detailseite fuer Inventurzyklen
+    # braucht es dafuer nicht.
+    inventurzyklen_result = await session.execute(
+        select(InventurZyklus, Anlage.bezeichnung)
+        .join(Anlage, Anlage.id == InventurZyklus.lager_id)
+        .where(InventurZyklus.aktiv.is_(True), InventurZyklus.naechste_inventur_am <= horizont)
+        .order_by(InventurZyklus.naechste_inventur_am.asc())
+    )
+    for zyklus, lager_bezeichnung in inventurzyklen_result.all():
+        fristen.append(
+            StoryItem(
+                titel=f"Inventur: {lager_bezeichnung}",
+                subtitel=f"Fällig am {zyklus.naechste_inventur_am:%d.%m.%Y}",
+                ampel=_frist_ampel(zyklus.naechste_inventur_am, heute_datum),
+                ziel_typ="anlage",
+                ziel_id=zyklus.lager_id,
             )
         )
 

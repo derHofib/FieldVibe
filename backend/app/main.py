@@ -10,11 +10,13 @@ from app.api.routes import (
     audit_log,
     auth,
     dauerauftraege,
+    fahrzeug_zuweisungen,
     feed,
     highlights,
     impersonation,
     insights,
     integrationen,
+    inventurzyklen,
     kunden,
     kundenportal,
     kundenportal_auth,
@@ -102,6 +104,8 @@ app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
 app.include_router(zuweisungen.router)
+app.include_router(fahrzeug_zuweisungen.router)
+app.include_router(inventurzyklen.router)
 
 
 @app.get("/healthz")

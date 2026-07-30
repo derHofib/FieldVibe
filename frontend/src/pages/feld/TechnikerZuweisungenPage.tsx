@@ -1,7 +1,36 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
-import { technikerZuweisungenApi } from "../../api/endpoints";
+import { anlagenApi, fahrzeugZuweisungenApi, technikerZuweisungenApi } from "../../api/endpoints";
+
+function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktuellesFahrzeugId: string | null }) {
+  const queryClient = useQueryClient();
+  const { data: fahrzeuge } = useQuery({
+    queryKey: ["lagerorte", "fahrzeug"],
+    queryFn: () => anlagenApi.list(undefined, "fahrzeug"),
+  });
+
+  const setzenMutation = useMutation({
+    mutationFn: (anlageId: string | null) => fahrzeugZuweisungenApi.setzen(userId, anlageId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["fahrzeug-zuweisungen"] }),
+  });
+
+  return (
+    <select
+      value={aktuellesFahrzeugId ?? ""}
+      onChange={(e) => setzenMutation.mutate(e.target.value || null)}
+      disabled={setzenMutation.isPending}
+      className="btn-touch mt-2 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:opacity-50"
+    >
+      <option value="">Kein Fahrzeug</option>
+      {(fahrzeuge ?? []).map((f) => (
+        <option key={f.id} value={f.id}>
+          {f.bezeichnung}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function TechnikerZuweisungenPage() {
   const navigate = useNavigate();
@@ -9,12 +38,20 @@ export function TechnikerZuweisungenPage() {
     queryKey: ["techniker-zuweisungen"],
     queryFn: technikerZuweisungenApi.uebersicht,
   });
+  const { data: fahrzeugUebersicht } = useQuery({
+    queryKey: ["fahrzeug-zuweisungen"],
+    queryFn: fahrzeugZuweisungenApi.uebersicht,
+  });
+  const fahrzeugByTechnikerId = new Map(
+    (fahrzeugUebersicht ?? []).map((row) => [row.techniker.id, row.fahrzeug])
+  );
 
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-slate-800">Techniker-Zuweisungen</h1>
       <p className="text-sm text-slate-500">
-        Welcher Techniker betreut welche Kunden. Zuweisen/Ändern geht über das Kunden-Profil.
+        Welcher Techniker betreut welche Kunden und faehrt welches Fahrzeug. Kunden zuweisen/ändern
+        geht über das Kunden-Profil, das Fahrzeug direkt hier.
       </p>
 
       {isLoading ? (
@@ -42,6 +79,13 @@ export function TechnikerZuweisungenPage() {
                   ))}
                 </div>
               )}
+              <div className="mt-2 border-t border-slate-100 pt-2">
+                <label className="mb-1 block text-xs text-slate-500">Fahrzeug</label>
+                <FahrzeugAuswahl
+                  userId={row.techniker.id}
+                  aktuellesFahrzeugId={fahrzeugByTechnikerId.get(row.techniker.id)?.id ?? null}
+                />
+              </div>
             </div>
           ))}
         </div>

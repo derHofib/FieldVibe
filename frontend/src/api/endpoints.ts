@@ -12,10 +12,12 @@ import type {
   Dauerauftrag,
   DauerauftragMitVerlauf,
   DauerauftragModus,
+  FahrzeugZuweisungUebersicht,
   FeedResponse,
   Highlight,
   ImpersonateResponse,
   Insights,
+  InventurZyklus,
   Kunde,
   KundeProfil,
   KundenportalZugang,
@@ -321,6 +323,34 @@ export const pruefzyklenApi = {
     apiFetch<Pruefzyklus>(`/api/pruefzyklen/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
+    }),
+};
+
+export const inventurzyklenApi = {
+  list: (lagerId?: string) =>
+    apiFetch<InventurZyklus[]>(`/api/inventurzyklen${lagerId ? `?lager_id=${lagerId}` : ""}`),
+  create: (body: { lager_id: string; intervall_tage: number; naechste_inventur_am?: string }) =>
+    apiFetch<InventurZyklus>("/api/inventurzyklen", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<
+      Pick<InventurZyklus, "intervall_tage" | "letzte_inventur_am" | "naechste_inventur_am" | "aktiv">
+    >,
+  ) =>
+    apiFetch<InventurZyklus>(`/api/inventurzyklen/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+};
+
+export const fahrzeugZuweisungenApi = {
+  uebersicht: () =>
+    apiFetch<FahrzeugZuweisungUebersicht[]>("/api/fahrzeug-zuweisungen"),
+  mir: () => apiFetch<Anlage | null>("/api/fahrzeug-zuweisungen/mir"),
+  setzen: (userId: string, anlageId: string | null) =>
+    apiFetch<Anlage | null>(`/api/fahrzeug-zuweisungen/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ anlage_id: anlageId }),
     }),
 };
 

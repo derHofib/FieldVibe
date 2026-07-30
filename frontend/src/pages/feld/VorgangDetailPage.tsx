@@ -6,6 +6,7 @@ import { ApiError } from "../../api/client";
 import {
   angeboteApi,
   anlagenApi,
+  fahrzeugZuweisungenApi,
   highlightsApi,
   kundenApi,
   maengelApi,
@@ -324,6 +325,11 @@ export function VorgangDetailPage() {
     enabled: showMaterialForm,
   });
   const lagerorte = (alleAnlagenFuerLager ?? []).filter((a) => a.objekttyp !== "kundenanlage");
+  const { data: meinFahrzeug } = useQuery({
+    queryKey: ["fahrzeug-mir"],
+    queryFn: fahrzeugZuweisungenApi.mir,
+    enabled: showMaterialForm && currentUser?.role === "techniker",
+  });
 
   const materialVerwendenMutation = useMutation({
     mutationFn: () => materialApi.verwenden(materialId, id!, materialLagerId, materialMenge),
@@ -842,7 +848,11 @@ export function VorgangDetailPage() {
               value={materialId}
               onChange={(e) => {
                 setMaterialId(e.target.value);
-                setMaterialLagerId("");
+                // Fuer Techniker das eigene zugewiesene Fahrzeug als
+                // Standard-Lagerort vorschlagen (siehe Techniker-
+                // Zuweisungen-Seite) -- spart bei jedem Materialverbrauch
+                // aus dem eigenen Fahrzeug den manuellen Auswahlschritt.
+                setMaterialLagerId(meinFahrzeug?.id ?? "");
               }}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             >

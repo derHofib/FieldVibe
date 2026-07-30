@@ -10,6 +10,7 @@ from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
+from app.models.inventurzyklus import InventurZyklus
 from app.models.mandant import Mandant
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
@@ -18,6 +19,7 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.services.event_bus import event_bus
+from app.services.fahrzeug_zuweisung_service import technikern_zugewiesen
 from app.services.numbering_service import next_vorgangsnummer
 
 SCHEDULER_AKTION = "pruefzyklen_scheduler_run"
@@ -52,12 +54,12 @@ async def _admins_und_disponenten(session: AsyncSession, mandant_id) -> list[Use
     return list(result.scalars().all())
 
 
-async def _hat_offene_notification(session: AsyncSession, *, user_id, ref_entity_id) -> bool:
+async def _hat_offene_notification(session: AsyncSession, *, user_id, ref_entity_type, ref_entity_id) -> bool:
     result = await session.execute(
         select(Notification.id)
         .where(
             Notification.user_id == user_id,
-            Notification.ref_entity_type == "pruefmittel",
+            Notification.ref_entity_type == ref_entity_type,
             Notification.ref_entity_id == ref_entity_id,
             Notification.gelesen_am.is_(None),
         )
@@ -71,9 +73,10 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
     Vorgang an und benachrichtigt Admin/Disponent -- pro Zyklus nur einmal,
     bis die zugehoerige Pruefung tatsaechlich durchgefuehrt wurde (siehe
     Pruefzyklus.offener_vorgang_id, der beim Abschluss des Vorgangs wieder
-    geleert wird, app/api/routes/vorgaenge.py). Faellige Pruefmittel
-    erzeugen keinen Vorgang (Kalibrierung ist kein Kundenauftrag), nur eine
-    wiederkehrende Erinnerung, solange keine ungelesene dazu offen ist.
+    geleert wird, app/api/routes/vorgaenge.py). Faellige Pruefmittel und
+    Inventurzyklen erzeugen keinen Vorgang (Kalibrierung/Inventur sind kein
+    Kundenauftrag), nur eine wiederkehrende Erinnerung, solange keine
+    ungelesene dazu offen ist.
 
     `mandant_ids` grenzt den Lauf auf die Mandanten ein, deren konfigurierte
     Scheduler-Stunde gerade erreicht ist (siehe app/worker.py) -- None (z.B.
@@ -85,6 +88,7 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
 
     erstellte_vorgaenge = 0
     faellige_pruefmittel = 0
+    faellige_inventurzyklen = 0
 
     async with system_session() as session:
         pruefzyklen_stmt = select(Pruefzyklus).where(
@@ -170,7 +174,7 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
 
             for empfaenger in empfaenger_liste:
                 if await _hat_offene_notification(
-                    session, user_id=empfaenger.id, ref_entity_id=mittel.id
+                    session, user_id=empfaenger.id, ref_entity_type="pruefmittel", ref_entity_id=mittel.id
                 ):
                     continue
                 session.add(
@@ -185,9 +189,54 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
                 )
             faellige_pruefmittel += 1
 
+        # Faellige Inventurzyklen (aktiv, siehe app/models/inventurzyklus.py)
+        # erzeugen -- wie Pruefmittel -- keinen Vorgang, nur eine
+        # wiederkehrende Erinnerung: eine Inventur ist ein interner Vorgang
+        # am Lagerort, kein Kundenauftrag. Ist der Lagerort ein Fahrzeug,
+        # wird zusaetzlich der/die zugewiesene(n) Techniker benachrichtigt
+        # (siehe app/services/fahrzeug_zuweisung_service.py) -- die
+        # tatsaechlichen Nutzer des Lagerorts sollen es genauso mitbekommen
+        # wie Admin/Disponent.
+        inventurzyklen_stmt = select(InventurZyklus).where(
+            InventurZyklus.aktiv.is_(True),
+            InventurZyklus.naechste_inventur_am <= horizont,
+        )
+        if mandant_ids is not None:
+            inventurzyklen_stmt = inventurzyklen_stmt.where(InventurZyklus.mandant_id.in_(mandant_ids))
+        inventurzyklen_faellig = (await session.execute(inventurzyklen_stmt)).scalars().all()
+
+        for zyklus in inventurzyklen_faellig:
+            lager = await session.get(Anlage, zyklus.lager_id)
+            if lager is None:
+                continue
+
+            empfaenger_liste = list(await _admins_und_disponenten(session, zyklus.mandant_id))
+            if lager.objekttyp == "fahrzeug":
+                for techniker in await technikern_zugewiesen(session, lager.id):
+                    if all(techniker.id != e.id for e in empfaenger_liste):
+                        empfaenger_liste.append(techniker)
+
+            for empfaenger in empfaenger_liste:
+                if await _hat_offene_notification(
+                    session, user_id=empfaenger.id, ref_entity_type="anlage", ref_entity_id=lager.id
+                ):
+                    continue
+                session.add(
+                    Notification(
+                        mandant_id=zyklus.mandant_id,
+                        user_id=empfaenger.id,
+                        typ="frist",
+                        titel=f"Inventur fällig: {lager.bezeichnung}",
+                        ref_entity_type="anlage",
+                        ref_entity_id=lager.id,
+                    )
+                )
+            faellige_inventurzyklen += 1
+
         ergebnis = {
             "vorgaenge_erstellt": erstellte_vorgaenge,
             "pruefmittel_faellig": faellige_pruefmittel,
+            "inventurzyklen_faellig": faellige_inventurzyklen,
         }
         session.add(
             AuditLog(

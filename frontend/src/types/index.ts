@@ -350,6 +350,22 @@ export interface Pruefzyklus {
   updated_at: string;
 }
 
+export interface InventurZyklus {
+  id: string;
+  lager_id: string;
+  intervall_tage: number;
+  letzte_inventur_am: string | null;
+  naechste_inventur_am: string;
+  aktiv: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FahrzeugZuweisungUebersicht {
+  techniker: User;
+  fahrzeug: Anlage | null;
+}
+
 export type PruefmittelStatus = "aktiv" | "defekt" | "ausser_betrieb";
 
 export interface Pruefmittel {

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { anlagenApi, pruefzyklenApi } from "../../api/endpoints";
+import { anlagenApi, inventurzyklenApi, pruefzyklenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -35,6 +35,7 @@ export function AnlageProfilePage() {
   const [showForm, setShowForm] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");
   const [intervall, setIntervall] = useState("12");
+  const [inventurIntervallTage, setInventurIntervallTage] = useState("90");
 
   const { data: profil, isLoading } = useQuery({
     queryKey: ["anlage-profil", id],
@@ -46,6 +47,12 @@ export function AnlageProfilePage() {
     queryFn: () => pruefzyklenApi.list(id!),
     enabled: !!id,
   });
+  const { data: inventurzyklen } = useQuery({
+    queryKey: ["inventurzyklen", id],
+    queryFn: () => inventurzyklenApi.list(id!),
+    enabled: !!id && profil?.objekttyp !== "kundenanlage",
+  });
+  const inventurzyklus = inventurzyklen?.[0];
 
   const createMutation = useMutation({
     mutationFn: pruefzyklenApi.create,
@@ -63,6 +70,25 @@ export function AnlageProfilePage() {
         letzte_pruefung_am: new Date().toISOString().slice(0, 10),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
+  });
+
+  const inventurAnlegenMutation = useMutation({
+    mutationFn: () =>
+      inventurzyklenApi.create({ lager_id: id!, intervall_tage: Number(inventurIntervallTage) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
+  });
+
+  const inventurDurchgefuehrtMutation = useMutation({
+    mutationFn: () =>
+      inventurzyklenApi.update(inventurzyklus!.id, {
+        letzte_inventur_am: new Date().toISOString().slice(0, 10),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
+  });
+
+  const inventurAktivMutation = useMutation({
+    mutationFn: () => inventurzyklenApi.update(inventurzyklus!.id, { aktiv: !inventurzyklus!.aktiv }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });
 
   if (isLoading || !profil) return <p className="text-center text-slate-500">Lädt…</p>;
@@ -223,6 +249,76 @@ export function AnlageProfilePage() {
           </div>
         )}
       </div>
+
+      {profil.objekttyp !== "kundenanlage" && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold text-slate-500">Inventur</h2>
+          {!inventurzyklus ? (
+            kannVerwalten ? (
+              <div className="space-y-2 rounded-lg bg-white p-3 shadow-sm">
+                <p className="text-sm text-slate-400">
+                  Noch kein Inventurzyklus für diesen Lagerort eingerichtet.
+                </p>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-500">Intervall (Tage)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={inventurIntervallTage}
+                    onChange={(e) => setInventurIntervallTage(e.target.value)}
+                    className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  />
+                  <button
+                    disabled={inventurAnlegenMutation.isPending}
+                    onClick={() => inventurAnlegenMutation.mutate()}
+                    className="btn-touch ml-auto rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    Einrichten
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400">Kein Inventurzyklus eingerichtet.</p>
+            )
+          ) : (
+            <div className="rounded-lg bg-white p-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${faelligkeitsFarbe(inventurzyklus.naechste_inventur_am)}`}>
+                  Fällig: {new Date(inventurzyklus.naechste_inventur_am).toLocaleDateString("de-DE")}
+                </span>
+                {!inventurzyklus.aktiv && (
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
+                    pausiert
+                  </span>
+                )}
+              </div>
+              {inventurzyklus.letzte_inventur_am && (
+                <p className="mt-1 text-xs text-slate-400">
+                  Zuletzt durchgeführt: {new Date(inventurzyklus.letzte_inventur_am).toLocaleDateString("de-DE")}
+                </p>
+              )}
+              {kannVerwalten && (
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => inventurDurchgefuehrtMutation.mutate()}
+                    disabled={inventurDurchgefuehrtMutation.isPending || !inventurzyklus.aktiv}
+                    className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50"
+                  >
+                    Inventur durchgeführt (heute)
+                  </button>
+                  <button
+                    onClick={() => inventurAktivMutation.mutate()}
+                    disabled={inventurAktivMutation.isPending}
+                    className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50"
+                  >
+                    {inventurzyklus.aktiv ? "Deaktivieren" : "Reaktivieren"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

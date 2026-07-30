@@ -3,8 +3,10 @@ from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
+from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.highlight import Highlight
 from app.models.integration import MandantIntegration
+from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
@@ -30,8 +32,10 @@ __all__ = [
     "AuditLog",
     "Dauerauftrag",
     "DauerauftragZiel",
+    "FahrzeugZuweisung",
     "Highlight",
     "MandantIntegration",
+    "InventurZyklus",
     "Kunde",
     "KundeZuweisung",
     "KundenportalZugang",
