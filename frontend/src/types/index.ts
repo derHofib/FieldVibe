@@ -74,9 +74,12 @@ export interface Kunde {
   updated_at: string;
 }
 
+export type AnlagenObjekttyp = "kundenanlage" | "fahrzeug" | "lager" | "baustelle";
+
 export interface Anlage {
   id: string;
-  kunde_id: string;
+  kunde_id: string | null;
+  objekttyp: AnlagenObjekttyp;
   bezeichnung: string;
   adresse: Record<string, unknown>;
   anlagentyp: string | null;
@@ -243,7 +246,7 @@ export interface TechnikerZuweisungUebersicht {
 }
 
 export interface AnlageProfil extends Anlage {
-  kunde: Kunde;
+  kunde: Kunde | null;
   vorgaenge: Vorgang[];
   tags: Tag[];
   vorgaenge_nach_status: Record<string, number>;
@@ -460,23 +463,45 @@ export interface Highlight {
   foto_thumbnail_url: string | null;
 }
 
+export interface MaterialBestand {
+  lager_id: string;
+  lager_bezeichnung: string;
+  menge: string;
+}
+
 export interface Material {
   id: string;
   bezeichnung: string;
   einheit: string;
-  bestand: string;
   mindestbestand: string;
   einzelpreis: string | null;
   created_at: string;
   updated_at: string;
+  bestand_gesamt: string;
+  bestaende: MaterialBestand[];
 }
 
 export interface MaterialVerwendung {
   id: string;
   material_id: string;
+  lager_id: string;
   vorgang_id: string;
   menge: string;
   verwendet_von: string;
+  created_at: string;
+}
+
+export type MaterialBewegungTyp = "eingang" | "umlagerung" | "verwendung" | "korrektur";
+
+export interface MaterialBewegung {
+  id: string;
+  material_id: string;
+  typ: MaterialBewegungTyp;
+  von_lager_id: string | null;
+  nach_lager_id: string | null;
+  menge: string;
+  vorgang_id: string | null;
+  erstellt_von: string;
   created_at: string;
 }
 

@@ -15,7 +15,7 @@ class KundeProfil(KundeRead):
 
 
 class AnlageProfil(AnlageRead):
-    kunde: KundeRead
+    kunde: KundeRead | None
     vorgaenge: list[VorgangRead]
     tags: list[TagRead]
     vorgaenge_nach_status: dict[str, int]

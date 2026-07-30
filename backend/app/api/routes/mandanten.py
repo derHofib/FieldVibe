@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_db, require_roles
+from app.models.anlage import Anlage
 from app.models.mandant import Mandant
 from app.schemas.mandant import MandantCreate, MandantRead, MandantUpdate
 from app.services.audit_service import log_action
@@ -43,6 +44,21 @@ async def create_mandant(
             status_code=status.HTTP_409_CONFLICT,
             detail="Slug bereits vergeben",
         ) from exc
+
+    # Jeder Mandant bekommt sofort einen nutzbaren Lagerort fuer die
+    # Materialwirtschaft (siehe app/models/anlage.py: Lagerorte sind Anlagen
+    # mit objekttyp="lager", kein eigenes Onboarding-Formular noetig).
+    session.add(
+        Anlage(
+            mandant_id=mandant.id,
+            kunde_id=None,
+            objekttyp="lager",
+            bezeichnung="Zentrallager",
+            adresse={},
+            stammdaten={},
+        )
+    )
+    await session.flush()
 
     await log_action(
         session,

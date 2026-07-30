@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,14 +42,21 @@ async def _require_own_kunde(session: AsyncSession, kunde_id: UUID) -> Kunde:
 @router.get("", response_model=list[AnlageRead])
 async def list_anlagen(
     kunde_id: UUID | None = Query(default=None),
+    objekttyp: str | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Anlage]:
     stmt = select(Anlage).order_by(Anlage.bezeichnung)
     if kunde_id:
         stmt = stmt.where(Anlage.kunde_id == kunde_id)
+    if objekttyp:
+        stmt = stmt.where(Anlage.objekttyp == objekttyp)
     if auth.role == "techniker":
-        stmt = stmt.where(Anlage.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
+        # Interne Objekte (Fahrzeuge/Lager/Baustellen, kunde_id NULL) sind
+        # keine Kundendaten und daher unabhaengig von der Kunde-Zuweisung
+        # immer sichtbar -- nur echte Kundenanlagen werden eingeschraenkt.
+        zugewiesene = await assigned_kunde_ids(session, auth.user_id)
+        stmt = stmt.where(or_(Anlage.kunde_id.is_(None), Anlage.kunde_id.in_(zugewiesene)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -65,11 +72,13 @@ async def create_anlage(
     auth=Depends(require_roles("mandant_admin", "disponent")),
     session: AsyncSession = Depends(get_db),
 ) -> Anlage:
-    await _require_own_kunde(session, body.kunde_id)
+    if body.kunde_id is not None:
+        await _require_own_kunde(session, body.kunde_id)
 
     anlage = Anlage(
         mandant_id=auth.mandant_id,
         kunde_id=body.kunde_id,
+        objekttyp=body.objekttyp,
         bezeichnung=body.bezeichnung,
         adresse=body.adresse,
         anlagentyp=body.anlagentyp,
@@ -89,8 +98,10 @@ async def create_anlage(
 
 
 async def _require_anlage_zugriff(session: AsyncSession, auth: AuthContext, anlage: Anlage) -> None:
-    if auth.role == "techniker" and anlage.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
+    if (
+        auth.role == "techniker"
+        and anlage.kunde_id is not None
+        and anlage.kunde_id not in await assigned_kunde_ids(session, auth.user_id)
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
 
@@ -112,8 +123,10 @@ async def get_anlage_by_qr(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
         )
-    if auth.role == "techniker" and anlage.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
+    if (
+        auth.role == "techniker"
+        and anlage.kunde_id is not None
+        and anlage.kunde_id not in await assigned_kunde_ids(session, auth.user_id)
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
@@ -144,7 +157,7 @@ async def get_anlage_profil(
     if anlage is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
     await _require_anlage_zugriff(session, auth, anlage)
-    kunde = await session.get(Kunde, anlage.kunde_id)
+    kunde = await session.get(Kunde, anlage.kunde_id) if anlage.kunde_id is not None else None
 
     vorgaenge_result = await session.execute(
         select(Vorgang)
@@ -178,7 +191,7 @@ async def get_anlage_profil(
 
     return AnlageProfil(
         **AnlageRead.model_validate(anlage).model_dump(),
-        kunde=KundeRead.model_validate(kunde),
+        kunde=KundeRead.model_validate(kunde) if kunde is not None else None,
         vorgaenge=list(vorgaenge_result.scalars().all()),
         tags=list(tags_result.scalars().all()),
         vorgaenge_nach_status=vorgaenge_nach_status,

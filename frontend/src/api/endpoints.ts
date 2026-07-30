@@ -4,6 +4,7 @@ import type {
   Angebot,
   AngebotPosition,
   Anlage,
+  AnlagenObjekttyp,
   AnlageProfil,
   AuditLogEntry,
   CurrentKunde,
@@ -23,6 +24,7 @@ import type {
   MandantIntegration,
   Mangel,
   Material,
+  MaterialBewegung,
   MaterialVerwendung,
   NotificationEntry,
   Pruefmittel,
@@ -138,13 +140,22 @@ export const technikerZuweisungenApi = {
 };
 
 export const anlagenApi = {
-  list: (kundeId?: string) =>
-    apiFetch<Anlage[]>(`/api/anlagen${kundeId ? `?kunde_id=${kundeId}` : ""}`),
+  list: (kundeId?: string, objekttyp?: AnlagenObjekttyp) => {
+    const params = new URLSearchParams();
+    if (kundeId) params.set("kunde_id", kundeId);
+    if (objekttyp) params.set("objekttyp", objekttyp);
+    const qs = params.toString();
+    return apiFetch<Anlage[]>(`/api/anlagen${qs ? `?${qs}` : ""}`);
+  },
   get: (id: string) => apiFetch<Anlage>(`/api/anlagen/${id}`),
   profil: (id: string) => apiFetch<AnlageProfil>(`/api/anlagen/${id}/profil`),
   byQrCode: (qrCode: string) => apiFetch<Anlage>(`/api/anlagen/by-qr/${encodeURIComponent(qrCode)}`),
-  create: (body: { kunde_id: string; bezeichnung: string; anlagentyp?: string }) =>
-    apiFetch<Anlage>("/api/anlagen", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: {
+    kunde_id?: string;
+    objekttyp?: AnlagenObjekttyp;
+    bezeichnung: string;
+    anlagentyp?: string;
+  }) => apiFetch<Anlage>("/api/anlagen", { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const dauerauftraegeApi = {
@@ -417,16 +428,34 @@ export const highlightsApi = {
 
 export const materialApi = {
   list: () => apiFetch<Material[]>("/api/material"),
-  create: (body: { bezeichnung: string; einheit?: string; bestand?: string; mindestbestand?: string; einzelpreis?: string }) =>
-    apiFetch<Material>("/api/material", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: {
+    bezeichnung: string;
+    einheit?: string;
+    mindestbestand?: string;
+    einzelpreis?: string;
+    lager_id?: string;
+    menge?: string;
+  }) => apiFetch<Material>("/api/material", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<Pick<Material, "bezeichnung" | "einheit" | "bestand" | "mindestbestand" | "einzelpreis">>,
+    body: Partial<Pick<Material, "bezeichnung" | "einheit" | "mindestbestand" | "einzelpreis">>,
   ) => apiFetch<Material>(`/api/material/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  verwenden: (materialId: string, vorgangId: string, menge: string) =>
+  bestandSetzen: (materialId: string, lagerId: string, menge: string) =>
+    apiFetch<Material>(`/api/material/${materialId}/bestand/${lagerId}`, {
+      method: "PUT",
+      body: JSON.stringify({ menge }),
+    }),
+  umlagern: (materialId: string, vonLagerId: string, nachLagerId: string, menge: string) =>
+    apiFetch<Material>(`/api/material/${materialId}/umlagern`, {
+      method: "POST",
+      body: JSON.stringify({ von_lager_id: vonLagerId, nach_lager_id: nachLagerId, menge }),
+    }),
+  bewegungen: (materialId: string) =>
+    apiFetch<MaterialBewegung[]>(`/api/material/${materialId}/bewegungen`),
+  verwenden: (materialId: string, vorgangId: string, lagerId: string, menge: string) =>
     apiFetch<MaterialVerwendung>(`/api/material/${materialId}/verwendung`, {
       method: "POST",
-      body: JSON.stringify({ vorgang_id: vorgangId, menge }),
+      body: JSON.stringify({ vorgang_id: vorgangId, lager_id: lagerId, menge }),
     }),
 };
 

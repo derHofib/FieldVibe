@@ -77,12 +77,16 @@ export function AnlageProfilePage() {
 
       <div className="rounded-lg bg-white p-4 shadow-sm">
         <h1 className="text-lg font-bold text-slate-800">{profil.bezeichnung}</h1>
-        <button
-          onClick={() => navigate(`/kunden/${profil.kunde.id}`)}
-          className="text-sm text-blue-700 underline-offset-2 hover:underline"
-        >
-          {profil.kunde.name}
-        </button>
+        {profil.kunde ? (
+          <button
+            onClick={() => navigate(`/kunden/${profil.kunde!.id}`)}
+            className="text-sm text-blue-700 underline-offset-2 hover:underline"
+          >
+            {profil.kunde.name}
+          </button>
+        ) : (
+          <p className="text-sm text-slate-500">Internes Objekt (kein Kundenbezug)</p>
+        )}
         {(adresse?.strasse || adresse?.ort) && (
           <p className="mt-1 text-sm text-slate-500">
             {[adresse.strasse, adresse.ort].filter(Boolean).join(", ")}

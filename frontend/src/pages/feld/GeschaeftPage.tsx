@@ -2,9 +2,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
-import { angeboteApi, kundenApi, materialApi, rechnungenApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import { angeboteApi, anlagenApi, kundenApi, materialApi, rechnungenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
-import type { AngebotStatus, Material, RechnungStatus } from "../../types";
+import type { Anlage, AnlagenObjekttyp, AngebotStatus, Material, RechnungStatus } from "../../types";
+
+const OBJEKTTYP_LABEL: Record<AnlagenObjekttyp, string> = {
+  kundenanlage: "Kundenanlage",
+  fahrzeug: "Fahrzeug",
+  lager: "Lager",
+  baustelle: "Baustelle",
+};
 
 const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
   entwurf: "Entwurf",
@@ -21,21 +29,39 @@ const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
 };
 
 function istUnterbestand(m: Material): boolean {
-  return Number(m.bestand) <= Number(m.mindestbestand);
+  return Number(m.bestand_gesamt) <= Number(m.mindestbestand);
 }
 
-function MaterialZeile({ material }: { material: Material }) {
+function MaterialZeile({ material, lagerorte }: { material: Material; lagerorte: Anlage[] }) {
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState(false);
-  const [bestand, setBestand] = useState(material.bestand);
-  const [mindestbestand, setMindestbestand] = useState(material.mindestbestand);
+  const [editingLagerId, setEditingLagerId] = useState<string | null>(null);
+  const [neueMenge, setNeueMenge] = useState("");
+  const [zeigeUmlagern, setZeigeUmlagern] = useState(false);
+  const [umlagernVon, setUmlagernVon] = useState("");
+  const [umlagernNach, setUmlagernNach] = useState("");
+  const [umlagernMenge, setUmlagernMenge] = useState("");
 
-  const updateMutation = useMutation({
-    mutationFn: () => materialApi.update(material.id, { bestand, mindestbestand }),
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["material"] });
+    queryClient.invalidateQueries({ queryKey: ["stories"] });
+  };
+
+  const bestandSetzenMutation = useMutation({
+    mutationFn: (lagerId: string) => materialApi.bestandSetzen(material.id, lagerId, neueMenge),
     onSuccess: () => {
-      setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["material"] });
-      queryClient.invalidateQueries({ queryKey: ["stories"] });
+      setEditingLagerId(null);
+      invalidate();
+    },
+  });
+
+  const umlagernMutation = useMutation({
+    mutationFn: () => materialApi.umlagern(material.id, umlagernVon, umlagernNach, umlagernMenge),
+    onSuccess: () => {
+      setZeigeUmlagern(false);
+      setUmlagernVon("");
+      setUmlagernNach("");
+      setUmlagernMenge("");
+      invalidate();
     },
   });
 
@@ -45,44 +71,190 @@ function MaterialZeile({ material }: { material: Material }) {
         <div>
           <div className="text-sm font-medium text-slate-800">{material.bezeichnung}</div>
           <div className={`text-xs ${istUnterbestand(material) ? "font-semibold text-red-600" : "text-slate-500"}`}>
-            Bestand: {material.bestand} {material.einheit} (Mindestbestand {material.mindestbestand})
+            Gesamt: {material.bestand_gesamt} {material.einheit} (Mindestbestand {material.mindestbestand})
           </div>
           {material.einzelpreis && (
             <div className="text-xs text-slate-400">{material.einzelpreis} EUR/Einheit</div>
           )}
         </div>
-        <button onClick={() => setEditing((v) => !v)} className="btn-touch text-xs font-medium text-blue-700">
-          {editing ? "Abbrechen" : "Bestand ändern"}
+        {lagerorte.length > 1 && (
+          <button
+            onClick={() => setZeigeUmlagern((v) => !v)}
+            className="btn-touch text-xs font-medium text-blue-700"
+          >
+            {zeigeUmlagern ? "Abbrechen" : "Umlagern"}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+        {material.bestaende.map((b) => (
+          <div key={b.lager_id} className="flex items-center justify-between text-xs">
+            <span className="text-slate-600">{b.lager_bezeichnung}</span>
+            {editingLagerId === b.lager_id ? (
+              <span className="flex items-center gap-1">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={neueMenge}
+                  onChange={(e) => setNeueMenge(e.target.value)}
+                  className="w-16 rounded border border-slate-300 px-1 py-0.5"
+                />
+                <button
+                  onClick={() => bestandSetzenMutation.mutate(b.lager_id)}
+                  disabled={bestandSetzenMutation.isPending}
+                  className="btn-touch rounded bg-slate-900 px-2 py-0.5 text-white"
+                >
+                  ✓
+                </button>
+                <button onClick={() => setEditingLagerId(null)} className="btn-touch text-slate-400">
+                  ✕
+                </button>
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  setEditingLagerId(b.lager_id);
+                  setNeueMenge(b.menge);
+                }}
+                className="btn-touch font-medium text-slate-700 underline-offset-2 hover:underline"
+              >
+                {b.menge} {material.einheit}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {zeigeUmlagern && (
+        <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2">
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={umlagernVon}
+              onChange={(e) => setUmlagernVon(e.target.value)}
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+            >
+              <option value="">Von…</option>
+              {lagerorte.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.bezeichnung}
+                </option>
+              ))}
+            </select>
+            <select
+              value={umlagernNach}
+              onChange={(e) => setUmlagernNach(e.target.value)}
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+            >
+              <option value="">Nach…</option>
+              {lagerorte.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.bezeichnung}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Menge"
+              value={umlagernMenge}
+              onChange={(e) => setUmlagernMenge(e.target.value)}
+              className="flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs"
+            />
+            <button
+              disabled={
+                !umlagernVon || !umlagernNach || umlagernVon === umlagernNach || !umlagernMenge || umlagernMutation.isPending
+              }
+              onClick={() => umlagernMutation.mutate()}
+              className="btn-touch shrink-0 rounded-md bg-slate-900 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+            >
+              Umlagern
+            </button>
+          </div>
+          {umlagernMutation.isError && (
+            <p className="text-xs text-red-700">
+              {umlagernMutation.error instanceof ApiError ? umlagernMutation.error.message : "Fehler"}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [bezeichnung, setBezeichnung] = useState("");
+  const [objekttyp, setObjekttyp] = useState<AnlagenObjekttyp>("fahrzeug");
+
+  const createMutation = useMutation({
+    mutationFn: () => anlagenApi.create({ bezeichnung, objekttyp }),
+    onSuccess: () => {
+      setShowForm(false);
+      setBezeichnung("");
+      queryClient.invalidateQueries({ queryKey: ["lagerorte"] });
+    },
+  });
+
+  return (
+    <div className="rounded-lg bg-white p-3 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-500">Fahrzeuge & Lagerorte</h2>
+        <button onClick={() => setShowForm((v) => !v)} className="btn-touch text-xs font-medium text-blue-700">
+          {showForm ? "Abbrechen" : "+ Neu"}
         </button>
       </div>
-      {editing && (
-        <div className="mt-2 flex items-end gap-2 border-t border-slate-100 pt-2">
-          <div className="flex-1">
-            <label className="mb-1 block text-xs text-slate-500">Bestand</label>
-            <input
-              type="number"
-              step="0.01"
-              value={bestand}
-              onChange={(e) => setBestand(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="mb-1 block text-xs text-slate-500">Mindestbestand</label>
-            <input
-              type="number"
-              step="0.01"
-              value={mindestbestand}
-              onChange={(e) => setMindestbestand(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm"
-            />
-          </div>
-          <button
-            onClick={() => updateMutation.mutate()}
-            disabled={updateMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+
+      {lagerorte.length === 0 ? (
+        <p className="mt-2 text-sm text-slate-400">Noch keine weiteren Lagerorte.</p>
+      ) : (
+        <div className="mt-2 space-y-1">
+          {lagerorte.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => navigate(`/anlagen/${l.id}`)}
+              className="btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm"
+            >
+              <span className="text-slate-700">{l.bezeichnung}</span>
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
+                {OBJEKTTYP_LABEL[l.objekttyp]}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="mt-2 space-y-2 border-t border-slate-100 pt-2">
+          <input
+            value={bezeichnung}
+            onChange={(e) => setBezeichnung(e.target.value)}
+            placeholder="Bezeichnung (z.B. Transporter VW)"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          />
+          <select
+            value={objekttyp}
+            onChange={(e) => setObjekttyp(e.target.value as AnlagenObjekttyp)}
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
           >
-            Speichern
+            <option value="fahrzeug">Fahrzeug</option>
+            <option value="lager">Lager</option>
+            <option value="baustelle">Baustelle</option>
+          </select>
+          <p className="text-xs text-slate-400">
+            Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material -- keine Kunde-
+            Zuordnung nötig.
+          </p>
+          <button
+            disabled={!bezeichnung || createMutation.isPending}
+            onClick={() => createMutation.mutate()}
+            className="btn-touch w-full rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            Anlegen
           </button>
         </div>
       )}
@@ -101,7 +273,8 @@ export function GeschaeftPage() {
   const [materialForm, setMaterialForm] = useState({
     bezeichnung: "",
     einheit: "Stk",
-    bestand: "0",
+    menge: "0",
+    lagerId: "",
     mindestbestand: "0",
     einzelpreis: "",
   });
@@ -110,6 +283,12 @@ export function GeschaeftPage() {
   const { data: angebote } = useQuery({ queryKey: ["angebote"], queryFn: () => angeboteApi.list() });
   const { data: rechnungen } = useQuery({ queryKey: ["rechnungen"], queryFn: () => rechnungenApi.list() });
   const { data: material } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list() });
+  const { data: alleAnlagen } = useQuery({
+    queryKey: ["lagerorte"],
+    queryFn: () => anlagenApi.list(),
+    enabled: tab === "material",
+  });
+  const lagerorte = (alleAnlagen ?? []).filter((a) => a.objekttyp !== "kundenanlage");
 
   const createAngebotMutation = useMutation({
     mutationFn: () => angeboteApi.create({ kunde_id: kundeId }),
@@ -132,13 +311,14 @@ export function GeschaeftPage() {
       materialApi.create({
         bezeichnung: materialForm.bezeichnung,
         einheit: materialForm.einheit,
-        bestand: materialForm.bestand,
+        menge: materialForm.menge,
+        lager_id: materialForm.lagerId || undefined,
         mindestbestand: materialForm.mindestbestand,
         einzelpreis: materialForm.einzelpreis || undefined,
       }),
     onSuccess: () => {
       setShowForm(false);
-      setMaterialForm({ bezeichnung: "", einheit: "Stk", bestand: "0", mindestbestand: "0", einzelpreis: "" });
+      setMaterialForm({ bezeichnung: "", einheit: "Stk", menge: "0", lagerId: "", mindestbestand: "0", einzelpreis: "" });
       queryClient.invalidateQueries({ queryKey: ["material"] });
       queryClient.invalidateQueries({ queryKey: ["stories"] });
     },
@@ -257,12 +437,12 @@ export function GeschaeftPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500">Bestand</label>
+              <label className="mb-1 block text-xs text-slate-500">Anfangsbestand</label>
               <input
                 type="number"
                 step="0.01"
-                value={materialForm.bestand}
-                onChange={(e) => setMaterialForm({ ...materialForm, bestand: e.target.value })}
+                value={materialForm.menge}
+                onChange={(e) => setMaterialForm({ ...materialForm, menge: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               />
             </div>
@@ -275,6 +455,23 @@ export function GeschaeftPage() {
                 onChange={(e) => setMaterialForm({ ...materialForm, mindestbestand: e.target.value })}
                 className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               />
+            </div>
+            <div className="col-span-2">
+              <label className="mb-1 block text-xs text-slate-500">Lagerort für Anfangsbestand</label>
+              <select
+                value={materialForm.lagerId}
+                onChange={(e) => setMaterialForm({ ...materialForm, lagerId: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">Zentrallager (Standard)</option>
+                {lagerorte
+                  .filter((l) => l.objekttyp !== "kundenanlage")
+                  .map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.bezeichnung}
+                    </option>
+                  ))}
+              </select>
             </div>
           </div>
           <button
@@ -365,10 +562,11 @@ export function GeschaeftPage() {
 
       {tab === "material" && (
         <div className="space-y-2">
+          <LagerorteVerwaltung lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")} />
           {(material ?? []).length === 0 ? (
             <p className="text-center text-sm text-slate-400">Kein Material erfasst.</p>
           ) : (
-            material!.map((m) => <MaterialZeile key={m.id} material={m} />)
+            material!.map((m) => <MaterialZeile key={m.id} material={m} lagerorte={lagerorte} />)
           )}
         </div>
       )}

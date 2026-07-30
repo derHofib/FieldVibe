@@ -132,6 +132,19 @@ async def make_mandant():
             mandant = Mandant(name=name, slug=f"{name.lower()}-{uuid.uuid4().hex[:8]}", status=status)
             session.add(mandant)
             await session.flush()
+            # Spiegelt app/api/routes/mandanten.py:create_mandant -- jeder
+            # Mandant bekommt sofort einen Lagerort fuer die Materialwirtschaft.
+            session.add(
+                Anlage(
+                    mandant_id=mandant.id,
+                    kunde_id=None,
+                    objekttyp="lager",
+                    bezeichnung="Zentrallager",
+                    adresse={},
+                    stammdaten={},
+                )
+            )
+            await session.flush()
             await session.refresh(mandant)
             return mandant
 
@@ -187,13 +200,15 @@ async def make_kunde():
 
 @pytest_asyncio.fixture
 async def make_anlage():
-    async def _make(*, mandant: Mandant, kunde: Kunde, bezeichnung: str = "Hauptverteilung", **kwargs) -> Anlage:
+    async def _make(
+        *, mandant: Mandant, kunde: Kunde | None = None, bezeichnung: str = "Hauptverteilung", **kwargs
+    ) -> Anlage:
         async with system_session() as session:
             anlage = Anlage(
                 mandant_id=mandant.id,
-                kunde_id=kunde.id,
+                kunde_id=kunde.id if kunde is not None else None,
                 bezeichnung=bezeichnung,
-                adresse=kwargs.pop("adresse", {"strasse": "Teststr. 1", "ort": "Musterstadt"}),
+                adresse=kwargs.pop("adresse", {"strasse": "Teststr. 1", "ort": "Musterstadt"} if kunde else {}),
                 **kwargs,
             )
             session.add(anlage)

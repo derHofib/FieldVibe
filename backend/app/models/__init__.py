@@ -10,7 +10,7 @@ from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
-from app.models.material import Material, MaterialVerwendung
+from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
@@ -38,6 +38,8 @@ __all__ = [
     "Mandant",
     "Mangel",
     "Material",
+    "MaterialBestand",
+    "MaterialBewegung",
     "MaterialVerwendung",
     "Notification",
     "Pruefmittel",

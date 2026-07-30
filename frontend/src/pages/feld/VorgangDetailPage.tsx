@@ -162,6 +162,7 @@ export function VorgangDetailPage() {
   const [showMaterialForm, setShowMaterialForm] = useState(false);
   const [materialId, setMaterialId] = useState("");
   const [materialMenge, setMaterialMenge] = useState("");
+  const [materialLagerId, setMaterialLagerId] = useState("");
   const [editingZuordnung, setEditingZuordnung] = useState(false);
   const [editKundeId, setEditKundeId] = useState("");
   const [editAnlageId, setEditAnlageId] = useState("");
@@ -317,13 +318,20 @@ export function VorgangDetailPage() {
   });
 
   const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list() });
+  const { data: alleAnlagenFuerLager } = useQuery({
+    queryKey: ["lagerorte"],
+    queryFn: () => anlagenApi.list(),
+    enabled: showMaterialForm,
+  });
+  const lagerorte = (alleAnlagenFuerLager ?? []).filter((a) => a.objekttyp !== "kundenanlage");
 
   const materialVerwendenMutation = useMutation({
-    mutationFn: () => materialApi.verwenden(materialId, id!, materialMenge),
+    mutationFn: () => materialApi.verwenden(materialId, id!, materialLagerId, materialMenge),
     onSuccess: () => {
       setShowMaterialForm(false);
       setMaterialId("");
       setMaterialMenge("");
+      setMaterialLagerId("");
       queryClient.invalidateQueries({ queryKey: ["material"] });
       queryClient.invalidateQueries({ queryKey: ["stories"] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
@@ -832,16 +840,42 @@ export function VorgangDetailPage() {
           <div className="space-y-2 rounded-md bg-slate-50 p-2">
             <select
               value={materialId}
-              onChange={(e) => setMaterialId(e.target.value)}
+              onChange={(e) => {
+                setMaterialId(e.target.value);
+                setMaterialLagerId("");
+              }}
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             >
               <option value="">Material wählen…</option>
               {(materialListe ?? []).map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.bezeichnung} ({m.bestand} {m.einheit} verfügbar)
+                  {m.bezeichnung} ({m.bestand_gesamt} {m.einheit} gesamt verfügbar)
                 </option>
               ))}
             </select>
+            {materialId && (
+              <select
+                value={materialLagerId}
+                onChange={(e) => setMaterialLagerId(e.target.value)}
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">Lagerort wählen…</option>
+                {(materialListe?.find((m) => m.id === materialId)?.bestaende ?? []).map((b) => (
+                  <option key={b.lager_id} value={b.lager_id}>
+                    {b.lager_bezeichnung} ({b.menge} verfügbar)
+                  </option>
+                ))}
+                {lagerorte
+                  .filter(
+                    (l) => !materialListe?.find((m) => m.id === materialId)?.bestaende.some((b) => b.lager_id === l.id)
+                  )
+                  .map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.bezeichnung} (0 verfügbar)
+                    </option>
+                  ))}
+              </select>
+            )}
             <div className="flex gap-2">
               <input
                 type="number"
@@ -853,7 +887,7 @@ export function VorgangDetailPage() {
                 className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               />
               <button
-                disabled={!materialId || !materialMenge || materialVerwendenMutation.isPending}
+                disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
                 onClick={() => materialVerwendenMutation.mutate()}
                 className="btn-touch shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >

@@ -203,6 +203,87 @@ async def test_anlage_profil_auswertung(
 
 
 @pytest.mark.asyncio
+async def test_fahrzeug_anlage_ohne_kunde_anlegen(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={"objekttyp": "fahrzeug", "bezeichnung": "Transporter VW"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["objekttyp"] == "fahrzeug"
+    assert body["kunde_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_kundenanlage_ohne_kunde_id_schlaegt_fehl(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={"bezeichnung": "Anlage ohne Kunde"},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_fahrzeug_mit_kunde_id_schlaegt_fehl(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={"objekttyp": "fahrzeug", "bezeichnung": "Transporter", "kunde_id": str(kunde.id)},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_techniker_sieht_fahrzeuge_ohne_kunde_zuweisung(
+    client, make_mandant, make_user, make_anlage
+):
+    """Interne Objekte (Fahrzeuge/Lager) sind keine Kundendaten -- ein
+    Techniker ohne jede Kunde-Zuweisung sieht sie trotzdem."""
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    fahrzeug = await make_anlage(mandant=mandant, objekttyp="fahrzeug", bezeichnung="Transporter")
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.get("/api/anlagen", headers=auth_headers(token))
+    assert resp.status_code == 200
+    bezeichnungen = [a["bezeichnung"] for a in resp.json()]
+    assert fahrzeug.bezeichnung in bezeichnungen
+    assert "Zentrallager" in bezeichnungen
+
+    get_resp = await client.get(f"/api/anlagen/{fahrzeug.id}", headers=auth_headers(token))
+    assert get_resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_liste_filterbar_nach_objekttyp(client, make_mandant, make_user, make_kunde, make_anlage):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Kundenanlage")
+    await make_anlage(mandant=mandant, objekttyp="fahrzeug", bezeichnung="Fahrzeug 1")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.get("/api/anlagen", headers=auth_headers(token), params={"objekttyp": "fahrzeug"})
+    assert resp.status_code == 200
+    assert [a["bezeichnung"] for a in resp.json()] == ["Fahrzeug 1"]
+
+
+@pytest.mark.asyncio
 async def test_vorgaenge_und_feed_filterbar_nach_anlage(
     client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
 ):

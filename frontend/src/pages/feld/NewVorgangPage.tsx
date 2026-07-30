@@ -150,7 +150,7 @@ export function NewVorgangPage() {
     try {
       const found = await anlagenApi.byQrCode(code);
       setAnlage(found);
-      setKundeId(found.kunde_id);
+      setKundeId(found.kunde_id ?? "");
       if (!titel) setTitel(`Vor-Ort-Termin: ${found.bezeichnung}`);
     } catch {
       setScanError(`Keine Anlage mit dem Code "${code}" gefunden.`);
