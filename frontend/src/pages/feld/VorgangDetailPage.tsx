@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import {
   angeboteApi,
+  anlagenApi,
   highlightsApi,
   kundenApi,
   maengelApi,
@@ -161,6 +162,10 @@ export function VorgangDetailPage() {
   const [showMaterialForm, setShowMaterialForm] = useState(false);
   const [materialId, setMaterialId] = useState("");
   const [materialMenge, setMaterialMenge] = useState("");
+  const [editingZuordnung, setEditingZuordnung] = useState(false);
+  const [editKundeId, setEditKundeId] = useState("");
+  const [editAnlageId, setEditAnlageId] = useState("");
+  const [zuordnungError, setZuordnungError] = useState<string | null>(null);
 
   const kannDisponieren =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
@@ -186,6 +191,33 @@ export function VorgangDetailPage() {
       }
     },
     enabled: !!vorgang,
+  });
+  const { data: anlage } = useQuery({
+    queryKey: ["anlage", vorgang?.anlage_id],
+    queryFn: () => anlagenApi.get(vorgang!.anlage_id!),
+    enabled: !!vorgang?.anlage_id,
+  });
+  const { data: alleKunden } = useQuery({
+    queryKey: ["kunden"],
+    queryFn: () => kundenApi.list(),
+    enabled: editingZuordnung,
+  });
+  const { data: anlagenFuerEditKunde } = useQuery({
+    queryKey: ["anlagen", editKundeId],
+    queryFn: () => anlagenApi.list(editKundeId),
+    enabled: editingZuordnung && !!editKundeId,
+  });
+  const zuordnungMutation = useMutation({
+    mutationFn: () =>
+      vorgaengeApi.update(id!, { kunde_id: editKundeId, anlage_id: editAnlageId || null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      setEditingZuordnung(false);
+      setZuordnungError(null);
+    },
+    onError: (err) => setZuordnungError(err instanceof ApiError ? err.message : "Fehler"),
   });
   const { data: events } = useQuery({
     queryKey: ["vorgang-events", id],
@@ -394,14 +426,100 @@ export function VorgangDetailPage() {
       <div className="rounded-lg bg-white p-4 shadow-sm">
         <div className="text-xs text-slate-400">{vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-slate-800">{vorgang.titel}</h1>
-        {kunde && (
-          <button
-            onClick={() => navigate(`/kunden/${kunde.id}`)}
-            className="text-sm text-blue-700 underline-offset-2 hover:underline"
-          >
-            {kunde.name}
-          </button>
+
+        <div className="mt-1 flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+            {kunde && (
+              <button
+                onClick={() => navigate(`/kunden/${kunde.id}`)}
+                className="text-blue-700 underline-offset-2 hover:underline"
+              >
+                {kunde.name}
+              </button>
+            )}
+            {anlage && (
+              <>
+                <span className="text-slate-300">·</span>
+                <button
+                  onClick={() => navigate(`/anlagen/${anlage.id}`)}
+                  className="text-blue-700 underline-offset-2 hover:underline"
+                >
+                  {anlage.bezeichnung}
+                </button>
+              </>
+            )}
+          </div>
+          {!editingZuordnung && (
+            <button
+              onClick={() => {
+                setEditKundeId(vorgang.kunde_id);
+                setEditAnlageId(vorgang.anlage_id ?? "");
+                setZuordnungError(null);
+                setEditingZuordnung(true);
+              }}
+              className="btn-touch text-xs font-medium text-blue-700"
+            >
+              Bearbeiten
+            </button>
+          )}
+        </div>
+
+        {editingZuordnung && (
+          <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Kunde</label>
+              <select
+                value={editKundeId}
+                onChange={(e) => {
+                  setEditKundeId(e.target.value);
+                  setEditAnlageId("");
+                }}
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                {alleKunden?.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.name} ({k.kundennummer})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-500">Anlage (optional)</label>
+              <select
+                value={editAnlageId}
+                onChange={(e) => setEditAnlageId(e.target.value)}
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">Keine Anlage</option>
+                {anlagenFuerEditKunde?.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.bezeichnung}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {zuordnungError && <p className="text-xs text-red-700">{zuordnungError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => zuordnungMutation.mutate()}
+                disabled={!editKundeId || zuordnungMutation.isPending}
+                className="btn-touch flex-1 rounded-md bg-slate-900 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Speichern
+              </button>
+              <button
+                onClick={() => {
+                  setEditingZuordnung(false);
+                  setZuordnungError(null);
+                }}
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
         )}
+
         {vorgang.beschreibung && <p className="mt-2 text-sm text-slate-600">{vorgang.beschreibung}</p>}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -139,6 +139,7 @@ export const technikerZuweisungenApi = {
 export const anlagenApi = {
   list: (kundeId?: string) =>
     apiFetch<Anlage[]>(`/api/anlagen${kundeId ? `?kunde_id=${kundeId}` : ""}`),
+  get: (id: string) => apiFetch<Anlage>(`/api/anlagen/${id}`),
   profil: (id: string) => apiFetch<AnlageProfil>(`/api/anlagen/${id}/profil`),
   byQrCode: (qrCode: string) => apiFetch<Anlage>(`/api/anlagen/by-qr/${encodeURIComponent(qrCode)}`),
   create: (body: { kunde_id: string; bezeichnung: string; anlagentyp?: string }) =>
@@ -197,8 +198,12 @@ export const vorgaengeApi = {
     prioritaet?: number;
     client_uuid?: string;
   }) => apiFetch<Vorgang>("/api/vorgaenge", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<Pick<Vorgang, "status" | "titel" | "beschreibung" | "prioritaet">>) =>
-    apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<
+      Pick<Vorgang, "status" | "titel" | "beschreibung" | "prioritaet" | "kunde_id" | "anlage_id">
+    >
+  ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };
 
 export const vorgangEventsApi = {

@@ -32,6 +32,7 @@ class VorgangCreate(BaseModel):
 class VorgangUpdate(BaseModel):
     titel: str | None = None
     beschreibung: str | None = None
+    kunde_id: UUID | None = None
     anlage_id: UUID | None = None
     vertrag_id: UUID | None = None
     abrechnungsart: VorgangAbrechnungsart | None = None

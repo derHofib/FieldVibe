@@ -191,3 +191,142 @@ async def test_vorgang_filter_by_status_and_leistungstyp(
     )
     assert resp.status_code == 200
     assert all(v["leistungstyp"] == "pruefung" for v in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_vorgang_kann_an_anderen_kunden_gebunden_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde1 = await make_kunde(mandant=mandant, name="Kunde 1")
+    kunde2 = await make_kunde(mandant=mandant, name="Kunde 2")
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde1)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde2.id)},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["kunde_id"] == str(kunde2.id)
+
+    # Der Vorgang taucht danach nur noch bei Kunde 2 auf, nicht mehr bei Kunde 1.
+    profil1 = await client.get(f"/api/kunden/{kunde1.id}/profil", headers=auth_headers(token))
+    assert profil1.json()["vorgaenge"] == []
+    profil2 = await client.get(f"/api/kunden/{kunde2.id}/profil", headers=auth_headers(token))
+    assert [v["id"] for v in profil2.json()["vorgaenge"]] == [str(vorgang.id)]
+
+    events_resp = await client.get(
+        f"/api/vorgaenge/{vorgang.id}/events", headers=auth_headers(token)
+    )
+    kunde_events = [e for e in events_resp.json() if "Kunde geändert" in (e["body"] or "")]
+    assert len(kunde_events) == 1
+
+
+@pytest.mark.asyncio
+async def test_vorgang_kann_an_anlage_fixiert_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"anlage_id": str(anlage.id)},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["anlage_id"] == str(anlage.id)
+
+    profil = await client.get(f"/api/anlagen/{anlage.id}/profil", headers=auth_headers(token))
+    assert [v["id"] for v in profil.json()["vorgaenge"]] == [str(vorgang.id)]
+
+
+@pytest.mark.asyncio
+async def test_kundenwechsel_entfernt_nicht_mehr_passende_anlage(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde1 = await make_kunde(mandant=mandant, name="Kunde 1")
+    kunde2 = await make_kunde(mandant=mandant, name="Kunde 2")
+    anlage_von_kunde1 = await make_anlage(mandant=mandant, kunde=kunde1)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde1, anlage_id=anlage_von_kunde1.id)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde2.id)},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["kunde_id"] == str(kunde2.id)
+    assert resp.json()["anlage_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_kunde_und_anlage_gemeinsam_wechseln(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde1 = await make_kunde(mandant=mandant, name="Kunde 1")
+    kunde2 = await make_kunde(mandant=mandant, name="Kunde 2")
+    anlage_von_kunde2 = await make_anlage(mandant=mandant, kunde=kunde2)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde1)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde2.id), "anlage_id": str(anlage_von_kunde2.id)},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["kunde_id"] == str(kunde2.id)
+    assert resp.json()["anlage_id"] == str(anlage_von_kunde2.id)
+
+
+@pytest.mark.asyncio
+async def test_neue_anlage_muss_zum_neuen_kunden_gehoeren(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde1 = await make_kunde(mandant=mandant, name="Kunde 1")
+    kunde2 = await make_kunde(mandant=mandant, name="Kunde 2")
+    anlage_von_kunde1 = await make_anlage(mandant=mandant, kunde=kunde1)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde1)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde2.id), "anlage_id": str(anlage_von_kunde1.id)},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_techniker_kann_vorgang_nicht_zu_nicht_zugewiesenem_kunden_binden(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde_eigen = await make_kunde(mandant=mandant, name="Eigener Kunde")
+    kunde_fremd = await make_kunde(mandant=mandant, name="Fremder Kunde")
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde_eigen, techniker=techniker)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde_eigen)
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde_fremd.id)},
+    )
+    assert resp.status_code == 403

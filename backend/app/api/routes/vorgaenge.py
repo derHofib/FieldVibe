@@ -199,9 +199,64 @@ async def update_vorgang(
 
     changes = body.model_dump(exclude_unset=True)
     alter_status = vorgang.status
+    alter_kunde_id = vorgang.kunde_id
+
+    if "kunde_id" in changes:
+        neuer_kunde_id = changes["kunde_id"]
+        if await session.get(Kunde, neuer_kunde_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        if auth.role == "techniker" and neuer_kunde_id not in await assigned_kunde_ids(
+            session, auth.user_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Dieser Kunde ist dir nicht zugewiesen",
+            )
+        # Eine bestehende Anlage-Zuordnung gehoerte zum alten Kunden -- wird
+        # die neue Anlage nicht im selben Request mitgegeben, bleibt sie
+        # sonst inkonsistent (Anlage eines anderen Kunden) an diesem Vorgang
+        # haengen. Statt das abzulehnen, wird die Verknuepfung entfernt.
+        if "anlage_id" not in changes and vorgang.anlage_id is not None:
+            bestehende_anlage = await session.get(Anlage, vorgang.anlage_id)
+            if bestehende_anlage is None or bestehende_anlage.kunde_id != neuer_kunde_id:
+                changes["anlage_id"] = None
+
+    if changes.get("anlage_id") is not None:
+        anlage = await session.get(Anlage, changes["anlage_id"])
+        if anlage is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        ziel_kunde_id = changes.get("kunde_id", vorgang.kunde_id)
+        if anlage.kunde_id != ziel_kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Anlage gehört nicht zum (neuen) Kunden dieses Vorgangs",
+            )
 
     for field, value in changes.items():
         setattr(vorgang, field, value)
+
+    if "kunde_id" in changes and changes["kunde_id"] != alter_kunde_id:
+        alter_kunde = await session.get(Kunde, alter_kunde_id)
+        neuer_kunde = await session.get(Kunde, changes["kunde_id"])
+        session.add(
+            VorgangEvent(
+                mandant_id=vorgang.mandant_id,
+                vorgang_id=vorgang.id,
+                event_type="system",
+                is_system=True,
+                author_user_id=auth.user_id,
+                body=(
+                    f"Kunde geändert: {alter_kunde.name if alter_kunde else '?'} → "
+                    f"{neuer_kunde.name if neuer_kunde else '?'}"
+                ),
+            )
+        )
 
     if "status" in changes and changes["status"] != alter_status:
         if changes["status"] == "abgeschlossen" and vorgang.abgeschlossen_am is None:
