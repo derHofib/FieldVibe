@@ -209,9 +209,17 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
               className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm"
             >
               <div>
-                <div className="text-sm font-medium text-slate-800">{d.titel}</div>
+                <div className="text-sm font-medium text-slate-800">
+                  {d.titel}
+                  {d.anzahl_ziele > 1 && (
+                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500">
+                      {d.anzahl_ziele} Anlagen
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-slate-400">
-                  alle {d.intervall_tage} Tage · nächste Fälligkeit {d.naechste_faelligkeit_am}
+                  alle {d.intervall_tage} Tage
+                  {d.naechste_faelligkeit_am && ` · nächste Fälligkeit ${d.naechste_faelligkeit_am}`}
                 </div>
               </div>
               {!d.aktiv && (

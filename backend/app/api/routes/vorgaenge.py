@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.dauerauftrag import Dauerauftrag
+from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.kunde import Kunde
 from app.models.mangel import Mangel
 from app.models.pruefzyklus import Pruefzyklus
@@ -288,18 +289,28 @@ async def update_vorgang(
                 )
                 zyklus.offener_vorgang_id = None
 
-            # Schliesst dieser Vorgang einen Dauerauftrag ab (wiederkehrender
-            # Auftrag, siehe app/models/dauerauftrag.py): naechste
-            # Faelligkeit fortschreiben und offener_vorgang_id leeren, damit
-            # der naechste Scheduler-Lauf ueberhaupt erst einen Folge-Vorgang
-            # anlegen darf -- solange dieser hier offen war, geschah das nie.
-            dauerauftrag = (
+            # Schliesst dieser Vorgang das Ziel eines Dauerauftrags ab
+            # (wiederkehrender Auftrag, siehe app/models/dauerauftrag.py,
+            # gebuendelt ueber app/models/dauerauftrag_ziel.py): naechste
+            # Faelligkeit dieses Ziels fortschreiben und offener_vorgang_id
+            # leeren, damit der naechste Scheduler-Lauf ueberhaupt erst einen
+            # Folge-Vorgang fuer GENAU DIESES Ziel anlegen darf -- andere
+            # Ziele desselben Buendels sind davon unabhaengig und laufen
+            # unbeeinflusst weiter.
+            dauerauftrag_ziel = (
                 await session.execute(
-                    select(Dauerauftrag).where(Dauerauftrag.offener_vorgang_id == vorgang.id)
+                    select(DauerauftragZiel).where(
+                        DauerauftragZiel.offener_vorgang_id == vorgang.id
+                    )
                 )
             ).scalar_one_or_none()
-            if dauerauftrag is not None:
-                geplante_faelligkeit = dauerauftrag.naechste_faelligkeit_am
+            dauerauftrag = (
+                await session.get(Dauerauftrag, dauerauftrag_ziel.dauerauftrag_id)
+                if dauerauftrag_ziel is not None
+                else None
+            )
+            if dauerauftrag_ziel is not None and dauerauftrag is not None:
+                geplante_faelligkeit = dauerauftrag_ziel.naechste_faelligkeit_am
                 abgeschlossen_datum = vorgang.abgeschlossen_am.date()
                 tage_abweichung = (abgeschlossen_datum - geplante_faelligkeit).days
 
@@ -344,8 +355,10 @@ async def update_vorgang(
                 basis = (
                     abgeschlossen_datum if dauerauftrag.modus == "rollierend" else geplante_faelligkeit
                 )
-                dauerauftrag.naechste_faelligkeit_am = basis + timedelta(days=dauerauftrag.intervall_tage)
-                dauerauftrag.offener_vorgang_id = None
+                dauerauftrag_ziel.naechste_faelligkeit_am = basis + timedelta(
+                    days=dauerauftrag.intervall_tage
+                )
+                dauerauftrag_ziel.offener_vorgang_id = None
 
             # Schliesst dieser Vorgang eine aus einem angenommenen Angebot
             # entstandene Reparatur ab, gelten die zugehoerigen Maengel als

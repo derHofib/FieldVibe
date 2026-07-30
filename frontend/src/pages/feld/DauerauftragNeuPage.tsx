@@ -29,7 +29,7 @@ export function DauerauftragNeuPage() {
   const vorausgewaehlterKundeId = searchParams.get("kunde_id") ?? "";
 
   const [kundeId, setKundeId] = useState(vorausgewaehlterKundeId);
-  const [anlageId, setAnlageId] = useState("");
+  const [anlageIds, setAnlageIds] = useState<string[]>([]);
   const [titel, setTitel] = useState("");
   const [beschreibung, setBeschreibung] = useState("");
   const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("wartung");
@@ -54,7 +54,7 @@ export function DauerauftragNeuPage() {
     mutationFn: () =>
       dauerauftraegeApi.create({
         kunde_id: kundeId,
-        anlage_id: anlageId || undefined,
+        anlage_ids: anlageIds.length > 0 ? anlageIds : undefined,
         titel,
         beschreibung: beschreibung || undefined,
         abrechnungsart,
@@ -105,7 +105,7 @@ export function DauerauftragNeuPage() {
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
-              setAnlageId("");
+              setAnlageIds([]);
             }}
             className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
           >
@@ -120,19 +120,34 @@ export function DauerauftragNeuPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Anlage (optional)</label>
-            <select
-              value={anlageId}
-              onChange={(e) => setAnlageId(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
-            >
-              <option value="">Keine Anlage</option>
-              {anlagenListe?.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.bezeichnung}
-                </option>
-              ))}
-            </select>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Anlagen (optional, mehrfach möglich)
+            </label>
+            <p className="mb-1 text-xs text-slate-400">
+              Keine Anlage ausgewählt: der Dauer-Auftrag gilt direkt für den Kunden. Mehrere Anlagen
+              ausgewählt: ein Buendel, das für jede Anlage einen eigenen, unabhängig laufenden Zyklus
+              anlegt -- statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
+            </p>
+            {!anlagenListe || anlagenListe.length === 0 ? (
+              <p className="text-sm text-slate-400">Keine Anlagen für diesen Kunden vorhanden.</p>
+            ) : (
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2">
+                {anlagenListe.map((a) => (
+                  <label key={a.id} className="flex items-center gap-2 py-1 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={anlageIds.includes(a.id)}
+                      onChange={(e) =>
+                        setAnlageIds((prev) =>
+                          e.target.checked ? [...prev, a.id] : prev.filter((id) => id !== a.id)
+                        )
+                      }
+                    />
+                    {a.bezeichnung}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

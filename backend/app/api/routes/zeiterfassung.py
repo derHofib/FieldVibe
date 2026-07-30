@@ -1,17 +1,21 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.models.mandant import Mandant
+from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
-from app.schemas.zeiterfassung import ZeiterfassungRead, ZeiterfassungStart
+from app.schemas.zeiterfassung import ZeiterfassungRead, ZeiterfassungStart, ZeiterfassungStatistik
 from app.services.event_bus import event_bus
+from app.services.pdf_service import generate_wochenzettel_pdf
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
@@ -21,16 +25,46 @@ router = APIRouter(
 )
 
 
+def _montag_dieser_woche(jetzt: datetime) -> datetime:
+    tage_seit_montag = jetzt.weekday()
+    montag_datum = jetzt.date() - timedelta(days=tage_seit_montag)
+    return datetime.combine(montag_datum, time.min, tzinfo=timezone.utc)
+
+
+def _tagesbeginn(d: date) -> datetime:
+    return datetime.combine(d, time.min, tzinfo=timezone.utc)
+
+
 @router.get("", response_model=list[ZeiterfassungRead])
 async def list_zeiterfassung(
     vorgang_id: UUID | None = Query(default=None),
+    techniker_id: UUID | None = Query(default=None),
+    von: date | None = Query(default=None),
+    bis: date | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Zeiterfassung]:
     stmt = select(Zeiterfassung).order_by(Zeiterfassung.start_at.desc())
     if vorgang_id:
         stmt = stmt.where(Zeiterfassung.vorgang_id == vorgang_id)
-    if auth.role == "techniker":
+    if von:
+        stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
+    if bis:
+        stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
+
+    if techniker_id:
+        # Ausdruecklich nach einem Techniker gefiltert (z.B. die eigene
+        # Statistik-Seite): dessen komplette eigene Historie zaehlt, auch
+        # fuer Kunden, denen er inzwischen nicht mehr zugewiesen ist --
+        # die kunde_id-Einschraenkung unten ist nur fuer den impliziten
+        # Fall (kein techniker_id, z.B. Zeiterfassungen zu EINEM Vorgang)
+        # gedacht.
+        if auth.role == "techniker" and techniker_id != auth.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Zeiterfassungen einsehbar"
+            )
+        stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
+    elif auth.role == "techniker":
         stmt = stmt.where(
             Zeiterfassung.vorgang_id.in_(
                 select(Vorgang.id).where(
@@ -40,6 +74,91 @@ async def list_zeiterfassung(
         )
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+@router.get("/statistik", response_model=ZeiterfassungStatistik)
+async def get_statistik(
+    techniker_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ZeiterfassungStatistik:
+    ziel_id = techniker_id or auth.user_id
+    if auth.role == "techniker" and ziel_id != auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Statistik einsehbar"
+        )
+
+    jetzt = datetime.now(timezone.utc)
+    wochenstart = _montag_dieser_woche(jetzt)
+    monatsstart = datetime(jetzt.year, jetzt.month, 1, tzinfo=timezone.utc)
+    jahresstart = datetime(jetzt.year, 1, 1, tzinfo=timezone.utc)
+
+    async def _stunden_seit(start: datetime) -> Decimal:
+        result = await session.execute(
+            select(Zeiterfassung).where(
+                Zeiterfassung.techniker_id == ziel_id,
+                Zeiterfassung.start_at >= start,
+                Zeiterfassung.ende_at.isnot(None),
+            )
+        )
+        sekunden = sum(
+            (e.ende_at - e.start_at).total_seconds() for e in result.scalars().all()
+        )
+        return (Decimal(sekunden) / Decimal(3600)).quantize(Decimal("0.1"))
+
+    return ZeiterfassungStatistik(
+        wochenstunden=await _stunden_seit(wochenstart),
+        monatsstunden=await _stunden_seit(monatsstart),
+        jahresstunden=await _stunden_seit(jahresstart),
+    )
+
+
+@router.get("/wochenzettel-pdf")
+async def wochenzettel_pdf(
+    woche_start: date = Query(...),
+    techniker_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    ziel_id = techniker_id or auth.user_id
+    if auth.role == "techniker" and ziel_id != auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigener Wochenzettel abrufbar"
+        )
+
+    techniker = await session.get(User, ziel_id)
+    if techniker is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Techniker nicht gefunden")
+    mandant = await session.get(Mandant, auth.mandant_id)
+
+    woche_ende = woche_start + timedelta(days=6)
+    result = await session.execute(
+        select(Zeiterfassung)
+        .where(
+            Zeiterfassung.techniker_id == ziel_id,
+            Zeiterfassung.start_at >= _tagesbeginn(woche_start),
+            Zeiterfassung.start_at < _tagesbeginn(woche_start + timedelta(days=7)),
+        )
+        .order_by(Zeiterfassung.start_at)
+    )
+    eintraege = list(result.scalars().all())
+    vorgaenge_by_id: dict[UUID, Vorgang | None] = {}
+    for eintrag in eintraege:
+        if eintrag.vorgang_id not in vorgaenge_by_id:
+            vorgaenge_by_id[eintrag.vorgang_id] = await session.get(Vorgang, eintrag.vorgang_id)
+    paare = [(eintrag, vorgaenge_by_id.get(eintrag.vorgang_id)) for eintrag in eintraege]
+
+    pdf_bytes = generate_wochenzettel_pdf(mandant, techniker, woche_start, woche_ende, paare)
+    sicherer_name = "".join(c if c.isalnum() else "_" for c in techniker.name)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": (
+                f'inline; filename="Wochenzettel-{sicherer_name}-{woche_start.isoformat()}.pdf"'
+            )
+        },
+    )
 
 
 @router.get("/laufend", response_model=ZeiterfassungRead | None)

@@ -254,23 +254,30 @@ export interface AnlageProfil extends Anlage {
 
 export type DauerauftragModus = "rollierend" | "fest";
 
+export interface DauerauftragZiel {
+  id: string;
+  anlage_id: string | null;
+  naechste_faelligkeit_am: string;
+  offener_vorgang_id: string | null;
+}
+
 export interface Dauerauftrag {
   id: string;
   kunde_id: string;
-  anlage_id: string | null;
   titel: string;
   beschreibung: string | null;
   abrechnungsart: VorgangAbrechnungsart;
   leistungstyp: Leistungstyp;
   intervall_tage: number;
-  naechste_faelligkeit_am: string;
   modus: DauerauftragModus;
   toleranz_frueh_tage: number | null;
   toleranz_spaet_tage: number | null;
   aktiv: boolean;
-  offener_vorgang_id: string | null;
   created_at: string;
   updated_at: string;
+  ziele: DauerauftragZiel[];
+  anzahl_ziele: number;
+  naechste_faelligkeit_am: string | null;
 }
 
 export interface DauerauftragMitVerlauf extends Dauerauftrag {
@@ -290,6 +297,12 @@ export interface Zeiterfassung {
   freigegeben: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface ZeiterfassungStatistik {
+  wochenstunden: string;
+  monatsstunden: string;
+  jahresstunden: string;
 }
 
 // --- Steuerung (Phase 5) --------------------------------------------------

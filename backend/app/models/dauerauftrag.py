@@ -1,7 +1,6 @@
 import uuid
-from datetime import date
 
-from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, SmallInteger, Text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, SmallInteger, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,9 +12,15 @@ DAUERAUFTRAG_MODI = ("rollierend", "fest")
 
 class Dauerauftrag(TimestampMixin, Base):
     """Wiederkehrender Auftrag: erzeugt automatisch einen neuen Vorgang fuer
-    denselben Kunden/dieselbe Anlage, sobald der jeweils zuletzt erzeugte
-    Vorgang abgeschlossen wird -- nie waehrend ein Vorgang noch offen ist
+    denselben Kunden, sobald der jeweils zuletzt erzeugte Vorgang eines
+    Ziels abgeschlossen wird -- nie waehrend ein Vorgang noch offen ist
     (siehe app/api/routes/vorgaenge.py, Abschluss-Hook).
+
+    Ein Dauerauftrag kann mehrere Ziele buendeln (z.B. 100 Anlagen desselben
+    Kunden statt 100 einzelner Daueraufträge) -- siehe app.models.dauerauftrag_ziel.
+    DauerauftragZiel. Jedes Ziel hat seinen eigenen Zyklus
+    (naechste_faelligkeit_am/offener_vorgang_id) und dreht sich unabhaengig
+    von den anderen Zielen im selben Buendel weiter.
 
     modus="rollierend" (Default): naechste_faelligkeit_am = tatsaechliches
     Abschlussdatum + intervall_tage -- die Frist "wandert" mit, wenn ein
@@ -60,19 +65,12 @@ class Dauerauftrag(TimestampMixin, Base):
     kunde_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=False
     )
-    anlage_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=True
-    )
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text)
     abrechnungsart: Mapped[str] = mapped_column(Text, nullable=False)
     leistungstyp: Mapped[str] = mapped_column(Text, nullable=False)
     intervall_tage: Mapped[int] = mapped_column(SmallInteger, nullable=False)
-    naechste_faelligkeit_am: Mapped[date] = mapped_column(Date, nullable=False)
     modus: Mapped[str] = mapped_column(Text, nullable=False, default="rollierend")
     toleranz_frueh_tage: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     toleranz_spaet_tage: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    offener_vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=True
-    )

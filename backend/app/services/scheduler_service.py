@@ -9,6 +9,7 @@ from app.db.session import system_session
 from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
+from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.mandant import Mandant
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
@@ -203,14 +204,18 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
 
 
 async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
-    """Stuendlicher Lauf: legt fuer faellige Dauerauftraege (wiederkehrende
-    Auftraege, siehe app/models/dauerauftrag.py) einen neuen Vorgang an --
-    pro Dauerauftrag nur einen gleichzeitig offenen (offener_vorgang_id),
-    bis der zuletzt erzeugte Vorgang abgeschlossen wird (siehe
+    """Stuendlicher Lauf: legt fuer faellige Ziele eines Dauerauftrags
+    (wiederkehrender Auftrag, siehe app/models/dauerauftrag.py, gebuendelt
+    ueber app/models/dauerauftrag_ziel.py) je einen neuen Vorgang an -- pro
+    Ziel nur einen gleichzeitig offenen (offener_vorgang_id), bis der
+    zuletzt erzeugte Vorgang abgeschlossen wird (siehe
     app/api/routes/vorgaenge.py, der die naechste Faelligkeit dann relativ
-    zum tatsaechlichen Abschlussdatum fortschreibt). Anders als bei
-    Pruefzyklen kein Vorlauf-Horizont -- die Erzeugung erfolgt erst, wenn
-    naechste_faelligkeit_am tatsaechlich erreicht ist.
+    zum tatsaechlichen Abschlussdatum fortschreibt). Ein Buendel mit
+    mehreren Zielen (z.B. mehreren Anlagen desselben Kunden) laeuft dadurch
+    je Ziel unabhaengig -- ein liegen gebliebenes Ziel blockiert nicht die
+    anderen. Anders als bei Pruefzyklen kein Vorlauf-Horizont -- die
+    Erzeugung erfolgt erst, wenn naechste_faelligkeit_am tatsaechlich
+    erreicht ist.
 
     `mandant_ids` grenzt den Lauf wie beim Pruefzyklen-Scheduler auf die
     gerade faelligen Mandanten ein (siehe app/worker.py); None bearbeitet
@@ -219,22 +224,26 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
     erstellte_vorgaenge = 0
 
     async with system_session() as session:
-        stmt = select(Dauerauftrag).where(
-            Dauerauftrag.aktiv.is_(True),
-            Dauerauftrag.naechste_faelligkeit_am <= heute,
-            Dauerauftrag.offener_vorgang_id.is_(None),
+        stmt = (
+            select(DauerauftragZiel, Dauerauftrag)
+            .join(Dauerauftrag, DauerauftragZiel.dauerauftrag_id == Dauerauftrag.id)
+            .where(
+                Dauerauftrag.aktiv.is_(True),
+                DauerauftragZiel.naechste_faelligkeit_am <= heute,
+                DauerauftragZiel.offener_vorgang_id.is_(None),
+            )
         )
         if mandant_ids is not None:
             stmt = stmt.where(Dauerauftrag.mandant_id.in_(mandant_ids))
-        dauerauftraege = (await session.execute(stmt)).scalars().all()
+        faellige_ziele = (await session.execute(stmt)).all()
 
-        for auftrag in dauerauftraege:
+        for ziel, auftrag in faellige_ziele:
             vorgangsnummer = await next_vorgangsnummer(session, auftrag.mandant_id)
             vorgang = Vorgang(
                 mandant_id=auftrag.mandant_id,
                 vorgangsnummer=vorgangsnummer,
                 kunde_id=auftrag.kunde_id,
-                anlage_id=auftrag.anlage_id,
+                anlage_id=ziel.anlage_id,
                 dauerauftrag_id=auftrag.id,
                 titel=auftrag.titel,
                 beschreibung=auftrag.beschreibung,
@@ -244,7 +253,7 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
             session.add(vorgang)
             await session.flush()
 
-            auftrag.offener_vorgang_id = vorgang.id
+            ziel.offener_vorgang_id = vorgang.id
 
             session.add(
                 VorgangEvent(
@@ -253,7 +262,7 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
                     event_type="system",
                     is_system=True,
                     body="Automatisch angelegt durch den Dauerauftrag-Scheduler",
-                    payload={"dauerauftrag_id": str(auftrag.id)},
+                    payload={"dauerauftrag_id": str(auftrag.id), "dauerauftrag_ziel_id": str(ziel.id)},
                 )
             )
 

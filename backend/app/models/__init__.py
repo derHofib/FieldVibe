@@ -2,6 +2,7 @@ from app.models.angebot import Angebot, AngebotPosition
 from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
+from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.highlight import Highlight
 from app.models.integration import MandantIntegration
 from app.models.kunde import Kunde
@@ -28,6 +29,7 @@ __all__ = [
     "Anlage",
     "AuditLog",
     "Dauerauftrag",
+    "DauerauftragZiel",
     "Highlight",
     "MandantIntegration",
     "Kunde",

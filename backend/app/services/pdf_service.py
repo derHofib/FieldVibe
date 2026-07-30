@@ -9,7 +9,9 @@ from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.rechnung import Rechnung, RechnungPosition
+from app.models.user import User
 from app.models.vorgang import Vorgang
+from app.models.zeiterfassung import Zeiterfassung
 
 # fpdf2s core fonts (Helvetica/Times/Courier) sind Windows-1252-kodiert --
 # das deckt deutsche Umlaute/ß ab, aber NICHT das Euro-Zeichen zuverlaessig
@@ -150,5 +152,63 @@ def generate_maengel_protokoll_pdf(mandant: Mandant, vorgang: Vorgang, maengel: 
 
     if not maengel:
         pdf.cell(0, 8, "Keine Maengel erfasst.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    return bytes(pdf.output())
+
+
+def generate_wochenzettel_pdf(
+    mandant: Mandant,
+    techniker: User,
+    woche_start: date,
+    woche_ende: date,
+    eintraege: list[tuple[Zeiterfassung, Vorgang | None]],
+) -> bytes:
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(
+        0,
+        6,
+        f"Wochenzettel: {techniker.name} ({_fmt_datum(woche_start)} - {_fmt_datum(woche_ende)})",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.ln(6)
+
+    pdf.set_font("Helvetica", "B", 10)
+    spalten = (("Datum", 25), ("Vorgang", 30), ("Tätigkeit", 75), ("Von", 20), ("Bis", 20), ("Dauer", 20))
+    for label, breite in spalten:
+        pdf.cell(breite, 8, label, border=1)
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 9)
+    gesamt_sekunden = 0.0
+    for eintrag, vorgang in sorted(eintraege, key=lambda x: x[0].start_at):
+        dauer_sekunden = (
+            ((eintrag.ende_at - eintrag.start_at).total_seconds()) if eintrag.ende_at else 0.0
+        )
+        gesamt_sekunden += dauer_sekunden
+        pdf.cell(25, 8, _fmt_datum(eintrag.start_at), border=1)
+        pdf.cell(30, 8, vorgang.vorgangsnummer if vorgang else "-", border=1)
+        pdf.cell(75, 8, (eintrag.taetigkeit or "-")[:45], border=1)
+        pdf.cell(20, 8, eintrag.start_at.strftime("%H:%M"), border=1, align="R")
+        pdf.cell(
+            20,
+            8,
+            eintrag.ende_at.strftime("%H:%M") if eintrag.ende_at else "läuft",
+            border=1,
+            align="R",
+        )
+        pdf.cell(20, 8, f"{dauer_sekunden / 3600:.2f} h", border=1, align="R")
+        pdf.ln()
+
+    if not eintraege:
+        pdf.cell(0, 8, "Keine Zeiterfassungen in diesem Zeitraum.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, f"Gesamt: {gesamt_sekunden / 3600:.2f} Stunden", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     return bytes(pdf.output())

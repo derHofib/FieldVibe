@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { dauerauftraegeApi, kundenApi } from "../../api/endpoints";
+import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -24,6 +24,9 @@ export function DauerauftragDetailPage() {
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
 
   const [editIntervall, setEditIntervall] = useState<string | null>(null);
+  const [anlagenBearbeiten, setAnlagenBearbeiten] = useState(false);
+  const [ausgewaehlteAnlageIds, setAusgewaehlteAnlageIds] = useState<string[]>([]);
+  const [neueFaelligkeit, setNeueFaelligkeit] = useState(new Date().toISOString().slice(0, 10));
 
   const { data: dauerauftrag, isLoading } = useQuery({
     queryKey: ["dauerauftrag", id],
@@ -35,6 +38,12 @@ export function DauerauftragDetailPage() {
     queryFn: () => kundenApi.get(dauerauftrag!.kunde_id),
     enabled: !!dauerauftrag,
   });
+  const { data: anlagenListe } = useQuery({
+    queryKey: ["anlagen", dauerauftrag?.kunde_id],
+    queryFn: () => anlagenApi.list(dauerauftrag!.kunde_id),
+    enabled: !!dauerauftrag,
+  });
+  const anlageNameById = new Map((anlagenListe ?? []).map((a) => [a.id, a.bezeichnung]));
 
   const toggleAktivMutation = useMutation({
     mutationFn: () => dauerauftraegeApi.update(id!, { aktiv: !dauerauftrag!.aktiv }),
@@ -56,6 +65,25 @@ export function DauerauftragDetailPage() {
       navigate("/dauerauftraege");
     },
   });
+
+  const setAnlagenMutation = useMutation({
+    mutationFn: () =>
+      dauerauftraegeApi.setAnlagen(id!, {
+        anlage_ids: ausgewaehlteAnlageIds,
+        naechste_faelligkeit_am: neueFaelligkeit,
+      }),
+    onSuccess: () => {
+      setAnlagenBearbeiten(false);
+      queryClient.invalidateQueries({ queryKey: ["dauerauftrag", id] });
+    },
+  });
+
+  function anlagenBearbeitenStarten() {
+    setAusgewaehlteAnlageIds(
+      (dauerauftrag!.ziele.filter((z) => z.anlage_id !== null).map((z) => z.anlage_id) as string[])
+    );
+    setAnlagenBearbeiten(true);
+  }
 
   if (isLoading || !dauerauftrag) return <p className="text-center text-slate-500">Lädt…</p>;
 
@@ -131,10 +159,12 @@ export function DauerauftragDetailPage() {
               )}
             </dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-slate-500">Nächste Fälligkeit</dt>
-            <dd className="text-slate-800">{dauerauftrag.naechste_faelligkeit_am}</dd>
-          </div>
+          {dauerauftrag.anzahl_ziele <= 1 && (
+            <div className="flex justify-between">
+              <dt className="text-slate-500">Nächste Fälligkeit</dt>
+              <dd className="text-slate-800">{dauerauftrag.naechste_faelligkeit_am ?? "–"}</dd>
+            </div>
+          )}
           <div className="flex justify-between">
             <dt className="text-slate-500">Modus</dt>
             <dd className="text-slate-800">
@@ -162,6 +192,98 @@ export function DauerauftragDetailPage() {
             <dd className="text-slate-800">{dauerauftrag.abrechnungsart}</dd>
           </div>
         </dl>
+
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-500">
+              Anlagen im Buendel ({dauerauftrag.anzahl_ziele})
+            </h2>
+            {kannVerwalten && !anlagenBearbeiten && (
+              <button
+                onClick={anlagenBearbeitenStarten}
+                className="btn-touch text-xs text-blue-700 underline"
+              >
+                Anlagen verwalten
+              </button>
+            )}
+          </div>
+
+          {!anlagenBearbeiten ? (
+            <div className="space-y-1">
+              {dauerauftrag.ziele.map((z) => (
+                <div
+                  key={z.id}
+                  className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm"
+                >
+                  <span className="text-slate-700">
+                    {z.anlage_id ? anlageNameById.get(z.anlage_id) ?? "Anlage" : "Ohne Anlagenbezug"}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {z.offener_vorgang_id ? (
+                      <button
+                        onClick={() => navigate(`/vorgaenge/${z.offener_vorgang_id}`)}
+                        className="text-blue-700 underline"
+                      >
+                        Vorgang offen
+                      </button>
+                    ) : (
+                      `fällig ${z.naechste_faelligkeit_am}`
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2 rounded-md border border-slate-200 p-2">
+              {!anlagenListe || anlagenListe.length === 0 ? (
+                <p className="text-sm text-slate-400">Keine Anlagen für diesen Kunden vorhanden.</p>
+              ) : (
+                <div className="max-h-48 space-y-1 overflow-y-auto">
+                  {anlagenListe.map((a) => (
+                    <label key={a.id} className="flex items-center gap-2 py-1 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={ausgewaehlteAnlageIds.includes(a.id)}
+                        onChange={(e) =>
+                          setAusgewaehlteAnlageIds((prev) =>
+                            e.target.checked ? [...prev, a.id] : prev.filter((id) => id !== a.id)
+                          )
+                        }
+                      />
+                      {a.bezeichnung}
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">
+                  Fälligkeit für neu hinzugefügte Anlagen
+                </label>
+                <input
+                  type="date"
+                  value={neueFaelligkeit}
+                  onChange={(e) => setNeueFaelligkeit(e.target.value)}
+                  className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setAnlagenMutation.mutate()}
+                  disabled={setAnlagenMutation.isPending}
+                  className="btn-touch flex-1 rounded-md bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  Speichern
+                </button>
+                <button
+                  onClick={() => setAnlagenBearbeiten(false)}
+                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm text-slate-600"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {kannVerwalten && (
           <div className="mt-3 space-y-2">

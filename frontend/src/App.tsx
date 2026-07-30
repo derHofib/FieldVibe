@@ -25,6 +25,7 @@ import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { SearchPage } from "./pages/feld/SearchPage";
+import { StatistikPage } from "./pages/feld/StatistikPage";
 import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
@@ -89,6 +90,7 @@ export function App() {
           <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
+          <Route path="/statistik" element={<StatistikPage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       )}

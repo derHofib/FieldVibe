@@ -41,6 +41,7 @@ import type {
   VorgangEvent,
   VorgangEventType,
   Zeiterfassung,
+  ZeiterfassungStatistik,
 } from "../types";
 
 export const authApi = {
@@ -152,7 +153,7 @@ export const dauerauftraegeApi = {
   get: (id: string) => apiFetch<DauerauftragMitVerlauf>(`/api/dauerauftraege/${id}`),
   create: (body: {
     kunde_id: string;
-    anlage_id?: string;
+    anlage_ids?: string[];
     titel: string;
     beschreibung?: string;
     abrechnungsart: string;
@@ -168,17 +169,20 @@ export const dauerauftraegeApi = {
     body: Partial<{
       titel: string;
       beschreibung: string;
-      anlage_id: string;
       abrechnungsart: string;
       leistungstyp: string;
       intervall_tage: number;
-      naechste_faelligkeit_am: string;
       modus: DauerauftragModus;
       toleranz_frueh_tage: number | null;
       toleranz_spaet_tage: number | null;
       aktiv: boolean;
     }>
   ) => apiFetch<Dauerauftrag>(`/api/dauerauftraege/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  setAnlagen: (id: string, body: { anlage_ids: string[]; naechste_faelligkeit_am: string }) =>
+    apiFetch<Dauerauftrag>(`/api/dauerauftraege/${id}/anlagen`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
   delete: (id: string) => apiFetch<void>(`/api/dauerauftraege/${id}`, { method: "DELETE" }),
 };
 
@@ -247,6 +251,22 @@ export const zeiterfassungApi = {
     apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/stop`, { method: "POST" }),
   list: (vorgangId: string) =>
     apiFetch<Zeiterfassung[]>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
+  listFuerZeitraum: (params: { techniker_id?: string; von?: string; bis?: string }) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
+    ).toString();
+    return apiFetch<Zeiterfassung[]>(`/api/zeiterfassung${qs ? `?${qs}` : ""}`);
+  },
+  statistik: (technikerId?: string) =>
+    apiFetch<ZeiterfassungStatistik>(
+      `/api/zeiterfassung/statistik${technikerId ? `?techniker_id=${technikerId}` : ""}`
+    ),
+  wochenzettelPdf: (wocheStart: string, technikerId?: string) =>
+    apiFetchBlob(
+      `/api/zeiterfassung/wochenzettel-pdf?woche_start=${wocheStart}${
+        technikerId ? `&techniker_id=${technikerId}` : ""
+      }`
+    ),
 };
 
 export const termineApi = {
