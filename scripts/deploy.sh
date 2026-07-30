@@ -142,14 +142,22 @@ is_placeholder INTEGRATION_SECRET_KEY && set_env INTEGRATION_SECRET_KEY "$(gen_s
 is_placeholder MINIO_ROOT_PASSWORD && set_env MINIO_ROOT_PASSWORD "$(gen_secret)"
 
 # --- 6. Domains bzw. Server-IP ----------------------------------------------
+# Fester Standard fuer dieses Deployment -- Enter druecken uebernimmt ihn,
+# eigene Eingabe ueberschreibt ihn bei Bedarf trotzdem noch.
+DEFAULT_DOMAIN_BASE="fieldvibe.de"
+
 if [[ "$DEPLOY_MODE" == "domain" ]]; then
   CURRENT_DOMAIN_APP="$(get_env DOMAIN_APP)"
   if [[ "$CURRENT_DOMAIN_APP" == "app.example.de" || -z "$CURRENT_DOMAIN_APP" ]]; then
     log "Domains konfigurieren. Die drei DNS-A-Records müssen schon jetzt auf diesen Server zeigen."
-    read -rp "App-Domain (z.B. app.deinefirma.de): " DOMAIN_APP
-    read -rp "API-Domain (z.B. api.deinefirma.de): " DOMAIN_API
-    read -rp "Fotos/S3-Domain (z.B. s3.deinefirma.de): " DOMAIN_S3
-    read -rp "E-Mail für Let's-Encrypt-Benachrichtigungen: " CADDY_EMAIL
+    read -rp "App-Domain [app.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_APP
+    DOMAIN_APP="${DOMAIN_APP:-app.${DEFAULT_DOMAIN_BASE}}"
+    read -rp "API-Domain [api.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_API
+    DOMAIN_API="${DOMAIN_API:-api.${DEFAULT_DOMAIN_BASE}}"
+    read -rp "Fotos/S3-Domain [s3.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_S3
+    DOMAIN_S3="${DOMAIN_S3:-s3.${DEFAULT_DOMAIN_BASE}}"
+    read -rp "E-Mail für Let's-Encrypt-Benachrichtigungen [admin@${DEFAULT_DOMAIN_BASE}]: " CADDY_EMAIL
+    CADDY_EMAIL="${CADDY_EMAIL:-admin@${DEFAULT_DOMAIN_BASE}}"
 
     set_env DOMAIN_APP "$DOMAIN_APP"
     set_env DOMAIN_API "$DOMAIN_API"
