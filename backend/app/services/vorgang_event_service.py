@@ -12,4 +12,8 @@ def to_read_model(event: VorgangEvent) -> VorgangEventRead:
             data.foto_url = storage_service.presigned_get_url(key)
         if thumbnail_key:
             data.foto_thumbnail_url = storage_service.presigned_get_url(thumbnail_key)
+    elif event.event_type == "unterschrift" and event.payload:
+        key = event.payload.get("key")
+        if key:
+            data.unterschrift_url = storage_service.presigned_get_url(key)
     return data

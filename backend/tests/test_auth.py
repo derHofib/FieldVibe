@@ -19,6 +19,47 @@ async def test_login_success(client, make_mandant, make_user):
 
 
 @pytest.mark.asyncio
+async def test_login_ignores_email_case(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    user = await make_user(
+        mandant=mandant, role="mandant_admin", password="korrekt-123", email="Dennis@SocialCRM.de"
+    )
+
+    resp = await client.post(
+        "/api/auth/login", json={"email": "dennis@socialcrm.de", "password": "korrekt-123"}
+    )
+    assert resp.status_code == 200
+
+    resp2 = await client.post(
+        "/api/auth/login", json={"email": "DENNIS@SOCIALCRM.DE", "password": "korrekt-123"}
+    )
+    assert resp2.status_code == 200
+    assert resp2.json()["access_token"]
+    assert user.email == "Dennis@SocialCRM.de"
+
+
+@pytest.mark.asyncio
+async def test_create_user_normalizes_email_case(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/users",
+        headers=auth_headers(token),
+        json={
+            "mandant_id": str(mandant.id),
+            "email": "Neuer.Techniker@Firma.DE",
+            "password": "hunter2!!",
+            "role": "techniker",
+            "name": "Neuer Techniker",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["email"] == "neuer.techniker@firma.de"
+
+
+@pytest.mark.asyncio
 async def test_login_wrong_password(client, make_mandant, make_user):
     mandant = await make_mandant()
     user = await make_user(mandant=mandant, role="techniker", password="korrekt-123")

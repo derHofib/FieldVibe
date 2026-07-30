@@ -251,6 +251,18 @@ export const vorgangEventsApi = {
     if (body) formData.append("body", body);
     return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/foto`, formData);
   },
+  uploadUnterschrift: (
+    vorgangId: string,
+    file: Blob,
+    unterzeichnerName: string,
+    kundensichtbar: boolean = true,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file, "unterschrift.png");
+    formData.append("unterzeichner_name", unterzeichnerName);
+    formData.append("kundensichtbar", String(kundensichtbar));
+    return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/unterschrift`, formData);
+  },
 };
 
 export const zeiterfassungApi = {
@@ -491,6 +503,12 @@ export const materialApi = {
 
 export const insightsApi = {
   get: () => apiFetch<Insights>("/api/insights"),
+};
+
+export const exportApi = {
+  vorgaengeCsv: () => apiFetchBlob("/api/vorgaenge/export/csv"),
+  zeiterfassungCsv: () => apiFetchBlob("/api/zeiterfassung/export/csv"),
+  materialCsv: () => apiFetchBlob("/api/material/export/csv"),
 };
 
 export const kundenportalZugaengeApi = {

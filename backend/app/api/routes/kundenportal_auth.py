@@ -2,7 +2,7 @@ import logging
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db
@@ -97,7 +97,7 @@ async def passwort_vergessen(body: KundenPasswortVergessenRequest) -> None:
     404-statt-403 bei Fremdzugriff auf Vorgaenge/Angebote)."""
     async with system_session() as session:
         result = await session.execute(
-            select(KundenportalZugang).where(KundenportalZugang.email == body.email)
+            select(KundenportalZugang).where(func.lower(KundenportalZugang.email) == body.email)
         )
         zugang = result.scalar_one_or_none()
         if zugang is None or not zugang.aktiv:

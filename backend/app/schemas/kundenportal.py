@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 
 class CurrentKunde(BaseModel):
@@ -16,6 +16,11 @@ class KundenportalZugangCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class KundenportalZugangUpdate(BaseModel):
@@ -33,6 +38,11 @@ class KundenAngebotAntwort(BaseModel):
 
 class KundenPasswortVergessenRequest(BaseModel):
     email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
 
 
 class KundenPasswortResetRequest(BaseModel):

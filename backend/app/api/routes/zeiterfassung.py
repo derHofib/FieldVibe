@@ -14,6 +14,7 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZeiterfassungRead, ZeiterfassungStart, ZeiterfassungStatistik
+from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.pdf_service import generate_wochenzettel_pdf
 from app.services.zuweisung_service import assigned_kunde_ids
@@ -74,6 +75,56 @@ async def list_zeiterfassung(
         )
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+@router.get("/export/csv")
+async def export_zeiterfassung_csv(
+    techniker_id: UUID | None = Query(default=None),
+    von: date | None = Query(default=None),
+    bis: date | None = Query(default=None),
+    auth: AuthContext = Depends(require_roles("mandant_admin", "disponent")),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    stmt = select(Zeiterfassung).order_by(Zeiterfassung.start_at.asc())
+    if techniker_id:
+        stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
+    if von:
+        stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
+    if bis:
+        stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
+    eintraege = list((await session.execute(stmt)).scalars().all())
+
+    technikers_by_id: dict[UUID, User | None] = {}
+    vorgaenge_by_id: dict[UUID, Vorgang | None] = {}
+    rows = []
+    for e in eintraege:
+        if e.techniker_id not in technikers_by_id:
+            technikers_by_id[e.techniker_id] = await session.get(User, e.techniker_id)
+        techniker = technikers_by_id[e.techniker_id]
+        if e.vorgang_id not in vorgaenge_by_id:
+            vorgaenge_by_id[e.vorgang_id] = await session.get(Vorgang, e.vorgang_id)
+        vorgang = vorgaenge_by_id[e.vorgang_id]
+        dauer_stunden = (
+            (e.ende_at - e.start_at).total_seconds() / 3600 if e.ende_at else None
+        )
+        rows.append(
+            [
+                e.start_at.strftime("%d.%m.%Y"),
+                techniker.name if techniker else "",
+                vorgang.vorgangsnummer if vorgang else "",
+                e.taetigkeit or "",
+                e.start_at.strftime("%H:%M"),
+                e.ende_at.strftime("%H:%M") if e.ende_at else "",
+                f"{dauer_stunden:.2f}".replace(".", ",") if dauer_stunden is not None else "",
+                "Ja" if e.abrechenbar else "Nein",
+            ]
+        )
+
+    return csv_response(
+        ["Datum", "Techniker", "Vorgang", "Tätigkeit", "Von", "Bis", "Dauer (Std.)", "Abrechenbar"],
+        rows,
+        "Zeiterfassung.csv",
+    )
 
 
 @router.get("/statistik", response_model=ZeiterfassungStatistik)

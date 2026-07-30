@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.security import (
     create_kundenportal_access_token,
@@ -24,7 +24,9 @@ async def authenticate_kunde(email: str, password: str) -> TokenPair:
     system_session() as the staff login."""
     async with system_session() as session:
         result = await session.execute(
-            select(KundenportalZugang).where(KundenportalZugang.email == email)
+            select(KundenportalZugang).where(
+                func.lower(KundenportalZugang.email) == email.strip().lower()
+            )
         )
         zugang = result.scalar_one_or_none()
 

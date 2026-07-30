@@ -141,7 +141,8 @@ export type VorgangEventType =
   | "zeit_stop"
   | "termin"
   | "rechnung_status"
-  | "system";
+  | "system"
+  | "unterschrift";
 
 export interface VorgangEvent {
   id: number;
@@ -158,6 +159,7 @@ export interface VorgangEvent {
   created_at: string;
   foto_url: string | null;
   foto_thumbnail_url: string | null;
+  unterschrift_url: string | null;
 }
 
 export interface Tag {

@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate } from "react-router-dom";
 
-import { insightsApi } from "../../api/endpoints";
+import { exportApi, insightsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { downloadBlob } from "../../utils/download";
 import type { VorgangStatus } from "../../types";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
@@ -31,6 +32,19 @@ export function InsightsPage() {
   const { data: insights, isLoading } = useQuery({
     queryKey: ["insights"],
     queryFn: insightsApi.get,
+  });
+
+  const vorgaengeExportMutation = useMutation({
+    mutationFn: exportApi.vorgaengeCsv,
+    onSuccess: (blob) => downloadBlob(blob, "Vorgaenge.csv"),
+  });
+  const zeiterfassungExportMutation = useMutation({
+    mutationFn: exportApi.zeiterfassungCsv,
+    onSuccess: (blob) => downloadBlob(blob, "Zeiterfassung.csv"),
+  });
+  const materialExportMutation = useMutation({
+    mutationFn: exportApi.materialCsv,
+    onSuccess: (blob) => downloadBlob(blob, "Material-Bestand.csv"),
   });
 
   if (currentUser && currentUser.role !== "mandant_admin") return <Navigate to="/feed" replace />;
@@ -93,6 +107,33 @@ export function InsightsPage() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg bg-white p-4 shadow-sm">
+        <h2 className="mb-2 text-sm font-semibold text-slate-500">Export</h2>
+        <div className="space-y-2">
+          <button
+            onClick={() => vorgaengeExportMutation.mutate()}
+            disabled={vorgaengeExportMutation.isPending}
+            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+          >
+            ⬇️ Vorgänge (CSV)
+          </button>
+          <button
+            onClick={() => zeiterfassungExportMutation.mutate()}
+            disabled={zeiterfassungExportMutation.isPending}
+            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+          >
+            ⬇️ Zeiterfassung (CSV)
+          </button>
+          <button
+            onClick={() => materialExportMutation.mutate()}
+            disabled={materialExportMutation.isPending}
+            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+          >
+            ⬇️ Material-Bestand (CSV)
+          </button>
+        </div>
       </div>
     </div>
   );

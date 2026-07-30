@@ -1,7 +1,7 @@
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,7 @@ from app.schemas.material import (
     MaterialVerwendungCreate,
     MaterialVerwendungRead,
 )
+from app.services.csv_service import csv_response
 
 router = APIRouter(
     prefix="/api/material",
@@ -111,6 +112,34 @@ async def _material_read(session: AsyncSession, material: Material) -> MaterialR
 async def list_material(session: AsyncSession = Depends(get_db)) -> list[MaterialRead]:
     result = await session.execute(select(Material).order_by(Material.bezeichnung))
     return [await _material_read(session, m) for m in result.scalars().all()]
+
+
+@router.get(
+    "/export/csv", dependencies=[Depends(require_roles("mandant_admin", "disponent"))]
+)
+async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Response:
+    result = await session.execute(
+        select(Material, MaterialBestand, Anlage.bezeichnung)
+        .join(MaterialBestand, MaterialBestand.material_id == Material.id)
+        .join(Anlage, Anlage.id == MaterialBestand.lager_id)
+        .order_by(Material.bezeichnung, Anlage.bezeichnung)
+    )
+    rows = [
+        [
+            material.bezeichnung,
+            material.einheit,
+            lager_bezeichnung,
+            f"{bestand.menge:g}".replace(".", ","),
+            f"{material.mindestbestand:g}".replace(".", ","),
+            f"{material.einzelpreis:g}".replace(".", ",") if material.einzelpreis is not None else "",
+        ]
+        for material, bestand, lager_bezeichnung in result.all()
+    ]
+    return csv_response(
+        ["Material", "Einheit", "Lagerort", "Menge", "Mindestbestand", "Einzelpreis (EUR)"],
+        rows,
+        "Material-Bestand.csv",
+    )
 
 
 @router.post(

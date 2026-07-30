@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -17,6 +17,7 @@ from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang import VorgangCreate, VorgangRead, VorgangUpdate
+from app.services.csv_service import csv_response
 from app.services.date_utils import add_months
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
@@ -171,6 +172,62 @@ async def _require_vorgang_zugriff(
         session, auth.user_id
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+
+
+@router.get("/export/csv")
+async def export_vorgaenge_csv(
+    status_filter: str | None = Query(default=None, alias="status"),
+    kunde_id: UUID | None = Query(default=None),
+    von: date | None = Query(default=None),
+    bis: date | None = Query(default=None),
+    auth: AuthContext = Depends(require_roles("mandant_admin", "disponent")),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    stmt = select(Vorgang).order_by(Vorgang.created_at.asc())
+    if status_filter:
+        stmt = stmt.where(Vorgang.status == status_filter)
+    if kunde_id:
+        stmt = stmt.where(Vorgang.kunde_id == kunde_id)
+    if von:
+        stmt = stmt.where(Vorgang.created_at >= datetime.combine(von, datetime.min.time(), tzinfo=timezone.utc))
+    if bis:
+        stmt = stmt.where(
+            Vorgang.created_at
+            < datetime.combine(bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+        )
+    vorgaenge = list((await session.execute(stmt)).scalars().all())
+
+    kunden_by_id: dict[UUID, Kunde | None] = {}
+    anlagen_by_id: dict[UUID, Anlage | None] = {}
+    rows = []
+    for v in vorgaenge:
+        if v.kunde_id not in kunden_by_id:
+            kunden_by_id[v.kunde_id] = await session.get(Kunde, v.kunde_id)
+        kunde = kunden_by_id[v.kunde_id]
+        anlage = None
+        if v.anlage_id is not None:
+            if v.anlage_id not in anlagen_by_id:
+                anlagen_by_id[v.anlage_id] = await session.get(Anlage, v.anlage_id)
+            anlage = anlagen_by_id[v.anlage_id]
+        rows.append(
+            [
+                v.vorgangsnummer,
+                v.titel,
+                kunde.name if kunde else "",
+                anlage.bezeichnung if anlage else "",
+                v.status,
+                v.abrechnungsart,
+                v.leistungstyp,
+                v.created_at.strftime("%d.%m.%Y %H:%M"),
+                v.abgeschlossen_am.strftime("%d.%m.%Y %H:%M") if v.abgeschlossen_am else "",
+            ]
+        )
+
+    return csv_response(
+        ["Vorgangsnummer", "Titel", "Kunde", "Anlage", "Status", "Abrechnungsart", "Leistungstyp", "Erstellt am", "Abgeschlossen am"],
+        rows,
+        "Vorgaenge.csv",
+    )
 
 
 @router.get("/{vorgang_id}", response_model=VorgangRead)

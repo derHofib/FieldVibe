@@ -56,6 +56,19 @@ async def test_kunde_login_and_me(client, make_mandant, make_kunde):
 
 
 @pytest.mark.asyncio
+async def test_kunde_login_ignores_email_case(client, make_mandant, make_kunde):
+    mandant = await make_mandant()
+    kunde = await make_kunde(mandant=mandant)
+    await _make_zugang(mandant, kunde, email="Kunde.Portal@Beispiel.DE")
+
+    resp = await client.post(
+        "/api/kundenportal/auth/login",
+        json={"email": "kunde.portal@beispiel.de", "password": "kunden-pw-123"},
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_kunde_login_wrong_password_rejected(client, make_mandant, make_kunde):
     mandant = await make_mandant()
     kunde = await make_kunde(mandant=mandant)

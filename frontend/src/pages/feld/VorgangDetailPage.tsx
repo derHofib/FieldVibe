@@ -18,6 +18,7 @@ import {
   zeiterfassungApi,
 } from "../../api/endpoints";
 import { MentionText } from "../../components/MentionText";
+import { SignaturePad } from "../../components/SignaturePad";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
 import { getOutboxItems, queueFoto, queueKommentar } from "../../offline/outbox";
@@ -63,6 +64,7 @@ const EVENT_LABEL: Partial<Record<string, string>> = {
   zeit_stop: "Zeit gestoppt",
   termin: "Termin",
   rechnung_status: "Rechnungsstatus aktualisiert",
+  unterschrift: "Unterschrift erfasst",
 };
 
 function EventBubble({
@@ -109,6 +111,20 @@ function EventBubble({
           </button>
         </>
       )}
+      {event.event_type === "unterschrift" && event.unterschrift_url && (
+        <div className="mb-2">
+          <img
+            src={event.unterschrift_url}
+            alt="Unterschrift"
+            className="max-h-32 rounded-md border border-slate-200 bg-white"
+          />
+          {typeof event.payload.unterzeichner_name === "string" && (
+            <p className="mt-1 text-xs text-slate-500">
+              Unterschrieben von: {event.payload.unterzeichner_name}
+            </p>
+          )}
+        </div>
+      )}
       {event.body && (
         <p className="whitespace-pre-wrap text-sm text-slate-800">
           <MentionText text={event.body} />
@@ -150,6 +166,7 @@ export function VorgangDetailPage() {
   const [kundensichtbar, setKundensichtbar] = useState(false);
   const [kundenansicht, setKundenansicht] = useState(false);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
+  const [showUnterschriftPad, setShowUnterschriftPad] = useState(false);
   const [taetigkeit, setTaetigkeit] = useState("");
   const [showTerminForm, setShowTerminForm] = useState(false);
   const [terminWarnungen, setTerminWarnungen] = useState<TerminWarnung[]>([]);
@@ -388,6 +405,15 @@ export function VorgangDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+    },
+  });
+
+  const unterschriftMutation = useMutation({
+    mutationFn: ({ blob, unterzeichnerName }: { blob: Blob; unterzeichnerName: string }) =>
+      vorgangEventsApi.uploadUnterschrift(id!, blob, unterzeichnerName),
+    onSuccess: () => {
+      setShowUnterschriftPad(false);
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
   });
 
@@ -999,6 +1025,12 @@ export function VorgangDetailPage() {
               >
                 📷 Foto
               </button>
+              <button
+                onClick={() => setShowUnterschriftPad((v) => !v)}
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600"
+              >
+                ✍️ Unterschrift
+              </button>
               <label className="flex items-center gap-1.5 text-sm text-slate-500">
                 <input
                   type="checkbox"
@@ -1017,6 +1049,25 @@ export function VorgangDetailPage() {
               Senden
             </button>
           </div>
+
+          {showUnterschriftPad && (
+            <div className="mt-2">
+              <SignaturePad
+                isSaving={unterschriftMutation.isPending}
+                onCancel={() => setShowUnterschriftPad(false)}
+                onSave={(blob, unterzeichnerName) =>
+                  unterschriftMutation.mutate({ blob, unterzeichnerName })
+                }
+              />
+              {unterschriftMutation.isError && (
+                <p className="mt-1 text-xs text-red-700">
+                  {unterschriftMutation.error instanceof ApiError
+                    ? unterschriftMutation.error.message
+                    : "Fehler beim Speichern der Unterschrift"}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 Role = Literal["super_admin", "mandant_admin", "disponent", "techniker"]
 
@@ -13,6 +13,16 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8)
     role: Role
     name: str
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        # E-Mail-Adressen sind ueberall case-insensitiv -- ohne diese
+        # Normalisierung koennte "Dennis@Firma.de" und "dennis@firma.de" als
+        # zwei verschiedene Accounts angelegt werden, und der Login (der
+        # ebenfalls normalisiert, siehe app/services/auth_service.py)
+        # wuerde bei abweichender Schreibweise faelschlich scheitern.
+        return v.strip().lower()
 
     @model_validator(mode="after")
     def _mandant_required_unless_super_admin(self) -> "UserCreate":

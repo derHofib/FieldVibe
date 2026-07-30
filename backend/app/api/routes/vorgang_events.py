@@ -176,3 +176,63 @@ async def upload_foto(
     )
 
     return _to_read_model(event)
+
+
+@router.post(
+    "/unterschrift", response_model=VorgangEventRead, status_code=status.HTTP_201_CREATED
+)
+async def upload_unterschrift(
+    vorgang_id: UUID,
+    file: UploadFile,
+    unterzeichner_name: str = Form(...),
+    kundensichtbar: bool = Form(default=True),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangEventRead:
+    """Digitale Unterschrift des Kunden (vom Signature-Pad exportiertes PNG)
+    -- gespeichert wie ein Foto (siehe upload_foto), nur ohne Thumbnail und
+    mit dem eingegebenen Namen des Unterzeichners im payload als
+    Nachweis, wer unterschrieben hat."""
+    await _require_own_vorgang(session, auth, vorgang_id)
+
+    if not unterzeichner_name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Name des Unterzeichners fehlt"
+        )
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Nur Bilddateien werden unterstützt"
+        )
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)"
+        )
+
+    key = storage_service.new_object_key(vorgang_id, "unterschrift.png")
+    await storage_service.upload_bytes(key, data, file.content_type)
+
+    event = VorgangEvent(
+        mandant_id=auth.mandant_id,
+        vorgang_id=vorgang_id,
+        event_type="unterschrift",
+        author_user_id=auth.user_id,
+        payload={
+            "key": key,
+            "content_type": file.content_type,
+            "size": len(data),
+            "unterzeichner_name": unterzeichner_name.strip(),
+        },
+        kundensichtbar=kundensichtbar,
+    )
+    session.add(event)
+    await session.flush()
+
+    await event_bus.publish(
+        auth.mandant_id,
+        "vorgang_event",
+        {"vorgang_id": str(vorgang_id), "event_id": event.id, "event_type": "unterschrift"},
+    )
+
+    return _to_read_model(event)
