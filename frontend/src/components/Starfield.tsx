@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 
 interface Star {
   top: number;
@@ -6,6 +6,8 @@ interface Star {
   size: number;
   delay: number;
   duration: number;
+  dx: number;
+  dy: number;
 }
 
 function erzeugeSterne(anzahl: number): Star[] {
@@ -15,6 +17,10 @@ function erzeugeSterne(anzahl: number): Star[] {
     size: Math.random() < 0.15 ? 2.5 : Math.random() < 0.5 ? 1.5 : 1,
     delay: Math.random() * 4,
     duration: 2.5 + Math.random() * 3.5,
+    // kleine, zufaellige Drift-Richtung je Stern -- macht das Twinkle-Keyframe
+    // zusaetzlich zum Aufblitzen leicht "schweben" statt nur auf der Stelle zu pulsieren.
+    dx: (Math.random() - 0.5) * 14,
+    dy: (Math.random() - 0.5) * 14,
   }));
 }
 
@@ -36,14 +42,18 @@ export function Starfield() {
         <span
           key={i}
           className="absolute animate-twinkle rounded-full bg-white"
-          style={{
-            top: `${s.top}%`,
-            left: `${s.left}%`,
-            width: `${s.size}px`,
-            height: `${s.size}px`,
-            animationDelay: `${s.delay}s`,
-            animationDuration: `${s.duration}s`,
-          }}
+          style={
+            {
+              top: `${s.top}%`,
+              left: `${s.left}%`,
+              width: `${s.size}px`,
+              height: `${s.size}px`,
+              animationDelay: `${s.delay}s`,
+              animationDuration: `${s.duration}s`,
+              "--dx": `${s.dx}px`,
+              "--dy": `${s.dy}px`,
+            } as CSSProperties
+          }
         />
       ))}
     </div>

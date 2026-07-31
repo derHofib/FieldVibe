@@ -5,8 +5,11 @@ export default {
     extend: {
       keyframes: {
         twinkle: {
-          "0%, 100%": { opacity: "0.15", transform: "scale(0.85)" },
-          "50%": { opacity: "1", transform: "scale(1.1)" },
+          "0%, 100%": { opacity: "0.15", transform: "translate(0, 0) scale(0.85)" },
+          "50%": {
+            opacity: "1",
+            transform: "translate(var(--dx, 4px), var(--dy, -4px)) scale(1.1)",
+          },
         },
         drift: {
           "0%": { transform: "translate(0, 0)" },
