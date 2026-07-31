@@ -42,23 +42,37 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white">
+    <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
       {sichtbareItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
           className={({ isActive }) =>
             `btn-touch relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium ${
-              isActive ? "text-slate-900" : "text-slate-400"
+              isActive
+                ? "text-cyan-600 dark:text-cyan-400"
+                : "text-slate-400 dark:text-slate-500"
             }`
           }
         >
-          <span className="text-lg leading-none">{item.icon}</span>
-          {item.label}
-          {item.to === "/benachrichtigungen" && unreadCount > 0 && (
-            <span className="absolute right-4 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+          {({ isActive }) => (
+            <>
+              <span
+                className={`text-lg leading-none transition-all ${
+                  isActive
+                    ? "scale-110 drop-shadow-[0_0_6px_rgba(34,211,238,0.65)]"
+                    : "opacity-50 grayscale"
+                }`}
+              >
+                {item.icon}
+              </span>
+              {item.label}
+              {item.to === "/benachrichtigungen" && unreadCount > 0 && (
+                <span className="absolute right-4 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </>
           )}
         </NavLink>
       ))}

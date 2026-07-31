@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { useKundenAuth } from "../context/KundenAuthContext";
+import { ThemeToggle } from "./ThemeToggle";
 
 const NAV_ITEMS = [
   { to: "/portal/vorgaenge", label: "Aufträge" },
@@ -13,16 +14,22 @@ export function PortalLayout() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-16">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-        <button onClick={() => navigate("/portal/vorgaenge")} className="text-lg font-bold text-slate-800">
-          Kundenportal
+    <div className="min-h-screen bg-slate-100 pb-16 dark:bg-slate-950">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/70">
+        <button
+          onClick={() => navigate("/portal/vorgaenge")}
+          className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-white"
+        >
+          Kunden<span className="text-cyan-500 dark:text-cyan-400">portal</span>
         </button>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-slate-600 sm:inline">{currentKunde?.name}</span>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-300">
+            {currentKunde?.name}
+          </span>
+          <ThemeToggle />
           <button
             onClick={logout}
-            className="btn-touch rounded-md px-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            className="btn-touch rounded-md px-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
           >
             Abmelden
           </button>
@@ -31,14 +38,16 @@ export function PortalLayout() {
       <main className="mx-auto max-w-2xl px-3 py-4">
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-slate-200 bg-white">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-slate-200 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               `btn-touch flex-1 py-3 text-center text-sm font-medium ${
-                isActive ? "text-slate-900" : "text-slate-400"
+                isActive
+                  ? "text-cyan-600 dark:text-cyan-400"
+                  : "text-slate-400 dark:text-slate-500"
               }`
             }
           >

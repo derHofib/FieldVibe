@@ -19,13 +19,13 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 };
 
 const STATUS_BADGE: Record<VorgangStatus, string> = {
-  neu: "bg-blue-100 text-blue-800",
-  geplant: "bg-purple-100 text-purple-800",
-  in_arbeit: "bg-amber-100 text-amber-800",
-  wartet_kunde: "bg-orange-100 text-orange-800",
-  abgeschlossen: "bg-green-100 text-green-800",
-  abgerechnet: "bg-slate-200 text-slate-700",
-  storniert: "bg-slate-100 text-slate-400",
+  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
+  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
+  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
+  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
+  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
+  storniert: "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500",
 };
 
 const AMPEL_COLOR: Record<string, string> = {
@@ -50,12 +50,16 @@ function StoryChip({ item }: { item: StoryItem }) {
   return (
     <button
       onClick={() => navigate(path)}
-      className={`btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-sm ${
-        item.ampel ? AMPEL_COLOR[item.ampel] : "border-slate-300"
+      className={`btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+        item.ampel ? AMPEL_COLOR[item.ampel] : "border-slate-300 dark:border-slate-600"
       }`}
     >
-      <span className="line-clamp-2 text-sm font-semibold text-slate-800">{item.titel}</span>
-      {item.subtitel && <span className="mt-1 text-xs text-slate-500">{item.subtitel}</span>}
+      <span className="line-clamp-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        {item.titel}
+      </span>
+      {item.subtitel && (
+        <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.subtitel}</span>
+      )}
     </button>
   );
 }
@@ -65,17 +69,17 @@ function FeedCardView({ card }: { card: FeedCard }) {
   return (
     <button
       onClick={() => navigate(`/vorgaenge/${card.id}`)}
-      className={`btn-touch flex w-full flex-col gap-2 rounded-lg bg-white p-4 text-left shadow-sm ${
+      className={`btn-touch flex w-full flex-col gap-2 rounded-lg bg-white p-4 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
         card.status === "storniert" ? "opacity-60 grayscale" : ""
       }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-xs text-slate-400">{card.vorgangsnummer}</div>
-          <div className="font-semibold text-slate-800">{card.titel}</div>
-          <div className="text-sm text-slate-500">{card.kunde_name}</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500">{card.vorgangsnummer}</div>
+          <div className="font-semibold text-slate-800 dark:text-slate-100">{card.titel}</div>
+          <div className="text-sm text-slate-500 dark:text-slate-400">{card.kunde_name}</div>
           {card.anlage_kurzadresse && (
-            <div className="text-xs text-slate-400">{card.anlage_kurzadresse}</div>
+            <div className="text-xs text-slate-400 dark:text-slate-500">{card.anlage_kurzadresse}</div>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -93,14 +97,17 @@ function FeedCardView({ card }: { card: FeedCard }) {
         </div>
       </div>
       {card.letztes_event_vorschau && (
-        <p className="line-clamp-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm text-slate-600">
+        <p className="line-clamp-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
           {card.letztes_event_vorschau}
         </p>
       )}
       {card.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
           {card.tags.map((tag) => (
-            <span key={tag} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+            <span
+              key={tag}
+              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            >
               #{tag}
             </span>
           ))}
@@ -158,7 +165,7 @@ export function FeedPage() {
       {istModulAktiv(currentUser, "highlights") && (
         <button
           onClick={() => navigate("/highlights")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm"
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm dark:bg-slate-900 dark:text-amber-400 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
           ⭐ Highlights ansehen
         </button>
@@ -175,7 +182,7 @@ export function FeedPage() {
       <select
         value={statusFilter}
         onChange={(e) => setStatusFilter(e.target.value)}
-        className="btn-touch w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+        className="btn-touch w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       >
         <option value="">Alle Status</option>
         {Object.entries(STATUS_LABEL).map(([value, label]) => (
@@ -186,9 +193,9 @@ export function FeedPage() {
       </select>
 
       {isLoading ? (
-        <p className="text-center text-slate-500">Lädt…</p>
+        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
       ) : cards.length === 0 ? (
-        <p className="text-center text-slate-500">Keine Vorgänge gefunden.</p>
+        <p className="text-center text-slate-500 dark:text-slate-400">Keine Vorgänge gefunden.</p>
       ) : (
         <div className="space-y-3">
           {cards.map((card) => (
@@ -201,7 +208,7 @@ export function FeedPage() {
         <button
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-sm disabled:opacity-50"
+          className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-sm disabled:opacity-50 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
           {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
         </button>
