@@ -340,7 +340,7 @@ const STATUS_BADGE: Record<string, string> = {
   wartet_kunde: "bg-orange-100 text-orange-800",
   abgeschlossen: "bg-green-100 text-green-800",
   abgerechnet: "bg-slate-200 text-slate-700",
-  storniert: "bg-red-100 text-red-800",
+  storniert: "bg-slate-100 text-slate-400",
 };
 
 function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewiesen: User[] }) {
@@ -591,6 +591,13 @@ export function KundeProfilePage() {
     [profil?.vorgaenge, anlageFilter]
   );
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteMutation = useMutation({
+    mutationFn: () => kundenApi.remove(id!),
+    onSuccess: () => navigate("/geschaeft"),
+    onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
+  });
+
   if (isLoading || !profil) return <p className="text-center text-slate-500">Lädt…</p>;
 
   const kannVerwalten =
@@ -603,9 +610,30 @@ export function KundeProfilePage() {
       </button>
 
       <div className="rounded-lg bg-white p-4 shadow-sm">
-        <div className="text-xs text-slate-400">{profil.kundennummer}</div>
-        <h1 className="text-lg font-bold text-slate-800">{profil.name}</h1>
-        {profil.typ && <span className="text-sm text-slate-500">{profil.typ}</span>}
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-xs text-slate-400">{profil.kundennummer}</div>
+            <h1 className="text-lg font-bold text-slate-800">{profil.name}</h1>
+            {profil.typ && <span className="text-sm text-slate-500">{profil.typ}</span>}
+          </div>
+          {kannVerwalten && (
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
+                  )
+                ) {
+                  deleteMutation.mutate();
+                }
+              }}
+              className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+            >
+              Löschen
+            </button>
+          )}
+        </div>
+        {deleteError && <p className="mt-2 text-sm text-red-700">{deleteError}</p>}
         {profil.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {profil.tags.map((t) => (
@@ -676,7 +704,9 @@ export function KundeProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm"
+                className={`btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm ${
+                  v.status === "storniert" ? "opacity-60 grayscale" : ""
+                }`}
               >
                 <div>
                   <div className="text-xs text-slate-400">

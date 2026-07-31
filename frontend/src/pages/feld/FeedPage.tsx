@@ -23,7 +23,7 @@ const STATUS_BADGE: Record<VorgangStatus, string> = {
   wartet_kunde: "bg-orange-100 text-orange-800",
   abgeschlossen: "bg-green-100 text-green-800",
   abgerechnet: "bg-slate-200 text-slate-700",
-  storniert: "bg-red-100 text-red-800",
+  storniert: "bg-slate-100 text-slate-400",
 };
 
 const AMPEL_COLOR: Record<string, string> = {
@@ -63,7 +63,9 @@ function FeedCardView({ card }: { card: FeedCard }) {
   return (
     <button
       onClick={() => navigate(`/vorgaenge/${card.id}`)}
-      className="btn-touch flex w-full flex-col gap-2 rounded-lg bg-white p-4 text-left shadow-sm"
+      className={`btn-touch flex w-full flex-col gap-2 rounded-lg bg-white p-4 text-left shadow-sm ${
+        card.status === "storniert" ? "opacity-60 grayscale" : ""
+      }`}
     >
       <div className="flex items-start justify-between gap-2">
         <div>

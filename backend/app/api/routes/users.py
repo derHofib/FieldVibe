@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -130,3 +130,72 @@ async def update_user(
             payload=changes,
         )
     return user
+
+
+@router.delete(
+    "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
+async def delete_user(
+    user_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+
+    if auth.role == "mandant_admin":
+        if user.mandant_id != auth.mandant_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+        if user.role == "super_admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nicht berechtigt für super_admin-Accounts",
+            )
+
+    if user.id == auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Der eigene Account kann nicht gelöscht werden"
+        )
+
+    if user.role == "mandant_admin":
+        # Ein Mandant ohne jeden mandant_admin waere von niemandem mehr
+        # verwaltbar -- der letzte muss also erhalten bleiben.
+        andere_admins = await session.scalar(
+            select(func.count()).select_from(User).where(
+                User.mandant_id == user.mandant_id,
+                User.role == "mandant_admin",
+                User.id != user.id,
+            )
+        )
+        if andere_admins == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Der letzte Mandanten-Admin kann nicht gelöscht werden",
+            )
+
+    mandant_id = user.mandant_id
+    audit_payload = {"email": user.email, "role": user.role}
+    try:
+        await session.delete(user)
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Nutzer kann nicht gelöscht werden, da noch Daten damit verknüpft sind "
+                "(z.B. Zeiterfassungen, erstellte Angebote/Rechnungen) -- stattdessen deaktivieren."
+            ),
+        ) from exc
+
+    await log_action(
+        session,
+        aktion="user_geloescht",
+        mandant_id=mandant_id,
+        actor_user_id=auth.user_id,
+        entity_type="user",
+        entity_id=user_id,
+        payload=audit_payload,
+    )

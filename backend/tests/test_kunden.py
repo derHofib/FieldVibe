@@ -169,6 +169,49 @@ async def test_kunde_update_ansprechpartner_liste(client, make_mandant, make_use
 
 
 @pytest.mark.asyncio
+async def test_admin_can_delete_unused_kunde(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.delete(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    assert resp.status_code == 204
+
+    get_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    assert get_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_kunde_delete_blocked_when_vorgang_exists(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.delete(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    assert resp.status_code == 409
+
+    # Der Kunde (und damit sein Vorgang) existiert unveraendert weiter.
+    get_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    assert get_resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_techniker_cannot_delete_kunde(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.delete(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_unknown_kunde_returns_404(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")

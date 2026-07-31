@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -223,3 +223,37 @@ async def update_anlage(
     if changes:
         await session.refresh(anlage)
     return anlage
+
+
+@router.delete(
+    "/{anlage_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def delete_anlage(anlage_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
+    anlage = await session.get(Anlage, anlage_id)
+    if anlage is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
+
+    # Tag-Zuordnungen sind polymorph (entity_id ohne echte FK zu anlagen.id)
+    # und werden daher explizit mit aufgeraeumt. Alles mit echtem fachlichem
+    # Gewicht (Vorgaenge, Vertraege, Pruefzyklen, Inventurzyklus, Material-
+    # Bestand/-Bewegungen, Fahrzeug-Zuweisung) blockt die Loeschung ueber
+    # den FK-Constraint unten.
+    await session.execute(
+        delete(TagAssignment).where(
+            TagAssignment.entity_type == "anlage", TagAssignment.entity_id == anlage_id
+        )
+    )
+
+    try:
+        await session.delete(anlage)
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Anlage kann nicht gelöscht werden, da noch Daten verknüpft sind "
+                "(z.B. Vorgänge, Verträge, Prüfzyklen, Material-Bestand)."
+            ),
+        ) from exc

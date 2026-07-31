@@ -95,6 +95,7 @@ export const usersApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
 };
 
 export const auditLogApi = {
@@ -145,6 +146,7 @@ export const kundenApi = {
       ansprechpartner: Ansprechpartner[];
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/kunden/${id}`, { method: "DELETE" }),
   technikerListe: (id: string) => apiFetch<User[]>(`/api/kunden/${id}/techniker`),
   technikerSetzen: (id: string, userIds: string[]) =>
     apiFetch<User[]>(`/api/kunden/${id}/techniker`, {
@@ -177,6 +179,7 @@ export const anlagenApi = {
   }) => apiFetch<Anlage>("/api/anlagen", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: Partial<{ bezeichnung: string; adresse: Adresse; anlagentyp: string | null }>) =>
     apiFetch<Anlage>(`/api/anlagen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/anlagen/${id}`, { method: "DELETE" }),
 };
 
 export const dauerauftraegeApi = {

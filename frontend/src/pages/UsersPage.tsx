@@ -49,6 +49,16 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteMutation = useMutation({
+    mutationFn: usersApi.remove,
+    onSuccess: () => {
+      setDeleteError(null);
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+    },
+    onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
+  });
+
   function handleCreate(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -152,6 +162,7 @@ export function UsersPage() {
 
       <section>
         <h2 className="mb-4 text-lg font-bold text-slate-800">Accounts</h2>
+        {deleteError && <p className="mb-2 text-sm text-red-700">{deleteError}</p>}
         {isLoading ? (
           <p>Lädt…</p>
         ) : (
@@ -187,14 +198,29 @@ export function UsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() =>
-                        toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
-                      }
-                      className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
-                    >
-                      {u.aktiv ? "Deaktivieren" : "Aktivieren"}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() =>
+                          toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
+                        }
+                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+                      >
+                        {u.aktiv ? "Deaktivieren" : "Aktivieren"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`${u.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
+                            setDeleteError(null);
+                            deleteMutation.mutate(u.id);
+                          }
+                        }}
+                        disabled={u.id === currentUser?.id}
+                        title={u.id === currentUser?.id ? "Eigener Account kann nicht gelöscht werden" : undefined}
+                        className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Löschen
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

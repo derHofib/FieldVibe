@@ -43,6 +43,48 @@ async def test_create_anlage_ohne_adresse(client, make_mandant, make_user, make_
 
 
 @pytest.mark.asyncio
+async def test_admin_can_delete_unused_anlage(client, make_mandant, make_user, make_kunde, make_anlage):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.delete(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
+    assert resp.status_code == 204
+
+    get_resp = await client.get(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
+    assert get_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_anlage_delete_blocked_when_vorgang_exists(
+    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage.id)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.delete(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_techniker_cannot_delete_anlage(client, make_mandant, make_user, make_kunde, make_anlage):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.delete(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_cannot_create_anlage_for_foreign_kunde(
     client, make_mandant, make_user, make_kunde
 ):

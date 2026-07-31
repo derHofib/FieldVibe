@@ -12,7 +12,7 @@ const STATUS_BADGE: Record<string, string> = {
   wartet_kunde: "bg-orange-100 text-orange-800",
   abgeschlossen: "bg-green-100 text-green-800",
   abgerechnet: "bg-slate-200 text-slate-700",
-  storniert: "bg-red-100 text-red-800",
+  storniert: "bg-slate-100 text-slate-400",
 };
 
 export function DauerauftragDetailPage() {
@@ -321,7 +321,9 @@ export function DauerauftragDetailPage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm"
+                className={`btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm ${
+                  v.status === "storniert" ? "opacity-60 grayscale" : ""
+                }`}
               >
                 <div>
                   <div className="text-xs text-slate-400">{v.vorgangsnummer}</div>

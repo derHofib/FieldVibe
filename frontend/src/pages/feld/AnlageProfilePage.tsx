@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, inventurzyklenApi, materialApi, pruefzyklenApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { Adresse } from "../../types";
@@ -14,7 +15,7 @@ const STATUS_BADGE: Record<string, string> = {
   wartet_kunde: "bg-orange-100 text-orange-800",
   abgeschlossen: "bg-green-100 text-green-800",
   abgerechnet: "bg-slate-200 text-slate-700",
-  storniert: "bg-red-100 text-red-800",
+  storniert: "bg-slate-100 text-slate-400",
 };
 
 function faelligkeitsFarbe(datum: string): string {
@@ -220,6 +221,13 @@ export function AnlageProfilePage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteMutation = useMutation({
+    mutationFn: () => anlagenApi.remove(id!),
+    onSuccess: () => navigate(profil?.kunde ? `/kunden/${profil.kunde.id}` : "/geschaeft"),
+    onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
+  });
+
   if (isLoading || !profil) return <p className="text-center text-slate-500">Lädt…</p>;
 
   return (
@@ -229,7 +237,26 @@ export function AnlageProfilePage() {
       </button>
 
       <div className="rounded-lg bg-white p-4 shadow-sm">
-        <h1 className="text-lg font-bold text-slate-800">{profil.bezeichnung}</h1>
+        <div className="flex items-start justify-between">
+          <h1 className="text-lg font-bold text-slate-800">{profil.bezeichnung}</h1>
+          {kannVerwalten && (
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `${profil.bezeichnung} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
+                  )
+                ) {
+                  deleteMutation.mutate();
+                }
+              }}
+              className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+            >
+              Löschen
+            </button>
+          )}
+        </div>
+        {deleteError && <p className="mt-1 text-sm text-red-700">{deleteError}</p>}
         {profil.kunde ? (
           <button
             onClick={() => navigate(`/kunden/${profil.kunde!.id}`)}
@@ -283,7 +310,9 @@ export function AnlageProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm"
+                className={`btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm ${
+                  v.status === "storniert" ? "opacity-60 grayscale" : ""
+                }`}
               >
                 <div>
                   <div className="text-xs text-slate-400">

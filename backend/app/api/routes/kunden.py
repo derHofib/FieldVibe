@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -237,6 +237,43 @@ async def update_kunde(
     if changes:
         await session.refresh(kunde)
     return kunde
+
+
+@router.delete(
+    "/{kunde_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def delete_kunde(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+
+    # Portal-Zugaenge (Login-Credentials) und Tag-Zuordnungen (entity_id ist
+    # polymorph, hat also keine echte FK zu kunden.id) sind reine Anhaengsel
+    # des Kunden, keine eigenstaendigen Geschaeftsvorfaelle -- die raeumen
+    # wir mit auf. kunde_zuweisungen loescht sich per ondelete=CASCADE
+    # bereits selbst. Alles mit echtem fachlichem Gewicht (Anlagen, Vorgaenge,
+    # Vertraege, Angebote, Rechnungen, Dauerauftraege) blockt die eigentliche
+    # Loeschung unten ueber den FK-Constraint.
+    await session.execute(delete(KundenportalZugang).where(KundenportalZugang.kunde_id == kunde_id))
+    await session.execute(
+        delete(TagAssignment).where(
+            TagAssignment.entity_type == "kunde", TagAssignment.entity_id == kunde_id
+        )
+    )
+
+    try:
+        await session.delete(kunde)
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Kunde kann nicht gelöscht werden, da noch Daten verknüpft sind "
+                "(z.B. Anlagen, Vorgänge, Verträge, Angebote, Rechnungen)."
+            ),
+        ) from exc
 
 
 @router.get("/{kunde_id}/portal-zugaenge", response_model=list[KundenportalZugangRead])
