@@ -12,7 +12,7 @@ export function Layout() {
   const { currentUser, logout } = useAuth();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-slate-100 text-slate-900">
       <div className="flex min-h-screen">
         <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-4">
           <div className="mb-8 text-lg font-bold text-slate-800">FieldVibe</div>
