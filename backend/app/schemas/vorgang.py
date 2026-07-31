@@ -11,6 +11,14 @@ Leistungstyp = Literal["installation", "pruefung", "wartung", "stoerung", "berat
 VorgangStatus = Literal[
     "neu", "geplant", "in_arbeit", "wartet_kunde", "abgeschlossen", "abgerechnet", "storniert"
 ]
+# "abgerechnet" bewusst ausgenommen: dieser Status wird ausschliesslich vom
+# Rechnungs-Workflow gesetzt (app/api/routes/rechnungen.py, beim Bezahlen
+# einer verknuepften Rechnung), nicht per direktem PATCH auf den Vorgang --
+# sonst liesse sich ein Vorgang als abgerechnet markieren, ohne dass je eine
+# bezahlte Rechnung dafuer existiert.
+VorgangStatusSetzbar = Literal[
+    "neu", "geplant", "in_arbeit", "wartet_kunde", "abgeschlossen", "storniert"
+]
 
 
 class VorgangCreate(BaseModel):
@@ -37,7 +45,7 @@ class VorgangUpdate(BaseModel):
     vertrag_id: UUID | None = None
     abrechnungsart: VorgangAbrechnungsart | None = None
     leistungstyp: Leistungstyp | None = None
-    status: VorgangStatus | None = None
+    status: VorgangStatusSetzbar | None = None
     prioritaet: int | None = Field(default=None, ge=1, le=5)
 
 

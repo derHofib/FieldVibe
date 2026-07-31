@@ -1,4 +1,5 @@
 import base64
+from collections import defaultdict
 from datetime import datetime
 from uuid import UUID
 
@@ -116,37 +117,63 @@ async def get_feed(
         last = page[-1]
         next_cursor = _encode_cursor(last.last_activity_at, last.id)
 
+    vorgang_ids = [v.id for v in page]
+
+    kunde_ids = {v.kunde_id for v in page}
+    kunden_by_id: dict[UUID, Kunde] = {}
+    if kunde_ids:
+        kunden_result = await session.execute(select(Kunde).where(Kunde.id.in_(kunde_ids)))
+        kunden_by_id = {k.id: k for k in kunden_result.scalars().all()}
+
+    anlage_ids = {v.anlage_id for v in page if v.anlage_id}
+    anlagen_by_id: dict[UUID, Anlage] = {}
+    if anlage_ids:
+        anlagen_result = await session.execute(select(Anlage).where(Anlage.id.in_(anlage_ids)))
+        anlagen_by_id = {a.id: a for a in anlagen_result.scalars().all()}
+
+    last_events_by_vorgang: dict[UUID, VorgangEvent] = {}
+    if vorgang_ids:
+        # DISTINCT ON (Postgres) statt einer eigenen Query pro Vorgang: eine
+        # Row pro vorgang_id, die mit der groessten id (= neuestes Event)
+        # dank passender order_by-Reihenfolge.
+        last_event_result = await session.execute(
+            select(VorgangEvent)
+            .where(VorgangEvent.vorgang_id.in_(vorgang_ids))
+            .order_by(VorgangEvent.vorgang_id, VorgangEvent.id.desc())
+            .distinct(VorgangEvent.vorgang_id)
+        )
+        last_events_by_vorgang = {e.vorgang_id: e for e in last_event_result.scalars().all()}
+
+    tags_by_vorgang: dict[UUID, list[str]] = defaultdict(list)
+    if vorgang_ids:
+        tags_result = await session.execute(
+            select(TagAssignment.entity_id, Tag.label)
+            .join(Tag, Tag.id == TagAssignment.tag_id)
+            .where(
+                TagAssignment.entity_type == "vorgang", TagAssignment.entity_id.in_(vorgang_ids)
+            )
+        )
+        for entity_id, label in tags_result.all():
+            tags_by_vorgang[entity_id].append(label)
+
+    vorgaenge_mit_laufendem_timer: set[UUID] = set()
+    if vorgang_ids:
+        timer_result = await session.execute(
+            select(Zeiterfassung.vorgang_id).where(
+                Zeiterfassung.vorgang_id.in_(vorgang_ids), Zeiterfassung.ende_at.is_(None)
+            )
+        )
+        vorgaenge_mit_laufendem_timer = {row[0] for row in timer_result.all()}
+
     items: list[FeedCard] = []
     for vorgang in page:
-        kunde = await session.get(Kunde, vorgang.kunde_id)
+        kunde = kunden_by_id.get(vorgang.kunde_id)
         anlage_kurzadresse = None
         if vorgang.anlage_id:
-            anlage = await session.get(Anlage, vorgang.anlage_id)
+            anlage = anlagen_by_id.get(vorgang.anlage_id)
             if anlage and anlage.adresse:
                 teile = [anlage.adresse.get("strasse"), anlage.adresse.get("ort")]
                 anlage_kurzadresse = ", ".join(t for t in teile if t) or None
-
-        last_event_result = await session.execute(
-            select(VorgangEvent)
-            .where(VorgangEvent.vorgang_id == vorgang.id)
-            .order_by(VorgangEvent.id.desc())
-            .limit(1)
-        )
-        last_event = last_event_result.scalar_one_or_none()
-
-        tags_result = await session.execute(
-            select(Tag.label)
-            .join(TagAssignment, TagAssignment.tag_id == Tag.id)
-            .where(TagAssignment.entity_type == "vorgang", TagAssignment.entity_id == vorgang.id)
-        )
-        tags = [row[0] for row in tags_result.all()]
-
-        timer_result = await session.execute(
-            select(Zeiterfassung.id)
-            .where(Zeiterfassung.vorgang_id == vorgang.id, Zeiterfassung.ende_at.is_(None))
-            .limit(1)
-        )
-        timer_laeuft = timer_result.scalar_one_or_none() is not None
 
         items.append(
             FeedCard(
@@ -160,9 +187,9 @@ async def get_feed(
                 abrechnungsart=vorgang.abrechnungsart,
                 prioritaet=vorgang.prioritaet,
                 last_activity_at=vorgang.last_activity_at,
-                letztes_event_vorschau=_preview_text(last_event),
-                tags=tags,
-                timer_laeuft=timer_laeuft,
+                letztes_event_vorschau=_preview_text(last_events_by_vorgang.get(vorgang.id)),
+                tags=tags_by_vorgang.get(vorgang.id, []),
+                timer_laeuft=vorgang.id in vorgaenge_mit_laufendem_timer,
                 dauerauftrag_id=vorgang.dauerauftrag_id,
             )
         )

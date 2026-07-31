@@ -29,6 +29,11 @@ from moto.moto_server.threaded_moto_server import ThreadedMotoServer
 from sqlalchemy import create_engine, text
 
 from app.core.config import get_settings
+from app.core.rate_limit import (
+    login_account_limiter,
+    login_ip_limiter,
+    password_reset_ip_limiter,
+)
 from app.core.security import hash_password
 from app.db.session import engine, system_session
 from app.main import app
@@ -99,6 +104,19 @@ def _s3_test_server():
         yield
     finally:
         server.stop()
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiters():
+    # Alle Test-Requests laufen ueber httpx' ASGITransport mit derselben
+    # festen Client-IP (127.0.0.1) -- ohne Reset wuerden sich Fehlversuche
+    # aus verschiedenen, voneinander unabhaengigen Tests im selben
+    # In-Memory-Rate-Limiter aufsummieren und irgendwann faelschlich einen
+    # spaeteren Test mit 429 blockieren.
+    login_account_limiter._failures.clear()
+    login_ip_limiter._failures.clear()
+    password_reset_ip_limiter._failures.clear()
+    yield
 
 
 @pytest_asyncio.fixture(autouse=True)

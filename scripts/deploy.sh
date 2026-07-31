@@ -215,6 +215,18 @@ if [[ "$DEPLOY_MODE" == "domain" ]]; then
   log "Caddy holt beim allerersten Start ein bis zwei Minuten lang die TLS-Zertifikate. Fortschritt: ${COMPOSE[*]} logs -f caddy"
 fi
 
+# --- 8b. Datenbank-Rolle absichern ------------------------------------------
+# Das offizielle postgres-Image macht POSTGRES_USER standardmaessig zu einem
+# Superuser -- ein Superuser umgeht Row-Level-Security immer, unabhaengig von
+# den RLS-Policies der Anwendung. Die Mandantentrennung in der Datenbank
+# greift daher erst, wenn diese Rolle kein Superuser mehr ist. Idempotent,
+# daher bei jedem Lauf (auch Updates auf bereits laufenden Servern) sicher
+# erneut ausfuehrbar.
+log "Entziehe der Datenbank-Rolle Superuser-Rechte (Voraussetzung fuer wirksame Mandantentrennung per Row-Level-Security)..."
+"${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB" \
+  -c "ALTER ROLE \"${PG_USER}\" NOSUPERUSER NOBYPASSRLS;" \
+  || err "Konnte der Datenbank-Rolle nicht die Superuser-Rechte entziehen -- Row-Level-Security waere sonst wirkungslos, Deployment abgebrochen."
+
 # --- 9. Migrationen ----------------------------------------------------------
 log "Wende Datenbank-Migrationen an..."
 "${COMPOSE[@]}" run --rm backend alembic upgrade head

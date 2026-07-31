@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { authApi, mandantenApi } from "../api/endpoints";
 import { authStore } from "../api/authStore";
+import { clearAllOfflineData } from "../offline/db";
 import type { CurrentUser } from "../types";
 
 interface AuthContextValue {
@@ -48,6 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     authStore.clear();
     queryClient.clear();
+    // Geraet kann von mehreren Technikern geteilt sein (Firmenhandy) -- ohne
+    // das wuerden Kunden-/Vorgangsdaten des vorherigen Nutzers sichtbar
+    // bleiben und dessen noch nicht synchronisierte Outbox-Eintraege spaeter
+    // unter der Identitaet des naechsten Nutzers hochgeladen.
+    void clearAllOfflineData();
   }, [queryClient]);
 
   const startImpersonation = useCallback(

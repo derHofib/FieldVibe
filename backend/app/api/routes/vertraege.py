@@ -44,11 +44,18 @@ async def create_vertrag(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if body.anlage_id is not None and await session.get(Anlage, body.anlage_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
-        )
+    if body.anlage_id is not None:
+        anlage = await session.get(Anlage, body.anlage_id)
+        if anlage is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        if anlage.kunde_id != body.kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Anlage gehört nicht zum Kunden dieses Vertrags",
+            )
 
     vertrag = Vertrag(
         mandant_id=auth.mandant_id,
@@ -81,6 +88,10 @@ async def update_vertrag(
     if vertrag is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vertrag nicht gefunden")
 
+    # VertragUpdate erlaubt kein Aendern von kunde_id/anlage_id (siehe
+    # schemas/vertrag.py) -- die Kunde-Anlage-Konsistenz kann sich nach dem
+    # Anlegen eines Vertrags also nur ueber create_vertrag() aendern, dort
+    # bereits geprueft.
     changes = body.model_dump(exclude_unset=True)
     for field, value in changes.items():
         setattr(vertrag, field, value)

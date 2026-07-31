@@ -269,11 +269,13 @@ export const vorgangEventsApi = {
     filename: string,
     kundensichtbar: boolean,
     body?: string,
+    clientUuid?: string,
   ) => {
     const formData = new FormData();
     formData.append("file", file, filename);
     formData.append("kundensichtbar", String(kundensichtbar));
     if (body) formData.append("body", body);
+    if (clientUuid) formData.append("client_uuid", clientUuid);
     return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/foto`, formData);
   },
   uploadUnterschrift: (

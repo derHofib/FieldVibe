@@ -122,6 +122,72 @@ async def test_anlage_muss_zum_kunden_gehoeren(
 
 
 @pytest.mark.asyncio
+async def test_vertrag_muss_zum_kunden_gehoeren(
+    client, make_mandant, make_user, make_kunde, make_vertrag
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde1 = await make_kunde(mandant=mandant, name="Kunde 1")
+    kunde2 = await make_kunde(mandant=mandant, name="Kunde 2")
+    vertrag_von_kunde1 = await make_vertrag(mandant=mandant, kunde=kunde1)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde2.id),
+            "vertrag_id": str(vertrag_von_kunde1.id),
+            "titel": "Inkonsistent",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "stoerung",
+        },
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_vorgang_update_lehnt_vertrag_fremden_kunden_ab(
+    client, make_mandant, make_user, make_kunde, make_vertrag, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant, name="Vorgangskunde")
+    fremder_kunde = await make_kunde(mandant=mandant, name="Fremder Kunde")
+    fremder_vertrag = await make_vertrag(mandant=mandant, kunde=fremder_kunde)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"vertrag_id": str(fremder_vertrag.id)},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_vorgang_kundenwechsel_entfernt_nicht_mehr_passenden_vertrag(
+    client, make_mandant, make_user, make_kunde, make_vertrag, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant, name="Alter Kunde")
+    anderer_kunde = await make_kunde(mandant=mandant, name="Neuer Kunde")
+    vertrag = await make_vertrag(mandant=mandant, kunde=kunde)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde, vertrag_id=vertrag.id)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"kunde_id": str(anderer_kunde.id)},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["vertrag_id"] is None
+
+
+@pytest.mark.asyncio
 async def test_status_change_erzeugt_event_und_setzt_abgeschlossen_am(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
@@ -147,6 +213,24 @@ async def test_status_change_erzeugt_event_und_setzt_abgeschlossen_am(
     status_events = [e for e in events.json() if e["event_type"] == "status_change"]
     assert len(status_events) == 1
     assert status_events[0]["payload"] == {"von": "neu", "nach": "abgeschlossen"}
+
+
+@pytest.mark.asyncio
+async def test_status_abgerechnet_kann_nicht_per_patch_gesetzt_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"status": "abgerechnet"},
+    )
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio

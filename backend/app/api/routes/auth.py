@@ -1,8 +1,9 @@
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 
 from app.api.deps import AuthContext, get_current_user
+from app.core.rate_limit import client_ip, login_account_limiter, login_ip_limiter
 from app.core.security import (
     TokenType,
     create_access_token,
@@ -19,8 +20,20 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/login", response_model=TokenPair)
-async def login(body: LoginRequest) -> TokenPair:
-    return await authenticate(body.email, body.password)
+async def login(body: LoginRequest, request: Request) -> TokenPair:
+    ip_key = client_ip(request)
+    account_key = body.email.strip().lower()
+    login_ip_limiter.check(ip_key)
+    login_account_limiter.check(account_key)
+    try:
+        result = await authenticate(body.email, body.password)
+    except HTTPException:
+        login_ip_limiter.record_failure(ip_key)
+        login_account_limiter.record_failure(account_key)
+        raise
+    login_ip_limiter.record_success(ip_key)
+    login_account_limiter.record_success(account_key)
+    return result
 
 
 @router.post("/refresh", response_model=TokenPair)

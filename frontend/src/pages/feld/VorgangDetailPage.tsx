@@ -21,7 +21,7 @@ import { MentionText } from "../../components/MentionText";
 import { SignaturePad } from "../../components/SignaturePad";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
-import { getOutboxItems, queueFoto, queueKommentar } from "../../offline/outbox";
+import { discardOutboxItem, getOutboxItems, queueFoto, queueKommentar, queueStatusChange } from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
@@ -137,15 +137,37 @@ function EventBubble({
   );
 }
 
-function OutboxBubble({ item }: { item: OutboxItem }) {
+function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clientUuid: string) => void }) {
   return (
-    <div className="mb-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-      <div className="mb-1 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
-        <span>🕘</span>
-        <span>Nicht synchronisiert</span>
+    <div
+      className={`mb-3 rounded-lg border border-dashed p-3 ${
+        item.failed
+          ? "border-red-300 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
+          : "border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+      }`}
+    >
+      <div className="mb-1 flex items-center justify-between gap-1 text-xs">
+        {item.failed ? (
+          <span className="text-red-500 dark:text-red-400">⚠ Vom Server abgelehnt{item.errorMessage ? `: ${item.errorMessage}` : ""}</span>
+        ) : (
+          <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
+            <span>🕘</span>
+            <span>Nicht synchronisiert</span>
+          </span>
+        )}
+        {item.failed && (
+          <button
+            onClick={() => onDiscard(item.client_uuid)}
+            className="btn-touch text-red-500 underline dark:text-red-400"
+          >
+            Verwerfen
+          </button>
+        )}
       </div>
       {item.kind === "foto" ? (
         <p className="text-sm text-slate-600 dark:text-slate-300">📷 Foto wartet auf Synchronisierung</p>
+      ) : item.kind === "status" ? (
+        <p className="text-sm text-slate-600 dark:text-slate-300">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
         <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{item.body}</p>
       )}
@@ -365,10 +387,19 @@ export function VorgangDetailPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: (status: VorgangStatus) => vorgaengeApi.update(id!, { status }),
+    mutationFn: async (status: VorgangStatus) => {
+      try {
+        return await vorgaengeApi.update(id!, { status });
+      } catch (err) {
+        if (err instanceof ApiError) throw err; // echte Ablehnung, nicht queuen
+        await queueStatusChange(id!, status); // Netzwerkfehler -> offline
+        return null;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
   });
 
@@ -397,11 +428,19 @@ export function VorgangDetailPage() {
 
   const fotoMutation = useMutation({
     mutationFn: async (file: File) => {
+      const clientUuid = crypto.randomUUID();
       try {
-        return await vorgangEventsApi.uploadFoto(id!, file, file.name, kundensichtbar);
+        return await vorgangEventsApi.uploadFoto(
+          id!,
+          file,
+          file.name,
+          kundensichtbar,
+          undefined,
+          clientUuid,
+        );
       } catch (err) {
         if (err instanceof ApiError) throw err;
-        await queueFoto(id!, file, file.name, kundensichtbar);
+        await queueFoto(id!, file, file.name, kundensichtbar, clientUuid);
         return null;
       }
     },
@@ -983,7 +1022,16 @@ export function VorgangDetailPage() {
             {/* Noch nicht synchronisierte Einträge sind immer die neuesten
                 -- stehen deshalb vor den bereits synchronisierten Events. */}
             {!kundenansicht &&
-              eigeneOutboxItems.map((item) => <OutboxBubble key={item.client_uuid} item={item} />)}
+              eigeneOutboxItems.map((item) => (
+                <OutboxBubble
+                  key={item.client_uuid}
+                  item={item}
+                  onDiscard={async (clientUuid) => {
+                    await discardOutboxItem(clientUuid);
+                    queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+                  }}
+                />
+              ))}
             {sichtbareEvents.map((event) => (
               <EventBubble key={event.id} event={event} onHighlight={(eventId) => highlightMutation.mutate(eventId)} />
             ))}

@@ -1,4 +1,4 @@
-import { apiFetch, apiFetchForm } from "../api/client";
+import { apiFetch, apiFetchForm, ApiError } from "../api/client";
 import type { Vorgang, VorgangEvent } from "../types";
 import { getDb, type OutboxItem } from "./db";
 
@@ -39,8 +39,8 @@ export async function queueFoto(
   file: Blob,
   fotoName: string,
   kundensichtbar: boolean,
+  clientUuid: string = crypto.randomUUID(),
 ): Promise<string> {
-  const clientUuid = crypto.randomUUID();
   const db = await getDb();
   await db.put("outbox", {
     client_uuid: clientUuid,
@@ -49,6 +49,20 @@ export async function queueFoto(
     fotoBlob: file,
     fotoName,
     kundensichtbar,
+    created_at: new Date().toISOString(),
+  });
+  notify();
+  return clientUuid;
+}
+
+export async function queueStatusChange(vorgangId: string, status: string): Promise<string> {
+  const clientUuid = crypto.randomUUID();
+  const db = await getDb();
+  await db.put("outbox", {
+    client_uuid: clientUuid,
+    vorgang_id: vorgangId,
+    kind: "status",
+    statusValue: status,
     created_at: new Date().toISOString(),
   });
   notify();
@@ -94,24 +108,41 @@ export async function getOutboxCount(): Promise<number> {
 
 let syncing = false;
 
-/** Sends queued items one at a time, oldest first, in original order --
- * stops at the first failure (network drop mid-sync) rather than
- * reshuffling later items ahead of an earlier one that's still stuck. */
+/** Discards a permanently failed item (the server rejected it outright, a
+ * retry would just fail again the same way) so it stops taking up space in
+ * the queue and the "nicht synchronisiert" list. */
+export async function discardOutboxItem(clientUuid: string): Promise<void> {
+  const db = await getDb();
+  await db.delete("outbox", clientUuid);
+  notify();
+}
+
+/** Sends queued items one at a time, oldest first, in original order.
+ * A transient failure (network drop, timeout, 5xx) stops the whole run --
+ * the same item is retried first on the next sync, preserving order. A
+ * permanent rejection (4xx: the server looked at the request and said no)
+ * would just fail again identically, so it's marked failed and left for the
+ * user to see/discard instead of blocking every later item behind it. */
 export async function syncOutbox(): Promise<void> {
   if (syncing || !navigator.onLine) return;
   syncing = true;
   try {
     const db = await getDb();
-    const items = (await db.getAll("outbox")).sort((a, b) =>
-      a.created_at < b.created_at ? -1 : 1,
-    );
+    const items = (await db.getAll("outbox"))
+      .filter((i) => !i.failed)
+      .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
 
     for (const item of items) {
       try {
         await sendOutboxItem(item);
         await db.delete("outbox", item.client_uuid);
         notify();
-      } catch {
+      } catch (err) {
+        if (err instanceof ApiError && err.status >= 400 && err.status < 500) {
+          await db.put("outbox", { ...item, failed: true, errorMessage: err.message });
+          notify();
+          continue;
+        }
         break;
       }
     }
@@ -136,6 +167,13 @@ async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang>
     });
   }
 
+  if (item.kind === "status") {
+    return apiFetch<Vorgang>(`/api/vorgaenge/${item.vorgang_id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: item.statusValue }),
+    });
+  }
+
   if (item.kind === "kommentar") {
     return apiFetch<VorgangEvent>(`/api/vorgaenge/${item.vorgang_id}/events`, {
       method: "POST",
@@ -151,5 +189,6 @@ async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang>
   const formData = new FormData();
   formData.append("file", item.fotoBlob!, item.fotoName ?? "foto.jpg");
   formData.append("kundensichtbar", String(item.kundensichtbar ?? false));
+  formData.append("client_uuid", item.client_uuid);
   return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${item.vorgang_id}/events/foto`, formData);
 }

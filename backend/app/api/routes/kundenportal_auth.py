@@ -1,12 +1,18 @@
 import logging
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db
 from app.core.config import get_settings
+from app.core.rate_limit import (
+    client_ip,
+    login_account_limiter,
+    login_ip_limiter,
+    password_reset_ip_limiter,
+)
 from app.core.security import (
     create_kundenportal_access_token,
     create_kundenportal_password_reset_token,
@@ -32,8 +38,20 @@ _logger = logging.getLogger("app.kundenportal")
 
 
 @router.post("/login", response_model=TokenPair)
-async def login(body: LoginRequest) -> TokenPair:
-    return await authenticate_kunde(body.email, body.password)
+async def login(body: LoginRequest, request: Request) -> TokenPair:
+    ip_key = client_ip(request)
+    account_key = f"portal:{body.email.strip().lower()}"
+    login_ip_limiter.check(ip_key)
+    login_account_limiter.check(account_key)
+    try:
+        result = await authenticate_kunde(body.email, body.password)
+    except HTTPException:
+        login_ip_limiter.record_failure(ip_key)
+        login_account_limiter.record_failure(account_key)
+        raise
+    login_ip_limiter.record_success(ip_key)
+    login_account_limiter.record_success(account_key)
+    return result
 
 
 @router.post("/refresh", response_model=TokenPair)
@@ -89,12 +107,19 @@ async def me(
 
 
 @router.post("/passwort-vergessen", status_code=status.HTTP_202_ACCEPTED)
-async def passwort_vergessen(body: KundenPasswortVergessenRequest) -> None:
+async def passwort_vergessen(body: KundenPasswortVergessenRequest, request: Request) -> None:
     """Antwortet immer mit 202, egal ob die E-Mail existiert, der Zugang
     aktiv ist, oder der Mandant ueberhaupt SMTP konfiguriert hat -- sonst
     liesse sich allein am Response-Status ablesen, ob eine E-Mail-Adresse
     im System bekannt ist (Enumeration-Schutz, dieselbe Ueberlegung wie das
-    404-statt-403 bei Fremdzugriff auf Vorgaenge/Angebote)."""
+    404-statt-403 bei Fremdzugriff auf Vorgaenge/Angebote). Der immer-gleiche
+    Status heisst aber auch: Rate-Limiting kann hier nicht an Erfolg/Fehlschlag
+    haengen, sondern zaehlt jeden Aufruf pro IP, um Massen-Mailversand zu
+    verhindern."""
+    ip_key = client_ip(request)
+    password_reset_ip_limiter.check(ip_key)
+    password_reset_ip_limiter.record_failure(ip_key)
+
     async with system_session() as session:
         result = await session.execute(
             select(KundenportalZugang).where(func.lower(KundenportalZugang.email) == body.email)
@@ -139,15 +164,20 @@ async def passwort_vergessen(body: KundenPasswortVergessenRequest) -> None:
 
 
 @router.post("/passwort-zuruecksetzen", status_code=status.HTTP_204_NO_CONTENT)
-async def passwort_zuruecksetzen(body: KundenPasswortResetRequest) -> None:
+async def passwort_zuruecksetzen(body: KundenPasswortResetRequest, request: Request) -> None:
+    ip_key = client_ip(request)
+    password_reset_ip_limiter.check(ip_key)
+
     try:
         payload = decode_token(body.token)
     except jwt.PyJWTError as exc:
+        password_reset_ip_limiter.record_failure(ip_key)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Reset-Link ist ungültig oder abgelaufen"
         ) from exc
 
     if payload.get("type") != "kundenportal_password_reset":
+        password_reset_ip_limiter.record_failure(ip_key)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Reset-Token")
 
     if len(body.new_password) < 10:
@@ -158,7 +188,9 @@ async def passwort_zuruecksetzen(body: KundenPasswortResetRequest) -> None:
     async with system_session() as session:
         zugang = await session.get(KundenportalZugang, payload["sub"])
         if zugang is None or not zugang.aktiv:
+            password_reset_ip_limiter.record_failure(ip_key)
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")
         zugang.password_hash = hash_password(body.new_password)
         await session.commit()
+    password_reset_ip_limiter.record_success(ip_key)
     return None

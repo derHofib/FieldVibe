@@ -136,13 +136,27 @@ async def create_event(
 async def upload_foto(
     vorgang_id: UUID,
     file: UploadFile,
+    response: Response,
     kundensichtbar: bool = Form(default=False),
     body: str | None = Form(default=None),
+    client_uuid: UUID | None = Form(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorgangEventRead:
     vorgang = await _require_own_vorgang(session, auth, vorgang_id)
     _require_offen(vorgang)
+
+    if client_uuid is not None:
+        # Dasselbe Idempotenz-Muster wie bei create_event: ein Offline-Sync-
+        # Retry desselben Fotos (Server hat vorher schon geantwortet, nur die
+        # Antwort ist nicht mehr angekommen) legt sonst ein Duplikat an.
+        existing = await session.execute(
+            select(VorgangEvent).where(VorgangEvent.client_uuid == client_uuid)
+        )
+        existing_event = existing.scalar_one_or_none()
+        if existing_event is not None:
+            response.status_code = status.HTTP_200_OK
+            return _to_read_model(existing_event)
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -179,9 +193,15 @@ async def upload_foto(
             "size": len(data),
         },
         kundensichtbar=kundensichtbar,
+        client_uuid=client_uuid,
     )
     session.add(event)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Event-Konflikt"
+        ) from exc
 
     await event_bus.publish(
         auth.mandant_id,

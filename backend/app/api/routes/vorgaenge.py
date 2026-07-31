@@ -85,11 +85,18 @@ async def _validate_references(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Anlage gehört nicht zum angegebenen Kunden",
             )
-    if body.vertrag_id is not None and await session.get(Vertrag, body.vertrag_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
-        )
+    if body.vertrag_id is not None:
+        vertrag = await session.get(Vertrag, body.vertrag_id)
+        if vertrag is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        if vertrag.kunde_id != body.kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Vertrag gehört nicht zum angegebenen Kunden",
+            )
     if body.parent_vorgang_id is not None and await session.get(Vorgang, body.parent_vorgang_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -285,6 +292,11 @@ async def update_vorgang(
             bestehende_anlage = await session.get(Anlage, vorgang.anlage_id)
             if bestehende_anlage is None or bestehende_anlage.kunde_id != neuer_kunde_id:
                 changes["anlage_id"] = None
+        # Dieselbe Ueberlegung fuer einen bestehenden Vertrag.
+        if "vertrag_id" not in changes and vorgang.vertrag_id is not None:
+            bestehender_vertrag = await session.get(Vertrag, vorgang.vertrag_id)
+            if bestehender_vertrag is None or bestehender_vertrag.kunde_id != neuer_kunde_id:
+                changes["vertrag_id"] = None
 
     if changes.get("anlage_id") is not None:
         anlage = await session.get(Anlage, changes["anlage_id"])
@@ -298,6 +310,20 @@ async def update_vorgang(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Anlage gehört nicht zum (neuen) Kunden dieses Vorgangs",
+            )
+
+    if changes.get("vertrag_id") is not None:
+        vertrag = await session.get(Vertrag, changes["vertrag_id"])
+        if vertrag is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        ziel_kunde_id = changes.get("kunde_id", vorgang.kunde_id)
+        if vertrag.kunde_id != ziel_kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Vertrag gehört nicht zum (neuen) Kunden dieses Vorgangs",
             )
 
     for field, value in changes.items():
