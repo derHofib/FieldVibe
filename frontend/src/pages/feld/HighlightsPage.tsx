@@ -21,24 +21,27 @@ export function HighlightsPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-slate-800">⭐ Highlights</h1>
-      <p className="text-sm text-slate-500">
+      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">⭐ Highlights</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         Markierte Fotos aus abgeschlossenen und laufenden Vorgängen – eine kleine Werkschau.
       </p>
 
       {isLoading ? (
-        <p className="text-center text-slate-500">Lädt…</p>
+        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
       ) : (highlights ?? []).length === 0 ? (
-        <p className="text-center text-sm text-slate-400">
+        <p className="text-center text-sm text-slate-400 dark:text-slate-500">
           Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit ⭐ markieren.
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {highlights!.map((h) => (
-            <div key={h.id} className="group relative overflow-hidden rounded-lg bg-white shadow-sm">
+            <div
+              key={h.id}
+              className="group relative overflow-hidden rounded-lg bg-white shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+            >
               <button
                 onClick={() => navigate(`/vorgaenge/${h.vorgang_id}`)}
                 className="btn-touch block w-full text-left"
@@ -51,10 +54,10 @@ export function HighlightsPage() {
                   />
                 )}
                 <div className="p-2">
-                  <div className="line-clamp-1 text-xs font-medium text-slate-700">
+                  <div className="line-clamp-1 text-xs font-medium text-slate-700 dark:text-slate-300">
                     {h.titel ?? h.vorgang_titel}
                   </div>
-                  <div className="text-xs text-slate-400">{h.vorgangsnummer}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">{h.vorgangsnummer}</div>
                 </div>
               </button>
               {(currentUser?.role === "mandant_admin" ||

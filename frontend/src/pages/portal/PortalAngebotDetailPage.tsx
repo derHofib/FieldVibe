@@ -36,57 +36,62 @@ export function PortalAngebotDetailPage() {
     onSuccess: openPdfBlob,
   });
 
-  if (!angebot) return <p className="text-center text-slate-500">Lädt…</p>;
+  if (!angebot) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm">
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="flex items-start justify-between">
-          <div className="text-xs text-slate-400">{angebot.angebotsnummer}</div>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
+          <div className="text-xs text-slate-400 dark:text-slate-500">{angebot.angebotsnummer}</div>
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             {STATUS_LABEL[angebot.status]}
           </span>
         </div>
         {angebot.gueltig_bis && (
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Gültig bis {new Date(angebot.gueltig_bis).toLocaleDateString("de-DE")}
           </p>
         )}
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch mt-3 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50"
+          className="btn-touch mt-3 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
         >
           📄 PDF anzeigen
         </button>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500">Positionen</h2>
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Positionen</h2>
         {angebot.positionen.length === 0 ? (
-          <p className="text-sm text-slate-400">Keine Positionen.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Positionen.</p>
         ) : (
           <div className="space-y-1.5">
             {angebot.positionen.map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm">
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60"
+              >
                 <div>
-                  <div className="text-slate-700">{p.beschreibung}</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-slate-700 dark:text-slate-300">{p.beschreibung}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
-                <div className="font-medium text-slate-700">{p.gesamt} EUR</div>
+                <div className="font-medium text-slate-700 dark:text-slate-300">{p.gesamt} EUR</div>
               </div>
             ))}
           </div>
         )}
-        <div className="mt-3 border-t border-slate-100 pt-2 text-right text-sm">
-          <div className="text-slate-500">Netto: {angebot.gesamt_netto} EUR</div>
-          <div className="font-semibold text-slate-800">Brutto: {angebot.gesamt_brutto} EUR</div>
+        <div className="mt-3 border-t border-slate-100 pt-2 text-right text-sm dark:border-slate-800">
+          <div className="text-slate-500 dark:text-slate-400">Netto: {angebot.gesamt_netto} EUR</div>
+          <div className="font-semibold text-slate-800 dark:text-slate-100">
+            Brutto: {angebot.gesamt_brutto} EUR
+          </div>
         </div>
       </div>
 
@@ -109,10 +114,14 @@ export function PortalAngebotDetailPage() {
         </div>
       )}
       {angebot.status === "angenommen" && (
-        <p className="text-center text-sm text-green-700">Sie haben dieses Angebot angenommen.</p>
+        <p className="text-center text-sm text-green-700 dark:text-green-400">
+          Sie haben dieses Angebot angenommen.
+        </p>
       )}
       {angebot.status === "abgelehnt" && (
-        <p className="text-center text-sm text-red-700">Sie haben dieses Angebot abgelehnt.</p>
+        <p className="text-center text-sm text-red-700 dark:text-red-400">
+          Sie haben dieses Angebot abgelehnt.
+        </p>
       )}
     </div>
   );

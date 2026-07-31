@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
+import { Starfield } from "../../components/Starfield";
 import { useKundenAuth } from "../../context/KundenAuthContext";
 
 export function PortalLoginPage() {
@@ -27,40 +28,51 @@ export function PortalLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-lg bg-white p-8 shadow-md">
-        <h1 className="mb-1 text-xl font-bold text-slate-800">Kundenportal</h1>
-        <p className="mb-6 text-sm text-slate-500">Anmeldung für Ihre Aufträge, Angebote und Rechnungen</p>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950">
+      <Starfield />
 
-        {error && <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+      <form
+        onSubmit={handleSubmit}
+        className="relative w-full max-w-sm rounded-xl border border-cyan-400/20 bg-slate-900/60 p-8 shadow-[0_0_45px_-10px_rgba(34,211,238,0.25)] backdrop-blur-xl"
+      >
+        <h1 className="mb-1 text-xl font-bold tracking-wide text-white">
+          Kunden<span className="text-cyan-400">portal</span>
+        </h1>
+        <p className="mb-6 text-sm text-slate-400">Anmeldung für Ihre Aufträge, Angebote und Rechnungen</p>
 
-        <label className="mb-1 block text-sm font-medium text-slate-700">E-Mail</label>
+        {error && (
+          <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+
+        <label className="mb-1 block text-sm font-medium text-slate-300">E-Mail</label>
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="btn-touch mb-4 w-full rounded-md border border-slate-300 px-3 py-2"
+          className="btn-touch mb-4 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-none focus:ring-1 focus:ring-cyan-400/60"
         />
 
-        <label className="mb-1 block text-sm font-medium text-slate-700">Passwort</label>
+        <label className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
         <input
           type="password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="btn-touch mb-6 w-full rounded-md border border-slate-300 px-3 py-2"
+          className="btn-touch mb-6 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-none focus:ring-1 focus:ring-cyan-400/60"
         />
 
         <button
           type="submit"
           disabled={submitting}
-          className="btn-touch w-full rounded-md bg-slate-900 px-3 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 font-medium text-white shadow-[0_0_20px_-5px_rgba(34,211,238,0.6)] hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50"
         >
           {submitting ? "Anmelden…" : "Anmelden"}
         </button>
 
-        <Link to="/portal/passwort-vergessen" className="mt-4 block text-center text-sm text-slate-500">
+        <Link to="/portal/passwort-vergessen" className="mt-4 block text-center text-sm text-slate-400 hover:text-slate-300">
           Passwort vergessen?
         </Link>
       </form>

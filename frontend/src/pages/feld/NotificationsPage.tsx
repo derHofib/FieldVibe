@@ -38,11 +38,11 @@ export function NotificationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800">Benachrichtigungen</h1>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Benachrichtigungen</h1>
         {notifications && notifications.some((n) => !n.gelesen_am) && (
           <button
             onClick={() => markAllReadMutation.mutate()}
-            className="btn-touch text-sm font-medium text-blue-700"
+            className="btn-touch text-sm font-medium text-blue-700 dark:text-blue-400"
           >
             Alle als gelesen markieren
           </button>
@@ -50,22 +50,22 @@ export function NotificationsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-slate-500">Lädt…</p>
+        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
       ) : !notifications || notifications.length === 0 ? (
-        <p className="text-center text-slate-500">Keine Benachrichtigungen.</p>
+        <p className="text-center text-slate-500 dark:text-slate-400">Keine Benachrichtigungen.</p>
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => (
             <button
               key={n.id}
               onClick={() => handleClick(n)}
-              className={`btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-sm ${
-                n.gelesen_am ? "bg-white" : "bg-blue-50"
+              className={`btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+                n.gelesen_am ? "bg-white dark:bg-slate-900" : "bg-blue-50 dark:bg-blue-500/10"
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-slate-800">{n.titel}</div>
-                <div className="text-xs text-slate-400">
+                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{n.titel}</div>
+                <div className="text-xs text-slate-400 dark:text-slate-500">
                   {new Date(n.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </div>
               </div>

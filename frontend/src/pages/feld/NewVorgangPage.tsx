@@ -169,30 +169,30 @@ export function NewVorgangPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800">Neuer Vorgang</h1>
+      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Neuer Vorgang</h1>
 
       <button
         onClick={() => setShowScanner(true)}
-        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-3 text-sm font-medium text-slate-700 shadow-sm"
+        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-3 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
       >
         📷 QR-Code an Anlage scannen
       </button>
-      {scanError && <p className="text-sm text-red-700">{scanError}</p>}
+      {scanError && <p className="text-sm text-red-700 dark:text-red-400">{scanError}</p>}
       {anlage && (
-        <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
+        <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-500/10 dark:text-blue-200">
           <span>
             Anlage erkannt: <strong>{anlage.bezeichnung}</strong>
           </span>
           <span className="flex gap-3">
             <button
               onClick={() => navigate(`/anlagen/${anlage.id}`)}
-              className="btn-touch text-xs text-blue-700 underline"
+              className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
             >
               ansehen
             </button>
             <button
               onClick={() => setAnlage(null)}
-              className="btn-touch text-xs text-blue-700 underline"
+              className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
             >
               entfernen
             </button>
@@ -204,22 +204,25 @@ export function NewVorgangPage() {
         <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
       )}
 
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
         Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
         sich automatisch, sobald wieder eine Verbindung besteht.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-3 rounded-lg bg-white p-4 shadow-sm">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+      >
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Kunde</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Kunde</label>
           <select
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
               setAnlage(null);
             }}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -232,7 +235,7 @@ export function NewVorgangPage() {
             <button
               type="button"
               onClick={() => setShowNewKunde(true)}
-              className="btn-touch mt-1 text-xs text-blue-700 underline"
+              className="btn-touch mt-1 text-xs text-blue-700 underline dark:text-blue-400"
             >
               + Neuen Kunden anlegen
             </button>
@@ -240,22 +243,22 @@ export function NewVorgangPage() {
         </div>
 
         {showNewKunde && (
-          <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+          <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
               <input
                 autoFocus
                 value={newKundeName}
                 onChange={(e) => setNewKundeName(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Typ (optional)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Typ (optional)</label>
               <select
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
                 <option value="">Keine Angabe</option>
                 {KUNDE_TYPEN.map((t) => (
@@ -265,13 +268,13 @@ export function NewVorgangPage() {
                 ))}
               </select>
             </div>
-            {newKundeError && <p className="text-sm text-red-700">{newKundeError}</p>}
+            {newKundeError && <p className="text-sm text-red-700 dark:text-red-400">{newKundeError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleCreateKunde}
                 disabled={createKundeMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 Kunde anlegen
               </button>
@@ -281,7 +284,7 @@ export function NewVorgangPage() {
                   setShowNewKunde(false);
                   setNewKundeError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700"
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
               >
                 Abbrechen
               </button>
@@ -291,13 +294,13 @@ export function NewVorgangPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Anlage (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Anlage (optional)</label>
             <select
               value={anlage?.id ?? ""}
               onChange={(e) =>
                 setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)
               }
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="">Keine Anlage</option>
               {anlagenListe?.map((a) => (
@@ -310,7 +313,7 @@ export function NewVorgangPage() {
               <button
                 type="button"
                 onClick={() => setShowNewAnlage(true)}
-                className="btn-touch mt-1 text-xs text-blue-700 underline"
+                className="btn-touch mt-1 text-xs text-blue-700 underline dark:text-blue-400"
               >
                 + Neue Anlage anlegen
               </button>
@@ -319,32 +322,32 @@ export function NewVorgangPage() {
         )}
 
         {showNewAnlage && (
-          <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+          <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Bezeichnung</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Bezeichnung</label>
               <input
                 autoFocus
                 value={newAnlageBezeichnung}
                 onChange={(e) => setNewAnlageBezeichnung(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Typ (optional)</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Typ (optional)</label>
               <input
                 value={newAnlageTyp}
                 onChange={(e) => setNewAnlageTyp(e.target.value)}
                 placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
-            {newAnlageError && <p className="text-sm text-red-700">{newAnlageError}</p>}
+            {newAnlageError && <p className="text-sm text-red-700 dark:text-red-400">{newAnlageError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleCreateAnlage}
                 disabled={createAnlageMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-slate-900 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 Anlage anlegen
               </button>
@@ -354,7 +357,7 @@ export function NewVorgangPage() {
                   setShowNewAnlage(false);
                   setNewAnlageError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700"
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
               >
                 Abbrechen
               </button>
@@ -363,32 +366,32 @@ export function NewVorgangPage() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Titel</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Titel</label>
           <input
             required
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Beschreibung</label>
           <textarea
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
             rows={3}
-            className="w-full resize-none rounded-md border border-slate-300 p-2"
+            className="w-full resize-none rounded-md border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Leistungstyp</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Leistungstyp</label>
             <select
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -398,11 +401,11 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Abrechnungsart</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Abrechnungsart</label>
             <select
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
@@ -413,12 +416,12 @@ export function NewVorgangPage() {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
 
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md bg-slate-900 py-2 font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white disabled:opacity-50"
         >
           Vorgang anlegen
         </button>

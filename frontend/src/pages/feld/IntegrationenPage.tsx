@@ -26,12 +26,14 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">SMTP (E-Mail-Versand)</span>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">SMTP (E-Mail-Versand)</span>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            integration.aktiv ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
+            integration.aktiv
+              ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
+              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -43,25 +45,25 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Benutzername"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
         <input
           value={fromAddress}
           onChange={(e) => setFromAddress(e.target.value)}
           placeholder="Absender-Adresse"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
       </div>
       <input
@@ -69,7 +71,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
       />
 
       <div className="flex gap-2">
@@ -81,14 +83,14 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -97,7 +99,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             if (window.confirm("SMTP-Integration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50"
+          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400"
         >
           Löschen
         </button>
@@ -151,23 +153,23 @@ export function IntegrationenPage() {
   });
 
   if (currentUser && currentUser.role !== "mandant_admin") return <Navigate to="/feed" replace />;
-  if (isLoading) return <p className="text-center text-slate-500">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-slate-800">🔌 Integrationen</h1>
+      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">🔌 Integrationen</h1>
 
       {einstellungen && (
-        <div className="rounded-lg bg-white p-4 shadow-sm">
-          <h2 className="mb-1 text-sm font-semibold text-slate-700">
+        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+          <h2 className="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
             Prüfzyklen-/Mahnwesen-Uhrzeit
           </h2>
-          <p className="mb-2 text-xs text-slate-500">
+          <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
             Uhrzeit (UTC), zu der der tägliche Hintergrund-Lauf für diesen Betrieb
             geprüfte/überfällige Vorgänge und Rechnungen bearbeitet.
           </p>
@@ -177,7 +179,7 @@ export function IntegrationenPage() {
               onChange={(e) =>
                 schedulerMutation.mutate(e.target.value === "" ? null : Number(e.target.value))
               }
-              className="btn-touch rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="btn-touch rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="">Standard ({einstellungen.effektive_scheduler_stunde_utc.toString().padStart(2, "0")}:00 UTC)</option>
               {Array.from({ length: 24 }, (_, h) => (
@@ -186,12 +188,14 @@ export function IntegrationenPage() {
                 </option>
               ))}
             </select>
-            {schedulerMutation.isPending && <span className="text-xs text-slate-400">Speichert…</span>}
+            {schedulerMutation.isPending && (
+              <span className="text-xs text-slate-400 dark:text-slate-500">Speichert…</span>
+            )}
           </div>
         </div>
       )}
 
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-500 dark:text-slate-400">
         SMTP wird für den "Passwort vergessen"-Link im Kundenportal genutzt. Ohne
         konfiguriertes SMTP kann ein Mitarbeiter das Passwort eines Kunden weiterhin
         direkt über den Kunden setzen.
@@ -200,31 +204,31 @@ export function IntegrationenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm">
+        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="Host"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
               placeholder="Port"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <input
               value={user}
               onChange={(e) => setUser(e.target.value)}
               placeholder="Benutzername"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <input
               value={fromAddress}
               onChange={(e) => setFromAddress(e.target.value)}
               placeholder="Absender-Adresse"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <input
@@ -232,12 +236,12 @@ export function IntegrationenPage() {
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             SMTP einrichten
           </button>
@@ -245,7 +249,7 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
           + SMTP einrichten
         </button>
