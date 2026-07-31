@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, inventurzyklenApi, pruefzyklenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { formatStundenAlsHHMM } from "../../utils/duration";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "bg-blue-100 text-blue-800",
@@ -144,7 +145,7 @@ export function AnlageProfilePage() {
           ))}
         </div>
         <p className="mt-2 text-sm text-slate-600">
-          Erfasste Zeit gesamt: <span className="font-medium">{profil.zeiterfassung_stunden_gesamt} Std.</span>
+          Erfasste Zeit gesamt: <span className="font-medium">{formatStundenAlsHHMM(Number(profil.zeiterfassung_stunden_gesamt))} Std.</span>
         </p>
       </div>
 

@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { exportApi, insightsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
+import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { VorgangStatus } from "../../types";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
@@ -102,7 +103,7 @@ export function InsightsPage() {
             {insights.techniker_auslastung.map((t) => (
               <div key={t.techniker_id} className="flex items-center justify-between text-sm">
                 <span className="text-slate-700">{t.name}</span>
-                <span className="font-medium text-slate-800">{t.stunden_diese_woche} Std.</span>
+                <span className="font-medium text-slate-800">{formatStundenAlsHHMM(Number(t.stunden_diese_woche))} Std.</span>
               </div>
             ))}
           </div>

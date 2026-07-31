@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { formatStundenAlsHHMM } from "../../utils/duration";
 
 function montagDerWoche(datum: Date): Date {
   const tag = datum.getDay();
@@ -99,19 +100,19 @@ export function StatistikPage() {
         <div className="grid grid-cols-3 gap-2">
           <div className="rounded-lg bg-white p-3 text-center shadow-sm">
             <div className="text-xl font-bold text-slate-800">
-              {statistik.wochenstunden.replace(".", ",")}
+              {formatStundenAlsHHMM(Number(statistik.wochenstunden))}
             </div>
             <div className="text-xs text-slate-500">Std. diese Woche</div>
           </div>
           <div className="rounded-lg bg-white p-3 text-center shadow-sm">
             <div className="text-xl font-bold text-slate-800">
-              {statistik.monatsstunden.replace(".", ",")}
+              {formatStundenAlsHHMM(Number(statistik.monatsstunden))}
             </div>
             <div className="text-xs text-slate-500">Std. dieser Monat</div>
           </div>
           <div className="rounded-lg bg-white p-3 text-center shadow-sm">
             <div className="text-xl font-bold text-slate-800">
-              {statistik.jahresstunden.replace(".", ",")}
+              {formatStundenAlsHHMM(Number(statistik.jahresstunden))}
             </div>
             <div className="text-xs text-slate-500">Std. dieses Jahr</div>
           </div>
@@ -161,7 +162,7 @@ export function StatistikPage() {
                     {e.taetigkeit && ` · ${e.taetigkeit}`}
                   </span>
                   <span className="shrink-0 font-medium text-slate-700">
-                    {formatDauer(e.start_at, e.ende_at).toFixed(1).replace(".", ",")} Std.
+                    {formatStundenAlsHHMM(formatDauer(e.start_at, e.ende_at))} Std.
                   </span>
                 </button>
               ))}
@@ -170,7 +171,7 @@ export function StatistikPage() {
 
           <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2">
             <span className="text-sm font-semibold text-slate-700">
-              Wochensumme: {wochensumme.toFixed(1).replace(".", ",")} Std.
+              Wochensumme: {formatStundenAlsHHMM(wochensumme)} Std.
             </span>
             <button
               onClick={exportieren}

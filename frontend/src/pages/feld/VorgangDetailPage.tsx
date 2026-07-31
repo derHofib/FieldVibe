@@ -22,6 +22,7 @@ import { SignaturePad } from "../../components/SignaturePad";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
 import { getOutboxItems, queueFoto, queueKommentar } from "../../offline/outbox";
+import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
 import type { MangelSchweregrad, MangelStatus, TerminWarnung, VorgangEvent, VorgangStatus } from "../../types";
@@ -452,7 +453,7 @@ export function VorgangDetailPage() {
     if (!e.ende_at) return summe;
     return summe + (new Date(e.ende_at).getTime() - new Date(e.start_at).getTime()) / 1000;
   }, 0);
-  const gesamtStunden = (gesamtSekunden / 3600).toFixed(1);
+  const gesamtStunden = formatSekundenAlsHHMM(gesamtSekunden);
 
   const timerLaeuftHier = laufenderTimer && laufenderTimer.vorgang_id === id;
   const timerLaeuftAnderswo = laufenderTimer && laufenderTimer.vorgang_id !== id;
@@ -585,7 +586,7 @@ export function VorgangDetailPage() {
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500">Arbeitszeit</h2>
           <span className="text-sm font-medium text-slate-700">
-            Bisher {gesamtStunden.replace(".", ",")} Std.
+            Bisher {gesamtStunden} Std.
           </span>
         </div>
         {timerLaeuftHier ? (
@@ -632,11 +633,8 @@ export function VorgangDetailPage() {
               .filter((e) => e.ende_at)
               .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
               .map((e) => {
-                const dauerStunden = (
-                  (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) /
-                  1000 /
-                  3600
-                ).toFixed(1);
+                const dauerSekunden =
+                  (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
                 const techniker = users?.find((u) => u.id === e.techniker_id);
                 return (
                   <div key={e.id} className="flex items-center justify-between text-xs text-slate-500">
@@ -647,7 +645,7 @@ export function VorgangDetailPage() {
                       {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                     </span>
                     <span className="shrink-0 font-medium text-slate-600">
-                      {dauerStunden.replace(".", ",")} Std.
+                      {formatSekundenAlsHHMM(dauerSekunden)} Std.
                     </span>
                   </div>
                 );
