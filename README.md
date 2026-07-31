@@ -1,4 +1,4 @@
-# SocialCRM
+# FieldVibe
 
 Mandantenfähiges Auftragsmanagement- und CRM-System für einen
 Elektro-Handwerksbetrieb: ein streng strukturiertes fachliches Datenmodell

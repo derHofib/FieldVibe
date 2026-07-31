@@ -14,8 +14,8 @@ export default defineConfig({
       // Offline-Outbox (src/offline/), which caches exactly what the spec
       // calls for instead of blanket-caching arbitrary API GETs.
       manifest: {
-        name: "SocialCRM",
-        short_name: "SocialCRM",
+        name: "FieldVibe",
+        short_name: "FieldVibe",
         description: "Auftragsmanagement für den Elektro-Handwerksbetrieb",
         theme_color: "#0f172a",
         background_color: "#0f172a",

@@ -15,7 +15,7 @@ export function Layout() {
     <div className="min-h-screen">
       <div className="flex min-h-screen">
         <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-4">
-          <div className="mb-8 text-lg font-bold text-slate-800">SocialCRM</div>
+          <div className="mb-8 text-lg font-bold text-slate-800">FieldVibe</div>
           <nav className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => (
               <NavLink

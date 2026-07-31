@@ -44,7 +44,7 @@ async def create_super_admin(email: str, name: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="SocialCRM Betriebs-CLI")
+    parser = argparse.ArgumentParser(description="FieldVibe Betriebs-CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     create_parser = subparsers.add_parser(

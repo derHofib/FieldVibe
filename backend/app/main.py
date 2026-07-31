@@ -55,7 +55,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="SocialCRM API",
+    title="FieldVibe API",
     description=(
         "Mandantenfähiges Auftragsmanagement- und CRM-System für den "
         "Elektro-Handwerksbetrieb – Phase 7: Ausbau."

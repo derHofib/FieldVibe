@@ -32,7 +32,7 @@ export function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-lg bg-white p-8 shadow-md"
       >
-        <h1 className="mb-6 text-xl font-bold text-slate-800">SocialCRM Anmeldung</h1>
+        <h1 className="mb-6 text-xl font-bold text-slate-800">FieldVibe Anmeldung</h1>
 
         {error && (
           <div className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
