@@ -229,7 +229,7 @@ fi
 
 # --- 11. Backup-Cron ----------------------------------------------------------
 BACKUP_DIR_VAL="$(get_env BACKUP_DIR)"
-mkdir -p "${BACKUP_DIR_VAL:-/opt/socialcrm-backups}"
+mkdir -p "${BACKUP_DIR_VAL:-/opt/fieldvibe-backups}"
 
 if ! command -v crontab &>/dev/null; then
   if [[ $IS_ROOT -eq 1 ]] && command -v apt-get &>/dev/null; then
@@ -241,7 +241,7 @@ if ! command -v crontab &>/dev/null; then
   fi
 fi
 
-CRON_LINE="30 2 * * * ${REPO_DIR}/scripts/backup.sh >> /var/log/socialcrm-backup.log 2>&1"
+CRON_LINE="30 2 * * * ${REPO_DIR}/scripts/backup.sh >> /var/log/fieldvibe-backup.log 2>&1"
 if command -v crontab &>/dev/null; then
   if ! crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup.sh"; then
     log "Richte tägliches Backup per Cron ein (02:30 Uhr)..."
@@ -259,7 +259,7 @@ if [[ "$DEPLOY_MODE" == "domain" ]]; then
 
   App:       https://$(get_env DOMAIN_APP)
   API-Docs:  https://$(get_env DOMAIN_API)/docs
-  Backups:   ${BACKUP_DIR_VAL:-/opt/socialcrm-backups} (täglich 02:30 Uhr)
+  Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
 
   Falls das Zertifikat noch nicht bereit ist:
     ${COMPOSE[*]} logs -f caddy
@@ -271,7 +271,7 @@ else
 
   App:       http://$(get_env DEPLOY_IP):4173
   API-Docs:  http://$(get_env DEPLOY_IP):8000/docs
-  Backups:   ${BACKUP_DIR_VAL:-/opt/socialcrm-backups} (täglich 02:30 Uhr)
+  Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
 
   ⚠ Unverschlüsselt (kein HTTPS) -- nur für Tests/internes Netz gedacht.
     Für echten Betrieb später auf eine Domain umsteigen: die Zeile

@@ -3,11 +3,11 @@ import uuid
 
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql+asyncpg://socialcrm:socialcrm@localhost:5432/socialcrm_test",
+    "postgresql+asyncpg://fieldvibe:fieldvibe@localhost:5432/fieldvibe_test",
 )
 os.environ.setdefault(
     "DATABASE_URL_SYNC",
-    "postgresql+psycopg2://socialcrm:socialcrm@localhost:5432/socialcrm_test",
+    "postgresql+psycopg2://fieldvibe:fieldvibe@localhost:5432/fieldvibe_test",
 )
 os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
 # Fixed port (not dynamically chosen) because app.services.storage_service
@@ -17,7 +17,7 @@ os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
 # rather than discover and propagate one after the fact.
 os.environ.setdefault("S3_ENDPOINT_URL", "http://localhost:9199")
 os.environ.setdefault("S3_PUBLIC_URL_BASE", "http://localhost:9199")
-os.environ.setdefault("S3_BUCKET_FOTOS", "socialcrm-fotos-test")
+os.environ.setdefault("S3_BUCKET_FOTOS", "fieldvibe-fotos-test")
 
 import pytest
 import pytest_asyncio

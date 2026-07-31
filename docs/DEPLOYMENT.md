@@ -168,14 +168,14 @@ einloggen und den ersten echten Mandanten anlegen.
 
 `scripts/backup.sh` sichert täglich per Host-Cron einen `pg_dump` der
 Datenbank und ein Tar-Archiv der MinIO-Objektdaten nach `$BACKUP_DIR`
-(Default aus `.env`: `/opt/socialcrm-backups`), mit Rotation nach
+(Default aus `.env`: `/opt/fieldvibe-backups`), mit Rotation nach
 `BACKUP_RETENTION_DAYS` (Default 14).
 
 ```bash
-mkdir -p /opt/socialcrm-backups
+mkdir -p /opt/fieldvibe-backups
 crontab -e
 # Taeglich 02:30:
-30 2 * * * /pfad/zu/SocialCRM/scripts/backup.sh >> /var/log/socialcrm-backup.log 2>&1
+30 2 * * * /pfad/zu/SocialCRM/scripts/backup.sh >> /var/log/fieldvibe-backup.log 2>&1
 ```
 
 Wiederherstellen:

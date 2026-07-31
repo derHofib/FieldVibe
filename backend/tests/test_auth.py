@@ -22,20 +22,20 @@ async def test_login_success(client, make_mandant, make_user):
 async def test_login_ignores_email_case(client, make_mandant, make_user):
     mandant = await make_mandant()
     user = await make_user(
-        mandant=mandant, role="mandant_admin", password="korrekt-123", email="Dennis@SocialCRM.de"
+        mandant=mandant, role="mandant_admin", password="korrekt-123", email="Dennis@FieldVibe.de"
     )
 
     resp = await client.post(
-        "/api/auth/login", json={"email": "dennis@socialcrm.de", "password": "korrekt-123"}
+        "/api/auth/login", json={"email": "dennis@fieldvibe.de", "password": "korrekt-123"}
     )
     assert resp.status_code == 200
 
     resp2 = await client.post(
-        "/api/auth/login", json={"email": "DENNIS@SOCIALCRM.DE", "password": "korrekt-123"}
+        "/api/auth/login", json={"email": "DENNIS@FIELDVIBE.DE", "password": "korrekt-123"}
     )
     assert resp2.status_code == 200
     assert resp2.json()["access_token"]
-    assert user.email == "Dennis@SocialCRM.de"
+    assert user.email == "Dennis@FieldVibe.de"
 
 
 @pytest.mark.asyncio

@@ -3,7 +3,7 @@ export interface KundenTokens {
   refreshToken: string;
 }
 
-const STORAGE_KEY = "socialcrm_kundenportal_auth_v1";
+const STORAGE_KEY = "fieldvibe_kundenportal_auth_v1";
 type Listener = () => void;
 
 function load(): KundenTokens | null {

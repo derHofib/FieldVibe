@@ -15,7 +15,7 @@ interface AuthState {
   impersonation: ImpersonationSession | null;
 }
 
-const STORAGE_KEY = "socialcrm_auth_v1";
+const STORAGE_KEY = "fieldvibe_auth_v1";
 type Listener = () => void;
 
 function load(): AuthState {

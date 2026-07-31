@@ -26,7 +26,7 @@ export interface OutboxItem {
   vorgangLeistungstyp?: string;
 }
 
-interface SocialCrmDB extends DBSchema {
+interface FieldVibeDB extends DBSchema {
   feed: { key: string; value: FeedCard };
   vorgang_events: { key: number; value: VorgangEvent; indexes: { "by-vorgang": string } };
   kunden: { key: string; value: Kunde };
@@ -34,11 +34,11 @@ interface SocialCrmDB extends DBSchema {
   outbox: { key: string; value: OutboxItem };
 }
 
-let dbPromise: Promise<IDBPDatabase<SocialCrmDB>> | null = null;
+let dbPromise: Promise<IDBPDatabase<FieldVibeDB>> | null = null;
 
-export function getDb(): Promise<IDBPDatabase<SocialCrmDB>> {
+export function getDb(): Promise<IDBPDatabase<FieldVibeDB>> {
   if (!dbPromise) {
-    dbPromise = openDB<SocialCrmDB>("socialcrm-offline", 1, {
+    dbPromise = openDB<FieldVibeDB>("fieldvibe-offline", 1, {
       upgrade(db) {
         db.createObjectStore("feed", { keyPath: "id" });
         const events = db.createObjectStore("vorgang_events", { keyPath: "id" });

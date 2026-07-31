@@ -7,7 +7,7 @@ set -euo pipefail
 # ein einfacher Cron-Aufruf reicht (siehe docs/DEPLOYMENT.md).
 #
 # Beispiel-Crontab-Eintrag (taeglich 02:30):
-#   30 2 * * * /pfad/zu/SocialCRM/scripts/backup.sh >> /var/log/socialcrm-backup.log 2>&1
+#   30 2 * * * /pfad/zu/SocialCRM/scripts/backup.sh >> /var/log/fieldvibe-backup.log 2>&1
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"

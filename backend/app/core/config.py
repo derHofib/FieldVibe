@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     database_url: str = (
-        "postgresql+asyncpg://socialcrm:socialcrm@localhost:5432/socialcrm"
+        "postgresql+asyncpg://fieldvibe:fieldvibe@localhost:5432/fieldvibe"
     )
     database_url_sync: str = (
-        "postgresql+psycopg2://socialcrm:socialcrm@localhost:5432/socialcrm"
+        "postgresql+psycopg2://fieldvibe:fieldvibe@localhost:5432/fieldvibe"
     )
 
     jwt_secret: str = "change-me-in-env"
@@ -32,10 +32,10 @@ class Settings(BaseSettings):
     # unterschiedlichen, für den jeweiligen Aufrufer erreichbaren Hosts.
     s3_endpoint_url: str = "http://localhost:9000"
     s3_public_url_base: str = "http://localhost:9000"
-    s3_access_key: str = "socialcrm"
+    s3_access_key: str = "fieldvibe"
     s3_secret_key: str = "changeme"
     s3_region: str = "us-east-1"
-    s3_bucket_fotos: str = "socialcrm-fotos"
+    s3_bucket_fotos: str = "fieldvibe-fotos"
 
     # --- Dispo (Abschnitt 4.5): Fahrzeit-Heuristik per Luftlinie ---------
     # Kein Routendienst -- eine grobe Schaetzung (Haversine-Distanz durch

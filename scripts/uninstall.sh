@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Entfernt eine SocialCRM-Installation vollstaendig: alle Container, die
+# Entfernt eine FieldVibe-Installation vollstaendig: alle Container, die
 # Docker-Volumes (Postgres-Datenbank UND MinIO-Fotos!), die gebauten
 # Docker-Images und den taeglichen Backup-Cron-Eintrag aus scripts/deploy.sh.
 # Macht KEINE Sicherung vorher -- dafuer ist scripts/backup.sh da, nicht
@@ -48,7 +48,7 @@ done
 # (Domain/TLS oder Nur-IP) zuverlaessig gefunden, egal welche gerade lief.
 COMPOSE=(docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.ip.yml)
 
-BACKUP_DIR_VAL="/opt/socialcrm-backups"
+BACKUP_DIR_VAL="/opt/fieldvibe-backups"
 if [[ -f .env ]]; then
   set -a
   source .env
@@ -58,7 +58,7 @@ fi
 
 echo
 echo "Das wird jetzt UNWIDERRUFLICH gelöscht:"
-echo "  - Alle laufenden SocialCRM-Container"
+echo "  - Alle laufenden FieldVibe-Container"
 echo "  - Die Postgres-Datenbank (alle Mandanten, Kunden, Vorgänge, Rechnungen, ...)"
 echo "  - Alle in MinIO gespeicherten Fotos"
 [[ $KEEP_IMAGES -eq 0 ]] && echo "  - Die gebauten Docker-Images (Backend/Frontend)"

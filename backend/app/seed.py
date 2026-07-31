@@ -24,7 +24,7 @@ from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 
-SUPER_ADMIN_EMAIL = os.environ.get("SEED_SUPER_ADMIN_EMAIL", "superadmin@socialcrm.example.de")
+SUPER_ADMIN_EMAIL = os.environ.get("SEED_SUPER_ADMIN_EMAIL", "superadmin@fieldvibe.example.de")
 SUPER_ADMIN_PASSWORD = os.environ.get("SEED_SUPER_ADMIN_PASSWORD", "SuperAdmin123!")
 DEFAULT_PASSWORD = os.environ.get("SEED_USER_PASSWORD", "Handwerk123!")
 
