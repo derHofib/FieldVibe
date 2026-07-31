@@ -88,11 +88,13 @@ function EventBubble({
   }
 
   return (
-    <div className="mb-3 rounded-lg bg-white p-3 shadow-sm">
-      <div className="mb-1 flex items-center justify-between text-xs text-slate-400">
+    <div className="mb-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="mb-1 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
         <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
         {event.kundensichtbar && (
-          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-600">Kundensichtbar</span>
+          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
+            Kundensichtbar
+          </span>
         )}
       </div>
       {event.event_type === "foto" && event.foto_url && (
@@ -106,7 +108,7 @@ function EventBubble({
           </a>
           <button
             onClick={() => onHighlight(event.id)}
-            className="btn-touch mb-2 text-xs font-medium text-amber-600"
+            className="btn-touch mb-2 text-xs font-medium text-amber-600 dark:text-amber-400"
           >
             ⭐ Als Highlight markieren
           </button>
@@ -120,14 +122,14 @@ function EventBubble({
             className="max-h-32 rounded-md border border-slate-200 bg-white"
           />
           {typeof event.payload.unterzeichner_name === "string" && (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Unterschrieben von: {event.payload.unterzeichner_name}
             </p>
           )}
         </div>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap text-sm text-slate-800">
+        <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-100">
           <MentionText text={event.body} />
         </p>
       )}
@@ -137,15 +139,15 @@ function EventBubble({
 
 function OutboxBubble({ item }: { item: OutboxItem }) {
   return (
-    <div className="mb-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3">
-      <div className="mb-1 flex items-center gap-1 text-xs text-slate-400">
+    <div className="mb-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
+      <div className="mb-1 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
         <span>🕘</span>
         <span>Nicht synchronisiert</span>
       </div>
       {item.kind === "foto" ? (
-        <p className="text-sm text-slate-600">📷 Foto wartet auf Synchronisierung</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">📷 Foto wartet auf Synchronisierung</p>
       ) : (
-        <p className="whitespace-pre-wrap text-sm text-slate-700">{item.body}</p>
+        <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{item.body}</p>
       )}
     </div>
   );
@@ -460,30 +462,30 @@ export function VorgangDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <div className="text-xs text-slate-400">{vorgang.vorgangsnummer}</div>
-        <h1 className="text-lg font-bold text-slate-800">{vorgang.titel}</h1>
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="text-xs text-slate-400 dark:text-slate-500">{vorgang.vorgangsnummer}</div>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{vorgang.titel}</h1>
 
         <div className="mt-1 flex items-center justify-between">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
             {kunde && (
               <button
                 onClick={() => navigate(`/kunden/${kunde.id}`)}
-                className="text-blue-700 underline-offset-2 hover:underline"
+                className="text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
               >
                 {kunde.name}
               </button>
             )}
             {anlage && (
               <>
-                <span className="text-slate-300">·</span>
+                <span className="text-slate-300 dark:text-slate-600">·</span>
                 <button
                   onClick={() => navigate(`/anlagen/${anlage.id}`)}
-                  className="text-blue-700 underline-offset-2 hover:underline"
+                  className="text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
                 >
                   {anlage.bezeichnung}
                 </button>
@@ -498,7 +500,7 @@ export function VorgangDetailPage() {
                 setZuordnungError(null);
                 setEditingZuordnung(true);
               }}
-              className="btn-touch text-xs font-medium text-blue-700"
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
             >
               Bearbeiten
             </button>
@@ -506,16 +508,16 @@ export function VorgangDetailPage() {
         </div>
 
         {editingZuordnung && (
-          <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3">
+          <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Kunde</label>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Kunde</label>
               <select
                 value={editKundeId}
                 onChange={(e) => {
                   setEditKundeId(e.target.value);
                   setEditAnlageId("");
                 }}
-                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
                 {alleKunden?.map((k) => (
                   <option key={k.id} value={k.id}>
@@ -525,11 +527,13 @@ export function VorgangDetailPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">Anlage (optional)</label>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                Anlage (optional)
+              </label>
               <select
                 value={editAnlageId}
                 onChange={(e) => setEditAnlageId(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
                 <option value="">Keine Anlage</option>
                 {anlagenFuerEditKunde?.map((a) => (
@@ -539,12 +543,12 @@ export function VorgangDetailPage() {
                 ))}
               </select>
             </div>
-            {zuordnungError && <p className="text-xs text-red-700">{zuordnungError}</p>}
+            {zuordnungError && <p className="text-xs text-red-700 dark:text-red-400">{zuordnungError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={() => zuordnungMutation.mutate()}
                 disabled={!editKundeId || zuordnungMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-slate-900 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Speichern
               </button>
@@ -553,7 +557,7 @@ export function VorgangDetailPage() {
                   setEditingZuordnung(false);
                   setZuordnungError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700"
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
               >
                 Abbrechen
               </button>
@@ -561,14 +565,16 @@ export function VorgangDetailPage() {
           </div>
         )}
 
-        {vorgang.beschreibung && <p className="mt-2 text-sm text-slate-600">{vorgang.beschreibung}</p>}
+        {vorgang.beschreibung && (
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{vorgang.beschreibung}</p>
+        )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="text-sm text-slate-500">Status:</label>
+          <label className="text-sm text-slate-500 dark:text-slate-400">Status:</label>
           <select
             value={vorgang.status}
             onChange={(e) => statusMutation.mutate(e.target.value as VorgangStatus)}
-            className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm"
+            className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
@@ -576,22 +582,22 @@ export function VorgangDetailPage() {
               </option>
             ))}
           </select>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             Priorität {vorgang.prioritaet}
           </span>
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm">
+      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500">Arbeitszeit</h2>
-          <span className="text-sm font-medium text-slate-700">
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Arbeitszeit</h2>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Bisher {gesamtStunden} Std.
           </span>
         </div>
         {timerLaeuftHier ? (
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <span className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
               <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
               Zeit läuft seit{" "}
               {new Date(laufenderTimer.start_at).toLocaleTimeString("de-DE", {
@@ -614,13 +620,13 @@ export function VorgangDetailPage() {
               value={taetigkeit}
               onChange={(e) => setTaetigkeit(e.target.value)}
               placeholder="Tätigkeit (optional)"
-              className="btn-touch flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="btn-touch flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <button
               onClick={() => startTimerMutation.mutate()}
               disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
               title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
-              className="btn-touch shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Zeit starten
             </button>
@@ -628,7 +634,7 @@ export function VorgangDetailPage() {
         )}
 
         {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2">
+          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-slate-800">
             {[...(zeiterfassungListe ?? [])]
               .filter((e) => e.ende_at)
               .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
@@ -637,14 +643,17 @@ export function VorgangDetailPage() {
                   (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
                 const techniker = users?.find((u) => u.id === e.techniker_id);
                 return (
-                  <div key={e.id} className="flex items-center justify-between text-xs text-slate-500">
+                  <div
+                    key={e.id}
+                    className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
+                  >
                     <span>
                       {techniker?.name ?? "—"}
                       {e.taetigkeit && ` · ${e.taetigkeit}`}
                       {" · "}
                       {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                     </span>
-                    <span className="shrink-0 font-medium text-slate-600">
+                    <span className="shrink-0 font-medium text-slate-600 dark:text-slate-300">
                       {formatSekundenAlsHHMM(dauerSekunden)} Std.
                     </span>
                   </div>
@@ -654,9 +663,9 @@ export function VorgangDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm">
+      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500">Termine</h2>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Termine</h2>
           {kannDisponieren && (
             <button
               onClick={() => {
@@ -671,7 +680,7 @@ export function VorgangDetailPage() {
                   setTerminTechnikerId(users?.find((u) => u.role === "techniker")?.id ?? "");
                 }
               }}
-              className="btn-touch text-xs font-medium text-blue-700"
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
             >
               {showTerminForm ? "Abbrechen" : "+ Termin planen"}
             </button>
@@ -679,7 +688,7 @@ export function VorgangDetailPage() {
         </div>
 
         {terminWarnungen.length > 0 && (
-          <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
+          <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
             {terminWarnungen.map((w, i) => (
               <p key={i}>⚠️ {w.meldung}</p>
             ))}
@@ -687,17 +696,17 @@ export function VorgangDetailPage() {
         )}
 
         {showTerminForm && (
-          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2">
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
             <input
               value={terminTitel}
               onChange={(e) => setTerminTitel(e.target.value)}
               placeholder="Titel"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <select
               value={terminTechnikerId}
               onChange={(e) => setTerminTechnikerId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {(users ?? [])
                 .filter((u) => u.role === "techniker")
@@ -712,19 +721,19 @@ export function VorgangDetailPage() {
                 type="datetime-local"
                 value={terminStart}
                 onChange={(e) => setTerminStart(e.target.value)}
-                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               />
               <input
                 type="datetime-local"
                 value={terminEnde}
                 onChange={(e) => setTerminEnde(e.target.value)}
-                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
             <button
               disabled={!terminTitel || !terminTechnikerId || terminMutation.isPending}
               onClick={() => terminMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -732,14 +741,17 @@ export function VorgangDetailPage() {
         )}
 
         {(termine ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Keine Termine geplant.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Termine geplant.</p>
         ) : (
           <div className="space-y-1.5">
             {termine!.map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm">
+              <div
+                key={t.id}
+                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60"
+              >
                 <div>
-                  <div className="font-medium text-slate-700">{t.titel}</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="font-medium text-slate-700 dark:text-slate-300">{t.titel}</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500">
                     {new Date(t.start_at).toLocaleString("de-DE", {
                       timeZone: "Europe/Berlin",
                       dateStyle: "short",
@@ -749,7 +761,9 @@ export function VorgangDetailPage() {
                 </div>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    t.status === "abgesagt" ? "bg-slate-200 text-slate-500" : "bg-blue-50 text-blue-700"
+                    t.status === "abgesagt"
+                      ? "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                      : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
                   }`}
                 >
                   {t.status}
@@ -760,38 +774,41 @@ export function VorgangDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm">
+      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500">Mängel</h2>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Mängel</h2>
           <div className="flex items-center gap-3">
             {(maengel ?? []).length > 0 && (
               <button
                 onClick={() => maengelProtokollMutation.mutate()}
                 disabled={maengelProtokollMutation.isPending}
-                className="btn-touch text-xs font-medium text-slate-500"
+                className="btn-touch text-xs font-medium text-slate-500 dark:text-slate-400"
               >
                 📄 Protokoll
               </button>
             )}
-            <button onClick={() => setShowMangelForm((v) => !v)} className="btn-touch text-xs font-medium text-blue-700">
+            <button
+              onClick={() => setShowMangelForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            >
               {showMangelForm ? "Abbrechen" : "+ Mangel melden"}
             </button>
           </div>
         </div>
 
         {showMangelForm && (
-          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2">
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
             <textarea
               value={mangelBeschreibung}
               onChange={(e) => setMangelBeschreibung(e.target.value)}
               placeholder="Was ist defekt?"
               rows={2}
-              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm"
+              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <select
               value={mangelSchweregrad}
               onChange={(e) => setMangelSchweregrad(e.target.value as MangelSchweregrad)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {SCHWEREGRAD_OPTIONEN.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -802,7 +819,7 @@ export function VorgangDetailPage() {
             <button
               disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
               onClick={() => mangelMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Erfassen
             </button>
@@ -810,30 +827,30 @@ export function VorgangDetailPage() {
         )}
 
         {(maengel ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400">Keine Mängel erfasst.</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Mängel erfasst.</p>
         ) : (
           <div className="space-y-1.5">
             {maengel!.map((m) => (
-              <div key={m.id} className="rounded-md bg-slate-50 p-2 text-sm">
+              <div key={m.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-slate-700">{m.beschreibung}</p>
-                  <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">
+                  <p className="text-slate-700 dark:text-slate-300">{m.beschreibung}</p>
+                  <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     {m.schweregrad}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between">
-                  <span className="text-xs text-slate-400">{m.status}</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{m.status}</span>
                   {m.status === "offen" && (
                     <div className="flex gap-2">
                       <button
                         onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "behoben" })}
-                        className="btn-touch text-xs font-medium text-green-700"
+                        className="btn-touch text-xs font-medium text-green-700 dark:text-green-400"
                       >
                         Behoben
                       </button>
                       <button
                         onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "abgelehnt" })}
-                        className="btn-touch text-xs font-medium text-red-700"
+                        className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
                       >
                         Verwerfen
                       </button>
@@ -851,23 +868,26 @@ export function VorgangDetailPage() {
               angebotAusMaengelnMutation.mutate(maengel!.filter((m) => m.status === "offen").map((m) => m.id))
             }
             disabled={angebotAusMaengelnMutation.isPending}
-            className="btn-touch mt-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50"
+            className="btn-touch mt-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
             Angebot aus offenen Mängeln erstellen
           </button>
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm">
+      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500">Material</h2>
-          <button onClick={() => setShowMaterialForm((v) => !v)} className="btn-touch text-xs font-medium text-blue-700">
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Material</h2>
+          <button
+            onClick={() => setShowMaterialForm((v) => !v)}
+            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+          >
             {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
           </button>
         </div>
 
         {showMaterialForm && (
-          <div className="space-y-2 rounded-md bg-slate-50 p-2">
+          <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
             <select
               value={materialId}
               onChange={(e) => {
@@ -878,7 +898,7 @@ export function VorgangDetailPage() {
                 // aus dem eigenen Fahrzeug den manuellen Auswahlschritt.
                 setMaterialLagerId(meinFahrzeug?.id ?? "");
               }}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               <option value="">Material wählen…</option>
               {(materialListe ?? []).map((m) => (
@@ -891,7 +911,7 @@ export function VorgangDetailPage() {
               <select
                 value={materialLagerId}
                 onChange={(e) => setMaterialLagerId(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
                 <option value="">Lagerort wählen…</option>
                 {(materialListe?.find((m) => m.id === materialId)?.bestaende ?? []).map((b) => (
@@ -918,18 +938,18 @@ export function VorgangDetailPage() {
                 value={materialMenge}
                 onChange={(e) => setMaterialMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               />
               <button
                 disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
                 onClick={() => materialVerwendenMutation.mutate()}
-                className="btn-touch shrink-0 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Erfassen
               </button>
             </div>
             {materialVerwendenMutation.isError && (
-              <p className="text-xs text-red-700">
+              <p className="text-xs text-red-700 dark:text-red-400">
                 {materialVerwendenMutation.error instanceof ApiError
                   ? materialVerwendenMutation.error.message
                   : "Fehler beim Erfassen"}
@@ -940,13 +960,15 @@ export function VorgangDetailPage() {
       </div>
 
       <div className="flex items-center justify-end gap-2">
-        <span className="text-sm text-slate-500">
+        <span className="text-sm text-slate-500 dark:text-slate-400">
           {kundenansicht ? "Kundenansicht" : "Interne Ansicht"}
         </span>
         <button
           onClick={() => setKundenansicht((v) => !v)}
           className={`btn-touch rounded-full px-3 py-1 text-xs font-semibold ${
-            kundenansicht ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-700"
+            kundenansicht
+              ? "bg-blue-600 text-white"
+              : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
           }`}
         >
           Umschalten
@@ -955,7 +977,7 @@ export function VorgangDetailPage() {
 
       <div>
         {sichtbareEvents.length === 0 && eigeneOutboxItems.length === 0 ? (
-          <p className="text-center text-sm text-slate-400">Noch keine Einträge.</p>
+          <p className="text-center text-sm text-slate-400 dark:text-slate-500">Noch keine Einträge.</p>
         ) : (
           <>
             {/* Noch nicht synchronisierte Einträge sind immer die neuesten
@@ -970,17 +992,17 @@ export function VorgangDetailPage() {
       </div>
 
       {!kundenansicht && (
-        <div className="sticky bottom-16 space-y-2 rounded-lg bg-white p-3 shadow-md">
+        <div className="sticky bottom-16 space-y-2 rounded-lg bg-white p-3 shadow-md dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
           <div className="relative">
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Kommentar schreiben…"
               rows={2}
-              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm"
+              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             {showMentionPicker && (
-              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
                 {users?.map((u) => (
                   <button
                     key={u.id}
@@ -988,7 +1010,7 @@ export function VorgangDetailPage() {
                       setComment((c) => `${c}@[${u.name}](${u.id}) `);
                       setShowMentionPicker(false);
                     }}
-                    className="btn-touch block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                    className="btn-touch block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-700"
                   >
                     {u.name}
                   </button>
@@ -1012,24 +1034,24 @@ export function VorgangDetailPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowMentionPicker((v) => !v)}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600"
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
               >
                 @ Erwähnen
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={fotoMutation.isPending}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 disabled:opacity-50"
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
               >
                 📷 Foto
               </button>
               <button
                 onClick={() => setShowUnterschriftPad((v) => !v)}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600"
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
               >
                 ✍️ Unterschrift
               </button>
-              <label className="flex items-center gap-1.5 text-sm text-slate-500">
+              <label className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
                 <input
                   type="checkbox"
                   checked={kundensichtbar}
@@ -1042,7 +1064,7 @@ export function VorgangDetailPage() {
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               Senden
             </button>
@@ -1058,7 +1080,7 @@ export function VorgangDetailPage() {
                 }
               />
               {unterschriftMutation.isError && (
-                <p className="mt-1 text-xs text-red-700">
+                <p className="mt-1 text-xs text-red-700 dark:text-red-400">
                   {unterschriftMutation.error instanceof ApiError
                     ? unterschriftMutation.error.message
                     : "Fehler beim Speichern der Unterschrift"}
