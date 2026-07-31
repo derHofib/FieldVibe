@@ -13,6 +13,10 @@ from app.services import storage_service
 from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
 from app.services.photo_service import make_thumbnail
+from app.services.vorgang_completion_service import (
+    VORGANG_STATUS_GESCHLOSSEN,
+    close_vorgang,
+)
 from app.services.vorgang_event_service import to_read_model as _to_read_model
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -36,6 +40,14 @@ async def _require_own_vorgang(
     ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
+
+
+def _require_offen(vorgang: Vorgang) -> None:
+    if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgeschlossen und kann nicht mehr geändert werden",
+        )
 
 
 @router.get("", response_model=list[VorgangEventRead])
@@ -62,6 +74,7 @@ async def create_event(
     session: AsyncSession = Depends(get_db),
 ) -> VorgangEventRead:
     vorgang = await _require_own_vorgang(session, auth, vorgang_id)
+    _require_offen(vorgang)
 
     if body.client_uuid is not None:
         # Checked up front rather than caught as an IntegrityError after the
@@ -128,7 +141,8 @@ async def upload_foto(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorgangEventRead:
-    await _require_own_vorgang(session, auth, vorgang_id)
+    vorgang = await _require_own_vorgang(session, auth, vorgang_id)
+    _require_offen(vorgang)
 
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -192,8 +206,11 @@ async def upload_unterschrift(
     """Digitale Unterschrift des Kunden (vom Signature-Pad exportiertes PNG)
     -- gespeichert wie ein Foto (siehe upload_foto), nur ohne Thumbnail und
     mit dem eingegebenen Namen des Unterzeichners im payload als
-    Nachweis, wer unterschrieben hat."""
-    await _require_own_vorgang(session, auth, vorgang_id)
+    Nachweis, wer unterschrieben hat. Schliesst den Vorgang danach
+    automatisch ab (siehe close_vorgang), damit nach der Unterschrift
+    keine Aenderungen mehr moeglich sind."""
+    vorgang = await _require_own_vorgang(session, auth, vorgang_id)
+    _require_offen(vorgang)
 
     if not unterzeichner_name.strip():
         raise HTTPException(
@@ -227,12 +244,18 @@ async def upload_unterschrift(
         kundensichtbar=kundensichtbar,
     )
     session.add(event)
+    await close_vorgang(
+        session, vorgang, alter_status=vorgang.status, author_user_id=auth.user_id
+    )
     await session.flush()
 
     await event_bus.publish(
         auth.mandant_id,
         "vorgang_event",
         {"vorgang_id": str(vorgang_id), "event_id": event.id, "event_type": "unterschrift"},
+    )
+    await event_bus.publish(
+        auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang_id), "reason": "geaendert"}
     )
 
     return _to_read_model(event)

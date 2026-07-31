@@ -79,6 +79,67 @@ async def test_upload_unterschrift_rejects_non_image(
 
 
 @pytest.mark.asyncio
+async def test_upload_unterschrift_schliesst_vorgang_automatisch_ab(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events/unterschrift",
+        headers=auth_headers(token),
+        files={"file": ("unterschrift.png", _make_test_image_bytes(), "image/png")},
+        data={"unterzeichner_name": "Max Mustermann"},
+    )
+    assert resp.status_code == 201
+
+    vorgang_resp = await client.get(
+        f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token)
+    )
+    body = vorgang_resp.json()
+    assert body["status"] == "abgeschlossen"
+    assert body["abgeschlossen_am"] is not None
+
+
+@pytest.mark.asyncio
+async def test_abgeschlossener_vorgang_lehnt_weitere_events_ab(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
+    token = await login(client, techniker.email, "pw-123456")
+
+    await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events/unterschrift",
+        headers=auth_headers(token),
+        files={"file": ("unterschrift.png", _make_test_image_bytes(), "image/png")},
+        data={"unterzeichner_name": "Max Mustermann"},
+    )
+
+    zweite_unterschrift = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events/unterschrift",
+        headers=auth_headers(token),
+        files={"file": ("unterschrift.png", _make_test_image_bytes(), "image/png")},
+        data={"unterzeichner_name": "Zweiter Versuch"},
+    )
+    assert zweite_unterschrift.status_code == 409
+
+    kommentar = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events",
+        headers=auth_headers(token),
+        json={"event_type": "kommentar", "body": "Sollte nicht mehr gehen"},
+    )
+    assert kommentar.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_unterschrift_erscheint_in_event_liste(
     client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):

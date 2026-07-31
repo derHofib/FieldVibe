@@ -150,6 +150,30 @@ async def test_status_change_erzeugt_event_und_setzt_abgeschlossen_am(
 
 
 @pytest.mark.asyncio
+async def test_abgeschlossener_vorgang_kann_nicht_mehr_geaendert_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"status": "abgeschlossen"},
+    )
+
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang.id}",
+        headers=auth_headers(token),
+        json={"titel": "Nachtraeglich geaendert"},
+    )
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_feed_sortiert_nach_last_activity_at(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
