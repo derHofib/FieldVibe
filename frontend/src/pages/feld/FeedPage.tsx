@@ -3,7 +3,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { feedApi, storiesApi } from "../../api/endpoints";
+import { useAuth } from "../../context/AuthContext";
 import { cacheFeedItems, getCachedFeedItems } from "../../offline/cache";
+import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, FeedResponse, StoryItem, VorgangStatus } from "../../types";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
@@ -110,6 +112,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
 
 export function FeedPage() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
@@ -152,12 +155,14 @@ export function FeedPage() {
 
   return (
     <div className="space-y-4">
-      <button
-        onClick={() => navigate("/highlights")}
-        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm"
-      >
-        ⭐ Highlights ansehen
-      </button>
+      {istModulAktiv(currentUser, "highlights") && (
+        <button
+          onClick={() => navigate("/highlights")}
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm"
+        >
+          ⭐ Highlights ansehen
+        </button>
+      )}
 
       {storyGroups.length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">

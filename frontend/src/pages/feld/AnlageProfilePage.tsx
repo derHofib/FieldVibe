@@ -6,6 +6,7 @@ import { anlagenApi, inventurzyklenApi, materialApi, pruefzyklenApi } from "../.
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
+import { istModulAktiv } from "../../utils/module";
 import type { Adresse } from "../../types";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -172,15 +173,19 @@ export function AnlageProfilePage() {
     queryFn: () => anlagenApi.profil(id!),
     enabled: !!id,
   });
+  const pruefzyklenAktiv = istModulAktiv(currentUser, "pruefzyklen");
+  const fahrzeugeAktiv = istModulAktiv(currentUser, "fahrzeuge");
+  const materialAktiv = istModulAktiv(currentUser, "material");
+
   const { data: pruefzyklen } = useQuery({
     queryKey: ["pruefzyklen", id],
     queryFn: () => pruefzyklenApi.list(id!),
-    enabled: !!id,
+    enabled: !!id && pruefzyklenAktiv,
   });
   const { data: inventurzyklen } = useQuery({
     queryKey: ["inventurzyklen", id],
     queryFn: () => inventurzyklenApi.list(id!),
-    enabled: !!id && profil?.objekttyp !== "kundenanlage",
+    enabled: !!id && profil?.objekttyp !== "kundenanlage" && fahrzeugeAktiv,
   });
   const inventurzyklus = inventurzyklen?.[0];
 
@@ -298,7 +303,7 @@ export function AnlageProfilePage() {
         </p>
       </div>
 
-      {profil.objekttyp !== "kundenanlage" && <MaterialInLager lagerId={id!} />}
+      {profil.objekttyp !== "kundenanlage" && materialAktiv && <MaterialInLager lagerId={id!} />}
 
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500">Vorgänge</h2>
@@ -330,6 +335,7 @@ export function AnlageProfilePage() {
         )}
       </div>
 
+      {pruefzyklenAktiv && (
       <div>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500">Prüfzyklen</h2>
@@ -403,8 +409,9 @@ export function AnlageProfilePage() {
           </div>
         )}
       </div>
+      )}
 
-      {profil.objekttyp !== "kundenanlage" && (
+      {profil.objekttyp !== "kundenanlage" && fahrzeugeAktiv && (
         <div>
           <h2 className="mb-2 text-sm font-semibold text-slate-500">Inventur</h2>
           {!inventurzyklus ? (

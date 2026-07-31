@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { angeboteApi, anlagenApi, kundenApi, materialApi, rechnungenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { istModulAktiv } from "../../utils/module";
 import type { Anlage, AnlagenObjekttyp, AngebotStatus, Material, RechnungStatus } from "../../types";
+
+type GeschaeftTab = "kunden" | "angebote" | "rechnungen" | "material";
 
 const OBJEKTTYP_LABEL: Record<AnlagenObjekttyp, string> = {
   kundenanlage: "Kundenanlage",
@@ -266,7 +269,19 @@ export function GeschaeftPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"kunden" | "angebote" | "rechnungen" | "material">("kunden");
+
+  const sichtbareTabs: GeschaeftTab[] = [
+    ...(istModulAktiv(currentUser, "kundenverwaltung") ? (["kunden"] as const) : []),
+    ...(istModulAktiv(currentUser, "abrechnung") ? (["angebote", "rechnungen"] as const) : []),
+    ...(istModulAktiv(currentUser, "material") ? (["material"] as const) : []),
+  ];
+  const [tab, setTab] = useState<GeschaeftTab>(sichtbareTabs[0] ?? "kunden");
+  useEffect(() => {
+    if (sichtbareTabs.length > 0 && !sichtbareTabs.includes(tab)) {
+      setTab(sichtbareTabs[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sichtbareTabs.join(",")]);
   const [showForm, setShowForm] = useState(false);
   const [kundeId, setKundeId] = useState("");
   const [betragNetto, setBetragNetto] = useState("");
@@ -288,14 +303,29 @@ export function GeschaeftPage() {
     einzelpreis: "",
   });
 
+  const abrechnungAktiv = istModulAktiv(currentUser, "abrechnung");
+  const materialAktiv = istModulAktiv(currentUser, "material");
+
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
-  const { data: angebote } = useQuery({ queryKey: ["angebote"], queryFn: () => angeboteApi.list() });
-  const { data: rechnungen } = useQuery({ queryKey: ["rechnungen"], queryFn: () => rechnungenApi.list() });
-  const { data: material } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list() });
+  const { data: angebote } = useQuery({
+    queryKey: ["angebote"],
+    queryFn: () => angeboteApi.list(),
+    enabled: abrechnungAktiv,
+  });
+  const { data: rechnungen } = useQuery({
+    queryKey: ["rechnungen"],
+    queryFn: () => rechnungenApi.list(),
+    enabled: abrechnungAktiv,
+  });
+  const { data: material } = useQuery({
+    queryKey: ["material"],
+    queryFn: () => materialApi.list(),
+    enabled: materialAktiv,
+  });
   const { data: alleAnlagen } = useQuery({
     queryKey: ["lagerorte"],
     queryFn: () => anlagenApi.list(),
-    enabled: tab === "material",
+    enabled: tab === "material" && materialAktiv,
   });
   const lagerorte = (alleAnlagen ?? []).filter((a) => a.objekttyp !== "kundenanlage");
 
@@ -356,6 +386,7 @@ export function GeschaeftPage() {
   });
 
   if (currentUser && currentUser.role === "techniker") return <Navigate to="/feed" replace />;
+  if (sichtbareTabs.length === 0) return <Navigate to="/feed" replace />;
 
   const nameFuer = (kundeId: string) => kunden?.find((k) => k.id === kundeId)?.name ?? "—";
 
@@ -364,7 +395,7 @@ export function GeschaeftPage() {
       <h1 className="text-lg font-bold text-slate-800">Geschäft</h1>
 
       <div className="flex gap-2 rounded-lg bg-white p-1 shadow-sm">
-        {(["kunden", "angebote", "rechnungen", "material"] as const).map((t) => (
+        {sichtbareTabs.map((t) => (
           <button
             key={t}
             onClick={() => {

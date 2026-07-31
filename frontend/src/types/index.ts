@@ -1,6 +1,22 @@
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
 export type Role = "super_admin" | "mandant_admin" | "disponent" | "techniker";
 
+// Muss mit MANDANT_MODULE in backend/app/models/mandant.py uebereinstimmen.
+// "vorgaenge" (Auftrag + Chat/Foto/Status/Unterschrift + Zeit start/stopp,
+// Kunde per Dropdown waehlen oder inline anlegen) ist bewusst NICHT Teil
+// dieser Liste -- das ist der nicht abschaltbare Boden.
+export type MandantModul =
+  | "kundenverwaltung"
+  | "dispo"
+  | "material"
+  | "pruefzyklen"
+  | "abrechnung"
+  | "kundenportal"
+  | "dauerauftrag"
+  | "statistik"
+  | "fahrzeuge"
+  | "highlights";
+
 export interface Mandant {
   id: string;
   name: string;
@@ -8,6 +24,7 @@ export interface Mandant {
   branche: string | null;
   status: MandantStatus;
   branding: Record<string, unknown>;
+  deaktivierte_module: MandantModul[];
   created_at: string;
   updated_at: string;
 }
@@ -43,6 +60,7 @@ export interface CurrentUser {
   name: string;
   email: string;
   impersonated_by: string | null;
+  deaktivierte_module: MandantModul[];
 }
 
 export interface TokenPair {

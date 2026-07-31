@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.highlight import Highlight
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
@@ -15,7 +15,10 @@ from app.services import storage_service
 router = APIRouter(
     prefix="/api/highlights",
     tags=["highlights"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_module("highlights")),
+    ],
 )
 
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.anlage import Anlage
 from app.models.pruefzyklus import Pruefzyklus
 from app.schemas.pruefzyklus import PruefzyklusCreate, PruefzyklusRead, PruefzyklusUpdate
@@ -14,7 +14,10 @@ from app.services.date_utils import add_months
 router = APIRouter(
     prefix="/api/pruefzyklen",
     tags=["pruefzyklen"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_module("pruefzyklen")),
+    ],
 )
 
 

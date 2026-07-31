@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { anlagenApi, dauerauftraegeApi, kundenApi, usersApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
+import { istModulAktiv } from "../../utils/module";
 import type { Adresse, Ansprechpartner, Anlage, Eskalationsstufe, User } from "../../types";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
@@ -573,10 +574,18 @@ export function KundeProfilePage() {
   const { currentUser } = useAuth();
   const [anlageFilter, setAnlageFilter] = useState("");
 
-  const { data: profil, isLoading } = useQuery({
+  const kundenverwaltungAktiv = istModulAktiv(currentUser, "kundenverwaltung");
+
+  const { data: profil, isLoading: profilLoading } = useQuery({
     queryKey: ["kunde-profil", id],
     queryFn: () => kundenApi.profil(id!),
-    enabled: !!id,
+    enabled: !!id && kundenverwaltungAktiv,
+  });
+
+  const { data: kunde, isLoading: kundeLoading } = useQuery({
+    queryKey: ["kunde", id],
+    queryFn: () => kundenApi.get(id!),
+    enabled: !!id && !kundenverwaltungAktiv,
   });
 
   const anlageNameById = useMemo(
@@ -598,7 +607,23 @@ export function KundeProfilePage() {
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
-  if (isLoading || !profil) return <p className="text-center text-slate-500">Lädt…</p>;
+  if (!kundenverwaltungAktiv) {
+    if (kundeLoading || !kunde) return <p className="text-center text-slate-500">Lädt…</p>;
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500">
+          ← Zurück
+        </button>
+        <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="text-xs text-slate-400">{kunde.kundennummer}</div>
+          <h1 className="text-lg font-bold text-slate-800">{kunde.name}</h1>
+          {kunde.typ && <span className="text-sm text-slate-500">{kunde.typ}</span>}
+        </div>
+      </div>
+    );
+  }
+
+  if (profilLoading || !profil) return <p className="text-center text-slate-500">Lädt…</p>;
 
   const kannVerwalten =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";

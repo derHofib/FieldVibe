@@ -42,6 +42,11 @@ async def authenticate_kunde(email: str, password: str) -> TokenPair:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Mandant ist nicht aktiv"
             )
+        if "kundenportal" in mandant.deaktivierte_module:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Kundenportal ist für diesen Betrieb nicht freigeschaltet",
+            )
 
         return TokenPair(
             access_token=create_kundenportal_access_token(

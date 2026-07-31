@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.mandant import Mandant
 from app.models.mangel import MANGEL_SCHWEREGRADE, Mangel
 from app.models.vorgang import Vorgang
@@ -16,7 +16,10 @@ from app.services.pdf_service import generate_maengel_protokoll_pdf
 router = APIRouter(
     prefix="/api/maengel",
     tags=["maengel"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_module("abrechnung")),
+    ],
 )
 
 # Direkt per PATCH darf ein Nutzer einen Mangel nur "vor Ort" abschliessen

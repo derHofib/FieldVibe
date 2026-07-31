@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.termin import Termin
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -16,7 +16,10 @@ from app.services.event_bus import event_bus
 router = APIRouter(
     prefix="/api/termine",
     tags=["termine"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_module("dispo")),
+    ],
 )
 
 

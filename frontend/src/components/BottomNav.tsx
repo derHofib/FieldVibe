@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
+import { istModulAktiv } from "../utils/module";
 
 const items = [
   { to: "/feed", label: "Feed", icon: "📋" },
@@ -28,7 +29,17 @@ export function BottomNav() {
   // in einem versteckten Menue, da es fuer Disponent/Admin Kernarbeit ist.
   const canDisponieren =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
-  const sichtbareItems = canDisponieren ? [...items, dispoItem, geschaeftItem] : items;
+  const sichtbareItems = [
+    ...items,
+    ...(canDisponieren && istModulAktiv(currentUser, "dispo") ? [dispoItem] : []),
+    // "Geschäft" buendelt Kunden/Angebote-Rechnungen/Material-Tabs -- ganz
+    // weg, wenn alle drei Bereiche fuer diesen Mandanten deaktiviert sind
+    // (die Kunde-Basisfunktionen fuers Vorgang-Anlegen bleiben trotzdem
+    // ueber die Inline-Anlage in "+Neu" erreichbar, siehe GeschaeftPage).
+    ...(canDisponieren && istModulAktiv(currentUser, "kundenverwaltung", "abrechnung", "material")
+      ? [geschaeftItem]
+      : []),
+  ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t border-slate-200 bg-white">

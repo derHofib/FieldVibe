@@ -6,7 +6,7 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.tag import Tag, TagAssignment
@@ -65,7 +65,10 @@ async def list_anlagen(
     "",
     response_model=AnlageRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenverwaltung", "material")),
+    ],
 )
 async def create_anlage(
     body: AnlageCreate,
@@ -202,7 +205,10 @@ async def get_anlage_profil(
 @router.patch(
     "/{anlage_id}",
     response_model=AnlageRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenverwaltung", "material")),
+    ],
 )
 async def update_anlage(
     anlage_id: UUID, body: AnlageUpdate, session: AsyncSession = Depends(get_db)
@@ -228,7 +234,10 @@ async def update_anlage(
 @router.delete(
     "/{anlage_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenverwaltung", "material")),
+    ],
 )
 async def delete_anlage(anlage_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
     anlage = await session.get(Anlage, anlage_id)

@@ -67,6 +67,35 @@ async def test_super_admin_can_update_mandant_status(client, make_mandant, make_
 
 
 @pytest.mark.asyncio
+async def test_super_admin_can_set_deaktivierte_module(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=None, role="super_admin", password="admin-pass-1")
+    token = await login(client, admin.email, "admin-pass-1")
+
+    resp = await client.patch(
+        f"/api/admin/mandanten/{mandant.id}",
+        headers=auth_headers(token),
+        json={"deaktivierte_module": ["material", "dispo"]},
+    )
+    assert resp.status_code == 200
+    assert sorted(resp.json()["deaktivierte_module"]) == ["dispo", "material"]
+
+
+@pytest.mark.asyncio
+async def test_unbekanntes_modul_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=None, role="super_admin", password="admin-pass-1")
+    token = await login(client, admin.email, "admin-pass-1")
+
+    resp = await client.patch(
+        f"/api/admin/mandanten/{mandant.id}",
+        headers=auth_headers(token),
+        json={"deaktivierte_module": ["nonexistent"]},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_unknown_mandant_returns_404(client, make_user):
     admin = await make_user(mandant=None, role="super_admin", password="admin-pass-1")
     token = await login(client, admin.email, "admin-pass-1")

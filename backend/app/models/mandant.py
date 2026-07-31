@@ -6,6 +6,24 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
 
+# Modul-Katalog fuers Super-Admin-Menue (siehe Mandant.deaktivierte_module).
+# "vorgaenge" (Auftrag anlegen/Chat/Foto/Status/Unterschrift/Zeit start-stopp,
+# plus Kunde per Dropdown waehlen oder inline anlegen) ist bewusst NICHT Teil
+# dieser Liste -- das ist der nicht abschaltbare Boden, ohne den "Auftraege
+# tracken" ueberhaupt nicht ginge (ein Vorgang braucht zwingend einen Kunden).
+MANDANT_MODULE = (
+    "kundenverwaltung",
+    "dispo",
+    "material",
+    "pruefzyklen",
+    "abrechnung",
+    "kundenportal",
+    "dauerauftrag",
+    "statistik",
+    "fahrzeuge",
+    "highlights",
+)
+
 
 class Mandant(TimestampMixin, Base):
     __tablename__ = "mandanten"
@@ -32,3 +50,5 @@ class Mandant(TimestampMixin, Base):
     # Pruefzyklen-/Mahnwesen-Lauf auf eine fuer den eigenen Betrieb passende
     # Uhrzeit zu legen, statt fest fuer alle Mandanten auf 03:00 UTC.
     scheduler_stunde_utc: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # Opt-out: leer = alles an. Siehe MANDANT_MODULE fuer die gueltigen Werte.
+    deaktivierte_module: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)

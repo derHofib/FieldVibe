@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db
+from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db, require_module_kunde
 from app.models.angebot import Angebot
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
@@ -24,7 +24,11 @@ from app.services.rechnung_service import (
 )
 from app.services.vorgang_event_service import to_read_model as event_to_read_model
 
-router = APIRouter(prefix="/api/kundenportal", tags=["kundenportal"])
+router = APIRouter(
+    prefix="/api/kundenportal",
+    tags=["kundenportal"],
+    dependencies=[Depends(require_module_kunde("kundenportal"))],
+)
 
 # Nur diese beiden Uebergaenge darf der KUNDE selbst ausloesen -- "versendet"
 # ist allein Sache des Betriebs (siehe app/services/angebot_service.py fuer

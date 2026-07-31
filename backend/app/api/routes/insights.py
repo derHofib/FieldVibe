@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, require_roles
+from app.api.deps import get_db, require_module, require_roles
 from app.models.angebot import Angebot
 from app.models.rechnung import Rechnung
 from app.models.user import User
@@ -17,7 +17,10 @@ from app.services.rechnung_service import netto_betrag, positionen_fuer
 router = APIRouter(
     prefix="/api/insights",
     tags=["insights"],
-    dependencies=[Depends(require_roles("mandant_admin"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin")),
+        Depends(require_module("statistik")),
+    ],
 )
 
 

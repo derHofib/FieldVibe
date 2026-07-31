@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.session import system_session, tenant_session
+from app.models.mandant import Mandant
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -81,6 +82,31 @@ def require_roles(*roles: str):
     return checker
 
 
+def require_module(*modules: str):
+    """Sperrt einen Endpunkt, wenn der Mandant ALLE uebergebenen Module
+    deaktiviert hat (Mehrfachangabe = "erlaubt, wenn mindestens eines davon
+    aktiv ist" -- fuer Anlagen, die sowohl zu 'kundenverwaltung' als auch zu
+    'material' gehoeren koennen). super_admin (mandant_id is None, ausser bei
+    Impersonation) ist von der Pruefung ausgenommen -- Modul-Flags sind ein
+    mandantenbezogenes Konzept, keine Plattform-Einschraenkung."""
+
+    async def checker(
+        auth: AuthContext = Depends(get_current_user),
+        session: AsyncSession = Depends(get_db),
+    ) -> AuthContext:
+        if auth.mandant_id is None:
+            return auth
+        mandant = await session.get(Mandant, auth.mandant_id)
+        if mandant is not None and set(mandant.deaktivierte_module).issuperset(modules):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Diese Funktion ist für Ihren Account nicht freigeschaltet",
+            )
+        return auth
+
+    return checker
+
+
 @dataclass(frozen=True)
 class KundenAuthContext:
     zugang_id: UUID
@@ -128,3 +154,23 @@ async def get_kunden_db(
     """
     async with tenant_session(mandant_id=auth.mandant_id, is_super_admin=False) as session:
         yield session
+
+
+def require_module_kunde(*modules: str):
+    """Kundenportal-Pendant zu require_module: greift schon vorm Login (siehe
+    kundenportal_auth_service.authenticate_kunde), dieser Checker deckt die
+    Datenroutern ab, die bereits ein gueltiges Kundenportal-Token voraussetzen."""
+
+    async def checker(
+        auth: KundenAuthContext = Depends(get_current_kunde),
+        session: AsyncSession = Depends(get_kunden_db),
+    ) -> KundenAuthContext:
+        mandant = await session.get(Mandant, auth.mandant_id)
+        if mandant is not None and set(mandant.deaktivierte_module).issuperset(modules):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Diese Funktion ist für Ihren Account nicht freigeschaltet",
+            )
+        return auth
+
+    return checker

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
+import { istModulAktiv } from "../../utils/module";
 
 const ROLE_LABEL: Record<string, string> = {
   mandant_admin: "Mandanten-Admin",
@@ -36,7 +37,7 @@ export function ProfilePage() {
         </dl>
       </div>
 
-      {currentUser?.role === "mandant_admin" && (
+      {currentUser?.role === "mandant_admin" && istModulAktiv(currentUser, "statistik") && (
         <button
           onClick={() => navigate("/insights")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
@@ -72,21 +73,24 @@ export function ProfilePage() {
         </button>
       )}
 
-      {(currentUser?.role === "mandant_admin" || currentUser?.role === "disponent") && (
+      {(currentUser?.role === "mandant_admin" || currentUser?.role === "disponent") &&
+        istModulAktiv(currentUser, "dauerauftrag") && (
+          <button
+            onClick={() => navigate("/dauerauftraege")}
+            className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
+          >
+            🔁 Dauer-Aufträge
+          </button>
+        )}
+
+      {istModulAktiv(currentUser, "statistik") && (
         <button
-          onClick={() => navigate("/dauerauftraege")}
+          onClick={() => navigate("/statistik")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
         >
-          🔁 Dauer-Aufträge
+          📊 {currentUser?.role === "techniker" ? "Meine Statistik" : "Statistik"}
         </button>
       )}
-
-      <button
-        onClick={() => navigate("/statistik")}
-        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
-      >
-        📊 {currentUser?.role === "techniker" ? "Meine Statistik" : "Statistik"}
-      </button>
 
       <button
         onClick={logout}

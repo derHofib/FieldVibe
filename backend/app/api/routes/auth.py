@@ -71,9 +71,12 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             )
 
         mandant_name: str | None = None
+        deaktivierte_module: list[str] = []
         if auth.mandant_id is not None:
             mandant = await session.get(Mandant, auth.mandant_id)
-            mandant_name = mandant.name if mandant else None
+            if mandant is not None:
+                mandant_name = mandant.name
+                deaktivierte_module = mandant.deaktivierte_module
 
         return CurrentUser(
             id=user.id,
@@ -83,4 +86,5 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             email=user.email,
             impersonated_by=auth.impersonated_by,
             mandant_name=mandant_name,
+            deaktivierte_module=deaktivierte_module,
         )

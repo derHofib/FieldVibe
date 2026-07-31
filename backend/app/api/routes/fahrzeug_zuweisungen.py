@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.anlage import Anlage
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.user import User
@@ -15,7 +15,10 @@ from app.schemas.user import UserRead
 router = APIRouter(
     prefix="/api/fahrzeug-zuweisungen",
     tags=["fahrzeug-zuweisungen"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_module("fahrzeuge")),
+    ],
 )
 
 

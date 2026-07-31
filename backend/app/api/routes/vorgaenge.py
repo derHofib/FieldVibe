@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.vertrag import Vertrag
@@ -173,7 +173,7 @@ async def _require_vorgang_zugriff(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
 
 
-@router.get("/export/csv")
+@router.get("/export/csv", dependencies=[Depends(require_module("statistik"))])
 async def export_vorgaenge_csv(
     status_filter: str | None = Query(default=None, alias="status"),
     kunde_id: UUID | None = Query(default=None),

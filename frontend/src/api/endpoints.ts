@@ -66,7 +66,10 @@ export const mandantenApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (id: string, body: Partial<Pick<Mandant, "name" | "branche" | "status">>) =>
+  update: (
+    id: string,
+    body: Partial<Pick<Mandant, "name" | "branche" | "status" | "deaktivierte_module">>,
+  ) =>
     apiFetch<Mandant>(`/api/admin/mandanten/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),

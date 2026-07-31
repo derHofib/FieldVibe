@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.anlage import Anlage
 from app.models.inventurzyklus import InventurZyklus
 from app.schemas.inventurzyklus import InventurZyklusCreate, InventurZyklusRead, InventurZyklusUpdate
@@ -13,7 +13,10 @@ from app.schemas.inventurzyklus import InventurZyklusCreate, InventurZyklusRead,
 router = APIRouter(
     prefix="/api/inventurzyklen",
     tags=["inventurzyklen"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_module("fahrzeuge")),
+    ],
 )
 
 LAGERORT_OBJEKTTYPEN = ("fahrzeug", "lager", "baustelle")

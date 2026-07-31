@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
@@ -19,7 +19,10 @@ from app.services.rechnung_service import positionen_fuer, to_read_model
 router = APIRouter(
     prefix="/api/rechnungen",
     tags=["rechnungen"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_module("abrechnung")),
+    ],
 )
 
 _GUELTIGE_UEBERGAENGE = {

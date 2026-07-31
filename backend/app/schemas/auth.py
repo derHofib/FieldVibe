@@ -34,6 +34,7 @@ class CurrentUser(BaseModel):
     name: str
     email: str
     impersonated_by: UUID | None = None
+    deaktivierte_module: list[str] = []
 
 
 class ImpersonateResponse(BaseModel):

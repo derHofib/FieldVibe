@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -77,7 +77,7 @@ async def list_zeiterfassung(
     return list(result.scalars().all())
 
 
-@router.get("/export/csv")
+@router.get("/export/csv", dependencies=[Depends(require_module("statistik"))])
 async def export_zeiterfassung_csv(
     techniker_id: UUID | None = Query(default=None),
     von: date | None = Query(default=None),
@@ -127,7 +127,11 @@ async def export_zeiterfassung_csv(
     )
 
 
-@router.get("/statistik", response_model=ZeiterfassungStatistik)
+@router.get(
+    "/statistik",
+    response_model=ZeiterfassungStatistik,
+    dependencies=[Depends(require_module("statistik"))],
+)
 async def get_statistik(
     techniker_id: UUID | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
@@ -164,7 +168,7 @@ async def get_statistik(
     )
 
 
-@router.get("/wochenzettel-pdf")
+@router.get("/wochenzettel-pdf", dependencies=[Depends(require_module("statistik"))])
 async def wochenzettel_pdf(
     woche_start: date = Query(...),
     techniker_id: UUID | None = Query(default=None),

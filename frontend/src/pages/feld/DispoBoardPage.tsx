@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 
 import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { istModulAktiv } from "../../utils/module";
 import type { Termin, TerminWarnung } from "../../types";
 
 const WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -143,12 +144,16 @@ export function DispoBoardPage() {
           ← Zurück
         </button>
         <h1 className="text-lg font-bold text-slate-800">Dispo-Board</h1>
-        <button
-          onClick={() => navigate("/pruefmittel")}
-          className="text-sm text-blue-700 underline-offset-2 hover:underline"
-        >
-          Prüfmittel →
-        </button>
+        {istModulAktiv(currentUser, "pruefzyklen") ? (
+          <button
+            onClick={() => navigate("/pruefmittel")}
+            className="text-sm text-blue-700 underline-offset-2 hover:underline"
+          >
+            Prüfmittel →
+          </button>
+        ) : (
+          <span />
+        )}
       </div>
 
       <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm">

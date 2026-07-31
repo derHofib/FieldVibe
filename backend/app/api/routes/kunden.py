@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.core.security import hash_password
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
@@ -105,7 +105,11 @@ async def get_kunde(
     return kunde
 
 
-@router.get("/{kunde_id}/profil", response_model=KundeProfil)
+@router.get(
+    "/{kunde_id}/profil",
+    response_model=KundeProfil,
+    dependencies=[Depends(require_module("kundenverwaltung"))],
+)
 async def get_kunde_profil(
     kunde_id: UUID,
     auth: AuthContext = Depends(get_current_user),
@@ -149,7 +153,10 @@ async def get_kunde_profil(
 @router.get(
     "/{kunde_id}/techniker",
     response_model=list[UserRead],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenverwaltung")),
+    ],
 )
 async def list_kunde_techniker(
     kunde_id: UUID, session: AsyncSession = Depends(get_db)
@@ -168,7 +175,10 @@ async def list_kunde_techniker(
 @router.put(
     "/{kunde_id}/techniker",
     response_model=list[UserRead],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenverwaltung")),
+    ],
 )
 async def set_kunde_techniker(
     kunde_id: UUID,
@@ -217,7 +227,10 @@ async def set_kunde_techniker(
 @router.patch(
     "/{kunde_id}",
     response_model=KundeRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenverwaltung")),
+    ],
 )
 async def update_kunde(
     kunde_id: UUID, body: KundeUpdate, session: AsyncSession = Depends(get_db)
@@ -242,7 +255,10 @@ async def update_kunde(
 @router.delete(
     "/{kunde_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenverwaltung")),
+    ],
 )
 async def delete_kunde(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
     kunde = await session.get(Kunde, kunde_id)
@@ -276,7 +292,11 @@ async def delete_kunde(kunde_id: UUID, session: AsyncSession = Depends(get_db)) 
         ) from exc
 
 
-@router.get("/{kunde_id}/portal-zugaenge", response_model=list[KundenportalZugangRead])
+@router.get(
+    "/{kunde_id}/portal-zugaenge",
+    response_model=list[KundenportalZugangRead],
+    dependencies=[Depends(require_module("kundenportal"))],
+)
 async def list_portal_zugaenge(
     kunde_id: UUID, session: AsyncSession = Depends(get_db)
 ) -> list[KundenportalZugang]:
@@ -292,7 +312,10 @@ async def list_portal_zugaenge(
     "/{kunde_id}/portal-zugaenge",
     response_model=KundenportalZugangRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenportal")),
+    ],
 )
 async def create_portal_zugang(
     kunde_id: UUID,
@@ -327,7 +350,10 @@ async def create_portal_zugang(
 @router.patch(
     "/{kunde_id}/portal-zugaenge/{zugang_id}",
     response_model=KundenportalZugangRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenportal")),
+    ],
 )
 async def update_portal_zugang(
     kunde_id: UUID,
