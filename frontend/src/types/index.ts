@@ -62,13 +62,33 @@ export interface ImpersonateResponse {
 
 export type KundeTyp = "privat" | "gewerbe" | "oeffentlich" | "hausverwaltung";
 
+// 1 = Erstkontakt, 2 = Eskalation, 3 = Geschaeftsleitung/Notfall.
+export type Eskalationsstufe = 1 | 2 | 3;
+
+export interface Ansprechpartner {
+  id: string;
+  name: string;
+  position: string | null;
+  telefon: string | null;
+  email: string | null;
+  operativ: boolean;
+  eskalationsstufe: Eskalationsstufe | null;
+  notiz: string | null;
+}
+
+export interface Adresse {
+  strasse?: string;
+  plz?: string;
+  ort?: string;
+}
+
 export interface Kunde {
   id: string;
   kundennummer: string;
   name: string;
   typ: KundeTyp | null;
-  ansprechpartner: unknown[];
-  adresse: Record<string, unknown> | null;
+  ansprechpartner: Ansprechpartner[];
+  adresse: Adresse | null;
   notiz: string | null;
   created_at: string;
   updated_at: string;
@@ -81,7 +101,7 @@ export interface Anlage {
   kunde_id: string | null;
   objekttyp: AnlagenObjekttyp;
   bezeichnung: string;
-  adresse: Record<string, unknown>;
+  adresse: Adresse;
   anlagentyp: string | null;
   qr_code: string | null;
   stammdaten: Record<string, unknown>;

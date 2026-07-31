@@ -1,11 +1,13 @@
 import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import type {
+  Adresse,
   Angebot,
   AngebotPosition,
   Anlage,
   AnlagenObjekttyp,
   AnlageProfil,
+  Ansprechpartner,
   AuditLogEntry,
   CurrentKunde,
   CurrentUser,
@@ -126,8 +128,23 @@ export const kundenApi = {
   list: (q?: string) => apiFetch<Kunde[]>(`/api/kunden${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   get: (id: string) => apiFetch<Kunde>(`/api/kunden/${id}`),
   profil: (id: string) => apiFetch<KundeProfil>(`/api/kunden/${id}/profil`),
-  create: (body: { name: string; typ?: string; kundennummer?: string }) =>
-    apiFetch<Kunde>("/api/kunden", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: {
+    name: string;
+    typ?: string;
+    kundennummer?: string;
+    adresse?: Adresse;
+    notiz?: string;
+  }) => apiFetch<Kunde>("/api/kunden", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<{
+      name: string;
+      typ: string | null;
+      adresse: Adresse | null;
+      notiz: string | null;
+      ansprechpartner: Ansprechpartner[];
+    }>,
+  ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   technikerListe: (id: string) => apiFetch<User[]>(`/api/kunden/${id}/techniker`),
   technikerSetzen: (id: string, userIds: string[]) =>
     apiFetch<User[]>(`/api/kunden/${id}/techniker`, {
@@ -158,6 +175,8 @@ export const anlagenApi = {
     bezeichnung: string;
     anlagentyp?: string;
   }) => apiFetch<Anlage>("/api/anlagen", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<{ bezeichnung: string; adresse: Adresse; anlagentyp: string | null }>) =>
+    apiFetch<Anlage>(`/api/anlagen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
 };
 
 export const dauerauftraegeApi = {
@@ -469,7 +488,8 @@ export const highlightsApi = {
 };
 
 export const materialApi = {
-  list: () => apiFetch<Material[]>("/api/material"),
+  list: (lagerId?: string) =>
+    apiFetch<Material[]>(`/api/material${lagerId ? `?lager_id=${lagerId}` : ""}`),
   create: (body: {
     bezeichnung: string;
     einheit?: string;

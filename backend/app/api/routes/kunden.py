@@ -69,7 +69,7 @@ async def create_kunde(
         kundennummer=kundennummer,
         name=body.name,
         typ=body.typ,
-        ansprechpartner=body.ansprechpartner,
+        ansprechpartner=[a.model_dump(mode="json") for a in body.ansprechpartner],
         adresse=body.adresse,
         notiz=body.notiz,
     )
@@ -226,7 +226,11 @@ async def update_kunde(
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
 
-    changes = body.model_dump(exclude_unset=True)
+    # mode="json" statt des Standard-model_dump(): ansprechpartner enthaelt
+    # verschachtelte AnsprechpartnerEintrag-Objekte, deren id ein UUID-Objekt
+    # ist -- die JSONB-Spalte braucht dafuer JSON-taugliche Werte (str statt
+    # UUID), sonst schlaegt das Schreiben in die Datenbank fehl.
+    changes = body.model_dump(exclude_unset=True, mode="json")
     for field, value in changes.items():
         setattr(kunde, field, value)
     await session.flush()

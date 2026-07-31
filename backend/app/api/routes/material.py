@@ -1,7 +1,7 @@
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -109,8 +109,23 @@ async def _material_read(session: AsyncSession, material: Material) -> MaterialR
 
 
 @router.get("", response_model=list[MaterialRead])
-async def list_material(session: AsyncSession = Depends(get_db)) -> list[MaterialRead]:
-    result = await session.execute(select(Material).order_by(Material.bezeichnung))
+async def list_material(
+    lager_id: UUID | None = Query(default=None),
+    session: AsyncSession = Depends(get_db),
+) -> list[MaterialRead]:
+    stmt = select(Material).order_by(Material.bezeichnung)
+    if lager_id is not None:
+        # Nur Material, das an diesem Lagerort tatsaechlich vorhanden ist --
+        # ein Bestand-Datensatz mit menge=0 ist nur ein Ueberbleibsel einer
+        # frueheren Umlagerung, kein "ist hier"-Signal mehr.
+        stmt = stmt.where(
+            Material.id.in_(
+                select(MaterialBestand.material_id).where(
+                    MaterialBestand.lager_id == lager_id, MaterialBestand.menge > 0
+                )
+            )
+        )
+    result = await session.execute(stmt)
     return [await _material_read(session, m) for m in result.scalars().all()]
 
 

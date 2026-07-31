@@ -87,6 +87,88 @@ async def test_kunde_update(client, make_mandant, make_user, make_kunde):
 
 
 @pytest.mark.asyncio
+async def test_kunde_create_mit_adresse_und_ansprechpartner(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/kunden",
+        headers=auth_headers(token),
+        json={
+            "name": "Bäckerei Sonnenschein",
+            "typ": "gewerbe",
+            "adresse": {"strasse": "Hauptstr. 1", "plz": "12345", "ort": "Musterstadt"},
+            "ansprechpartner": [
+                {
+                    "name": "Erika Musterfrau",
+                    "position": "Geschäftsführerin",
+                    "telefon": "0170-1234567",
+                    "email": "erika@baeckerei-sonnenschein.de",
+                    "operativ": False,
+                    "eskalationsstufe": 3,
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["adresse"] == {"strasse": "Hauptstr. 1", "plz": "12345", "ort": "Musterstadt"}
+    assert len(body["ansprechpartner"]) == 1
+    ansprechpartner = body["ansprechpartner"][0]
+    assert ansprechpartner["name"] == "Erika Musterfrau"
+    assert ansprechpartner["eskalationsstufe"] == 3
+    assert ansprechpartner["operativ"] is False
+    assert "id" in ansprechpartner
+
+
+@pytest.mark.asyncio
+async def test_kunde_ansprechpartner_eskalationsstufe_ausserhalb_bereich_schlaegt_fehl(
+    client, make_mandant, make_user
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/kunden",
+        headers=auth_headers(token),
+        json={
+            "name": "Kunde A",
+            "ansprechpartner": [{"name": "Max Mustermann", "eskalationsstufe": 5}],
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_kunde_update_ansprechpartner_liste(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/kunden/{kunde.id}",
+        headers=auth_headers(token),
+        json={
+            "ansprechpartner": [
+                {"name": "Hans Meier", "position": "Hausmeister", "operativ": True, "eskalationsstufe": 1}
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["ansprechpartner"]) == 1
+    assert body["ansprechpartner"][0]["operativ"] is True
+
+    # Erneut lesen bestaetigt, dass die Liste tatsaechlich persistiert wurde
+    # (nicht nur in der Response-Serialisierung des PATCH-Aufrufs korrekt ist).
+    get_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    assert get_resp.json()["ansprechpartner"][0]["name"] == "Hans Meier"
+
+
+@pytest.mark.asyncio
 async def test_unknown_kunde_returns_404(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")

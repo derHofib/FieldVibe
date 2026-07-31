@@ -2,9 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { anlagenApi, inventurzyklenApi, pruefzyklenApi } from "../../api/endpoints";
+import { anlagenApi, inventurzyklenApi, materialApi, pruefzyklenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
+import type { Adresse } from "../../types";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "bg-blue-100 text-blue-800",
@@ -23,6 +24,133 @@ function faelligkeitsFarbe(datum: string): string {
   in7Tagen.setDate(in7Tagen.getDate() + 7);
   if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600";
   return "text-slate-500";
+}
+
+function AdresseBearbeiten({
+  anlageId,
+  adresse,
+  kannVerwalten,
+}: {
+  anlageId: string;
+  adresse: Adresse;
+  kannVerwalten: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [bearbeiten, setBearbeiten] = useState(false);
+  const [form, setForm] = useState({
+    strasse: adresse.strasse ?? "",
+    plz: adresse.plz ?? "",
+    ort: adresse.ort ?? "",
+  });
+
+  const speichernMutation = useMutation({
+    mutationFn: () =>
+      anlagenApi.update(anlageId, {
+        adresse: { strasse: form.strasse || undefined, plz: form.plz || undefined, ort: form.ort || undefined },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["anlage-profil", anlageId] });
+      setBearbeiten(false);
+    },
+  });
+
+  if (!bearbeiten) {
+    const zeile = [adresse.strasse, [adresse.plz, adresse.ort].filter(Boolean).join(" ")]
+      .filter(Boolean)
+      .join(", ");
+    if (!zeile && !kannVerwalten) return null;
+    return (
+      <div className="mt-1 flex items-center gap-2">
+        {zeile ? (
+          <p className="text-sm text-slate-500">{zeile}</p>
+        ) : (
+          kannVerwalten && <p className="text-sm text-slate-400">Keine Adresse hinterlegt.</p>
+        )}
+        {kannVerwalten && (
+          <button
+            onClick={() => {
+              setForm({ strasse: adresse.strasse ?? "", plz: adresse.plz ?? "", ort: adresse.ort ?? "" });
+              setBearbeiten(true);
+            }}
+            className="btn-touch text-xs font-medium text-blue-700"
+          >
+            Bearbeiten
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2">
+      <input
+        value={form.strasse}
+        onChange={(e) => setForm({ ...form, strasse: e.target.value })}
+        placeholder="Straße + Hausnr."
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          value={form.plz}
+          onChange={(e) => setForm({ ...form, plz: e.target.value })}
+          placeholder="PLZ"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        />
+        <input
+          value={form.ort}
+          onChange={(e) => setForm({ ...form, ort: e.target.value })}
+          placeholder="Ort"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={speichernMutation.isPending}
+          className="btn-touch flex-1 rounded-md bg-slate-900 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        <button
+          onClick={() => setBearbeiten(false)}
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MaterialInLager({ lagerId }: { lagerId: string }) {
+  const { data: material } = useQuery({
+    queryKey: ["material", "lager", lagerId],
+    queryFn: () => materialApi.list(lagerId),
+  });
+
+  return (
+    <div>
+      <h2 className="mb-2 text-sm font-semibold text-slate-500">Material an diesem Lagerort</h2>
+      {!material || material.length === 0 ? (
+        <p className="text-sm text-slate-400">Kein Material an diesem Lagerort.</p>
+      ) : (
+        <div className="space-y-2">
+          {material.map((m) => {
+            const bestand = m.bestaende.find((b) => b.lager_id === lagerId);
+            const unterbestand = bestand ? Number(bestand.menge) <= Number(m.mindestbestand) : false;
+            return (
+              <div key={m.id} className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm">
+                <span className="text-sm font-medium text-slate-800">{m.bezeichnung}</span>
+                <span className={`text-sm font-medium ${unterbestand ? "text-red-600" : "text-slate-700"}`}>
+                  {bestand?.menge ?? "0"} {m.einheit}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function AnlageProfilePage() {
@@ -94,8 +222,6 @@ export function AnlageProfilePage() {
 
   if (isLoading || !profil) return <p className="text-center text-slate-500">Lädt…</p>;
 
-  const adresse = profil.adresse as { strasse?: string; ort?: string };
-
   return (
     <div className="space-y-4">
       <button onClick={() => navigate(-1)} className="text-sm text-slate-500">
@@ -114,11 +240,7 @@ export function AnlageProfilePage() {
         ) : (
           <p className="text-sm text-slate-500">Internes Objekt (kein Kundenbezug)</p>
         )}
-        {(adresse?.strasse || adresse?.ort) && (
-          <p className="mt-1 text-sm text-slate-500">
-            {[adresse.strasse, adresse.ort].filter(Boolean).join(", ")}
-          </p>
-        )}
+        <AdresseBearbeiten anlageId={id!} adresse={profil.adresse} kannVerwalten={kannVerwalten} />
         {profil.anlagentyp && <p className="text-xs text-slate-400">{profil.anlagentyp}</p>}
         {profil.qr_code && <p className="mt-2 text-xs text-slate-400">QR-Code: {profil.qr_code}</p>}
         {profil.tags.length > 0 && (
@@ -148,6 +270,8 @@ export function AnlageProfilePage() {
           Erfasste Zeit gesamt: <span className="font-medium">{formatStundenAlsHHMM(Number(profil.zeiterfassung_stunden_gesamt))} Std.</span>
         </p>
       </div>
+
+      {profil.objekttyp !== "kundenanlage" && <MaterialInLager lagerId={id!} />}
 
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500">Vorgänge</h2>

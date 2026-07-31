@@ -82,6 +82,25 @@ async def test_material_ohne_menge_landet_mit_null_bestand_im_zentrallager(
 
 
 @pytest.mark.asyncio
+async def test_list_material_gefiltert_nach_lager_id(client, make_mandant, make_user, make_anlage):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    zentrallager = await _zentrallager(mandant)
+    keller = await make_anlage(mandant=mandant, bezeichnung="Keller", objekttyp="lager")
+    await _make_material(mandant, lager=keller, bezeichnung="Sicherung 16A")
+    await _make_material(mandant, lager=zentrallager, bezeichnung="Kabel NYM 3x1.5")
+
+    resp = await client.get(
+        "/api/material", headers=auth_headers(token), params={"lager_id": str(keller.id)}
+    )
+    assert resp.status_code == 200
+    bezeichnungen = [m["bezeichnung"] for m in resp.json()]
+    assert bezeichnungen == ["Sicherung 16A"]
+
+
+@pytest.mark.asyncio
 async def test_techniker_cannot_create_or_update_material(client, make_mandant, make_user):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")

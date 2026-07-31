@@ -270,6 +270,15 @@ export function GeschaeftPage() {
   const [showForm, setShowForm] = useState(false);
   const [kundeId, setKundeId] = useState("");
   const [betragNetto, setBetragNetto] = useState("");
+  const [neuerKunde, setNeuerKunde] = useState({
+    name: "",
+    kundennummer: "",
+    typ: "",
+    strasse: "",
+    plz: "",
+    ort: "",
+    notiz: "",
+  });
   const [materialForm, setMaterialForm] = useState({
     bezeichnung: "",
     einheit: "Stk",
@@ -303,6 +312,28 @@ export function GeschaeftPage() {
     onSuccess: (rechnung) => {
       queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
       navigate(`/rechnungen/${rechnung.id}`);
+    },
+  });
+
+  const createKundeMutation = useMutation({
+    mutationFn: () => {
+      const adresse =
+        neuerKunde.strasse || neuerKunde.plz || neuerKunde.ort
+          ? { strasse: neuerKunde.strasse || undefined, plz: neuerKunde.plz || undefined, ort: neuerKunde.ort || undefined }
+          : undefined;
+      return kundenApi.create({
+        name: neuerKunde.name,
+        kundennummer: neuerKunde.kundennummer || undefined,
+        typ: neuerKunde.typ || undefined,
+        adresse,
+        notiz: neuerKunde.notiz || undefined,
+      });
+    },
+    onSuccess: (kunde) => {
+      queryClient.invalidateQueries({ queryKey: ["kunden"] });
+      setShowForm(false);
+      setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "" });
+      navigate(`/kunden/${kunde.id}`);
     },
   });
 
@@ -349,22 +380,106 @@ export function GeschaeftPage() {
         ))}
       </div>
 
-      {tab !== "kunden" && (
-        <button
-          onClick={() => setShowForm((v) => !v)}
-          className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700"
-        >
-          {showForm
-            ? "Abbrechen"
+      <button
+        onClick={() => setShowForm((v) => !v)}
+        className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700"
+      >
+        {showForm
+          ? "Abbrechen"
+          : tab === "kunden"
+            ? "+ Neuer Kunde"
             : tab === "angebote"
               ? "+ Neues Angebot"
               : tab === "rechnungen"
                 ? "+ Neue Rechnung"
                 : "+ Neues Material"}
-        </button>
+      </button>
+
+      {showForm && tab === "kunden" && (
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Name *</label>
+            <input
+              autoFocus
+              value={neuerKunde.name}
+              onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">Kundennummer (optional)</label>
+              <input
+                value={neuerKunde.kundennummer}
+                onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
+                placeholder="wird sonst vergeben"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">Typ</label>
+              <select
+                value={neuerKunde.typ}
+                onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              >
+                <option value="">Bitte wählen…</option>
+                <option value="privat">Privat</option>
+                <option value="gewerbe">Gewerbe</option>
+                <option value="oeffentlich">Öffentlich</option>
+                <option value="hausverwaltung">Hausverwaltung</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-500">Straße + Hausnr.</label>
+            <input
+              value={neuerKunde.strasse}
+              onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">PLZ</label>
+              <input
+                value={neuerKunde.plz}
+                onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-500">Ort</label>
+              <input
+                value={neuerKunde.ort}
+                onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-500">Notiz</label>
+            <textarea
+              value={neuerKunde.notiz}
+              onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
+              rows={2}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+          </div>
+          <p className="text-xs text-slate-400">
+            Ansprechpartner können anschließend auf der Kunden-Detailseite angelegt werden.
+          </p>
+          <button
+            disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
+            onClick={() => createKundeMutation.mutate()}
+            className="btn-touch w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          >
+            Anlegen
+          </button>
+        </div>
       )}
 
-      {showForm && tab !== "material" && (
+      {showForm && tab !== "material" && tab !== "kunden" && (
         <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Kunde</label>
