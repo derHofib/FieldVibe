@@ -51,6 +51,11 @@ def new_object_key(vorgang_id: uuid.UUID, filename: str) -> str:
     return f"vorgaenge/{vorgang_id}/{uuid.uuid4()}.{suffix}"
 
 
+def new_kunde_logo_key(kunde_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"kunden/{kunde_id}/logo/{uuid.uuid4()}.{suffix}"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     await run_in_threadpool(
         _internal_client.put_object,
@@ -59,6 +64,10 @@ async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
         Body=data,
         ContentType=content_type,
     )
+
+
+async def delete_object(key: str) -> None:
+    await run_in_threadpool(_internal_client.delete_object, Bucket=BUCKET, Key=key)
 
 
 def presigned_get_url(key: str, expires_seconds: int = 3600) -> str:

@@ -1,5 +1,4 @@
 import re
-import secrets
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -20,7 +19,6 @@ async def _make_zugang(mandant, kunde, *, email=None, password="alt-passwort-123
             password_hash=hash_password(password),
             name="Kundenportal-Nutzer",
             aktiv=aktiv,
-            login_slug=secrets.token_urlsafe(16),
         )
         session.add(zugang)
         await session.flush()

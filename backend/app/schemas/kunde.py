@@ -31,6 +31,10 @@ class KundeCreate(BaseModel):
     notiz: str | None = None
 
 
+class KundeLogoUrl(BaseModel):
+    url: str | None
+
+
 class KundeUpdate(BaseModel):
     name: str | None = None
     typ: KundeTyp | None = None
@@ -49,5 +53,7 @@ class KundeRead(BaseModel):
     ansprechpartner: list[AnsprechpartnerEintrag]
     adresse: dict | None
     notiz: str | None
+    portal_slug: str
+    logo_object_key: str | None
     created_at: datetime
     updated_at: datetime

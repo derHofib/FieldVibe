@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalAuthApi } from "../../api/endpoints";
@@ -16,17 +16,22 @@ export function PortalLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Personalisierter Link (/portal/l/:slug): befuellt nur die E-Mail und
-  // begruesst mit Namen -- ersetzt nicht die Passwort-Eingabe.
+  // Personalisierter Link (/portal/l/:slug): ein Link pro Kunde, den jeder
+  // Mitarbeiter dieses Kunden nutzen kann -- begruesst nur mit Name/Logo des
+  // Kunden zur Wiedererkennung, befuellt aber keine E-Mail (da nicht an
+  // eine einzelne Person gebunden). Passwort-Eingabe bleibt Pflicht.
   const { data: linkInfo } = useQuery({
     queryKey: ["kundenportal-link", slug],
     queryFn: () => kundenportalAuthApi.linkInfo(slug!),
     enabled: !!slug,
     retry: false,
   });
-  useEffect(() => {
-    if (linkInfo) setEmail(linkInfo.email);
-  }, [linkInfo]);
+  const { data: logoInfo } = useQuery({
+    queryKey: ["kundenportal-link-logo", slug],
+    queryFn: () => kundenportalAuthApi.linkLogoUrl(slug!),
+    enabled: !!slug && !!linkInfo?.hat_logo,
+    retry: false,
+  });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -50,12 +55,19 @@ export function PortalLoginPage() {
         onSubmit={handleSubmit}
         className="relative w-full max-w-sm rounded-xl border border-cyan-400/20 bg-slate-900/60 p-8 shadow-[0_0_45px_-10px_rgba(34,211,238,0.25)] backdrop-blur-xl"
       >
+        {logoInfo?.url && (
+          <img
+            src={logoInfo.url}
+            alt={`Logo ${linkInfo?.kunde_name ?? ""}`}
+            className="mx-auto mb-4 h-16 w-16 rounded-md object-contain"
+          />
+        )}
         <h1 className="mb-1 text-xl font-bold tracking-wide text-white">
           Kunden<span className="text-cyan-400">portal</span>
         </h1>
         <p className="mb-6 text-sm text-slate-400">
           {linkInfo
-            ? `Willkommen zurück, ${linkInfo.name} (${linkInfo.mandant_name}) – bitte mit Ihrem Passwort anmelden.`
+            ? `Willkommen, ${linkInfo.kunde_name} – bitte mit Ihrer E-Mail und Ihrem Passwort anmelden.`
             : "Anmeldung für Ihre Aufträge, Angebote und Rechnungen"}
         </p>
 

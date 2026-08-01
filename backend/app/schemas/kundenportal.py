@@ -6,13 +6,14 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 class KundenportalLinkInfo(BaseModel):
     """Oeffentliche Antwort fuer den personalisierten Login-Link (kein Auth
-    noetig, keine sensiblen Daten): befuellt nur die E-Mail auf der
-    Login-Seite vor -- das Passwort bleibt in jedem Fall Pflicht."""
+    noetig, keine sensiblen Daten): ein Link pro Kunde, den jeder
+    Mitarbeiter dieses Kunden nutzen kann -- zeigt nur Name/Logo des Kunden
+    zur Wiedererkennung, das Passwort bleibt in jedem Fall Pflicht und ist
+    weiterhin an den jeweils eigenen KundenportalZugang gebunden."""
 
-    email: str
-    name: str
     kunde_name: str
     mandant_name: str
+    hat_logo: bool
 
 
 class CurrentKunde(BaseModel):
@@ -69,7 +70,6 @@ class KundenportalZugangRead(BaseModel):
     email: str
     name: str
     aktiv: bool
-    login_slug: str
     created_at: datetime
     updated_at: datetime
 

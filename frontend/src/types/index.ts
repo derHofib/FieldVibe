@@ -114,6 +114,8 @@ export interface Kunde {
   ansprechpartner: Ansprechpartner[];
   adresse: Adresse | null;
   notiz: string | null;
+  portal_slug: string;
+  logo_object_key: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -632,16 +634,18 @@ export interface KundenportalZugang {
   email: string;
   name: string;
   aktiv: boolean;
-  login_slug: string;
   created_at: string;
   updated_at: string;
 }
 
 export interface KundenportalLinkInfo {
-  email: string;
-  name: string;
   kunde_name: string;
   mandant_name: string;
+  hat_logo: boolean;
+}
+
+export interface KundeLogoUrl {
+  url: string | null;
 }
 
 // --- Rechte-Matrix (Account-Typen controller/mitarbeiter) -------------------

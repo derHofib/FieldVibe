@@ -1,5 +1,3 @@
-import secrets
-
 import pytest
 
 from app.core.security import hash_password
@@ -144,7 +142,6 @@ async def test_kundenportal_login_blockiert_wenn_modul_deaktiviert(
             email="kunde@example.de",
             password_hash=hash_password("kunden-pw-123"),
             name="Kundenportal-Nutzer",
-            login_slug=secrets.token_urlsafe(16),
         )
         session.add(zugang)
         await session.flush()

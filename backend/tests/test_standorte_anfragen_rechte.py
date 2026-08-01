@@ -16,7 +16,6 @@ async def _make_zugang(mandant, kunde, *, email=None, password="kunden-pw-123", 
             email=email or f"portal-{kunde.id}@example.de",
             password_hash=hash_password(password),
             name=name,
-            login_slug=uuid.uuid4().hex,
         )
         session.add(zugang)
         await session.flush()
@@ -216,7 +215,7 @@ async def test_kunde_kann_nicht_fremde_anfrage_annehmen(client, make_mandant, ma
     assert resp.status_code == 401
 
 
-# --- Personalisierter Login-Link -----------------------------------------
+# --- Personalisierter Login-Link (ein Link pro Kunde) ----------------------
 
 
 @pytest.mark.asyncio
@@ -226,24 +225,105 @@ async def test_personalisierter_link_liefert_nur_anzeigedaten(client, make_manda
     kunde = await make_kunde(mandant=mandant, name="Bäckerei Krause")
     token = await login(client, admin.email, "pw-123456")
 
-    create = await client.post(
-        f"/api/kunden/{kunde.id}/portal-zugaenge",
-        headers=auth_headers(token),
-        json={"email": "baecker@example.de", "password": "kunden-pw-123456", "name": "Herr Krause"},
-    )
-    assert create.status_code == 201
-    slug = create.json()["login_slug"]
+    kunde_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    slug = kunde_resp.json()["portal_slug"]
     assert slug
 
     link_resp = await client.get(f"/api/kundenportal/auth/link/{slug}")
     assert link_resp.status_code == 200
     body = link_resp.json()
-    assert body["email"] == "baecker@example.de"
     assert body["kunde_name"] == "Bäckerei Krause"
+    assert body["hat_logo"] is False
+    # Ein Link pro Kunde, keine E-Mail eines einzelnen Ansprechpartners mehr.
+    assert "email" not in body
 
-    # Der Link allein loggt nicht ein -- ohne Passwort bleibt der Login-Endpunkt zustaendig.
     unknown = await client.get("/api/kundenportal/auth/link/does-not-exist")
     assert unknown.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_derselbe_link_funktioniert_fuer_mehrere_mitarbeiter_des_kunden(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant, name="Bäckerei Krause")
+    token = await login(client, admin.email, "pw-123456")
+
+    for email in ("herr.krause@example.de", "frau.krause@example.de"):
+        create = await client.post(
+            f"/api/kunden/{kunde.id}/portal-zugaenge",
+            headers=auth_headers(token),
+            json={"email": email, "password": "kunden-pw-123456", "name": email},
+        )
+        assert create.status_code == 201
+        assert "login_slug" not in create.json()
+
+    kunde_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
+    slug = kunde_resp.json()["portal_slug"]
+
+    # Derselbe Link ist fuer beide Mitarbeiter gueltig -- jeder loggt sich
+    # danach mit seiner eigenen E-Mail/seinem eigenen Passwort ein.
+    for email in ("herr.krause@example.de", "frau.krause@example.de"):
+        link_resp = await client.get(f"/api/kundenportal/auth/link/{slug}")
+        assert link_resp.status_code == 200
+        login_resp = await client.post(
+            "/api/kundenportal/auth/login", json={"email": email, "password": "kunden-pw-123456"}
+        )
+        assert login_resp.status_code == 200
+
+
+# --- Kunden-Logo -----------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_mandant_admin_kann_logo_hochladen_und_entfernen(client, make_mandant, make_user, make_kunde):
+    import io
+
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    admin_token = await login(client, admin.email, "pw-123456")
+    disponent_token = await login(client, disponent.email, "pw-123456")
+
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00"
+        b"\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\x18\xdd\x8d\xb0"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    # Nur mandant_admin darf ein Logo hochladen, nicht disponent.
+    verboten = await client.post(
+        f"/api/kunden/{kunde.id}/logo",
+        headers=auth_headers(disponent_token),
+        files={"file": ("logo.png", io.BytesIO(png_bytes), "image/png")},
+    )
+    assert verboten.status_code == 403
+
+    upload = await client.post(
+        f"/api/kunden/{kunde.id}/logo",
+        headers=auth_headers(admin_token),
+        files={"file": ("logo.png", io.BytesIO(png_bytes), "image/png")},
+    )
+    assert upload.status_code == 200
+    assert upload.json()["logo_object_key"] is not None
+
+    url_resp = await client.get(f"/api/kunden/{kunde.id}/logo-url", headers=auth_headers(admin_token))
+    assert url_resp.status_code == 200
+    assert url_resp.json()["url"] is not None
+
+    kunde_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(admin_token))
+    slug = kunde_resp.json()["portal_slug"]
+    link_resp = await client.get(f"/api/kundenportal/auth/link/{slug}")
+    assert link_resp.json()["hat_logo"] is True
+    logo_url_resp = await client.get(f"/api/kundenportal/auth/link/{slug}/logo-url")
+    assert logo_url_resp.status_code == 200
+    assert logo_url_resp.json()["url"] is not None
+
+    remove = await client.delete(f"/api/kunden/{kunde.id}/logo", headers=auth_headers(admin_token))
+    assert remove.status_code == 200
+    assert remove.json()["logo_object_key"] is None
 
 
 # --- Rechte-Matrix ---------------------------------------------------------

@@ -9,6 +9,7 @@ Run with:
 """
 import asyncio
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -340,6 +341,7 @@ async def _seed_kunden(session, mandant: Mandant, kunden_data: list[dict]) -> di
                 name=kunde_data["name"],
                 typ=kunde_data["typ"],
                 adresse={"strasse": "Musterstraße 1", "plz": "12345", "ort": "Musterstadt"},
+                portal_slug=secrets.token_urlsafe(12),
             )
             session.add(kunde)
             await session.flush()

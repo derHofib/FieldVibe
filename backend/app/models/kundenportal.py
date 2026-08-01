@@ -23,7 +23,3 @@ class KundenportalZugang(TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    # Personalisierter Login-Link (/portal/l/{login_slug}): identifiziert nur,
-    # wer sich anmeldet und befuellt die E-Mail auf der Login-Seite vor --
-    # ersetzt NICHT die Passwort-Eingabe (siehe app/api/routes/kundenportal_auth.py).
-    login_slug: Mapped[str] = mapped_column(Text, unique=True, nullable=False)

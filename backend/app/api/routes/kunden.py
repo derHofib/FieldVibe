@@ -1,7 +1,7 @@
 import secrets
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,7 +22,7 @@ from app.models.kundenportal import KundenportalZugang
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
 from app.models.vorgang import Vorgang
-from app.schemas.kunde import KundeCreate, KundeRead, KundeUpdate
+from app.schemas.kunde import KundeCreate, KundeLogoUrl, KundeRead, KundeUpdate
 from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
 from app.schemas.kundenportal import (
     KundenportalZugangCreate,
@@ -31,6 +31,7 @@ from app.schemas.kundenportal import (
 )
 from app.schemas.profile import KundeProfil
 from app.schemas.user import UserRead
+from app.services import storage_service
 from app.services.numbering_service import next_kundennummer
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -85,6 +86,10 @@ async def create_kunde(
         ansprechpartner=[a.model_dump(mode="json") for a in body.ansprechpartner],
         adresse=body.adresse,
         notiz=body.notiz,
+        # Ein Link fuer den gesamten Kunden (nicht pro Ansprechpartner) --
+        # jeder Mitarbeiter des Kunden mit eigenem KundenportalZugang meldet
+        # sich darueber mit seiner eigenen E-Mail/seinem eigenen Passwort an.
+        portal_slug=secrets.token_urlsafe(12),
     )
     session.add(kunde)
     try:
@@ -355,10 +360,6 @@ async def create_portal_zugang(
         email=body.email,
         password_hash=hash_password(body.password),
         name=body.name,
-        # Entropie von secrets.token_urlsafe(16) macht Kollisionen praktisch
-        # ausgeschlossen -- kein Retry-Loop wie bei den kurzen, fortlaufenden
-        # Kunden-/Vorgangsnummern noetig.
-        login_slug=secrets.token_urlsafe(16),
     )
     session.add(zugang)
     try:
@@ -404,3 +405,88 @@ async def update_portal_zugang(
     if changes:
         await session.refresh(zugang)
     return zugang
+
+
+_LOGO_MAX_BYTES = 3 * 1024 * 1024
+
+
+@router.post(
+    "/{kunde_id}/logo",
+    response_model=KundeRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin")),
+        Depends(require_module("kundenportal")),
+    ],
+)
+async def upload_kunde_logo(
+    kunde_id: UUID,
+    file: UploadFile,
+    session: AsyncSession = Depends(get_db),
+) -> Kunde:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Nur Bilddateien werden unterstützt"
+        )
+
+    data = await file.read()
+    if len(data) > _LOGO_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 3 MB)"
+        )
+
+    alter_key = kunde.logo_object_key
+    key = storage_service.new_kunde_logo_key(kunde_id, file.filename or "logo.png")
+    await storage_service.upload_bytes(key, data, file.content_type)
+    kunde.logo_object_key = key
+    await session.flush()
+    await session.refresh(kunde)
+
+    if alter_key is not None:
+        await storage_service.delete_object(alter_key)
+    return kunde
+
+
+@router.delete(
+    "/{kunde_id}/logo",
+    response_model=KundeRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin")),
+        Depends(require_module("kundenportal")),
+    ],
+)
+async def remove_kunde_logo(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> Kunde:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+
+    alter_key = kunde.logo_object_key
+    kunde.logo_object_key = None
+    await session.flush()
+    await session.refresh(kunde)
+
+    if alter_key is not None:
+        await storage_service.delete_object(alter_key)
+    return kunde
+
+
+@router.get(
+    "/{kunde_id}/logo-url",
+    response_model=KundeLogoUrl,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def get_kunde_logo_url(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> KundeLogoUrl:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+
+    if kunde.logo_object_key is None:
+        return KundeLogoUrl(url=None)
+    return KundeLogoUrl(url=storage_service.presigned_get_url(kunde.logo_object_key))

@@ -21,6 +21,7 @@ import type {
   Insights,
   InventurZyklus,
   Kunde,
+  KundeLogoUrl,
   KundeProfil,
   KundenportalLinkInfo,
   KundenportalZugang,
@@ -164,6 +165,13 @@ export const kundenApi = {
       method: "PUT",
       body: JSON.stringify({ user_ids: userIds }),
     }),
+  logoUpload: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<Kunde>(`/api/kunden/${id}/logo`, formData);
+  },
+  logoRemove: (id: string) => apiFetch<Kunde>(`/api/kunden/${id}/logo`, { method: "DELETE" }),
+  logoUrl: (id: string) => apiFetch<KundeLogoUrl>(`/api/kunden/${id}/logo-url`),
 };
 
 export const technikerZuweisungenApi = {
@@ -626,9 +634,13 @@ export const kundenportalAuthApi = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  linkInfo: (loginSlug: string) =>
+  linkInfo: (portalSlug: string) =>
     kundenApiFetch<KundenportalLinkInfo>(
-      `/api/kundenportal/auth/link/${encodeURIComponent(loginSlug)}`,
+      `/api/kundenportal/auth/link/${encodeURIComponent(portalSlug)}`,
+    ),
+  linkLogoUrl: (portalSlug: string) =>
+    kundenApiFetch<KundeLogoUrl>(
+      `/api/kundenportal/auth/link/${encodeURIComponent(portalSlug)}/logo-url`,
     ),
   me: () => kundenApiFetch<CurrentKunde>("/api/kundenportal/auth/me"),
   passwortVergessen: (email: string) =>

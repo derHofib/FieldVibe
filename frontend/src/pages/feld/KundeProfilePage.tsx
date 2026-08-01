@@ -18,6 +18,7 @@ import type {
   Ansprechpartner,
   Anlage,
   Eskalationsstufe,
+  Kunde,
   KundenportalZugang,
   Standort,
   User,
@@ -735,12 +736,59 @@ function AnlageAktivToggle({ anlage, kundeId }: { anlage: Anlage; kundeId: strin
 
 function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; kundeId: string }) {
   const queryClient = useQueryClient();
-  const [kopiert, setKopiert] = useState(false);
-  const link = `${window.location.origin}/portal/l/${zugang.login_slug}`;
 
   const toggleMutation = useMutation({
     mutationFn: () => kundenportalZugaengeApi.update(kundeId, zugang.id, { aktiv: !zugang.aktiv }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portal-zugaenge", kundeId] }),
+  });
+
+  return (
+    <div
+      className={`flex items-start justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+        zugang.aktiv ? "" : "opacity-60"
+      }`}
+    >
+      <div>
+        <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{zugang.name}</div>
+        <div className="text-xs text-slate-400 dark:text-slate-500">{zugang.email}</div>
+      </div>
+      <button
+        onClick={() => toggleMutation.mutate()}
+        className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+      >
+        {zugang.aktiv ? "Deaktivieren" : "Aktivieren"}
+      </button>
+    </div>
+  );
+}
+
+function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
+  const queryClient = useQueryClient();
+  const { currentUser } = useAuth();
+  const istMandantAdmin = currentUser?.role === "mandant_admin";
+  const [kopiert, setKopiert] = useState(false);
+  const link = `${window.location.origin}/portal/l/${kunde.portal_slug}`;
+
+  const { data: logoUrl } = useQuery({
+    queryKey: ["kunde-logo-url", kunde.id],
+    queryFn: () => kundenApi.logoUrl(kunde.id),
+    enabled: !!kunde.logo_object_key,
+  });
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => kundenApi.logoUpload(kunde.id, file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kunde-profil", kunde.id] });
+      queryClient.invalidateQueries({ queryKey: ["kunde-logo-url", kunde.id] });
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () => kundenApi.logoRemove(kunde.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["kunde-profil", kunde.id] });
+      queryClient.invalidateQueries({ queryKey: ["kunde-logo-url", kunde.id] });
+    },
   });
 
   async function kopieren() {
@@ -750,24 +798,15 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
   }
 
   return (
-    <div
-      className={`rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
-        zugang.aktiv ? "" : "opacity-60"
-      }`}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{zugang.name}</div>
-          <div className="text-xs text-slate-400 dark:text-slate-500">{zugang.email}</div>
-        </div>
-        <button
-          onClick={() => toggleMutation.mutate()}
-          className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-        >
-          {zugang.aktiv ? "Deaktivieren" : "Aktivieren"}
-        </button>
-      </div>
-      <div className="mt-2 flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
+    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+        Portal-Link für {kunde.name}
+      </h2>
+      <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
+        Ein Link für den ganzen Kunden -- jeder Mitarbeiter mit eigenem Kundenportal-Zugang meldet
+        sich darüber mit seiner eigenen E-Mail und seinem eigenen Passwort an.
+      </p>
+      <div className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
         <span className="flex-1 truncate text-xs text-slate-500 dark:text-slate-400">{link}</span>
         <button
           onClick={kopieren}
@@ -776,6 +815,50 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
           {kopiert ? "Kopiert ✓" : "Link kopieren"}
         </button>
       </div>
+
+      {istMandantAdmin && (
+        <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+          <h3 className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+            Logo für die Portal-Login-Seite
+          </h3>
+          <div className="flex items-center gap-3">
+            {kunde.logo_object_key && logoUrl?.url && (
+              <img
+                src={logoUrl.url}
+                alt={`Logo ${kunde.name}`}
+                className="h-12 w-12 rounded-md object-contain ring-1 ring-slate-200 dark:ring-slate-700"
+              />
+            )}
+            <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              {kunde.logo_object_key ? "Logo ersetzen" : "Logo hochladen"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadMutation.mutate(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {kunde.logo_object_key && (
+              <button
+                onClick={() => removeMutation.mutate()}
+                disabled={removeMutation.isPending}
+                className="btn-touch text-xs text-red-700 underline disabled:opacity-50 dark:text-red-400"
+              >
+                Entfernen
+              </button>
+            )}
+          </div>
+          {uploadMutation.isError && (
+            <p className="mt-1 text-xs text-red-700 dark:text-red-400">
+              {uploadMutation.error instanceof ApiError ? uploadMutation.error.message : "Fehler beim Hochladen"}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1058,7 +1141,10 @@ export function KundeProfilePage() {
       <StandorteVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
 
       {kannVerwalten && istModulAktiv(currentUser, "kundenportal") && (
-        <PortalZugaengeVerwaltung kundeId={id!} />
+        <>
+          <KundenPortalLinkUndLogo kunde={profil} />
+          <PortalZugaengeVerwaltung kundeId={id!} />
+        </>
       )}
 
       <div>

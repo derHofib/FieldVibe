@@ -206,6 +206,7 @@ async def make_kunde():
                 mandant_id=mandant.id,
                 kundennummer=kwargs.pop("kundennummer", f"K-{uuid.uuid4().hex[:6]}"),
                 name=name,
+                portal_slug=kwargs.pop("portal_slug", uuid.uuid4().hex),
                 **kwargs,
             )
             session.add(kunde)
