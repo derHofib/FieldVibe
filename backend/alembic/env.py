@@ -12,6 +12,15 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# Binding this here means Base.metadata.naming_convention (app/db/base.py)
+# is also active during migrations, not just for autogenerate diffing.
+# Gotcha discovered/fixed in 0022_check_constraint_namen_fix.py: inside a
+# migration, sa.CheckConstraint(cond, name="ck_x_y") passed straight to
+# op.create_table()/op.add_constraint() gets the "ck" convention applied to
+# it a SECOND time (its given name is treated as the raw constraint_name
+# token), silently producing "ck_x_ck_x_y" instead of "ck_x_y". Wrap any new
+# migration's literal constraint name in op.f("ck_x_y") to mark it as
+# already-final and skip that re-application.
 target_metadata = Base.metadata
 
 settings = get_settings()
