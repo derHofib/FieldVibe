@@ -5,6 +5,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const NAV_ITEMS = [
   { to: "/portal/vorgaenge", label: "Aufträge" },
+  { to: "/portal/anfragen", label: "Anfragen" },
   { to: "/portal/angebote", label: "Angebote" },
   { to: "/portal/rechnungen", label: "Rechnungen" },
 ];

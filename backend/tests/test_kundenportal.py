@@ -1,3 +1,4 @@
+import secrets
 from decimal import Decimal
 
 import pytest
@@ -21,6 +22,7 @@ async def _make_zugang(mandant, kunde, *, email=None, password="kunden-pw-123", 
             password_hash=hash_password(password),
             name=name,
             aktiv=aktiv,
+            login_slug=secrets.token_urlsafe(16),
         )
         session.add(zugang)
         await session.flush()

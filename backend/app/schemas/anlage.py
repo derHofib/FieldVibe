@@ -9,6 +9,7 @@ AnlagenObjekttyp = Literal["kundenanlage", "fahrzeug", "lager", "baustelle"]
 
 class AnlageCreate(BaseModel):
     kunde_id: UUID | None = None
+    standort_id: UUID | None = None
     objekttyp: AnlagenObjekttyp = "kundenanlage"
     bezeichnung: str
     adresse: dict = Field(default_factory=dict)
@@ -24,10 +25,13 @@ class AnlageCreate(BaseModel):
             raise ValueError("kunde_id ist für objekttyp=kundenanlage erforderlich")
         if self.objekttyp != "kundenanlage" and self.kunde_id is not None:
             raise ValueError(f"kunde_id darf für objekttyp={self.objekttyp} nicht gesetzt sein")
+        if self.objekttyp != "kundenanlage" and self.standort_id is not None:
+            raise ValueError(f"standort_id darf für objekttyp={self.objekttyp} nicht gesetzt sein")
         return self
 
 
 class AnlageUpdate(BaseModel):
+    standort_id: UUID | None = None
     bezeichnung: str | None = None
     adresse: dict | None = None
     anlagentyp: str | None = None
@@ -35,6 +39,7 @@ class AnlageUpdate(BaseModel):
     stammdaten: dict | None = None
     geo_lat: float | None = None
     geo_lng: float | None = None
+    aktiv: bool | None = None
 
 
 class AnlageRead(BaseModel):
@@ -42,6 +47,7 @@ class AnlageRead(BaseModel):
 
     id: UUID
     kunde_id: UUID | None
+    standort_id: UUID | None
     objekttyp: AnlagenObjekttyp
     bezeichnung: str
     adresse: dict
@@ -50,5 +56,7 @@ class AnlageRead(BaseModel):
     stammdaten: dict
     geo_lat: float | None
     geo_lng: float | None
+    aktiv: bool
+    erstellt_von_kundenportal_zugang_id: UUID | None
     created_at: datetime
     updated_at: datetime

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
 
-ROLES = ("super_admin", "mandant_admin", "disponent", "techniker")
+ROLES = ("super_admin", "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
 
 
 class User(TimestampMixin, Base):

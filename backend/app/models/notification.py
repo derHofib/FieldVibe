@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-NOTIFICATION_TYPEN = ("mention", "frist", "zuweisung", "angebot")
+NOTIFICATION_TYPEN = ("mention", "frist", "zuweisung", "angebot", "anfrage")
 
 
 class Notification(Base):

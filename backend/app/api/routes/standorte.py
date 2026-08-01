@@ -1,0 +1,150 @@
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.models.kunde import Kunde
+from app.models.standort import Standort
+from app.schemas.standort import StandortCreate, StandortRead, StandortUpdate
+from app.services.zuweisung_service import assigned_kunde_ids
+
+router = APIRouter(
+    prefix="/api/standorte",
+    tags=["standorte"],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+    ],
+)
+
+
+async def _require_own_kunde(session: AsyncSession, kunde_id: UUID) -> Kunde:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    return kunde
+
+
+@router.get(
+    "", response_model=list[StandortRead], dependencies=[Depends(require_recht("kunden", "sehen"))]
+)
+async def list_standorte(
+    kunde_id: UUID | None = Query(default=None),
+    aktiv: bool | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[Standort]:
+    stmt = select(Standort).order_by(Standort.bezeichnung)
+    if kunde_id:
+        stmt = stmt.where(Standort.kunde_id == kunde_id)
+    if aktiv is not None:
+        stmt = stmt.where(Standort.aktiv == aktiv)
+    if auth.role == "techniker":
+        stmt = stmt.where(Standort.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+@router.post(
+    "",
+    response_model=StandortRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+        Depends(require_recht("kunden", "bearbeiten")),
+    ],
+)
+async def create_standort(
+    body: StandortCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Standort:
+    await _require_own_kunde(session, body.kunde_id)
+
+    standort = Standort(
+        mandant_id=auth.mandant_id,
+        kunde_id=body.kunde_id,
+        bezeichnung=body.bezeichnung,
+        adresse=body.adresse,
+        geo_lat=body.geo_lat,
+        geo_lng=body.geo_lng,
+    )
+    session.add(standort)
+    await session.flush()
+    return standort
+
+
+async def _require_standort_zugriff(session: AsyncSession, auth: AuthContext, standort: Standort) -> None:
+    if auth.role == "techniker" and standort.kunde_id not in await assigned_kunde_ids(
+        session, auth.user_id
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
+
+
+@router.get(
+    "/{standort_id}",
+    response_model=StandortRead,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def get_standort(
+    standort_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Standort:
+    standort = await session.get(Standort, standort_id)
+    if standort is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
+    await _require_standort_zugriff(session, auth, standort)
+    return standort
+
+
+@router.patch(
+    "/{standort_id}",
+    response_model=StandortRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+        Depends(require_recht("kunden", "bearbeiten")),
+    ],
+)
+async def update_standort(
+    standort_id: UUID, body: StandortUpdate, session: AsyncSession = Depends(get_db)
+) -> Standort:
+    standort = await session.get(Standort, standort_id)
+    if standort is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
+
+    changes = body.model_dump(exclude_unset=True)
+    for field, value in changes.items():
+        setattr(standort, field, value)
+    await session.flush()
+    if changes:
+        await session.refresh(standort)
+    return standort
+
+
+@router.delete(
+    "/{standort_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def delete_standort(standort_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
+    standort = await session.get(Standort, standort_id)
+    if standort is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
+
+    try:
+        await session.delete(standort)
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Standort kann nicht gelöscht werden, da noch Anlagen oder Vorgänge "
+                "damit verknüpft sind -- stattdessen deaktivieren."
+            ),
+        ) from exc

@@ -1,3 +1,4 @@
+import secrets
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -5,7 +6,14 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.core.security import hash_password
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
@@ -33,11 +41,13 @@ from app.services.zuweisung_service import assigned_kunde_ids
 router = APIRouter(
     prefix="/api/kunden",
     tags=["kunden"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+    ],
 )
 
 
-@router.get("", response_model=list[KundeRead])
+@router.get("", response_model=list[KundeRead], dependencies=[Depends(require_recht("kunden", "sehen"))])
 async def list_kunden(
     q: str | None = Query(default=None, description="Suche in Name/Kundennummer"),
     auth: AuthContext = Depends(get_current_user),
@@ -56,7 +66,10 @@ async def list_kunden(
     "",
     response_model=KundeRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+        Depends(require_recht("kunden", "bearbeiten")),
+    ],
 )
 async def create_kunde(
     body: KundeCreate,
@@ -92,7 +105,9 @@ async def _require_kunde_zugriff(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
 
 
-@router.get("/{kunde_id}", response_model=KundeRead)
+@router.get(
+    "/{kunde_id}", response_model=KundeRead, dependencies=[Depends(require_recht("kunden", "sehen"))]
+)
 async def get_kunde(
     kunde_id: UUID,
     auth: AuthContext = Depends(get_current_user),
@@ -108,7 +123,10 @@ async def get_kunde(
 @router.get(
     "/{kunde_id}/profil",
     response_model=KundeProfil,
-    dependencies=[Depends(require_module("kundenverwaltung"))],
+    dependencies=[
+        Depends(require_module("kundenverwaltung")),
+        Depends(require_recht("kunden", "sehen")),
+    ],
 )
 async def get_kunde_profil(
     kunde_id: UUID,
@@ -228,8 +246,9 @@ async def set_kunde_techniker(
     "/{kunde_id}",
     response_model=KundeRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
         Depends(require_module("kundenverwaltung")),
+        Depends(require_recht("kunden", "bearbeiten")),
     ],
 )
 async def update_kunde(
@@ -336,6 +355,10 @@ async def create_portal_zugang(
         email=body.email,
         password_hash=hash_password(body.password),
         name=body.name,
+        # Entropie von secrets.token_urlsafe(16) macht Kollisionen praktisch
+        # ausgeschlossen -- kein Retry-Loop wie bei den kurzen, fortlaufenden
+        # Kunden-/Vorgangsnummern noetig.
+        login_slug=secrets.token_urlsafe(16),
     )
     session.add(zugang)
     try:

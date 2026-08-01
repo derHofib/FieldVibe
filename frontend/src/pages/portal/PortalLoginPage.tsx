@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState, type FormEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { kundenportalAuthApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { Starfield } from "../../components/Starfield";
 import { useKundenAuth } from "../../context/KundenAuthContext";
@@ -8,10 +10,23 @@ import { useKundenAuth } from "../../context/KundenAuthContext";
 export function PortalLoginPage() {
   const { login } = useKundenAuth();
   const navigate = useNavigate();
+  const { slug } = useParams<{ slug?: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Personalisierter Link (/portal/l/:slug): befuellt nur die E-Mail und
+  // begruesst mit Namen -- ersetzt nicht die Passwort-Eingabe.
+  const { data: linkInfo } = useQuery({
+    queryKey: ["kundenportal-link", slug],
+    queryFn: () => kundenportalAuthApi.linkInfo(slug!),
+    enabled: !!slug,
+    retry: false,
+  });
+  useEffect(() => {
+    if (linkInfo) setEmail(linkInfo.email);
+  }, [linkInfo]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -38,7 +53,11 @@ export function PortalLoginPage() {
         <h1 className="mb-1 text-xl font-bold tracking-wide text-white">
           Kunden<span className="text-cyan-400">portal</span>
         </h1>
-        <p className="mb-6 text-sm text-slate-400">Anmeldung für Ihre Aufträge, Angebote und Rechnungen</p>
+        <p className="mb-6 text-sm text-slate-400">
+          {linkInfo
+            ? `Willkommen zurück, ${linkInfo.name} (${linkInfo.mandant_name}) – bitte mit Ihrem Passwort anmelden.`
+            : "Anmeldung für Ihre Aufträge, Angebote und Rechnungen"}
+        </p>
 
         {error && (
           <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">

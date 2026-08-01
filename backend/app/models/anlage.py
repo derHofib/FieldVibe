@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import CheckConstraint, Float, ForeignKey, Text
+from sqlalchemy import Boolean, CheckConstraint, Float, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,6 +38,12 @@ class Anlage(TimestampMixin, Base):
     kunde_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True
     )
+    # Optional: eine Anlage kann, muss aber nicht einem Standort zugeordnet
+    # sein (siehe app/models/standort.py) -- Bestandsanlagen ohne Standort
+    # bleiben gueltig.
+    standort_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("standorte.id"), nullable=True
+    )
     objekttyp: Mapped[str] = mapped_column(Text, nullable=False, default="kundenanlage")
     bezeichnung: Mapped[str] = mapped_column(Text, nullable=False)
     adresse: Mapped[dict] = mapped_column(JSONB, nullable=False)
@@ -46,3 +52,10 @@ class Anlage(TimestampMixin, Base):
     stammdaten: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     geo_lat: Mapped[float | None] = mapped_column(Float)
     geo_lng: Mapped[float | None] = mapped_column(Float)
+    # Inaktive Anlagen stehen beim Anlegen eines neuen Vorgangs nicht mehr
+    # zur Auswahl (siehe _validate_references in vorgaenge.py), bleiben aber
+    # an bestehenden Vorgaengen/Vertraegen weiter gueltig verknuepft.
+    aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    erstellt_von_kundenportal_zugang_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kundenportal_zugaenge.id"), nullable=True
+    )

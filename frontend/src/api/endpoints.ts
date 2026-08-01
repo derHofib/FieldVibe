@@ -22,7 +22,9 @@ import type {
   InventurZyklus,
   Kunde,
   KundeProfil,
+  KundenportalLinkInfo,
   KundenportalZugang,
+  Leistungstyp,
   Mandant,
   MandantEinstellungen,
   MandantIntegration,
@@ -35,7 +37,12 @@ import type {
   Pruefzyklus,
   Rechnung,
   RechnungPosition,
+  RechteAktion,
+  RechteBereich,
+  RechteMatrixEintrag,
+  RechteRolle,
   SearchResponse,
+  Standort,
   StoriesResponse,
   Tag,
   TechnikerZuweisungUebersicht,
@@ -44,6 +51,7 @@ import type {
   TokenPair,
   User,
   Vorgang,
+  VorgangAnfrage,
   VorgangEvent,
   VorgangEventType,
   Zeiterfassung,
@@ -164,10 +172,11 @@ export const technikerZuweisungenApi = {
 };
 
 export const anlagenApi = {
-  list: (kundeId?: string, objekttyp?: AnlagenObjekttyp) => {
+  list: (kundeId?: string, objekttyp?: AnlagenObjekttyp, aktiv?: boolean) => {
     const params = new URLSearchParams();
     if (kundeId) params.set("kunde_id", kundeId);
     if (objekttyp) params.set("objekttyp", objekttyp);
+    if (aktiv !== undefined) params.set("aktiv", String(aktiv));
     const qs = params.toString();
     return apiFetch<Anlage[]>(`/api/anlagen${qs ? `?${qs}` : ""}`);
   },
@@ -176,13 +185,38 @@ export const anlagenApi = {
   byQrCode: (qrCode: string) => apiFetch<Anlage>(`/api/anlagen/by-qr/${encodeURIComponent(qrCode)}`),
   create: (body: {
     kunde_id?: string;
+    standort_id?: string | null;
     objekttyp?: AnlagenObjekttyp;
     bezeichnung: string;
     anlagentyp?: string;
   }) => apiFetch<Anlage>("/api/anlagen", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<{ bezeichnung: string; adresse: Adresse; anlagentyp: string | null }>) =>
-    apiFetch<Anlage>(`/api/anlagen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<{
+      standort_id: string | null;
+      bezeichnung: string;
+      adresse: Adresse;
+      anlagentyp: string | null;
+      aktiv: boolean;
+    }>,
+  ) => apiFetch<Anlage>(`/api/anlagen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/anlagen/${id}`, { method: "DELETE" }),
+};
+
+export const standorteApi = {
+  list: (kundeId?: string, aktiv?: boolean) => {
+    const params = new URLSearchParams();
+    if (kundeId) params.set("kunde_id", kundeId);
+    if (aktiv !== undefined) params.set("aktiv", String(aktiv));
+    const qs = params.toString();
+    return apiFetch<Standort[]>(`/api/standorte${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => apiFetch<Standort>(`/api/standorte/${id}`),
+  create: (body: { kunde_id: string; bezeichnung: string; adresse?: Adresse }) =>
+    apiFetch<Standort>("/api/standorte", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<{ bezeichnung: string; adresse: Adresse; aktiv: boolean }>) =>
+    apiFetch<Standort>(`/api/standorte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/standorte/${id}`, { method: "DELETE" }),
 };
 
 export const dauerauftraegeApi = {
@@ -233,6 +267,7 @@ export const vorgaengeApi = {
   create: (body: {
     kunde_id: string;
     anlage_id?: string | null;
+    standort_id?: string | null;
     titel: string;
     beschreibung?: string;
     abrechnungsart: string;
@@ -243,9 +278,37 @@ export const vorgaengeApi = {
   update: (
     id: string,
     body: Partial<
-      Pick<Vorgang, "status" | "titel" | "beschreibung" | "prioritaet" | "kunde_id" | "anlage_id">
+      Pick<
+        Vorgang,
+        "status" | "titel" | "beschreibung" | "prioritaet" | "kunde_id" | "anlage_id" | "standort_id"
+      >
     >
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+};
+
+export const vorgangAnfragenApi = {
+  list: (status?: string) =>
+    apiFetch<VorgangAnfrage[]>(`/api/vorgang-anfragen${status ? `?status=${status}` : ""}`),
+  get: (id: string) => apiFetch<VorgangAnfrage>(`/api/vorgang-anfragen/${id}`),
+  annehmen: (id: string, body: { abrechnungsart: string; prioritaet?: number }) =>
+    apiFetch<VorgangAnfrage>(`/api/vorgang-anfragen/${id}/annehmen`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  ablehnen: (id: string, ablehnungsgrund?: string) =>
+    apiFetch<VorgangAnfrage>(`/api/vorgang-anfragen/${id}/ablehnen`, {
+      method: "POST",
+      body: JSON.stringify({ ablehnungsgrund }),
+    }),
+};
+
+export const rechteMatrixApi = {
+  get: () => apiFetch<RechteMatrixEintrag[]>("/api/rechte-matrix"),
+  set: (rolle: RechteRolle, bereich: RechteBereich, aktion: RechteAktion, erlaubt: boolean) =>
+    apiFetch<RechteMatrixEintrag[]>("/api/rechte-matrix", {
+      method: "PUT",
+      body: JSON.stringify({ rolle, bereich, aktion, erlaubt }),
+    }),
 };
 
 export const vorgangEventsApi = {
@@ -563,6 +626,10 @@ export const kundenportalAuthApi = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+  linkInfo: (loginSlug: string) =>
+    kundenApiFetch<KundenportalLinkInfo>(
+      `/api/kundenportal/auth/link/${encodeURIComponent(loginSlug)}`,
+    ),
   me: () => kundenApiFetch<CurrentKunde>("/api/kundenportal/auth/me"),
   passwortVergessen: (email: string) =>
     kundenApiFetch<void>("/api/kundenportal/auth/passwort-vergessen", {
@@ -617,4 +684,29 @@ export const kundenportalApi = {
   angebotPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/angebote/${id}/pdf`),
   rechnungen: () => kundenApiFetch<Rechnung[]>("/api/kundenportal/rechnungen"),
   rechnungPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/rechnungen/${id}/pdf`),
+  standorte: () => kundenApiFetch<Standort[]>("/api/kundenportal/standorte"),
+  standortAnlegen: (body: { bezeichnung: string; adresse?: Adresse }) =>
+    kundenApiFetch<Standort>("/api/kundenportal/standorte", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  anlagen: () => kundenApiFetch<Anlage[]>("/api/kundenportal/anlagen"),
+  anlageAnlegen: (body: { standort_id?: string | null; bezeichnung: string; adresse?: Adresse; anlagentyp?: string }) =>
+    kundenApiFetch<Anlage>("/api/kundenportal/anlagen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  anfragen: () => kundenApiFetch<VorgangAnfrage[]>("/api/kundenportal/anfragen"),
+  anfrage: (id: string) => kundenApiFetch<VorgangAnfrage>(`/api/kundenportal/anfragen/${id}`),
+  anfrageAnlegen: (body: {
+    titel: string;
+    beschreibung?: string;
+    leistungstyp: Leistungstyp;
+    standort_id?: string | null;
+    anlage_id?: string | null;
+  }) =>
+    kundenApiFetch<VorgangAnfrage>("/api/kundenportal/anfragen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
 };

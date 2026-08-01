@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
 from app.models.vorgang import Vorgang
@@ -22,13 +29,17 @@ from app.schemas.material import (
     MaterialVerwendungRead,
 )
 from app.services.csv_service import csv_response
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 
 router = APIRouter(
     prefix="/api/material",
     tags=["material"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(
+            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+        ),
         Depends(require_module("material")),
+        Depends(require_recht("material", "sehen")),
     ],
 )
 
@@ -349,6 +360,11 @@ async def verwendung_erfassen(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgeschlossen und kann nicht mehr bebucht werden",
         )
     await _require_lager(session, body.lager_id)
     bestand = await _get_or_create_bestand(session, auth.mandant_id, material_id, body.lager_id)

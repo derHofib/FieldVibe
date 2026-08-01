@@ -66,6 +66,9 @@ class Vorgang(TimestampMixin, Base):
     anlage_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=True
     )
+    standort_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("standorte.id"), nullable=True
+    )
     vertrag_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("vertraege.id"), nullable=True
     )
@@ -92,3 +95,10 @@ class Vorgang(TimestampMixin, Base):
     # doppeltem Versand versehentlich zwei Vorgaenge zu erzeugen -- exakt
     # dasselbe Muster wie VorgangEvent.client_uuid.
     client_uuid: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # Ansprechpartner beim Kunden, falls dieser Vorgang aus einer per
+    # Kundenportal gestellten und angenommenen Auftragsanfrage entstanden ist
+    # (siehe app/models/vorgang_anfrage.py). NULL bei intern erstellten
+    # Vorgaengen.
+    erstellt_von_kundenportal_zugang_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kundenportal_zugaenge.id"), nullable=True
+    )

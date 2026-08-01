@@ -6,7 +6,9 @@ import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantenPage } from "./pages/MandantenPage";
+import { RechteMatrixPage } from "./pages/RechteMatrixPage";
 import { UsersPage } from "./pages/UsersPage";
+import { AnfragenPage } from "./pages/feld/AnfragenPage";
 import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
@@ -83,12 +85,14 @@ export function App() {
           <Route path="/dispo" element={<DispoBoardPage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
           <Route path="/geschaeft" element={<GeschaeftPage />} />
+          <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="/accounts" element={<UsersPage />} />
+          <Route path="/rechte-matrix" element={<RechteMatrixPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />

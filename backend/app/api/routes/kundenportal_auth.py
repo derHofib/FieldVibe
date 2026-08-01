@@ -23,11 +23,13 @@ from app.core.security import (
 from app.db.session import system_session
 from app.models.kunde import Kunde
 from app.models.kundenportal import KundenportalZugang
+from app.models.mandant import Mandant
 from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair
 from app.schemas.kundenportal import (
     CurrentKunde,
     KundenPasswortResetRequest,
     KundenPasswortVergessenRequest,
+    KundenportalLinkInfo,
 )
 from app.services.email_service import EmailNichtKonfiguriert, send_email
 from app.services.kundenportal_auth_service import authenticate_kunde
@@ -52,6 +54,32 @@ async def login(body: LoginRequest, request: Request) -> TokenPair:
     login_ip_limiter.record_success(ip_key)
     login_account_limiter.record_success(account_key)
     return result
+
+
+@router.get("/link/{login_slug}", response_model=KundenportalLinkInfo)
+async def link_info(login_slug: str) -> KundenportalLinkInfo:
+    """Loest den personalisierten Login-Link auf (/portal/l/{login_slug}):
+    liefert nur Anzeigedaten zum Vorbefuellen der Login-Seite, niemals einen
+    Token -- die Passwort-Eingabe bleibt in jedem Fall Pflicht. Absichtlich
+    ohne Rate-Limiting: der Slug ist selbst schon ein hochentropisches
+    Geheimnis (secrets.token_urlsafe(16), siehe app/api/routes/kunden.py),
+    kein erratbarer Bezeichner wie eine E-Mail-Adresse."""
+    async with system_session() as session:
+        result = await session.execute(
+            select(KundenportalZugang).where(KundenportalZugang.login_slug == login_slug)
+        )
+        zugang = result.scalar_one_or_none()
+        if zugang is None or not zugang.aktiv:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link ungültig")
+
+        kunde = await session.get(Kunde, zugang.kunde_id)
+        mandant = await session.get(Mandant, zugang.mandant_id)
+        if kunde is None or mandant is None or mandant.status != "aktiv":
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link ungültig")
+
+        return KundenportalLinkInfo(
+            email=zugang.email, name=zugang.name, kunde_name=kunde.name, mandant_name=mandant.name
+        )
 
 
 @router.post("/refresh", response_model=TokenPair)

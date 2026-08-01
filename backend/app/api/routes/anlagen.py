@@ -6,9 +6,17 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
@@ -20,7 +28,9 @@ from app.services.zuweisung_service import assigned_kunde_ids
 router = APIRouter(
     prefix="/api/anlagen",
     tags=["anlagen"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+    ],
 )
 
 
@@ -39,18 +49,43 @@ async def _require_own_kunde(session: AsyncSession, kunde_id: UUID) -> Kunde:
     return kunde
 
 
-@router.get("", response_model=list[AnlageRead])
+async def _require_standort_fuer_kunde(
+    session: AsyncSession, standort_id: UUID, kunde_id: UUID | None
+) -> Standort:
+    standort = await session.get(Standort, standort_id)
+    if standort is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Standort nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if standort.kunde_id != kunde_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Standort gehört nicht zum angegebenen Kunden",
+        )
+    return standort
+
+
+@router.get(
+    "", response_model=list[AnlageRead], dependencies=[Depends(require_recht("kunden", "sehen"))]
+)
 async def list_anlagen(
     kunde_id: UUID | None = Query(default=None),
+    standort_id: UUID | None = Query(default=None),
     objekttyp: str | None = Query(default=None),
+    aktiv: bool | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Anlage]:
     stmt = select(Anlage).order_by(Anlage.bezeichnung)
     if kunde_id:
         stmt = stmt.where(Anlage.kunde_id == kunde_id)
+    if standort_id:
+        stmt = stmt.where(Anlage.standort_id == standort_id)
     if objekttyp:
         stmt = stmt.where(Anlage.objekttyp == objekttyp)
+    if aktiv is not None:
+        stmt = stmt.where(Anlage.aktiv == aktiv)
     if auth.role == "techniker":
         # Interne Objekte (Fahrzeuge/Lager/Baustellen, kunde_id NULL) sind
         # keine Kundendaten und daher unabhaengig von der Kunde-Zuweisung
@@ -66,21 +101,25 @@ async def list_anlagen(
     response_model=AnlageRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
         Depends(require_module("kundenverwaltung", "material")),
+        Depends(require_recht("kunden", "bearbeiten")),
     ],
 )
 async def create_anlage(
     body: AnlageCreate,
-    auth=Depends(require_roles("mandant_admin", "disponent")),
+    auth=Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
     session: AsyncSession = Depends(get_db),
 ) -> Anlage:
     if body.kunde_id is not None:
         await _require_own_kunde(session, body.kunde_id)
+    if body.standort_id is not None:
+        await _require_standort_fuer_kunde(session, body.standort_id, body.kunde_id)
 
     anlage = Anlage(
         mandant_id=auth.mandant_id,
         kunde_id=body.kunde_id,
+        standort_id=body.standort_id,
         objekttyp=body.objekttyp,
         bezeichnung=body.bezeichnung,
         adresse=body.adresse,
@@ -137,7 +176,11 @@ async def get_anlage_by_qr(
     return anlage
 
 
-@router.get("/{anlage_id}", response_model=AnlageRead)
+@router.get(
+    "/{anlage_id}",
+    response_model=AnlageRead,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
 async def get_anlage(
     anlage_id: UUID,
     auth: AuthContext = Depends(get_current_user),
@@ -150,7 +193,11 @@ async def get_anlage(
     return anlage
 
 
-@router.get("/{anlage_id}/profil", response_model=AnlageProfil)
+@router.get(
+    "/{anlage_id}/profil",
+    response_model=AnlageProfil,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
 async def get_anlage_profil(
     anlage_id: UUID,
     auth: AuthContext = Depends(get_current_user),
@@ -206,8 +253,9 @@ async def get_anlage_profil(
     "/{anlage_id}",
     response_model=AnlageRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
         Depends(require_module("kundenverwaltung", "material")),
+        Depends(require_recht("kunden", "bearbeiten")),
     ],
 )
 async def update_anlage(
@@ -218,6 +266,8 @@ async def update_anlage(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)
+    if changes.get("standort_id") is not None:
+        await _require_standort_fuer_kunde(session, changes["standort_id"], anlage.kunde_id)
     for field, value in changes.items():
         setattr(anlage, field, value)
     try:

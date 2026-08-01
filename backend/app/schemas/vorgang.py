@@ -25,6 +25,7 @@ class VorgangCreate(BaseModel):
     vorgangsnummer: str | None = None
     kunde_id: UUID
     anlage_id: UUID | None = None
+    standort_id: UUID | None = None
     vertrag_id: UUID | None = None
     parent_vorgang_id: UUID | None = None
     titel: str
@@ -42,6 +43,7 @@ class VorgangUpdate(BaseModel):
     beschreibung: str | None = None
     kunde_id: UUID | None = None
     anlage_id: UUID | None = None
+    standort_id: UUID | None = None
     vertrag_id: UUID | None = None
     abrechnungsart: VorgangAbrechnungsart | None = None
     leistungstyp: Leistungstyp | None = None
@@ -56,6 +58,7 @@ class VorgangRead(BaseModel):
     vorgangsnummer: str
     kunde_id: UUID
     anlage_id: UUID | None
+    standort_id: UUID | None
     vertrag_id: UUID | None
     parent_vorgang_id: UUID | None
     dauerauftrag_id: UUID | None
@@ -67,5 +70,6 @@ class VorgangRead(BaseModel):
     prioritaet: int
     last_activity_at: datetime
     abgeschlossen_am: datetime | None
+    erstellt_von_kundenportal_zugang_id: UUID | None
     created_at: datetime
     updated_at: datetime

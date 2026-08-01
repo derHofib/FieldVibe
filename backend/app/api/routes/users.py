@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.core.security import hash_password
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
@@ -17,7 +17,19 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 @router.get(
     "",
     response_model=list[UserRead],
-    dependencies=[Depends(require_roles("super_admin", "mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(
+            require_roles(
+                "super_admin",
+                "mandant_admin",
+                "disponent",
+                "techniker",
+                "controller",
+                "mitarbeiter",
+            )
+        ),
+        Depends(require_recht("mitarbeiterverwaltung", "sehen")),
+    ],
 )
 async def list_users(session: AsyncSession = Depends(get_db)) -> list[User]:
     # RLS restricts a mandant_admin's session to their own mandant already;

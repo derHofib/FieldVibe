@@ -4,7 +4,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
-Role = Literal["super_admin", "mandant_admin", "disponent", "techniker"]
+Role = Literal[
+    "super_admin", "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"
+]
 
 
 class UserCreate(BaseModel):

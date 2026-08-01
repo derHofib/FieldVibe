@@ -1,16 +1,19 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { Role } from "../types";
 
-const ROLE_LABEL: Record<Role, string> = {
+export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
   mandant_admin: "Mandanten-Admin",
   disponent: "Disponent",
   techniker: "Techniker",
+  controller: "Controller",
+  mitarbeiter: "Mitarbeiter",
 };
 
 export function UsersPage() {
@@ -80,6 +83,16 @@ export function UsersPage() {
 
   return (
     <div className="space-y-8">
+      {currentUser?.role === "mandant_admin" && (
+        <div className="flex justify-end">
+          <Link
+            to="/rechte-matrix"
+            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+          >
+            Rechte für Controller/Mitarbeiter einstellen →
+          </Link>
+        </div>
+      )}
       <section>
         <h2 className="mb-4 text-lg font-bold text-slate-800">Neuen Account anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">

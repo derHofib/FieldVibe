@@ -28,7 +28,9 @@ from app.api.routes import (
     pruefmittel,
     pruefzyklen,
     rechnungen,
+    rechte,
     search,
+    standorte,
     stories,
     stream,
     tags,
@@ -36,6 +38,7 @@ from app.api.routes import (
     users,
     vertraege,
     vorgaenge,
+    vorgang_anfragen,
     vorgang_events,
     zeiterfassung,
     zuweisungen,
@@ -80,9 +83,11 @@ app.include_router(impersonation.router)
 app.include_router(audit_log.router)
 app.include_router(kunden.router)
 app.include_router(anlagen.router)
+app.include_router(standorte.router)
 app.include_router(dauerauftraege.router)
 app.include_router(vertraege.router)
 app.include_router(vorgaenge.router)
+app.include_router(vorgang_anfragen.router)
 app.include_router(vorgang_events.router)
 app.include_router(tags.router)
 app.include_router(feed.router)
@@ -103,6 +108,7 @@ app.include_router(material.router)
 app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
+app.include_router(rechte.router)
 app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)

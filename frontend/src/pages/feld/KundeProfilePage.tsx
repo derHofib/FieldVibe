@@ -2,11 +2,26 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { anlagenApi, dauerauftraegeApi, kundenApi, usersApi } from "../../api/endpoints";
+import {
+  anlagenApi,
+  dauerauftraegeApi,
+  kundenApi,
+  kundenportalZugaengeApi,
+  standorteApi,
+  usersApi,
+} from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
-import type { Adresse, Ansprechpartner, Anlage, Eskalationsstufe, User } from "../../types";
+import type {
+  Adresse,
+  Ansprechpartner,
+  Anlage,
+  Eskalationsstufe,
+  KundenportalZugang,
+  Standort,
+  User,
+} from "../../types";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
   1: "Stufe 1 – Erstkontakt",
@@ -439,21 +454,28 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
   );
 }
 
-function NeueAnlage({ kundeId }: { kundeId: string }) {
+function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Standort[] }) {
   const queryClient = useQueryClient();
   const [zeigen, setZeigen] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");
   const [anlagentyp, setAnlagentyp] = useState("");
+  const [standortId, setStandortId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: () =>
-      anlagenApi.create({ kunde_id: kundeId, bezeichnung, anlagentyp: anlagentyp || undefined }),
+      anlagenApi.create({
+        kunde_id: kundeId,
+        bezeichnung,
+        anlagentyp: anlagentyp || undefined,
+        standort_id: standortId || undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
       setZeigen(false);
       setBezeichnung("");
       setAnlagentyp("");
+      setStandortId("");
       setError(null);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Anlage konnte nicht angelegt werden"),
@@ -497,6 +519,25 @@ function NeueAnlage({ kundeId }: { kundeId: string }) {
           className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
       </div>
+      {standorte.length > 0 && (
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Standort (optional)
+          </label>
+          <select
+            value={standortId}
+            onChange={(e) => setStandortId(e.target.value)}
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          >
+            <option value="">Kein Standort</option>
+            {standorte.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.bezeichnung}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
         <button
@@ -515,6 +556,335 @@ function NeueAnlage({ kundeId }: { kundeId: string }) {
         </button>
       </div>
     </form>
+  );
+}
+
+function NeuerStandort({ kundeId }: { kundeId: string }) {
+  const queryClient = useQueryClient();
+  const [zeigen, setZeigen] = useState(false);
+  const [bezeichnung, setBezeichnung] = useState("");
+  const [strasse, setStrasse] = useState("");
+  const [plz, setPlz] = useState("");
+  const [ort, setOrt] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      standorteApi.create({
+        kunde_id: kundeId,
+        bezeichnung,
+        adresse:
+          strasse || plz || ort
+            ? { strasse: strasse || undefined, plz: plz || undefined, ort: ort || undefined }
+            : undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["standorte", kundeId] });
+      setZeigen(false);
+      setBezeichnung("");
+      setStrasse("");
+      setPlz("");
+      setOrt("");
+      setError(null);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Standort konnte nicht angelegt werden"),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!bezeichnung.trim()) {
+      setError("Bitte eine Bezeichnung eingeben");
+      return;
+    }
+    createMutation.mutate();
+  }
+
+  if (!zeigen) {
+    return (
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+        + Neuen Standort anlegen
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+      <input
+        autoFocus
+        value={bezeichnung}
+        onChange={(e) => setBezeichnung(e.target.value)}
+        placeholder="Bezeichnung (z.B. Filiale Nord)"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      <input
+        value={strasse}
+        onChange={(e) => setStrasse(e.target.value)}
+        placeholder="Straße + Hausnr."
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          value={plz}
+          onChange={(e) => setPlz(e.target.value)}
+          placeholder="PLZ"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          value={ort}
+          onChange={(e) => setOrt(e.target.value)}
+          placeholder="Ort"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+      </div>
+      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={createMutation.isPending}
+          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Anlegen
+        </button>
+        <button
+          type="button"
+          onClick={() => setZeigen(false)}
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kannVerwalten: boolean }) {
+  const queryClient = useQueryClient();
+  const { data: standorte } = useQuery({
+    queryKey: ["standorte", kundeId],
+    queryFn: () => standorteApi.list(kundeId),
+  });
+
+  const toggleAktivMutation = useMutation({
+    mutationFn: ({ id, aktiv }: { id: string; aktiv: boolean }) => standorteApi.update(id, { aktiv }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["standorte", kundeId] }),
+  });
+
+  return (
+    <div>
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Standorte</h2>
+      {!standorte || standorte.length === 0 ? (
+        <p className="text-sm text-slate-400 dark:text-slate-500">Keine Standorte.</p>
+      ) : (
+        <div className="space-y-2">
+          {standorte.map((s) => (
+            <div
+              key={s.id}
+              className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+                s.aktiv ? "" : "opacity-60"
+              }`}
+            >
+              <div>
+                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{s.bezeichnung}</div>
+                {s.adresse?.ort && (
+                  <div className="text-xs text-slate-400 dark:text-slate-500">
+                    {[s.adresse.strasse, [s.adresse.plz, s.adresse.ort].filter(Boolean).join(" ")]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </div>
+                )}
+              </div>
+              {kannVerwalten && (
+                <button
+                  onClick={() => toggleAktivMutation.mutate({ id: s.id, aktiv: !s.aktiv })}
+                  className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  {s.aktiv ? "Deaktivieren" : "Aktivieren"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      {kannVerwalten && (
+        <div className="mt-2">
+          <NeuerStandort kundeId={kundeId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AnlageAktivToggle({ anlage, kundeId }: { anlage: Anlage; kundeId: string }) {
+  const queryClient = useQueryClient();
+  const toggleMutation = useMutation({
+    mutationFn: () => anlagenApi.update(anlage.id, { aktiv: !anlage.aktiv }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] }),
+  });
+
+  return (
+    <button
+      onClick={() => toggleMutation.mutate()}
+      disabled={toggleMutation.isPending}
+      className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+    >
+      {anlage.aktiv ? "Deaktivieren" : "Aktivieren"}
+    </button>
+  );
+}
+
+function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; kundeId: string }) {
+  const queryClient = useQueryClient();
+  const [kopiert, setKopiert] = useState(false);
+  const link = `${window.location.origin}/portal/l/${zugang.login_slug}`;
+
+  const toggleMutation = useMutation({
+    mutationFn: () => kundenportalZugaengeApi.update(kundeId, zugang.id, { aktiv: !zugang.aktiv }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["portal-zugaenge", kundeId] }),
+  });
+
+  async function kopieren() {
+    await navigator.clipboard.writeText(link);
+    setKopiert(true);
+    setTimeout(() => setKopiert(false), 2000);
+  }
+
+  return (
+    <div
+      className={`rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+        zugang.aktiv ? "" : "opacity-60"
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{zugang.name}</div>
+          <div className="text-xs text-slate-400 dark:text-slate-500">{zugang.email}</div>
+        </div>
+        <button
+          onClick={() => toggleMutation.mutate()}
+          className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+        >
+          {zugang.aktiv ? "Deaktivieren" : "Aktivieren"}
+        </button>
+      </div>
+      <div className="mt-2 flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
+        <span className="flex-1 truncate text-xs text-slate-500 dark:text-slate-400">{link}</span>
+        <button
+          onClick={kopieren}
+          className="btn-touch shrink-0 text-xs font-medium text-blue-700 dark:text-blue-400"
+        >
+          {kopiert ? "Kopiert ✓" : "Link kopieren"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
+  const queryClient = useQueryClient();
+  const [zeigen, setZeigen] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: () => kundenportalZugaengeApi.create(kundeId, { name, email, password }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["portal-zugaenge", kundeId] });
+      setZeigen(false);
+      setName("");
+      setEmail("");
+      setPassword("");
+      setError(null);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Zugang konnte nicht angelegt werden"),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (password.length < 10) {
+      setError("Passwort muss mindestens 10 Zeichen haben");
+      return;
+    }
+    createMutation.mutate();
+  }
+
+  if (!zeigen) {
+    return (
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+        + Neuen Zugang anlegen
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name des Ansprechpartners"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="E-Mail"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Passwort (mind. 10 Zeichen)"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={createMutation.isPending}
+          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Anlegen
+        </button>
+        <button
+          type="button"
+          onClick={() => setZeigen(false)}
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function PortalZugaengeVerwaltung({ kundeId }: { kundeId: string }) {
+  const { data: zugaenge } = useQuery({
+    queryKey: ["portal-zugaenge", kundeId],
+    queryFn: () => kundenportalZugaengeApi.list(kundeId),
+  });
+
+  return (
+    <div>
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Kundenportal-Zugänge</h2>
+      {!zugaenge || zugaenge.length === 0 ? (
+        <p className="text-sm text-slate-400 dark:text-slate-500">Noch kein Zugang angelegt.</p>
+      ) : (
+        <div className="space-y-2">
+          {zugaenge.map((z) => (
+            <PortalZugangZeile key={z.id} zugang={z} kundeId={kundeId} />
+          ))}
+        </div>
+      )}
+      <div className="mt-2">
+        <NeuerPortalZugang kundeId={kundeId} />
+      </div>
+    </div>
   );
 }
 
@@ -589,6 +959,12 @@ export function KundeProfilePage() {
     queryKey: ["kunde", id],
     queryFn: () => kundenApi.get(id!),
     enabled: !!id && !kundenverwaltungAktiv,
+  });
+
+  const { data: standorteFuerAnlagen } = useQuery({
+    queryKey: ["standorte", id],
+    queryFn: () => standorteApi.list(id!),
+    enabled: !!id && kundenverwaltungAktiv,
   });
 
   const anlageNameById = useMemo(
@@ -679,6 +1055,12 @@ export function KundeProfilePage() {
 
       {kannVerwalten && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
 
+      <StandorteVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
+
+      {kannVerwalten && istModulAktiv(currentUser, "kundenportal") && (
+        <PortalZugaengeVerwaltung kundeId={id!} />
+      )}
+
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Anlagen</h2>
         {profil.anlagen.length === 0 ? (
@@ -686,20 +1068,29 @@ export function KundeProfilePage() {
         ) : (
           <div className="space-y-2">
             {profil.anlagen.map((a) => (
-              <button
+              <div
                 key={a.id}
-                onClick={() => navigate(`/anlagen/${a.id}`)}
-                className="btn-touch block w-full rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+                  a.aktiv ? "" : "opacity-60"
+                }`}
               >
-                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{a.bezeichnung}</div>
-                {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-slate-500">{a.anlagentyp}</div>}
-              </button>
+                <button onClick={() => navigate(`/anlagen/${a.id}`)} className="btn-touch flex-1 text-left">
+                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{a.bezeichnung}</div>
+                  {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-slate-500">{a.anlagentyp}</div>}
+                </button>
+                {kannVerwalten && (
+                  <AnlageAktivToggle anlage={a} kundeId={id!} />
+                )}
+              </div>
             ))}
           </div>
         )}
         {kannVerwalten && (
           <div className="mt-2">
-            <NeueAnlage kundeId={id!} />
+            <NeueAnlage
+              kundeId={id!}
+              standorte={(standorteFuerAnlagen ?? []).filter((s) => s.aktiv)}
+            />
           </div>
         )}
       </div>

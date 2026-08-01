@@ -404,7 +404,17 @@ export function GeschaeftPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Geschäft</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Geschäft</h1>
+        {istModulAktiv(currentUser, "kundenportal") && (
+          <button
+            onClick={() => navigate("/anfragen")}
+            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          >
+            Auftragsanfragen
+          </button>
+        )}
+      </div>
 
       <div className="flex gap-2 rounded-lg bg-white p-1 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         {sichtbareTabs.map((t) => (

@@ -6,9 +6,17 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.standort import Standort
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
@@ -25,11 +33,13 @@ from app.services.zuweisung_service import assigned_kunde_ids
 router = APIRouter(
     prefix="/api/vorgaenge",
     tags=["vorgaenge"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+    ],
 )
 
 
-@router.get("", response_model=list[VorgangRead])
+@router.get("", response_model=list[VorgangRead], dependencies=[Depends(require_recht("vorgaenge", "sehen"))])
 async def list_vorgaenge(
     status_filter: str | None = Query(default=None, alias="status"),
     kunde_id: UUID | None = Query(default=None),
@@ -85,6 +95,28 @@ async def _validate_references(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Anlage gehört nicht zum angegebenen Kunden",
             )
+        if not anlage.aktiv:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Anlage ist inaktiv und steht für neue Vorgänge nicht zur Auswahl",
+            )
+    if body.standort_id is not None:
+        standort = await session.get(Standort, body.standort_id)
+        if standort is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Standort nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        if standort.kunde_id != body.kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Standort gehört nicht zum angegebenen Kunden",
+            )
+        if not standort.aktiv:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Standort ist inaktiv und steht für neue Vorgänge nicht zur Auswahl",
+            )
     if body.vertrag_id is not None:
         vertrag = await session.get(Vertrag, body.vertrag_id)
         if vertrag is None:
@@ -104,7 +136,12 @@ async def _validate_references(
         )
 
 
-@router.post("", response_model=VorgangRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=VorgangRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_recht("vorgaenge", "bearbeiten"))],
+)
 async def create_vorgang(
     body: VorgangCreate,
     response: Response,
@@ -134,6 +171,7 @@ async def create_vorgang(
         vorgangsnummer=vorgangsnummer,
         kunde_id=body.kunde_id,
         anlage_id=body.anlage_id,
+        standort_id=body.standort_id,
         vertrag_id=body.vertrag_id,
         parent_vorgang_id=body.parent_vorgang_id,
         titel=body.titel,
@@ -236,7 +274,11 @@ async def export_vorgaenge_csv(
     )
 
 
-@router.get("/{vorgang_id}", response_model=VorgangRead)
+@router.get(
+    "/{vorgang_id}",
+    response_model=VorgangRead,
+    dependencies=[Depends(require_recht("vorgaenge", "sehen"))],
+)
 async def get_vorgang(
     vorgang_id: UUID,
     auth: AuthContext = Depends(get_current_user),
@@ -249,7 +291,11 @@ async def get_vorgang(
     return vorgang
 
 
-@router.patch("/{vorgang_id}", response_model=VorgangRead)
+@router.patch(
+    "/{vorgang_id}",
+    response_model=VorgangRead,
+    dependencies=[Depends(require_recht("vorgaenge", "bearbeiten"))],
+)
 async def update_vorgang(
     vorgang_id: UUID,
     body: VorgangUpdate,
@@ -292,6 +338,11 @@ async def update_vorgang(
             bestehende_anlage = await session.get(Anlage, vorgang.anlage_id)
             if bestehende_anlage is None or bestehende_anlage.kunde_id != neuer_kunde_id:
                 changes["anlage_id"] = None
+        # Dieselbe Ueberlegung fuer einen bestehenden Standort.
+        if "standort_id" not in changes and vorgang.standort_id is not None:
+            bestehender_standort = await session.get(Standort, vorgang.standort_id)
+            if bestehender_standort is None or bestehender_standort.kunde_id != neuer_kunde_id:
+                changes["standort_id"] = None
         # Dieselbe Ueberlegung fuer einen bestehenden Vertrag.
         if "vertrag_id" not in changes and vorgang.vertrag_id is not None:
             bestehender_vertrag = await session.get(Vertrag, vorgang.vertrag_id)
@@ -310,6 +361,20 @@ async def update_vorgang(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Anlage gehört nicht zum (neuen) Kunden dieses Vorgangs",
+            )
+
+    if changes.get("standort_id") is not None:
+        standort = await session.get(Standort, changes["standort_id"])
+        if standort is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Standort nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        ziel_kunde_id = changes.get("kunde_id", vorgang.kunde_id)
+        if standort.kunde_id != ziel_kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Standort gehört nicht zum (neuen) Kunden dieses Vorgangs",
             )
 
     if changes.get("vertrag_id") is not None:

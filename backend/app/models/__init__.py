@@ -17,11 +17,14 @@ from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition
+from app.models.rollen_recht import MandantRollenRecht
+from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
 from app.models.termin import Termin
 from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 
@@ -48,14 +51,17 @@ __all__ = [
     "Notification",
     "Pruefmittel",
     "Pruefzyklus",
+    "MandantRollenRecht",
     "Rechnung",
     "RechnungPosition",
+    "Standort",
     "Tag",
     "TagAssignment",
     "Termin",
     "User",
     "Vertrag",
     "Vorgang",
+    "VorgangAnfrage",
     "VorgangEvent",
     "Zeiterfassung",
 ]

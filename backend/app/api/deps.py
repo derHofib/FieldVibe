@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import decode_token
 from app.db.session import system_session, tenant_session
 from app.models.mandant import Mandant
+from app.services.rechte_service import hat_recht
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -101,6 +102,33 @@ def require_module(*modules: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Diese Funktion ist für Ihren Account nicht freigeschaltet",
+            )
+        return auth
+
+    return checker
+
+
+def require_recht(bereich: str, aktion: str = "sehen"):
+    """Zusaetzlich zu require_roles: schraenkt die frei konfigurierbaren
+    Account-Typen controller/mitarbeiter gemaess der vom mandant_admin
+    gepflegten Rechte-Matrix ein (siehe app/services/rechte_service.py).
+    super_admin/mandant_admin/disponent/techniker sind hier immer erlaubt --
+    deren Zugriff wird ausschliesslich ueber require_roles an der jeweiligen
+    Route gesteuert und bleibt von dieser Matrix unberuehrt."""
+
+    async def checker(
+        auth: AuthContext = Depends(get_current_user),
+        session: AsyncSession = Depends(get_db),
+    ) -> AuthContext:
+        if auth.role not in ("controller", "mitarbeiter"):
+            return auth
+        erlaubt = await hat_recht(
+            session, mandant_id=auth.mandant_id, rolle=auth.role, bereich=bereich, aktion=aktion
+        )
+        if not erlaubt:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Keine Berechtigung für diese Aktion",
             )
         return auth
 

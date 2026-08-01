@@ -7,7 +7,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -17,12 +24,18 @@ from app.schemas.zeiterfassung import ZeiterfassungRead, ZeiterfassungStart, Zei
 from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.pdf_service import generate_wochenzettel_pdf
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/zeiterfassung",
     tags=["zeiterfassung"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(
+            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+        ),
+        Depends(require_recht("vorgaenge", "sehen")),
+    ],
 )
 
 
@@ -228,7 +241,12 @@ async def get_laufender_timer(
     return result.scalar_one_or_none()
 
 
-@router.post("/start", response_model=ZeiterfassungRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/start",
+    response_model=ZeiterfassungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_recht("vorgaenge", "bearbeiten"))],
+)
 async def start_timer(
     body: ZeiterfassungStart,
     auth: AuthContext = Depends(get_current_user),
@@ -245,6 +263,11 @@ async def start_timer(
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
+        )
+    if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgeschlossen und kann nicht mehr bebucht werden",
         )
 
     eintrag = Zeiterfassung(

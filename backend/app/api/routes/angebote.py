@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
@@ -27,8 +34,11 @@ router = APIRouter(
     prefix="/api/angebote",
     tags=["angebote"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(
+            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+        ),
         Depends(require_module("abrechnung")),
+        Depends(require_recht("abrechnung", "sehen")),
     ],
 )
 

@@ -1,5 +1,11 @@
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
-export type Role = "super_admin" | "mandant_admin" | "disponent" | "techniker";
+export type Role =
+  | "super_admin"
+  | "mandant_admin"
+  | "disponent"
+  | "techniker"
+  | "controller"
+  | "mitarbeiter";
 
 // Muss mit MANDANT_MODULE in backend/app/models/mandant.py uebereinstimmen.
 // "vorgaenge" (Auftrag + Chat/Foto/Status/Unterschrift + Zeit start/stopp,
@@ -117,6 +123,7 @@ export type AnlagenObjekttyp = "kundenanlage" | "fahrzeug" | "lager" | "baustell
 export interface Anlage {
   id: string;
   kunde_id: string | null;
+  standort_id: string | null;
   objekttyp: AnlagenObjekttyp;
   bezeichnung: string;
   adresse: Adresse;
@@ -125,6 +132,21 @@ export interface Anlage {
   stammdaten: Record<string, unknown>;
   geo_lat: number | null;
   geo_lng: number | null;
+  aktiv: boolean;
+  erstellt_von_kundenportal_zugang_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Standort {
+  id: string;
+  kunde_id: string;
+  bezeichnung: string;
+  adresse: Adresse;
+  aktiv: boolean;
+  geo_lat: number | null;
+  geo_lng: number | null;
+  erstellt_von_kundenportal_zugang_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -152,6 +174,7 @@ export interface Vorgang {
   vorgangsnummer: string;
   kunde_id: string;
   anlage_id: string | null;
+  standort_id: string | null;
   vertrag_id: string | null;
   parent_vorgang_id: string | null;
   dauerauftrag_id: string | null;
@@ -163,6 +186,29 @@ export interface Vorgang {
   prioritaet: number;
   last_activity_at: string;
   abgeschlossen_am: string | null;
+  erstellt_von_kundenportal_zugang_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// --- Auftragsanfragen (Kundenportal) ----------------------------------------
+
+export type VorgangAnfrageStatus = "offen" | "angenommen" | "abgelehnt";
+
+export interface VorgangAnfrage {
+  id: string;
+  kunde_id: string;
+  kundenportal_zugang_id: string;
+  standort_id: string | null;
+  anlage_id: string | null;
+  titel: string;
+  beschreibung: string | null;
+  leistungstyp: Leistungstyp;
+  status: VorgangAnfrageStatus;
+  ablehnungsgrund: string | null;
+  vorgang_id: string | null;
+  bearbeitet_von: string | null;
+  bearbeitet_am: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -586,8 +632,36 @@ export interface KundenportalZugang {
   email: string;
   name: string;
   aktiv: boolean;
+  login_slug: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface KundenportalLinkInfo {
+  email: string;
+  name: string;
+  kunde_name: string;
+  mandant_name: string;
+}
+
+// --- Rechte-Matrix (Account-Typen controller/mitarbeiter) -------------------
+
+export type RechteRolle = "controller" | "mitarbeiter";
+export type RechteBereich =
+  | "vorgaenge"
+  | "kunden"
+  | "material"
+  | "dispo"
+  | "abrechnung"
+  | "statistik"
+  | "mitarbeiterverwaltung";
+export type RechteAktion = "sehen" | "bearbeiten";
+
+export interface RechteMatrixEintrag {
+  rolle: RechteRolle;
+  bereich: RechteBereich;
+  aktion: RechteAktion;
+  erlaubt: boolean;
 }
 
 // --- Mandant-Einstellungen (Nacharbeit) -------------------------------------

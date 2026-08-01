@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { anlagenApi, kundenApi, vorgaengeApi } from "../../api/endpoints";
+import { anlagenApi, kundenApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { QrScanner } from "../../components/QrScanner";
 import { queueVorgang } from "../../offline/outbox";
@@ -38,6 +38,7 @@ export function NewVorgangPage() {
   const [error, setError] = useState<string | null>(null);
   const [kundeId, setKundeId] = useState("");
   const [anlage, setAnlage] = useState<Anlage | null>(null);
+  const [standortId, setStandortId] = useState("");
   const [titel, setTitel] = useState("");
   const [beschreibung, setBeschreibung] = useState("");
   const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("stoerung");
@@ -55,8 +56,13 @@ export function NewVorgangPage() {
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
   const { data: anlagenListe } = useQuery({
-    queryKey: ["anlagen", kundeId],
-    queryFn: () => anlagenApi.list(kundeId),
+    queryKey: ["anlagen", kundeId, "aktiv"],
+    queryFn: () => anlagenApi.list(kundeId, undefined, true),
+    enabled: !!kundeId,
+  });
+  const { data: standorteListe } = useQuery({
+    queryKey: ["standorte", kundeId, "aktiv"],
+    queryFn: () => standorteApi.list(kundeId, true),
     enabled: !!kundeId,
   });
 
@@ -120,6 +126,7 @@ export function NewVorgangPage() {
       const payload = {
         kunde_id: kundeId,
         anlage_id: anlage?.id ?? null,
+        standort_id: standortId || null,
         titel,
         beschreibung,
         abrechnungsart,
@@ -221,6 +228,7 @@ export function NewVorgangPage() {
             onChange={(e) => {
               setKundeId(e.target.value);
               setAnlage(null);
+              setStandortId("");
             }}
             className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
@@ -289,6 +297,26 @@ export function NewVorgangPage() {
                 Abbrechen
               </button>
             </div>
+          </div>
+        )}
+
+        {kundeId && standorteListe && standorteListe.length > 0 && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Standort (optional)
+            </label>
+            <select
+              value={standortId}
+              onChange={(e) => setStandortId(e.target.value)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Kein Standort</option>
+              {standorteListe.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.bezeichnung}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
