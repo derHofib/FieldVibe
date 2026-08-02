@@ -461,7 +461,20 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
   const [bezeichnung, setBezeichnung] = useState("");
   const [anlagentyp, setAnlagentyp] = useState("");
   const [standortId, setStandortId] = useState("");
+  const [neuerStandortName, setNeuerStandortName] = useState("");
+  const [zeigeNeuerStandort, setZeigeNeuerStandort] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const neuerStandortMutation = useMutation({
+    mutationFn: () => standorteApi.create({ kunde_id: kundeId, bezeichnung: neuerStandortName }),
+    onSuccess: (standort) => {
+      queryClient.invalidateQueries({ queryKey: ["standorte", kundeId] });
+      setStandortId(standort.id);
+      setNeuerStandortName("");
+      setZeigeNeuerStandort(false);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Standort konnte nicht angelegt werden"),
+  });
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -520,11 +533,38 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
           className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
       </div>
-      {standorte.length > 0 && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
             Standort (optional)
           </label>
+          <button
+            type="button"
+            onClick={() => setZeigeNeuerStandort((v) => !v)}
+            className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+          >
+            {zeigeNeuerStandort ? "Abbrechen" : "+ Neuer Standort"}
+          </button>
+        </div>
+        {zeigeNeuerStandort ? (
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              value={neuerStandortName}
+              onChange={(e) => setNeuerStandortName(e.target.value)}
+              placeholder="Bezeichnung (z.B. Filiale Nord)"
+              className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <button
+              type="button"
+              disabled={!neuerStandortName.trim() || neuerStandortMutation.isPending}
+              onClick={() => neuerStandortMutation.mutate()}
+              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Anlegen
+            </button>
+          </div>
+        ) : (
           <select
             value={standortId}
             onChange={(e) => setStandortId(e.target.value)}
@@ -537,8 +577,8 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
               </option>
             ))}
           </select>
-        </div>
-      )}
+        )}
+      </div>
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
         <button
@@ -661,6 +701,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
 
 function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kannVerwalten: boolean }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: standorte } = useQuery({
     queryKey: ["standorte", kundeId],
     queryFn: () => standorteApi.list(kundeId),
@@ -685,8 +726,13 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
                 s.aktiv ? "" : "opacity-60"
               }`}
             >
-              <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{s.bezeichnung}</div>
+              <button
+                onClick={() => navigate(`/standorte/${s.id}`)}
+                className="btn-touch flex-1 text-left"
+              >
+                <div className="text-sm font-medium text-slate-800 dark:text-slate-100 hover:underline">
+                  {s.bezeichnung}
+                </div>
                 {s.adresse?.ort && (
                   <div className="text-xs text-slate-400 dark:text-slate-500">
                     {[s.adresse.strasse, [s.adresse.plz, s.adresse.ort].filter(Boolean).join(" ")]
@@ -694,7 +740,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
                       .join(", ")}
                   </div>
                 )}
-              </div>
+              </button>
               {kannVerwalten && (
                 <button
                   onClick={() => toggleAktivMutation.mutate({ id: s.id, aktiv: !s.aktiv })}

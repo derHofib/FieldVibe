@@ -33,6 +33,7 @@ class VorgangCreate(BaseModel):
     abrechnungsart: VorgangAbrechnungsart
     leistungstyp: Leistungstyp
     prioritaet: int = Field(default=3, ge=1, le=5)
+    faelligkeit_am: datetime | None = None
     # Von der Offline-Outbox vergeben (Nacharbeit): macht einen Sync-Retry
     # sicher idempotent, dasselbe Muster wie VorgangEventCreate.client_uuid.
     client_uuid: UUID | None = None
@@ -49,6 +50,7 @@ class VorgangUpdate(BaseModel):
     leistungstyp: Leistungstyp | None = None
     status: VorgangStatusSetzbar | None = None
     prioritaet: int | None = Field(default=None, ge=1, le=5)
+    faelligkeit_am: datetime | None = None
 
 
 class VorgangRead(BaseModel):
@@ -68,8 +70,10 @@ class VorgangRead(BaseModel):
     leistungstyp: Leistungstyp
     status: VorgangStatus
     prioritaet: int
+    faelligkeit_am: datetime | None
     last_activity_at: datetime
     abgeschlossen_am: datetime | None
     erstellt_von_kundenportal_zugang_id: UUID | None
+    erstellt_von: UUID | None
     created_at: datetime
     updated_at: datetime

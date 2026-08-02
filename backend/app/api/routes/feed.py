@@ -1,6 +1,6 @@
 import base64
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,7 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.kundenportal import KundenportalZugang
+from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
+from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
@@ -71,9 +74,12 @@ async def get_feed(
     status_filter: str | None = Query(default=None, alias="status"),
     kunde_id: UUID | None = Query(default=None),
     anlage_id: UUID | None = Query(default=None),
+    standort_id: UUID | None = Query(default=None),
     tag: str | None = Query(default=None, description="Tag-Label ohne '#'"),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
+    faellig_von: date | None = Query(default=None),
+    faellig_bis: date | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
@@ -85,10 +91,21 @@ async def get_feed(
         stmt = stmt.where(Vorgang.kunde_id == kunde_id)
     if anlage_id:
         stmt = stmt.where(Vorgang.anlage_id == anlage_id)
+    if standort_id:
+        stmt = stmt.where(Vorgang.standort_id == standort_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
         stmt = stmt.where(Vorgang.abrechnungsart == abrechnungsart)
+    if faellig_von:
+        stmt = stmt.where(
+            Vorgang.faelligkeit_am >= datetime.combine(faellig_von, datetime.min.time(), tzinfo=timezone.utc)
+        )
+    if faellig_bis:
+        stmt = stmt.where(
+            Vorgang.faelligkeit_am
+            < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+        )
     if auth.role == "techniker":
         stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     if tag:
@@ -131,6 +148,28 @@ async def get_feed(
         anlagen_result = await session.execute(select(Anlage).where(Anlage.id.in_(anlage_ids)))
         anlagen_by_id = {a.id: a for a in anlagen_result.scalars().all()}
 
+    standort_ids = {v.standort_id for v in page if v.standort_id}
+    standorte_by_id: dict[UUID, Standort] = {}
+    if standort_ids:
+        standorte_result = await session.execute(select(Standort).where(Standort.id.in_(standort_ids)))
+        standorte_by_id = {s.id: s for s in standorte_result.scalars().all()}
+
+    ersteller_ids = {v.erstellt_von for v in page if v.erstellt_von}
+    ersteller_by_id: dict[UUID, User] = {}
+    if ersteller_ids:
+        ersteller_result = await session.execute(select(User).where(User.id.in_(ersteller_ids)))
+        ersteller_by_id = {u.id: u for u in ersteller_result.scalars().all()}
+
+    portal_ersteller_ids = {
+        v.erstellt_von_kundenportal_zugang_id for v in page if v.erstellt_von_kundenportal_zugang_id
+    }
+    portal_ersteller_by_id: dict[UUID, KundenportalZugang] = {}
+    if portal_ersteller_ids:
+        portal_ersteller_result = await session.execute(
+            select(KundenportalZugang).where(KundenportalZugang.id.in_(portal_ersteller_ids))
+        )
+        portal_ersteller_by_id = {z.id: z for z in portal_ersteller_result.scalars().all()}
+
     last_events_by_vorgang: dict[UUID, VorgangEvent] = {}
     if vorgang_ids:
         # DISTINCT ON (Postgres) statt einer eigenen Query pro Vorgang: eine
@@ -168,12 +207,20 @@ async def get_feed(
     items: list[FeedCard] = []
     for vorgang in page:
         kunde = kunden_by_id.get(vorgang.kunde_id)
+        anlage = anlagen_by_id.get(vorgang.anlage_id) if vorgang.anlage_id else None
         anlage_kurzadresse = None
-        if vorgang.anlage_id:
-            anlage = anlagen_by_id.get(vorgang.anlage_id)
-            if anlage and anlage.adresse:
-                teile = [anlage.adresse.get("strasse"), anlage.adresse.get("ort")]
-                anlage_kurzadresse = ", ".join(t for t in teile if t) or None
+        if anlage and anlage.adresse:
+            teile = [anlage.adresse.get("strasse"), anlage.adresse.get("ort")]
+            anlage_kurzadresse = ", ".join(t for t in teile if t) or None
+        standort = standorte_by_id.get(vorgang.standort_id) if vorgang.standort_id else None
+
+        ersteller_name = None
+        if vorgang.erstellt_von:
+            ersteller = ersteller_by_id.get(vorgang.erstellt_von)
+            ersteller_name = ersteller.name if ersteller else None
+        elif vorgang.erstellt_von_kundenportal_zugang_id:
+            portal_ersteller = portal_ersteller_by_id.get(vorgang.erstellt_von_kundenportal_zugang_id)
+            ersteller_name = f"{portal_ersteller.name} (Kunde)" if portal_ersteller else None
 
         items.append(
             FeedCard(
@@ -182,10 +229,14 @@ async def get_feed(
                 titel=vorgang.titel,
                 kunde_name=kunde.name if kunde else "",
                 anlage_kurzadresse=anlage_kurzadresse,
+                anlage_bezeichnung=anlage.bezeichnung if anlage else None,
+                standort_bezeichnung=standort.bezeichnung if standort else None,
+                ersteller_name=ersteller_name,
                 status=vorgang.status,
                 leistungstyp=vorgang.leistungstyp,
                 abrechnungsart=vorgang.abrechnungsart,
                 prioritaet=vorgang.prioritaet,
+                faelligkeit_am=vorgang.faelligkeit_am,
                 last_activity_at=vorgang.last_activity_at,
                 letztes_event_vorschau=_preview_text(last_events_by_vorgang.get(vorgang.id)),
                 tags=tags_by_vorgang.get(vorgang.id, []),

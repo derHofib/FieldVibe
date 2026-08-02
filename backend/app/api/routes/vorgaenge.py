@@ -46,6 +46,9 @@ async def list_vorgaenge(
     anlage_id: UUID | None = Query(default=None),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
+    standort_id: UUID | None = Query(default=None),
+    faellig_von: date | None = Query(default=None),
+    faellig_bis: date | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -57,10 +60,21 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.kunde_id == kunde_id)
     if anlage_id:
         stmt = stmt.where(Vorgang.anlage_id == anlage_id)
+    if standort_id:
+        stmt = stmt.where(Vorgang.standort_id == standort_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
         stmt = stmt.where(Vorgang.abrechnungsart == abrechnungsart)
+    if faellig_von:
+        stmt = stmt.where(
+            Vorgang.faelligkeit_am >= datetime.combine(faellig_von, datetime.min.time(), tzinfo=timezone.utc)
+        )
+    if faellig_bis:
+        stmt = stmt.where(
+            Vorgang.faelligkeit_am
+            < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
+        )
     if auth.role == "techniker":
         stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
@@ -179,7 +193,9 @@ async def create_vorgang(
         abrechnungsart=body.abrechnungsart,
         leistungstyp=body.leistungstyp,
         prioritaet=body.prioritaet,
+        faelligkeit_am=body.faelligkeit_am,
         client_uuid=body.client_uuid,
+        erstellt_von=auth.user_id,
     )
     session.add(vorgang)
     try:

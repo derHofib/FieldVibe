@@ -1,12 +1,28 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { feedApi, storiesApi } from "../../api/endpoints";
+import { feedApi, kundenApi, storiesApi } from "../../api/endpoints";
+import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import { useAuth } from "../../context/AuthContext";
 import { cacheFeedItems, getCachedFeedItems } from "../../offline/cache";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, FeedResponse, StoryItem, VorgangStatus } from "../../types";
+
+const LEISTUNGSTYP_LABEL: Record<string, string> = {
+  installation: "Installation",
+  pruefung: "Prüfung",
+  wartung: "Wartung",
+  stoerung: "Störung",
+  beratung: "Beratung",
+  planung: "Planung",
+};
+
+function heuteIso(offsetTage = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetTage);
+  return d.toISOString().slice(0, 10);
+}
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",
@@ -64,8 +80,16 @@ function StoryChip({ item }: { item: StoryItem }) {
   );
 }
 
+function faelligkeitsFarbe(iso: string): string {
+  const heute = heuteIso();
+  if (iso < heute) return "text-red-600 dark:text-red-400";
+  if (iso <= heuteIso(3)) return "text-amber-600 dark:text-amber-400";
+  return "text-slate-500 dark:text-slate-400";
+}
+
 function FeedCardView({ card }: { card: FeedCard }) {
   const navigate = useNavigate();
+  const faelligkeitIso = card.faelligkeit_am?.slice(0, 10);
   return (
     <button
       onClick={() => navigate(`/vorgaenge/${card.id}`)}
@@ -78,8 +102,16 @@ function FeedCardView({ card }: { card: FeedCard }) {
           <div className="text-xs text-slate-400 dark:text-slate-500">{card.vorgangsnummer}</div>
           <div className="font-semibold text-slate-800 dark:text-slate-100">{card.titel}</div>
           <div className="text-sm text-slate-500 dark:text-slate-400">{card.kunde_name}</div>
+          {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
+            <div className="text-xs text-slate-400 dark:text-slate-500">
+              {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
+            </div>
+          )}
           {card.anlage_kurzadresse && (
             <div className="text-xs text-slate-400 dark:text-slate-500">{card.anlage_kurzadresse}</div>
+          )}
+          {card.ersteller_name && (
+            <div className="text-xs text-slate-400 dark:text-slate-500">von {card.ersteller_name}</div>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
@@ -94,6 +126,11 @@ function FeedCardView({ card }: { card: FeedCard }) {
           <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[card.status]}`}>
             {STATUS_LABEL[card.status]}
           </span>
+          {faelligkeitIso && (
+            <span className={`whitespace-nowrap text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
+              Fällig: {new Date(faelligkeitIso).toLocaleDateString("de-DE")}
+            </span>
+          )}
         </div>
       </div>
       {card.letztes_event_vorschau && (
@@ -117,12 +154,27 @@ function FeedCardView({ card }: { card: FeedCard }) {
   );
 }
 
+const LEER_FILTER: Record<string, string> = {};
+
 export function FeedPage() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [filter, setFilter] = useState<Record<string, string>>(LEER_FILTER);
+  const [zeigeFilter, setZeigeFilter] = useState(false);
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+
+  function setField(key: string, value: string) {
+    setFilter((f) => {
+      const next = { ...f };
+      if (value) next[key] = value;
+      else delete next[key];
+      return next;
+    });
+  }
+
+  const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
   const {
     data,
@@ -131,11 +183,11 @@ export function FeedPage() {
     isFetchingNextPage,
     isLoading,
   } = useInfiniteQuery({
-    queryKey: ["feed", statusFilter],
+    queryKey: ["feed", filter],
     queryFn: async ({ pageParam }: { pageParam: string | undefined }): Promise<FeedResponse> => {
       try {
         const result = await feedApi.get({
-          ...(statusFilter ? { status: statusFilter } : {}),
+          ...filter,
           ...(pageParam ? { cursor: pageParam } : {}),
         });
         // Only the first page mirrors into the offline cache -- it's meant
@@ -159,6 +211,7 @@ export function FeedPage() {
     ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen, ...stories.material]
     : [];
   const cards = data?.pages.flatMap((p) => p.items) ?? [];
+  const aktiveFilterAnzahl = Object.keys(filter).length;
 
   return (
     <div className="space-y-4">
@@ -179,18 +232,101 @@ export function FeedPage() {
         </div>
       )}
 
-      <select
-        value={statusFilter}
-        onChange={(e) => setStatusFilter(e.target.value)}
-        className="btn-touch w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-      >
-        <option value="">Alle Status</option>
-        {Object.entries(STATUS_LABEL).map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
+      <div className="space-y-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setZeigeFilter((v) => !v)}
+            className="btn-touch flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+          >
+            🔎 Filter
+            {aktiveFilterAnzahl > 0 && (
+              <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+                {aktiveFilterAnzahl}
+              </span>
+            )}
+          </button>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setField("faellig_bis", heuteIso())}
+              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            >
+              Überfällig
+            </button>
+            <button
+              onClick={() => setField("faellig_bis", heuteIso(7))}
+              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            >
+              Diese Woche fällig
+            </button>
+          </div>
+        </div>
+
+        {zeigeFilter && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <select
+              value={filter.status ?? ""}
+              onChange={(e) => setField("status", e.target.value)}
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Alle Status</option>
+              {Object.entries(STATUS_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filter.kunde_id ?? ""}
+              onChange={(e) => setField("kunde_id", e.target.value)}
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Alle Kunden</option>
+              {(kunden ?? []).map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filter.leistungstyp ?? ""}
+              onChange={(e) => setField("leistungstyp", e.target.value)}
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Alle Leistungstypen</option>
+              {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
+              <input
+                type="date"
+                value={filter.faellig_von ?? ""}
+                onChange={(e) => setField("faellig_von", e.target.value)}
+                title="Fällig ab"
+                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+              <span className="text-xs text-slate-400 dark:text-slate-500">bis</span>
+              <input
+                type="date"
+                value={filter.faellig_bis ?? ""}
+                onChange={(e) => setField("faellig_bis", e.target.value)}
+                title="Fällig bis"
+                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+            </div>
+            <input
+              value={filter.tag ?? ""}
+              onChange={(e) => setField("tag", e.target.value)}
+              placeholder="#Tag"
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </div>
+        )}
+
+        <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
+      </div>
 
       {isLoading ? (
         <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>

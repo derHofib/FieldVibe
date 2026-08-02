@@ -4,6 +4,7 @@ from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
+from app.models.gespeicherter_filter import GespeicherterFilter
 from app.models.highlight import Highlight
 from app.models.integration import MandantIntegration
 from app.models.inventurzyklus import InventurZyklus
@@ -36,6 +37,7 @@ __all__ = [
     "Dauerauftrag",
     "DauerauftragZiel",
     "FahrzeugZuweisung",
+    "GespeicherterFilter",
     "Highlight",
     "MandantIntegration",
     "InventurZyklus",

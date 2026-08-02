@@ -16,6 +16,8 @@ import type {
   DauerauftragModus,
   FahrzeugZuweisungUebersicht,
   FeedResponse,
+  GespeicherterFilter,
+  GespeicherterFilterEntitaet,
   Highlight,
   ImpersonateResponse,
   Insights,
@@ -44,6 +46,7 @@ import type {
   RechteRolle,
   SearchResponse,
   Standort,
+  StandortProfil,
   StoriesResponse,
   Tag,
   TechnikerZuweisungUebersicht,
@@ -220,11 +223,33 @@ export const standorteApi = {
     return apiFetch<Standort[]>(`/api/standorte${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Standort>(`/api/standorte/${id}`),
+  profil: (id: string) => apiFetch<StandortProfil>(`/api/standorte/${id}/profil`),
   create: (body: { kunde_id: string; bezeichnung: string; adresse?: Adresse }) =>
     apiFetch<Standort>("/api/standorte", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: Partial<{ bezeichnung: string; adresse: Adresse; aktiv: boolean }>) =>
     apiFetch<Standort>(`/api/standorte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/standorte/${id}`, { method: "DELETE" }),
+};
+
+export const gespeicherteFilterApi = {
+  list: (entitaet: GespeicherterFilterEntitaet) =>
+    apiFetch<GespeicherterFilter[]>(`/api/gespeicherte-filter?entitaet=${entitaet}`),
+  create: (body: {
+    entitaet: GespeicherterFilterEntitaet;
+    name: string;
+    filter_json: Record<string, string>;
+    ist_standard?: boolean;
+  }) =>
+    apiFetch<GespeicherterFilter>("/api/gespeicherte-filter", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: Partial<{ name: string; filter_json: Record<string, string>; ist_standard: boolean }>) =>
+    apiFetch<GespeicherterFilter>(`/api/gespeicherte-filter/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/gespeicherte-filter/${id}`, { method: "DELETE" }),
 };
 
 export const dauerauftraegeApi = {
@@ -281,6 +306,7 @@ export const vorgaengeApi = {
     abrechnungsart: string;
     leistungstyp: string;
     prioritaet?: number;
+    faelligkeit_am?: string | null;
     client_uuid?: string;
   }) => apiFetch<Vorgang>("/api/vorgaenge", { method: "POST", body: JSON.stringify(body) }),
   update: (
@@ -288,7 +314,14 @@ export const vorgaengeApi = {
     body: Partial<
       Pick<
         Vorgang,
-        "status" | "titel" | "beschreibung" | "prioritaet" | "kunde_id" | "anlage_id" | "standort_id"
+        | "status"
+        | "titel"
+        | "beschreibung"
+        | "prioritaet"
+        | "kunde_id"
+        | "anlage_id"
+        | "standort_id"
+        | "faelligkeit_am"
       >
     >
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),

@@ -102,3 +102,15 @@ class Vorgang(TimestampMixin, Base):
     erstellt_von_kundenportal_zugang_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kundenportal_zugaenge.id"), nullable=True
     )
+    # Mitarbeiter, der den Vorgang angelegt hat -- NULL bei Vorgaengen aus
+    # einer Kundenportal-Anfrage (siehe erstellt_von_kundenportal_zugang_id
+    # oben) oder bei sehr alten, vor Einfuehrung dieses Felds erstellten
+    # Vorgaengen.
+    erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    # Faelligkeitsdatum, ueber das Aufträge im Feed/Filter priorisiert werden
+    # koennen -- optional, da nicht jeder Vorgang eine feste Frist hat.
+    faelligkeit_am: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

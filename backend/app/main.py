@@ -12,6 +12,7 @@ from app.api.routes import (
     dauerauftraege,
     fahrzeug_zuweisungen,
     feed,
+    gespeicherte_filter,
     highlights,
     impersonation,
     insights,
@@ -91,6 +92,7 @@ app.include_router(vorgang_anfragen.router)
 app.include_router(vorgang_events.router)
 app.include_router(tags.router)
 app.include_router(feed.router)
+app.include_router(gespeicherte_filter.router)
 app.include_router(stories.router)
 app.include_router(search.router)
 app.include_router(notifications.router)

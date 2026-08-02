@@ -186,9 +186,11 @@ export interface Vorgang {
   leistungstyp: Leistungstyp;
   status: VorgangStatus;
   prioritaet: number;
+  faelligkeit_am: string | null;
   last_activity_at: string;
   abgeschlossen_am: string | null;
   erstellt_von_kundenportal_zugang_id: string | null;
+  erstellt_von: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -265,10 +267,14 @@ export interface FeedCard {
   titel: string;
   kunde_name: string;
   anlage_kurzadresse: string | null;
+  anlage_bezeichnung: string | null;
+  standort_bezeichnung: string | null;
+  ersteller_name: string | null;
   status: VorgangStatus;
   leistungstyp: Leistungstyp;
   abrechnungsart: VorgangAbrechnungsart;
   prioritaet: number;
+  faelligkeit_am: string | null;
   last_activity_at: string;
   letztes_event_vorschau: string | null;
   tags: string[];
@@ -333,12 +339,33 @@ export interface TechnikerZuweisungUebersicht {
   kunden: Kunde[];
 }
 
+// --- Gespeicherte Filter-Vorlagen -----------------------------------------
+
+export type GespeicherterFilterEntitaet = "vorgaenge" | "anlagen" | "kunden" | "standorte";
+
+export interface GespeicherterFilter {
+  id: string;
+  entitaet: GespeicherterFilterEntitaet;
+  name: string;
+  filter_json: Record<string, string>;
+  ist_standard: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AnlageProfil extends Anlage {
   kunde: Kunde | null;
   vorgaenge: Vorgang[];
   tags: Tag[];
   vorgaenge_nach_status: Record<string, number>;
   zeiterfassung_stunden_gesamt: string;
+}
+
+export interface StandortProfil extends Standort {
+  kunde: Kunde | null;
+  anlagen: Anlage[];
+  vorgaenge: Vorgang[];
+  vorgaenge_nach_status: Record<string, number>;
 }
 
 // --- Dauerauftraege (wiederkehrende Auftraege) ---------------------------

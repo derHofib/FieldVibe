@@ -63,6 +63,52 @@ async def test_standort_crud_und_aktiv_filter(client, make_mandant, make_user, m
 
 
 @pytest.mark.asyncio
+async def test_standort_profil_zeigt_anlagen_und_vorgaenge(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant, name="Filialkunde GmbH")
+    token = await login(client, admin.email, "pw-123456")
+
+    standort = await client.post(
+        "/api/standorte",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "bezeichnung": "Filiale Ost"},
+    )
+    standort_id = standort.json()["id"]
+
+    anlage = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "standort_id": standort_id, "bezeichnung": "Klimaanlage"},
+    )
+    assert anlage.status_code == 201
+
+    vorgang = await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "standort_id": standort_id,
+            "titel": "Wartungstermin",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "wartung",
+        },
+    )
+    assert vorgang.status_code == 201
+
+    profil = await client.get(f"/api/standorte/{standort_id}/profil", headers=auth_headers(token))
+    assert profil.status_code == 200
+    body = profil.json()
+    assert body["bezeichnung"] == "Filiale Ost"
+    assert body["kunde"]["name"] == "Filialkunde GmbH"
+    assert [a["bezeichnung"] for a in body["anlagen"]] == ["Klimaanlage"]
+    assert [v["titel"] for v in body["vorgaenge"]] == ["Wartungstermin"]
+    assert body["vorgaenge_nach_status"] == {"neu": 1}
+
+
+@pytest.mark.asyncio
 async def test_inaktiver_standort_kann_nicht_fuer_neuen_vorgang_gewaehlt_werden(
     client, make_mandant, make_user, make_kunde
 ):

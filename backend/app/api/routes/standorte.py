@@ -1,13 +1,17 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.standort import Standort
+from app.models.vorgang import Vorgang
+from app.schemas.kunde import KundeRead
+from app.schemas.profile import StandortProfil
 from app.schemas.standort import StandortCreate, StandortRead, StandortUpdate
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -101,6 +105,47 @@ async def get_standort(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
     await _require_standort_zugriff(session, auth, standort)
     return standort
+
+
+@router.get(
+    "/{standort_id}/profil",
+    response_model=StandortProfil,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def get_standort_profil(
+    standort_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> StandortProfil:
+    standort = await session.get(Standort, standort_id)
+    if standort is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
+    await _require_standort_zugriff(session, auth, standort)
+    kunde = await session.get(Kunde, standort.kunde_id)
+
+    anlagen_result = await session.execute(
+        select(Anlage).where(Anlage.standort_id == standort_id).order_by(Anlage.bezeichnung)
+    )
+    vorgaenge_result = await session.execute(
+        select(Vorgang)
+        .where(Vorgang.standort_id == standort_id)
+        .order_by(Vorgang.last_activity_at.desc())
+        .limit(50)
+    )
+    status_result = await session.execute(
+        select(Vorgang.status, func.count())
+        .where(Vorgang.standort_id == standort_id)
+        .group_by(Vorgang.status)
+    )
+    vorgaenge_nach_status = {status: count for status, count in status_result.all()}
+
+    return StandortProfil(
+        **StandortRead.model_validate(standort).model_dump(),
+        kunde=KundeRead.model_validate(kunde) if kunde is not None else None,
+        anlagen=list(anlagen_result.scalars().all()),
+        vorgaenge=list(vorgaenge_result.scalars().all()),
+        vorgaenge_nach_status=vorgaenge_nach_status,
+    )
 
 
 @router.patch(

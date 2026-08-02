@@ -27,6 +27,7 @@ import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { SearchPage } from "./pages/feld/SearchPage";
+import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
 import { StatistikPage } from "./pages/feld/StatistikPage";
 import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
@@ -79,6 +80,7 @@ export function App() {
           <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
           <Route path="/kunden/:id" element={<KundeProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
+          <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
