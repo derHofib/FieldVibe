@@ -174,6 +174,14 @@ export function FeedPage() {
     });
   }
 
+  const aktiveStatus = (filter.status ?? "").split(",").filter(Boolean);
+  function toggleStatus(status: string) {
+    const set = new Set(aktiveStatus);
+    if (set.has(status)) set.delete(status);
+    else set.add(status);
+    setField("status", Array.from(set).join(","));
+  }
+
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
   const {
@@ -262,19 +270,32 @@ export function FeedPage() {
         </div>
 
         {zeigeFilter && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <select
-              value={filter.status ?? ""}
-              onChange={(e) => setField("status", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-            >
-              <option value="">Alle Status</option>
-              {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-2">
+            <div>
+              <div className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                Status (Mehrfachauswahl möglich)
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(STATUS_LABEL).map(([value, label]) => {
+                  const aktiv = aktiveStatus.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => toggleStatus(value)}
+                      className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
+                        aktiv
+                          ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <select
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
@@ -322,6 +343,7 @@ export function FeedPage() {
               placeholder="#Tag"
               className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
+            </div>
           </div>
         )}
 

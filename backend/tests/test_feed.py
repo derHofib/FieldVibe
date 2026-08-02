@@ -108,6 +108,24 @@ async def test_feed_shows_last_event_preview(
 
 
 @pytest.mark.asyncio
+async def test_feed_filtert_nach_mehreren_status(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    await make_vorgang(mandant=mandant, kunde=kunde, titel="Neu", status="neu")
+    await make_vorgang(mandant=mandant, kunde=kunde, titel="Läuft", status="in_arbeit")
+    await make_vorgang(mandant=mandant, kunde=kunde, titel="Erledigt", status="abgeschlossen")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.get(
+        "/api/feed", headers=auth_headers(token), params={"status": "neu,in_arbeit"}
+    )
+    assert {i["titel"] for i in resp.json()["items"]} == {"Neu", "Läuft"}
+
+
+@pytest.mark.asyncio
 async def test_feed_zeigt_anlage_standort_und_ersteller(
     client, make_mandant, make_user, make_kunde
 ):

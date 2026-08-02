@@ -71,7 +71,11 @@ def _preview_text(event: VorgangEvent | None) -> str | None:
 async def get_feed(
     cursor: str | None = Query(default=None),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=100),
-    status_filter: str | None = Query(default=None, alias="status"),
+    status_filter: str | None = Query(
+        default=None,
+        alias="status",
+        description="Ein oder mehrere Status, kommagetrennt (z.B. 'neu,in_arbeit')",
+    ),
     kunde_id: UUID | None = Query(default=None),
     anlage_id: UUID | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
@@ -86,7 +90,9 @@ async def get_feed(
     stmt = select(Vorgang).order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
 
     if status_filter:
-        stmt = stmt.where(Vorgang.status == status_filter)
+        status_liste = [s for s in status_filter.split(",") if s]
+        if status_liste:
+            stmt = stmt.where(Vorgang.status.in_(status_liste))
     if kunde_id:
         stmt = stmt.where(Vorgang.kunde_id == kunde_id)
     if anlage_id:
