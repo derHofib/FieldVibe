@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
 
-PRUEFZYKLUS_EINHEITEN = ("tag", "monat", "stunde")
+PRUEFZYKLUS_EINHEITEN = ("tag", "woche", "monat", "stunde")
 
 
 class Pruefzyklus(TimestampMixin, Base):

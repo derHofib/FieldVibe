@@ -95,6 +95,34 @@ async def test_create_pruefzyklus_mit_stunden_einheit(
 
 
 @pytest.mark.asyncio
+async def test_create_pruefzyklus_mit_wochen_einheit(
+    client, make_mandant, make_user, make_kunde, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    letzte = date(2025, 1, 15)
+    resp = await client.post(
+        "/api/pruefzyklen",
+        headers=auth_headers(token),
+        json={
+            "anlage_id": str(anlage.id),
+            "bezeichnung": "Wöchentliche Sichtprüfung",
+            "intervall_wert": 2,
+            "intervall_einheit": "woche",
+            "letzte_pruefung_am": letzte.isoformat(),
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    basis = datetime(2025, 1, 15, tzinfo=timezone.utc)
+    assert datetime.fromisoformat(body["naechste_pruefung_am"]) == add_intervall(basis, "woche", 2)
+
+
+@pytest.mark.asyncio
 async def test_techniker_can_list_but_not_create(
     client, make_mandant, make_user, make_kunde, make_anlage
 ):

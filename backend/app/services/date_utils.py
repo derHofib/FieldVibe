@@ -20,6 +20,8 @@ def add_intervall(basis: datetime, einheit: str, wert: int) -> datetime:
     Kalendermonat-Arithmetik von add_months auf das Datum an."""
     if einheit == "tag":
         return basis + timedelta(days=wert)
+    if einheit == "woche":
+        return basis + timedelta(weeks=wert)
     if einheit == "stunde":
         return basis + timedelta(hours=wert)
     if einheit == "monat":

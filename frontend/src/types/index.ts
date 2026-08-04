@@ -469,7 +469,7 @@ export interface TerminCreateResult {
   warnungen: TerminWarnung[];
 }
 
-export type PruefzyklusEinheit = "tag" | "monat" | "stunde";
+export type PruefzyklusEinheit = "tag" | "woche" | "monat" | "stunde";
 
 export interface Pruefzyklus {
   id: string;

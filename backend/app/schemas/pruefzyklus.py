@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-PruefzyklusEinheit = Literal["tag", "monat", "stunde"]
+PruefzyklusEinheit = Literal["tag", "woche", "monat", "stunde"]
 
 
 class PruefzyklusCreate(BaseModel):

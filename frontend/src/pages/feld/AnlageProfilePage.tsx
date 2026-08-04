@@ -17,6 +17,7 @@ import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
+  woche: "Wochen",
   monat: "Monate",
   stunde: "Stunden",
 };
