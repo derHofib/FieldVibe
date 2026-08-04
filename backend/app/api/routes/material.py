@@ -115,6 +115,7 @@ async def _material_read(session: AsyncSession, material: Material) -> MaterialR
         einheit=material.einheit,
         mindestbestand=material.mindestbestand,
         einzelpreis=material.einzelpreis,
+        lieferant_id=material.lieferant_id,
         created_at=material.created_at,
         updated_at=material.updated_at,
         bestand_gesamt=bestand_gesamt,
@@ -188,6 +189,7 @@ async def create_material(
         einheit=body.einheit,
         mindestbestand=body.mindestbestand,
         einzelpreis=body.einzelpreis,
+        lieferant_id=body.lieferant_id,
     )
     session.add(material)
     await session.flush()

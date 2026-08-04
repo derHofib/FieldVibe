@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal
 from uuid import UUID
 
@@ -17,10 +18,13 @@ from app.models.angebot import Angebot, AngebotPosition
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
+from app.models.material import Material
+from app.models.material_bedarf import MaterialBedarf
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.angebot import (
     AngebotAusMaengelnCreate,
+    AngebotAusMaterialBedarfenCreate,
     AngebotCreate,
     AngebotPositionCreate,
     AngebotRead,
@@ -212,6 +216,108 @@ async def create_angebot_from_maengel(
                 event_type="angebot",
                 author_user_id=auth.user_id,
                 body=f"Angebot {angebotsnummer} aus {len(maengel)} Mangel/Mängeln erstellt",
+                payload={"angebot_id": str(angebot.id), "status": "entwurf"},
+            )
+        )
+
+    await session.flush()
+    await session.refresh(angebot)
+    return await to_read_model(session, angebot)
+
+
+@router.post(
+    "/from-material-bedarfe",
+    response_model=AngebotRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def create_angebot_from_material_bedarfe(
+    body: AngebotAusMaterialBedarfenCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    if not body.material_bedarf_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keine Materialbedarfe angegeben")
+
+    bedarfe: list[MaterialBedarf] = []
+    for bedarf_id in body.material_bedarf_ids:
+        bedarf = await session.get(MaterialBedarf, bedarf_id)
+        if bedarf is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Materialbedarf {bedarf_id} nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        if bedarf.status != "offen" or bedarf.zweck != "angebot":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Materialbedarf {bedarf_id} ist nicht als offener Angebots-Bedarf verfügbar",
+            )
+        bedarfe.append(bedarf)
+
+    vorgang_ids = {b.vorgang_id for b in bedarfe}
+    vorgaenge = {vid: await session.get(Vorgang, vid) for vid in vorgang_ids}
+    kunde_ids = {v.kunde_id for v in vorgaenge.values() if v is not None}
+    if len(kunde_ids) != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Alle Materialbedarfe müssen zum selben Kunden gehören",
+        )
+    kunde_id = next(iter(kunde_ids))
+    gemeinsamer_vorgang_id = next(iter(vorgang_ids)) if len(vorgang_ids) == 1 else None
+
+    # Mehrere Bedarfe desselben Materials (z.B. aus verschiedenen
+    # Auftraegen) werden zu einer Position zusammengefasst -- ein Angebot
+    # soll dieselbe Artikelbezeichnung nicht mehrfach auflisten, siehe
+    # dieselbe Logik in create_bestellung_from_bedarfe.
+    mengen_je_material: dict[UUID, Decimal] = defaultdict(Decimal)
+    for bedarf in bedarfe:
+        mengen_je_material[bedarf.material_id] += bedarf.menge
+
+    materialien = {
+        m.id: m
+        for m in (
+            await session.execute(select(Material).where(Material.id.in_(mengen_je_material.keys())))
+        )
+        .scalars()
+        .all()
+    }
+
+    angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
+    angebot = Angebot(
+        mandant_id=auth.mandant_id,
+        kunde_id=kunde_id,
+        vorgang_id=gemeinsamer_vorgang_id,
+        angebotsnummer=angebotsnummer,
+        erstellt_von=auth.user_id,
+        gueltig_bis=body.gueltig_bis,
+    )
+    session.add(angebot)
+    await session.flush()
+
+    positionen = [
+        AngebotPositionCreate(
+            beschreibung=materialien[material_id].bezeichnung,
+            menge=menge,
+            einheit=materialien[material_id].einheit,
+            einzelpreis=materialien[material_id].einzelpreis or Decimal("0"),
+        )
+        for material_id, menge in mengen_je_material.items()
+    ]
+    for p in _neue_positionen(angebot.id, auth.mandant_id, positionen):
+        session.add(p)
+
+    for bedarf in bedarfe:
+        bedarf.angebot_id = angebot.id
+        bedarf.status = "in_angebot"
+
+    for vid in vorgang_ids:
+        session.add(
+            VorgangEvent(
+                mandant_id=auth.mandant_id,
+                vorgang_id=vid,
+                event_type="angebot",
+                author_user_id=auth.user_id,
+                body=f"Angebot {angebotsnummer} aus {len(bedarfe)} Materialbedarf(en) erstellt",
                 payload={"angebot_id": str(angebot.id), "status": "entwurf"},
             )
         )

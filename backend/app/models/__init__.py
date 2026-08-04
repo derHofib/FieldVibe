@@ -2,6 +2,7 @@ from app.models.angebot import Angebot, AngebotPosition
 from app.models.anlage import Anlage
 from app.models.anlagen_feld_definition import AnlagenFeldDefinition
 from app.models.audit_log import AuditLog
+from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
@@ -12,9 +13,11 @@ from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
+from app.models.lieferant import Lieferant
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
+from app.models.material_bedarf import MaterialBedarf
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
@@ -36,6 +39,8 @@ __all__ = [
     "Anlage",
     "AnlagenFeldDefinition",
     "AuditLog",
+    "Bestellung",
+    "BestellungPosition",
     "Dauerauftrag",
     "DauerauftragZiel",
     "FahrzeugZuweisung",
@@ -46,9 +51,11 @@ __all__ = [
     "Kunde",
     "KundeZuweisung",
     "KundenportalZugang",
+    "Lieferant",
     "Mandant",
     "Mangel",
     "Material",
+    "MaterialBedarf",
     "MaterialBestand",
     "MaterialBewegung",
     "MaterialVerwendung",

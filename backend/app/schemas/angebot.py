@@ -40,6 +40,11 @@ class AngebotAusMaengelnCreate(BaseModel):
     gueltig_bis: date | None = None
 
 
+class AngebotAusMaterialBedarfenCreate(BaseModel):
+    material_bedarf_ids: list[UUID]
+    gueltig_bis: date | None = None
+
+
 class AngebotUpdate(BaseModel):
     status: str | None = None
     gueltig_bis: date | None = None

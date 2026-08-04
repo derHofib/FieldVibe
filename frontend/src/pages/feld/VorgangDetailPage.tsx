@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -11,6 +11,7 @@ import {
   kundenApi,
   maengelApi,
   materialApi,
+  materialBedarfeApi,
   termineApi,
   usersApi,
   vorgangEventsApi,
@@ -25,7 +26,14 @@ import { discardOutboxItem, getOutboxItems, queueFoto, queueKommentar, queueStat
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
-import type { MangelSchweregrad, MangelStatus, TerminWarnung, VorgangEvent, VorgangStatus } from "../../types";
+import type {
+  MangelSchweregrad,
+  MangelStatus,
+  MaterialBedarfZweck,
+  TerminWarnung,
+  VorgangEvent,
+  VorgangStatus,
+} from "../../types";
 
 const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
   { value: "niedrig", label: "Niedrig" },
@@ -206,6 +214,11 @@ export function VorgangDetailPage() {
   const [materialId, setMaterialId] = useState("");
   const [materialMenge, setMaterialMenge] = useState("");
   const [materialLagerId, setMaterialLagerId] = useState("");
+  const [showBedarfForm, setShowBedarfForm] = useState(false);
+  const [bedarfMaterialId, setBedarfMaterialId] = useState("");
+  const [bedarfMenge, setBedarfMenge] = useState("");
+  const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
+  const [bedarfNotiz, setBedarfNotiz] = useState("");
   const [editingZuordnung, setEditingZuordnung] = useState(false);
   const [editKundeId, setEditKundeId] = useState("");
   const [editAnlageId, setEditAnlageId] = useState("");
@@ -384,6 +397,42 @@ export function VorgangDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["stories"] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+  });
+
+  useEffect(() => {
+    if (showBedarfForm && vorgang) {
+      setBedarfZweck(vorgang.leistungstyp === "planung" || vorgang.leistungstyp === "beratung" ? "angebot" : "bestellung");
+    }
+  }, [showBedarfForm, vorgang]);
+
+  const { data: materialBedarfe } = useQuery({
+    queryKey: ["material-bedarfe", "vorgang", id],
+    queryFn: () => materialBedarfeApi.list({ vorgang_id: id! }),
+    enabled: !!id,
+  });
+
+  const materialBedarfMutation = useMutation({
+    mutationFn: () =>
+      materialBedarfeApi.create({
+        material_id: bedarfMaterialId,
+        vorgang_id: id!,
+        menge: bedarfMenge,
+        zweck: bedarfZweck,
+        notiz: bedarfNotiz || undefined,
+      }),
+    onSuccess: () => {
+      setShowBedarfForm(false);
+      setBedarfMaterialId("");
+      setBedarfMenge("");
+      setBedarfNotiz("");
+      queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+  });
+
+  const bedarfEntfernenMutation = useMutation({
+    mutationFn: (bedarfId: string) => materialBedarfeApi.remove(bedarfId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
   });
 
   const statusMutation = useMutation({
@@ -917,13 +966,104 @@ export function VorgangDetailPage() {
       <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Material</h2>
-          <button
-            onClick={() => setShowMaterialForm((v) => !v)}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
-          >
-            {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowBedarfForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            >
+              {showBedarfForm ? "Abbrechen" : "+ Material bestellen"}
+            </button>
+            <button
+              onClick={() => setShowMaterialForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            >
+              {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
+            </button>
+          </div>
         </div>
+
+        {showBedarfForm && (
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
+            <select
+              value={bedarfMaterialId}
+              onChange={(e) => setBedarfMaterialId(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Material wählen…</option>
+              {(materialListe ?? []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.bezeichnung}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={bedarfMenge}
+                onChange={(e) => setBedarfMenge(e.target.value)}
+                placeholder="Menge"
+                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+              <select
+                value={bedarfZweck}
+                onChange={(e) => setBedarfZweck(e.target.value as MaterialBedarfZweck)}
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              >
+                <option value="bestellung">Zur Bestellung</option>
+                <option value="angebot">Für Angebot</option>
+              </select>
+            </div>
+            <input
+              type="text"
+              value={bedarfNotiz}
+              onChange={(e) => setBedarfNotiz(e.target.value)}
+              placeholder="Notiz (optional)"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <button
+              disabled={!bedarfMaterialId || !bedarfMenge || materialBedarfMutation.isPending}
+              onClick={() => materialBedarfMutation.mutate()}
+              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Vormerken
+            </button>
+            {materialBedarfMutation.isError && (
+              <p className="text-xs text-red-700 dark:text-red-400">
+                {materialBedarfMutation.error instanceof ApiError
+                  ? materialBedarfMutation.error.message
+                  : "Fehler beim Vormerken"}
+              </p>
+            )}
+          </div>
+        )}
+
+        {(materialBedarfe ?? []).length > 0 && (
+          <div className="mb-2 space-y-1">
+            {materialBedarfe!.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-slate-800/60"
+              >
+                <span className="text-slate-700 dark:text-slate-200">
+                  {b.menge}× {b.material_bezeichnung}
+                  <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                    {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
+                  </span>
+                </span>
+                {b.status === "offen" && (
+                  <button
+                    onClick={() => bedarfEntfernenMutation.mutate(b.id)}
+                    className="btn-touch text-xs text-red-700 dark:text-red-400"
+                  >
+                    Entfernen
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         {showMaterialForm && (
           <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">

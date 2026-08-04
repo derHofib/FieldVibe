@@ -5,7 +5,9 @@ from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
 from app.models.angebot import Angebot, AngebotPosition
+from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.kunde import Kunde
+from app.models.lieferant import Lieferant
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.rechnung import Rechnung, RechnungPosition
@@ -210,5 +212,47 @@ def generate_wochenzettel_pdf(
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 11)
     pdf.cell(0, 8, f"Gesamt: {gesamt_sekunden / 3600:.2f} Stunden", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    return bytes(pdf.output())
+
+
+def generate_bestellung_pdf(
+    mandant: Mandant, bestellung: Bestellung, positionen: list[BestellungPosition], lieferant: Lieferant | None
+) -> bytes:
+    """Anders als Angebot/Rechnung ist der Empfänger hier ein Lieferant statt
+    ein Kunde -- eigener, schlankerer Kopf statt _kopf() (kein
+    MwSt.-/Summenblock, da einzelpreis hier nur ein interner Richtwert ist,
+    nicht der tatsaechliche Einkaufspreis des Lieferanten)."""
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Bestellung {bestellung.bestellnummer}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 6, "Lieferant", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, lieferant.name if lieferant else "-", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if lieferant and lieferant.email:
+        pdf.cell(0, 6, lieferant.email, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(6)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Datum: {_fmt_datum(bestellung.created_at)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(4)
+
+    gesamt_netto = _positionen_tabelle(pdf, positionen)
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(148, 8, "", border=0)
+    pdf.cell(22, 8, "Richtwert")
+    pdf.cell(22, 8, _fmt_betrag(gesamt_netto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    if bestellung.notiz:
+        pdf.ln(6)
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 6, "Notiz", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_font("Helvetica", "", 10)
+        pdf.multi_cell(0, 6, bestellung.notiz)
 
     return bytes(pdf.output())

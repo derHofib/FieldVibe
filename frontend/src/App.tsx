@@ -12,6 +12,7 @@ import { AnfragenPage } from "./pages/feld/AnfragenPage";
 import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
 import { AnlagenFelderPage } from "./pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
+import { BestellungDetailPage } from "./pages/feld/BestellungDetailPage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
@@ -92,6 +93,7 @@ export function App() {
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
+          <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />

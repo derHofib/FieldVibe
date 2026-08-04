@@ -28,6 +28,13 @@ class Material(TimestampMixin, Base):
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     mindestbestand: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0"))
     einzelpreis: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    # Optionaler Standard-Lieferant, ueber den eine Bestellung dieses
+    # Materials typischerweise laeuft -- rein informativ fuer die
+    # automatische Gruppierung offener Materialbedarfe nach Lieferant
+    # (siehe app/models/bestellung.py), keine Pflichtangabe.
+    lieferant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("lieferanten.id"), nullable=True
+    )
 
 
 class MaterialBestand(TimestampMixin, Base):

@@ -626,6 +626,7 @@ export interface Material {
   einheit: string;
   mindestbestand: string;
   einzelpreis: string | null;
+  lieferant_id: string | null;
   created_at: string;
   updated_at: string;
   bestand_gesamt: string;
@@ -654,6 +655,65 @@ export interface MaterialBewegung {
   vorgang_id: string | null;
   erstellt_von: string;
   created_at: string;
+}
+
+export interface Lieferant {
+  id: string;
+  name: string;
+  email: string | null;
+  telefon: string | null;
+  notiz: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MaterialBedarfZweck = "bestellung" | "angebot";
+export type MaterialBedarfStatus = "offen" | "bestellt" | "in_angebot" | "erhalten" | "storniert";
+
+export interface MaterialBedarf {
+  id: string;
+  material_id: string;
+  vorgang_id: string;
+  menge: string;
+  notiz: string | null;
+  zweck: MaterialBedarfZweck;
+  status: MaterialBedarfStatus;
+  bestellung_id: string | null;
+  angebot_id: string | null;
+  erstellt_von: string;
+  created_at: string;
+}
+
+export interface MaterialBedarfMitDetails extends MaterialBedarf {
+  material_bezeichnung: string;
+  material_einheit: string;
+  vorgang_titel: string;
+  vorgang_vorgangsnummer: string;
+  kunde_name: string;
+}
+
+export type BestellungStatus = "entwurf" | "bestellt" | "eingegangen";
+
+export interface BestellungPosition {
+  id: string;
+  material_id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+}
+
+export interface Bestellung {
+  id: string;
+  lieferant_id: string | null;
+  bestellnummer: string;
+  status: BestellungStatus;
+  notiz: string | null;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+  positionen: BestellungPosition[];
 }
 
 export interface Insights {

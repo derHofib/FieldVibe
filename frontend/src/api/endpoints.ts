@@ -11,6 +11,7 @@ import type {
   AnlageProfil,
   Ansprechpartner,
   AuditLogEntry,
+  Bestellung,
   CurrentKunde,
   CurrentUser,
   Dauerauftrag,
@@ -30,11 +31,15 @@ import type {
   KundenportalLinkInfo,
   KundenportalZugang,
   Leistungstyp,
+  Lieferant,
   Mandant,
   MandantEinstellungen,
   MandantIntegration,
   Mangel,
   Material,
+  MaterialBedarf,
+  MaterialBedarfMitDetails,
+  MaterialBedarfZweck,
   MaterialBewegung,
   MaterialVerwendung,
   NotificationEntry,
@@ -581,6 +586,11 @@ export const angeboteApi = {
       method: "POST",
       body: JSON.stringify({ mangel_ids: mangelIds, gueltig_bis: gueltigBis }),
     }),
+  createFromMaterialBedarfe: (materialBedarfIds: string[], gueltigBis?: string) =>
+    apiFetch<Angebot>("/api/angebote/from-material-bedarfe", {
+      method: "POST",
+      body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, gueltig_bis: gueltigBis }),
+    }),
   addPosition: (
     id: string,
     body: Pick<AngebotPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">,
@@ -641,12 +651,13 @@ export const materialApi = {
     einheit?: string;
     mindestbestand?: string;
     einzelpreis?: string;
+    lieferant_id?: string;
     lager_id?: string;
     menge?: string;
   }) => apiFetch<Material>("/api/material", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<Pick<Material, "bezeichnung" | "einheit" | "mindestbestand" | "einzelpreis">>,
+    body: Partial<Pick<Material, "bezeichnung" | "einheit" | "mindestbestand" | "einzelpreis" | "lieferant_id">>,
   ) => apiFetch<Material>(`/api/material/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   bestandSetzen: (materialId: string, lagerId: string, menge: string) =>
     apiFetch<Material>(`/api/material/${materialId}/bestand/${lagerId}`, {
@@ -665,6 +676,39 @@ export const materialApi = {
       method: "POST",
       body: JSON.stringify({ vorgang_id: vorgangId, lager_id: lagerId, menge }),
     }),
+};
+
+export const lieferantenApi = {
+  list: () => apiFetch<Lieferant[]>("/api/lieferanten"),
+  create: (body: { name: string; email?: string; telefon?: string; notiz?: string }) =>
+    apiFetch<Lieferant>("/api/lieferanten", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<Pick<Lieferant, "name" | "email" | "telefon" | "notiz">>) =>
+    apiFetch<Lieferant>(`/api/lieferanten/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/lieferanten/${id}`, { method: "DELETE" }),
+};
+
+export const materialBedarfeApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<MaterialBedarfMitDetails[]>(`/api/material-bedarfe${qs ? `?${qs}` : ""}`);
+  },
+  create: (body: { material_id: string; vorgang_id: string; menge: string; notiz?: string; zweck?: MaterialBedarfZweck }) =>
+    apiFetch<MaterialBedarf>("/api/material-bedarfe", { method: "POST", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/material-bedarfe/${id}`, { method: "DELETE" }),
+};
+
+export const bestellungenApi = {
+  list: () => apiFetch<Bestellung[]>("/api/bestellungen"),
+  get: (id: string) => apiFetch<Bestellung>(`/api/bestellungen/${id}`),
+  createFromBedarfe: (materialBedarfIds: string[], lieferantId?: string, notiz?: string) =>
+    apiFetch<Bestellung>("/api/bestellungen/from-bedarfe", {
+      method: "POST",
+      body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, lieferant_id: lieferantId, notiz }),
+    }),
+  update: (id: string, body: { status?: string; lieferant_id?: string | null; notiz?: string }) =>
+    apiFetch<Bestellung>(`/api/bestellungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  csv: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/csv`),
+  pdf: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/pdf`),
 };
 
 export const insightsApi = {

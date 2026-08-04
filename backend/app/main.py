@@ -10,6 +10,7 @@ from app.api.routes import (
     anlagen_feld_definitionen,
     audit_log,
     auth,
+    bestellungen,
     dauerauftraege,
     fahrzeug_zuweisungen,
     feed,
@@ -22,10 +23,12 @@ from app.api.routes import (
     kunden,
     kundenportal,
     kundenportal_auth,
+    lieferanten,
     maengel,
     mandant_einstellungen,
     mandanten,
     material,
+    material_bedarfe,
     notifications,
     pruefmittel,
     pruefzyklen,
@@ -109,6 +112,9 @@ app.include_router(kundenportal_auth.router)
 app.include_router(kundenportal.router)
 app.include_router(highlights.router)
 app.include_router(material.router)
+app.include_router(lieferanten.router)
+app.include_router(material_bedarfe.router)
+app.include_router(bestellungen.router)
 app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
