@@ -438,3 +438,95 @@ async def test_techniker_kann_vorgang_nicht_zu_nicht_zugewiesenem_kunden_binden(
         json={"kunde_id": str(kunde_fremd.id)},
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_vorgang_kann_mit_weiteren_anlagen_angelegt_werden(
+    client, make_mandant, make_user, make_kunde, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    haupt_anlage = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Hauptverteilung")
+    weitere_1 = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Unterverteilung 1")
+    weitere_2 = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Unterverteilung 2")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "anlage_id": str(haupt_anlage.id),
+            "titel": "Wartung am Standort",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "wartung",
+            "weitere_anlage_ids": [str(weitere_1.id), str(weitere_2.id), str(haupt_anlage.id)],
+        },
+    )
+    assert resp.status_code == 201
+    vorgang_id = resp.json()["id"]
+
+    anlagen_resp = await client.get(
+        f"/api/vorgaenge/{vorgang_id}/anlagen", headers=auth_headers(token)
+    )
+    assert anlagen_resp.status_code == 200
+    namen = {a["bezeichnung"] for a in anlagen_resp.json()}
+    # Die Haupt-Anlage taucht nur ueber anlage_id auf, nicht dubliziert in
+    # der Zusatzliste, obwohl sie auch in weitere_anlage_ids stand.
+    assert namen == {"Unterverteilung 1", "Unterverteilung 2"}
+
+
+@pytest.mark.asyncio
+async def test_weitere_anlage_muss_zum_kunden_gehoeren(
+    client, make_mandant, make_user, make_kunde, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde1 = await make_kunde(mandant=mandant, name="Kunde 1")
+    kunde2 = await make_kunde(mandant=mandant, name="Kunde 2")
+    anlage_fremd = await make_anlage(mandant=mandant, kunde=kunde2)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde1.id),
+            "titel": "Sollte scheitern",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "wartung",
+            "weitere_anlage_ids": [str(anlage_fremd.id)],
+        },
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_vorgang_anlage_kann_nachtraeglich_hinzugefuegt_und_entfernt_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    add_resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/anlagen",
+        headers=auth_headers(token),
+        json={"anlage_ids": [str(anlage.id)]},
+    )
+    assert add_resp.status_code == 201
+    assert len(add_resp.json()) == 1
+
+    remove_resp = await client.delete(
+        f"/api/vorgaenge/{vorgang.id}/anlagen/{anlage.id}", headers=auth_headers(token)
+    )
+    assert remove_resp.status_code == 204
+
+    list_resp = await client.get(
+        f"/api/vorgaenge/{vorgang.id}/anlagen", headers=auth_headers(token)
+    )
+    assert list_resp.json() == []

@@ -25,6 +25,10 @@ class VorgangCreate(BaseModel):
     vorgangsnummer: str | None = None
     kunde_id: UUID
     anlage_id: UUID | None = None
+    # Weitere Anlagen zusaetzlich zur einzelnen anlage_id (der "Haupt-
+    # Anlage") -- v.a. wenn beim Standort mehrere Anlagen automatisch mit
+    # in den Vorgang uebernommen werden (siehe app/models/vorgang_anlage.py).
+    weitere_anlage_ids: list[UUID] = Field(default_factory=list)
     standort_id: UUID | None = None
     vertrag_id: UUID | None = None
     parent_vorgang_id: UUID | None = None
@@ -37,6 +41,10 @@ class VorgangCreate(BaseModel):
     # Von der Offline-Outbox vergeben (Nacharbeit): macht einen Sync-Retry
     # sicher idempotent, dasselbe Muster wie VorgangEventCreate.client_uuid.
     client_uuid: UUID | None = None
+
+
+class VorgangAnlagenHinzufuegen(BaseModel):
+    anlage_ids: list[UUID]
 
 
 class VorgangUpdate(BaseModel):

@@ -206,11 +206,12 @@ export const technikerZuweisungenApi = {
 };
 
 export const anlagenApi = {
-  list: (kundeId?: string, objekttyp?: AnlagenObjekttyp, aktiv?: boolean) => {
+  list: (kundeId?: string, objekttyp?: AnlagenObjekttyp, aktiv?: boolean, standortId?: string) => {
     const params = new URLSearchParams();
     if (kundeId) params.set("kunde_id", kundeId);
     if (objekttyp) params.set("objekttyp", objekttyp);
     if (aktiv !== undefined) params.set("aktiv", String(aktiv));
+    if (standortId) params.set("standort_id", standortId);
     const qs = params.toString();
     return apiFetch<Anlage[]>(`/api/anlagen${qs ? `?${qs}` : ""}`);
   },
@@ -353,6 +354,7 @@ export const vorgaengeApi = {
   create: (body: {
     kunde_id: string;
     anlage_id?: string | null;
+    weitere_anlage_ids?: string[];
     standort_id?: string | null;
     titel: string;
     beschreibung?: string;
@@ -362,6 +364,14 @@ export const vorgaengeApi = {
     faelligkeit_am?: string | null;
     client_uuid?: string;
   }) => apiFetch<Vorgang>("/api/vorgaenge", { method: "POST", body: JSON.stringify(body) }),
+  anlagen: (vorgangId: string) => apiFetch<Anlage[]>(`/api/vorgaenge/${vorgangId}/anlagen`),
+  anlagenHinzufuegen: (vorgangId: string, anlageIds: string[]) =>
+    apiFetch<Anlage[]>(`/api/vorgaenge/${vorgangId}/anlagen`, {
+      method: "POST",
+      body: JSON.stringify({ anlage_ids: anlageIds }),
+    }),
+  anlageEntfernen: (vorgangId: string, anlageId: string) =>
+    apiFetch<void>(`/api/vorgaenge/${vorgangId}/anlagen/${anlageId}`, { method: "DELETE" }),
   update: (
     id: string,
     body: Partial<

@@ -268,6 +268,34 @@ export function VorgangDetailPage() {
     queryFn: () => anlagenApi.get(vorgang!.anlage_id!),
     enabled: !!vorgang?.anlage_id,
   });
+  const { data: weitereAnlagen } = useQuery({
+    queryKey: ["vorgang-anlagen", id],
+    queryFn: () => vorgaengeApi.anlagen(id!),
+    enabled: !!id,
+  });
+  const [showAnlageHinzufuegen, setShowAnlageHinzufuegen] = useState(false);
+  const [neueAnlageId, setNeueAnlageId] = useState("");
+  const { data: anlagenFuerVorgangKunde } = useQuery({
+    queryKey: ["anlagen", vorgang?.kunde_id],
+    queryFn: () => anlagenApi.list(vorgang!.kunde_id, undefined, true),
+    enabled: showAnlageHinzufuegen && !!vorgang?.kunde_id,
+  });
+  const bereitsZugeordneteAnlageIds = new Set([
+    ...(weitereAnlagen ?? []).map((a) => a.id),
+    ...(vorgang?.anlage_id ? [vorgang.anlage_id] : []),
+  ]);
+  const anlageHinzufuegenMutation = useMutation({
+    mutationFn: (anlageId: string) => vorgaengeApi.anlagenHinzufuegen(id!, [anlageId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] });
+      setShowAnlageHinzufuegen(false);
+      setNeueAnlageId("");
+    },
+  });
+  const anlageEntfernenMutation = useMutation({
+    mutationFn: (anlageId: string) => vorgaengeApi.anlageEntfernen(id!, anlageId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] }),
+  });
   const { data: alleKunden } = useQuery({
     queryKey: ["kunden"],
     queryFn: () => kundenApi.list(),
@@ -725,6 +753,83 @@ export function VorgangDetailPage() {
                 Abbrechen
               </button>
             </div>
+          </div>
+        )}
+
+        {((weitereAnlagen && weitereAnlagen.length > 0) || kannDisponieren) && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Weitere Anlagen</span>
+              {kannDisponieren && !showAnlageHinzufuegen && (
+                <button
+                  onClick={() => setShowAnlageHinzufuegen(true)}
+                  className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+                >
+                  + Hinzufügen
+                </button>
+              )}
+            </div>
+            {(weitereAnlagen ?? []).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {weitereAnlagen!.map((a) => (
+                  <span
+                    key={a.id}
+                    className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  >
+                    <button
+                      onClick={() => navigate(`/anlagen/${a.id}`)}
+                      className="underline-offset-2 hover:underline"
+                    >
+                      {a.bezeichnung}
+                    </button>
+                    {kannDisponieren && (
+                      <button
+                        onClick={() => anlageEntfernenMutation.mutate(a.id)}
+                        disabled={anlageEntfernenMutation.isPending}
+                        className="text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400"
+                        aria-label={`${a.bezeichnung} entfernen`}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+            {showAnlageHinzufuegen && (
+              <div className="mt-2 flex gap-2">
+                <select
+                  value={neueAnlageId}
+                  onChange={(e) => setNeueAnlageId(e.target.value)}
+                  className="btn-touch flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Anlage wählen…</option>
+                  {(anlagenFuerVorgangKunde ?? [])
+                    .filter((a) => !bereitsZugeordneteAnlageIds.has(a.id))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.bezeichnung}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  onClick={() => anlageHinzufuegenMutation.mutate(neueAnlageId)}
+                  disabled={!neueAnlageId || anlageHinzufuegenMutation.isPending}
+                  className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  OK
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAnlageHinzufuegen(false);
+                    setNeueAnlageId("");
+                  }}
+                  className="btn-touch rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            )}
           </div>
         )}
 

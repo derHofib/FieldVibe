@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, kundenApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
@@ -39,6 +39,7 @@ export function NewVorgangPage() {
   const [kundeId, setKundeId] = useState("");
   const [anlage, setAnlage] = useState<Anlage | null>(null);
   const [standortId, setStandortId] = useState("");
+  const [weitereAnlagenIds, setWeitereAnlagenIds] = useState<Set<string>>(new Set());
   const [titel, setTitel] = useState("");
   const [beschreibung, setBeschreibung] = useState("");
   const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("stoerung");
@@ -65,6 +66,17 @@ export function NewVorgangPage() {
     queryFn: () => standorteApi.list(kundeId, true),
     enabled: !!kundeId,
   });
+  const { data: standortAnlagen } = useQuery({
+    queryKey: ["anlagen", "standort", standortId, "aktiv"],
+    queryFn: () => anlagenApi.list(undefined, undefined, true, standortId),
+    enabled: !!standortId,
+  });
+
+  // Beim Auswaehlen eines Standorts sind dessen Anlagen zunaechst alle
+  // vorausgewaehlt -- einzelne lassen sich in der Checkliste abwaehlen.
+  useEffect(() => {
+    setWeitereAnlagenIds(new Set((standortAnlagen ?? []).map((a) => a.id)));
+  }, [standortAnlagen]);
 
   const createAnlageMutation = useMutation({
     mutationFn: () =>
@@ -126,6 +138,7 @@ export function NewVorgangPage() {
       const payload = {
         kunde_id: kundeId,
         anlage_id: anlage?.id ?? null,
+        weitere_anlage_ids: Array.from(weitereAnlagenIds),
         standort_id: standortId || null,
         titel,
         beschreibung,
@@ -317,6 +330,36 @@ export function NewVorgangPage() {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {standortId && standortAnlagen && standortAnlagen.length > 0 && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Anlagen an diesem Standort
+            </label>
+            <div className="space-y-1 rounded-md border border-slate-200 p-2 dark:border-slate-700">
+              {standortAnlagen.map((a) => (
+                <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={weitereAnlagenIds.has(a.id)}
+                    onChange={(e) =>
+                      setWeitereAnlagenIds((prev) => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(a.id);
+                        else next.delete(a.id);
+                        return next;
+                      })
+                    }
+                  />
+                  {a.bezeichnung}
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              Alle angehakten Anlagen werden mit in den Vorgang aufgenommen.
+            </p>
           </div>
         )}
 

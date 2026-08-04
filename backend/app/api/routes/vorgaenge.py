@@ -19,8 +19,15 @@ from app.models.kunde import Kunde
 from app.models.standort import Standort
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
-from app.schemas.vorgang import VorgangCreate, VorgangRead, VorgangUpdate
+from app.schemas.anlage import AnlageRead
+from app.schemas.vorgang import (
+    VorgangAnlagenHinzufuegen,
+    VorgangCreate,
+    VorgangRead,
+    VorgangUpdate,
+)
 from app.services import papierkorb_service
 from app.services.audit_service import log_action
 from app.services.csv_service import csv_response
@@ -93,6 +100,27 @@ async def list_vorgaenge(
     return list(result.scalars().all())
 
 
+async def _validate_anlage_fuer_kunde(
+    session: AsyncSession, anlage_id: UUID, kunde_id: UUID
+) -> None:
+    anlage = await session.get(Anlage, anlage_id)
+    if anlage is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if anlage.kunde_id != kunde_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlage gehört nicht zum angegebenen Kunden",
+        )
+    if not anlage.aktiv:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anlage ist inaktiv und steht für neue Vorgänge nicht zur Auswahl",
+        )
+
+
 async def _validate_references(
     session: AsyncSession, auth: AuthContext, body: VorgangCreate
 ) -> None:
@@ -110,22 +138,9 @@ async def _validate_references(
             detail="Dieser Kunde ist dir nicht zugewiesen",
         )
     if body.anlage_id is not None:
-        anlage = await session.get(Anlage, body.anlage_id)
-        if anlage is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
-            )
-        if anlage.kunde_id != body.kunde_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Anlage gehört nicht zum angegebenen Kunden",
-            )
-        if not anlage.aktiv:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Anlage ist inaktiv und steht für neue Vorgänge nicht zur Auswahl",
-            )
+        await _validate_anlage_fuer_kunde(session, body.anlage_id, body.kunde_id)
+    for weitere_id in body.weitere_anlage_ids:
+        await _validate_anlage_fuer_kunde(session, weitere_id, body.kunde_id)
     if body.standort_id is not None:
         standort = await session.get(Standort, body.standort_id)
         if standort is None:
@@ -222,6 +237,11 @@ async def create_vorgang(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Vorgangsnummer bereits vergeben"
         ) from exc
+
+    # Dubletten zur Haupt-Anlage vermeiden (z.B. wenn dieselbe Anlage sowohl
+    # als anlage_id als auch in der Standort-Checkliste ausgewaehlt wurde).
+    for weitere_id in set(body.weitere_anlage_ids) - {body.anlage_id}:
+        session.add(VorgangAnlage(mandant_id=auth.mandant_id, vorgang_id=vorgang.id, anlage_id=weitere_id))
 
     session.add(
         VorgangEvent(
@@ -323,6 +343,85 @@ async def get_vorgang(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     await _require_vorgang_zugriff(session, auth, vorgang)
     return vorgang
+
+
+@router.get("/{vorgang_id}/anlagen", response_model=list[AnlageRead])
+async def list_vorgang_anlagen(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[Anlage]:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+    result = await session.execute(
+        select(Anlage)
+        .join(VorgangAnlage, VorgangAnlage.anlage_id == Anlage.id)
+        .where(VorgangAnlage.vorgang_id == vorgang_id, Anlage.geloescht_am.is_(None))
+        .order_by(Anlage.bezeichnung)
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{vorgang_id}/anlagen",
+    response_model=list[AnlageRead],
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
+)
+async def add_vorgang_anlagen(
+    vorgang_id: UUID,
+    body: VorgangAnlagenHinzufuegen,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[Anlage]:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+
+    bestehende = await session.execute(
+        select(VorgangAnlage.anlage_id).where(VorgangAnlage.vorgang_id == vorgang_id)
+    )
+    bereits_zugeordnet = set(bestehende.scalars().all()) | {vorgang.anlage_id}
+
+    for anlage_id in set(body.anlage_ids) - bereits_zugeordnet:
+        await _validate_anlage_fuer_kunde(session, anlage_id, vorgang.kunde_id)
+        session.add(
+            VorgangAnlage(mandant_id=auth.mandant_id, vorgang_id=vorgang_id, anlage_id=anlage_id)
+        )
+    await session.flush()
+
+    result = await session.execute(
+        select(Anlage)
+        .join(VorgangAnlage, VorgangAnlage.anlage_id == Anlage.id)
+        .where(VorgangAnlage.vorgang_id == vorgang_id, Anlage.geloescht_am.is_(None))
+        .order_by(Anlage.bezeichnung)
+    )
+    return list(result.scalars().all())
+
+
+@router.delete(
+    "/{vorgang_id}/anlagen/{anlage_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
+)
+async def remove_vorgang_anlage(
+    vorgang_id: UUID,
+    anlage_id: UUID,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    zuordnung = await session.get(VorgangAnlage, {"vorgang_id": vorgang_id, "anlage_id": anlage_id})
+    if zuordnung is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zuordnung nicht gefunden")
+    await session.delete(zuordnung)
+    await session.flush()
 
 
 @router.patch(
