@@ -489,6 +489,13 @@ export function GeschaeftPage() {
     },
   });
 
+  const deleteLieferantMutation = useMutation({
+    mutationFn: (id: string) => lieferantenApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lieferanten"] }),
+  });
+
+  const kannLieferantenLoeschen = currentUser?.role === "loesch_operativ";
+
   const createAngebotMutation = useMutation({
     mutationFn: () => angeboteApi.create({ kunde_id: kundeId }),
     onSuccess: (angebot) => {
@@ -1026,9 +1033,27 @@ export function GeschaeftPage() {
             ) : (
               <div className="space-y-1">
                 {lieferanten!.map((l) => (
-                  <div key={l.id} className="rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-slate-800/60">
-                    <span className="text-slate-700 dark:text-slate-200">{l.name}</span>
-                    {l.email && <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{l.email}</span>}
+                  <div
+                    key={l.id}
+                    className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-slate-800/60"
+                  >
+                    <div>
+                      <span className="text-slate-700 dark:text-slate-200">{l.name}</span>
+                      {l.email && <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{l.email}</span>}
+                    </div>
+                    {kannLieferantenLoeschen && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Lieferant "${l.name}" wirklich löschen?`)) {
+                            deleteLieferantMutation.mutate(l.id);
+                          }
+                        }}
+                        disabled={deleteLieferantMutation.isPending}
+                        className="btn-touch text-xs font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+                      >
+                        Löschen
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

@@ -366,6 +366,18 @@ export function VorgangDetailPage() {
     },
   });
 
+  const deleteMangelMutation = useMutation({
+    mutationFn: (mangelId: string) => maengelApi.remove(mangelId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] }),
+  });
+
+  const deleteTerminMutation = useMutation({
+    mutationFn: (terminId: string) => termineApi.remove(terminId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] }),
+  });
+
+  const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
+
   const angebotAusMaengelnMutation = useMutation({
     mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
@@ -908,15 +920,30 @@ export function VorgangDetailPage() {
                     })}
                   </div>
                 </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    t.status === "abgesagt"
-                      ? "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
-                      : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-                  }`}
-                >
-                  {t.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      t.status === "abgesagt"
+                        ? "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                        : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                    }`}
+                  >
+                    {t.status}
+                  </span>
+                  {kannPapierkorbLoeschen && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                          deleteTerminMutation.mutate(t.id);
+                        }
+                      }}
+                      disabled={deleteTerminMutation.isPending}
+                      className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
+                    >
+                      Löschen
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -989,22 +1016,37 @@ export function VorgangDetailPage() {
                 </div>
                 <div className="mt-1 flex items-center justify-between">
                   <span className="text-xs text-slate-400 dark:text-slate-500">{m.status}</span>
-                  {m.status === "offen" && (
-                    <div className="flex gap-2">
+                  <div className="flex gap-2">
+                    {m.status === "offen" && (
+                      <>
+                        <button
+                          onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "behoben" })}
+                          className="btn-touch text-xs font-medium text-green-700 dark:text-green-400"
+                        >
+                          Behoben
+                        </button>
+                        <button
+                          onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "abgelehnt" })}
+                          className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
+                        >
+                          Verwerfen
+                        </button>
+                      </>
+                    )}
+                    {kannPapierkorbLoeschen && (
                       <button
-                        onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "behoben" })}
-                        className="btn-touch text-xs font-medium text-green-700 dark:text-green-400"
-                      >
-                        Behoben
-                      </button>
-                      <button
-                        onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "abgelehnt" })}
+                        onClick={() => {
+                          if (window.confirm("Mangel wirklich löschen?")) {
+                            deleteMangelMutation.mutate(m.id);
+                          }
+                        }}
+                        disabled={deleteMangelMutation.isPending}
                         className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
                       >
-                        Verwerfen
+                        Löschen
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

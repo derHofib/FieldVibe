@@ -66,6 +66,13 @@ export function PruefmittelPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => pruefmittelApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
+  });
+
+  const kannLoeschen = currentUser?.role === "loesch_operativ";
+
   if (currentUser && currentUser.role === "techniker") return <Navigate to="/feed" replace />;
 
   const sortiert = [...(pruefmittel ?? [])].sort((a, b) =>
@@ -204,6 +211,19 @@ export function PruefmittelPage() {
                   Kalibrierung erfolgt (heute)
                 </button>
               </div>
+              {kannLoeschen && (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Prüfmittel "${mittel.bezeichnung}" wirklich löschen?`)) {
+                      deleteMutation.mutate(mittel.id);
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                >
+                  Löschen
+                </button>
+              )}
             </div>
           ))
         )}

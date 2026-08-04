@@ -281,6 +281,7 @@ export function StandortDetailPage() {
   const { currentUser } = useAuth();
   const kannVerwalten =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+  const kannLoeschen = currentUser?.role === "loesch_operativ";
 
   const { data: profil, isLoading } = useQuery({
     queryKey: ["standort-profil", id],
@@ -293,13 +294,36 @@ export function StandortDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["standort-profil", id] }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => standorteApi.remove(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["standorte"] });
+      navigate("/feed");
+    },
+  });
+
   if (isLoading || !profil) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
-        ← Zurück
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+          ← Zurück
+        </button>
+        {kannLoeschen && (
+          <button
+            onClick={() => {
+              if (window.confirm("Standort wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+                deleteMutation.mutate();
+              }
+            }}
+            disabled={deleteMutation.isPending}
+            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+          >
+            Standort löschen
+          </button>
+        )}
+      </div>
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="flex items-start justify-between">

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenApi, rechnungenApi } from "../../api/endpoints";
+import { useAuth } from "../../context/AuthContext";
 import { openPdfBlob } from "../../utils/pdf";
 import type { RechnungStatus } from "../../types";
 
@@ -17,8 +18,18 @@ export function RechnungDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentUser } = useAuth();
+  const kannLoeschen = currentUser?.role === "loesch_operativ";
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => rechnungenApi.remove(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
+      navigate("/feed");
+    },
+  });
 
   const { data: rechnung } = useQuery({
     queryKey: ["rechnung", id],
@@ -60,9 +71,24 @@ export function RechnungDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
-        ← Zurück
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+          ← Zurück
+        </button>
+        {kannLoeschen && (
+          <button
+            onClick={() => {
+              if (window.confirm("Rechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
+                deleteMutation.mutate();
+              }
+            }}
+            disabled={deleteMutation.isPending}
+            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+          >
+            Rechnung löschen
+          </button>
+        )}
+      </div>
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="flex items-start justify-between">

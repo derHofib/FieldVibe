@@ -3,11 +3,22 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
+import { useAuth } from "../../context/AuthContext";
 
 export function MaterialDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentUser } = useAuth();
+  const kannLoeschen = currentUser?.role === "loesch_operativ";
+
+  const deleteMutation = useMutation({
+    mutationFn: () => materialApi.remove(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["material"] });
+      navigate("/geschaeft");
+    },
+  });
 
   const [form, setForm] = useState({
     bezeichnung: "",
@@ -91,9 +102,24 @@ export function MaterialDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
-        ← Zurück
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+          ← Zurück
+        </button>
+        {kannLoeschen && (
+          <button
+            onClick={() => {
+              if (window.confirm("Material wirklich löschen? Es wandert in den Papierkorb.")) {
+                deleteMutation.mutate();
+              }
+            }}
+            disabled={deleteMutation.isPending}
+            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+          >
+            Material löschen
+          </button>
+        )}
+      </div>
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{material.bezeichnung}</h1>

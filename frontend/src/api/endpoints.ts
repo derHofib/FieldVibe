@@ -500,6 +500,7 @@ export const termineApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  remove: (id: string) => apiFetch<void>(`/api/termine/${id}`, { method: "DELETE" }),
 };
 
 export const pruefzyklenApi = {
@@ -522,6 +523,7 @@ export const pruefzyklenApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  remove: (id: string) => apiFetch<void>(`/api/pruefzyklen/${id}`, { method: "DELETE" }),
 };
 
 export const inventurzyklenApi = {
@@ -539,6 +541,7 @@ export const inventurzyklenApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  remove: (id: string) => apiFetch<void>(`/api/inventurzyklen/${id}`, { method: "DELETE" }),
 };
 
 export const fahrzeugZuweisungenApi = {
@@ -575,6 +578,7 @@ export const pruefmittelApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  remove: (id: string) => apiFetch<void>(`/api/pruefmittel/${id}`, { method: "DELETE" }),
 };
 
 export const maengelApi = {
@@ -586,6 +590,7 @@ export const maengelApi = {
     apiFetch<Mangel>("/api/maengel", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: Partial<Pick<Mangel, "beschreibung" | "schweregrad" | "status">>) =>
     apiFetch<Mangel>(`/api/maengel/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/maengel/${id}`, { method: "DELETE" }),
   protokollPdf: (vorgangId: string) => apiFetchBlob(`/api/maengel/protokoll/pdf?vorgang_id=${vorgangId}`),
 };
 
@@ -613,6 +618,7 @@ export const angeboteApi = {
   ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  remove: (id: string) => apiFetch<void>(`/api/angebote/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/angebote/${id}/pdf`),
 };
 
@@ -635,6 +641,7 @@ export const rechnungenApi = {
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  remove: (id: string) => apiFetch<void>(`/api/rechnungen/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/pdf`),
 };
 
@@ -709,6 +716,7 @@ export const materialApi = {
       method: "POST",
       body: JSON.stringify({ vorgang_id: vorgangId, lager_id: lagerId, menge }),
     }),
+  remove: (id: string) => apiFetch<void>(`/api/material/${id}`, { method: "DELETE" }),
 };
 
 export const lieferantenApi = {
@@ -740,6 +748,7 @@ export const bestellungenApi = {
     }),
   update: (id: string, body: { status?: string; lieferant_id?: string | null; notiz?: string }) =>
     apiFetch<Bestellung>(`/api/bestellungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/bestellungen/${id}`, { method: "DELETE" }),
   csv: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/csv`),
   pdf: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/pdf`),
 };

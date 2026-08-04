@@ -406,6 +406,18 @@ export function AnlageProfilePage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });
 
+  const deletePruefzyklusMutation = useMutation({
+    mutationFn: (pruefzyklusId: string) => pruefzyklenApi.remove(pruefzyklusId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
+  });
+
+  const deleteInventurzyklusMutation = useMutation({
+    mutationFn: () => inventurzyklenApi.remove(inventurzyklus!.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
+  });
+
+  const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
+
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: () => anlagenApi.remove(id!),
@@ -616,6 +628,19 @@ export function AnlageProfilePage() {
                     </button>
                   )}
                 </div>
+                {kannPapierkorbLoeschen && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Prüfzyklus "${z.bezeichnung}" wirklich löschen?`)) {
+                        deletePruefzyklusMutation.mutate(z.id);
+                      }
+                    }}
+                    disabled={deletePruefzyklusMutation.isPending}
+                    className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                  >
+                    Löschen
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -687,6 +712,19 @@ export function AnlageProfilePage() {
                     {inventurzyklus.aktiv ? "Deaktivieren" : "Reaktivieren"}
                   </button>
                 </div>
+              )}
+              {kannPapierkorbLoeschen && (
+                <button
+                  onClick={() => {
+                    if (window.confirm("Inventurzyklus wirklich löschen?")) {
+                      deleteInventurzyklusMutation.mutate();
+                    }
+                  }}
+                  disabled={deleteInventurzyklusMutation.isPending}
+                  className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1.5 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                >
+                  Löschen
+                </button>
               )}
             </div>
           )}
