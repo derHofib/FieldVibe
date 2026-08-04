@@ -20,6 +20,8 @@ class MaterialCreate(BaseModel):
     mindestbestand: Decimal = Decimal("0")
     einzelpreis: Decimal | None = None
     lieferant_id: UUID | None = None
+    artikelnummer: str | None = None
+    bestell_url: str | None = None
     # Anfangsbestand landet an diesem Lagerort (Default: Zentrallager des
     # Mandanten) -- weiterer Bestand kommt ueber Wareneingang/Umlagerung dazu.
     lager_id: UUID | None = None
@@ -32,6 +34,8 @@ class MaterialUpdate(BaseModel):
     mindestbestand: Decimal | None = None
     einzelpreis: Decimal | None = None
     lieferant_id: UUID | None = None
+    artikelnummer: str | None = None
+    bestell_url: str | None = None
 
 
 class MaterialRead(BaseModel):
@@ -43,10 +47,13 @@ class MaterialRead(BaseModel):
     mindestbestand: Decimal
     einzelpreis: Decimal | None
     lieferant_id: UUID | None
+    artikelnummer: str | None
+    bestell_url: str | None
     created_at: datetime
     updated_at: datetime
     bestand_gesamt: Decimal
     bestaende: list[MaterialBestandRead]
+    tag_ids: list[UUID]
 
 
 class MaterialBestandSetzen(BaseModel):

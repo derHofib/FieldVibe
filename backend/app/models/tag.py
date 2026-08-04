@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
 
-TAG_ENTITY_TYPEN = ("kunde", "anlage", "vorgang")
+TAG_ENTITY_TYPEN = ("kunde", "anlage", "vorgang", "material")
 
 
 class Tag(TimestampMixin, Base):

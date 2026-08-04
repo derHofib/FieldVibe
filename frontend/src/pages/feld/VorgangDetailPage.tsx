@@ -20,6 +20,7 @@ import {
   zeiterfassungApi,
 } from "../../api/endpoints";
 import { MentionText } from "../../components/MentionText";
+import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
@@ -1017,19 +1018,15 @@ export function VorgangDetailPage() {
 
         {showBedarfForm && (
           <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
-            <select
+            <SearchableSelect
               value={bedarfMaterialId}
-              onChange={(e) => setBedarfMaterialId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-            >
-              <option value="">Material wählen…</option>
-              {(materialListe ?? []).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.bezeichnung}
-                </option>
-              ))}
-              <option value={NEU_MATERIAL}>+ Neues Material anlegen…</option>
-            </select>
+              onChange={setBedarfMaterialId}
+              placeholder="Material wählen…"
+              options={[
+                ...(materialListe ?? []).map((m) => ({ value: m.id, label: m.bezeichnung })),
+                { value: NEU_MATERIAL, label: "+ Neues Material anlegen…" },
+              ]}
+            />
 
             {bedarfMaterialId === NEU_MATERIAL && (
               <div className="space-y-2 rounded-md border border-dashed border-slate-300 p-2 dark:border-slate-700">
@@ -1149,25 +1146,23 @@ export function VorgangDetailPage() {
 
         {showMaterialForm && (
           <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
-            <select
+            <SearchableSelect
               value={materialId}
-              onChange={(e) => {
-                setMaterialId(e.target.value);
+              onChange={(v) => {
+                setMaterialId(v);
                 // Fuer Techniker das eigene zugewiesene Fahrzeug als
                 // Standard-Lagerort vorschlagen (siehe Techniker-
                 // Zuweisungen-Seite) -- spart bei jedem Materialverbrauch
                 // aus dem eigenen Fahrzeug den manuellen Auswahlschritt.
                 setMaterialLagerId(meinFahrzeug?.id ?? "");
               }}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-            >
-              <option value="">Material wählen…</option>
-              {(materialListe ?? []).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.bezeichnung} ({m.bestand_gesamt} {m.einheit} gesamt verfügbar)
-                </option>
-              ))}
-            </select>
+              placeholder="Material wählen…"
+              options={(materialListe ?? []).map((m) => ({
+                value: m.id,
+                label: m.bezeichnung,
+                sublabel: `(${m.bestand_gesamt} ${m.einheit} gesamt verfügbar)`,
+              }))}
+            />
             {materialId && (
               <select
                 value={materialLagerId}

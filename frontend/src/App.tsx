@@ -23,6 +23,7 @@ import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
 import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
+import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
@@ -94,6 +95,7 @@ export function App() {
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
+          <Route path="/material/:id" element={<MaterialDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />

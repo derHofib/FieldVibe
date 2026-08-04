@@ -276,6 +276,15 @@ export interface Tag {
   updated_at: string;
 }
 
+export type TagEntityType = "kunde" | "anlage" | "vorgang" | "material";
+
+export interface TagAssignment {
+  tag_id: string;
+  entity_type: TagEntityType;
+  entity_id: string;
+  created_at: string;
+}
+
 // --- Social-UX (Phase 3) -------------------------------------------------
 
 export interface FeedCard {
@@ -627,10 +636,13 @@ export interface Material {
   mindestbestand: string;
   einzelpreis: string | null;
   lieferant_id: string | null;
+  artikelnummer: string | null;
+  bestell_url: string | null;
   created_at: string;
   updated_at: string;
   bestand_gesamt: string;
   bestaende: MaterialBestand[];
+  tag_ids: string[];
 }
 
 export interface MaterialVerwendung {

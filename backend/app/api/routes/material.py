@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from app.api.deps import (
 )
 from app.models.anlage import Anlage
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
+from app.models.tag import TagAssignment
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.material import (
@@ -90,7 +92,18 @@ async def _get_or_create_bestand(
     return bestand
 
 
-async def _material_read(session: AsyncSession, material: Material) -> MaterialRead:
+async def _tag_ids_fuer(session: AsyncSession, material_id: UUID) -> list[UUID]:
+    result = await session.execute(
+        select(TagAssignment.tag_id).where(
+            TagAssignment.entity_type == "material", TagAssignment.entity_id == material_id
+        )
+    )
+    return list(result.scalars().all())
+
+
+async def _material_read(
+    session: AsyncSession, material: Material, *, tag_ids: list[UUID] | None = None
+) -> MaterialRead:
     result = await session.execute(
         select(MaterialBestand, Anlage.bezeichnung)
         .join(Anlage, Anlage.id == MaterialBestand.lager_id)
@@ -116,10 +129,13 @@ async def _material_read(session: AsyncSession, material: Material) -> MaterialR
         mindestbestand=material.mindestbestand,
         einzelpreis=material.einzelpreis,
         lieferant_id=material.lieferant_id,
+        artikelnummer=material.artikelnummer,
+        bestell_url=material.bestell_url,
         created_at=material.created_at,
         updated_at=material.updated_at,
         bestand_gesamt=bestand_gesamt,
         bestaende=bestaende,
+        tag_ids=tag_ids if tag_ids is not None else await _tag_ids_fuer(session, material.id),
     )
 
 
@@ -141,7 +157,27 @@ async def list_material(
             )
         )
     result = await session.execute(stmt)
-    return [await _material_read(session, m) for m in result.scalars().all()]
+    materialien = list(result.scalars().all())
+    if not materialien:
+        return []
+
+    # Tag-Zuordnungen fuer alle Materialien der Liste in einer Abfrage holen
+    # statt pro Zeile einzeln -- sonst waere das bei groesseren Katalogen ein
+    # N+1-Problem (dieselbe Regel wie in feed.py/material_bedarfe.py).
+    tag_result = await session.execute(
+        select(TagAssignment.entity_id, TagAssignment.tag_id).where(
+            TagAssignment.entity_type == "material",
+            TagAssignment.entity_id.in_([m.id for m in materialien]),
+        )
+    )
+    tag_ids_je_material: dict[UUID, list[UUID]] = defaultdict(list)
+    for material_id, tag_id in tag_result.all():
+        tag_ids_je_material[material_id].append(tag_id)
+
+    return [
+        await _material_read(session, m, tag_ids=tag_ids_je_material.get(m.id, []))
+        for m in materialien
+    ]
 
 
 @router.get(
@@ -172,6 +208,14 @@ async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Respon
     )
 
 
+@router.get("/{material_id}", response_model=MaterialRead)
+async def get_material(material_id: UUID, session: AsyncSession = Depends(get_db)) -> MaterialRead:
+    material = await session.get(Material, material_id)
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material nicht gefunden")
+    return await _material_read(session, material)
+
+
 @router.post(
     "",
     response_model=MaterialRead,
@@ -190,6 +234,8 @@ async def create_material(
         mindestbestand=body.mindestbestand,
         einzelpreis=body.einzelpreis,
         lieferant_id=body.lieferant_id,
+        artikelnummer=body.artikelnummer,
+        bestell_url=body.bestell_url,
     )
     session.add(material)
     await session.flush()

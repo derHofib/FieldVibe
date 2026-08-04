@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-TagEntityType = Literal["kunde", "anlage", "vorgang"]
+TagEntityType = Literal["kunde", "anlage", "vorgang", "material"]
 
 
 class TagCreate(BaseModel):

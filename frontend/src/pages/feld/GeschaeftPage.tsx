@@ -12,6 +12,7 @@ import {
   materialApi,
   materialBedarfeApi,
   rechnungenApi,
+  tagsApi,
 } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
@@ -23,6 +24,7 @@ import type {
   Material,
   MaterialBedarfZweck,
   RechnungStatus,
+  Tag,
 } from "../../types";
 
 type GeschaeftTab = "kunden" | "angebote" | "rechnungen" | "material" | "bestellwesen";
@@ -58,7 +60,18 @@ function istUnterbestand(m: Material): boolean {
   return Number(m.bestand_gesamt) <= Number(m.mindestbestand);
 }
 
-function MaterialZeile({ material, lagerorte }: { material: Material; lagerorte: Anlage[] }) {
+function MaterialZeile({
+  material,
+  lagerorte,
+  lieferantName,
+  tags,
+}: {
+  material: Material;
+  lagerorte: Anlage[];
+  lieferantName?: string;
+  tags: Tag[];
+}) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [editingLagerId, setEditingLagerId] = useState<string | null>(null);
   const [neueMenge, setNeueMenge] = useState("");
@@ -94,8 +107,13 @@ function MaterialZeile({ material, lagerorte }: { material: Material; lagerorte:
   return (
     <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
       <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{material.bezeichnung}</div>
+        <button
+          onClick={() => navigate(`/material/${material.id}`)}
+          className="btn-touch text-left"
+        >
+          <div className="text-sm font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100">
+            {material.bezeichnung}
+          </div>
           <div
             className={`text-xs ${
               istUnterbestand(material)
@@ -105,10 +123,30 @@ function MaterialZeile({ material, lagerorte }: { material: Material; lagerorte:
           >
             Gesamt: {material.bestand_gesamt} {material.einheit} (Mindestbestand {material.mindestbestand})
           </div>
-          {material.einzelpreis && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">{material.einzelpreis} EUR/Einheit</div>
+          {material.artikelnummer && (
+            <div className="text-xs text-slate-400 dark:text-slate-500">Art.-Nr. {material.artikelnummer}</div>
           )}
-        </div>
+          {material.einzelpreis && (
+            <div className="text-xs text-slate-400 dark:text-slate-500">
+              {material.einzelpreis} EUR/Einheit{lieferantName ? ` · ${lieferantName}` : ""}
+            </div>
+          )}
+          {!material.einzelpreis && lieferantName && (
+            <div className="text-xs text-slate-400 dark:text-slate-500">{lieferantName}</div>
+          )}
+          {tags.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {tags.map((t) => (
+                <span
+                  key={t.id}
+                  className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                >
+                  #{t.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </button>
         {lagerorte.length > 1 && (
           <button
             onClick={() => setZeigeUmlagern((v) => !v)}
@@ -338,6 +376,10 @@ export function GeschaeftPage() {
     einzelpreis: "",
     lieferantId: "",
   });
+  const [matFilterLieferantId, setMatFilterLieferantId] = useState("");
+  const [matFilterTagId, setMatFilterTagId] = useState("");
+  const [matFilterUnterbestand, setMatFilterUnterbestand] = useState(false);
+  const [matSuche, setMatSuche] = useState("");
   const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
   const [ausgewaehlteBedarfe, setAusgewaehlteBedarfe] = useState<Set<string>>(new Set());
   const [bestellLieferantId, setBestellLieferantId] = useState("");
@@ -371,6 +413,23 @@ export function GeschaeftPage() {
     enabled: tab === "material" && materialAktiv,
   });
   const lagerorte = (alleAnlagen ?? []).filter((a) => a.objekttyp !== "kundenanlage");
+  const { data: materialTags } = useQuery({
+    queryKey: ["tags"],
+    queryFn: tagsApi.list,
+    enabled: materialAktiv,
+  });
+  const materialGefiltert = (material ?? []).filter((m) => {
+    if (matFilterLieferantId && m.lieferant_id !== matFilterLieferantId) return false;
+    if (matFilterTagId && !m.tag_ids.includes(matFilterTagId)) return false;
+    if (matFilterUnterbestand && !istUnterbestand(m)) return false;
+    if (matSuche.trim()) {
+      const q = matSuche.trim().toLowerCase();
+      const treffer =
+        m.bezeichnung.toLowerCase().includes(q) || (m.artikelnummer ?? "").toLowerCase().includes(q);
+      if (!treffer) return false;
+    }
+    return true;
+  });
 
   const { data: offeneBedarfe } = useQuery({
     queryKey: ["material-bedarfe", "offen", bedarfZweck],
@@ -862,10 +921,67 @@ export function GeschaeftPage() {
       {tab === "material" && (
         <div className="space-y-2">
           <LagerorteVerwaltung lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")} />
+
+          {(material ?? []).length > 0 && (
+            <div className="space-y-2 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+              <input
+                value={matSuche}
+                onChange={(e) => setMatSuche(e.target.value)}
+                placeholder="Suche nach Bezeichnung oder Artikelnummer…"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={matFilterLieferantId}
+                  onChange={(e) => setMatFilterLieferantId(e.target.value)}
+                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Alle Lieferanten</option>
+                  {(lieferanten ?? []).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={matFilterTagId}
+                  onChange={(e) => setMatFilterTagId(e.target.value)}
+                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Alle Tags</option>
+                  {(materialTags ?? []).map((t) => (
+                    <option key={t.id} value={t.id}>
+                      #{t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={matFilterUnterbestand}
+                  onChange={(e) => setMatFilterUnterbestand(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                Nur Unterbestand
+              </label>
+            </div>
+          )}
+
           {(material ?? []).length === 0 ? (
             <p className="text-center text-sm text-slate-400 dark:text-slate-500">Kein Material erfasst.</p>
+          ) : materialGefiltert.length === 0 ? (
+            <p className="text-center text-sm text-slate-400 dark:text-slate-500">Kein Material entspricht dem Filter.</p>
           ) : (
-            material!.map((m) => <MaterialZeile key={m.id} material={m} lagerorte={lagerorte} />)
+            materialGefiltert.map((m) => (
+              <MaterialZeile
+                key={m.id}
+                material={m}
+                lagerorte={lagerorte}
+                lieferantName={lieferanten?.find((l) => l.id === m.lieferant_id)?.name}
+                tags={(materialTags ?? []).filter((t) => m.tag_ids.includes(t.id))}
+              />
+            ))
           )}
         </div>
       )}

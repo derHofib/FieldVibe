@@ -57,6 +57,8 @@ import type {
   StandortProfil,
   StoriesResponse,
   Tag,
+  TagAssignment,
+  TagEntityType,
   TechnikerZuweisungUebersicht,
   Termin,
   TerminCreateResult,
@@ -626,11 +628,20 @@ export const tagsApi = {
   list: () => apiFetch<Tag[]>("/api/tags"),
   create: (label: string) =>
     apiFetch<Tag>("/api/tags", { method: "POST", body: JSON.stringify({ label }) }),
-  assign: (tagId: string, entityType: "kunde" | "anlage" | "vorgang", entityId: string) =>
-    apiFetch(`/api/tags/${tagId}/assignments`, {
+  assignments: (entityType: TagEntityType, entityId: string) =>
+    apiFetch<TagAssignment[]>(
+      `/api/tags/assignments?entity_type=${entityType}&entity_id=${entityId}`,
+    ),
+  assign: (tagId: string, entityType: TagEntityType, entityId: string) =>
+    apiFetch<TagAssignment>(`/api/tags/${tagId}/assignments`, {
       method: "POST",
       body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
     }),
+  unassign: (tagId: string, entityType: TagEntityType, entityId: string) =>
+    apiFetch<void>(
+      `/api/tags/${tagId}/assignments?entity_type=${entityType}&entity_id=${entityId}`,
+      { method: "DELETE" },
+    ),
 };
 
 export const highlightsApi = {
@@ -646,18 +657,26 @@ export const highlightsApi = {
 export const materialApi = {
   list: (lagerId?: string) =>
     apiFetch<Material[]>(`/api/material${lagerId ? `?lager_id=${lagerId}` : ""}`),
+  get: (id: string) => apiFetch<Material>(`/api/material/${id}`),
   create: (body: {
     bezeichnung: string;
     einheit?: string;
     mindestbestand?: string;
     einzelpreis?: string;
     lieferant_id?: string;
+    artikelnummer?: string;
+    bestell_url?: string;
     lager_id?: string;
     menge?: string;
   }) => apiFetch<Material>("/api/material", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<Pick<Material, "bezeichnung" | "einheit" | "mindestbestand" | "einzelpreis" | "lieferant_id">>,
+    body: Partial<
+      Pick<
+        Material,
+        "bezeichnung" | "einheit" | "mindestbestand" | "einzelpreis" | "lieferant_id" | "artikelnummer" | "bestell_url"
+      >
+    >,
   ) => apiFetch<Material>(`/api/material/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   bestandSetzen: (materialId: string, lagerId: string, menge: string) =>
     apiFetch<Material>(`/api/material/${materialId}/bestand/${lagerId}`, {
