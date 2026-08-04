@@ -339,7 +339,9 @@ export function AnlageProfilePage() {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const kannVerwalten =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+    currentUser?.role === "mandant_admin" ||
+    currentUser?.role === "disponent" ||
+    currentUser?.role === "loesch_operativ";
 
   const [showForm, setShowForm] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");

@@ -62,6 +62,7 @@ export function HighlightsPage() {
               </button>
               {(currentUser?.role === "mandant_admin" ||
                 currentUser?.role === "disponent" ||
+                currentUser?.role === "loesch_operativ" ||
                 h.erstellt_von === currentUser?.id) && (
                 <button
                   onClick={() => removeMutation.mutate(h.id)}

@@ -233,7 +233,9 @@ export function VorgangDetailPage() {
   const [zuordnungError, setZuordnungError] = useState<string | null>(null);
 
   const kannDisponieren =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+    currentUser?.role === "mandant_admin" ||
+    currentUser?.role === "disponent" ||
+    currentUser?.role === "loesch_operativ";
   const kannLoeschen =
     currentUser?.role === "mandant_admin" ||
     currentUser?.role === "disponent" ||

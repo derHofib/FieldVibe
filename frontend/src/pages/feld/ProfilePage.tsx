@@ -2,16 +2,16 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
-
-const ROLE_LABEL: Record<string, string> = {
-  mandant_admin: "Mandanten-Admin",
-  disponent: "Disponent",
-  techniker: "Techniker",
-};
+import { ROLE_LABEL } from "../UsersPage";
 
 export function ProfilePage() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  // loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+  // app/api/deps.py:require_roles()) -- die Verwaltungs-Links hier folgen
+  // demselben Muster, sonst waeren die Backend-Rechte ohne Navigation dazu.
+  const istMandantAdminAehnlich =
+    currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
 
   return (
     <div className="space-y-4">
@@ -39,7 +39,7 @@ export function ProfilePage() {
         </dl>
       </div>
 
-      {currentUser?.role === "mandant_admin" && istModulAktiv(currentUser, "statistik") && (
+      {istMandantAdminAehnlich && istModulAktiv(currentUser, "statistik") && (
         <button
           onClick={() => navigate("/insights")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
@@ -48,7 +48,7 @@ export function ProfilePage() {
         </button>
       )}
 
-      {currentUser?.role === "mandant_admin" && (
+      {istMandantAdminAehnlich && (
         <button
           onClick={() => navigate("/integrationen")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
@@ -57,7 +57,7 @@ export function ProfilePage() {
         </button>
       )}
 
-      {currentUser?.role === "mandant_admin" && (
+      {istMandantAdminAehnlich && (
         <button
           onClick={() => navigate("/accounts")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
@@ -66,7 +66,7 @@ export function ProfilePage() {
         </button>
       )}
 
-      {currentUser?.role === "mandant_admin" && (
+      {istMandantAdminAehnlich && (
         <button
           onClick={() => navigate("/anlagen-felder")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
@@ -75,7 +75,7 @@ export function ProfilePage() {
         </button>
       )}
 
-      {(currentUser?.role === "mandant_admin" || currentUser?.role === "disponent") && (
+      {(istMandantAdminAehnlich || currentUser?.role === "disponent") && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
@@ -84,7 +84,7 @@ export function ProfilePage() {
         </button>
       )}
 
-      {(currentUser?.role === "mandant_admin" || currentUser?.role === "disponent") &&
+      {(istMandantAdminAehnlich || currentUser?.role === "disponent") &&
         istModulAktiv(currentUser, "dauerauftrag") && (
           <button
             onClick={() => navigate("/dauerauftraege")}

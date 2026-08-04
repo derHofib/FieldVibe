@@ -280,7 +280,9 @@ export function StandortDetailPage() {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const kannVerwalten =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+    currentUser?.role === "mandant_admin" ||
+    currentUser?.role === "disponent" ||
+    currentUser?.role === "loesch_operativ";
   const kannLoeschen = currentUser?.role === "loesch_operativ";
 
   const { data: profil, isLoading } = useQuery({

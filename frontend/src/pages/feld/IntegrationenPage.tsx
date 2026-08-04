@@ -152,7 +152,8 @@ export function IntegrationenPage() {
     },
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin") return <Navigate to="/feed" replace />;
+  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
+    return <Navigate to="/feed" replace />;
   if (isLoading) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");

@@ -21,7 +21,9 @@ export function DauerauftragDetailPage() {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const kannVerwalten =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+    currentUser?.role === "mandant_admin" ||
+    currentUser?.role === "disponent" ||
+    currentUser?.role === "loesch_operativ";
 
   const [editIntervall, setEditIntervall] = useState<string | null>(null);
   const [anlagenBearbeiten, setAnlagenBearbeiten] = useState(false);

@@ -48,7 +48,8 @@ export function InsightsPage() {
     onSuccess: (blob) => downloadBlob(blob, "Material-Bestand.csv"),
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin") return <Navigate to="/feed" replace />;
+  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
+    return <Navigate to="/feed" replace />;
   if (isLoading || !insights) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
   const gesamtVorgaenge = Object.values(insights.vorgaenge_nach_status).reduce((a, b) => a + b, 0);

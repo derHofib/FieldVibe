@@ -811,7 +811,8 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
 function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
-  const istMandantAdmin = currentUser?.role === "mandant_admin";
+  const istMandantAdmin =
+    currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
   const [kopiert, setKopiert] = useState(false);
   const link = `${window.location.origin}/portal/l/${kunde.portal_slug}`;
 
@@ -1134,7 +1135,9 @@ export function KundeProfilePage() {
   if (profilLoading || !profil) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
   const kannVerwalten =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+    currentUser?.role === "mandant_admin" ||
+    currentUser?.role === "disponent" ||
+    currentUser?.role === "loesch_operativ";
 
   return (
     <div className="space-y-4">

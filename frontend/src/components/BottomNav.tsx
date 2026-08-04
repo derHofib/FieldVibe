@@ -55,8 +55,12 @@ export function BottomNav() {
   // Dispo-Board ist Disposition, nicht Kommunikation -- bewusst kein
   // Feed-Ersatz, aber trotzdem ueber die Hauptnavigation erreichbar statt
   // in einem versteckten Menue, da es fuer Disponent/Admin Kernarbeit ist.
+  // loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+  // app/api/deps.py:require_roles()) und sieht daher dieselbe Navigation.
   const canDisponieren =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+    currentUser?.role === "mandant_admin" ||
+    currentUser?.role === "disponent" ||
+    currentUser?.role === "loesch_operativ";
 
   // Nur die Kernaktionen (Feed, Neu, Profil) bleiben dauerhaft sichtbar --
   // alles andere ist seltener und wandert ins aufklappbare "Mehr"-Menue,

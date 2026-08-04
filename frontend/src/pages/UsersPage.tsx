@@ -89,7 +89,7 @@ export function UsersPage() {
 
   return (
     <div className="space-y-8">
-      {currentUser?.role === "mandant_admin" && (
+      {(currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ") && (
         <div className="flex justify-end">
           <Link
             to="/rechte-matrix"
