@@ -167,10 +167,9 @@ async def _validate_references(
     response_model=VorgangRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        # loesch_operativ ist zwar Teil der Router-Basisrolle (fuer den
-        # lesenden Zugriff wie ein mitarbeiter, siehe Router-Definition
-        # oben), darf aber selbst keine Vorgaenge anlegen/bearbeiten --
-        # deshalb hier zusaetzlich explizit ausgeschlossen.
+        # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin
+        # (siehe app/api/deps.py:require_roles()) und darf Vorgaenge daher
+        # auch anlegen.
         Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
         Depends(require_recht("vorgaenge", "bearbeiten")),
     ],

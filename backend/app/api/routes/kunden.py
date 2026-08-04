@@ -39,8 +39,9 @@ from app.services.zuweisung_service import assigned_kunde_ids
 # mandantengebunden, und ein nicht-impersonierender super_admin hat kein
 # mandant_id im Token. Zugriff läuft für die Plattform-Rolle ausschließlich
 # über "Login als Mandant" (das Token trägt dann role=mandant_admin).
-# loesch_operativ (Papierkorb) sieht fachliche Daten wie ein mitarbeiter
-# zusaetzlich mit -- siehe app/api/routes/papierkorb.py.
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/kunden",
     tags=["kunden"],

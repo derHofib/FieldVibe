@@ -14,8 +14,10 @@ from app.services.audit_service import log_action
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 # Siehe app/services/papierkorb_service.py: nur super_admin darf diese
-# Rollen vergeben/entziehen -- ein mandant_admin soll sich diese
-# Berechtigung nicht selbst zuweisen koennen.
+# Rollen vergeben/entziehen -- weder ein mandant_admin noch ein
+# loesch_operativ (das via app/api/deps.py:require_roles() ansonsten
+# ueberall dieselben Rechte wie mandant_admin hat) sollen sich diese
+# Berechtigung selbst zuweisen bzw. sie weiterreichen koennen.
 _PAPIERKORB_ROLLEN = ("loesch_ansicht", "loesch_operativ")
 
 
@@ -64,7 +66,7 @@ async def create_user(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> User:
-    if auth.role == "mandant_admin":
+    if auth.role in ("mandant_admin", "loesch_operativ"):
         if body.role == "super_admin":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -130,7 +132,7 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
         )
 
-    if auth.role == "mandant_admin":
+    if auth.role in ("mandant_admin", "loesch_operativ"):
         if user.mandant_id != auth.mandant_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
@@ -190,7 +192,7 @@ async def delete_user(
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
 
-    if auth.role == "mandant_admin":
+    if auth.role in ("mandant_admin", "loesch_operativ"):
         if user.mandant_id != auth.mandant_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
         if user.role == "super_admin":

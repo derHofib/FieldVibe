@@ -12,9 +12,9 @@ from app.schemas.pruefzyklus import PruefzyklusCreate, PruefzyklusRead, Pruefzyk
 from app.services import papierkorb_service
 from app.services.date_utils import add_intervall
 
-# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
-# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um
-# Pruefzyklen loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/pruefzyklen",
     tags=["pruefzyklen"],

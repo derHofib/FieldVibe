@@ -378,6 +378,7 @@ export const vorgaengeApi = {
       >
     >
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/vorgaenge/${id}`, { method: "DELETE" }),
 };
 
 export const vorgangAnfragenApi = {

@@ -11,9 +11,9 @@ from app.models.inventurzyklus import InventurZyklus
 from app.schemas.inventurzyklus import InventurZyklusCreate, InventurZyklusRead, InventurZyklusUpdate
 from app.services import papierkorb_service
 
-# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
-# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um
-# Inventurzyklen loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/inventurzyklen",
     tags=["inventurzyklen"],

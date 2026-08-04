@@ -21,9 +21,9 @@ from app.schemas.dauerauftrag import (
 from app.services import papierkorb_service
 from app.services.zuweisung_service import assigned_kunde_ids
 
-# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
-# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um
-# Daueraufträge loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/dauerauftraege",
     tags=["dauerauftraege"],

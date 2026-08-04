@@ -41,8 +41,6 @@ async def list_vertraege(
     "",
     response_model=VertragRead,
     status_code=status.HTTP_201_CREATED,
-    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
-    # Wiederherstellen -- Anlegen/Bearbeiten bleibt mandant_admin vorbehalten.
     dependencies=[Depends(require_roles("mandant_admin"))],
 )
 async def create_vertrag(

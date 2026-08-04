@@ -73,6 +73,16 @@ async def get_db(
 
 def require_roles(*roles: str):
     async def checker(auth: AuthContext = Depends(get_current_user)) -> AuthContext:
+        # loesch_operativ (Papierkorb, siehe app/api/routes/papierkorb.py) hat
+        # zusaetzlich zum Loeschen/Wiederherstellen/endgueltigen Loeschen
+        # dieselben Rechte wie ein mandant_admin -- ueberall im Code, wo
+        # mandant_admin erlaubt ist, ist loesch_operativ es damit implizit
+        # auch, ohne dass jede einzelne require_roles(...)-Stelle angepasst
+        # werden muesste. Einzige Ausnahme: die super_admin-only vergebbaren
+        # Papierkorb-Rollen selbst duerfen auch von loesch_operativ nicht
+        # vergeben werden (siehe app/api/routes/users.py).
+        if auth.role == "loesch_operativ" and "mandant_admin" in roles:
+            return auth
         if auth.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

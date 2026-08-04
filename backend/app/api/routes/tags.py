@@ -10,9 +10,9 @@ from app.models.tag import Tag, TagAssignment
 from app.schemas.tag import TagAssignmentCreate, TagAssignmentRead, TagCreate, TagRead
 from app.services import papierkorb_service
 
-# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
-# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um Tags
-# loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/tags",
     tags=["tags"],
@@ -97,9 +97,6 @@ async def list_assignments(
     "/{tag_id}/assignments",
     response_model=TagAssignmentRead,
     status_code=status.HTTP_201_CREATED,
-    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
-    # Wiederherstellen von Tags selbst -- Zuordnen/Entfernen einer Zuordnung
-    # bleibt den fachlichen Rollen vorbehalten.
     dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
 )
 async def assign_tag(

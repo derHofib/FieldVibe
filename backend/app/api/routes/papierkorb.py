@@ -12,9 +12,9 @@ from app.services import papierkorb_service
 from app.services.audit_service import log_action
 
 # loesch_ansicht sieht ausschliesslich diesen Router (rein lesend) --
-# loesch_operativ zusaetzlich alle fachlichen Daten wie ein mitarbeiter
-# (siehe require_roles an den jeweiligen Fach-Routern) sowie das
-# Wiederherstellen/endgueltige Loeschen unten.
+# loesch_operativ hat zusaetzlich ueberall dieselben Rechte wie mandant_admin
+# (siehe app/api/deps.py:require_roles()) sowie das Wiederherstellen/
+# endgueltige Loeschen unten.
 router = APIRouter(
     prefix="/api/papierkorb",
     tags=["papierkorb"],

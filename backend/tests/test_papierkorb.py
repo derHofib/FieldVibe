@@ -4,14 +4,12 @@ from tests.conftest import auth_headers, login
 
 
 @pytest.mark.asyncio
-async def test_loesch_operativ_darf_nicht_schreiben(
+async def test_loesch_operativ_hat_schreibrechte_wie_mandant_admin(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
-    # loesch_operativ sieht fachliche Daten wie ein mitarbeiter UND darf
-    # zusaetzlich loeschen/wiederherstellen -- es darf aber keine neuen
-    # fachlichen Schreibrechte bekommen, nur weil es Teil der jeweiligen
-    # Router-Basisrolle ist (siehe app/api/routes/vorgaenge.py,
-    # app/api/routes/vertraege.py, app/api/routes/maengel.py).
+    # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+    # app/api/deps.py:require_roles()) und darf zusaetzlich loeschen/
+    # wiederherstellen/endgueltig loeschen.
     mandant = await make_mandant()
     kunde = await make_kunde(mandant=mandant)
     operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
@@ -22,23 +20,23 @@ async def test_loesch_operativ_darf_nicht_schreiben(
         headers=auth_headers(token),
         json={
             "kunde_id": str(kunde.id),
-            "titel": "Sollte nicht gehen",
+            "titel": "Sollte gehen",
             "abrechnungsart": "aufwand",
             "leistungstyp": "stoerung",
         },
     )
-    assert vorgang_resp.status_code == 403
+    assert vorgang_resp.status_code == 201
 
     vertrag_resp = await client.post(
         "/api/vertraege",
         headers=auth_headers(token),
         json={
             "kunde_id": str(kunde.id),
-            "bezeichnung": "Sollte nicht gehen",
+            "bezeichnung": "Sollte gehen",
             "abrechnungsart": "wartungsvertrag",
         },
     )
-    assert vertrag_resp.status_code == 403
+    assert vertrag_resp.status_code == 201
 
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     mangel_resp = await client.post(
@@ -46,11 +44,42 @@ async def test_loesch_operativ_darf_nicht_schreiben(
         headers=auth_headers(token),
         json={
             "vorgang_id": str(vorgang.id),
-            "beschreibung": "Sollte nicht gehen",
+            "beschreibung": "Sollte gehen",
             "schweregrad": "mittel",
         },
     )
-    assert mangel_resp.status_code == 403
+    assert mangel_resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_loesch_operativ_cannot_create_or_promote_into_papierkorb_role(
+    client, make_mandant, make_user
+):
+    mandant = await make_mandant()
+    operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
+    token = await login(client, operativ.email, "pw-123456")
+    mitarbeiter = await make_user(mandant=mandant, role="mitarbeiter")
+
+    for rolle in ("loesch_ansicht", "loesch_operativ", "super_admin"):
+        resp = await client.post(
+            "/api/users",
+            headers=auth_headers(token),
+            json={
+                "mandant_id": None if rolle == "super_admin" else str(mandant.id),
+                "email": f"{rolle}-neu@example.de",
+                "password": "pw-123456",
+                "role": rolle,
+                "name": "Sollte nicht gehen",
+            },
+        )
+        assert resp.status_code == 403
+
+    resp = await client.patch(
+        f"/api/users/{mitarbeiter.id}",
+        headers=auth_headers(token),
+        json={"role": "loesch_operativ"},
+    )
+    assert resp.status_code == 403
 
 
 @pytest.mark.asyncio

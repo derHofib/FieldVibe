@@ -234,6 +234,10 @@ export function VorgangDetailPage() {
 
   const kannDisponieren =
     currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+  const kannLoeschen =
+    currentUser?.role === "mandant_admin" ||
+    currentUser?.role === "disponent" ||
+    currentUser?.role === "loesch_operativ";
 
   const { data: vorgang } = useQuery({
     queryKey: ["vorgang", id],
@@ -469,6 +473,14 @@ export function VorgangDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
   });
 
+  const deleteVorgangMutation = useMutation({
+    mutationFn: () => vorgaengeApi.remove(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      navigate("/feed");
+    },
+  });
+
   const statusMutation = useMutation({
     mutationFn: async (status: VorgangStatus) => {
       try {
@@ -584,9 +596,24 @@ export function VorgangDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
-        ← Zurück
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+          ← Zurück
+        </button>
+        {kannLoeschen && (
+          <button
+            onClick={() => {
+              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+                deleteVorgangMutation.mutate();
+              }
+            }}
+            disabled={deleteVorgangMutation.isPending}
+            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+          >
+            Vorgang löschen
+          </button>
+        )}
+      </div>
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="text-xs text-slate-400 dark:text-slate-500">{vorgang.vorgangsnummer}</div>

@@ -92,8 +92,6 @@ async def list_material_bedarfe(
     "",
     response_model=MaterialBedarfRead,
     status_code=status.HTTP_201_CREATED,
-    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
-    # Wiederherstellen -- Anlegen bleibt den fachlichen Rollen vorbehalten.
     dependencies=[
         Depends(
             require_roles(

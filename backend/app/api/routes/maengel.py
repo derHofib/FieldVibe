@@ -14,9 +14,9 @@ from app.schemas.mangel import MangelCreate, MangelRead, MangelUpdate
 from app.services import papierkorb_service
 from app.services.pdf_service import generate_maengel_protokoll_pdf
 
-# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
-# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um Maengel
-# loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/maengel",
     tags=["maengel"],
@@ -100,9 +100,6 @@ async def delete_mangel(
     "",
     response_model=MangelRead,
     status_code=status.HTTP_201_CREATED,
-    # loesch_operativ ist Teil der Router-Basisrolle fuer lesenden Zugriff
-    # (siehe Router-Definition oben), darf aber selbst keine Maengel
-    # anlegen/bearbeiten.
     dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
 )
 async def create_mangel(

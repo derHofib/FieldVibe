@@ -13,11 +13,9 @@ from app.schemas.fahrzeug_zuweisung import FahrzeugZuweisungSetzen, FahrzeugZuwe
 from app.schemas.user import UserRead
 from app.services import papierkorb_service
 
-# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
-# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um weich
-# geloeschte Fahrzeug-Zuweisungen im Papierkorb wiederherzustellen (siehe
-# papierkorb.py); das Setzen/Aufheben einer Zuweisung selbst bleibt wie
-# bisher mandant_admin/disponent vorbehalten.
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/fahrzeug-zuweisungen",
     tags=["fahrzeug-zuweisungen"],

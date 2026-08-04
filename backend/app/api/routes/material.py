@@ -364,9 +364,6 @@ async def bestand_setzen(
 @router.post(
     "/{material_id}/umlagern",
     response_model=MaterialRead,
-    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
-    # Wiederherstellen von Material selbst -- Umlagern/Verwendung bleibt den
-    # fachlichen Rollen vorbehalten.
     dependencies=[
         Depends(
             require_roles(
