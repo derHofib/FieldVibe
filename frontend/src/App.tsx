@@ -10,6 +10,7 @@ import { RechteMatrixPage } from "./pages/RechteMatrixPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
 import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
+import { AnlagenFelderPage } from "./pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
@@ -81,6 +82,7 @@ export function App() {
           <Route path="/kunden/:id" element={<KundeProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
+          <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />

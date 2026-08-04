@@ -7,6 +7,7 @@ from sqlalchemy import text
 from app.api.routes import (
     angebote,
     anlagen,
+    anlagen_feld_definitionen,
     audit_log,
     auth,
     dauerauftraege,
@@ -84,6 +85,7 @@ app.include_router(impersonation.router)
 app.include_router(audit_log.router)
 app.include_router(kunden.router)
 app.include_router(anlagen.router)
+app.include_router(anlagen_feld_definitionen.router)
 app.include_router(standorte.router)
 app.include_router(dauerauftraege.router)
 app.include_router(vertraege.router)

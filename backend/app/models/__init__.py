@@ -1,5 +1,6 @@
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.anlage import Anlage
+from app.models.anlagen_feld_definition import AnlagenFeldDefinition
 from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
@@ -33,6 +34,7 @@ __all__ = [
     "Angebot",
     "AngebotPosition",
     "Anlage",
+    "AnlagenFeldDefinition",
     "AuditLog",
     "Dauerauftrag",
     "DauerauftragZiel",

@@ -5,6 +5,8 @@ import type {
   Angebot,
   AngebotPosition,
   Anlage,
+  AnlagenFeldDefinition,
+  AnlagenFeldTyp,
   AnlagenObjekttyp,
   AnlageProfil,
   Ansprechpartner,
@@ -200,6 +202,12 @@ export const anlagenApi = {
     objekttyp?: AnlagenObjekttyp;
     bezeichnung: string;
     anlagentyp?: string;
+    hersteller?: string;
+    modell?: string;
+    seriennummer?: string;
+    anschaffungsdatum?: string;
+    notiz?: string;
+    stammdaten?: Record<string, unknown>;
   }) => apiFetch<Anlage>("/api/anlagen", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
@@ -209,9 +217,33 @@ export const anlagenApi = {
       adresse: Adresse;
       anlagentyp: string | null;
       aktiv: boolean;
+      hersteller: string | null;
+      modell: string | null;
+      seriennummer: string | null;
+      anschaffungsdatum: string | null;
+      notiz: string | null;
+      stammdaten: Record<string, unknown>;
     }>,
   ) => apiFetch<Anlage>(`/api/anlagen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/anlagen/${id}`, { method: "DELETE" }),
+};
+
+export const anlagenFeldDefinitionenApi = {
+  list: (anlagentyp?: string) =>
+    apiFetch<AnlagenFeldDefinition[]>(
+      `/api/anlagen-feld-definitionen${anlagentyp ? `?anlagentyp=${encodeURIComponent(anlagentyp)}` : ""}`,
+    ),
+  create: (body: { anlagentyp: string; feld_name: string; feld_typ: AnlagenFeldTyp; reihenfolge?: number }) =>
+    apiFetch<AnlagenFeldDefinition>("/api/anlagen-feld-definitionen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: Partial<{ feld_name: string; feld_typ: AnlagenFeldTyp; reihenfolge: number }>) =>
+    apiFetch<AnlagenFeldDefinition>(`/api/anlagen-feld-definitionen/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/anlagen-feld-definitionen/${id}`, { method: "DELETE" }),
 };
 
 export const standorteApi = {

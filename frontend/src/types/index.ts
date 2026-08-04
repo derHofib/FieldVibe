@@ -131,11 +131,28 @@ export interface Anlage {
   adresse: Adresse;
   anlagentyp: string | null;
   qr_code: string | null;
+  hersteller: string | null;
+  modell: string | null;
+  seriennummer: string | null;
+  anschaffungsdatum: string | null;
+  notiz: string | null;
   stammdaten: Record<string, unknown>;
   geo_lat: number | null;
   geo_lng: number | null;
   aktiv: boolean;
   erstellt_von_kundenportal_zugang_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AnlagenFeldTyp = "text" | "zahl" | "datum";
+
+export interface AnlagenFeldDefinition {
+  id: string;
+  anlagentyp: string;
+  feld_name: string;
+  feld_typ: AnlagenFeldTyp;
+  reihenfolge: number;
   created_at: string;
   updated_at: string;
 }

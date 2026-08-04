@@ -1040,7 +1040,7 @@ export function VorgangDetailPage() {
       </div>
 
       {!kundenansicht && (
-        <div className="sticky bottom-16 space-y-2 rounded-lg bg-white p-3 shadow-md dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="sticky bottom-24 space-y-2 rounded-lg bg-white p-3 shadow-md dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
           <div className="relative">
             <textarea
               value={comment}
@@ -1078,41 +1078,51 @@ export function VorgangDetailPage() {
               e.target.value = "";
             }}
           />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowMentionPicker((v) => !v)}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                title="Erwähnen"
+                aria-label="Erwähnen"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-base text-slate-600 dark:bg-slate-800 dark:text-slate-300"
               >
-                @ Erwähnen
+                @
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={fotoMutation.isPending}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+                title="Foto anhängen"
+                aria-label="Foto anhängen"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-base text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
               >
-                📷 Foto
+                📷
               </button>
               <button
                 onClick={() => setShowUnterschriftPad((v) => !v)}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                title="Unterschrift erfassen"
+                aria-label="Unterschrift erfassen"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-base text-slate-600 dark:bg-slate-800 dark:text-slate-300"
               >
-                ✍️ Unterschrift
+                ✍️
               </button>
-              <label className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={kundensichtbar}
-                  onChange={(e) => setKundensichtbar(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                Für Kunde sichtbar
-              </label>
+              <button
+                onClick={() => setKundensichtbar((v) => !v)}
+                title={kundensichtbar ? "Für Kunde sichtbar – antippen zum Verbergen" : "Nur intern – antippen um für Kunde sichtbar zu machen"}
+                aria-label="Für Kunde sichtbar umschalten"
+                aria-pressed={kundensichtbar}
+                className={`btn-touch flex h-9 w-9 items-center justify-center rounded-full text-base ${
+                  kundensichtbar
+                    ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
+                    : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                }`}
+              >
+                {kundensichtbar ? "👁️" : "🚫"}
+              </button>
             </div>
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               Senden
             </button>

@@ -1,6 +1,7 @@
 import uuid
+from datetime import date
 
-from sqlalchemy import Boolean, CheckConstraint, Float, ForeignKey, Text
+from sqlalchemy import Boolean, CheckConstraint, Date, Float, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -49,6 +50,18 @@ class Anlage(TimestampMixin, Base):
     adresse: Mapped[dict] = mapped_column(JSONB, nullable=False)
     anlagentyp: Mapped[str | None] = mapped_column(Text)
     qr_code: Mapped[str | None] = mapped_column(Text, unique=True)
+    # Universelle Beschreibungsfelder, unabhaengig vom konkreten Anlagentyp
+    # (Fahrzeug, Ladestation, Geraet, ...) -- fuer alles Typ-Spezifische
+    # siehe stammdaten unten, befuellt anhand von AnlagenFeldDefinition.
+    hersteller: Mapped[str | None] = mapped_column(Text)
+    modell: Mapped[str | None] = mapped_column(Text)
+    seriennummer: Mapped[str | None] = mapped_column(Text)
+    anschaffungsdatum: Mapped[date | None] = mapped_column(Date)
+    notiz: Mapped[str | None] = mapped_column(Text)
+    # Werte der mandantenkonfigurierbaren Zusatzfelder je Anlagentyp (siehe
+    # app/models/anlagen_feld_definition.py), als {feld_name: wert}. Bewusst
+    # ohne eigenes Schema/Migration pro neuem Feld -- die Definitionen selbst
+    # geben Namen/Typ vor, hier liegen nur die Werte.
     stammdaten: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     geo_lat: Mapped[float | None] = mapped_column(Float)
     geo_lng: Mapped[float | None] = mapped_column(Float)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -15,6 +15,11 @@ class AnlageCreate(BaseModel):
     adresse: dict = Field(default_factory=dict)
     anlagentyp: str | None = None
     qr_code: str | None = None
+    hersteller: str | None = None
+    modell: str | None = None
+    seriennummer: str | None = None
+    anschaffungsdatum: date | None = None
+    notiz: str | None = None
     stammdaten: dict = Field(default_factory=dict)
     geo_lat: float | None = None
     geo_lng: float | None = None
@@ -36,6 +41,11 @@ class AnlageUpdate(BaseModel):
     adresse: dict | None = None
     anlagentyp: str | None = None
     qr_code: str | None = None
+    hersteller: str | None = None
+    modell: str | None = None
+    seriennummer: str | None = None
+    anschaffungsdatum: date | None = None
+    notiz: str | None = None
     stammdaten: dict | None = None
     geo_lat: float | None = None
     geo_lng: float | None = None
@@ -53,6 +63,11 @@ class AnlageRead(BaseModel):
     adresse: dict
     anlagentyp: str | None
     qr_code: str | None
+    hersteller: str | None
+    modell: str | None
+    seriennummer: str | None
+    anschaffungsdatum: date | None
+    notiz: str | None
     stammdaten: dict
     geo_lat: float | None
     geo_lng: float | None

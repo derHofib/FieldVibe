@@ -53,7 +53,7 @@ export function FeldLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-16 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-100 pb-24 dark:bg-slate-950">
       <ImpersonationBanner />
       {!isOnline && (
         <div className="bg-slate-800 px-4 py-1.5 text-center text-xs font-medium text-white">
@@ -79,6 +79,14 @@ export function FeldLayout() {
           <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-300">
             {currentUser?.name}
           </span>
+          <button
+            onClick={() => navigate("/suche")}
+            aria-label="Suche"
+            title="Suche"
+            className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          >
+            🔍
+          </button>
           <ThemeToggle />
           <button
             onClick={logout}

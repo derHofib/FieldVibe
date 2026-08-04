@@ -66,6 +66,15 @@ export function ProfilePage() {
         </button>
       )}
 
+      {currentUser?.role === "mandant_admin" && (
+        <button
+          onClick={() => navigate("/anlagen-felder")}
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+        >
+          🏷️ Anlagen-Zusatzfelder
+        </button>
+      )}
+
       {(currentUser?.role === "mandant_admin" || currentUser?.role === "disponent") && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}

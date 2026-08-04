@@ -2,12 +2,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { anlagenApi, inventurzyklenApi, materialApi, pruefzyklenApi } from "../../api/endpoints";
+import {
+  anlagenApi,
+  anlagenFeldDefinitionenApi,
+  inventurzyklenApi,
+  materialApi,
+  pruefzyklenApi,
+} from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
-import type { Adresse } from "../../types";
+import type { AnlageProfil, Adresse } from "../../types";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
@@ -105,6 +111,164 @@ function AdresseBearbeiten({
           className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
       </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={speichernMutation.isPending}
+          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        <button
+          onClick={() => setBearbeiten(false)}
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const FELD_TYP_INPUT: Record<string, string> = { text: "text", zahl: "number", datum: "date" };
+
+function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; kannVerwalten: boolean }) {
+  const queryClient = useQueryClient();
+  const [bearbeiten, setBearbeiten] = useState(false);
+  const [form, setForm] = useState({
+    hersteller: profil.hersteller ?? "",
+    modell: profil.modell ?? "",
+    seriennummer: profil.seriennummer ?? "",
+    anschaffungsdatum: profil.anschaffungsdatum ?? "",
+    notiz: profil.notiz ?? "",
+  });
+  const [zusatzwerte, setZusatzwerte] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(profil.stammdaten ?? {}).map(([k, v]) => [k, String(v ?? "")])),
+  );
+
+  const { data: felder } = useQuery({
+    queryKey: ["anlagen-feld-definitionen", profil.anlagentyp],
+    queryFn: () => anlagenFeldDefinitionenApi.list(profil.anlagentyp!),
+    enabled: !!profil.anlagentyp,
+  });
+
+  const speichernMutation = useMutation({
+    mutationFn: () =>
+      anlagenApi.update(profil.id, {
+        hersteller: form.hersteller || null,
+        modell: form.modell || null,
+        seriennummer: form.seriennummer || null,
+        anschaffungsdatum: form.anschaffungsdatum || null,
+        notiz: form.notiz || null,
+        stammdaten: zusatzwerte,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["anlage-profil", profil.id] });
+      setBearbeiten(false);
+    },
+  });
+
+  const universelleZeilen = [
+    ["Hersteller", profil.hersteller],
+    ["Modell", profil.modell],
+    ["Seriennummer", profil.seriennummer],
+    ["Anschaffungsdatum", profil.anschaffungsdatum ? new Date(profil.anschaffungsdatum).toLocaleDateString("de-DE") : null],
+  ].filter(([, wert]) => wert) as [string, string][];
+  const zusatzZeilen = (felder ?? [])
+    .map((f) => [f.feld_name, profil.stammdaten?.[f.feld_name]] as [string, unknown])
+    .filter(([, wert]) => wert !== undefined && wert !== null && wert !== "");
+
+  if (!bearbeiten) {
+    const hatDetails = universelleZeilen.length > 0 || zusatzZeilen.length > 0 || profil.notiz;
+    return (
+      <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+        <div className="mb-1 flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400">Details</h3>
+          {kannVerwalten && (
+            <button onClick={() => setBearbeiten(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+              Bearbeiten
+            </button>
+          )}
+        </div>
+        {!hatDetails ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Details hinterlegt.</p>
+        ) : (
+          <dl className="space-y-1 text-sm">
+            {universelleZeilen.map(([label, wert]) => (
+              <div key={label} className="flex justify-between gap-2">
+                <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
+                <dd className="text-right text-slate-800 dark:text-slate-100">{wert}</dd>
+              </div>
+            ))}
+            {zusatzZeilen.map(([label, wert]) => (
+              <div key={label} className="flex justify-between gap-2">
+                <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
+                <dd className="text-right text-slate-800 dark:text-slate-100">{String(wert)}</dd>
+              </div>
+            ))}
+            {profil.notiz && (
+              <div className="pt-1 text-slate-600 dark:text-slate-300">{profil.notiz}</div>
+            )}
+          </dl>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-2 rounded-md border-t border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/60">
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          value={form.hersteller}
+          onChange={(e) => setForm({ ...form, hersteller: e.target.value })}
+          placeholder="Hersteller"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          value={form.modell}
+          onChange={(e) => setForm({ ...form, modell: e.target.value })}
+          placeholder="Modell"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          value={form.seriennummer}
+          onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
+          placeholder="Seriennummer"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          type="date"
+          value={form.anschaffungsdatum}
+          onChange={(e) => setForm({ ...form, anschaffungsdatum: e.target.value })}
+          title="Anschaffungsdatum"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+      </div>
+      <textarea
+        value={form.notiz}
+        onChange={(e) => setForm({ ...form, notiz: e.target.value })}
+        placeholder="Notiz"
+        rows={2}
+        className="w-full resize-none rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+      {(felder ?? []).length > 0 && (
+        <div className="space-y-2 border-t border-slate-200 pt-2 dark:border-slate-700">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            Zusatzfelder für „{profil.anlagentyp}"
+          </p>
+          {felder!.map((f) => (
+            <div key={f.id}>
+              <label className="mb-0.5 block text-xs text-slate-500 dark:text-slate-400">{f.feld_name}</label>
+              <input
+                type={FELD_TYP_INPUT[f.feld_typ]}
+                value={zusatzwerte[f.feld_name] ?? ""}
+                onChange={(e) => setZusatzwerte({ ...zusatzwerte, [f.feld_name]: e.target.value })}
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+            </div>
+          ))}
+        </div>
+      )}
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
@@ -296,6 +460,7 @@ export function AnlageProfilePage() {
             ))}
           </div>
         )}
+        <DetailsBearbeiten profil={profil} kannVerwalten={kannVerwalten} />
       </div>
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
