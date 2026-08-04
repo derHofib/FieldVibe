@@ -9,6 +9,7 @@ import {
   fahrzeugZuweisungenApi,
   highlightsApi,
   kundenApi,
+  lieferantenApi,
   maengelApi,
   materialApi,
   materialBedarfeApi,
@@ -75,6 +76,8 @@ const EVENT_LABEL: Partial<Record<string, string>> = {
   rechnung_status: "Rechnungsstatus aktualisiert",
   unterschrift: "Unterschrift erfasst",
 };
+
+const NEU_MATERIAL = "__neu__";
 
 function EventBubble({
   event,
@@ -219,6 +222,10 @@ export function VorgangDetailPage() {
   const [bedarfMenge, setBedarfMenge] = useState("");
   const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
   const [bedarfNotiz, setBedarfNotiz] = useState("");
+  const [bedarfNeuBezeichnung, setBedarfNeuBezeichnung] = useState("");
+  const [bedarfNeuEinheit, setBedarfNeuEinheit] = useState("Stk");
+  const [bedarfNeuEinzelpreis, setBedarfNeuEinzelpreis] = useState("");
+  const [bedarfNeuLieferantId, setBedarfNeuLieferantId] = useState("");
   const [editingZuordnung, setEditingZuordnung] = useState(false);
   const [editKundeId, setEditKundeId] = useState("");
   const [editAnlageId, setEditAnlageId] = useState("");
@@ -410,23 +417,49 @@ export function VorgangDetailPage() {
     queryFn: () => materialBedarfeApi.list({ vorgang_id: id! }),
     enabled: !!id,
   });
+  const { data: lieferantenFuerNeuesMaterial } = useQuery({
+    queryKey: ["lieferanten"],
+    queryFn: () => lieferantenApi.list(),
+    enabled: showBedarfForm && bedarfMaterialId === NEU_MATERIAL,
+  });
 
   const materialBedarfMutation = useMutation({
-    mutationFn: () =>
-      materialBedarfeApi.create({
-        material_id: bedarfMaterialId,
+    mutationFn: async () => {
+      // Wenn das Material noch nicht im Katalog existiert (haeufiger Fall
+      // bei einer Erstbestellung), wird es hier mit Bestand 0 angelegt --
+      // der Bedarf haengt sich danach an den neuen Katalogeintrag, statt
+      // eine eigene Freitext-Ablage zu brauchen.
+      const materialId =
+        bedarfMaterialId === NEU_MATERIAL
+          ? (
+              await materialApi.create({
+                bezeichnung: bedarfNeuBezeichnung,
+                einheit: bedarfNeuEinheit,
+                einzelpreis: bedarfNeuEinzelpreis || undefined,
+                lieferant_id: bedarfNeuLieferantId || undefined,
+              })
+            ).id
+          : bedarfMaterialId;
+      return materialBedarfeApi.create({
+        material_id: materialId,
         vorgang_id: id!,
         menge: bedarfMenge,
         zweck: bedarfZweck,
         notiz: bedarfNotiz || undefined,
-      }),
+      });
+    },
     onSuccess: () => {
       setShowBedarfForm(false);
       setBedarfMaterialId("");
       setBedarfMenge("");
       setBedarfNotiz("");
+      setBedarfNeuBezeichnung("");
+      setBedarfNeuEinheit("Stk");
+      setBedarfNeuEinzelpreis("");
+      setBedarfNeuLieferantId("");
       queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["material"] });
     },
   });
 
@@ -995,7 +1028,51 @@ export function VorgangDetailPage() {
                   {m.bezeichnung}
                 </option>
               ))}
+              <option value={NEU_MATERIAL}>+ Neues Material anlegen…</option>
             </select>
+
+            {bedarfMaterialId === NEU_MATERIAL && (
+              <div className="space-y-2 rounded-md border border-dashed border-slate-300 p-2 dark:border-slate-700">
+                <input
+                  type="text"
+                  value={bedarfNeuBezeichnung}
+                  onChange={(e) => setBedarfNeuBezeichnung(e.target.value)}
+                  placeholder="Bezeichnung"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={bedarfNeuEinheit}
+                    onChange={(e) => setBedarfNeuEinheit(e.target.value)}
+                    placeholder="Einheit"
+                    className="w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={bedarfNeuEinzelpreis}
+                    onChange={(e) => setBedarfNeuEinzelpreis(e.target.value)}
+                    placeholder="Preis (optional)"
+                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                </div>
+                <select
+                  value={bedarfNeuLieferantId}
+                  onChange={(e) => setBedarfNeuLieferantId(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <option value="">Kein Lieferant hinterlegt</option>
+                  {(lieferantenFuerNeuesMaterial ?? []).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <input
                 type="number"
@@ -1023,7 +1100,12 @@ export function VorgangDetailPage() {
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
             <button
-              disabled={!bedarfMaterialId || !bedarfMenge || materialBedarfMutation.isPending}
+              disabled={
+                !bedarfMaterialId ||
+                !bedarfMenge ||
+                (bedarfMaterialId === NEU_MATERIAL && !bedarfNeuBezeichnung.trim()) ||
+                materialBedarfMutation.isPending
+              }
               onClick={() => materialBedarfMutation.mutate()}
               className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
