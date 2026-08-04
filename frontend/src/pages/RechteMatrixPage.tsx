@@ -61,41 +61,48 @@ export function RechteMatrixPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/accounts" className="text-sm font-medium text-blue-700 hover:underline">
+        <Link to="/accounts" className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">
           ← Zurück zu Accounts
         </Link>
-        <h1 className="mt-2 text-lg font-bold text-slate-800">Rechte für Controller & Mitarbeiter</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="mt-2 text-lg font-bold text-slate-800 dark:text-slate-100">
+          Rechte für Controller & Mitarbeiter
+        </h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Legt fest, was diese beiden Account-Typen je Funktionsbereich sehen und bearbeiten dürfen.
           Mandanten-Admin, Disponent und Techniker sind hiervon nicht betroffen.
         </p>
       </div>
 
       {isLoading ? (
-        <p>Lädt…</p>
+        <p className="text-slate-500 dark:text-slate-400">Lädt…</p>
       ) : (
         ROLLEN.map((rolle) => (
-          <section key={rolle} className="rounded-lg bg-white shadow-sm">
-            <h2 className="border-b border-slate-100 px-4 py-3 text-base font-semibold text-slate-800">
+          <section
+            key={rolle}
+            className="rounded-lg bg-white shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+          >
+            <h2 className="border-b border-slate-100 px-4 py-3 text-base font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-100">
               {ROLLE_LABEL[rolle]}
             </h2>
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs text-slate-500">
+              <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-2">Bereich</th>
                   <th className="px-4 py-2 text-center">Sehen</th>
                   <th className="px-4 py-2 text-center">Bearbeiten</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {BEREICHE.map((bereich) => (
                   <tr key={bereich}>
-                    <td className="px-4 py-2 font-medium text-slate-700">{BEREICH_LABEL[bereich]}</td>
+                    <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300">
+                      {BEREICH_LABEL[bereich]}
+                    </td>
                     {(["sehen", "bearbeiten"] as const).map((aktion) => (
                       <td key={aktion} className="px-4 py-2 text-center">
                         <input
                           type="checkbox"
-                          className="h-4 w-4"
+                          className="h-4 w-4 accent-cyan-600"
                           checked={istErlaubt(rolle, bereich, aktion)}
                           disabled={setMutation.isPending}
                           onChange={(e) =>

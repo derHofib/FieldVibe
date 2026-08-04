@@ -93,51 +93,51 @@ export function UsersPage() {
         <div className="flex justify-end">
           <Link
             to="/rechte-matrix"
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Rechte für Controller/Mitarbeiter einstellen →
           </Link>
         </div>
       )}
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800">Neuen Account anlegen</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Neuen Account anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">E-Mail</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">E-Mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Passwort</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Passwort</label>
             <input
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Rolle</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Rolle</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {Object.entries(ROLE_LABEL)
                 .filter(
@@ -152,12 +152,12 @@ export function UsersPage() {
           </div>
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Mandant</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Mandant</label>
               <select
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               >
                 <option value="" disabled>
                   Bitte wählen…
@@ -173,22 +173,22 @@ export function UsersPage() {
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
           >
             Anlegen
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-red-700">{formError}</p>}
+        {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800">Accounts</h2>
-        {deleteError && <p className="mb-2 text-sm text-red-700">{deleteError}</p>}
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Accounts</h2>
+        {deleteError && <p className="mb-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p>Lädt…</p>
+          <p className="text-slate-500 dark:text-slate-400">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm">
-            <thead className="bg-slate-50 text-sm text-slate-600">
+          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">E-Mail</th>
@@ -198,21 +198,23 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
+            <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
               {users?.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-3 font-medium">{u.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{u.email}</td>
-                  <td className="px-4 py-3">{ROLE_LABEL[u.role]}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{u.name}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{u.email}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{ROLE_LABEL[u.role]}</td>
                   {isSuperAdmin && (
-                    <td className="px-4 py-3 text-slate-500">
+                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                       {u.mandant_id ? mandantNameById.get(u.mandant_id) ?? "–" : "–"}
                     </td>
                   )}
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        u.aktiv ? "bg-green-100 text-green-800" : "bg-slate-200 text-slate-600"
+                        u.aktiv
+                          ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
+                          : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400"
                       }`}
                     >
                       {u.aktiv ? "Aktiv" : "Deaktiviert"}
@@ -224,7 +226,7 @@ export function UsersPage() {
                         onClick={() =>
                           toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
                         }
-                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
+                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                       >
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
                       </button>
@@ -237,7 +239,7 @@ export function UsersPage() {
                         }}
                         disabled={u.id === currentUser?.id}
                         title={u.id === currentUser?.id ? "Eigener Account kann nicht gelöscht werden" : undefined}
-                        className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
                       >
                         Löschen
                       </button>
