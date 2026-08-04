@@ -40,6 +40,7 @@ import type {
   NotificationEntry,
   Pruefmittel,
   Pruefzyklus,
+  PruefzyklusEinheit,
   Rechnung,
   RechnungPosition,
   RechteAktion,
@@ -486,13 +487,14 @@ export const pruefzyklenApi = {
   create: (body: {
     anlage_id: string;
     bezeichnung: string;
-    intervall_monate: number;
+    intervall_wert: number;
+    intervall_einheit: PruefzyklusEinheit;
     letzte_pruefung_am?: string;
   }) => apiFetch<Pruefzyklus>("/api/pruefzyklen", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
     body: Partial<
-      Pick<Pruefzyklus, "bezeichnung" | "intervall_monate" | "letzte_pruefung_am" | "aktiv">
+      Pick<Pruefzyklus, "bezeichnung" | "intervall_wert" | "intervall_einheit" | "letzte_pruefung_am" | "aktiv">
     >,
   ) =>
     apiFetch<Pruefzyklus>(`/api/pruefzyklen/${id}`, {

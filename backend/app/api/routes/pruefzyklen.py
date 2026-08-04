@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import datetime, time, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -9,7 +9,7 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_module, 
 from app.models.anlage import Anlage
 from app.models.pruefzyklus import Pruefzyklus
 from app.schemas.pruefzyklus import PruefzyklusCreate, PruefzyklusRead, PruefzyklusUpdate
-from app.services.date_utils import add_months
+from app.services.date_utils import add_intervall
 
 router = APIRouter(
     prefix="/api/pruefzyklen",
@@ -51,14 +51,19 @@ async def create_pruefzyklus(
             detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
 
-    basis = body.letzte_pruefung_am or datetime.now(timezone.utc).date()
+    basis = (
+        datetime.combine(body.letzte_pruefung_am, time.min, tzinfo=timezone.utc)
+        if body.letzte_pruefung_am
+        else datetime.now(timezone.utc)
+    )
     pruefzyklus = Pruefzyklus(
         mandant_id=auth.mandant_id,
         anlage_id=body.anlage_id,
         bezeichnung=body.bezeichnung,
-        intervall_monate=body.intervall_monate,
-        letzte_pruefung_am=body.letzte_pruefung_am,
-        naechste_pruefung_am=add_months(basis, body.intervall_monate),
+        intervall_wert=body.intervall_wert,
+        intervall_einheit=body.intervall_einheit,
+        letzte_pruefung_am=basis if body.letzte_pruefung_am else None,
+        naechste_pruefung_am=add_intervall(basis, body.intervall_einheit, body.intervall_wert),
     )
     session.add(pruefzyklus)
     await session.flush()
@@ -97,6 +102,10 @@ async def update_pruefzyklus(
     changes = body.model_dump(exclude_unset=True)
     letzte_pruefung_explizit_gesetzt = "letzte_pruefung_am" in changes
     naechste_pruefung_explizit_gesetzt = "naechste_pruefung_am" in changes
+    if changes.get("letzte_pruefung_am") is not None:
+        changes["letzte_pruefung_am"] = datetime.combine(
+            changes["letzte_pruefung_am"], time.min, tzinfo=timezone.utc
+        )
 
     for field, value in changes.items():
         setattr(pruefzyklus, field, value)
@@ -106,8 +115,10 @@ async def update_pruefzyklus(
     # wurde, automatisch neu berechnen -- sonst muesste das Frontend diese
     # Rechnung dupliziert selbst machen.
     if letzte_pruefung_explizit_gesetzt and not naechste_pruefung_explizit_gesetzt:
-        basis: date = pruefzyklus.letzte_pruefung_am or datetime.now(timezone.utc).date()
-        pruefzyklus.naechste_pruefung_am = add_months(basis, pruefzyklus.intervall_monate)
+        basis = pruefzyklus.letzte_pruefung_am or datetime.now(timezone.utc)
+        pruefzyklus.naechste_pruefung_am = add_intervall(
+            basis, pruefzyklus.intervall_einheit, pruefzyklus.intervall_wert
+        )
         pruefzyklus.offener_vorgang_id = None
 
     await session.flush()

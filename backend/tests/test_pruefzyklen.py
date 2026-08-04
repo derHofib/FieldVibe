@@ -1,8 +1,8 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 import pytest
 
-from app.services.date_utils import add_months
+from app.services.date_utils import add_intervall
 from tests.conftest import auth_headers, login
 
 
@@ -19,12 +19,19 @@ async def test_create_pruefzyklus_without_letzte_pruefung_defaults_to_today(
     resp = await client.post(
         "/api/pruefzyklen",
         headers=auth_headers(token),
-        json={"anlage_id": str(anlage.id), "bezeichnung": "E-Check", "intervall_monate": 12},
+        json={
+            "anlage_id": str(anlage.id),
+            "bezeichnung": "E-Check",
+            "intervall_wert": 12,
+            "intervall_einheit": "monat",
+        },
     )
     assert resp.status_code == 201
     body = resp.json()
     assert body["letzte_pruefung_am"] is None
-    assert body["naechste_pruefung_am"] == add_months(date.today(), 12).isoformat()
+    naechste = datetime.fromisoformat(body["naechste_pruefung_am"])
+    erwartet = add_intervall(datetime.now(timezone.utc), "monat", 12)
+    assert abs((naechste - erwartet).total_seconds()) < 60
     assert body["aktiv"] is True
     assert body["offener_vorgang_id"] is None
 
@@ -46,13 +53,45 @@ async def test_create_pruefzyklus_with_letzte_pruefung_am(
         json={
             "anlage_id": str(anlage.id),
             "bezeichnung": "DGUV V3",
-            "intervall_monate": 6,
+            "intervall_wert": 6,
+            "intervall_einheit": "monat",
             "letzte_pruefung_am": letzte.isoformat(),
         },
     )
     assert resp.status_code == 201
     body = resp.json()
-    assert body["naechste_pruefung_am"] == add_months(letzte, 6).isoformat()
+    basis = datetime(2025, 1, 15, tzinfo=timezone.utc)
+    assert datetime.fromisoformat(body["naechste_pruefung_am"]) == add_intervall(basis, "monat", 6)
+
+
+@pytest.mark.asyncio
+async def test_create_pruefzyklus_mit_stunden_einheit(
+    client, make_mandant, make_user, make_kunde, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    anlage = await make_anlage(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    letzte = date(2025, 1, 15)
+    resp = await client.post(
+        "/api/pruefzyklen",
+        headers=auth_headers(token),
+        json={
+            "anlage_id": str(anlage.id),
+            "bezeichnung": "Betriebsprüfung",
+            "intervall_wert": 48,
+            "intervall_einheit": "stunde",
+            "letzte_pruefung_am": letzte.isoformat(),
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    basis = datetime(2025, 1, 15, tzinfo=timezone.utc)
+    assert datetime.fromisoformat(body["naechste_pruefung_am"]) == add_intervall(basis, "stunde", 48)
+    assert body["intervall_einheit"] == "stunde"
+    assert body["intervall_wert"] == 48
 
 
 @pytest.mark.asyncio
@@ -71,7 +110,7 @@ async def test_techniker_can_list_but_not_create(
     create_resp = await client.post(
         "/api/pruefzyklen",
         headers=auth_headers(token),
-        json={"anlage_id": str(anlage.id), "bezeichnung": "E-Check", "intervall_monate": 12},
+        json={"anlage_id": str(anlage.id), "bezeichnung": "E-Check", "intervall_wert": 12, "intervall_einheit": "monat"},
     )
     assert create_resp.status_code == 403
 
@@ -89,7 +128,7 @@ async def test_updating_letzte_pruefung_am_recomputes_naechste_and_clears_offene
     created = await client.post(
         "/api/pruefzyklen",
         headers=auth_headers(token),
-        json={"anlage_id": str(anlage.id), "bezeichnung": "E-Check", "intervall_monate": 12},
+        json={"anlage_id": str(anlage.id), "bezeichnung": "E-Check", "intervall_wert": 12, "intervall_einheit": "monat"},
     )
     pruefzyklus_id = created.json()["id"]
 
@@ -101,8 +140,9 @@ async def test_updating_letzte_pruefung_am_recomputes_naechste_and_clears_offene
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["letzte_pruefung_am"] == neue_pruefung.isoformat()
-    assert body["naechste_pruefung_am"] == add_months(neue_pruefung, 12).isoformat()
+    basis = datetime(2026, 3, 1, tzinfo=timezone.utc)
+    assert datetime.fromisoformat(body["letzte_pruefung_am"]) == basis
+    assert datetime.fromisoformat(body["naechste_pruefung_am"]) == add_intervall(basis, "monat", 12)
     assert body["offener_vorgang_id"] is None
 
 
@@ -122,7 +162,7 @@ async def test_mandant_isolation_for_pruefzyklen(
     created = await client.post(
         "/api/pruefzyklen",
         headers=auth_headers(token1),
-        json={"anlage_id": str(anlage1.id), "bezeichnung": "E-Check", "intervall_monate": 12},
+        json={"anlage_id": str(anlage1.id), "bezeichnung": "E-Check", "intervall_wert": 12, "intervall_einheit": "monat"},
     )
     assert created.status_code == 201
 

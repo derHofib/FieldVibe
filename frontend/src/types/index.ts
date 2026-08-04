@@ -469,11 +469,14 @@ export interface TerminCreateResult {
   warnungen: TerminWarnung[];
 }
 
+export type PruefzyklusEinheit = "tag" | "monat" | "stunde";
+
 export interface Pruefzyklus {
   id: string;
   anlage_id: string;
   bezeichnung: string;
-  intervall_monate: number;
+  intervall_wert: number;
+  intervall_einheit: PruefzyklusEinheit;
   letzte_pruefung_am: string | null;
   naechste_pruefung_am: string;
   aktiv: boolean;

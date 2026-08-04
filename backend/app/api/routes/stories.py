@@ -80,11 +80,18 @@ async def get_stories(
         .order_by(Pruefzyklus.naechste_pruefung_am.asc())
     )
     for zyklus, anlage_bezeichnung in pruefzyklen_result.all():
+        # naechste_pruefung_am ist seit der waehlbaren Intervall-Einheit ein
+        # Zeitstempel (siehe app/models/pruefzyklus.py) -- fuer den
+        # Ampel-Vergleich mit dem reinen Tagesdatum heute_datum reicht der
+        # Datumsanteil; bei Einheit "stunde" zeigt die Anzeige zusaetzlich
+        # die Uhrzeit, da der Tag allein dort zu ungenau waere.
+        faellig_am = zyklus.naechste_pruefung_am
+        anzeige_format = "%d.%m.%Y %H:%M" if zyklus.intervall_einheit == "stunde" else "%d.%m.%Y"
         fristen.append(
             StoryItem(
                 titel=f"{zyklus.bezeichnung}: {anlage_bezeichnung}",
-                subtitel=f"Fällig am {zyklus.naechste_pruefung_am:%d.%m.%Y}",
-                ampel=_frist_ampel(zyklus.naechste_pruefung_am, heute_datum),
+                subtitel=f"Fällig am {faellig_am.strftime(anzeige_format)}",
+                ampel=_frist_ampel(faellig_am.date(), heute_datum),
                 ziel_typ="anlage",
                 ziel_id=zyklus.anlage_id,
             )

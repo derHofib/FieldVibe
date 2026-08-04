@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
@@ -19,8 +19,9 @@ async def _make_pruefzyklus(mandant, anlage, *, faellig_in_tagen: int = 0) -> Pr
             mandant_id=mandant.id,
             anlage_id=anlage.id,
             bezeichnung="E-Check",
-            intervall_monate=12,
-            naechste_pruefung_am=date.today() + timedelta(days=faellig_in_tagen),
+            intervall_wert=12,
+            intervall_einheit="monat",
+            naechste_pruefung_am=datetime.now(timezone.utc) + timedelta(days=faellig_in_tagen),
         )
         session.add(zyklus)
         await session.flush()
@@ -99,7 +100,7 @@ async def test_completing_linked_vorgang_advances_pruefzyklus(
     async with system_session() as session:
         refreshed = await session.get(Pruefzyklus, zyklus.id)
         assert refreshed.offener_vorgang_id is None
-        assert refreshed.letzte_pruefung_am == date.today()
+        assert refreshed.letzte_pruefung_am.date() == date.today()
         assert refreshed.naechste_pruefung_am > alte_naechste_pruefung
 
     # Naechster Lauf legt fuer denselben (jetzt fortgeschriebenen) Zyklus

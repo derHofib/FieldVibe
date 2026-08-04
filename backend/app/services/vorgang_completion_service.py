@@ -10,7 +10,7 @@ from app.models.mangel import Mangel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
-from app.services.date_utils import add_months
+from app.services.date_utils import add_intervall
 
 # Ab hier gilt ein Vorgang als final -- weder ueber PATCH /vorgaenge/{id} noch
 # ueber neue Events (Kommentar/Foto/Unterschrift) veraenderbar. "abgerechnet"
@@ -52,9 +52,9 @@ async def close_vorgang(
         )
     ).scalar_one_or_none()
     if zyklus is not None:
-        zyklus.letzte_pruefung_am = vorgang.abgeschlossen_am.date()
-        zyklus.naechste_pruefung_am = add_months(
-            zyklus.letzte_pruefung_am, zyklus.intervall_monate
+        zyklus.letzte_pruefung_am = vorgang.abgeschlossen_am
+        zyklus.naechste_pruefung_am = add_intervall(
+            zyklus.letzte_pruefung_am, zyklus.intervall_einheit, zyklus.intervall_wert
         )
         zyklus.offener_vorgang_id = None
 
