@@ -317,7 +317,7 @@ export interface StoryItem {
   titel: string;
   subtitel: string | null;
   ampel: "gruen" | "gelb" | "rot" | null;
-  ziel_typ: "vorgang" | "anlage" | "pruefmittel" | "material";
+  ziel_typ: "vorgang" | "anlage" | "pruefmittel";
   ziel_id: string;
 }
 
@@ -325,7 +325,6 @@ export interface StoriesResponse {
   heute: StoryItem[];
   fristen: StoryItem[];
   wartet_kunde: StoryItem[];
-  material: StoryItem[];
 }
 
 export type SearchKategorie = "kunde" | "anlage" | "vorgang" | "tag";

@@ -308,33 +308,6 @@ async def test_fahrzeug_ist_gueltiger_lagerort_fuer_neues_material(
 
 
 @pytest.mark.asyncio
-async def test_unterbestand_story_ueber_alle_lagerorte_summiert(
-    client, make_mandant, make_user, make_anlage
-):
-    mandant = await make_mandant()
-    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
-    zentrallager = await _zentrallager(mandant)
-    fahrzeug = await make_anlage(mandant=mandant, objekttyp="fahrzeug", bezeichnung="Transporter")
-    material = await _make_material(
-        mandant, lager=zentrallager, bestand=Decimal("1"), mindestbestand=Decimal("5")
-    )
-    async with system_session() as session:
-        session.add(
-            MaterialBestand(
-                mandant_id=mandant.id, material_id=material.id, lager_id=fahrzeug.id, menge=Decimal("1")
-            )
-        )
-        await session.flush()
-    token = await login(client, admin.email, "pw-123456")
-
-    resp = await client.get("/api/stories", headers=auth_headers(token))
-    assert resp.status_code == 200
-    material_items = [m for m in resp.json()["material"] if m["ziel_id"] == str(material.id)]
-    assert len(material_items) == 1
-    assert "2" in material_items[0]["subtitel"]
-
-
-@pytest.mark.asyncio
 async def test_material_artikelnummer_und_bestell_url_roundtrip(
     client, make_mandant, make_user
 ):

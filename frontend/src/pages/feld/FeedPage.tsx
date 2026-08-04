@@ -53,11 +53,10 @@ const AMPEL_COLOR: Record<string, string> = {
 const STORY_ZIEL_PFAD: Record<StoryItem["ziel_typ"], (id: string) => string> = {
   vorgang: (id) => `/vorgaenge/${id}`,
   anlage: (id) => `/anlagen/${id}`,
-  // Prüfmittel/Material haben keine eigene Detailseite -- die jeweilige
-  // Verwaltungsliste ist das naechstbeste Ziel (besser als eine falsche
-  // ID in eine fremde Detailroute zu stecken).
+  // Pruefmittel hat keine eigene Detailseite -- die Verwaltungsliste ist
+  // das naechstbeste Ziel (besser als eine falsche ID in eine fremde
+  // Detailroute zu stecken).
   pruefmittel: () => "/pruefmittel",
-  material: () => "/geschaeft",
 };
 
 function StoryChip({ item }: { item: StoryItem }) {
@@ -216,7 +215,7 @@ export function FeedPage() {
   });
 
   const storyGroups = stories
-    ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen, ...stories.material]
+    ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen]
     : [];
   const cards = data?.pages.flatMap((p) => p.items) ?? [];
   const aktiveFilterAnzahl = Object.keys(filter).length;

@@ -25,7 +25,6 @@ async def test_stories_empty_groups_are_typed_arrays(
     body = resp.json()
     assert body["heute"] == []
     assert body["fristen"] == []
-    assert body["material"] == []
     assert body["wartet_kunde"] == []  # zu frisch, noch keine 3 Tage alt
 
 
