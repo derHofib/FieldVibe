@@ -21,6 +21,8 @@ from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang import VorgangCreate, VorgangRead, VorgangUpdate
+from app.services import papierkorb_service
+from app.services.audit_service import log_action
 from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
@@ -34,7 +36,12 @@ router = APIRouter(
     prefix="/api/vorgaenge",
     tags=["vorgaenge"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+        Depends(
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
+        )
     ],
 )
 
@@ -53,7 +60,12 @@ async def list_vorgaenge(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Vorgang]:
-    stmt = select(Vorgang).order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc()).limit(limit)
+    stmt = (
+        select(Vorgang)
+        .where(Vorgang.geloescht_am.is_(None))
+        .order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
+        .limit(limit)
+    )
     if status_filter:
         stmt = stmt.where(Vorgang.status == status_filter)
     if kunde_id:
@@ -154,7 +166,14 @@ async def _validate_references(
     "",
     response_model=VorgangRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_recht("vorgaenge", "bearbeiten"))],
+    dependencies=[
+        # loesch_operativ ist zwar Teil der Router-Basisrolle (fuer den
+        # lesenden Zugriff wie ein mitarbeiter, siehe Router-Definition
+        # oben), darf aber selbst keine Vorgaenge anlegen/bearbeiten --
+        # deshalb hier zusaetzlich explizit ausgeschlossen.
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
 )
 async def create_vorgang(
     body: VorgangCreate,
@@ -301,7 +320,7 @@ async def get_vorgang(
     session: AsyncSession = Depends(get_db),
 ) -> Vorgang:
     vorgang = await session.get(Vorgang, vorgang_id)
-    if vorgang is None:
+    if vorgang is None or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     await _require_vorgang_zugriff(session, auth, vorgang)
     return vorgang
@@ -310,7 +329,10 @@ async def get_vorgang(
 @router.patch(
     "/{vorgang_id}",
     response_model=VorgangRead,
-    dependencies=[Depends(require_recht("vorgaenge", "bearbeiten"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
 )
 async def update_vorgang(
     vorgang_id: UUID,
@@ -319,7 +341,7 @@ async def update_vorgang(
     session: AsyncSession = Depends(get_db),
 ) -> Vorgang:
     vorgang = await session.get(Vorgang, vorgang_id)
-    if vorgang is None:
+    if vorgang is None or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     await _require_vorgang_zugriff(session, auth, vorgang)
 
@@ -450,3 +472,34 @@ async def update_vorgang(
             auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
         )
     return vorgang
+
+
+@router.delete(
+    "/{vorgang_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+)
+async def delete_vorgang(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: kaskadiert auf Maengel, Angebote,
+    # Rechnungen, Materialbedarfe, Termine und untergeordnete Vorgaenge
+    # dieses Vorgangs (siehe app/services/papierkorb_service.py). Bisher gab
+    # es fuer einen Vorgang gar keinen Loesch-Endpoint (nur den Status
+    # "storniert") -- dieser ist neu und primaer fuer loesch_operativ gedacht.
+    vorgang = await papierkorb_service.soft_delete(
+        session, entity_typ="vorgang", entity_id=vorgang_id, actor_user_id=auth.user_id
+    )
+    if vorgang is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await log_action(
+        session,
+        aktion="vorgang_geloescht",
+        mandant_id=auth.mandant_id,
+        actor_user_id=auth.user_id,
+        entity_type="vorgang",
+        entity_id=vorgang_id,
+        payload={"vorgangsnummer": vorgang.vorgangsnummer},
+    )

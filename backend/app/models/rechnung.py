@@ -15,12 +15,12 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 RECHNUNG_STATUS = ("entwurf", "versendet", "bezahlt", "storniert")
 
 
-class Rechnung(TimestampMixin, Base):
+class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "rechnungen"
     __table_args__ = (
         UniqueConstraint("mandant_id", "rechnungsnummer", name="uq_rechnungen_mandant_rechnungsnummer"),

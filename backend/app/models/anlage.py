@@ -5,12 +5,12 @@ from sqlalchemy import Boolean, CheckConstraint, Date, Float, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ANLAGEN_OBJEKTTYPEN = ("kundenanlage", "fahrzeug", "lager", "baustelle")
 
 
-class Anlage(TimestampMixin, Base):
+class Anlage(SoftDeleteMixin, TimestampMixin, Base):
     """objekttyp="kundenanlage" (Default): eine Anlage beim Kunden, kunde_id
     ist Pflicht. objekttyp in ("fahrzeug", "lager", "baustelle"): ein
     internes Objekt des Mandanten selbst, kunde_id bleibt leer -- diese

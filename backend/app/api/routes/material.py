@@ -30,6 +30,7 @@ from app.schemas.material import (
     MaterialVerwendungCreate,
     MaterialVerwendungRead,
 )
+from app.services import papierkorb_service
 from app.services.csv_service import csv_response
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 
@@ -38,7 +39,10 @@ router = APIRouter(
     tags=["material"],
     dependencies=[
         Depends(
-            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
         ),
         Depends(require_module("material")),
         Depends(require_recht("material", "sehen")),
@@ -144,7 +148,7 @@ async def list_material(
     lager_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[MaterialRead]:
-    stmt = select(Material).order_by(Material.bezeichnung)
+    stmt = select(Material).where(Material.geloescht_am.is_(None)).order_by(Material.bezeichnung)
     if lager_id is not None:
         # Nur Material, das an diesem Lagerort tatsaechlich vorhanden ist --
         # ein Bestand-Datensatz mit menge=0 ist nur ein Ueberbleibsel einer
@@ -211,7 +215,7 @@ async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Respon
 @router.get("/{material_id}", response_model=MaterialRead)
 async def get_material(material_id: UUID, session: AsyncSession = Depends(get_db)) -> MaterialRead:
     material = await session.get(Material, material_id)
-    if material is None:
+    if material is None or material.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material nicht gefunden")
     return await _material_read(session, material)
 
@@ -275,7 +279,7 @@ async def update_material(
     material_id: UUID, body: MaterialUpdate, session: AsyncSession = Depends(get_db)
 ) -> MaterialRead:
     material = await session.get(Material, material_id)
-    if material is None:
+    if material is None or material.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)
@@ -285,6 +289,26 @@ async def update_material(
     if changes:
         await session.refresh(material)
     return await _material_read(session, material)
+
+
+@router.delete(
+    "/{material_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+)
+async def delete_material(
+    material_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: kaskadiert auf Materialbedarfe dieses
+    # Artikels (siehe app/services/papierkorb_service.py). Bestand/Bewegungen/
+    # Verwendungen bleiben als Buchungshistorie unangetastet stehen.
+    material = await papierkorb_service.soft_delete(
+        session, entity_typ="material", entity_id=material_id, actor_user_id=auth.user_id
+    )
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material nicht gefunden")
 
 
 @router.put(
@@ -337,7 +361,20 @@ async def bestand_setzen(
     return await _material_read(session, material)
 
 
-@router.post("/{material_id}/umlagern", response_model=MaterialRead)
+@router.post(
+    "/{material_id}/umlagern",
+    response_model=MaterialRead,
+    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
+    # Wiederherstellen von Material selbst -- Umlagern/Verwendung bleibt den
+    # fachlichen Rollen vorbehalten.
+    dependencies=[
+        Depends(
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"
+            )
+        )
+    ],
+)
 async def umlagern(
     material_id: UUID,
     body: MaterialUmlagernRequest,
@@ -392,7 +429,16 @@ async def bewegungen(
 
 
 @router.post(
-    "/{material_id}/verwendung", response_model=MaterialVerwendungRead, status_code=status.HTTP_201_CREATED
+    "/{material_id}/verwendung",
+    response_model=MaterialVerwendungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"
+            )
+        )
+    ],
 )
 async def verwendung_erfassen(
     material_id: UUID,

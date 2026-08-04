@@ -2,7 +2,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
@@ -13,13 +12,19 @@ from app.models.vorgang import Vorgang
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import StandortProfil
 from app.schemas.standort import StandortCreate, StandortRead, StandortUpdate
+from app.services import papierkorb_service
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/standorte",
     tags=["standorte"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+        Depends(
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
+        )
     ],
 )
 
@@ -43,7 +48,7 @@ async def list_standorte(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Standort]:
-    stmt = select(Standort).order_by(Standort.bezeichnung)
+    stmt = select(Standort).where(Standort.geloescht_am.is_(None)).order_by(Standort.bezeichnung)
     if kunde_id:
         stmt = stmt.where(Standort.kunde_id == kunde_id)
     if aktiv is not None:
@@ -101,7 +106,7 @@ async def get_standort(
     session: AsyncSession = Depends(get_db),
 ) -> Standort:
     standort = await session.get(Standort, standort_id)
-    if standort is None:
+    if standort is None or standort.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
     await _require_standort_zugriff(session, auth, standort)
     return standort
@@ -118,17 +123,19 @@ async def get_standort_profil(
     session: AsyncSession = Depends(get_db),
 ) -> StandortProfil:
     standort = await session.get(Standort, standort_id)
-    if standort is None:
+    if standort is None or standort.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
     await _require_standort_zugriff(session, auth, standort)
     kunde = await session.get(Kunde, standort.kunde_id)
 
     anlagen_result = await session.execute(
-        select(Anlage).where(Anlage.standort_id == standort_id).order_by(Anlage.bezeichnung)
+        select(Anlage)
+        .where(Anlage.standort_id == standort_id, Anlage.geloescht_am.is_(None))
+        .order_by(Anlage.bezeichnung)
     )
     vorgaenge_result = await session.execute(
         select(Vorgang)
-        .where(Vorgang.standort_id == standort_id)
+        .where(Vorgang.standort_id == standort_id, Vorgang.geloescht_am.is_(None))
         .order_by(Vorgang.last_activity_at.desc())
         .limit(50)
     )
@@ -160,7 +167,7 @@ async def update_standort(
     standort_id: UUID, body: StandortUpdate, session: AsyncSession = Depends(get_db)
 ) -> Standort:
     standort = await session.get(Standort, standort_id)
-    if standort is None:
+    if standort is None or standort.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)
@@ -175,21 +182,17 @@ async def update_standort(
 @router.delete(
     "/{standort_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
 )
-async def delete_standort(standort_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
-    standort = await session.get(Standort, standort_id)
+async def delete_standort(
+    standort_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: kaskadiert auf Anlagen und Vorgaenge
+    # dieses Standorts (siehe app/services/papierkorb_service.py).
+    standort = await papierkorb_service.soft_delete(
+        session, entity_typ="standort", entity_id=standort_id, actor_user_id=auth.user_id
+    )
     if standort is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
-
-    try:
-        await session.delete(standort)
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Standort kann nicht gelöscht werden, da noch Anlagen oder Vorgänge "
-                "damit verknüpft sind -- stattdessen deaktivieren."
-            ),
-        ) from exc

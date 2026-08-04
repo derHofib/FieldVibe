@@ -18,13 +18,17 @@ from app.schemas.dauerauftrag import (
     DauerauftragZieleUpdate,
     DauerauftragZielRead,
 )
+from app.services import papierkorb_service
 from app.services.zuweisung_service import assigned_kunde_ids
 
+# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
+# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um
+# Daueraufträge loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
 router = APIRouter(
     prefix="/api/dauerauftraege",
     tags=["dauerauftraege"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
         Depends(require_module("dauerauftrag")),
     ],
 )
@@ -67,7 +71,11 @@ async def list_dauerauftraege(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[DauerauftragRead]:
-    stmt = select(Dauerauftrag).order_by(Dauerauftrag.created_at.asc())
+    stmt = (
+        select(Dauerauftrag)
+        .where(Dauerauftrag.geloescht_am.is_(None))
+        .order_by(Dauerauftrag.created_at.asc())
+    )
     if kunde_id:
         stmt = stmt.where(Dauerauftrag.kunde_id == kunde_id)
     if auth.role == "techniker":
@@ -165,7 +173,7 @@ async def get_dauerauftrag(
     session: AsyncSession = Depends(get_db),
 ) -> DauerauftragMitVerlauf:
     dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
-    if dauerauftrag is None:
+    if dauerauftrag is None or dauerauftrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
@@ -194,7 +202,7 @@ async def update_dauerauftrag(
     session: AsyncSession = Depends(get_db),
 ) -> DauerauftragRead:
     dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
-    if dauerauftrag is None:
+    if dauerauftrag is None or dauerauftrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
@@ -225,7 +233,7 @@ async def set_dauerauftrag_anlagen(
     Zyklus-Datensatz, ihre ggf. bereits erzeugten Vorgaenge bleiben
     unangetastet (siehe DauerauftragZieleUpdate-Docstring)."""
     dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
-    if dauerauftrag is None:
+    if dauerauftrag is None or dauerauftrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
@@ -258,19 +266,21 @@ async def set_dauerauftrag_anlagen(
 @router.delete(
     "/{dauerauftrag_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
 )
 async def delete_dauerauftrag(
-    dauerauftrag_id: UUID, session: AsyncSession = Depends(get_db)
+    dauerauftrag_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> None:
-    # Bereits erzeugte Vorgaenge bleiben unangetastet -- sie verlieren nur
-    # ihre dauerauftrag_id (ON DELETE SET NULL, siehe Migration 0013), sind
-    # aber ganz normale Vorgaenge und werden nicht geloescht. Die Ziele des
-    # Buendels werden per ON DELETE CASCADE (Migration 0014) mitentfernt.
-    dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
+    # Papierkorb statt Hard-Delete: kaskadiert auf die Ziele des Buendels
+    # (siehe app/services/papierkorb_service.py). Bereits erzeugte Vorgaenge
+    # bleiben unangetastet und ganz normale Vorgaenge -- die Kaskade betrifft
+    # nur dauerauftrag_ziele, nicht vorgaenge.dauerauftrag_id.
+    dauerauftrag = await papierkorb_service.soft_delete(
+        session, entity_typ="dauerauftrag", entity_id=dauerauftrag_id, actor_user_id=auth.user_id
+    )
     if dauerauftrag is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
-    await session.delete(dauerauftrag)
-    await session.flush()

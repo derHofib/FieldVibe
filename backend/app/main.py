@@ -30,6 +30,7 @@ from app.api.routes import (
     material,
     material_bedarfe,
     notifications,
+    papierkorb,
     pruefmittel,
     pruefzyklen,
     rechnungen,
@@ -122,6 +123,7 @@ app.include_router(rechte.router)
 app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
+app.include_router(papierkorb.router)
 
 
 @app.get("/healthz")

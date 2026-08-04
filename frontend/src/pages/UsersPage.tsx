@@ -14,7 +14,13 @@ export const ROLE_LABEL: Record<Role, string> = {
   techniker: "Techniker",
   controller: "Controller",
   mitarbeiter: "Mitarbeiter",
+  loesch_ansicht: "Papierkorb (nur Ansicht)",
+  loesch_operativ: "Papierkorb (operativ)",
 };
+
+// Nur super_admin darf diese Rollen vergeben (siehe app/api/routes/users.py) --
+// ein mandant_admin sieht sie im Anlage-Dropdown gar nicht erst.
+const SUPER_ADMIN_ONLY_ROLES: Role[] = ["super_admin", "loesch_ansicht", "loesch_operativ"];
 
 export function UsersPage() {
   const { currentUser } = useAuth();
@@ -134,7 +140,9 @@ export function UsersPage() {
               className="btn-touch rounded-md border border-slate-300 px-3 py-2"
             >
               {Object.entries(ROLE_LABEL)
-                .filter(([value]) => isSuperAdmin || value !== "super_admin")
+                .filter(
+                  ([value]) => isSuperAdmin || !SUPER_ADMIN_ONLY_ROLES.includes(value as Role),
+                )
                 .map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}

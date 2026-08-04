@@ -5,13 +5,13 @@ from sqlalchemy import CheckConstraint, ForeignKey, Numeric, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 MATERIAL_BEDARF_ZWECKE = ("bestellung", "angebot")
 MATERIAL_BEDARF_STATUS = ("offen", "bestellt", "in_angebot", "erhalten", "storniert")
 
 
-class MaterialBedarf(TimestampMixin, Base):
+class MaterialBedarf(SoftDeleteMixin, TimestampMixin, Base):
     """Ein an einem Vorgang erfasster Materialbedarf, der (noch) nicht aus
     dem eigenen Bestand abgebucht wird (siehe dazu MaterialVerwendung) --
     entweder weil es beschafft werden muss (zweck="bestellung", sammelt sich

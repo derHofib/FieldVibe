@@ -8,11 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.tag import Tag, TagAssignment
 from app.schemas.tag import TagAssignmentCreate, TagAssignmentRead, TagCreate, TagRead
+from app.services import papierkorb_service
 
+# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
+# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um Tags
+# loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
 router = APIRouter(
     prefix="/api/tags",
     tags=["tags"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ"))
+    ],
 )
 
 
@@ -22,7 +28,9 @@ def _normalize_label(label: str) -> str:
 
 @router.get("", response_model=list[TagRead])
 async def list_tags(session: AsyncSession = Depends(get_db)) -> list[Tag]:
-    result = await session.execute(select(Tag).order_by(Tag.label))
+    result = await session.execute(
+        select(Tag).where(Tag.geloescht_am.is_(None)).order_by(Tag.label)
+    )
     return list(result.scalars().all())
 
 
@@ -51,18 +59,24 @@ async def create_tag(
 @router.delete(
     "/{tag_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
 )
-async def delete_tag(tag_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
+async def delete_tag(
+    tag_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
     tag = await session.get(Tag, tag_id)
-    if tag is None:
+    if tag is None or tag.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag nicht gefunden")
     if tag.system_tag:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="System-Tags können nicht gelöscht werden",
         )
-    await session.delete(tag)
+    await papierkorb_service.soft_delete(
+        session, entity_typ="tag", entity_id=tag_id, actor_user_id=auth.user_id
+    )
 
 
 @router.get("/assignments", response_model=list[TagAssignmentRead])
@@ -83,6 +97,10 @@ async def list_assignments(
     "/{tag_id}/assignments",
     response_model=TagAssignmentRead,
     status_code=status.HTTP_201_CREATED,
+    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
+    # Wiederherstellen von Tags selbst -- Zuordnen/Entfernen einer Zuordnung
+    # bleibt den fachlichen Rollen vorbehalten.
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
 )
 async def assign_tag(
     tag_id: UUID,
@@ -90,7 +108,8 @@ async def assign_tag(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> TagAssignment:
-    if await session.get(Tag, tag_id) is None:
+    tag = await session.get(Tag, tag_id)
+    if tag is None or tag.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag nicht gefunden")
 
     assignment = TagAssignment(
@@ -109,7 +128,11 @@ async def assign_tag(
     return assignment
 
 
-@router.delete("/{tag_id}/assignments", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{tag_id}/assignments",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+)
 async def unassign_tag(
     tag_id: UUID,
     entity_type: str = Query(...),

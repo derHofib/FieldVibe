@@ -15,6 +15,7 @@ from app.schemas.material_bedarf import (
     MaterialBedarfMitDetails,
     MaterialBedarfRead,
 )
+from app.services import papierkorb_service
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 
 router = APIRouter(
@@ -22,7 +23,10 @@ router = APIRouter(
     tags=["material-bedarfe"],
     dependencies=[
         Depends(
-            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
         ),
         Depends(require_module("material")),
     ],
@@ -38,7 +42,11 @@ async def list_material_bedarfe(
     zweck: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[MaterialBedarfMitDetails]:
-    stmt = select(MaterialBedarf).order_by(MaterialBedarf.created_at.desc())
+    stmt = (
+        select(MaterialBedarf)
+        .where(MaterialBedarf.geloescht_am.is_(None))
+        .order_by(MaterialBedarf.created_at.desc())
+    )
     if vorgang_id:
         stmt = stmt.where(MaterialBedarf.vorgang_id == vorgang_id)
     if status_filter:
@@ -84,7 +92,16 @@ async def list_material_bedarfe(
     "",
     response_model=MaterialBedarfRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_recht("material", "bearbeiten"))],
+    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
+    # Wiederherstellen -- Anlegen bleibt den fachlichen Rollen vorbehalten.
+    dependencies=[
+        Depends(
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"
+            )
+        ),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def create_material_bedarf(
     body: MaterialBedarfCreate,
@@ -139,14 +156,19 @@ async def create_material_bedarf(
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_recht("material", "bearbeiten"))],
 )
-async def delete_material_bedarf(bedarf_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
+async def delete_material_bedarf(
+    bedarf_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
     bedarf = await session.get(MaterialBedarf, bedarf_id)
-    if bedarf is None:
+    if bedarf is None or bedarf.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Materialbedarf nicht gefunden")
     if bedarf.status != "offen":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Nur offene Materialbedarfe können entfernt werden",
         )
-    await session.delete(bedarf)
-    await session.flush()
+    await papierkorb_service.soft_delete(
+        session, entity_typ="material_bedarf", entity_id=bedarf_id, actor_user_id=auth.user_id
+    )

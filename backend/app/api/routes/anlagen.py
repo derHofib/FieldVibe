@@ -2,7 +2,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,13 +23,19 @@ from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.anlage import AnlageCreate, AnlageRead, AnlageUpdate
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import AnlageProfil
+from app.services import papierkorb_service
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/anlagen",
     tags=["anlagen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+        Depends(
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
+        )
     ],
 )
 
@@ -77,7 +83,7 @@ async def list_anlagen(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Anlage]:
-    stmt = select(Anlage).order_by(Anlage.bezeichnung)
+    stmt = select(Anlage).where(Anlage.geloescht_am.is_(None)).order_by(Anlage.bezeichnung)
     if kunde_id:
         stmt = stmt.where(Anlage.kunde_id == kunde_id)
     if standort_id:
@@ -166,7 +172,7 @@ async def get_anlage_by_qr(
     # not a cross-tenant leak.
     result = await session.execute(select(Anlage).where(Anlage.qr_code == qr_code))
     anlage = result.scalar_one_or_none()
-    if anlage is None:
+    if anlage is None or anlage.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
         )
@@ -192,7 +198,7 @@ async def get_anlage(
     session: AsyncSession = Depends(get_db),
 ) -> Anlage:
     anlage = await session.get(Anlage, anlage_id)
-    if anlage is None:
+    if anlage is None or anlage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
     await _require_anlage_zugriff(session, auth, anlage)
     return anlage
@@ -209,14 +215,14 @@ async def get_anlage_profil(
     session: AsyncSession = Depends(get_db),
 ) -> AnlageProfil:
     anlage = await session.get(Anlage, anlage_id)
-    if anlage is None:
+    if anlage is None or anlage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
     await _require_anlage_zugriff(session, auth, anlage)
     kunde = await session.get(Kunde, anlage.kunde_id) if anlage.kunde_id is not None else None
 
     vorgaenge_result = await session.execute(
         select(Vorgang)
-        .where(Vorgang.anlage_id == anlage_id)
+        .where(Vorgang.anlage_id == anlage_id, Vorgang.geloescht_am.is_(None))
         .order_by(Vorgang.last_activity_at.desc())
         .limit(50)
     )
@@ -267,7 +273,7 @@ async def update_anlage(
     anlage_id: UUID, body: AnlageUpdate, session: AsyncSession = Depends(get_db)
 ) -> Anlage:
     anlage = await session.get(Anlage, anlage_id)
-    if anlage is None:
+    if anlage is None or anlage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)
@@ -290,34 +296,21 @@ async def update_anlage(
     "/{anlage_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "disponent", "loesch_operativ")),
         Depends(require_module("kundenverwaltung", "material")),
     ],
 )
-async def delete_anlage(anlage_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
-    anlage = await session.get(Anlage, anlage_id)
+async def delete_anlage(
+    anlage_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: kaskadiert auf Vertraege, Vorgaenge,
+    # Maengel, Pruefzyklen, Fahrzeug-Zuweisung, Inventurzyklus dieser Anlage
+    # (siehe app/services/papierkorb_service.py). Tag-Zuordnungen bleiben
+    # unangetastet stehen, da die Anlage selbst nicht mehr geloescht wird.
+    anlage = await papierkorb_service.soft_delete(
+        session, entity_typ="anlage", entity_id=anlage_id, actor_user_id=auth.user_id
+    )
     if anlage is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
-
-    # Tag-Zuordnungen sind polymorph (entity_id ohne echte FK zu anlagen.id)
-    # und werden daher explizit mit aufgeraeumt. Alles mit echtem fachlichem
-    # Gewicht (Vorgaenge, Vertraege, Pruefzyklen, Inventurzyklus, Material-
-    # Bestand/-Bewegungen, Fahrzeug-Zuweisung) blockt die Loeschung ueber
-    # den FK-Constraint unten.
-    await session.execute(
-        delete(TagAssignment).where(
-            TagAssignment.entity_type == "anlage", TagAssignment.entity_id == anlage_id
-        )
-    )
-
-    try:
-        await session.delete(anlage)
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Anlage kann nicht gelöscht werden, da noch Daten verknüpft sind "
-                "(z.B. Vorgänge, Verträge, Prüfzyklen, Material-Bestand)."
-            ),
-        ) from exc

@@ -11,13 +11,17 @@ from app.models.mangel import MANGEL_SCHWEREGRADE, Mangel
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.mangel import MangelCreate, MangelRead, MangelUpdate
+from app.services import papierkorb_service
 from app.services.pdf_service import generate_maengel_protokoll_pdf
 
+# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
+# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um Maengel
+# loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
 router = APIRouter(
     prefix="/api/maengel",
     tags=["maengel"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
         Depends(require_module("abrechnung")),
     ],
 )
@@ -36,7 +40,7 @@ async def list_maengel(
     status_filter: str | None = Query(default=None, alias="status"),
     session: AsyncSession = Depends(get_db),
 ) -> list[Mangel]:
-    stmt = select(Mangel).order_by(Mangel.created_at.desc())
+    stmt = select(Mangel).where(Mangel.geloescht_am.is_(None)).order_by(Mangel.created_at.desc())
     if vorgang_id:
         stmt = stmt.where(Mangel.vorgang_id == vorgang_id)
     if status_filter:
@@ -70,12 +74,37 @@ async def maengel_protokoll_pdf(
 @router.get("/{mangel_id}", response_model=MangelRead)
 async def get_mangel(mangel_id: UUID, session: AsyncSession = Depends(get_db)) -> Mangel:
     mangel = await session.get(Mangel, mangel_id)
-    if mangel is None:
+    if mangel is None or mangel.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mangel nicht gefunden")
     return mangel
 
 
-@router.post("", response_model=MangelRead, status_code=status.HTTP_201_CREATED)
+@router.delete(
+    "/{mangel_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+)
+async def delete_mangel(
+    mangel_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    mangel = await papierkorb_service.soft_delete(
+        session, entity_typ="mangel", entity_id=mangel_id, actor_user_id=auth.user_id
+    )
+    if mangel is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mangel nicht gefunden")
+
+
+@router.post(
+    "",
+    response_model=MangelRead,
+    status_code=status.HTTP_201_CREATED,
+    # loesch_operativ ist Teil der Router-Basisrolle fuer lesenden Zugriff
+    # (siehe Router-Definition oben), darf aber selbst keine Maengel
+    # anlegen/bearbeiten.
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+)
 async def create_mangel(
     body: MangelCreate,
     auth: AuthContext = Depends(get_current_user),
@@ -125,7 +154,11 @@ async def create_mangel(
     return mangel
 
 
-@router.patch("/{mangel_id}", response_model=MangelRead)
+@router.patch(
+    "/{mangel_id}",
+    response_model=MangelRead,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+)
 async def update_mangel(
     mangel_id: UUID,
     body: MangelUpdate,
@@ -133,7 +166,7 @@ async def update_mangel(
     session: AsyncSession = Depends(get_db),
 ) -> Mangel:
     mangel = await session.get(Mangel, mangel_id)
-    if mangel is None:
+    if mangel is None or mangel.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mangel nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)

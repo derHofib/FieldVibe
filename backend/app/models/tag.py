@@ -5,12 +5,12 @@ from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Text, UniqueConstra
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 TAG_ENTITY_TYPEN = ("kunde", "anlage", "vorgang", "material")
 
 
-class Tag(TimestampMixin, Base):
+class Tag(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "tags"
     __table_args__ = (
         UniqueConstraint("mandant_id", "label", name="uq_tags_mandant_label"),

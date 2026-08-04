@@ -5,12 +5,12 @@ from sqlalchemy import CheckConstraint, ForeignKey, Numeric, SmallInteger, Text,
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 BESTELLUNG_STATUS = ("entwurf", "bestellt", "eingegangen")
 
 
-class Bestellung(TimestampMixin, Base):
+class Bestellung(SoftDeleteMixin, TimestampMixin, Base):
     """Sammelt ausgewaehlte offene MaterialBedarf-Eintraege (zweck=
     "bestellung") zu einer Bestellung an einen Lieferanten -- Export als
     CSV/PDF (siehe app/api/routes/bestellungen.py). status="eingegangen"

@@ -616,10 +616,14 @@ async def test_dauerauftrag_loeschen(client, make_mandant, make_user, make_kunde
     get_resp = await client.get(f"/api/dauerauftraege/{auftrag_id}", headers=auth_headers(token))
     assert get_resp.status_code == 404
 
-    # Der Vorgang selbst bleibt bestehen, verliert nur die Rueckverknuepfung.
+    # Papierkorb statt Hard-Delete: der Vorgang selbst bleibt unangetastet
+    # bestehen und behaelt seine Rueckverknuepfung, da der Dauerauftrag
+    # weiterhin existiert (nur weich geloescht, siehe
+    # app/services/papierkorb_service.py) -- die ON DELETE SET NULL-Regel
+    # greift erst beim endgueltigen (harten) Loeschen im Papierkorb.
     vorgang_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
     assert vorgang_resp.status_code == 200
-    assert vorgang_resp.json()["dauerauftrag_id"] is None
+    assert vorgang_resp.json()["dauerauftrag_id"] == str(auftrag_id)
 
 
 @pytest.mark.asyncio

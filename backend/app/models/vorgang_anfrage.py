@@ -5,13 +5,13 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 from app.models.vorgang import LEISTUNGSTYPEN
 
 VORGANG_ANFRAGE_STATUS = ("offen", "angenommen", "abgelehnt")
 
 
-class VorgangAnfrage(TimestampMixin, Base):
+class VorgangAnfrage(SoftDeleteMixin, TimestampMixin, Base):
     """Ein vom Kunden ueber das Kundenportal gestellter Auftragswunsch. Wird
     erst durch die Annahme eines Mitarbeiters (siehe
     app/api/routes/vorgang_anfragen.py) zu einem echten Vorgang -- so bleiben

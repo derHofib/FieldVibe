@@ -15,12 +15,12 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ANGEBOT_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt")
 
 
-class Angebot(TimestampMixin, Base):
+class Angebot(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "angebote"
     __table_args__ = (
         UniqueConstraint("mandant_id", "angebotsnummer", name="uq_angebote_mandant_angebotsnummer"),

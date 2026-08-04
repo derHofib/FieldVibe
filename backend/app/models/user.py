@@ -6,7 +6,23 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
 
-ROLES = ("super_admin", "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+ROLES = (
+    "super_admin",
+    "mandant_admin",
+    "disponent",
+    "techniker",
+    "controller",
+    "mitarbeiter",
+    # Papierkorb (siehe app/services/papierkorb_service.py): loesch_ansicht
+    # sieht ausschliesslich den Papierkorb (rein lesend), loesch_operativ
+    # sieht zusaetzlich alle fachlichen Daten wie ein mitarbeiter und darf
+    # loeschen/wiederherstellen/endgueltig loeschen. Beide Rollen sind nur
+    # durch super_admin vergebbar (siehe app/api/routes/users.py), von
+    # loesch_operativ darf es je Mandant hoechstens einen aktiven Account
+    # geben (siehe Migration 0032, partial unique index).
+    "loesch_ansicht",
+    "loesch_operativ",
+)
 
 
 class User(TimestampMixin, Base):

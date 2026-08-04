@@ -32,7 +32,7 @@ async def search(
         label = q[1:].strip().lower()
         result = await session.execute(
             select(Tag)
-            .where(Tag.label.ilike(f"%{label}%"))
+            .where(Tag.label.ilike(f"%{label}%"), Tag.geloescht_am.is_(None))
             .order_by(func.similarity(Tag.label, label).desc())
             .limit(HITS_PER_KATEGORIE)
         )
@@ -46,7 +46,10 @@ async def search(
 
     kunden_stmt = (
         select(Kunde)
-        .where(or_(Kunde.name.ilike(f"%{q}%"), Kunde.kundennummer.ilike(f"%{q}%")))
+        .where(
+            or_(Kunde.name.ilike(f"%{q}%"), Kunde.kundennummer.ilike(f"%{q}%")),
+            Kunde.geloescht_am.is_(None),
+        )
         .order_by(func.similarity(Kunde.name, q).desc())
         .limit(HITS_PER_KATEGORIE)
     )
@@ -60,7 +63,7 @@ async def search(
 
     anlagen_stmt = (
         select(Anlage)
-        .where(Anlage.bezeichnung.ilike(f"%{q}%"))
+        .where(Anlage.bezeichnung.ilike(f"%{q}%"), Anlage.geloescht_am.is_(None))
         .order_by(func.similarity(Anlage.bezeichnung, q).desc())
         .limit(HITS_PER_KATEGORIE)
     )
@@ -81,7 +84,8 @@ async def search(
             or_(
                 text("search_vector @@ websearch_to_tsquery('german', :q)"),
                 Vorgang.vorgangsnummer.ilike(f"%{q}%"),
-            )
+            ),
+            Vorgang.geloescht_am.is_(None),
         )
         .params(q=q)
         .limit(HITS_PER_KATEGORIE)
@@ -96,7 +100,7 @@ async def search(
 
     tags_result = await session.execute(
         select(Tag)
-        .where(Tag.label.ilike(f"%{q}%"))
+        .where(Tag.label.ilike(f"%{q}%"), Tag.geloescht_am.is_(None))
         .order_by(func.similarity(Tag.label, q).desc())
         .limit(HITS_PER_KATEGORIE)
     )

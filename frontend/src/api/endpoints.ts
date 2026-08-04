@@ -43,6 +43,8 @@ import type {
   MaterialBewegung,
   MaterialVerwendung,
   NotificationEntry,
+  PapierkorbEintrag,
+  PapierkorbEntityTyp,
   Pruefmittel,
   Pruefzyklus,
   PruefzyklusEinheit,
@@ -125,6 +127,17 @@ export const usersApi = {
 
 export const auditLogApi = {
   list: () => apiFetch<AuditLogEntry[]>("/api/admin/audit-log"),
+};
+
+export const papierkorbApi = {
+  list: (entityTyp?: PapierkorbEntityTyp) =>
+    apiFetch<PapierkorbEintrag[]>(
+      `/api/papierkorb${entityTyp ? `?entity_typ=${entityTyp}` : ""}`,
+    ),
+  wiederherstellen: (entityTyp: PapierkorbEntityTyp, id: string) =>
+    apiFetch<void>(`/api/papierkorb/${entityTyp}/${id}/wiederherstellen`, { method: "POST" }),
+  endgueltigLoeschen: (entityTyp: PapierkorbEntityTyp, id: string) =>
+    apiFetch<void>(`/api/papierkorb/${entityTyp}/${id}`, { method: "DELETE" }),
 };
 
 export const feedApi = {

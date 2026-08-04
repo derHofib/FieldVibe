@@ -4,10 +4,10 @@ from sqlalchemy import ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 
-class Lieferant(TimestampMixin, Base):
+class Lieferant(SoftDeleteMixin, TimestampMixin, Base):
     """Stammdaten eines Großhändlers/Lieferanten, an den eine Bestellung
     (siehe app/models/bestellung.py) adressiert wird. Bewusst schlank
     gehalten (kein eigenes Adressfeld) -- der einzige heute benoetigte Zweck

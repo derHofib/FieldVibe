@@ -2,7 +2,7 @@ import secrets
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +31,7 @@ from app.schemas.kundenportal import (
 )
 from app.schemas.profile import KundeProfil
 from app.schemas.user import UserRead
-from app.services import storage_service
+from app.services import papierkorb_service, storage_service
 from app.services.numbering_service import next_kundennummer
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -39,11 +39,18 @@ from app.services.zuweisung_service import assigned_kunde_ids
 # mandantengebunden, und ein nicht-impersonierender super_admin hat kein
 # mandant_id im Token. Zugriff läuft für die Plattform-Rolle ausschließlich
 # über "Login als Mandant" (das Token trägt dann role=mandant_admin).
+# loesch_operativ (Papierkorb) sieht fachliche Daten wie ein mitarbeiter
+# zusaetzlich mit -- siehe app/api/routes/papierkorb.py.
 router = APIRouter(
     prefix="/api/kunden",
     tags=["kunden"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+        Depends(
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
+        )
     ],
 )
 
@@ -54,7 +61,7 @@ async def list_kunden(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Kunde]:
-    stmt = select(Kunde).order_by(Kunde.name)
+    stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
     if auth.role == "techniker":
@@ -119,7 +126,7 @@ async def get_kunde(
     session: AsyncSession = Depends(get_db),
 ) -> Kunde:
     kunde = await session.get(Kunde, kunde_id)
-    if kunde is None:
+    if kunde is None or kunde.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     await _require_kunde_zugriff(session, auth, kunde_id)
     return kunde
@@ -139,16 +146,18 @@ async def get_kunde_profil(
     session: AsyncSession = Depends(get_db),
 ) -> KundeProfil:
     kunde = await session.get(Kunde, kunde_id)
-    if kunde is None:
+    if kunde is None or kunde.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     await _require_kunde_zugriff(session, auth, kunde_id)
 
     anlagen_result = await session.execute(
-        select(Anlage).where(Anlage.kunde_id == kunde_id).order_by(Anlage.bezeichnung)
+        select(Anlage)
+        .where(Anlage.kunde_id == kunde_id, Anlage.geloescht_am.is_(None))
+        .order_by(Anlage.bezeichnung)
     )
     vorgaenge_result = await session.execute(
         select(Vorgang)
-        .where(Vorgang.kunde_id == kunde_id)
+        .where(Vorgang.kunde_id == kunde_id, Vorgang.geloescht_am.is_(None))
         .order_by(Vorgang.last_activity_at.desc())
         .limit(50)
     )
@@ -280,40 +289,25 @@ async def update_kunde(
     "/{kunde_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "disponent", "loesch_operativ")),
         Depends(require_module("kundenverwaltung")),
     ],
 )
-async def delete_kunde(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
-    kunde = await session.get(Kunde, kunde_id)
+async def delete_kunde(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: verschiebt den Kunden UND alle fachlich
+    # abhaengigen Datensaetze (Standorte, Anlagen, Vertraege, Vorgaenge, ...)
+    # kaskadierend in den Papierkorb (siehe app/services/papierkorb_service.py).
+    # Portal-Zugaenge/Tag-Zuordnungen bleiben unangetastet stehen, da der
+    # Kunden-Datensatz selbst nicht mehr geloescht, sondern nur markiert wird.
+    kunde = await papierkorb_service.soft_delete(
+        session, entity_typ="kunde", entity_id=kunde_id, actor_user_id=auth.user_id
+    )
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
-
-    # Portal-Zugaenge (Login-Credentials) und Tag-Zuordnungen (entity_id ist
-    # polymorph, hat also keine echte FK zu kunden.id) sind reine Anhaengsel
-    # des Kunden, keine eigenstaendigen Geschaeftsvorfaelle -- die raeumen
-    # wir mit auf. kunde_zuweisungen loescht sich per ondelete=CASCADE
-    # bereits selbst. Alles mit echtem fachlichem Gewicht (Anlagen, Vorgaenge,
-    # Vertraege, Angebote, Rechnungen, Dauerauftraege) blockt die eigentliche
-    # Loeschung unten ueber den FK-Constraint.
-    await session.execute(delete(KundenportalZugang).where(KundenportalZugang.kunde_id == kunde_id))
-    await session.execute(
-        delete(TagAssignment).where(
-            TagAssignment.entity_type == "kunde", TagAssignment.entity_id == kunde_id
-        )
-    )
-
-    try:
-        await session.delete(kunde)
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Kunde kann nicht gelöscht werden, da noch Daten verknüpft sind "
-                "(z.B. Anlagen, Vorgänge, Verträge, Angebote, Rechnungen)."
-            ),
-        ) from exc
 
 
 @router.get(

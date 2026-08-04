@@ -4,12 +4,12 @@ from sqlalchemy import CheckConstraint, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 KUNDE_TYPEN = ("privat", "gewerbe", "oeffentlich", "hausverwaltung")
 
 
-class Kunde(TimestampMixin, Base):
+class Kunde(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "kunden"
     __table_args__ = (
         UniqueConstraint("mandant_id", "kundennummer", name="uq_kunden_mandant_kundennummer"),

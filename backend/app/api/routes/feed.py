@@ -23,7 +23,9 @@ from app.services.zuweisung_service import assigned_kunde_ids
 router = APIRouter(
     prefix="/api/feed",
     tags=["feed"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ"))
+    ],
 )
 
 DEFAULT_PAGE_SIZE = 20
@@ -87,7 +89,11 @@ async def get_feed(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
-    stmt = select(Vorgang).order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
+    stmt = (
+        select(Vorgang)
+        .where(Vorgang.geloescht_am.is_(None))
+        .order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
+    )
 
     if status_filter:
         status_liste = [s for s in status_filter.split(",") if s]

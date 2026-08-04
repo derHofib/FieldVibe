@@ -11,12 +11,18 @@ from app.models.user import User
 from app.schemas.anlage import AnlageRead
 from app.schemas.fahrzeug_zuweisung import FahrzeugZuweisungSetzen, FahrzeugZuweisungUebersicht
 from app.schemas.user import UserRead
+from app.services import papierkorb_service
 
+# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
+# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um weich
+# geloeschte Fahrzeug-Zuweisungen im Papierkorb wiederherzustellen (siehe
+# papierkorb.py); das Setzen/Aufheben einer Zuweisung selbst bleibt wie
+# bisher mandant_admin/disponent vorbehalten.
 router = APIRouter(
     prefix="/api/fahrzeug-zuweisungen",
     tags=["fahrzeug-zuweisungen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
         Depends(require_module("fahrzeuge")),
     ],
 )
@@ -24,7 +30,9 @@ router = APIRouter(
 
 async def _zuweisung_fuer(session: AsyncSession, user_id: UUID) -> FahrzeugZuweisung | None:
     result = await session.execute(
-        select(FahrzeugZuweisung).where(FahrzeugZuweisung.user_id == user_id)
+        select(FahrzeugZuweisung).where(
+            FahrzeugZuweisung.user_id == user_id, FahrzeugZuweisung.geloescht_am.is_(None)
+        )
     )
     return result.scalar_one_or_none()
 
@@ -43,7 +51,9 @@ async def uebersicht(session: AsyncSession = Depends(get_db)) -> list[FahrzeugZu
     techniker_liste = list(techniker_result.scalars().all())
 
     zuweisungen_result = await session.execute(
-        select(FahrzeugZuweisung.user_id, Anlage).join(Anlage, Anlage.id == FahrzeugZuweisung.anlage_id)
+        select(FahrzeugZuweisung.user_id, Anlage)
+        .join(Anlage, Anlage.id == FahrzeugZuweisung.anlage_id)
+        .where(FahrzeugZuweisung.geloescht_am.is_(None))
     )
     fahrzeug_by_user = {user_id: anlage for user_id, anlage in zuweisungen_result.all()}
 
@@ -93,8 +103,12 @@ async def zuweisung_setzen(
 
     if body.anlage_id is None:
         if bestehende is not None:
-            await session.delete(bestehende)
-            await session.flush()
+            await papierkorb_service.soft_delete(
+                session,
+                entity_typ="fahrzeug_zuweisung",
+                entity_id=bestehende.id,
+                actor_user_id=auth.user_id,
+            )
         return None
 
     fahrzeug = await session.get(Anlage, body.anlage_id)

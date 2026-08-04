@@ -5,7 +5,9 @@ export type Role =
   | "disponent"
   | "techniker"
   | "controller"
-  | "mitarbeiter";
+  | "mitarbeiter"
+  | "loesch_ansicht"
+  | "loesch_operativ";
 
 // Muss mit MANDANT_MODULE in backend/app/models/mandant.py uebereinstimmen.
 // "vorgaenge" (Auftrag + Chat/Foto/Status/Unterschrift + Zeit start/stopp,
@@ -45,6 +47,40 @@ export interface User {
   aktiv: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
+// uebereinstimmen.
+export type PapierkorbEntityTyp =
+  | "kunde"
+  | "anlage"
+  | "vertrag"
+  | "vorgang"
+  | "standort"
+  | "termin"
+  | "pruefzyklus"
+  | "pruefmittel"
+  | "lieferant"
+  | "material"
+  | "material_bedarf"
+  | "bestellung"
+  | "dauerauftrag"
+  | "dauerauftrag_ziel"
+  | "mangel"
+  | "angebot"
+  | "rechnung"
+  | "inventurzyklus"
+  | "fahrzeug_zuweisung"
+  | "tag"
+  | "vorgang_anfrage";
+
+export interface PapierkorbEintrag {
+  entity_typ: PapierkorbEntityTyp;
+  id: string;
+  titel: string | null;
+  geloescht_am: string;
+  geloescht_von: string | null;
+  geloescht_von_name: string | null;
 }
 
 export interface AuditLogEntry {

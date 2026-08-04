@@ -147,18 +147,26 @@ async def test_admin_can_delete_unused_anlage(client, make_mandant, make_user, m
 
 
 @pytest.mark.asyncio
-async def test_anlage_delete_blocked_when_vorgang_exists(
+async def test_anlage_delete_kaskadiert_auf_vorgang(
     client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
 ):
+    # Papierkorb (siehe app/services/papierkorb_service.py): eine Anlage mit
+    # abhaengigen Vorgaengen laesst sich loeschen -- die Loeschung kaskadiert
+    # weich auf den Vorgang statt geblockt zu werden.
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     anlage = await make_anlage(mandant=mandant, kunde=kunde)
-    await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage.id)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage.id)
     token = await login(client, admin.email, "pw-123456")
 
     resp = await client.delete(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
-    assert resp.status_code == 409
+    assert resp.status_code == 204
+
+    get_resp = await client.get(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
+    assert get_resp.status_code == 404
+    vorgang_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
+    assert vorgang_resp.status_code == 404
 
 
 @pytest.mark.asyncio

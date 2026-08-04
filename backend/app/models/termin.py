@@ -5,12 +5,12 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 TERMIN_STATUS = ("geplant", "bestaetigt", "abgeschlossen", "abgesagt")
 
 
-class Termin(TimestampMixin, Base):
+class Termin(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "termine"
     __table_args__ = (
         CheckConstraint("ende_at > start_at", name="ck_termine_ende_after_start"),

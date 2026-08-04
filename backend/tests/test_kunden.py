@@ -183,21 +183,26 @@ async def test_admin_can_delete_unused_kunde(client, make_mandant, make_user, ma
 
 
 @pytest.mark.asyncio
-async def test_kunde_delete_blocked_when_vorgang_exists(
+async def test_kunde_delete_kaskadiert_auf_vorgang(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
+    # Papierkorb (siehe app/services/papierkorb_service.py): ein Kunde mit
+    # abhaengigen Vorgaengen laesst sich loeschen -- die Loeschung kaskadiert
+    # weich auf den Vorgang statt geblockt zu werden (siehe tests/test_papierkorb.py
+    # fuer die vollstaendige Kaskade und das Wiederherstellen).
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
-    await make_vorgang(mandant=mandant, kunde=kunde)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, admin.email, "pw-123456")
 
     resp = await client.delete(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
-    assert resp.status_code == 409
+    assert resp.status_code == 204
 
-    # Der Kunde (und damit sein Vorgang) existiert unveraendert weiter.
     get_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
-    assert get_resp.status_code == 200
+    assert get_resp.status_code == 404
+    vorgang_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
+    assert vorgang_resp.status_code == 404
 
 
 @pytest.mark.asyncio

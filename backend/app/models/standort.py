@@ -4,10 +4,10 @@ from sqlalchemy import Boolean, Float, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 
-class Standort(TimestampMixin, Base):
+class Standort(SoftDeleteMixin, TimestampMixin, Base):
     """Eigenstaendige Ebene zwischen Kunde und Anlage: ein Kunde kann mehrere
     Standorte haben (z.B. Filialen), eine Anlage haengt optional an einem
     Standort (siehe Anlage.standort_id) und ein Vorgang kann direkt einen

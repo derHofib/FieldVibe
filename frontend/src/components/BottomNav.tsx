@@ -35,13 +35,20 @@ function NavItem({ to, label, icon }: { to: string; label: string; icon: string 
 const dispoItem = { to: "/dispo", label: "Dispo", icon: "📅" };
 const geschaeftItem = { to: "/geschaeft", label: "Geschäft", icon: "💼" };
 const meldungenItem = { to: "/benachrichtigungen", label: "Meldungen", icon: "🔔" };
+const papierkorbItem = { to: "/papierkorb", label: "Papierkorb", icon: "🗑️" };
 
 export function BottomNav() {
   const { currentUser } = useAuth();
   const [mehrOffen, setMehrOffen] = useState(false);
+  // loesch_ansicht sieht ausschliesslich den Papierkorb (siehe
+  // app/api/routes/papierkorb.py) -- Feed/Meldungen/etc. wuerden fuer diese
+  // Rolle nur mit 403 scheitern, daher gar nicht erst laden/anzeigen.
+  const nurPapierkorb = currentUser?.role === "loesch_ansicht";
+  const istPapierkorbRolle = nurPapierkorb || currentUser?.role === "loesch_operativ";
   const { data: unread } = useQuery({
     queryKey: ["notifications", "unread"],
     queryFn: () => notificationsApi.list(true),
+    enabled: !nurPapierkorb,
   });
   const unreadCount = unread?.length ?? 0;
 
@@ -55,7 +62,7 @@ export function BottomNav() {
   // alles andere ist seltener und wandert ins aufklappbare "Mehr"-Menue,
   // damit die Leiste auf schmalen Bildschirmen nicht ueberladen wirkt.
   const mehrItems = [
-    { ...meldungenItem, badge: unreadCount },
+    ...(nurPapierkorb ? [] : [{ ...meldungenItem, badge: unreadCount }]),
     ...(canDisponieren && istModulAktiv(currentUser, "dispo") ? [{ ...dispoItem, badge: 0 }] : []),
     // "Geschäft" buendelt Kunden/Angebote-Rechnungen/Material-Tabs -- ganz
     // weg, wenn alle drei Bereiche fuer diesen Mandanten deaktiviert sind
@@ -64,6 +71,7 @@ export function BottomNav() {
     ...(canDisponieren && istModulAktiv(currentUser, "kundenverwaltung", "abrechnung", "material")
       ? [{ ...geschaeftItem, badge: 0 }]
       : []),
+    ...(istPapierkorbRolle ? [{ ...papierkorbItem, badge: 0 }] : []),
   ];
   const mehrBadge = mehrItems.reduce((sum, item) => sum + item.badge, 0);
 

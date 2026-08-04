@@ -6,12 +6,12 @@ from sqlalchemy import CheckConstraint, ForeignKey, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 MATERIAL_BEWEGUNG_TYPEN = ("eingang", "umlagerung", "verwendung", "korrektur")
 
 
-class Material(TimestampMixin, Base):
+class Material(SoftDeleteMixin, TimestampMixin, Base):
     """Der tatsaechliche Bestand liegt nicht mehr hier, sondern verteilt auf
     Lagerorte (siehe MaterialBestand) -- Material selbst beschreibt nur noch
     den Artikel (Bezeichnung, Einheit, Mindestbestand, Preis)."""

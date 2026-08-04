@@ -30,6 +30,7 @@ from app.schemas.angebot import (
     AngebotRead,
     AngebotUpdate,
 )
+from app.services import papierkorb_service
 from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
 from app.services.numbering_service import next_angebotsnummer
 from app.services.pdf_service import generate_angebot_pdf
@@ -39,7 +40,10 @@ router = APIRouter(
     tags=["angebote"],
     dependencies=[
         Depends(
-            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
         ),
         Depends(require_module("abrechnung")),
         Depends(require_recht("abrechnung", "sehen")),
@@ -54,7 +58,7 @@ async def list_angebote(
     status_filter: str | None = Query(default=None, alias="status"),
     session: AsyncSession = Depends(get_db),
 ) -> list[AngebotRead]:
-    stmt = select(Angebot).order_by(Angebot.created_at.desc())
+    stmt = select(Angebot).where(Angebot.geloescht_am.is_(None)).order_by(Angebot.created_at.desc())
     if kunde_id:
         stmt = stmt.where(Angebot.kunde_id == kunde_id)
     if vorgang_id:
@@ -68,9 +72,32 @@ async def list_angebote(
 @router.get("/{angebot_id}", response_model=AngebotRead)
 async def get_angebot(angebot_id: UUID, session: AsyncSession = Depends(get_db)) -> AngebotRead:
     angebot = await session.get(Angebot, angebot_id)
-    if angebot is None:
+    if angebot is None or angebot.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
     return await to_read_model(session, angebot)
+
+
+@router.delete(
+    "/{angebot_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+)
+async def delete_angebot(
+    angebot_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    angebot = await session.get(Angebot, angebot_id)
+    if angebot is None or angebot.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    if angebot.status != "entwurf":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nur Angebote im Entwurf können gelöscht werden",
+        )
+    await papierkorb_service.soft_delete(
+        session, entity_typ="angebot", entity_id=angebot_id, actor_user_id=auth.user_id
+    )
 
 
 async def _validate_kunde_vorgang(session: AsyncSession, kunde_id: UUID, vorgang_id: UUID | None) -> None:
@@ -338,7 +365,7 @@ async def add_position(
     session: AsyncSession = Depends(get_db),
 ) -> AngebotRead:
     angebot = await session.get(Angebot, angebot_id)
-    if angebot is None:
+    if angebot is None or angebot.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
     if angebot.status != "entwurf":
         raise HTTPException(
@@ -374,7 +401,7 @@ async def update_angebot(
     session: AsyncSession = Depends(get_db),
 ) -> AngebotRead:
     angebot = await session.get(Angebot, angebot_id)
-    if angebot is None:
+    if angebot is None or angebot.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
 
     if body.gueltig_bis is not None:

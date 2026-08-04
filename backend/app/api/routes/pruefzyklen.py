@@ -9,13 +9,17 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_module, 
 from app.models.anlage import Anlage
 from app.models.pruefzyklus import Pruefzyklus
 from app.schemas.pruefzyklus import PruefzyklusCreate, PruefzyklusRead, PruefzyklusUpdate
+from app.services import papierkorb_service
 from app.services.date_utils import add_intervall
 
+# loesch_operativ ist hier die einzige Abweichung von der sonst techniker-
+# aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um
+# Pruefzyklen loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
 router = APIRouter(
     prefix="/api/pruefzyklen",
     tags=["pruefzyklen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
         Depends(require_module("pruefzyklen")),
     ],
 )
@@ -26,7 +30,11 @@ async def list_pruefzyklen(
     anlage_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[Pruefzyklus]:
-    stmt = select(Pruefzyklus).order_by(Pruefzyklus.naechste_pruefung_am.asc())
+    stmt = (
+        select(Pruefzyklus)
+        .where(Pruefzyklus.geloescht_am.is_(None))
+        .order_by(Pruefzyklus.naechste_pruefung_am.asc())
+    )
     if anlage_id:
         stmt = stmt.where(Pruefzyklus.anlage_id == anlage_id)
     result = await session.execute(stmt)
@@ -76,7 +84,7 @@ async def get_pruefzyklus(
     pruefzyklus_id: UUID, session: AsyncSession = Depends(get_db)
 ) -> Pruefzyklus:
     pruefzyklus = await session.get(Pruefzyklus, pruefzyklus_id)
-    if pruefzyklus is None:
+    if pruefzyklus is None or pruefzyklus.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Prüfzyklus nicht gefunden"
         )
@@ -94,7 +102,7 @@ async def update_pruefzyklus(
     session: AsyncSession = Depends(get_db),
 ) -> Pruefzyklus:
     pruefzyklus = await session.get(Pruefzyklus, pruefzyklus_id)
-    if pruefzyklus is None:
+    if pruefzyklus is None or pruefzyklus.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Prüfzyklus nicht gefunden"
         )
@@ -124,3 +132,22 @@ async def update_pruefzyklus(
     await session.flush()
     await session.refresh(pruefzyklus)
     return pruefzyklus
+
+
+@router.delete(
+    "/{pruefzyklus_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+)
+async def delete_pruefzyklus(
+    pruefzyklus_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    pruefzyklus = await papierkorb_service.soft_delete(
+        session, entity_typ="pruefzyklus", entity_id=pruefzyklus_id, actor_user_id=auth.user_id
+    )
+    if pruefzyklus is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Prüfzyklus nicht gefunden"
+        )

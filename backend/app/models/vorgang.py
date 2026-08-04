@@ -14,7 +14,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ABRECHNUNGSARTEN_VORGANG = (
     "pauschale",
@@ -35,7 +35,7 @@ VORGANG_STATUS = (
 )
 
 
-class Vorgang(TimestampMixin, Base):
+class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "vorgaenge"
     __table_args__ = (
         UniqueConstraint(

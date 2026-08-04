@@ -13,6 +13,18 @@ from app.services.audit_service import log_action
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
+# Siehe app/services/papierkorb_service.py: nur super_admin darf diese
+# Rollen vergeben/entziehen -- ein mandant_admin soll sich diese
+# Berechtigung nicht selbst zuweisen koennen.
+_PAPIERKORB_ROLLEN = ("loesch_ansicht", "loesch_operativ")
+
+
+def _integrity_error_detail(exc: IntegrityError) -> str:
+    constraint = getattr(getattr(exc, "orig", None), "constraint_name", None)
+    if constraint == "uq_users_mandant_loesch_operativ_aktiv":
+        return "Für diesen Mandanten existiert bereits ein aktiver loesch_operativ-Account"
+    return "E-Mail bereits vergeben"
+
 
 @router.get(
     "",
@@ -58,6 +70,16 @@ async def create_user(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="mandant_admin darf keine super_admin-Accounts anlegen",
             )
+        # Papierkorb-Rollen (siehe app/services/papierkorb_service.py) sind
+        # bewusst nur durch super_admin vergebbar -- loesch_operativ sieht
+        # fachliche Daten wie ein mitarbeiter UND darf zusaetzlich loeschen/
+        # wiederherstellen, ein mandant_admin soll sich diese Berechtigung
+        # nicht selbst zuweisen koennen.
+        if body.role in _PAPIERKORB_ROLLEN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="mandant_admin darf keine Papierkorb-Accounts anlegen",
+            )
         if body.mandant_id != auth.mandant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -76,7 +98,7 @@ async def create_user(
         await session.flush()
     except IntegrityError as exc:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="E-Mail bereits vergeben"
+            status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
         ) from exc
 
     await log_action(
@@ -118,6 +140,11 @@ async def update_user(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nicht berechtigt für super_admin-Accounts",
             )
+        if body.role in _PAPIERKORB_ROLLEN or user.role in _PAPIERKORB_ROLLEN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nicht berechtigt für Papierkorb-Accounts",
+            )
 
     changes = body.model_dump(exclude_unset=True, exclude={"password"})
     for field, value in changes.items():
@@ -125,7 +152,12 @@ async def update_user(
     if body.password:
         user.password_hash = hash_password(body.password)
         changes["password"] = "***"
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
+        ) from exc
     if changes:
         # See mandanten.update_mandant: UPDATE has no implicit RETURNING for
         # server-computed columns, so refresh before the response is built.
@@ -165,6 +197,11 @@ async def delete_user(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nicht berechtigt für super_admin-Accounts",
+            )
+        if user.role in _PAPIERKORB_ROLLEN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nicht berechtigt für Papierkorb-Accounts",
             )
 
     if user.id == auth.user_id:

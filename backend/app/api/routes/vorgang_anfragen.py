@@ -32,7 +32,11 @@ async def list_anfragen(
     status_filter: str | None = Query(default=None, alias="status"),
     session: AsyncSession = Depends(get_db),
 ) -> list[VorgangAnfrage]:
-    stmt = select(VorgangAnfrage).order_by(VorgangAnfrage.created_at.desc())
+    stmt = (
+        select(VorgangAnfrage)
+        .where(VorgangAnfrage.geloescht_am.is_(None))
+        .order_by(VorgangAnfrage.created_at.desc())
+    )
     if status_filter:
         stmt = stmt.where(VorgangAnfrage.status == status_filter)
     result = await session.execute(stmt)
@@ -42,7 +46,7 @@ async def list_anfragen(
 @router.get("/{anfrage_id}", response_model=VorgangAnfrageRead)
 async def get_anfrage(anfrage_id: UUID, session: AsyncSession = Depends(get_db)) -> VorgangAnfrage:
     anfrage = await session.get(VorgangAnfrage, anfrage_id)
-    if anfrage is None:
+    if anfrage is None or anfrage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
     return anfrage
 
@@ -63,7 +67,7 @@ async def annehmen(
     session: AsyncSession = Depends(get_db),
 ) -> VorgangAnfrage:
     anfrage = await session.get(VorgangAnfrage, anfrage_id)
-    if anfrage is None:
+    if anfrage is None or anfrage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
     _require_offen(anfrage)
 
@@ -141,7 +145,7 @@ async def ablehnen(
     session: AsyncSession = Depends(get_db),
 ) -> VorgangAnfrage:
     anfrage = await session.get(VorgangAnfrage, anfrage_id)
-    if anfrage is None:
+    if anfrage is None or anfrage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
     _require_offen(anfrage)
 

@@ -26,6 +26,7 @@ import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
+import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
@@ -52,6 +53,12 @@ export function App() {
   // point of impersonation as a support tool -- so they get routed into the
   // Feld-App below instead, same as any real tenant user.
   const isPlatformAdmin = currentUser?.role === "super_admin" && !isImpersonating;
+
+  // loesch_ansicht sieht ausschliesslich den Papierkorb (siehe
+  // app/api/routes/papierkorb.py) -- /feed wuerde fuer diese Rolle mit 403
+  // scheitern, also landet sie beim Login/bei jedem unbekannten Pfad direkt
+  // dort statt im sonst ueblichen Feed.
+  const standardStartseite = currentUser?.role === "loesch_ansicht" ? "/papierkorb" : "/feed";
 
   return (
     <Routes>
@@ -103,7 +110,8 @@ export function App() {
           <Route path="/rechte-matrix" element={<RechteMatrixPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
-          <Route path="*" element={<Navigate to="/feed" replace />} />
+          <Route path="/papierkorb" element={<PapierkorbPage />} />
+          <Route path="*" element={<Navigate to={standardStartseite} replace />} />
         </Route>
       )}
     </Routes>

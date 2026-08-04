@@ -13,16 +13,20 @@ from app.models.material import Material
 from app.models.material_bedarf import MaterialBedarf
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.bestellung import BestellungAusBedarfenCreate, BestellungRead, BestellungUpdate
+from app.services import papierkorb_service
 from app.services.bestellung_service import apply_status_transition, positionen_fuer, to_read_model
 from app.services.csv_service import csv_response
 from app.services.numbering_service import next_bestellnummer
 from app.services.pdf_service import generate_bestellung_pdf
 
+# loesch_operativ ist hier die einzige Abweichung von der sonst
+# disponent-aehnlichen Sichtbarkeit dieses Routers -- es braucht Zugriff, um
+# Bestellungen loeschen/wiederherstellen zu koennen (siehe papierkorb.py).
 router = APIRouter(
     prefix="/api/bestellungen",
     tags=["bestellungen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "disponent", "loesch_operativ")),
         Depends(require_module("material")),
     ],
 )
@@ -30,19 +34,44 @@ router = APIRouter(
 
 @router.get("", response_model=list[BestellungRead])
 async def list_bestellungen(session: AsyncSession = Depends(get_db)) -> list[BestellungRead]:
-    result = await session.execute(select(Bestellung).order_by(Bestellung.created_at.desc()))
+    result = await session.execute(
+        select(Bestellung)
+        .where(Bestellung.geloescht_am.is_(None))
+        .order_by(Bestellung.created_at.desc())
+    )
     return [await to_read_model(session, b) for b in result.scalars().all()]
 
 
 @router.get("/{bestellung_id}", response_model=BestellungRead)
 async def get_bestellung(bestellung_id: UUID, session: AsyncSession = Depends(get_db)) -> BestellungRead:
     bestellung = await session.get(Bestellung, bestellung_id)
-    if bestellung is None:
+    if bestellung is None or bestellung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bestellung nicht gefunden")
     return await to_read_model(session, bestellung)
 
 
-@router.post("/from-bedarfe", response_model=BestellungRead, status_code=status.HTTP_201_CREATED)
+@router.delete("/{bestellung_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_bestellung(
+    bestellung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    bestellung = await papierkorb_service.soft_delete(
+        session, entity_typ="bestellung", entity_id=bestellung_id, actor_user_id=auth.user_id
+    )
+    if bestellung is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bestellung nicht gefunden")
+
+
+@router.post(
+    "/from-bedarfe",
+    response_model=BestellungRead,
+    status_code=status.HTTP_201_CREATED,
+    # loesch_operativ ist Teil der Router-Basisrolle, aber nur zum Loeschen/
+    # Wiederherstellen -- Anlegen/Bearbeiten bleibt mandant_admin/disponent
+    # vorbehalten.
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
 async def create_bestellung_from_bedarfe(
     body: BestellungAusBedarfenCreate,
     auth: AuthContext = Depends(get_current_user),
@@ -137,7 +166,11 @@ async def create_bestellung_from_bedarfe(
     return await to_read_model(session, bestellung)
 
 
-@router.patch("/{bestellung_id}", response_model=BestellungRead)
+@router.patch(
+    "/{bestellung_id}",
+    response_model=BestellungRead,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
 async def update_bestellung(
     bestellung_id: UUID,
     body: BestellungUpdate,
@@ -145,7 +178,7 @@ async def update_bestellung(
     session: AsyncSession = Depends(get_db),
 ) -> BestellungRead:
     bestellung = await session.get(Bestellung, bestellung_id)
-    if bestellung is None:
+    if bestellung is None or bestellung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bestellung nicht gefunden")
 
     if body.lieferant_id is not None:

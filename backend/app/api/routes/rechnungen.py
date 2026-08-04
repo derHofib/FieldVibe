@@ -19,6 +19,7 @@ from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.rechnung import RechnungCreate, RechnungPositionCreate, RechnungRead, RechnungUpdate
+from app.services import papierkorb_service
 from app.services.numbering_service import next_rechnungsnummer
 from app.services.pdf_service import generate_rechnung_pdf
 from app.services.rechnung_service import positionen_fuer, to_read_model
@@ -28,7 +29,10 @@ router = APIRouter(
     tags=["rechnungen"],
     dependencies=[
         Depends(
-            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
         ),
         Depends(require_module("abrechnung")),
         Depends(require_recht("abrechnung", "sehen")),
@@ -48,7 +52,7 @@ async def list_rechnungen(
     status_filter: str | None = Query(default=None, alias="status"),
     session: AsyncSession = Depends(get_db),
 ) -> list[RechnungRead]:
-    stmt = select(Rechnung).order_by(Rechnung.created_at.desc())
+    stmt = select(Rechnung).where(Rechnung.geloescht_am.is_(None)).order_by(Rechnung.created_at.desc())
     if kunde_id:
         stmt = stmt.where(Rechnung.kunde_id == kunde_id)
     if vorgang_id:
@@ -62,9 +66,32 @@ async def list_rechnungen(
 @router.get("/{rechnung_id}", response_model=RechnungRead)
 async def get_rechnung(rechnung_id: UUID, session: AsyncSession = Depends(get_db)) -> RechnungRead:
     rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None:
+    if rechnung is None or rechnung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
     return await to_read_model(session, rechnung)
+
+
+@router.delete(
+    "/{rechnung_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+)
+async def delete_rechnung(
+    rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status != "entwurf":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nur Rechnungen im Entwurf können gelöscht werden",
+        )
+    await papierkorb_service.soft_delete(
+        session, entity_typ="rechnung", entity_id=rechnung_id, actor_user_id=auth.user_id
+    )
 
 
 def _neue_positionen(
@@ -158,7 +185,7 @@ async def add_position(
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
     rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None:
+    if rechnung is None or rechnung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
     if rechnung.status != "entwurf":
         raise HTTPException(
@@ -195,7 +222,7 @@ async def update_rechnung(
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
     rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None:
+    if rechnung is None or rechnung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
 
     if body.betrag_netto is not None:

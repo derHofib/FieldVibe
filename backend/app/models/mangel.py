@@ -5,13 +5,13 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 MANGEL_SCHWEREGRADE = ("kritisch", "hoch", "mittel", "niedrig")
 MANGEL_STATUS = ("offen", "in_angebot", "in_bearbeitung", "behoben", "abgelehnt")
 
 
-class Mangel(TimestampMixin, Base):
+class Mangel(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "maengel"
     __table_args__ = (
         CheckConstraint(f"schweregrad IN {MANGEL_SCHWEREGRADE}", name="ck_maengel_schweregrad_valid"),

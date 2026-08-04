@@ -7,13 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.lieferant import Lieferant
 from app.schemas.lieferant import LieferantCreate, LieferantRead, LieferantUpdate
+from app.services import papierkorb_service
 
 router = APIRouter(
     prefix="/api/lieferanten",
     tags=["lieferanten"],
     dependencies=[
         Depends(
-            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
+            require_roles(
+                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
+                "loesch_operativ",
+            )
         ),
         Depends(require_module("material")),
     ],
@@ -22,7 +26,9 @@ router = APIRouter(
 
 @router.get("", response_model=list[LieferantRead])
 async def list_lieferanten(session: AsyncSession = Depends(get_db)) -> list[Lieferant]:
-    result = await session.execute(select(Lieferant).order_by(Lieferant.name))
+    result = await session.execute(
+        select(Lieferant).where(Lieferant.geloescht_am.is_(None)).order_by(Lieferant.name)
+    )
     return list(result.scalars().all())
 
 
@@ -53,7 +59,7 @@ async def update_lieferant(
     lieferant_id: UUID, body: LieferantUpdate, session: AsyncSession = Depends(get_db)
 ) -> Lieferant:
     lieferant = await session.get(Lieferant, lieferant_id)
-    if lieferant is None:
+    if lieferant is None or lieferant.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lieferant nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)
@@ -68,11 +74,17 @@ async def update_lieferant(
 @router.delete(
     "/{lieferant_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
 )
-async def delete_lieferant(lieferant_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
-    lieferant = await session.get(Lieferant, lieferant_id)
+async def delete_lieferant(
+    lieferant_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: kaskadiert auf Bestellungen dieses
+    # Lieferanten (siehe app/services/papierkorb_service.py).
+    lieferant = await papierkorb_service.soft_delete(
+        session, entity_typ="lieferant", entity_id=lieferant_id, actor_user_id=auth.user_id
+    )
     if lieferant is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lieferant nicht gefunden")
-    await session.delete(lieferant)
-    await session.flush()

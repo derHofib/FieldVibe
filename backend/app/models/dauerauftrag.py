@@ -4,13 +4,13 @@ from sqlalchemy import Boolean, CheckConstraint, ForeignKey, SmallInteger, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 from app.models.vorgang import ABRECHNUNGSARTEN_VORGANG, LEISTUNGSTYPEN
 
 DAUERAUFTRAG_MODI = ("rollierend", "fest")
 
 
-class Dauerauftrag(TimestampMixin, Base):
+class Dauerauftrag(SoftDeleteMixin, TimestampMixin, Base):
     """Wiederkehrender Auftrag: erzeugt automatisch einen neuen Vorgang fuer
     denselben Kunden, sobald der jeweils zuletzt erzeugte Vorgang eines
     Ziels abgeschlossen wird -- nie waehrend ein Vorgang noch offen ist

@@ -5,12 +5,12 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, SmallInte
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 PRUEFZYKLUS_EINHEITEN = ("tag", "woche", "monat", "stunde")
 
 
-class Pruefzyklus(TimestampMixin, Base):
+class Pruefzyklus(SoftDeleteMixin, TimestampMixin, Base):
     """intervall_wert/intervall_einheit ersetzen ein frueheres, fest auf
     Monate begrenztes intervall_monate -- damit lassen sich auch kurze
     Pruefintervalle (z.B. "alle 48 Stunden") abbilden. Deshalb sind
