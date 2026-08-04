@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.db.session import system_session
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
+from app.models.vorgang import Vorgang
 from app.services.scheduler_service import run_dauerauftraege_scheduler
 from tests.conftest import auth_headers, login
 
@@ -301,6 +302,47 @@ async def test_scheduler_erzeugt_vorgang_wenn_faellig(make_mandant, make_kunde):
     # noch offen ist.
     ergebnis2 = await run_dauerauftraege_scheduler([mandant.id])
     assert ergebnis2["vorgaenge_erstellt"] == 0
+
+
+@pytest.mark.asyncio
+async def test_scheduler_setzt_faelligkeit_am_plus_toleranz_spaet(make_mandant, make_kunde):
+    geplante_faelligkeit = date.today() - timedelta(days=1)
+    mandant = await make_mandant()
+    auftrag, ziel = await _make_dauerauftrag_mit_ziel(
+        mandant=mandant,
+        kunde=await make_kunde(mandant=mandant),
+        naechste_faelligkeit_am=geplante_faelligkeit,
+        toleranz_spaet_tage=3,
+    )
+
+    await run_dauerauftraege_scheduler([mandant.id])
+
+    async with system_session() as session:
+        ziel_neu = await session.get(DauerauftragZiel, ziel.id)
+        vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
+        erwartet = datetime.combine(
+            geplante_faelligkeit + timedelta(days=3), datetime.min.time(), tzinfo=timezone.utc
+        )
+        assert vorgang.faelligkeit_am == erwartet
+
+
+@pytest.mark.asyncio
+async def test_scheduler_setzt_faelligkeit_am_ohne_toleranz(make_mandant, make_kunde):
+    geplante_faelligkeit = date.today() - timedelta(days=1)
+    mandant = await make_mandant()
+    auftrag, ziel = await _make_dauerauftrag_mit_ziel(
+        mandant=mandant,
+        kunde=await make_kunde(mandant=mandant),
+        naechste_faelligkeit_am=geplante_faelligkeit,
+    )
+
+    await run_dauerauftraege_scheduler([mandant.id])
+
+    async with system_session() as session:
+        ziel_neu = await session.get(DauerauftragZiel, ziel.id)
+        vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
+        erwartet = datetime.combine(geplante_faelligkeit, datetime.min.time(), tzinfo=timezone.utc)
+        assert vorgang.faelligkeit_am == erwartet
 
 
 @pytest.mark.asyncio

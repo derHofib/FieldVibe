@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import select
@@ -288,6 +288,16 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
 
         for ziel, auftrag in faellige_ziele:
             vorgangsnummer = await next_vorgangsnummer(session, auftrag.mandant_id)
+            # Wunsch-Enddatum = geplante Faelligkeit plus Gleitzeit nach hinten
+            # (toleranz_spaet_tage) -- der Vorgang gilt im Feed erst als
+            # ueberfaellig, wenn die Gleitzeit tatsaechlich ausgeschoepft ist,
+            # analog zur Hinweis-statt-Blockade-Logik beim Abschluss (siehe
+            # vorgang_completion_service.py).
+            faelligkeit_am = datetime.combine(
+                ziel.naechste_faelligkeit_am + timedelta(days=auftrag.toleranz_spaet_tage or 0),
+                time.min,
+                tzinfo=timezone.utc,
+            )
             vorgang = Vorgang(
                 mandant_id=auftrag.mandant_id,
                 vorgangsnummer=vorgangsnummer,
@@ -298,6 +308,7 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
                 beschreibung=auftrag.beschreibung,
                 abrechnungsart=auftrag.abrechnungsart,
                 leistungstyp=auftrag.leistungstyp,
+                faelligkeit_am=faelligkeit_am,
             )
             session.add(vorgang)
             await session.flush()
