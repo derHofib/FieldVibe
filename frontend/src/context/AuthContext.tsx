@@ -9,6 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { authApi, mandantenApi } from "../api/endpoints";
 import { authStore } from "../api/authStore";
+import { clearAllOfflineData } from "../offline/db";
 import type { CurrentUser } from "../types";
 
 interface AuthContextValue {
@@ -48,11 +49,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     authStore.clear();
     queryClient.clear();
+    // Geraet kann von mehreren Technikern geteilt sein (Firmenhandy) -- ohne
+    // das wuerden Kunden-/Vorgangsdaten des vorherigen Nutzers sichtbar
+    // bleiben und dessen noch nicht synchronisierte Outbox-Eintraege spaeter
+    // unter der Identitaet des naechsten Nutzers hochgeladen.
+    void clearAllOfflineData();
   }, [queryClient]);
 
   const startImpersonation = useCallback(
     async (mandantId: string) => {
       const resp = await mandantenApi.impersonate(mandantId);
+
+      // Cancel in-flight requests from the still-mounted Mandanten/Accounts/
+      // Audit-Log pages *before* switching the token. Those requests were
+      // already dispatched with the old super_admin token -- reordering
+      // code here can't change headers already baked into a request that's
+      // in flight, but cancelling the query client-side means an eventual
+      // 403 response for it is dropped instead of rendered, which was the
+      // brief loading-state flash observed during manual testing right
+      // after starting an impersonation.
+      await queryClient.cancelQueries({ queryKey: ["me"] });
+      await queryClient.cancelQueries({ queryKey: ["users"] });
+      await queryClient.cancelQueries({ queryKey: ["mandanten"] });
+      await queryClient.cancelQueries({ queryKey: ["audit-log"] });
+
       authStore.setImpersonation({
         accessToken: resp.access_token,
         mandantId: resp.mandant_id,

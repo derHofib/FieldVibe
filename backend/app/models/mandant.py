@@ -1,10 +1,28 @@
 import uuid
 
-from sqlalchemy import CheckConstraint, String, Text
+from sqlalchemy import CheckConstraint, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
+
+# Modul-Katalog fuers Super-Admin-Menue (siehe Mandant.deaktivierte_module).
+# "vorgaenge" (Auftrag anlegen/Chat/Foto/Status/Unterschrift/Zeit start-stopp,
+# plus Kunde per Dropdown waehlen oder inline anlegen) ist bewusst NICHT Teil
+# dieser Liste -- das ist der nicht abschaltbare Boden, ohne den "Auftraege
+# tracken" ueberhaupt nicht ginge (ein Vorgang braucht zwingend einen Kunden).
+MANDANT_MODULE = (
+    "kundenverwaltung",
+    "dispo",
+    "material",
+    "pruefzyklen",
+    "abrechnung",
+    "kundenportal",
+    "dauerauftrag",
+    "statistik",
+    "fahrzeuge",
+    "highlights",
+)
 
 
 class Mandant(TimestampMixin, Base):
@@ -12,6 +30,10 @@ class Mandant(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint(
             "status IN ('aktiv','pausiert','gekuendigt')", name="status_valid"
+        ),
+        CheckConstraint(
+            "scheduler_stunde_utc IS NULL OR (scheduler_stunde_utc >= 0 AND scheduler_stunde_utc <= 23)",
+            name="ck_mandanten_scheduler_stunde_utc_valid",
         ),
     )
 
@@ -23,3 +45,10 @@ class Mandant(TimestampMixin, Base):
     branche: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="aktiv")
     branding: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # Nacharbeit (Abschnitt 12/4.5): NULL = globaler Default aus Settings
+    # (scheduler_default_stunde_utc). Erlaubt einem Mandanten, den taeglichen
+    # Pruefzyklen-/Mahnwesen-Lauf auf eine fuer den eigenen Betrieb passende
+    # Uhrzeit zu legen, statt fest fuer alle Mandanten auf 03:00 UTC.
+    scheduler_stunde_utc: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # Opt-out: leer = alles an. Siehe MANDANT_MODULE fuer die gueltigen Werte.
+    deaktivierte_module: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)

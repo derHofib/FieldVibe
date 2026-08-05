@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
-import type { MandantStatus } from "../types";
+import type { Mandant, MandantModul, MandantStatus } from "../types";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -17,6 +17,66 @@ const STATUS_BADGE: Record<MandantStatus, string> = {
   pausiert: "bg-amber-100 text-amber-800",
   gekuendigt: "bg-red-100 text-red-800",
 };
+
+const MODUL_LABEL: Record<MandantModul, string> = {
+  kundenverwaltung: "Kundenverwaltung (Ansprechpartner, Adresse, Löschen)",
+  dispo: "Dispo/Termine",
+  material: "Materialwirtschaft (Lager/Bestand)",
+  pruefzyklen: "Prüfzyklen & Prüfmittel",
+  abrechnung: "Mängel/Angebote/Rechnungen",
+  kundenportal: "Kundenportal",
+  dauerauftrag: "Dauer-Aufträge",
+  statistik: "Statistik/Insights + Export",
+  fahrzeuge: "Fahrzeug-Zuweisung & Inventur",
+  highlights: "Highlights (Story-Feature)",
+};
+const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];
+
+function ModulListe({ mandant }: { mandant: Mandant }) {
+  const queryClient = useQueryClient();
+  const [offen, setOffen] = useState(false);
+
+  const speichernMutation = useMutation({
+    mutationFn: (deaktivierteModule: MandantModul[]) =>
+      mandantenApi.update(mandant.id, { deaktivierte_module: deaktivierteModule }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandanten"] }),
+  });
+
+  function toggle(modul: MandantModul) {
+    const aktuell = mandant.deaktivierte_module;
+    const naechste = aktuell.includes(modul)
+      ? aktuell.filter((m) => m !== modul)
+      : [...aktuell, modul];
+    speichernMutation.mutate(naechste);
+  }
+
+  return (
+    <div>
+      <button onClick={() => setOffen((v) => !v)} className="btn-touch text-xs font-medium text-blue-700 underline">
+        {offen ? "Module ausblenden" : "Module verwalten"}
+      </button>
+      {offen && (
+        <div className="mt-2 space-y-1.5 rounded-md bg-slate-50 p-3">
+          <p className="text-xs text-slate-400">
+            "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
+            abwählbar.
+          </p>
+          {ALLE_MODULE.map((modul) => (
+            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={!mandant.deaktivierte_module.includes(modul)}
+                disabled={speichernMutation.isPending}
+                onChange={() => toggle(modul)}
+              />
+              {MODUL_LABEL[modul]}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function MandantenPage() {
   const queryClient = useQueryClient();
@@ -115,6 +175,7 @@ export function MandantenPage() {
                 <th className="px-4 py-3">Slug</th>
                 <th className="px-4 py-3">Branche</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Module</th>
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
@@ -141,6 +202,9 @@ export function MandantenPage() {
                         </option>
                       ))}
                     </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <ModulListe mandant={m} />
                   </td>
                   <td className="px-4 py-3">
                     <button

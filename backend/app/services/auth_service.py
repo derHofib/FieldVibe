@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.security import (
     create_access_token,
@@ -26,7 +26,13 @@ async def authenticate(email: str, password: str) -> TokenPair:
     single matched account.
     """
     async with system_session() as session:
-        result = await session.execute(select(User).where(User.email == email))
+        # func.lower() auf beiden Seiten statt eines vorab normalisierten
+        # `email`-Arguments zu vertrauen -- so bleibt der Login auch dann
+        # case-insensitiv, wenn ein Aufrufer (Seed-Skript, direkter
+        # DB-Insert) die App-seitige Normalisierung beim Anlegen umgangen hat.
+        result = await session.execute(
+            select(User).where(func.lower(User.email) == email.strip().lower())
+        )
         user = result.scalar_one_or_none()
 
         if user is None or not verify_password(password, user.password_hash):

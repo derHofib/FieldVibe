@@ -1,0 +1,95 @@
+from datetime import datetime, time, timedelta, timezone
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_db, require_module, require_roles
+from app.models.angebot import Angebot
+from app.models.rechnung import Rechnung
+from app.models.user import User
+from app.models.vorgang import Vorgang
+from app.models.zeiterfassung import Zeiterfassung
+from app.schemas.insights import Insights, TechnikerAuslastung
+from app.services.rechnung_service import netto_betrag, positionen_fuer
+
+router = APIRouter(
+    prefix="/api/insights",
+    tags=["insights"],
+    dependencies=[
+        Depends(require_roles("mandant_admin")),
+        Depends(require_module("statistik")),
+    ],
+)
+
+
+def _montag_dieser_woche(jetzt: datetime) -> datetime:
+    tage_seit_montag = jetzt.weekday()
+    montag_datum = jetzt.date() - timedelta(days=tage_seit_montag)
+    return datetime.combine(montag_datum, time.min, tzinfo=timezone.utc)
+
+
+@router.get("", response_model=Insights)
+async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
+    status_result = await session.execute(
+        select(Vorgang.status, func.count()).group_by(Vorgang.status)
+    )
+    vorgaenge_nach_status = {status: count for status, count in status_result.all()}
+
+    offene_rechnungen = (
+        await session.execute(
+            select(Rechnung).where(Rechnung.status.in_(("entwurf", "versendet")))
+        )
+    ).scalars().all()
+    # netto_betrag() statt r.betrag_netto direkt: bei Teil-/Sammelrechnungen
+    # mit eigenen Positionen (Nacharbeit) ist deren Summe die Quelle der
+    # Wahrheit, nicht das (dann ungenutzte) Feld auf der Rechnung selbst.
+    offene_rechnungssumme = Decimal("0")
+    for r in offene_rechnungen:
+        netto = netto_betrag(r, await positionen_fuer(session, r.id))
+        offene_rechnungssumme += netto * (Decimal("1") + r.mwst_satz / Decimal("100"))
+    offene_rechnungssumme = offene_rechnungssumme.quantize(Decimal("0.01"))
+
+    angebote_versendet = (
+        await session.scalar(select(func.count()).select_from(Angebot).where(Angebot.versendet_am.isnot(None)))
+    ) or 0
+    angebote_angenommen = (
+        await session.scalar(select(func.count()).select_from(Angebot).where(Angebot.status == "angenommen"))
+    ) or 0
+    angebote_annahmequote = (
+        angebote_angenommen / angebote_versendet if angebote_versendet > 0 else None
+    )
+
+    wochenstart = _montag_dieser_woche(datetime.now(timezone.utc))
+    technikers = (
+        await session.execute(
+            select(User).where(User.role == "techniker", User.aktiv.is_(True)).order_by(User.name)
+        )
+    ).scalars().all()
+
+    techniker_auslastung: list[TechnikerAuslastung] = []
+    for techniker in technikers:
+        eintraege = (
+            await session.execute(
+                select(Zeiterfassung).where(
+                    Zeiterfassung.techniker_id == techniker.id,
+                    Zeiterfassung.start_at >= wochenstart,
+                    Zeiterfassung.ende_at.isnot(None),
+                )
+            )
+        ).scalars().all()
+        sekunden = sum((e.ende_at - e.start_at).total_seconds() for e in eintraege)
+        stunden = (Decimal(sekunden) / Decimal(3600)).quantize(Decimal("0.1"))
+        techniker_auslastung.append(
+            TechnikerAuslastung(techniker_id=techniker.id, name=techniker.name, stunden_diese_woche=stunden)
+        )
+
+    return Insights(
+        vorgaenge_nach_status=vorgaenge_nach_status,
+        offene_rechnungssumme=offene_rechnungssumme,
+        angebote_versendet=angebote_versendet,
+        angebote_angenommen=angebote_angenommen,
+        angebote_annahmequote=angebote_annahmequote,
+        techniker_auslastung=techniker_auslastung,
+    )
