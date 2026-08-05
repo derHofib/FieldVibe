@@ -5,6 +5,7 @@ from app.models.audit_log import AuditLog
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
+from app.models.email_log import EmailLog
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.gespeicherter_filter import GespeicherterFilter
 from app.models.highlight import Highlight
@@ -44,6 +45,7 @@ __all__ = [
     "BestellungPosition",
     "Dauerauftrag",
     "DauerauftragZiel",
+    "EmailLog",
     "FahrzeugZuweisung",
     "GespeicherterFilter",
     "Highlight",

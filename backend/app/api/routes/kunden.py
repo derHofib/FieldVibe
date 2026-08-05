@@ -16,12 +16,14 @@ from app.api.deps import (
 )
 from app.core.security import hash_password
 from app.models.anlage import Anlage
+from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
 from app.models.vorgang import Vorgang
+from app.schemas.email import EmailLogRead, EmailSenden
 from app.schemas.kunde import KundeCreate, KundeLogoUrl, KundeRead, KundeUpdate
 from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
 from app.schemas.kundenportal import (
@@ -32,6 +34,7 @@ from app.schemas.kundenportal import (
 from app.schemas.profile import KundeProfil
 from app.schemas.user import UserRead
 from app.services import papierkorb_service, storage_service
+from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -131,6 +134,58 @@ async def get_kunde(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     await _require_kunde_zugriff(session, auth, kunde_id)
     return kunde
+
+
+@router.get(
+    "/{kunde_id}/emails",
+    response_model=list[EmailLogRead],
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def list_kunde_emails(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[EmailLog]:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+    result = await session.execute(
+        select(EmailLog)
+        .where(EmailLog.entity_type == "kunde", EmailLog.entity_id == kunde_id)
+        .order_by(EmailLog.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{kunde_id}/emails",
+    response_model=EmailLogRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_recht("kunden", "bearbeiten"))],
+)
+async def send_kunde_email(
+    kunde_id: UUID,
+    body: EmailSenden,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EmailLog:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+
+    log = await send_email_and_log(
+        session,
+        auth.mandant_id,
+        entity_type="kunde",
+        entity_id=kunde_id,
+        to=body.empfaenger,
+        subject=body.betreff,
+        body=body.inhalt,
+        gesendet_von=auth.user_id,
+    )
+    return log
 
 
 @router.get(

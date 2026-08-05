@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { angeboteApi, kundenApi } from "../../api/endpoints";
+import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotStatus } from "../../types";
@@ -204,6 +205,15 @@ export function AngebotDetailPage() {
           </div>
         </div>
       </div>
+
+      <EmailSection
+        queryKey={["angebot-emails", id]}
+        listEmails={() => angeboteApi.emails(id!)}
+        sendEmail={(body) => angeboteApi.sendEmail(id!, body)}
+        defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
+        betreffPflicht={false}
+        hinweis="Das Angebot wird als PDF-Anhang mitgesendet."
+      />
 
       {angebot.status === "entwurf" && (
         <button

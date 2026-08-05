@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenApi, rechnungenApi } from "../../api/endpoints";
+import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { openPdfBlob } from "../../utils/pdf";
 import type { RechnungStatus } from "../../types";
@@ -207,6 +208,15 @@ export function RechnungDetailPage() {
           </div>
         )}
       </div>
+
+      <EmailSection
+        queryKey={["rechnung-emails", id]}
+        listEmails={() => rechnungenApi.emails(id!)}
+        sendEmail={(body) => rechnungenApi.sendEmail(id!, body)}
+        defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
+        betreffPflicht={false}
+        hinweis="Die Rechnung wird als PDF-Anhang mitgesendet."
+      />
 
       {rechnung.status === "entwurf" && (
         <div className="flex gap-2">

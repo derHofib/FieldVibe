@@ -15,6 +15,7 @@ from app.api.deps import (
     require_roles,
 )
 from app.models.angebot import Angebot, AngebotPosition
+from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
@@ -30,8 +31,10 @@ from app.schemas.angebot import (
     AngebotRead,
     AngebotUpdate,
 )
+from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
 from app.services import papierkorb_service
 from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_angebotsnummer
 from app.services.pdf_service import generate_angebot_pdf
 
@@ -436,3 +439,53 @@ async def angebot_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{angebot.angebotsnummer}.pdf"'},
     )
+
+
+@router.get("/{angebot_id}/emails", response_model=list[EmailLogRead])
+async def list_angebot_emails(
+    angebot_id: UUID, session: AsyncSession = Depends(get_db)
+) -> list[EmailLog]:
+    angebot = await session.get(Angebot, angebot_id)
+    if angebot is None or angebot.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    result = await session.execute(
+        select(EmailLog)
+        .where(EmailLog.entity_type == "angebot", EmailLog.entity_id == angebot_id)
+        .order_by(EmailLog.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{angebot_id}/email",
+    response_model=EmailLogRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def send_angebot_email(
+    angebot_id: UUID,
+    body: EmailMitAnhangSenden,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EmailLog:
+    angebot = await session.get(Angebot, angebot_id)
+    if angebot is None or angebot.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    kunde = await session.get(Kunde, angebot.kunde_id)
+    positionen = await positionen_fuer(session, angebot.id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde)
+    dateiname = f"{angebot.angebotsnummer}.pdf"
+
+    log = await send_email_and_log(
+        session,
+        auth.mandant_id,
+        entity_type="angebot",
+        entity_id=angebot_id,
+        to=body.empfaenger,
+        subject=body.betreff or f"Angebot {angebot.angebotsnummer}",
+        body=body.inhalt or f"Anbei erhalten Sie unser Angebot {angebot.angebotsnummer}.",
+        gesendet_von=auth.user_id,
+        attachment=(dateiname, pdf_bytes, "application/pdf"),
+    )
+    return log

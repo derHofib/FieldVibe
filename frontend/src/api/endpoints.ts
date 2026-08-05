@@ -17,6 +17,7 @@ import type {
   Dauerauftrag,
   DauerauftragMitVerlauf,
   DauerauftragModus,
+  EmailLog,
   FahrzeugZuweisungUebersicht,
   FeedResponse,
   GespeicherterFilter,
@@ -198,6 +199,9 @@ export const kundenApi = {
   },
   logoRemove: (id: string) => apiFetch<Kunde>(`/api/kunden/${id}/logo`, { method: "DELETE" }),
   logoUrl: (id: string) => apiFetch<KundeLogoUrl>(`/api/kunden/${id}/logo-url`),
+  emails: (id: string) => apiFetch<EmailLog[]>(`/api/kunden/${id}/emails`),
+  sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
+    apiFetch<EmailLog>(`/api/kunden/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const technikerZuweisungenApi = {
@@ -389,6 +393,9 @@ export const vorgaengeApi = {
     >
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/vorgaenge/${id}`, { method: "DELETE" }),
+  emails: (id: string) => apiFetch<EmailLog[]>(`/api/vorgaenge/${id}/emails`),
+  sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
+    apiFetch<EmailLog>(`/api/vorgaenge/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const vorgangAnfragenApi = {
@@ -630,6 +637,9 @@ export const angeboteApi = {
     apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   remove: (id: string) => apiFetch<void>(`/api/angebote/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/angebote/${id}/pdf`),
+  emails: (id: string) => apiFetch<EmailLog[]>(`/api/angebote/${id}/emails`),
+  sendEmail: (id: string, body: { empfaenger: string; betreff?: string; inhalt?: string }) =>
+    apiFetch<EmailLog>(`/api/angebote/${id}/email`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const rechnungenApi = {
@@ -653,6 +663,9 @@ export const rechnungenApi = {
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   remove: (id: string) => apiFetch<void>(`/api/rechnungen/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/pdf`),
+  emails: (id: string) => apiFetch<EmailLog[]>(`/api/rechnungen/${id}/emails`),
+  sendEmail: (id: string, body: { empfaenger: string; betreff?: string; inhalt?: string }) =>
+    apiFetch<EmailLog>(`/api/rechnungen/${id}/email`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const tagsApi = {
@@ -761,6 +774,9 @@ export const bestellungenApi = {
   remove: (id: string) => apiFetch<void>(`/api/bestellungen/${id}`, { method: "DELETE" }),
   csv: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/csv`),
   pdf: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/pdf`),
+  emails: (id: string) => apiFetch<EmailLog[]>(`/api/bestellungen/${id}/emails`),
+  sendEmail: (id: string, body: { empfaenger: string; betreff?: string; inhalt?: string }) =>
+    apiFetch<EmailLog>(`/api/bestellungen/${id}/email`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const insightsApi = {

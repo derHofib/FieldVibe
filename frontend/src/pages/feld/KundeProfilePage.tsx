@@ -11,6 +11,7 @@ import {
   usersApi,
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import type {
@@ -1184,6 +1185,21 @@ export function KundeProfilePage() {
       <Stammdaten kundeId={id!} adresse={profil.adresse} notiz={profil.notiz} kannVerwalten={kannVerwalten} />
 
       <AnsprechpartnerVerwaltung kundeId={id!} liste={profil.ansprechpartner} kannVerwalten={kannVerwalten} />
+
+      {kannVerwalten && (
+        <EmailSection
+          queryKey={["kunde-emails", id]}
+          listEmails={() => kundenApi.emails(id!)}
+          sendEmail={(body) =>
+            kundenApi.sendEmail(id!, {
+              empfaenger: body.empfaenger,
+              betreff: body.betreff ?? "",
+              inhalt: body.inhalt ?? "",
+            })
+          }
+          defaultEmpfaenger={profil.ansprechpartner.find((a) => a.email)?.email ?? undefined}
+        />
+      )}
 
       {kannVerwalten && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
 

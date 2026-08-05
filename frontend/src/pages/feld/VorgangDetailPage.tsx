@@ -19,6 +19,7 @@ import {
   vorgaengeApi,
   zeiterfassungApi,
 } from "../../api/endpoints";
+import { EmailSection } from "../../components/EmailSection";
 import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
@@ -1390,6 +1391,19 @@ export function VorgangDetailPage() {
           </div>
         )}
       </div>
+
+      <EmailSection
+        queryKey={["vorgang-emails", id]}
+        listEmails={() => vorgaengeApi.emails(id!)}
+        sendEmail={(body) =>
+          vorgaengeApi.sendEmail(id!, {
+            empfaenger: body.empfaenger,
+            betreff: body.betreff ?? "",
+            inhalt: body.inhalt ?? "",
+          })
+        }
+        defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
+      />
 
       <div className="flex items-center justify-end gap-2">
         <span className="text-sm text-slate-500 dark:text-slate-400">

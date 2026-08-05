@@ -13,13 +13,16 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
+from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
 from app.schemas.rechnung import RechnungCreate, RechnungPositionCreate, RechnungRead, RechnungUpdate
 from app.services import papierkorb_service
+from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
 from app.services.pdf_service import generate_rechnung_pdf
 from app.services.rechnung_service import positionen_fuer, to_read_model
@@ -295,3 +298,53 @@ async def rechnung_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{rechnung.rechnungsnummer}.pdf"'},
     )
+
+
+@router.get("/{rechnung_id}/emails", response_model=list[EmailLogRead])
+async def list_rechnung_emails(
+    rechnung_id: UUID, session: AsyncSession = Depends(get_db)
+) -> list[EmailLog]:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    result = await session.execute(
+        select(EmailLog)
+        .where(EmailLog.entity_type == "rechnung", EmailLog.entity_id == rechnung_id)
+        .order_by(EmailLog.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{rechnung_id}/email",
+    response_model=EmailLogRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def send_rechnung_email(
+    rechnung_id: UUID,
+    body: EmailMitAnhangSenden,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EmailLog:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    kunde = await session.get(Kunde, rechnung.kunde_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    positionen = await positionen_fuer(session, rechnung.id)
+    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde, positionen)
+    dateiname = f"{rechnung.rechnungsnummer}.pdf"
+
+    log = await send_email_and_log(
+        session,
+        auth.mandant_id,
+        entity_type="rechnung",
+        entity_id=rechnung_id,
+        to=body.empfaenger,
+        subject=body.betreff or f"Rechnung {rechnung.rechnungsnummer}",
+        body=body.inhalt or f"Anbei erhalten Sie unsere Rechnung {rechnung.rechnungsnummer}.",
+        gesendet_von=auth.user_id,
+        attachment=(dateiname, pdf_bytes, "application/pdf"),
+    )
+    return log

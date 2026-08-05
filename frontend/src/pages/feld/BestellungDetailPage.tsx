@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { bestellungenApi, lieferantenApi } from "../../api/endpoints";
+import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { openPdfBlob } from "../../utils/pdf";
@@ -141,6 +142,15 @@ export function BestellungDetailPage() {
           ))}
         </div>
       </div>
+
+      <EmailSection
+        queryKey={["bestellung-emails", id]}
+        listEmails={() => bestellungenApi.emails(id!)}
+        sendEmail={(body) => bestellungenApi.sendEmail(id!, body)}
+        defaultEmpfaenger={lieferant?.email ?? undefined}
+        betreffPflicht={false}
+        hinweis="Die Bestellung wird als PDF-Anhang mitgesendet."
+      />
 
       {bestellung.status === "entwurf" && (
         <div className="flex gap-2">

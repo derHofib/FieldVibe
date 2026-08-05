@@ -8,14 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.bestellung import Bestellung, BestellungPosition
+from app.models.email_log import EmailLog
 from app.models.lieferant import Lieferant
 from app.models.material import Material
 from app.models.material_bedarf import MaterialBedarf
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.bestellung import BestellungAusBedarfenCreate, BestellungRead, BestellungUpdate
+from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
 from app.services import papierkorb_service
 from app.services.bestellung_service import apply_status_transition, positionen_fuer, to_read_model
 from app.services.csv_service import csv_response
+from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_bestellnummer
 from app.services.pdf_service import generate_bestellung_pdf
 
@@ -231,3 +234,55 @@ async def bestellung_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{bestellung.bestellnummer}.pdf"'},
     )
+
+
+@router.get("/{bestellung_id}/emails", response_model=list[EmailLogRead])
+async def list_bestellung_emails(
+    bestellung_id: UUID, session: AsyncSession = Depends(get_db)
+) -> list[EmailLog]:
+    bestellung = await session.get(Bestellung, bestellung_id)
+    if bestellung is None or bestellung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bestellung nicht gefunden")
+    result = await session.execute(
+        select(EmailLog)
+        .where(EmailLog.entity_type == "bestellung", EmailLog.entity_id == bestellung_id)
+        .order_by(EmailLog.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{bestellung_id}/email",
+    response_model=EmailLogRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def send_bestellung_email(
+    bestellung_id: UUID,
+    body: EmailMitAnhangSenden,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EmailLog:
+    bestellung = await session.get(Bestellung, bestellung_id)
+    if bestellung is None or bestellung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bestellung nicht gefunden")
+    lieferant = await session.get(Lieferant, bestellung.lieferant_id) if bestellung.lieferant_id else None
+    positionen = await positionen_fuer(session, bestellung_id)
+    from app.models.mandant import Mandant
+
+    mandant = await session.get(Mandant, auth.mandant_id)
+    pdf_bytes = generate_bestellung_pdf(mandant, bestellung, positionen, lieferant)
+    dateiname = f"{bestellung.bestellnummer}.pdf"
+
+    log = await send_email_and_log(
+        session,
+        auth.mandant_id,
+        entity_type="bestellung",
+        entity_id=bestellung_id,
+        to=body.empfaenger,
+        subject=body.betreff or f"Bestellung {bestellung.bestellnummer}",
+        body=body.inhalt or f"Anbei erhalten Sie unsere Bestellung {bestellung.bestellnummer}.",
+        gesendet_von=auth.user_id,
+        attachment=(dateiname, pdf_bytes, "application/pdf"),
+    )
+    return log

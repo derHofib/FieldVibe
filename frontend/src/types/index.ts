@@ -841,3 +841,22 @@ export interface MandantIntegration {
   created_at: string;
   updated_at: string;
 }
+
+// --- E-Mail-Versand ----------------------------------------------------------
+
+export type EmailEntityTyp = "kunde" | "vorgang" | "angebot" | "rechnung" | "bestellung";
+export type EmailStatus = "gesendet" | "fehler";
+
+export interface EmailLog {
+  id: string;
+  entity_type: EmailEntityTyp;
+  entity_id: string;
+  empfaenger: string;
+  betreff: string;
+  inhalt: string;
+  anhang_dateiname: string | null;
+  status: EmailStatus;
+  fehlermeldung: string | null;
+  gesendet_von: string;
+  created_at: string;
+}

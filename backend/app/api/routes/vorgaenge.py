@@ -15,6 +15,7 @@ from app.api.deps import (
     require_roles,
 )
 from app.models.anlage import Anlage
+from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.standort import Standort
 from app.models.vertrag import Vertrag
@@ -22,6 +23,7 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.anlage import AnlageRead
+from app.schemas.email import EmailLogRead, EmailSenden
 from app.schemas.vorgang import (
     VorgangAnlagenHinzufuegen,
     VorgangCreate,
@@ -31,6 +33,7 @@ from app.schemas.vorgang import (
 from app.services import papierkorb_service
 from app.services.audit_service import log_action
 from app.services.csv_service import csv_response
+from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.vorgang_completion_service import (
@@ -422,6 +425,57 @@ async def remove_vorgang_anlage(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zuordnung nicht gefunden")
     await session.delete(zuordnung)
     await session.flush()
+
+
+@router.get("/{vorgang_id}/emails", response_model=list[EmailLogRead])
+async def list_vorgang_emails(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[EmailLog]:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+    result = await session.execute(
+        select(EmailLog)
+        .where(EmailLog.entity_type == "vorgang", EmailLog.entity_id == vorgang_id)
+        .order_by(EmailLog.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{vorgang_id}/emails",
+    response_model=EmailLogRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
+)
+async def send_vorgang_email(
+    vorgang_id: UUID,
+    body: EmailSenden,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EmailLog:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    log = await send_email_and_log(
+        session,
+        auth.mandant_id,
+        entity_type="vorgang",
+        entity_id=vorgang_id,
+        to=body.empfaenger,
+        subject=body.betreff,
+        body=body.inhalt,
+        gesendet_von=auth.user_id,
+    )
+    return log
 
 
 @router.patch(
