@@ -101,6 +101,11 @@ export function RechnungDetailPage() {
             {STATUS_LABEL[rechnung.status]}
           </span>
         </div>
+        {rechnung.leistungsdatum && (
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            Leistungsdatum {new Date(rechnung.leistungsdatum).toLocaleDateString("de-DE")}
+          </p>
+        )}
         {rechnung.faellig_am && (
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Fällig am {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}

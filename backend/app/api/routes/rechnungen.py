@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -144,6 +145,13 @@ async def create_rechnung(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum angegebenen Kunden"
             )
 
+    mandant = await session.get(Mandant, auth.mandant_id)
+    # Kleinunternehmer (§19 UStG) duerfen keine Umsatzsteuer ausweisen -- der
+    # Satz wird hier serverseitig erzwungen, damit kein Aufruf (versehentlich
+    # oder nicht) trotzdem eine besteuerte Rechnung erzeugen kann.
+    ist_kleinunternehmer = bool((mandant.firmendaten or {}).get("ist_kleinunternehmer"))
+    mwst_satz = Decimal("0") if ist_kleinunternehmer else body.mwst_satz
+
     rechnungsnummer = await next_rechnungsnummer(session, auth.mandant_id)
     rechnung = Rechnung(
         mandant_id=auth.mandant_id,
@@ -151,8 +159,9 @@ async def create_rechnung(
         vorgang_id=body.vorgang_id,
         rechnungsnummer=rechnungsnummer,
         betrag_netto=body.betrag_netto,
-        mwst_satz=body.mwst_satz,
+        mwst_satz=mwst_satz,
         faellig_am=body.faellig_am,
+        leistungsdatum=body.leistungsdatum,
         erstellt_von=auth.user_id,
     )
     session.add(rechnung)
@@ -249,6 +258,8 @@ async def update_rechnung(
         rechnung.betrag_netto = body.betrag_netto
     if body.faellig_am is not None:
         rechnung.faellig_am = body.faellig_am
+    if body.leistungsdatum is not None:
+        rechnung.leistungsdatum = body.leistungsdatum
 
     neuer_status = body.status
     if neuer_status is not None:

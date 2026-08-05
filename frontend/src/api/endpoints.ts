@@ -690,6 +690,7 @@ export const rechnungenApi = {
     vorgang_id?: string | null;
     betrag_netto?: string;
     faellig_am?: string;
+    leistungsdatum?: string;
     positionen?: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
   }) => apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
   addPosition: (

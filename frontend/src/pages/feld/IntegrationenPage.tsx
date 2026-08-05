@@ -21,6 +21,8 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   const [geschaeftsfuehrung, setGeschaeftsfuehrung] = useState(fd.geschaeftsfuehrung ?? "");
   const [handelsregister, setHandelsregister] = useState(fd.handelsregister ?? "");
   const [ustIdnr, setUstIdnr] = useState(fd.ust_idnr ?? "");
+  const [steuernummer, setSteuernummer] = useState(fd.steuernummer ?? "");
+  const [istKleinunternehmer, setIstKleinunternehmer] = useState(fd.ist_kleinunternehmer ?? false);
 
   const { data: logoUrl } = useQuery({
     queryKey: ["mandant-logo-url"],
@@ -40,6 +42,8 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         geschaeftsfuehrung,
         handelsregister,
         ust_idnr: ustIdnr,
+        steuernummer,
+        ist_kleinunternehmer: istKleinunternehmer,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });
@@ -149,7 +153,22 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
           placeholder="Handelsregister"
           className={inputClass}
         />
+        <input
+          value={steuernummer}
+          onChange={(e) => setSteuernummer(e.target.value)}
+          placeholder="Steuernummer"
+          className={inputClass}
+        />
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <input
+          type="checkbox"
+          checked={istKleinunternehmer}
+          onChange={(e) => setIstKleinunternehmer(e.target.checked)}
+        />
+        Kleinunternehmer nach § 19 UStG (keine Umsatzsteuer auf Rechnungen)
+      </label>
 
       <div className="flex items-center gap-2">
         <button

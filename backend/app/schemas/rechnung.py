@@ -38,6 +38,9 @@ class RechnungCreate(BaseModel):
     betrag_netto: Decimal = Decimal("0")
     mwst_satz: Decimal = Decimal("19.00")
     faellig_am: date | None = None
+    # Zeitpunkt der Leistung/Lieferung (§14 Abs. 4 Nr. 6 UStG) -- optional,
+    # da oft identisch mit dem Rechnungsdatum.
+    leistungsdatum: date | None = None
     positionen: list[RechnungPositionCreate] = Field(default_factory=list)
 
 
@@ -45,6 +48,7 @@ class RechnungUpdate(BaseModel):
     status: str | None = None
     betrag_netto: Decimal | None = None
     faellig_am: date | None = None
+    leistungsdatum: date | None = None
 
 
 class RechnungRead(BaseModel):
@@ -56,6 +60,7 @@ class RechnungRead(BaseModel):
     mwst_satz: Decimal
     status: str
     faellig_am: date | None
+    leistungsdatum: date | None
     erstellt_von: UUID
     versendet_am: datetime | None
     bezahlt_am: datetime | None

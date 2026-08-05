@@ -25,6 +25,63 @@ async def test_create_rechnung(client, make_mandant, make_user, make_kunde):
 
 
 @pytest.mark.asyncio
+async def test_rechnung_leistungsdatum_wird_gespeichert(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "betrag_netto": "100", "leistungsdatum": "2026-07-15"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["leistungsdatum"] == "2026-07-15"
+
+    rechnung_id = resp.json()["id"]
+    patched = await client.patch(
+        f"/api/rechnungen/{rechnung_id}",
+        headers=auth_headers(token),
+        json={"leistungsdatum": "2026-07-20"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["leistungsdatum"] == "2026-07-20"
+
+
+@pytest.mark.asyncio
+async def test_kleinunternehmer_erzwingt_null_prozent_mwst(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    settings_resp = await client.patch(
+        "/api/mandant/einstellungen",
+        headers=auth_headers(token),
+        json={"firmendaten": {"ist_kleinunternehmer": True, "steuernummer": "12/345/67890"}},
+    )
+    assert settings_resp.status_code == 200
+
+    # Trotz explizit gesetztem mwst_satz muss der Kleinunternehmer-Status
+    # serverseitig gewinnen -- sonst koennte versehentlich eine besteuerte
+    # Rechnung entstehen (§14c UStG-Risiko).
+    resp = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "betrag_netto": "100", "mwst_satz": "19.00"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["mwst_satz"] == "0.00"
+    assert body["betrag_brutto"] == "100.00"
+
+    pdf_resp = await client.get(f"/api/rechnungen/{body['id']}/pdf", headers=auth_headers(token))
+    assert pdf_resp.status_code == 200
+    assert pdf_resp.content.startswith(b"%PDF")
+
+
+@pytest.mark.asyncio
 async def test_techniker_cannot_create_rechnung(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")

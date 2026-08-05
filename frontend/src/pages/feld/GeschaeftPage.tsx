@@ -358,6 +358,7 @@ export function GeschaeftPage() {
   const [showForm, setShowForm] = useState(false);
   const [kundeId, setKundeId] = useState("");
   const [betragNetto, setBetragNetto] = useState("");
+  const [leistungsdatum, setLeistungsdatum] = useState("");
   const [neuerKunde, setNeuerKunde] = useState({
     name: "",
     kundennummer: "",
@@ -505,7 +506,12 @@ export function GeschaeftPage() {
   });
 
   const createRechnungMutation = useMutation({
-    mutationFn: () => rechnungenApi.create({ kunde_id: kundeId, betrag_netto: betragNetto }),
+    mutationFn: () =>
+      rechnungenApi.create({
+        kunde_id: kundeId,
+        betrag_netto: betragNetto,
+        leistungsdatum: leistungsdatum || undefined,
+      }),
     onSuccess: (rechnung) => {
       queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
       navigate(`/rechnungen/${rechnung.id}`);
@@ -720,19 +726,35 @@ export function GeschaeftPage() {
             </select>
           </div>
           {tab === "rechnungen" && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
-                Betrag netto (EUR)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={betragNetto}
-                onChange={(e) => setBetragNetto(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              />
-            </div>
+            <>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Betrag netto (EUR)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={betragNetto}
+                  onChange={(e) => setBetragNetto(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Leistungsdatum (optional)
+                </label>
+                <input
+                  type="date"
+                  value={leistungsdatum}
+                  onChange={(e) => setLeistungsdatum(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                  Nur nötig, wenn abweichend vom Rechnungsdatum.
+                </p>
+              </div>
+            </>
           )}
           <button
             disabled={

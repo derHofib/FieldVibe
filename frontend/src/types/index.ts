@@ -650,6 +650,7 @@ export interface Rechnung {
   mwst_satz: string;
   status: RechnungStatus;
   faellig_am: string | null;
+  leistungsdatum: string | null;
   erstellt_von: string;
   versendet_am: string | null;
   bezahlt_am: string | null;
@@ -883,6 +884,10 @@ export interface MandantFirmendaten {
   handelsregister?: string;
   geschaeftsfuehrung?: string;
   ust_idnr?: string;
+  steuernummer?: string;
+  // Kleinunternehmer nach §19 UStG: Rechnungs-PDF weist dann keine USt.
+  // aus und zeigt statt der Summenzeilen den gesetzlichen Hinweistext.
+  ist_kleinunternehmer?: boolean;
 }
 
 export interface MandantEinstellungen {

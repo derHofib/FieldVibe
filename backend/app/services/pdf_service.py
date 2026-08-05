@@ -40,6 +40,18 @@ def _fmt_datum(d: date | datetime | None) -> str:
 def _kopf(pdf: FPDF, mandant: Mandant, titel: str, nummer: str, kunde: Kunde) -> None:
     pdf.set_font("Helvetica", "B", 18)
     pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    # Eigene Anschrift + Steuernummer/USt-IdNr. (§14 Abs. 4 Nr. 1+2 UStG) --
+    # ohne diese beiden Angaben ist die Rechnung fuer den Empfaenger nicht
+    # vorsteuerabzugsfaehig.
+    fd = mandant.firmendaten or {}
+    pdf.set_font("Helvetica", "", 9)
+    for zeile in _adresse_zeilen(fd.get("adresse")):
+        pdf.cell(0, 5, zeile, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if fd.get("steuernummer"):
+        pdf.cell(0, 5, f"Steuernummer: {fd['steuernummer']}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    elif fd.get("ust_idnr"):
+        pdf.cell(0, 5, f"USt-IdNr.: {fd['ust_idnr']}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(2)
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(0, 6, f"{titel} {nummer}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
@@ -95,6 +107,17 @@ def _summenblock(pdf: FPDF, gesamt_netto: Decimal, mwst_satz: Decimal) -> None:
     pdf.cell(148, 8, "", border=0)
     pdf.cell(22, 8, "Gesamt")
     pdf.cell(22, 8, _fmt_betrag(gesamt_brutto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+
+def _summenblock_kleinunternehmer(pdf: FPDF, gesamt_netto: Decimal) -> None:
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(148, 8, "", border=0)
+    pdf.cell(22, 8, "Gesamt")
+    pdf.cell(22, 8, _fmt_betrag(gesamt_netto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "", 8)
+    pdf.multi_cell(0, 4, "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.")
 
 
 class _AngebotPDF(FPDF):
@@ -320,6 +343,8 @@ def generate_rechnung_pdf(
     _kopf(pdf, mandant, "Rechnung", rechnung.rechnungsnummer, kunde)
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(0, 6, f"Rechnungsdatum: {_fmt_datum(rechnung.created_at)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if rechnung.leistungsdatum:
+        pdf.cell(0, 6, f"Leistungsdatum: {_fmt_datum(rechnung.leistungsdatum)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     if rechnung.faellig_am:
         pdf.cell(0, 6, f"Faellig am: {_fmt_datum(rechnung.faellig_am)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
@@ -328,7 +353,11 @@ def generate_rechnung_pdf(
         gesamt_netto = _positionen_tabelle(pdf, positionen)
     else:
         gesamt_netto = rechnung.betrag_netto
-    _summenblock(pdf, gesamt_netto, rechnung.mwst_satz)
+
+    if (mandant.firmendaten or {}).get("ist_kleinunternehmer"):
+        _summenblock_kleinunternehmer(pdf, gesamt_netto)
+    else:
+        _summenblock(pdf, gesamt_netto, rechnung.mwst_satz)
     return bytes(pdf.output())
 
 

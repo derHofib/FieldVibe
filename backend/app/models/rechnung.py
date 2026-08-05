@@ -40,6 +40,9 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=True
     )
     rechnungsnummer: Mapped[str] = mapped_column(Text, nullable=False)
+    # Zeitpunkt der Leistung/Lieferung (§14 Abs. 4 Nr. 6 UStG) -- kann vom
+    # Rechnungsdatum abweichen (z.B. Rechnung erst Tage nach Auftragsende).
+    leistungsdatum: Mapped[date | None] = mapped_column(Date, nullable=True)
     betrag_netto: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     mwst_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("19.00"))
     status: Mapped[str] = mapped_column(Text, nullable=False, default="entwurf")
