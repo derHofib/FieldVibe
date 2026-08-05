@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 
 from app.core.config import get_settings
 from app.db.base import Base
@@ -47,6 +47,16 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Migrationen laufen ueber die normale App-DB-Rolle (kein
+        # Postgres-Superuser, siehe 0-Downtime-Deployment/NOSUPERUSER-
+        # Haertung), die denselben Row-Level-Security-Policies unterliegt
+        # wie jede App-Session. Ohne Bypass sieht ein Backfill-UPDATE nur
+        # Zeilen des (hier gar nicht gesetzten) app.current_mandant und
+        # laesst andere Mandanten unveraendert -- ein nachfolgendes
+        # ALTER COLUMN ... SET NOT NULL prueft aber alle Zeilen und
+        # schlaegt dann mit NotNullViolation fehl (siehe 0023, wo genau
+        # das bei bestehenden Mandantendaten passiert ist).
+        connection.execute(text("SET app.is_super_admin = 'true'"))
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
