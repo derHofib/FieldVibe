@@ -397,6 +397,7 @@ export const vorgaengeApi = {
     leistungstyp: string;
     prioritaet?: number;
     faelligkeit_am?: string | null;
+    adresse?: Adresse | null;
     client_uuid?: string;
   }) => apiFetch<Vorgang>("/api/vorgaenge", { method: "POST", body: JSON.stringify(body) }),
   anlagen: (vorgangId: string) => apiFetch<Anlage[]>(`/api/vorgaenge/${vorgangId}/anlagen`),
@@ -420,6 +421,7 @@ export const vorgaengeApi = {
         | "anlage_id"
         | "standort_id"
         | "faelligkeit_am"
+        | "adresse"
       >
     > & {
       // Nur bei status="abgeschlossen" auf einem Vorgang mit

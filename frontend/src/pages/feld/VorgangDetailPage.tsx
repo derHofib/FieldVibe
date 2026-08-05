@@ -30,6 +30,7 @@ import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
 import type {
+  Adresse,
   Leistungstyp,
   MangelSchweregrad,
   MangelStatus,
@@ -203,6 +204,16 @@ function toLocalInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function leereAdresse(adresse: Adresse | null | undefined): { strasse: string; plz: string; ort: string } {
+  return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
+}
+
+function adresseAlsZeile(adresse: Adresse | null | undefined): string {
+  return [adresse?.strasse, [adresse?.plz, adresse?.ort].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+}
+
 export function VorgangDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -242,6 +253,9 @@ export function VorgangDetailPage() {
   const [editKundeId, setEditKundeId] = useState("");
   const [editAnlageId, setEditAnlageId] = useState("");
   const [zuordnungError, setZuordnungError] = useState<string | null>(null);
+  const [editingAdresse, setEditingAdresse] = useState(false);
+  const [adresseForm, setAdresseForm] = useState(() => leereAdresse(null));
+  const [adresseError, setAdresseError] = useState<string | null>(null);
   const [showFolgeDialog, setShowFolgeDialog] = useState(false);
   const [folgeLeistungstyp, setFolgeLeistungstyp] = useState<Leistungstyp | "">("");
   const [folgeVorgangId, setFolgeVorgangId] = useState<string | null>(null);
@@ -330,6 +344,25 @@ export function VorgangDetailPage() {
       setZuordnungError(null);
     },
     onError: (err) => setZuordnungError(err instanceof ApiError ? err.message : "Fehler"),
+  });
+  const adresseMutation = useMutation({
+    mutationFn: () =>
+      vorgaengeApi.update(id!, {
+        adresse:
+          adresseForm.strasse || adresseForm.plz || adresseForm.ort
+            ? {
+                strasse: adresseForm.strasse || undefined,
+                plz: adresseForm.plz || undefined,
+                ort: adresseForm.ort || undefined,
+              }
+            : null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
+      setEditingAdresse(false);
+      setAdresseError(null);
+    },
+    onError: (err) => setAdresseError(err instanceof ApiError ? err.message : "Fehler"),
   });
   const { data: events } = useQuery({
     queryKey: ["vorgang-events", id],
@@ -791,6 +824,83 @@ export function VorgangDetailPage() {
             </div>
           </div>
         )}
+
+        <div className="mt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Adresse</span>
+            {kannDisponieren && !editingAdresse && (
+              <button
+                onClick={() => {
+                  setAdresseForm(leereAdresse(vorgang.adresse));
+                  setAdresseError(null);
+                  setEditingAdresse(true);
+                }}
+                className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              >
+                Bearbeiten
+              </button>
+            )}
+          </div>
+          {!editingAdresse &&
+            (adresseAlsZeile(vorgang.adresse) ? (
+              <>
+                <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                  {adresseAlsZeile(vorgang.adresse)}
+                </p>
+                <iframe
+                  title="Karte zur Adresse"
+                  className="mt-2 h-40 w-full rounded-lg border-0"
+                  loading="lazy"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(adresseAlsZeile(vorgang.adresse))}&output=embed`}
+                />
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Keine Adresse hinterlegt.</p>
+            ))}
+          {editingAdresse && (
+            <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+              <input
+                value={adresseForm.strasse}
+                onChange={(e) => setAdresseForm({ ...adresseForm, strasse: e.target.value })}
+                placeholder="Straße + Hausnr."
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  value={adresseForm.plz}
+                  onChange={(e) => setAdresseForm({ ...adresseForm, plz: e.target.value })}
+                  placeholder="PLZ"
+                  className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+                <input
+                  value={adresseForm.ort}
+                  onChange={(e) => setAdresseForm({ ...adresseForm, ort: e.target.value })}
+                  placeholder="Ort"
+                  className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+              </div>
+              {adresseError && <p className="text-xs text-red-700 dark:text-red-400">{adresseError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => adresseMutation.mutate()}
+                  disabled={adresseMutation.isPending}
+                  className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  Speichern
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingAdresse(false);
+                    setAdresseError(null);
+                  }}
+                  className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {((weitereAnlagen && weitereAnlagen.length > 0) || kannDisponieren) && (
           <div className="mt-2">

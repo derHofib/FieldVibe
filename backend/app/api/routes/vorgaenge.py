@@ -223,6 +223,7 @@ async def create_vorgang(
         leistungstyp=body.leistungstyp,
         prioritaet=body.prioritaet,
         faelligkeit_am=body.faelligkeit_am,
+        adresse=body.adresse,
         client_uuid=body.client_uuid,
         erstellt_von=auth.user_id,
     )

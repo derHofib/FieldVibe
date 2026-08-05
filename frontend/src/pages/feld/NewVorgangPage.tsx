@@ -54,6 +54,9 @@ export function NewVorgangPage() {
   const [newAnlageBezeichnung, setNewAnlageBezeichnung] = useState("");
   const [newAnlageTyp, setNewAnlageTyp] = useState("");
   const [newAnlageError, setNewAnlageError] = useState<string | null>(null);
+  const [adrStrasse, setAdrStrasse] = useState("");
+  const [adrPlz, setAdrPlz] = useState("");
+  const [adrOrt, setAdrOrt] = useState("");
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
   const { data: anlagenListe } = useQuery({
@@ -144,6 +147,10 @@ export function NewVorgangPage() {
         beschreibung,
         abrechnungsart,
         leistungstyp,
+        adresse:
+          adrStrasse || adrPlz || adrOrt
+            ? { strasse: adrStrasse || undefined, plz: adrPlz || undefined, ort: adrOrt || undefined }
+            : undefined,
       };
       try {
         return { online: true as const, vorgang: await vorgaengeApi.create(payload) };
@@ -454,6 +461,35 @@ export function NewVorgangPage() {
             rows={3}
             className="w-full resize-none rounded-md border border-slate-300 p-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            Adresse (optional)
+          </label>
+          <p className="mb-1 text-xs text-slate-400 dark:text-slate-500">
+            Nur nötig, wenn kein Standort ausgewählt ist -- damit weiß der Ausführende, wo er hin muss.
+          </p>
+          <input
+            value={adrStrasse}
+            onChange={(e) => setAdrStrasse(e.target.value)}
+            placeholder="Straße + Hausnr."
+            className="btn-touch mb-2 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              value={adrPlz}
+              onChange={(e) => setAdrPlz(e.target.value)}
+              placeholder="PLZ"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <input
+              value={adrOrt}
+              onChange={(e) => setAdrOrt(e.target.value)}
+              placeholder="Ort"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

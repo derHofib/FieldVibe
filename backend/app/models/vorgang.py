@@ -11,7 +11,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
@@ -114,3 +114,7 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     faelligkeit_am: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Adresse direkt am Vorgang, falls kein Standort angelegt werden soll
+    # (z.B. einmaliger Auftrag) -- der Ausfuehrende muss trotzdem wissen,
+    # wo er hin muss.
+    adresse: Mapped[dict | None] = mapped_column(JSONB)

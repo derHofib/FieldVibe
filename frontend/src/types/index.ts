@@ -251,6 +251,7 @@ export interface Vorgang {
   status: VorgangStatus;
   prioritaet: number;
   faelligkeit_am: string | null;
+  adresse: Adresse | null;
   last_activity_at: string;
   abgeschlossen_am: string | null;
   erstellt_von_kundenportal_zugang_id: string | null;

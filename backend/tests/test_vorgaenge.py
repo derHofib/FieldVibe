@@ -40,6 +40,66 @@ async def test_techniker_can_create_vorgang(
 
 
 @pytest.mark.asyncio
+async def test_vorgang_adresse_optional_beim_anlegen_und_bearbeitbar(
+    client, make_mandant, make_user, make_kunde, make_kunde_zuweisung
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
+    techniker_token = await login(client, techniker.email, "pw-123456")
+    disponent_token = await login(client, disponent.email, "pw-123456")
+
+    # Ohne Adresse anlegen ("nicht Pflicht") funktioniert weiterhin.
+    resp = await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(techniker_token),
+        json={
+            "kunde_id": str(kunde.id),
+            "titel": "Wartung ohne Standort",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "wartung",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["adresse"] is None
+
+    # Mit Adresse anlegen, fuer einen einmaligen Auftrag ohne Standort.
+    resp = await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(techniker_token),
+        json={
+            "kunde_id": str(kunde.id),
+            "titel": "Einmaliger Auftrag",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "stoerung",
+            "adresse": {"strasse": "Musterweg 1", "plz": "12345", "ort": "Musterstadt"},
+        },
+    )
+    assert resp.status_code == 201
+    vorgang_id = resp.json()["id"]
+    assert resp.json()["adresse"] == {
+        "strasse": "Musterweg 1",
+        "plz": "12345",
+        "ort": "Musterstadt",
+    }
+
+    # Nachtraeglich per PATCH aendern.
+    resp = await client.patch(
+        f"/api/vorgaenge/{vorgang_id}",
+        headers=auth_headers(disponent_token),
+        json={"adresse": {"strasse": "Andere Str. 2", "plz": "54321", "ort": "Anderswo"}},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["adresse"] == {
+        "strasse": "Andere Str. 2",
+        "plz": "54321",
+        "ort": "Anderswo",
+    }
+
+
+@pytest.mark.asyncio
 async def test_create_vorgang_mit_client_uuid_ist_idempotent(
     client, make_mandant, make_user, make_kunde, make_kunde_zuweisung
 ):

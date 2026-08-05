@@ -38,6 +38,9 @@ class VorgangCreate(BaseModel):
     leistungstyp: Leistungstyp
     prioritaet: int = Field(default=3, ge=1, le=5)
     faelligkeit_am: datetime | None = None
+    # Optionale Adresse direkt am Vorgang, falls kein Standort angelegt
+    # werden soll (z.B. einmaliger Auftrag).
+    adresse: dict | None = None
     # Von der Offline-Outbox vergeben (Nacharbeit): macht einen Sync-Retry
     # sicher idempotent, dasselbe Muster wie VorgangEventCreate.client_uuid.
     client_uuid: UUID | None = None
@@ -59,6 +62,7 @@ class VorgangUpdate(BaseModel):
     status: VorgangStatusSetzbar | None = None
     prioritaet: int | None = Field(default=None, ge=1, le=5)
     faelligkeit_am: datetime | None = None
+    adresse: dict | None = None
     # Nur zusammen mit status="abgeschlossen" auf einem Vorgang mit
     # leistungstyp="beratung" gueltig: legt einen Folge-Vorgang mit diesem
     # Leistungstyp an, der Kunde/Anlage(n)/Standort sowie die offenen
@@ -84,6 +88,7 @@ class VorgangRead(BaseModel):
     status: VorgangStatus
     prioritaet: int
     faelligkeit_am: datetime | None
+    adresse: dict | None
     last_activity_at: datetime
     abgeschlossen_am: datetime | None
     erstellt_von_kundenportal_zugang_id: UUID | None
