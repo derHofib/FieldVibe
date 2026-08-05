@@ -13,6 +13,7 @@ import {
   maengelApi,
   materialApi,
   materialBedarfeApi,
+  standorteApi,
   termineApi,
   usersApi,
   vorgangEventsApi,
@@ -289,6 +290,11 @@ export function VorgangDetailPage() {
     queryKey: ["anlage", vorgang?.anlage_id],
     queryFn: () => anlagenApi.get(vorgang!.anlage_id!),
     enabled: !!vorgang?.anlage_id,
+  });
+  const { data: standort } = useQuery({
+    queryKey: ["standort", vorgang?.standort_id],
+    queryFn: () => standorteApi.get(vorgang!.standort_id!),
+    enabled: !!vorgang?.standort_id,
   });
   const { data: parentVorgang } = useQuery({
     queryKey: ["vorgang", vorgang?.parent_vorgang_id],
@@ -680,6 +686,11 @@ export function VorgangDetailPage() {
 
   if (!vorgang) return <p className="text-center text-slate-500">Lädt…</p>;
 
+  // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
+  // des zugeordneten Standorts bzw. ersatzweise der Anlage, damit die Karte
+  // auch beim reinen Auswaehlen eines Standorts erscheint.
+  const anzeigeAdresse: Adresse | null = vorgang.adresse ?? standort?.adresse ?? anlage?.adresse ?? null;
+
   // Neuestes Ereignis oben, ältestes unten -- der Backend-Endpunkt liefert
   // bereits "ORDER BY id DESC" (siehe app/api/routes/vorgang_events.py),
   // hier also unveraendert uebernehmen statt umzudrehen.
@@ -842,16 +853,21 @@ export function VorgangDetailPage() {
             )}
           </div>
           {!editingAdresse &&
-            (adresseAlsZeile(vorgang.adresse) ? (
+            (adresseAlsZeile(anzeigeAdresse) ? (
               <>
                 <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                  {adresseAlsZeile(vorgang.adresse)}
+                  {adresseAlsZeile(anzeigeAdresse)}
+                  {!vorgang.adresse && (standort || anlage) && (
+                    <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">
+                      ({standort ? "Standort" : "Anlage"})
+                    </span>
+                  )}
                 </p>
                 <iframe
                   title="Karte zur Adresse"
                   className="mt-2 h-40 w-full rounded-lg border-0"
                   loading="lazy"
-                  src={`https://www.google.com/maps?q=${encodeURIComponent(adresseAlsZeile(vorgang.adresse))}&output=embed`}
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(adresseAlsZeile(anzeigeAdresse))}&output=embed`}
                 />
               </>
             ) : (
