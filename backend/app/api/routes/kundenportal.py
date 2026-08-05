@@ -11,6 +11,7 @@ from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung
 from app.models.standort import Standort
+from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.vorgang_event import VorgangEvent
@@ -28,6 +29,7 @@ from app.services.rechnung_service import (
     positionen_fuer as rechnung_positionen_fuer,
     to_read_model as rechnung_to_read_model,
 )
+from app.services.storage_service import download_bytes
 from app.services.vorgang_anfrage_service import notify_neue_anfrage
 from app.services.vorgang_event_service import to_read_model as event_to_read_model
 
@@ -149,8 +151,10 @@ async def eigenes_angebot_pdf(
     kunde = await session.get(Kunde, angebot.kunde_id)
     positionen = await positionen_fuer(session, angebot.id)
     mandant = await session.get(Mandant, auth.mandant_id)
+    bearbeiter = await session.get(User, angebot.erstellt_von)
+    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
 
-    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde)
+    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde, bearbeiter, logo_bytes)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

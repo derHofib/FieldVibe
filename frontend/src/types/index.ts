@@ -585,6 +585,7 @@ export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt"
 export interface AngebotPosition {
   id: string;
   position: number;
+  artikelnummer: string | null;
   beschreibung: string;
   menge: string;
   einheit: string;
@@ -824,9 +825,28 @@ export interface RechteMatrixEintrag {
 
 // --- Mandant-Einstellungen (Nacharbeit) -------------------------------------
 
+export interface MandantFirmendaten {
+  adresse?: { strasse?: string; plz?: string; ort?: string };
+  telefon?: string;
+  email?: string;
+  website?: string;
+  bank_name?: string;
+  iban?: string;
+  bic?: string;
+  handelsregister?: string;
+  geschaeftsfuehrung?: string;
+  ust_idnr?: string;
+}
+
 export interface MandantEinstellungen {
   scheduler_stunde_utc: number | null;
   effektive_scheduler_stunde_utc: number;
+  firmendaten: MandantFirmendaten;
+  logo_object_key: string | null;
+}
+
+export interface MandantLogoUrl {
+  url: string | null;
 }
 
 // --- Mandant-Integrationen (Nacharbeit) -------------------------------------

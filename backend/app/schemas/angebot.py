@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class AngebotPositionCreate(BaseModel):
+    artikelnummer: str | None = None
     beschreibung: str
     menge: Decimal = Decimal("1")
     einheit: str = "Stk"
@@ -17,6 +18,7 @@ class AngebotPositionRead(BaseModel):
 
     id: UUID
     position: int
+    artikelnummer: str | None
     beschreibung: str
     menge: Decimal
     einheit: str

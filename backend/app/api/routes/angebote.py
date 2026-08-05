@@ -21,6 +21,7 @@ from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.material import Material
 from app.models.material_bedarf import MaterialBedarf
+from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.angebot import (
@@ -37,6 +38,7 @@ from app.services.angebot_service import apply_status_transition, positionen_fue
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_angebotsnummer
 from app.services.pdf_service import generate_angebot_pdf
+from app.services.storage_service import download_bytes
 
 router = APIRouter(
     prefix="/api/angebote",
@@ -128,6 +130,7 @@ def _neue_positionen(angebot_id: UUID, mandant_id: UUID, eintraege: list[Angebot
             mandant_id=mandant_id,
             angebot_id=angebot_id,
             position=i + 1,
+            artikelnummer=e.artikelnummer,
             beschreibung=e.beschreibung,
             menge=e.menge,
             einheit=e.einheit,
@@ -382,6 +385,7 @@ async def add_position(
             mandant_id=angebot.mandant_id,
             angebot_id=angebot_id,
             position=naechste_position,
+            artikelnummer=body.artikelnummer,
             beschreibung=body.beschreibung,
             menge=body.menge,
             einheit=body.einheit,
@@ -420,6 +424,13 @@ async def update_angebot(
     return await to_read_model(session, angebot)
 
 
+async def _angebot_pdf_bytes(session: AsyncSession, mandant: Mandant, angebot: Angebot, kunde: Kunde) -> bytes:
+    positionen = await positionen_fuer(session, angebot.id)
+    bearbeiter = await session.get(User, angebot.erstellt_von)
+    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
+    return generate_angebot_pdf(mandant, angebot, positionen, kunde, bearbeiter, logo_bytes)
+
+
 @router.get("/{angebot_id}/pdf")
 async def angebot_pdf(
     angebot_id: UUID,
@@ -430,10 +441,9 @@ async def angebot_pdf(
     if angebot is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
     kunde = await session.get(Kunde, angebot.kunde_id)
-    positionen = await positionen_fuer(session, angebot.id)
     mandant = await session.get(Mandant, auth.mandant_id)
 
-    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde)
+    pdf_bytes = await _angebot_pdf_bytes(session, mandant, angebot, kunde)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -472,9 +482,8 @@ async def send_angebot_email(
     if angebot is None or angebot.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
     kunde = await session.get(Kunde, angebot.kunde_id)
-    positionen = await positionen_fuer(session, angebot.id)
     mandant = await session.get(Mandant, auth.mandant_id)
-    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde)
+    pdf_bytes = await _angebot_pdf_bytes(session, mandant, angebot, kunde)
     dateiname = f"{angebot.angebotsnummer}.pdf"
 
     log = await send_email_and_log(

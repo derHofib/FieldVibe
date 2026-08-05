@@ -56,6 +56,11 @@ def new_kunde_logo_key(kunde_id: uuid.UUID, filename: str) -> str:
     return f"kunden/{kunde_id}/logo/{uuid.uuid4()}.{suffix}"
 
 
+def new_mandant_logo_key(mandant_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"mandanten/{mandant_id}/logo/{uuid.uuid4()}.{suffix}"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     await run_in_threadpool(
         _internal_client.put_object,
@@ -64,6 +69,14 @@ async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
         Body=data,
         ContentType=content_type,
     )
+
+
+async def download_bytes(key: str) -> bytes:
+    def _get() -> bytes:
+        obj = _internal_client.get_object(Bucket=BUCKET, Key=key)
+        return obj["Body"].read()
+
+    return await run_in_threadpool(_get)
 
 
 async def delete_object(key: str) -> None:

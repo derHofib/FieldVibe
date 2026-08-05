@@ -16,6 +16,7 @@ const STATUS_LABEL: Record<AngebotStatus, string> = {
 };
 
 interface NeuePosition {
+  artikelnummer: string;
   beschreibung: string;
   menge: string;
   einheit: string;
@@ -29,7 +30,13 @@ export function AngebotDetailPage() {
   const { currentUser } = useAuth();
   const kannLoeschen = currentUser?.role === "loesch_operativ";
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<NeuePosition>({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
+  const [form, setForm] = useState<NeuePosition>({
+    artikelnummer: "",
+    beschreibung: "",
+    menge: "1",
+    einheit: "Stk",
+    einzelpreis: "0",
+  });
 
   const deleteMutation = useMutation({
     mutationFn: () => angeboteApi.remove(id!),
@@ -53,6 +60,7 @@ export function AngebotDetailPage() {
   const addPositionMutation = useMutation({
     mutationFn: () =>
       angeboteApi.addPosition(id!, {
+        artikelnummer: form.artikelnummer || undefined,
         beschreibung: form.beschreibung,
         menge: form.menge,
         einheit: form.einheit,
@@ -60,7 +68,7 @@ export function AngebotDetailPage() {
       }),
     onSuccess: () => {
       setShowForm(false);
-      setForm({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
+      setForm({ artikelnummer: "", beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
       queryClient.invalidateQueries({ queryKey: ["angebot", id] });
     },
   });
@@ -138,6 +146,12 @@ export function AngebotDetailPage() {
         {showForm && (
           <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
             <input
+              value={form.artikelnummer}
+              onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
+              placeholder="Art-Nr. (optional)"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
@@ -187,7 +201,12 @@ export function AngebotDetailPage() {
                 className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60"
               >
                 <div>
-                  <div className="text-slate-700 dark:text-slate-300">{p.beschreibung}</div>
+                  <div className="text-slate-700 dark:text-slate-300">
+                    {p.artikelnummer && (
+                      <span className="mr-1.5 text-xs text-slate-400 dark:text-slate-500">{p.artikelnummer}</span>
+                    )}
+                    {p.beschreibung}
+                  </div>
                   <div className="text-xs text-slate-400 dark:text-slate-500">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>

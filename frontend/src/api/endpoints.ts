@@ -35,7 +35,9 @@ import type {
   Lieferant,
   Mandant,
   MandantEinstellungen,
+  MandantFirmendaten,
   MandantIntegration,
+  MandantLogoUrl,
   Mangel,
   Material,
   MaterialBedarf,
@@ -631,7 +633,9 @@ export const angeboteApi = {
     }),
   addPosition: (
     id: string,
-    body: Pick<AngebotPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">,
+    body: Pick<AngebotPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
+      artikelnummer?: string;
+    },
   ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
@@ -841,6 +845,19 @@ export const mandantEinstellungenApi = {
       method: "PATCH",
       body: JSON.stringify({ scheduler_stunde_utc: schedulerStundeUtc }),
     }),
+  firmendatenSpeichern: (firmendaten: MandantFirmendaten) =>
+    apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
+      method: "PATCH",
+      body: JSON.stringify({ firmendaten }),
+    }),
+  logoUpload: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<MandantEinstellungen>("/api/mandant/einstellungen/logo", formData);
+  },
+  logoRemove: () =>
+    apiFetch<MandantEinstellungen>("/api/mandant/einstellungen/logo", { method: "DELETE" }),
+  logoUrl: () => apiFetch<MandantLogoUrl>("/api/mandant/einstellungen/logo-url"),
 };
 
 export const integrationenApi = {

@@ -4,7 +4,168 @@ import { Navigate, useNavigate } from "react-router-dom";
 
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
-import type { MandantIntegration } from "../../types";
+import type { MandantEinstellungen, MandantIntegration } from "../../types";
+
+function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
+  const queryClient = useQueryClient();
+  const fd = einstellungen.firmendaten;
+  const [strasse, setStrasse] = useState(fd.adresse?.strasse ?? "");
+  const [plz, setPlz] = useState(fd.adresse?.plz ?? "");
+  const [ort, setOrt] = useState(fd.adresse?.ort ?? "");
+  const [telefon, setTelefon] = useState(fd.telefon ?? "");
+  const [email, setEmail] = useState(fd.email ?? "");
+  const [website, setWebsite] = useState(fd.website ?? "");
+  const [bankName, setBankName] = useState(fd.bank_name ?? "");
+  const [iban, setIban] = useState(fd.iban ?? "");
+  const [bic, setBic] = useState(fd.bic ?? "");
+  const [geschaeftsfuehrung, setGeschaeftsfuehrung] = useState(fd.geschaeftsfuehrung ?? "");
+  const [handelsregister, setHandelsregister] = useState(fd.handelsregister ?? "");
+  const [ustIdnr, setUstIdnr] = useState(fd.ust_idnr ?? "");
+
+  const { data: logoUrl } = useQuery({
+    queryKey: ["mandant-logo-url"],
+    queryFn: mandantEinstellungenApi.logoUrl,
+  });
+
+  const speichernMutation = useMutation({
+    mutationFn: () =>
+      mandantEinstellungenApi.firmendatenSpeichern({
+        adresse: { strasse, plz, ort },
+        telefon,
+        email,
+        website,
+        bank_name: bankName,
+        iban,
+        bic,
+        geschaeftsfuehrung,
+        handelsregister,
+        ust_idnr: ustIdnr,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
+  });
+
+  const logoUploadMutation = useMutation({
+    mutationFn: (file: File) => mandantEinstellungenApi.logoUpload(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] });
+      queryClient.invalidateQueries({ queryKey: ["mandant-logo-url"] });
+    },
+  });
+
+  const logoRemoveMutation = useMutation({
+    mutationFn: () => mandantEinstellungenApi.logoRemove(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] });
+      queryClient.invalidateQueries({ queryKey: ["mandant-logo-url"] });
+    },
+  });
+
+  const inputClass =
+    "rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
+
+  return (
+    <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">🏢 Firmenprofil</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Diese Angaben erscheinen im Briefkopf und in der Fußzeile eurer Angebots-PDFs.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {logoUrl?.url ? (
+          <img src={logoUrl.url} alt="Firmenlogo" className="h-12 max-w-[160px] object-contain" />
+        ) : (
+          <span className="text-xs text-slate-400 dark:text-slate-500">Kein Logo hinterlegt</span>
+        )}
+        <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+          Logo hochladen
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) logoUploadMutation.mutate(file);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {einstellungen.logo_object_key && (
+          <button
+            onClick={() => logoRemoveMutation.mutate()}
+            disabled={logoRemoveMutation.isPending}
+            className="btn-touch text-xs font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+          >
+            Entfernen
+          </button>
+        )}
+      </div>
+
+      <input
+        value={strasse}
+        onChange={(e) => setStrasse(e.target.value)}
+        placeholder="Straße, Nr."
+        className={`w-full ${inputClass}`}
+      />
+      <div className="grid grid-cols-3 gap-2">
+        <input value={plz} onChange={(e) => setPlz(e.target.value)} placeholder="PLZ" className={inputClass} />
+        <input
+          value={ort}
+          onChange={(e) => setOrt(e.target.value)}
+          placeholder="Ort"
+          className={`col-span-2 ${inputClass}`}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input value={telefon} onChange={(e) => setTelefon(e.target.value)} placeholder="Telefon" className={inputClass} />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-Mail" className={inputClass} />
+        <input
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          placeholder="Website"
+          className={`col-span-2 ${inputClass}`}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Bank" className={inputClass} />
+        <input value={iban} onChange={(e) => setIban(e.target.value)} placeholder="IBAN" className={inputClass} />
+        <input value={bic} onChange={(e) => setBic(e.target.value)} placeholder="BIC" className={inputClass} />
+        <input
+          value={ustIdnr}
+          onChange={(e) => setUstIdnr(e.target.value)}
+          placeholder="USt-IdNr."
+          className={inputClass}
+        />
+        <input
+          value={geschaeftsfuehrung}
+          onChange={(e) => setGeschaeftsfuehrung(e.target.value)}
+          placeholder="Geschäftsführung"
+          className={inputClass}
+        />
+        <input
+          value={handelsregister}
+          onChange={(e) => setHandelsregister(e.target.value)}
+          placeholder="Handelsregister"
+          className={inputClass}
+        />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={speichernMutation.isPending}
+          className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        {speichernMutation.isSuccess && (
+          <span className="text-xs text-green-700 dark:text-green-400">Gespeichert.</span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   const queryClient = useQueryClient();
@@ -164,6 +325,8 @@ export function IntegrationenPage() {
         ← Zurück
       </button>
       <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">🔌 Integrationen</h1>
+
+      {einstellungen && <FirmenprofilSection einstellungen={einstellungen} />}
 
       {einstellungen && (
         <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">

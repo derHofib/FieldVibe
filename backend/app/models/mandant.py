@@ -52,3 +52,10 @@ class Mandant(TimestampMixin, Base):
     scheduler_stunde_utc: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     # Opt-out: leer = alles an. Siehe MANDANT_MODULE fuer die gueltigen Werte.
     deaktivierte_module: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    # Firmenstammdaten fuer den PDF-Briefkopf (Angebot): adresse (dict mit
+    # strasse/plz/ort, gleiche Form wie Kunde.adresse), telefon, email,
+    # website, bank_name, iban, bic, handelsregister, geschaeftsfuehrung,
+    # ust_idnr. Bewusst als loses JSONB statt einzelner Spalten, analog zu
+    # Kunde.adresse -- spart eine Migration pro zusaetzlichem Feld.
+    firmendaten: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    logo_object_key: Mapped[str | None] = mapped_column(Text)

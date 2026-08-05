@@ -57,6 +57,17 @@ def run_migrations_online() -> None:
         # schlaegt dann mit NotNullViolation fehl (siehe 0023, wo genau
         # das bei bestehenden Mandantendaten passiert ist).
         connection.execute(text("SET app.is_super_admin = 'true'"))
+        # SQLAlchemy 2.0 "autobegin" hat durch das obige execute() bereits
+        # eine Transaktion auf der Connection eroeffnet. Ohne diesen Commit
+        # haengt sich context.begin_transaction() unten in eben diese schon
+        # laufende Transaktion ein, deren Ende (Connection-Close ohne
+        # explizites commit()) SQLAlchemy 2.0 als Rollback behandelt -- die
+        # Migration liefe dann scheinbar fehlerfrei durch (kein Traceback,
+        # exit code 0), aber jede DDL/DML dieser Migration waere beim
+        # Verbindungsende wieder verworfen. Der Commit hier schliesst die
+        # SET-Transaktion sauber ab, damit die eigentliche Migration in
+        # einer frischen, von alembic selbst verwalteten Transaktion laeuft.
+        connection.commit()
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from io import BytesIO
 
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
@@ -22,8 +23,12 @@ from app.models.zeiterfassung import Zeiterfassung
 _WAEHRUNG = "EUR"
 
 
+def _fmt_zahl(zahl: Decimal) -> str:
+    return f"{zahl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
 def _fmt_betrag(betrag: Decimal) -> str:
-    return f"{betrag:,.2f} {_WAEHRUNG}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{_fmt_zahl(betrag)} {_WAEHRUNG}"
 
 
 def _fmt_datum(d: date | datetime | None) -> str:
@@ -92,20 +97,218 @@ def _summenblock(pdf: FPDF, gesamt_netto: Decimal, mwst_satz: Decimal) -> None:
     pdf.cell(22, 8, _fmt_betrag(gesamt_brutto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
 
-def generate_angebot_pdf(
-    mandant: Mandant, angebot: Angebot, positionen: list[AngebotPosition], kunde: Kunde
-) -> bytes:
-    pdf = FPDF()
-    pdf.add_page()
-    _kopf(pdf, mandant, "Angebot", angebot.angebotsnummer, kunde)
+class _AngebotPDF(FPDF):
+    """Eigene FPDF-Subklasse nur fuer generate_angebot_pdf() -- Kopf-/
+    Fusszeile muessen sich pro Seite automatisch wiederholen (Briefkopf auf
+    Seite 1 vollstaendig, ab Seite 2 nur noch eine schmale Kennzeile;
+    Bankverbindung/Rechtliches unten auf jeder Seite), was fpdf2 nur ueber
+    header()/footer() anbietet -- die generischen _kopf()/_positionen_
+    tabelle()/_summenblock() oben werden von Rechnung/Bestellung/Maengel-
+    Protokoll weiterverwendet und bleiben deshalb unveraendert."""
+
+    def __init__(self, mandant: Mandant, angebot: Angebot, logo_bytes: bytes | None):
+        super().__init__()
+        self._mandant = mandant
+        self._angebot = angebot
+        self._logo_bytes = logo_bytes
+
+    def header(self) -> None:
+        if self.page_no() == 1:
+            if self._logo_bytes:
+                self.image(BytesIO(self._logo_bytes), x=20, y=15, h=18)
+            else:
+                self.set_xy(20, 15)
+                self.set_font("Helvetica", "B", 20)
+                self.set_text_color(70, 70, 70)
+                self.cell(0, 10, self._mandant.name)
+                self.set_text_color(0, 0, 0)
+        else:
+            self.set_xy(20, 12)
+            self.set_font("Helvetica", "", 9)
+            self.set_text_color(120, 120, 120)
+            self.cell(
+                0,
+                6,
+                f"{self._mandant.name} · Angebot {self._angebot.angebotsnummer} · Seite {self.page_no()}",
+            )
+            self.set_text_color(0, 0, 0)
+
+    def footer(self) -> None:
+        fd = self._mandant.firmendaten or {}
+        teile = [self._mandant.name]
+        if fd.get("bank_name"):
+            teile.append(str(fd["bank_name"]))
+        if fd.get("iban"):
+            teile.append(f"IBAN: {fd['iban']}")
+        if fd.get("bic"):
+            teile.append(f"BIC: {fd['bic']}")
+        if fd.get("geschaeftsfuehrung"):
+            teile.append(f"Geschäftsführung: {fd['geschaeftsfuehrung']}")
+        if fd.get("handelsregister"):
+            teile.append(str(fd["handelsregister"]))
+        if fd.get("ust_idnr"):
+            teile.append(f"USt-IdNr.: {fd['ust_idnr']}")
+        if len(teile) == 1:
+            return
+        self.set_y(-15)
+        self.set_font("Helvetica", "", 7)
+        self.set_text_color(130, 130, 130)
+        self.multi_cell(0, 3.5, " · ".join(teile), align="C")
+        self.set_text_color(0, 0, 0)
+
+
+def _adresse_zeilen(adresse: dict | None) -> list[str]:
+    adresse = adresse or {}
+    zeilen = []
+    if adresse.get("strasse"):
+        zeilen.append(str(adresse["strasse"]))
+    ort = " ".join(str(adresse[k]) for k in ("plz", "ort") if adresse.get(k))
+    if ort:
+        zeilen.append(ort)
+    return zeilen
+
+
+def _angebot_adressbereich(pdf: FPDF, mandant: Mandant, kunde: Kunde) -> None:
+    firmenadresse_zeilen = _adresse_zeilen(mandant.firmendaten.get("adresse") if mandant.firmendaten else None)
+
+    # Kleine Ruecksendeangabe-Zeile oberhalb des Empfaenger-Blocks, wie auf
+    # einem Fensterumschlag-Briefbogen.
+    ruecksendeangabe = " · ".join([mandant.name, *firmenadresse_zeilen])
+    pdf.set_xy(20, 38)
+    pdf.set_font("Helvetica", "", 6)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 4, ruecksendeangabe)
+    pdf.set_text_color(0, 0, 0)
+
+    # Empfaenger links
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Datum: {_fmt_datum(angebot.created_at)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if angebot.gueltig_bis:
-        pdf.cell(0, 6, f"Gueltig bis: {_fmt_datum(angebot.gueltig_bis)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    for i, zeile in enumerate([kunde.name, *_adresse_zeilen(kunde.adresse)]):
+        pdf.set_xy(20, 45 + i * 5)
+        pdf.cell(85, 5, zeile)
+
+    # Absender rechts
+    fd = mandant.firmendaten or {}
+    absender_zeilen = [mandant.name, *firmenadresse_zeilen]
+    if fd.get("telefon"):
+        absender_zeilen.append(f"Fon: {fd['telefon']}")
+    absender_zeilen.append("")
+    if fd.get("email"):
+        absender_zeilen.append(str(fd["email"]))
+    if fd.get("website"):
+        absender_zeilen.append(str(fd["website"]))
+    pdf.set_font("Helvetica", "", 9)
+    for i, zeile in enumerate(absender_zeilen):
+        pdf.set_xy(115, 45 + i * 5)
+        pdf.cell(75, 5, zeile)
+
+
+def _angebot_metadaten(pdf: FPDF, angebot: Angebot, kunde: Kunde, bearbeiter: User | None) -> None:
+    pdf.set_xy(20, 85)
+    pdf.set_font("Helvetica", "B", 20)
+    pdf.cell(0, 10, "Angebot")
+
+    zeilen_links = [
+        ("Angebots-Nr.:", angebot.angebotsnummer),
+        ("Datum:", _fmt_datum(angebot.created_at)),
+        ("Kunden-Nr.:", kunde.kundennummer),
+    ]
+    zeilen_rechts = [("Gültig bis:", _fmt_datum(angebot.gueltig_bis))]
+    if bearbeiter:
+        zeilen_rechts.append(("Bearbeiter:", bearbeiter.name))
+        zeilen_rechts.append(("E-Mail:", bearbeiter.email))
+
+    y = 103
+    pdf.set_font("Helvetica", "B", 10)
+    for i, (label, wert) in enumerate(zeilen_links):
+        pdf.set_xy(20, y + i * 6)
+        pdf.cell(32, 6, label)
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(53, 6, wert)
+        pdf.set_font("Helvetica", "B", 10)
+    for i, (label, wert) in enumerate(zeilen_rechts):
+        pdf.set_xy(115, y + i * 6)
+        pdf.cell(30, 6, label)
+        pdf.set_font("Helvetica", "", 10)
+        pdf.cell(45, 6, wert)
+        pdf.set_font("Helvetica", "B", 10)
+
+    pdf.set_xy(20, y + max(len(zeilen_links), len(zeilen_rechts)) * 6 + 6)
+
+
+def _angebot_positionen_tabelle(pdf: FPDF, positionen: list[AngebotPosition]) -> Decimal:
+    spalten = (
+        ("Pos.", 10),
+        ("Art-Nr.", 22),
+        ("Bezeichnung", 62),
+        ("Menge", 16),
+        ("Einheit", 16),
+        ("Preis EUR", 22),
+        ("Gesamt EUR", 22),
+    )
+    pdf.set_fill_color(235, 235, 235)
+    pdf.set_font("Helvetica", "B", 9)
+    for label, breite in spalten:
+        pdf.cell(breite, 8, label, border=1, fill=True)
+    pdf.ln()
+
+    pdf.set_font("Helvetica", "", 9)
+    gesamt_netto = Decimal("0")
+    for i, p in enumerate(sorted(positionen, key=lambda x: x.position)):
+        zeilen_gesamt = p.menge * p.einzelpreis
+        gesamt_netto += zeilen_gesamt
+        pdf.set_fill_color(248, 248, 248)
+        fill = i % 2 == 1
+        pdf.cell(10, 7, str(p.position), border=1, fill=fill)
+        pdf.cell(22, 7, p.artikelnummer or "", border=1, fill=fill)
+        pdf.cell(62, 7, p.beschreibung[:38], border=1, fill=fill)
+        pdf.cell(16, 7, f"{p.menge:g}", border=1, align="R", fill=fill)
+        pdf.cell(16, 7, p.einheit, border=1, fill=fill)
+        pdf.cell(22, 7, _fmt_betrag(p.einzelpreis), border=1, align="R", fill=fill)
+        pdf.cell(22, 7, _fmt_betrag(zeilen_gesamt), border=1, align="R", fill=fill)
+        pdf.ln()
+    return gesamt_netto
+
+
+def _angebot_summenblock(pdf: FPDF, gesamt_netto: Decimal, mwst_satz: Decimal) -> None:
+    mwst_betrag = gesamt_netto * mwst_satz / Decimal("100")
+    gesamt_brutto = gesamt_netto + mwst_betrag
+    pdf.ln(4)
+    pdf.set_font("Helvetica", "", 10)
+    for label, wert in (
+        ("Summe Netto", _fmt_betrag(gesamt_netto)),
+        (f"{_fmt_zahl(mwst_satz)}% USt. auf {_fmt_zahl(gesamt_netto)}", _fmt_betrag(mwst_betrag)),
+    ):
+        pdf.cell(90, 7, "", border=0)
+        pdf.cell(58, 7, label)
+        pdf.cell(22, 7, wert, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_xy(110, pdf.get_y())
+    pdf.line(110, pdf.get_y(), 190, pdf.get_y())
+    pdf.ln(1)
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(90, 8, "", border=0)
+    pdf.cell(58, 8, "Endsumme")
+    pdf.cell(22, 8, _fmt_betrag(gesamt_brutto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+
+def generate_angebot_pdf(
+    mandant: Mandant,
+    angebot: Angebot,
+    positionen: list[AngebotPosition],
+    kunde: Kunde,
+    bearbeiter: User | None = None,
+    logo_bytes: bytes | None = None,
+) -> bytes:
+    pdf = _AngebotPDF(mandant, angebot, logo_bytes)
+    pdf.set_margins(20, 15, 20)
+    pdf.set_auto_page_break(auto=True, margin=25)
+    pdf.add_page()
+
+    _angebot_adressbereich(pdf, mandant, kunde)
+    _angebot_metadaten(pdf, angebot, kunde, bearbeiter)
     pdf.ln(4)
 
-    gesamt_netto = _positionen_tabelle(pdf, positionen)
-    _summenblock(pdf, gesamt_netto, angebot.mwst_satz)
+    gesamt_netto = _angebot_positionen_tabelle(pdf, positionen)
+    _angebot_summenblock(pdf, gesamt_netto, angebot.mwst_satz)
     return bytes(pdf.output())
 
 

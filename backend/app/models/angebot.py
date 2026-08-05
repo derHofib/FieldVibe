@@ -64,6 +64,7 @@ class AngebotPosition(Base):
         UUID(as_uuid=True), ForeignKey("angebote.id", ondelete="CASCADE"), nullable=False
     )
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    artikelnummer: Mapped[str | None] = mapped_column(Text)
     beschreibung: Mapped[str] = mapped_column(Text, nullable=False)
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
