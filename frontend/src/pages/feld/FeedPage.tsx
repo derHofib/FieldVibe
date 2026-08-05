@@ -125,6 +125,9 @@ function FeedCardView({ card }: { card: FeedCard }) {
           <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[card.status]}`}>
             {STATUS_LABEL[card.status]}
           </span>
+          <span className="whitespace-nowrap text-xs text-slate-400 dark:text-slate-500">
+            {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
+          </span>
           {faelligkeitIso && (
             <span className={`whitespace-nowrap text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
               Fällig: {new Date(faelligkeitIso).toLocaleDateString("de-DE")}
