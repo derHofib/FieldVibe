@@ -580,7 +580,7 @@ export function GeschaeftPage() {
         )}
       </div>
 
-      <div className="flex gap-2 rounded-lg bg-white p-1 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="flex gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         {sichtbareTabs.map((t) => (
           <button
             key={t}
@@ -588,7 +588,7 @@ export function GeschaeftPage() {
               setTab(t);
               setShowForm(false);
             }}
-            className={`btn-touch flex-1 rounded-md py-2 text-sm font-medium capitalize ${
+            className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium capitalize ${
               tab === t
                 ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
                 : "text-slate-600 dark:text-slate-400"
