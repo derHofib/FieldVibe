@@ -6,7 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 MaterialBedarfZweck = Literal["bestellung", "angebot"]
-MaterialBedarfStatus = Literal["offen", "bestellt", "in_angebot", "erhalten", "storniert"]
+MaterialBedarfStatus = Literal["offen", "bestellt", "in_angebot", "erhalten", "storniert", "uebertragen"]
 
 
 class MaterialBedarfCreate(BaseModel):
@@ -30,6 +30,7 @@ class MaterialBedarfRead(BaseModel):
     bestellung_id: UUID | None
     angebot_id: UUID | None
     erstellt_von: UUID
+    uebernommen_von_id: UUID | None
     created_at: datetime
 
 

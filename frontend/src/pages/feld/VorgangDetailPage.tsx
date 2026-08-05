@@ -30,6 +30,7 @@ import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
 import type {
+  Leistungstyp,
   MangelSchweregrad,
   MangelStatus,
   MaterialBedarfZweck,
@@ -43,6 +44,15 @@ const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
   { value: "mittel", label: "Mittel" },
   { value: "hoch", label: "Hoch" },
   { value: "kritisch", label: "Kritisch" },
+];
+
+const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
+  { value: "stoerung", label: "Störung" },
+  { value: "installation", label: "Installation" },
+  { value: "wartung", label: "Wartung" },
+  { value: "pruefung", label: "Prüfung" },
+  { value: "beratung", label: "Beratung" },
+  { value: "planung", label: "Planung" },
 ];
 
 const STATUS_OPTIONS: VorgangStatus[] = [
@@ -232,6 +242,9 @@ export function VorgangDetailPage() {
   const [editKundeId, setEditKundeId] = useState("");
   const [editAnlageId, setEditAnlageId] = useState("");
   const [zuordnungError, setZuordnungError] = useState<string | null>(null);
+  const [showFolgeDialog, setShowFolgeDialog] = useState(false);
+  const [folgeLeistungstyp, setFolgeLeistungstyp] = useState<Leistungstyp | "">("");
+  const [folgeVorgangId, setFolgeVorgangId] = useState<string | null>(null);
 
   const kannDisponieren =
     currentUser?.role === "mandant_admin" ||
@@ -268,6 +281,11 @@ export function VorgangDetailPage() {
     queryKey: ["anlage", vorgang?.anlage_id],
     queryFn: () => anlagenApi.get(vorgang!.anlage_id!),
     enabled: !!vorgang?.anlage_id,
+  });
+  const { data: parentVorgang } = useQuery({
+    queryKey: ["vorgang", vorgang?.parent_vorgang_id],
+    queryFn: () => vorgaengeApi.get(vorgang!.parent_vorgang_id!),
+    enabled: !!vorgang?.parent_vorgang_id,
   });
   const { data: weitereAnlagen } = useQuery({
     queryKey: ["vorgang-anlagen", id],
@@ -414,6 +432,11 @@ export function VorgangDetailPage() {
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
   });
 
+  const angebotAusVorgangMutation = useMutation({
+    mutationFn: () => angeboteApi.createFromVorgang(id!),
+    onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+  });
+
   const maengelProtokollMutation = useMutation({
     mutationFn: () => maengelApi.protokollPdf(id!),
     onSuccess: openPdfBlob,
@@ -525,16 +548,26 @@ export function VorgangDetailPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async (status: VorgangStatus) => {
+    mutationFn: async ({
+      status,
+      folgeLeistungstyp,
+    }: {
+      status: VorgangStatus;
+      folgeLeistungstyp?: Leistungstyp;
+    }) => {
       try {
-        return await vorgaengeApi.update(id!, { status });
+        return await vorgaengeApi.update(id!, {
+          status,
+          ...(folgeLeistungstyp ? { folge_leistungstyp: folgeLeistungstyp } : {}),
+        });
       } catch (err) {
         if (err instanceof ApiError) throw err; // echte Ablehnung, nicht queuen
         await queueStatusChange(id!, status); // Netzwerkfehler -> offline
         return null;
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result?.folge_vorgang_id) setFolgeVorgangId(result.folge_vorgang_id);
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
@@ -661,6 +694,14 @@ export function VorgangDetailPage() {
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="text-xs text-slate-400 dark:text-slate-500">{vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{vorgang.titel}</h1>
+        {parentVorgang && (
+          <button
+            onClick={() => navigate(`/vorgaenge/${parentVorgang.id}`)}
+            className="mt-0.5 block text-xs text-slate-400 underline-offset-2 hover:underline dark:text-slate-500"
+          >
+            Entstanden aus Vorgang {parentVorgang.vorgangsnummer}
+          </button>
+        )}
 
         <div className="mt-1 flex items-center justify-between">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
@@ -842,7 +883,15 @@ export function VorgangDetailPage() {
           <label className="text-sm text-slate-500 dark:text-slate-400">Status:</label>
           <select
             value={vorgang.status}
-            onChange={(e) => statusMutation.mutate(e.target.value as VorgangStatus)}
+            onChange={(e) => {
+              const status = e.target.value as VorgangStatus;
+              if (status === "abgeschlossen" && vorgang.leistungstyp === "beratung") {
+                setFolgeLeistungstyp("");
+                setShowFolgeDialog(true);
+                return;
+              }
+              statusMutation.mutate({ status });
+            }}
             className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           >
             {STATUS_OPTIONS.map((s) => (
@@ -855,6 +904,60 @@ export function VorgangDetailPage() {
             Priorität {vorgang.prioritaet}
           </span>
         </div>
+
+        {showFolgeDialog && (
+          <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Beratung abschließen: Soll daraus ein Folge-Vorgang entstehen? Offene Material-Positionen für ein
+              Angebot werden dann auf den Folge-Vorgang übernommen.
+            </p>
+            <select
+              value={folgeLeistungstyp}
+              onChange={(e) => setFolgeLeistungstyp(e.target.value as Leistungstyp)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">Kein Folge-Vorgang</option>
+              {LEISTUNGSTYPEN.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  statusMutation.mutate({
+                    status: "abgeschlossen",
+                    folgeLeistungstyp: folgeLeistungstyp || undefined,
+                  });
+                  setShowFolgeDialog(false);
+                }}
+                disabled={statusMutation.isPending}
+                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Abschließen
+              </button>
+              <button
+                onClick={() => setShowFolgeDialog(false)}
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {folgeVorgangId && (
+          <div className="mt-2 flex items-center justify-between rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <span>Folge-Vorgang wurde angelegt.</span>
+            <button
+              onClick={() => navigate(`/vorgaenge/${folgeVorgangId}`)}
+              className="btn-touch font-medium underline"
+            >
+              Jetzt ansehen
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
@@ -1319,6 +1422,16 @@ export function VorgangDetailPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {kannDisponieren && (
+          <button
+            onClick={() => angebotAusVorgangMutation.mutate()}
+            disabled={angebotAusVorgangMutation.isPending}
+            className="btn-touch mb-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+          >
+            + Angebot aus diesem Vorgang erstellen
+          </button>
         )}
 
         {showMaterialForm && (

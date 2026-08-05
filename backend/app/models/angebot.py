@@ -18,6 +18,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ANGEBOT_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt")
+ANGEBOT_POSITIONSTYPEN = ("material", "arbeitszeit")
 
 
 class Angebot(SoftDeleteMixin, TimestampMixin, Base):
@@ -69,3 +70,4 @@ class AngebotPosition(Base):
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    positionstyp: Mapped[str] = mapped_column(Text, nullable=False, default="material")

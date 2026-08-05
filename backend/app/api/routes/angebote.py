@@ -27,6 +27,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.schemas.angebot import (
     AngebotAusMaengelnCreate,
     AngebotAusMaterialBedarfenCreate,
+    AngebotAusVorgangCreate,
     AngebotCreate,
     AngebotPositionCreate,
     AngebotRead,
@@ -135,6 +136,7 @@ def _neue_positionen(angebot_id: UUID, mandant_id: UUID, eintraege: list[Angebot
             menge=e.menge,
             einheit=e.einheit,
             einzelpreis=e.einzelpreis,
+            positionstyp=e.positionstyp,
         )
         for i, e in enumerate(eintraege)
     ]
@@ -258,35 +260,17 @@ async def create_angebot_from_maengel(
     return await to_read_model(session, angebot)
 
 
-@router.post(
-    "/from-material-bedarfe",
-    response_model=AngebotRead,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
-)
-async def create_angebot_from_material_bedarfe(
-    body: AngebotAusMaterialBedarfenCreate,
-    auth: AuthContext = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> AngebotRead:
-    if not body.material_bedarf_ids:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keine Materialbedarfe angegeben")
-
-    bedarfe: list[MaterialBedarf] = []
-    for bedarf_id in body.material_bedarf_ids:
-        bedarf = await session.get(MaterialBedarf, bedarf_id)
-        if bedarf is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Materialbedarf {bedarf_id} nicht gefunden oder gehört nicht zum eigenen Mandanten",
-            )
-        if bedarf.status != "offen" or bedarf.zweck != "angebot":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Materialbedarf {bedarf_id} ist nicht als offener Angebots-Bedarf verfügbar",
-            )
-        bedarfe.append(bedarf)
-
+async def _angebot_aus_bedarfen(
+    session: AsyncSession, auth: AuthContext, bedarfe: list[MaterialBedarf], gueltig_bis
+) -> Angebot:
+    """Gemeinsame Kernlogik fuer beide "Angebot aus X"-Routen unten -- der
+    einzige Unterschied ist, WIE die zu uebernehmenden Bedarfe ermittelt
+    werden (explizite IDs vs. alle offenen Angebots-Bedarfe eines
+    Vorgangs), danach ist beides identisch: Positionen aus den Bedarfen
+    (je Material zusammengefasst) + Verknuepfung der Bedarfe zum neuen
+    Angebot. Erwartet eine nicht-leere Liste -- der Leerfall (Angebot ganz
+    ohne Material, z.B. reine Beratungsleistung) wird von den Aufrufern
+    selbst behandelt, dort gibt es kein "gemeinsamer Kunde" abzuleiten."""
     vorgang_ids = {b.vorgang_id for b in bedarfe}
     vorgaenge = {vid: await session.get(Vorgang, vid) for vid in vorgang_ids}
     kunde_ids = {v.kunde_id for v in vorgaenge.values() if v is not None}
@@ -322,13 +306,14 @@ async def create_angebot_from_material_bedarfe(
         vorgang_id=gemeinsamer_vorgang_id,
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
-        gueltig_bis=body.gueltig_bis,
+        gueltig_bis=gueltig_bis,
     )
     session.add(angebot)
     await session.flush()
 
     positionen = [
         AngebotPositionCreate(
+            artikelnummer=materialien[material_id].artikelnummer,
             beschreibung=materialien[material_id].bezeichnung,
             menge=menge,
             einheit=materialien[material_id].einheit,
@@ -357,6 +342,96 @@ async def create_angebot_from_material_bedarfe(
 
     await session.flush()
     await session.refresh(angebot)
+    return angebot
+
+
+@router.post(
+    "/from-material-bedarfe",
+    response_model=AngebotRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def create_angebot_from_material_bedarfe(
+    body: AngebotAusMaterialBedarfenCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    if not body.material_bedarf_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keine Materialbedarfe angegeben")
+
+    bedarfe: list[MaterialBedarf] = []
+    for bedarf_id in body.material_bedarf_ids:
+        bedarf = await session.get(MaterialBedarf, bedarf_id)
+        if bedarf is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Materialbedarf {bedarf_id} nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        if bedarf.status != "offen" or bedarf.zweck != "angebot":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Materialbedarf {bedarf_id} ist nicht als offener Angebots-Bedarf verfügbar",
+            )
+        bedarfe.append(bedarf)
+
+    angebot = await _angebot_aus_bedarfen(session, auth, bedarfe, body.gueltig_bis)
+    return await to_read_model(session, angebot)
+
+
+@router.post(
+    "/from-vorgang",
+    response_model=AngebotRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def create_angebot_from_vorgang(
+    body: AngebotAusVorgangCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    """Wie create_angebot_from_material_bedarfe, aber ohne den Umweg ueber
+    die Materialbedarfe-Uebersicht: nimmt automatisch alle offenen
+    Angebots-Bedarfe genau dieses Vorgangs (z.B. eine Beratung/Planung).
+    Auch ohne einen einzigen Bedarf gueltig -- ein Angebot fuer eine reine
+    Beratungsleistung ohne Material bekommt seine Positionen dann manuell
+    (Typ "Arbeitszeit") hinzugefuegt."""
+    vorgang = await session.get(Vorgang, body.vorgang_id)
+    if vorgang is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+
+    bedarfe = list(
+        (
+            await session.execute(
+                select(MaterialBedarf).where(
+                    MaterialBedarf.vorgang_id == body.vorgang_id,
+                    MaterialBedarf.zweck == "angebot",
+                    MaterialBedarf.status == "offen",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    if not bedarfe:
+        angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
+        angebot = Angebot(
+            mandant_id=auth.mandant_id,
+            kunde_id=vorgang.kunde_id,
+            vorgang_id=vorgang.id,
+            angebotsnummer=angebotsnummer,
+            erstellt_von=auth.user_id,
+            gueltig_bis=body.gueltig_bis,
+        )
+        session.add(angebot)
+        await session.flush()
+        await session.refresh(angebot)
+        return await to_read_model(session, angebot)
+
+    angebot = await _angebot_aus_bedarfen(session, auth, bedarfe, body.gueltig_bis)
     return await to_read_model(session, angebot)
 
 
@@ -390,6 +465,7 @@ async def add_position(
             menge=body.menge,
             einheit=body.einheit,
             einzelpreis=body.einzelpreis,
+            positionstyp=body.positionstyp,
         )
     )
     await session.flush()

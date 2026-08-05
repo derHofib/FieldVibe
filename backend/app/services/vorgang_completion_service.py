@@ -7,10 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.mangel import Mangel
+from app.models.material_bedarf import MaterialBedarf
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.vorgang import Vorgang
+from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
 from app.services.date_utils import add_intervall
+from app.services.numbering_service import next_vorgangsnummer
 
 # Ab hier gilt ein Vorgang als final -- weder ueber PATCH /vorgaenge/{id} noch
 # ueber neue Events (Kommentar/Foto/Unterschrift) veraenderbar. "abgerechnet"
@@ -20,13 +23,28 @@ VORGANG_STATUS_GESCHLOSSEN = frozenset({"abgeschlossen", "abgerechnet", "stornie
 
 
 async def close_vorgang(
-    session: AsyncSession, vorgang: Vorgang, *, alter_status: str, author_user_id: UUID
-) -> None:
+    session: AsyncSession,
+    vorgang: Vorgang,
+    *,
+    alter_status: str,
+    author_user_id: UUID,
+    folge_leistungstyp: str | None = None,
+) -> Vorgang | None:
     """Schliesst einen Vorgang ab: setzt Status/abgeschlossen_am, protokolliert
     den Statuswechsel und stoesst alle Folgeaktionen an (Pruefzyklus- und
     Dauerauftrag-Faelligkeit fortschreiben, verknuepfte Maengel als behoben
     markieren). Gemeinsam genutzt von PATCH /vorgaenge/{id} (status=abgeschlossen)
-    und dem Unterschrift-Upload, der einen Vorgang automatisch abschliesst."""
+    und dem Unterschrift-Upload, der einen Vorgang automatisch abschliesst.
+
+    folge_leistungstyp ist ausschliesslich fuer den Beratung-Workflow
+    gedacht (siehe app/api/routes/vorgaenge.py fuer die Validierung, dass
+    dies nur bei leistungstyp="beratung" mitgeschickt werden darf): legt
+    einen Folge-Vorgang mit diesem Leistungstyp an, uebernimmt Kunde/
+    Anlage(n)/Standort/Vertrag sowie die offenen Angebots-Materialbedarfe
+    (die am Original-Vorgang zur Dokumentation stehen bleiben, aber auf
+    Status "uebertragen" wechseln, damit sie nicht doppelt als offen
+    gelten) und gibt den neuen Vorgang zurueck, damit der Aufrufer ihn in
+    der Antwort verlinken kann."""
     vorgang.status = "abgeschlossen"
     if vorgang.abgeschlossen_am is None:
         vorgang.abgeschlossen_am = datetime.now(timezone.utc)
@@ -139,3 +157,84 @@ async def close_vorgang(
     for mangel in offene_maengel:
         mangel.status = "behoben"
         mangel.behoben_am = vorgang.abgeschlossen_am
+
+    if folge_leistungstyp is None:
+        return None
+
+    vorgangsnummer = await next_vorgangsnummer(session, vorgang.mandant_id)
+    folge_vorgang = Vorgang(
+        mandant_id=vorgang.mandant_id,
+        vorgangsnummer=vorgangsnummer,
+        kunde_id=vorgang.kunde_id,
+        anlage_id=vorgang.anlage_id,
+        standort_id=vorgang.standort_id,
+        vertrag_id=vorgang.vertrag_id,
+        parent_vorgang_id=vorgang.id,
+        titel=vorgang.titel,
+        beschreibung=vorgang.beschreibung,
+        abrechnungsart=vorgang.abrechnungsart,
+        leistungstyp=folge_leistungstyp,
+        prioritaet=vorgang.prioritaet,
+        erstellt_von=author_user_id,
+    )
+    session.add(folge_vorgang)
+    await session.flush()
+
+    weitere_anlagen = (
+        await session.execute(
+            select(VorgangAnlage.anlage_id).where(VorgangAnlage.vorgang_id == vorgang.id)
+        )
+    ).scalars().all()
+    for anlage_id in weitere_anlagen:
+        session.add(
+            VorgangAnlage(vorgang_id=folge_vorgang.id, anlage_id=anlage_id, mandant_id=vorgang.mandant_id)
+        )
+
+    offene_angebots_bedarfe = (
+        await session.execute(
+            select(MaterialBedarf).where(
+                MaterialBedarf.vorgang_id == vorgang.id,
+                MaterialBedarf.zweck == "angebot",
+                MaterialBedarf.status == "offen",
+            )
+        )
+    ).scalars().all()
+    for bedarf in offene_angebots_bedarfe:
+        session.add(
+            MaterialBedarf(
+                mandant_id=vorgang.mandant_id,
+                material_id=bedarf.material_id,
+                vorgang_id=folge_vorgang.id,
+                menge=bedarf.menge,
+                notiz=bedarf.notiz,
+                zweck=bedarf.zweck,
+                erstellt_von=author_user_id,
+                uebernommen_von_id=bedarf.id,
+            )
+        )
+        bedarf.status = "uebertragen"
+
+    session.add(
+        VorgangEvent(
+            mandant_id=vorgang.mandant_id,
+            vorgang_id=vorgang.id,
+            event_type="system",
+            is_system=True,
+            author_user_id=author_user_id,
+            body=f"Folge-Vorgang {vorgangsnummer} ({folge_leistungstyp}) angelegt.",
+            payload={"folge_vorgang_id": str(folge_vorgang.id)},
+        )
+    )
+    session.add(
+        VorgangEvent(
+            mandant_id=vorgang.mandant_id,
+            vorgang_id=folge_vorgang.id,
+            event_type="system",
+            is_system=True,
+            author_user_id=author_user_id,
+            body=f"Angelegt als Folge-Vorgang von {vorgang.vorgangsnummer}.",
+            payload={"quelle_vorgang_id": str(vorgang.id)},
+        )
+    )
+
+    return folge_vorgang

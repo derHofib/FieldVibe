@@ -6,7 +6,7 @@ import { angeboteApi, kundenApi } from "../../api/endpoints";
 import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { openPdfBlob } from "../../utils/pdf";
-import type { AngebotStatus } from "../../types";
+import type { AngebotPositionstyp, AngebotStatus } from "../../types";
 
 const STATUS_LABEL: Record<AngebotStatus, string> = {
   entwurf: "Entwurf",
@@ -15,12 +15,18 @@ const STATUS_LABEL: Record<AngebotStatus, string> = {
   abgelehnt: "Abgelehnt",
 };
 
+const POSITIONSTYP_LABEL: Record<AngebotPositionstyp, string> = {
+  material: "Material",
+  arbeitszeit: "Arbeitszeit",
+};
+
 interface NeuePosition {
   artikelnummer: string;
   beschreibung: string;
   menge: string;
   einheit: string;
   einzelpreis: string;
+  positionstyp: AngebotPositionstyp;
 }
 
 export function AngebotDetailPage() {
@@ -36,6 +42,7 @@ export function AngebotDetailPage() {
     menge: "1",
     einheit: "Stk",
     einzelpreis: "0",
+    positionstyp: "material",
   });
 
   const deleteMutation = useMutation({
@@ -65,10 +72,18 @@ export function AngebotDetailPage() {
         menge: form.menge,
         einheit: form.einheit,
         einzelpreis: form.einzelpreis,
+        positionstyp: form.positionstyp,
       }),
     onSuccess: () => {
       setShowForm(false);
-      setForm({ artikelnummer: "", beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
+      setForm({
+        artikelnummer: "",
+        beschreibung: "",
+        menge: "1",
+        einheit: "Stk",
+        einzelpreis: "0",
+        positionstyp: "material",
+      });
       queryClient.invalidateQueries({ queryKey: ["angebot", id] });
     },
   });
@@ -145,6 +160,22 @@ export function AngebotDetailPage() {
 
         {showForm && (
           <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
+            <div className="flex gap-1.5">
+              {(["material", "arbeitszeit"] as AngebotPositionstyp[]).map((typ) => (
+                <button
+                  key={typ}
+                  type="button"
+                  onClick={() => setForm({ ...form, positionstyp: typ })}
+                  className={`btn-touch rounded-md px-3 py-1.5 text-xs font-medium ${
+                    form.positionstyp === typ
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-slate-600 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
+                  }`}
+                >
+                  {POSITIONSTYP_LABEL[typ]}
+                </button>
+              ))}
+            </div>
             <input
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
@@ -202,6 +233,11 @@ export function AngebotDetailPage() {
               >
                 <div>
                   <div className="text-slate-700 dark:text-slate-300">
+                    {p.positionstyp === "arbeitszeit" && (
+                      <span className="mr-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                        {POSITIONSTYP_LABEL.arbeitszeit}
+                      </span>
+                    )}
                     {p.artikelnummer && (
                       <span className="mr-1.5 text-xs text-slate-400 dark:text-slate-500">{p.artikelnummer}</span>
                     )}

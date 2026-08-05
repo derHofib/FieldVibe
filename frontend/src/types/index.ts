@@ -246,6 +246,9 @@ export interface Vorgang {
   erstellt_von: string | null;
   created_at: string;
   updated_at: string;
+  // Nur gesetzt in der Antwort auf genau die PATCH-Anfrage, die diesen
+  // Folge-Vorgang beim Beratungsabschluss erzeugt hat (siehe close_vorgang).
+  folge_vorgang_id?: string | null;
 }
 
 // --- Auftragsanfragen (Kundenportal) ----------------------------------------
@@ -581,6 +584,7 @@ export interface Mangel {
 }
 
 export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt";
+export type AngebotPositionstyp = "material" | "arbeitszeit";
 
 export interface AngebotPosition {
   id: string;
@@ -590,6 +594,7 @@ export interface AngebotPosition {
   menge: string;
   einheit: string;
   einzelpreis: string;
+  positionstyp: AngebotPositionstyp;
   gesamt: string;
 }
 
@@ -716,7 +721,13 @@ export interface Lieferant {
 }
 
 export type MaterialBedarfZweck = "bestellung" | "angebot";
-export type MaterialBedarfStatus = "offen" | "bestellt" | "in_angebot" | "erhalten" | "storniert";
+export type MaterialBedarfStatus =
+  | "offen"
+  | "bestellt"
+  | "in_angebot"
+  | "erhalten"
+  | "storniert"
+  | "uebertragen";
 
 export interface MaterialBedarf {
   id: string;
@@ -729,6 +740,7 @@ export interface MaterialBedarf {
   bestellung_id: string | null;
   angebot_id: string | null;
   erstellt_von: string;
+  uebernommen_von_id: string | null;
   created_at: string;
 }
 

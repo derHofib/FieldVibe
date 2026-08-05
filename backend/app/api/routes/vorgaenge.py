@@ -503,6 +503,17 @@ async def update_vorgang(
             status_code=status.HTTP_409_CONFLICT,
             detail="Vorgang ist abgeschlossen und kann nicht mehr geändert werden",
         )
+    # Kein echtes Vorgang-Feld -- steuert nur close_vorgang() weiter unten,
+    # sonst wuerde die generische setattr-Schleife es als beliebiges
+    # Instanz-Attribut auf dem ORM-Objekt landen lassen.
+    folge_leistungstyp = changes.pop("folge_leistungstyp", None)
+    if folge_leistungstyp is not None and (
+        vorgang.leistungstyp != "beratung" or changes.get("status") != "abgeschlossen"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="folge_leistungstyp ist nur beim Abschluss eines Beratungs-Vorgangs gültig",
+        )
     alter_status = vorgang.status
     alter_kunde_id = vorgang.kunde_id
 
@@ -601,10 +612,15 @@ async def update_vorgang(
             )
         )
 
+    folge_vorgang = None
     if "status" in changes and changes["status"] != alter_status:
         if changes["status"] == "abgeschlossen":
-            await close_vorgang(
-                session, vorgang, alter_status=alter_status, author_user_id=auth.user_id
+            folge_vorgang = await close_vorgang(
+                session,
+                vorgang,
+                alter_status=alter_status,
+                author_user_id=auth.user_id,
+                folge_leistungstyp=folge_leistungstyp,
             )
         else:
             session.add(
@@ -623,6 +639,10 @@ async def update_vorgang(
         await event_bus.publish(
             auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
         )
+    if folge_vorgang is not None:
+        # Kein echtes Feld auf Vorgang -- nur transient auf dieser einen
+        # Antwort gesetzt, siehe VorgangRead.folge_vorgang_id.
+        vorgang.folge_vorgang_id = folge_vorgang.id
     return vorgang
 
 

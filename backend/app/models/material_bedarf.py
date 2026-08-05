@@ -8,7 +8,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 MATERIAL_BEDARF_ZWECKE = ("bestellung", "angebot")
-MATERIAL_BEDARF_STATUS = ("offen", "bestellt", "in_angebot", "erhalten", "storniert")
+# "uebertragen": beim Abschluss einer Beratung mit gewaehltem Folge-
+# Leistungstyp werden offene Angebots-Bedarfe auf den neu angelegten
+# Folge-Vorgang kopiert (siehe vorgang_completion_service.close_vorgang);
+# der Original-Bedarf bekommt diesen Status statt geloescht/veraendert zu
+# werden, damit er am (jetzt abgeschlossenen) Ursprungs-Vorgang weiterhin
+# als Information sichtbar bleibt, aber nicht mehr als "offen" doppelt
+# gemeldet wird.
+MATERIAL_BEDARF_STATUS = ("offen", "bestellt", "in_angebot", "erhalten", "storniert", "uebertragen")
 
 
 class MaterialBedarf(SoftDeleteMixin, TimestampMixin, Base):
@@ -59,4 +66,9 @@ class MaterialBedarf(SoftDeleteMixin, TimestampMixin, Base):
     )
     erstellt_von: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    # Gesetzt auf dem NEUEN Bedarf (am Folge-Vorgang), zeigt zurueck auf den
+    # Original-Bedarf, von dem er beim Beratungsabschluss uebernommen wurde.
+    uebernommen_von_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("material_bedarfe.id"), nullable=True
     )

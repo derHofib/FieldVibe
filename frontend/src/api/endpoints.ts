@@ -4,6 +4,7 @@ import type {
   Adresse,
   Angebot,
   AngebotPosition,
+  AngebotPositionstyp,
   Anlage,
   AnlagenFeldDefinition,
   AnlagenFeldTyp,
@@ -392,7 +393,12 @@ export const vorgaengeApi = {
         | "standort_id"
         | "faelligkeit_am"
       >
-    >
+    > & {
+      // Nur bei status="abgeschlossen" auf einem Vorgang mit
+      // leistungstyp="beratung" gueltig -- legt einen Folge-Vorgang an
+      // (siehe close_vorgang im Backend).
+      folge_leistungstyp?: Leistungstyp;
+    }
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/vorgaenge/${id}`, { method: "DELETE" }),
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/vorgaenge/${id}/emails`),
@@ -631,10 +637,16 @@ export const angeboteApi = {
       method: "POST",
       body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, gueltig_bis: gueltigBis }),
     }),
+  createFromVorgang: (vorgangId: string, gueltigBis?: string) =>
+    apiFetch<Angebot>("/api/angebote/from-vorgang", {
+      method: "POST",
+      body: JSON.stringify({ vorgang_id: vorgangId, gueltig_bis: gueltigBis }),
+    }),
   addPosition: (
     id: string,
     body: Pick<AngebotPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
       artikelnummer?: string;
+      positionstyp?: AngebotPositionstyp;
     },
   ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   updateStatus: (id: string, status: string) =>

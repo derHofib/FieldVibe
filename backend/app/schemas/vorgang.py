@@ -59,6 +59,11 @@ class VorgangUpdate(BaseModel):
     status: VorgangStatusSetzbar | None = None
     prioritaet: int | None = Field(default=None, ge=1, le=5)
     faelligkeit_am: datetime | None = None
+    # Nur zusammen mit status="abgeschlossen" auf einem Vorgang mit
+    # leistungstyp="beratung" gueltig: legt einen Folge-Vorgang mit diesem
+    # Leistungstyp an, der Kunde/Anlage(n)/Standort sowie die offenen
+    # Angebots-Materialbedarfe uebernimmt (siehe close_vorgang).
+    folge_leistungstyp: Leistungstyp | None = None
 
 
 class VorgangRead(BaseModel):
@@ -85,3 +90,7 @@ class VorgangRead(BaseModel):
     erstellt_von: UUID | None
     created_at: datetime
     updated_at: datetime
+    # Nur in der Antwort auf genau die PATCH-Anfrage gesetzt, die diesen
+    # Folge-Vorgang erzeugt hat (siehe close_vorgang) -- keine persistierte
+    # Spalte, sonst ueberall sonst None.
+    folge_vorgang_id: UUID | None = None
