@@ -4,6 +4,7 @@ import uuid
 import pytest
 from PIL import Image
 
+from app.services.photo_service import make_thumbnail
 from tests.conftest import auth_headers, login
 
 
@@ -12,6 +13,32 @@ def _make_test_image_bytes(size=(600, 600)) -> bytes:
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
     return buf.getvalue()
+
+
+def _make_test_image_bytes_mit_exif_rotation(size=(800, 600), orientation=6) -> bytes:
+    """Physisch querformatige Pixel (800x600) mit EXIF-Orientation=6 ("um 90°
+    drehen") -- genau wie es Handykameras beim Hochkant-Fotografieren
+    speichern: visuell hochkant, physisch quer."""
+    img = Image.new("RGB", size, color=(120, 200, 80))
+    exif = img.getexif()
+    exif[0x0112] = orientation
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", exif=exif.tobytes())
+    return buf.getvalue()
+
+
+@pytest.mark.asyncio
+async def test_thumbnail_respektiert_exif_orientierung():
+    """Ein mit EXIF als hochkant markiertes Foto (physisch 800x600, Tag
+    Orientation=6) muss nach dem Thumbnail-Erzeugen auch als hochkant
+    vorliegen (Breite < Hoehe) -- sonst wird es ueberall, wo das Thumbnail
+    angezeigt wird, faelschlich im Querformat dargestellt."""
+    quer_pixel_hochkant_exif = _make_test_image_bytes_mit_exif_rotation()
+
+    thumbnail_bytes = await make_thumbnail(quer_pixel_hochkant_exif)
+
+    thumbnail = Image.open(io.BytesIO(thumbnail_bytes))
+    assert thumbnail.width < thumbnail.height
 
 
 @pytest.mark.asyncio
