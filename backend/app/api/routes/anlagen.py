@@ -24,19 +24,13 @@ from app.schemas.anlage import AnlageCreate, AnlageRead, AnlageUpdate
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import AnlageProfil
 from app.services import papierkorb_service
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/anlagen",
     tags=["anlagen"],
-    dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        )
-    ],
+    dependencies=[Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))],
 )
 
 
@@ -92,7 +86,9 @@ async def list_anlagen(
         stmt = stmt.where(Anlage.objekttyp == objekttyp)
     if aktiv is not None:
         stmt = stmt.where(Anlage.aktiv == aktiv)
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         # Interne Objekte (Fahrzeuge/Lager/Baustellen, kunde_id NULL) sind
         # keine Kundendaten und daher unabhaengig von der Kunde-Zuweisung
         # immer sichtbar -- nur echte Kundenanlagen werden eingeschraenkt.
@@ -107,14 +103,14 @@ async def list_anlagen(
     response_model=AnlageRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_module("kundenverwaltung", "material")),
-        Depends(require_recht("kunden", "bearbeiten")),
+        Depends(require_recht("kunden", "erstellen")),
     ],
 )
 async def create_anlage(
     body: AnlageCreate,
-    auth=Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Anlage:
     if body.kunde_id is not None:
@@ -151,8 +147,11 @@ async def create_anlage(
 
 
 async def _require_anlage_zugriff(session: AsyncSession, auth: AuthContext, anlage: Anlage) -> None:
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
     if (
-        auth.role == "techniker"
+        beschraenkt
         and anlage.kunde_id is not None
         and anlage.kunde_id not in await assigned_kunde_ids(session, auth.user_id)
     ):
@@ -176,8 +175,11 @@ async def get_anlage_by_qr(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
         )
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
     if (
-        auth.role == "techniker"
+        beschraenkt
         and anlage.kunde_id is not None
         and anlage.kunde_id not in await assigned_kunde_ids(session, auth.user_id)
     ):
@@ -264,7 +266,7 @@ async def get_anlage_profil(
     "/{anlage_id}",
     response_model=AnlageRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_module("kundenverwaltung", "material")),
         Depends(require_recht("kunden", "bearbeiten")),
     ],
@@ -296,7 +298,8 @@ async def update_anlage(
     "/{anlage_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("kunden", "loeschen")),
         Depends(require_module("kundenverwaltung", "material")),
     ],
 )

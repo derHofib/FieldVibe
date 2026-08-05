@@ -6,7 +6,14 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.email_log import EmailLog
 from app.models.lieferant import Lieferant
@@ -29,13 +36,15 @@ router = APIRouter(
     prefix="/api/bestellungen",
     tags=["bestellungen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("material")),
     ],
 )
 
 
-@router.get("", response_model=list[BestellungRead])
+@router.get(
+    "", response_model=list[BestellungRead], dependencies=[Depends(require_recht("material", "sehen"))]
+)
 async def list_bestellungen(session: AsyncSession = Depends(get_db)) -> list[BestellungRead]:
     result = await session.execute(
         select(Bestellung)
@@ -45,7 +54,11 @@ async def list_bestellungen(session: AsyncSession = Depends(get_db)) -> list[Bes
     return [await to_read_model(session, b) for b in result.scalars().all()]
 
 
-@router.get("/{bestellung_id}", response_model=BestellungRead)
+@router.get(
+    "/{bestellung_id}",
+    response_model=BestellungRead,
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def get_bestellung(bestellung_id: UUID, session: AsyncSession = Depends(get_db)) -> BestellungRead:
     bestellung = await session.get(Bestellung, bestellung_id)
     if bestellung is None or bestellung.geloescht_am is not None:
@@ -53,7 +66,11 @@ async def get_bestellung(bestellung_id: UUID, session: AsyncSession = Depends(ge
     return await to_read_model(session, bestellung)
 
 
-@router.delete("/{bestellung_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{bestellung_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_recht("material", "loeschen"))],
+)
 async def delete_bestellung(
     bestellung_id: UUID,
     auth: AuthContext = Depends(get_current_user),
@@ -70,7 +87,10 @@ async def delete_bestellung(
     "/from-bedarfe",
     response_model=BestellungRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_bestellung_from_bedarfe(
     body: BestellungAusBedarfenCreate,
@@ -169,7 +189,10 @@ async def create_bestellung_from_bedarfe(
 @router.patch(
     "/{bestellung_id}",
     response_model=BestellungRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_bestellung(
     bestellung_id: UUID,
@@ -255,7 +278,10 @@ async def list_bestellung_emails(
     "/{bestellung_id}/email",
     response_model=EmailLogRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def send_bestellung_email(
     bestellung_id: UUID,

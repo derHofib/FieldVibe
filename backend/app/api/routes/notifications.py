@@ -11,7 +11,7 @@ from app.schemas.notification import NotificationRead
 router = APIRouter(
     prefix="/api/notifications",
     tags=["notifications"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[Depends(require_roles("mandant_admin", "custom"))],
 )
 
 

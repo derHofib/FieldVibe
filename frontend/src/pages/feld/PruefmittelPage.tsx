@@ -33,7 +33,7 @@ interface NeuesForm {
 }
 
 export function PruefmittelPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -73,7 +73,7 @@ export function PruefmittelPage() {
 
   const kannLoeschen = currentUser?.role === "loesch_operativ";
 
-  if (currentUser && currentUser.role === "techniker") return <Navigate to="/feed" replace />;
+  if (currentUser && !hatRecht("material", "sehen")) return <Navigate to="/feed" replace />;
 
   const sortiert = [...(pruefmittel ?? [])].sort((a, b) =>
     a.naechste_kalibrierung_am.localeCompare(b.naechste_kalibrierung_am),

@@ -38,12 +38,7 @@ router = APIRouter(
     prefix="/api/material",
     tags=["material"],
     dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        ),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("material")),
         Depends(require_recht("material", "sehen")),
     ],
@@ -184,9 +179,7 @@ async def list_material(
     ]
 
 
-@router.get(
-    "/export/csv", dependencies=[Depends(require_roles("mandant_admin", "disponent"))]
-)
+@router.get("/export/csv")
 async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Response:
     result = await session.execute(
         select(Material, MaterialBestand, Anlage.bezeichnung)
@@ -224,7 +217,10 @@ async def get_material(material_id: UUID, session: AsyncSession = Depends(get_db
     "",
     response_model=MaterialRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_material(
     body: MaterialCreate,
@@ -273,7 +269,10 @@ async def create_material(
 @router.patch(
     "/{material_id}",
     response_model=MaterialRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_material(
     material_id: UUID, body: MaterialUpdate, session: AsyncSession = Depends(get_db)
@@ -294,7 +293,10 @@ async def update_material(
 @router.delete(
     "/{material_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("material", "loeschen")),
+    ],
 )
 async def delete_material(
     material_id: UUID,
@@ -314,7 +316,10 @@ async def delete_material(
 @router.put(
     "/{material_id}/bestand/{lager_id}",
     response_model=MaterialRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def bestand_setzen(
     material_id: UUID,
@@ -361,17 +366,7 @@ async def bestand_setzen(
     return await _material_read(session, material)
 
 
-@router.post(
-    "/{material_id}/umlagern",
-    response_model=MaterialRead,
-    dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"
-            )
-        )
-    ],
-)
+@router.post("/{material_id}/umlagern", response_model=MaterialRead)
 async def umlagern(
     material_id: UUID,
     body: MaterialUmlagernRequest,
@@ -429,13 +424,6 @@ async def bewegungen(
     "/{material_id}/verwendung",
     response_model=MaterialVerwendungRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"
-            )
-        )
-    ],
 )
 async def verwendung_erfassen(
     material_id: UUID,

@@ -19,11 +19,8 @@ export function DauerauftragDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
-  const kannVerwalten =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
+  const { hatRecht } = useAuth();
+  const kannVerwalten = hatRecht("dispo", "bearbeiten");
 
   const [editIntervall, setEditIntervall] = useState<string | null>(null);
   const [anlagenBearbeiten, setAnlagenBearbeiten] = useState(false);

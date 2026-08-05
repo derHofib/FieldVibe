@@ -21,6 +21,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.services.event_bus import event_bus
 from app.services.fahrzeug_zuweisung_service import technikern_zugewiesen
 from app.services.numbering_service import next_vorgangsnummer
+from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 
 SCHEDULER_AKTION = "pruefzyklen_scheduler_run"
 DAUERAUFTRAEGE_SCHEDULER_AKTION = "dauerauftraege_scheduler_run"
@@ -44,13 +45,10 @@ async def mandanten_faellig_um(session: AsyncSession, stunde_utc: int) -> list[U
 
 
 async def _admins_und_disponenten(session: AsyncSession, mandant_id) -> list[User]:
-    result = await session.execute(
-        select(User).where(
-            User.mandant_id == mandant_id,
-            User.role.in_(("mandant_admin", "disponent")),
-            User.aktiv.is_(True),
-        )
-    )
+    user_ids = await dispo_verantwortliche_user_ids(session, mandant_id)
+    if not user_ids:
+        return []
+    result = await session.execute(select(User).where(User.id.in_(user_ids)))
     return list(result.scalars().all())
 
 

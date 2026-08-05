@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes import (
+    account_typen,
     angebote,
     anlagen,
     anlagen_feld_definitionen,
@@ -34,7 +35,6 @@ from app.api.routes import (
     pruefmittel,
     pruefzyklen,
     rechnungen,
-    rechte,
     search,
     standorte,
     stories,
@@ -82,6 +82,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(account_typen.router)
 app.include_router(angebote.router)
 app.include_router(mandanten.router)
 app.include_router(users.router)
@@ -119,7 +120,6 @@ app.include_router(bestellungen.router)
 app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
-app.include_router(rechte.router)
 app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)

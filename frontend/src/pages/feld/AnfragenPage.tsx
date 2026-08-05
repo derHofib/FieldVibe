@@ -177,7 +177,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
 }
 
 export function AnfragenPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const [statusFilter, setStatusFilter] = useState<"offen" | "alle">("offen");
 
   const { data: anfragen, isLoading } = useQuery({
@@ -185,7 +185,7 @@ export function AnfragenPage() {
     queryFn: () => vorgangAnfragenApi.list(statusFilter === "offen" ? "offen" : undefined),
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "disponent") {
+  if (currentUser && !hatRecht("vorgaenge", "bearbeiten")) {
     return <Navigate to="/feed" replace />;
   }
 

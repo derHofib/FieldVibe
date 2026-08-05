@@ -66,6 +66,7 @@ def _create_token(
     mandant_id: UUID | None,
     token_type: TokenType,
     expires_delta: timedelta,
+    account_typ_id: UUID | None = None,
     extra_claims: dict | None = None,
 ) -> str:
     now = datetime.now(timezone.utc)
@@ -73,6 +74,7 @@ def _create_token(
         "sub": str(subject),
         "role": role,
         "mandant_id": str(mandant_id) if mandant_id else None,
+        "account_typ_id": str(account_typ_id) if account_typ_id else None,
         "type": token_type.value,
         "iat": now,
         "exp": now + expires_delta,
@@ -83,24 +85,26 @@ def _create_token(
 
 
 def create_access_token(
-    *, subject: UUID, role: str, mandant_id: UUID | None
+    *, subject: UUID, role: str, mandant_id: UUID | None, account_typ_id: UUID | None = None
 ) -> str:
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
+        account_typ_id=account_typ_id,
         token_type=TokenType.ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
     )
 
 
 def create_refresh_token(
-    *, subject: UUID, role: str, mandant_id: UUID | None
+    *, subject: UUID, role: str, mandant_id: UUID | None, account_typ_id: UUID | None = None
 ) -> str:
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
+        account_typ_id=account_typ_id,
         token_type=TokenType.REFRESH,
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
     )

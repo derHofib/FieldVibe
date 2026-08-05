@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.user import User
@@ -12,6 +19,7 @@ from app.schemas.anlage import AnlageRead
 from app.schemas.fahrzeug_zuweisung import FahrzeugZuweisungSetzen, FahrzeugZuweisungUebersicht
 from app.schemas.user import UserRead
 from app.services import papierkorb_service
+from app.services.zuweisung_service import technik_user_ids
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -20,7 +28,7 @@ router = APIRouter(
     prefix="/api/fahrzeug-zuweisungen",
     tags=["fahrzeug-zuweisungen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("fahrzeuge")),
     ],
 )
@@ -38,13 +46,19 @@ async def _zuweisung_fuer(session: AsyncSession, user_id: UUID) -> FahrzeugZuwei
 @router.get(
     "",
     response_model=list[FahrzeugZuweisungUebersicht],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "sehen")),
+    ],
 )
-async def uebersicht(session: AsyncSession = Depends(get_db)) -> list[FahrzeugZuweisungUebersicht]:
+async def uebersicht(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> list[FahrzeugZuweisungUebersicht]:
     """Fuer den Disponent: welcher Techniker faehrt welches Fahrzeug.
     Zeigt auch Techniker ohne Zuweisung (fahrzeug=None)."""
+    techniker_ids = await technik_user_ids(session, auth.mandant_id)
     techniker_result = await session.execute(
-        select(User).where(User.role == "techniker").order_by(User.name)
+        select(User).where(User.id.in_(techniker_ids)).order_by(User.name)
     )
     techniker_liste = list(techniker_result.scalars().all())
 
@@ -83,7 +97,10 @@ async def meine_zuweisung(
 @router.put(
     "/{user_id}",
     response_model=AnlageRead | None,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "bearbeiten")),
+    ],
 )
 async def zuweisung_setzen(
     user_id: UUID,
@@ -92,7 +109,7 @@ async def zuweisung_setzen(
     session: AsyncSession = Depends(get_db),
 ) -> Anlage | None:
     techniker = await session.get(User, user_id)
-    if techniker is None or techniker.role != "techniker":
+    if techniker is None or user_id not in await technik_user_ids(session, auth.mandant_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Techniker nicht gefunden"
         )

@@ -36,6 +36,7 @@ from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
@@ -45,14 +46,7 @@ from app.services.zuweisung_service import assigned_kunde_ids
 router = APIRouter(
     prefix="/api/vorgaenge",
     tags=["vorgaenge"],
-    dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        )
-    ],
+    dependencies=[Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))],
 )
 
 
@@ -97,7 +91,9 @@ async def list_vorgaenge(
             Vorgang.faelligkeit_am
             < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         )
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -133,9 +129,9 @@ async def _validate_references(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if auth.role == "techniker" and body.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ) and body.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Dieser Kunde ist dir nicht zugewiesen",
@@ -185,11 +181,8 @@ async def _validate_references(
     response_model=VorgangRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin
-        # (siehe app/api/deps.py:require_roles()) und darf Vorgaenge daher
-        # auch anlegen.
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
-        Depends(require_recht("vorgaenge", "bearbeiten")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "erstellen")),
     ],
 )
 async def create_vorgang(
@@ -269,19 +262,27 @@ async def create_vorgang(
 async def _require_vorgang_zugriff(
     session: AsyncSession, auth: AuthContext, vorgang: Vorgang
 ) -> None:
-    if auth.role == "techniker" and vorgang.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
+    if beschraenkt and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
 
 
-@router.get("/export/csv", dependencies=[Depends(require_module("statistik"))])
+@router.get(
+    "/export/csv",
+    dependencies=[
+        Depends(require_module("statistik")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "sehen")),
+    ],
+)
 async def export_vorgaenge_csv(
     status_filter: str | None = Query(default=None, alias="status"),
     kunde_id: UUID | None = Query(default=None),
     von: date | None = Query(default=None),
     bis: date | None = Query(default=None),
-    auth: AuthContext = Depends(require_roles("mandant_admin", "disponent")),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     stmt = select(Vorgang).order_by(Vorgang.created_at.asc())
@@ -372,7 +373,7 @@ async def list_vorgang_anlagen(
     response_model=list[AnlageRead],
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_recht("vorgaenge", "bearbeiten")),
     ],
 )
@@ -411,7 +412,7 @@ async def add_vorgang_anlagen(
     "/{vorgang_id}/anlagen/{anlage_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_recht("vorgaenge", "bearbeiten")),
     ],
 )
@@ -450,7 +451,7 @@ async def list_vorgang_emails(
     response_model=EmailLogRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_recht("vorgaenge", "bearbeiten")),
     ],
 )
@@ -482,7 +483,7 @@ async def send_vorgang_email(
     "/{vorgang_id}",
     response_model=VorgangRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_recht("vorgaenge", "bearbeiten")),
     ],
 )
@@ -524,9 +525,9 @@ async def update_vorgang(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
-        if auth.role == "techniker" and neuer_kunde_id not in await assigned_kunde_ids(
-            session, auth.user_id
-        ):
+        if await ist_auf_zugewiesene_kunden_beschraenkt(
+            session, role=auth.role, account_typ_id=auth.account_typ_id
+        ) and neuer_kunde_id not in await assigned_kunde_ids(session, auth.user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Dieser Kunde ist dir nicht zugewiesen",
@@ -649,7 +650,10 @@ async def update_vorgang(
 @router.delete(
     "/{vorgang_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("vorgaenge", "loeschen")),
+    ],
 )
 async def delete_vorgang(
     vorgang_id: UUID,

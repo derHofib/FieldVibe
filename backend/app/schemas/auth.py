@@ -31,10 +31,23 @@ class CurrentUser(BaseModel):
     mandant_id: UUID | None
     mandant_name: str | None = None
     role: str
+    account_typ_id: UUID | None = None
+    account_typ_name: str | None = None
+    # Gespiegelt aus AccountTyp.nur_zugewiesene_kunden -- ersetzt im
+    # Frontend das fruehere role === "techniker" fuer rein UX-seitige
+    # Unterscheidungen (z.B. "eigenes Fahrzeug"-Materialbestand vorschlagen).
+    nur_zugewiesene_kunden: bool = False
     name: str
     email: str
     impersonated_by: UUID | None = None
     deaktivierte_module: list[str] = []
+    # Effektive Rechte-Matrix dieser Session (Bereich -> Liste erlaubter
+    # Aktionen). role != "custom" (mandant_admin/super_admin/loesch_*)
+    # bekommt IMMER alle Bereiche/Aktionen, da diese Rollen ohnehin an
+    # jedem require_recht()-Gate vorbeikommen (siehe app/api/deps.py) --
+    # das Frontend kann so unconditionell auf dieser Matrix pruefen, statt
+    # Rollennamen fest zu verdrahten.
+    rechte: dict[str, list[str]] = {}
 
 
 class ImpersonateResponse(BaseModel):

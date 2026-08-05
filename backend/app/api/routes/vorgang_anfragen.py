@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.models.anlage import Anlage
 from app.models.standort import Standort
 from app.models.vorgang import Vorgang
@@ -23,7 +23,10 @@ from app.services.numbering_service import next_vorgangsnummer
 router = APIRouter(
     prefix="/api/vorgang-anfragen",
     tags=["vorgang-anfragen"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
 )
 
 

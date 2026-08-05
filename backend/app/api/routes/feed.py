@@ -18,14 +18,13 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.feed import FeedCard, FeedResponse
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/feed",
     tags=["feed"],
-    dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ"))
-    ],
+    dependencies=[Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))],
 )
 
 DEFAULT_PAGE_SIZE = 20
@@ -118,7 +117,9 @@ async def get_feed(
             Vorgang.faelligkeit_am
             < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         )
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     if tag:
         stmt = stmt.where(

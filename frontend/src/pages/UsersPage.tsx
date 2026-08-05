@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
-import { mandantenApi, usersApi } from "../api/endpoints";
+import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { Role } from "../types";
@@ -10,17 +10,21 @@ import type { Role } from "../types";
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
   mandant_admin: "Mandanten-Admin",
-  disponent: "Disponent",
-  techniker: "Techniker",
-  controller: "Controller",
-  mitarbeiter: "Mitarbeiter",
+  custom: "Account-Typ",
   loesch_ansicht: "Papierkorb (nur Ansicht)",
   loesch_operativ: "Papierkorb (operativ)",
 };
 
-// Nur super_admin darf diese Rollen vergeben (siehe app/api/routes/users.py) --
-// ein mandant_admin sieht sie im Anlage-Dropdown gar nicht erst.
-const SUPER_ADMIN_ONLY_ROLES: Role[] = ["super_admin", "loesch_ansicht", "loesch_operativ"];
+// Nur super_admin darf diese Rollen vergeben (siehe app/api/routes/users.py).
+// "custom" fehlt hier bewusst: ein Account-Typ ist an genau einen Mandanten
+// gebunden (siehe app/api/routes/account_typen.py, mandant_admin-only), ein
+// nicht-impersonierender super_admin hat also gar keinen Account-Typ-Katalog,
+// aus dem er waehlen koennte.
+const SUPER_ADMIN_ROLLEN: Role[] = ["super_admin", "mandant_admin", "loesch_ansicht", "loesch_operativ"];
+// mandant_admin darf ausser sich selbst (weiteren Admins) nur eigene
+// Account-Typen vergeben -- die Papierkorb-Rollen bleiben super_admin
+// vorbehalten (siehe _PAPIERKORB_ROLLEN in app/api/routes/users.py).
+const MANDANT_ADMIN_ROLLEN: Role[] = ["mandant_admin", "custom"];
 
 export function UsersPage() {
   const { currentUser } = useAuth();
@@ -31,7 +35,8 @@ export function UsersPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("techniker");
+  const [role, setRole] = useState<Role>("mandant_admin");
+  const [accountTypId, setAccountTypId] = useState<string>("");
   const [mandantId, setMandantId] = useState<string>("");
 
   const { data: users, isLoading } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
@@ -39,6 +44,11 @@ export function UsersPage() {
     queryKey: ["mandanten"],
     queryFn: mandantenApi.list,
     enabled: isSuperAdmin,
+  });
+  const { data: accountTypen } = useQuery({
+    queryKey: ["account-typen"],
+    queryFn: accountTypenApi.list,
+    enabled: !isSuperAdmin,
   });
 
   const createMutation = useMutation({
@@ -76,11 +86,16 @@ export function UsersPage() {
       setFormError("Bitte einen Mandanten auswählen");
       return;
     }
+    if (role === "custom" && !accountTypId) {
+      setFormError("Bitte einen Account-Typ auswählen");
+      return;
+    }
     createMutation.mutate({
       mandant_id: role === "super_admin" ? null : effectiveMandantId,
       email,
       password,
       role,
+      account_typ_id: role === "custom" ? accountTypId : null,
       name,
     });
   }
@@ -89,16 +104,6 @@ export function UsersPage() {
 
   return (
     <div className="space-y-8">
-      {(currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ") && (
-        <div className="flex justify-end">
-          <Link
-            to="/rechte-matrix"
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-          >
-            Rechte für Controller/Mitarbeiter einstellen →
-          </Link>
-        </div>
-      )}
       <section>
         <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Neuen Account anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
@@ -139,17 +144,45 @@ export function UsersPage() {
               onChange={(e) => setRole(e.target.value as Role)}
               className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
-              {Object.entries(ROLE_LABEL)
-                .filter(
-                  ([value]) => isSuperAdmin || !SUPER_ADMIN_ONLY_ROLES.includes(value as Role),
-                )
-                .map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
+              {(isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).map((value) => (
+                <option key={value} value={value}>
+                  {value === "custom" ? "Account-Typ…" : ROLE_LABEL[value]}
+                </option>
+              ))}
             </select>
           </div>
+          {role === "custom" && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Account-Typ
+              </label>
+              {accountTypen && accountTypen.length > 0 ? (
+                <select
+                  required
+                  value={accountTypId}
+                  onChange={(e) => setAccountTypId(e.target.value)}
+                  className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  <option value="" disabled>
+                    Bitte wählen…
+                  </option>
+                  {accountTypen.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.icon ? `${t.icon} ` : ""}
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Link
+                  to="/account-typen"
+                  className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400"
+                >
+                  Noch keine Account-Typen — jetzt anlegen →
+                </Link>
+              )}
+            </div>
+          )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Mandant</label>
@@ -203,7 +236,9 @@ export function UsersPage() {
                 <tr key={u.id}>
                   <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{u.name}</td>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{u.email}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{ROLE_LABEL[u.role]}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                    {u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role]}
+                  </td>
                   {isSuperAdmin && (
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
                       {u.mandant_id ? mandantNameById.get(u.mandant_id) ?? "–" : "–"}

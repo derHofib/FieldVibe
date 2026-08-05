@@ -26,9 +26,9 @@ function formatDauer(startAt: string, endeAt: string | null): number {
 
 export function StatistikPage() {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const istTechniker = currentUser?.role === "techniker";
-  const kannAuswaehlen = !istTechniker;
+  const { currentUser, hatRecht } = useAuth();
+  const kannAuswaehlen = hatRecht("mitarbeiterverwaltung", "bearbeiten");
+  const istTechniker = !kannAuswaehlen;
 
   const [technikerId, setTechnikerId] = useState<string>(istTechniker ? currentUser!.id : "");
   const [wocheMontag, setWocheMontag] = useState(() => montagDerWoche(new Date()));
@@ -38,7 +38,7 @@ export function StatistikPage() {
     queryFn: usersApi.list,
     enabled: kannAuswaehlen,
   });
-  const techniker = (users ?? []).filter((u) => u.role === "techniker");
+  const techniker = (users ?? []).filter((u) => u.nur_zugewiesene_kunden);
 
   const effectiveTechnikerId = technikerId || undefined;
 

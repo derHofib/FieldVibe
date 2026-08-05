@@ -11,6 +11,11 @@ async def test_mandant_admin_can_create_user_in_own_mandant(
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
 
+    account_typ_resp = await client.post(
+        "/api/account-typen", headers=auth_headers(token), json={"name": "Techniker"}
+    )
+    account_typ_id = account_typ_resp.json()["id"]
+
     resp = await client.post(
         "/api/users",
         headers=auth_headers(token),
@@ -18,12 +23,14 @@ async def test_mandant_admin_can_create_user_in_own_mandant(
             "mandant_id": str(mandant.id),
             "email": "neu@example.de",
             "password": "supersecret1",
-            "role": "techniker",
+            "role": "custom",
+            "account_typ_id": account_typ_id,
             "name": "Neuer Techniker",
         },
     )
     assert resp.status_code == 201
-    assert resp.json()["role"] == "techniker"
+    assert resp.json()["role"] == "custom"
+    assert resp.json()["account_typ_id"] == account_typ_id
 
 
 @pytest.mark.asyncio
@@ -44,7 +51,7 @@ async def test_mandant_admin_cannot_create_user_in_other_mandant(
             "mandant_id": str(other_mandant.id),
             "email": "eindringling@example.de",
             "password": "supersecret1",
-            "role": "techniker",
+            "role": "mandant_admin",
             "name": "Eindringling",
         },
     )
@@ -114,7 +121,7 @@ async def test_super_admin_can_create_users_across_mandanten(
             "mandant_id": str(mandant.id),
             "email": "von-super-admin@example.de",
             "password": "supersecret1",
-            "role": "disponent",
+            "role": "mandant_admin",
             "name": "Von Super Admin",
         },
     )

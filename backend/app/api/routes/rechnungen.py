@@ -31,12 +31,7 @@ router = APIRouter(
     prefix="/api/rechnungen",
     tags=["rechnungen"],
     dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        ),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("abrechnung")),
         Depends(require_recht("abrechnung", "sehen")),
     ],
@@ -77,7 +72,10 @@ async def get_rechnung(rechnung_id: UUID, session: AsyncSession = Depends(get_db
 @router.delete(
     "/{rechnung_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("abrechnung", "loeschen")),
+    ],
 )
 async def delete_rechnung(
     rechnung_id: UUID,
@@ -118,7 +116,10 @@ def _neue_positionen(
     "",
     response_model=RechnungRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "erstellen")),
+    ],
 )
 async def create_rechnung(
     body: RechnungCreate,
@@ -180,7 +181,10 @@ async def create_rechnung(
 @router.post(
     "/{rechnung_id}/positionen",
     response_model=RechnungRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
 )
 async def add_position(
     rechnung_id: UUID,
@@ -216,7 +220,10 @@ async def add_position(
 @router.patch(
     "/{rechnung_id}",
     response_model=RechnungRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
 )
 async def update_rechnung(
     rechnung_id: UUID,
@@ -319,7 +326,10 @@ async def list_rechnung_emails(
     "/{rechnung_id}/email",
     response_model=EmailLogRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
 )
 async def send_rechnung_email(
     rechnung_id: UUID,

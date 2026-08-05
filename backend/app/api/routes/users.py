@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.core.security import hash_password
+from app.models.account_typ import AccountTyp
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.services.audit_service import log_action
@@ -28,31 +29,72 @@ def _integrity_error_detail(exc: IntegrityError) -> str:
     return "E-Mail bereits vergeben"
 
 
+async def _to_read(session: AsyncSession, user: User) -> UserRead:
+    account_typ = (
+        await session.get(AccountTyp, user.account_typ_id)
+        if user.account_typ_id is not None
+        else None
+    )
+    return UserRead(
+        id=user.id,
+        mandant_id=user.mandant_id,
+        email=user.email,
+        role=user.role,
+        account_typ_id=user.account_typ_id,
+        account_typ_name=account_typ.name if account_typ is not None else None,
+        nur_zugewiesene_kunden=account_typ.nur_zugewiesene_kunden if account_typ is not None else False,
+        name=user.name,
+        avatar_url=user.avatar_url,
+        aktiv=user.aktiv,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+    )
+
+
 @router.get(
     "",
     response_model=list[UserRead],
     dependencies=[
-        Depends(
-            require_roles(
-                "super_admin",
-                "mandant_admin",
-                "disponent",
-                "techniker",
-                "controller",
-                "mitarbeiter",
-            )
-        ),
+        Depends(require_roles("super_admin", "mandant_admin", "custom")),
         Depends(require_recht("mitarbeiterverwaltung", "sehen")),
     ],
 )
-async def list_users(session: AsyncSession = Depends(get_db)) -> list[User]:
+async def list_users(session: AsyncSession = Depends(get_db)) -> list[UserRead]:
     # RLS restricts a mandant_admin's session to their own mandant already;
     # super_admin sessions bypass RLS and therefore see every account.
-    # Read-only for disponent/techniker too: colleagues' names are needed
+    # Read-only for custom account types too: colleagues' names are needed
     # for the @-mention picker in the Vorgangs-Chat (Phase 3) and aren't
     # sensitive the way account management (create/patch below) is.
     result = await session.execute(select(User).order_by(User.name))
-    return list(result.scalars().all())
+    users = list(result.scalars().all())
+
+    account_typ_ids = {u.account_typ_id for u in users if u.account_typ_id is not None}
+    account_typen: dict[UUID, AccountTyp] = {}
+    if account_typ_ids:
+        typen_result = await session.execute(
+            select(AccountTyp).where(AccountTyp.id.in_(account_typ_ids))
+        )
+        account_typen = {t.id: t for t in typen_result.scalars().all()}
+
+    return [
+        UserRead(
+            id=u.id,
+            mandant_id=u.mandant_id,
+            email=u.email,
+            role=u.role,
+            account_typ_id=u.account_typ_id,
+            account_typ_name=account_typen[u.account_typ_id].name if u.account_typ_id in account_typen else None,
+            nur_zugewiesene_kunden=account_typen[u.account_typ_id].nur_zugewiesene_kunden
+            if u.account_typ_id in account_typen
+            else False,
+            name=u.name,
+            avatar_url=u.avatar_url,
+            aktiv=u.aktiv,
+            created_at=u.created_at,
+            updated_at=u.updated_at,
+        )
+        for u in users
+    ]
 
 
 @router.post(
@@ -65,7 +107,7 @@ async def create_user(
     body: UserCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> User:
+) -> UserRead:
     if auth.role in ("mandant_admin", "loesch_operativ"):
         if body.role == "super_admin":
             raise HTTPException(
@@ -88,11 +130,20 @@ async def create_user(
                 detail="Accounts können nur im eigenen Mandanten angelegt werden",
             )
 
+    if body.role == "custom":
+        account_typ = await session.get(AccountTyp, body.account_typ_id)
+        if account_typ is None or account_typ.mandant_id != body.mandant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Account-Typ nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+
     user = User(
         mandant_id=body.mandant_id,
         email=body.email,
         password_hash=hash_password(body.password),
         role=body.role,
+        account_typ_id=body.account_typ_id if body.role == "custom" else None,
         name=body.name,
     )
     session.add(user)
@@ -112,7 +163,7 @@ async def create_user(
         entity_id=user.id,
         payload={"email": user.email, "role": user.role},
     )
-    return user
+    return await _to_read(session, user)
 
 
 @router.patch(
@@ -125,7 +176,7 @@ async def update_user(
     body: UserUpdate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> User:
+) -> UserRead:
     user = await session.get(User, user_id)
     if user is None:
         raise HTTPException(
@@ -154,6 +205,20 @@ async def update_user(
     if body.password:
         user.password_hash = hash_password(body.password)
         changes["password"] = "***"
+    if user.role == "custom":
+        if user.account_typ_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="account_typ_id ist für role='custom' erforderlich",
+            )
+        account_typ = await session.get(AccountTyp, user.account_typ_id)
+        if account_typ is None or account_typ.mandant_id != user.mandant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Account-Typ nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+    else:
+        user.account_typ_id = None
     try:
         await session.flush()
     except IntegrityError as exc:
@@ -175,7 +240,7 @@ async def update_user(
             entity_id=user.id,
             payload=changes,
         )
-    return user
+    return await _to_read(session, user)
 
 
 @router.delete(

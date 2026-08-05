@@ -428,6 +428,9 @@ async def test_mandant_admin_kann_rechte_matrix_fuer_controller_erweitern(
     admin_token = await login(client, admin.email, "pw-123456")
     controller_token = await login(client, controller.email, "pw-123456")
 
+    typen_resp = await client.get("/api/account-typen", headers=auth_headers(admin_token))
+    controller_typ_id = next(t["id"] for t in typen_resp.json() if t["name"] == "Controller")
+
     # Vorher: kein Bearbeiten-Recht fuer controller im Bereich vorgaenge.
     verboten = await client.post(
         "/api/vorgaenge",
@@ -442,13 +445,13 @@ async def test_mandant_admin_kann_rechte_matrix_fuer_controller_erweitern(
     assert verboten.status_code == 403
 
     setzen = await client.put(
-        "/api/rechte-matrix",
+        f"/api/account-typen/{controller_typ_id}/rechte",
         headers=auth_headers(admin_token),
-        json={"rolle": "controller", "bereich": "vorgaenge", "aktion": "bearbeiten", "erlaubt": True},
+        json={"bereich": "vorgaenge", "aktion": "erstellen", "erlaubt": True},
     )
     assert setzen.status_code == 200
     eintrag = next(
-        e for e in setzen.json() if e["rolle"] == "controller" and e["bereich"] == "vorgaenge" and e["aktion"] == "bearbeiten"
+        e for e in setzen.json() if e["bereich"] == "vorgaenge" and e["aktion"] == "erstellen"
     )
     assert eintrag["erlaubt"] is True
 
@@ -471,7 +474,7 @@ async def test_disponent_kann_rechte_matrix_nicht_aendern(client, make_mandant, 
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
     token = await login(client, disponent.email, "pw-123456")
 
-    resp = await client.get("/api/rechte-matrix", headers=auth_headers(token))
+    resp = await client.get("/api/account-typen", headers=auth_headers(token))
     assert resp.status_code == 403
 
 

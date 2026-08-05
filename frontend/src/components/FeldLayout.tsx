@@ -26,6 +26,8 @@ function useOnlineStatus(): boolean {
 
 export function FeldLayout() {
   const { currentUser, logout } = useAuth();
+  const kannEinstellungenSehen =
+    currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const outboxCount = useOutboxSync();
@@ -88,6 +90,16 @@ export function FeldLayout() {
             🔍
           </button>
           <ThemeToggle />
+          {kannEinstellungenSehen && (
+            <button
+              onClick={() => navigate("/einstellungen")}
+              aria-label="Einstellungen"
+              title="Einstellungen"
+              className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            >
+              ⚙️
+            </button>
+          )}
           <button
             onClick={logout}
             className="btn-touch rounded-md px-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"

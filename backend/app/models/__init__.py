@@ -1,3 +1,4 @@
+from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.anlage import Anlage
 from app.models.anlagen_feld_definition import AnlagenFeldDefinition
@@ -23,7 +24,6 @@ from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition
-from app.models.rollen_recht import MandantRollenRecht
 from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
 from app.models.termin import Termin
@@ -36,6 +36,8 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 
 __all__ = [
+    "AccountTyp",
+    "AccountTypRecht",
     "Angebot",
     "AngebotPosition",
     "Anlage",
@@ -65,7 +67,6 @@ __all__ = [
     "Notification",
     "Pruefmittel",
     "Pruefzyklus",
-    "MandantRollenRecht",
     "Rechnung",
     "RechnungPosition",
     "Standort",

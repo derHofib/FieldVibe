@@ -16,6 +16,7 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import system_session
+from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
@@ -24,6 +25,38 @@ from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
+
+# Nur zur Veranschaulichung der Account-Typen-Rechte-Matrix im Seed-Datensatz
+# gedacht -- der mandant_admin kann diese ueber die Account-Verwaltung
+# (/api/account-typen) jederzeit frei anpassen oder weitere Typen anlegen.
+SEED_ACCOUNT_TYPEN = {
+    "Disponent": {
+        "icon": "🧭",
+        "nur_zugewiesene_kunden": False,
+        "rechte": {
+            "vorgaenge": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+            "kunden": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+            "material": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+            "dispo": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+            "abrechnung": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+            "statistik": {"sehen"},
+            "mitarbeiterverwaltung": {"sehen", "bearbeiten"},
+        },
+    },
+    "Techniker": {
+        "icon": "🔧",
+        "nur_zugewiesene_kunden": True,
+        "rechte": {
+            "vorgaenge": {"sehen", "erstellen", "bearbeiten"},
+            "kunden": {"sehen"},
+            "material": {"sehen"},
+            "dispo": {"sehen"},
+            "abrechnung": {"sehen"},
+            "statistik": {"sehen"},
+            "mitarbeiterverwaltung": {"sehen"},
+        },
+    },
+}
 
 SUPER_ADMIN_EMAIL = os.environ.get("SEED_SUPER_ADMIN_EMAIL", "superadmin@fieldvibe.example.de")
 SUPER_ADMIN_PASSWORD = os.environ.get("SEED_SUPER_ADMIN_PASSWORD", "SuperAdmin123!")
@@ -38,9 +71,9 @@ MANDANTEN = [
         "branche": "elektro",
         "users": [
             ("admin@mueller.example.de", "mandant_admin", "Sabine Müller"),
-            ("dispo@mueller.example.de", "disponent", "Jens Krause"),
-            ("technik1@mueller.example.de", "techniker", "Ali Yildiz"),
-            ("technik2@mueller.example.de", "techniker", "Petra Wagner"),
+            ("dispo@mueller.example.de", "Disponent", "Jens Krause"),
+            ("technik1@mueller.example.de", "Techniker", "Ali Yildiz"),
+            ("technik2@mueller.example.de", "Techniker", "Petra Wagner"),
         ],
         "kunden": [
             {
@@ -161,9 +194,9 @@ MANDANTEN = [
         "branche": "elektro",
         "users": [
             ("admin@blitz.example.de", "mandant_admin", "Markus Blitz"),
-            ("dispo@blitz.example.de", "disponent", "Nadine Roth"),
-            ("technik1@blitz.example.de", "techniker", "Tom Schuster"),
-            ("technik2@blitz.example.de", "techniker", "Lena Fischer"),
+            ("dispo@blitz.example.de", "Disponent", "Nadine Roth"),
+            ("technik1@blitz.example.de", "Techniker", "Tom Schuster"),
+            ("technik2@blitz.example.de", "Techniker", "Lena Fischer"),
         ],
         "kunden": [
             {
@@ -296,23 +329,60 @@ async def _seed_users_and_mandant(session, mandant_data: dict) -> tuple[Mandant,
     else:
         print(f"[seed] Mandant bereits vorhanden: {mandant.name}")
 
+    account_typen_by_name: dict[str, AccountTyp] = {}
+
+    async def _get_or_create_account_typ(name: str) -> AccountTyp:
+        if name in account_typen_by_name:
+            return account_typen_by_name[name]
+        account_typ = await _get_or_none(session, AccountTyp, mandant_id=mandant.id, name=name)
+        if account_typ is None:
+            vorlage = SEED_ACCOUNT_TYPEN[name]
+            account_typ = AccountTyp(
+                mandant_id=mandant.id,
+                name=name,
+                icon=vorlage["icon"],
+                nur_zugewiesene_kunden=vorlage["nur_zugewiesene_kunden"],
+            )
+            session.add(account_typ)
+            await session.flush()
+            for bereich, aktionen in vorlage["rechte"].items():
+                for aktion in ("sehen", "erstellen", "bearbeiten", "loeschen"):
+                    session.add(
+                        AccountTypRecht(
+                            account_typ_id=account_typ.id,
+                            bereich=bereich,
+                            aktion=aktion,
+                            erlaubt=aktion in aktionen,
+                        )
+                    )
+            await session.flush()
+            print(f"[seed]   Account-Typ angelegt: {name} ({mandant.name})")
+        account_typen_by_name[name] = account_typ
+        return account_typ
+
     admin_user: User | None = None
-    for email, role, name in mandant_data["users"]:
+    for email, rolle_oder_typ, name in mandant_data["users"]:
         user = await _get_or_none(session, User, email=email)
         if user is None:
+            if rolle_oder_typ == "mandant_admin":
+                role, account_typ_id = "mandant_admin", None
+            else:
+                account_typ = await _get_or_create_account_typ(rolle_oder_typ)
+                role, account_typ_id = "custom", account_typ.id
             user = User(
                 mandant_id=mandant.id,
                 email=email,
                 password_hash=hash_password(DEFAULT_PASSWORD),
                 role=role,
+                account_typ_id=account_typ_id,
                 name=name,
             )
             session.add(user)
             await session.flush()
-            print(f"[seed]   User angelegt: {email} ({role})")
+            print(f"[seed]   User angelegt: {email} ({rolle_oder_typ})")
         else:
             print(f"[seed]   User bereits vorhanden: {email}")
-        if role == "mandant_admin":
+        if rolle_oder_typ == "mandant_admin":
             admin_user = user
 
     return mandant, admin_user

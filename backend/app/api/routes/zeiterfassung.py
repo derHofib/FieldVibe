@@ -24,6 +24,10 @@ from app.schemas.zeiterfassung import ZeiterfassungRead, ZeiterfassungStart, Zei
 from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.pdf_service import generate_wochenzettel_pdf
+from app.services.rechte_service import (
+    darf_fremde_mitarbeiterdaten_einsehen,
+    ist_auf_zugewiesene_kunden_beschraenkt,
+)
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -31,9 +35,7 @@ router = APIRouter(
     prefix="/api/zeiterfassung",
     tags=["zeiterfassung"],
     dependencies=[
-        Depends(
-            require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter")
-        ),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_recht("vorgaenge", "sehen")),
     ],
 )
@@ -73,12 +75,16 @@ async def list_zeiterfassung(
         # die kunde_id-Einschraenkung unten ist nur fuer den impliziten
         # Fall (kein techniker_id, z.B. Zeiterfassungen zu EINEM Vorgang)
         # gedacht.
-        if auth.role == "techniker" and techniker_id != auth.user_id:
+        if techniker_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
+            session, role=auth.role, account_typ_id=auth.account_typ_id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Zeiterfassungen einsehbar"
             )
         stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
-    elif auth.role == "techniker":
+    elif await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(
             Zeiterfassung.vorgang_id.in_(
                 select(Vorgang.id).where(
@@ -90,12 +96,19 @@ async def list_zeiterfassung(
     return list(result.scalars().all())
 
 
-@router.get("/export/csv", dependencies=[Depends(require_module("statistik"))])
+@router.get(
+    "/export/csv",
+    dependencies=[
+        Depends(require_module("statistik")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("mitarbeiterverwaltung", "bearbeiten")),
+    ],
+)
 async def export_zeiterfassung_csv(
     techniker_id: UUID | None = Query(default=None),
     von: date | None = Query(default=None),
     bis: date | None = Query(default=None),
-    auth: AuthContext = Depends(require_roles("mandant_admin", "disponent")),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     stmt = select(Zeiterfassung).order_by(Zeiterfassung.start_at.asc())
@@ -151,7 +164,9 @@ async def get_statistik(
     session: AsyncSession = Depends(get_db),
 ) -> ZeiterfassungStatistik:
     ziel_id = techniker_id or auth.user_id
-    if auth.role == "techniker" and ziel_id != auth.user_id:
+    if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Statistik einsehbar"
         )
@@ -189,7 +204,9 @@ async def wochenzettel_pdf(
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     ziel_id = techniker_id or auth.user_id
-    if auth.role == "techniker" and ziel_id != auth.user_id:
+    if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigener Wochenzettel abrufbar"
         )
@@ -258,9 +275,9 @@ async def start_timer(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if auth.role == "techniker" and vorgang.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ) and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
         )

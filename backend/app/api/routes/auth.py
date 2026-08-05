@@ -11,10 +11,12 @@ from app.core.security import (
     decode_token,
 )
 from app.db.session import system_session
+from app.models.account_typ import RECHTE_AKTIONEN, RECHTE_BEREICHE, AccountTyp
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, TokenPair
 from app.services.auth_service import authenticate
+from app.services.rechte_service import rechte_matrix_fuer_account_typ
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -60,10 +62,16 @@ async def refresh(body: RefreshRequest) -> TokenPair:
 
         return TokenPair(
             access_token=create_access_token(
-                subject=user.id, role=user.role, mandant_id=user.mandant_id
+                subject=user.id,
+                role=user.role,
+                mandant_id=user.mandant_id,
+                account_typ_id=user.account_typ_id,
             ),
             refresh_token=create_refresh_token(
-                subject=user.id, role=user.role, mandant_id=user.mandant_id
+                subject=user.id,
+                role=user.role,
+                mandant_id=user.mandant_id,
+                account_typ_id=user.account_typ_id,
             ),
         )
 
@@ -91,13 +99,38 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
                 mandant_name = mandant.name
                 deaktivierte_module = mandant.deaktivierte_module
 
+        account_typ_name: str | None = None
+        nur_zugewiesene_kunden = False
+        if auth.account_typ_id is not None:
+            account_typ = await session.get(AccountTyp, auth.account_typ_id)
+            if account_typ is not None:
+                account_typ_name = account_typ.name
+                nur_zugewiesene_kunden = account_typ.nur_zugewiesene_kunden
+
+        if auth.role == "custom" and auth.account_typ_id is not None:
+            matrix = await rechte_matrix_fuer_account_typ(session, auth.account_typ_id)
+            rechte = {
+                bereich: [aktion for aktion, erlaubt in aktionen.items() if erlaubt]
+                for bereich, aktionen in matrix.items()
+            }
+        else:
+            # mandant_admin/super_admin/loesch_* kommen an require_recht()
+            # ohnehin immer vorbei (siehe app/api/deps.py) -- die Matrix
+            # spiegelt das 1:1, damit das Frontend nicht zusaetzlich nach
+            # der Rolle unterscheiden muss.
+            rechte = {bereich: list(RECHTE_AKTIONEN) for bereich in RECHTE_BEREICHE}
+
         return CurrentUser(
             id=user.id,
             mandant_id=auth.mandant_id,
             role=auth.role,
+            account_typ_id=auth.account_typ_id,
+            account_typ_name=account_typ_name,
+            nur_zugewiesene_kunden=nur_zugewiesene_kunden,
             name=user.name,
             email=user.email,
             impersonated_by=auth.impersonated_by,
             mandant_name=mandant_name,
             deaktivierte_module=deaktivierte_module,
+            rechte=rechte,
         )

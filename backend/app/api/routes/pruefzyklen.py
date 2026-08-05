@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.pruefzyklus import Pruefzyklus
 from app.schemas.pruefzyklus import PruefzyklusCreate, PruefzyklusRead, PruefzyklusUpdate
@@ -19,13 +26,15 @@ router = APIRouter(
     prefix="/api/pruefzyklen",
     tags=["pruefzyklen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("pruefzyklen")),
     ],
 )
 
 
-@router.get("", response_model=list[PruefzyklusRead])
+@router.get(
+    "", response_model=list[PruefzyklusRead], dependencies=[Depends(require_recht("material", "sehen"))]
+)
 async def list_pruefzyklen(
     anlage_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
@@ -45,7 +54,10 @@ async def list_pruefzyklen(
     "",
     response_model=PruefzyklusRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_pruefzyklus(
     body: PruefzyklusCreate,
@@ -79,7 +91,11 @@ async def create_pruefzyklus(
     return pruefzyklus
 
 
-@router.get("/{pruefzyklus_id}", response_model=PruefzyklusRead)
+@router.get(
+    "/{pruefzyklus_id}",
+    response_model=PruefzyklusRead,
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def get_pruefzyklus(
     pruefzyklus_id: UUID, session: AsyncSession = Depends(get_db)
 ) -> Pruefzyklus:
@@ -94,7 +110,10 @@ async def get_pruefzyklus(
 @router.patch(
     "/{pruefzyklus_id}",
     response_model=PruefzyklusRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_pruefzyklus(
     pruefzyklus_id: UUID,
@@ -137,7 +156,10 @@ async def update_pruefzyklus(
 @router.delete(
     "/{pruefzyklus_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("material", "loeschen")),
+    ],
 )
 async def delete_pruefzyklus(
     pruefzyklus_id: UUID,

@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.models.tag import Tag, TagAssignment
 from app.schemas.tag import TagAssignmentCreate, TagAssignmentRead, TagCreate, TagRead
 from app.services import papierkorb_service
@@ -16,9 +16,7 @@ from app.services import papierkorb_service
 router = APIRouter(
     prefix="/api/tags",
     tags=["tags"],
-    dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ"))
-    ],
+    dependencies=[Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))],
 )
 
 
@@ -26,7 +24,9 @@ def _normalize_label(label: str) -> str:
     return label.strip().lstrip("#").lower()
 
 
-@router.get("", response_model=list[TagRead])
+@router.get(
+    "", response_model=list[TagRead], dependencies=[Depends(require_recht("vorgaenge", "sehen"))]
+)
 async def list_tags(session: AsyncSession = Depends(get_db)) -> list[Tag]:
     result = await session.execute(
         select(Tag).where(Tag.geloescht_am.is_(None)).order_by(Tag.label)
@@ -38,7 +38,18 @@ async def list_tags(session: AsyncSession = Depends(get_db)) -> list[Tag]:
     "",
     response_model=TagRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        # Tag-Verwaltung (die Vokabular-Liste selbst anlegen/entfernen) war
+        # schon vor der Account-Typen-Umstellung enger gefasst als reines
+        # Vorgaenge-Bearbeiten -- "loeschen" trifft hier zufaellig genau die
+        # gewuenschte engere Teilmenge (disponent-artige Account-Typen mit
+        # vollem Vorgaenge-Zugriff), waehrend techniker-artige Typen (nur
+        # sehen/erstellen/bearbeiten, kein loeschen) weiterhin nur einem
+        # bestehenden Tag zuweisen, aber keinen neuen anlegen duerfen (siehe
+        # delete_tag unten, das aus demselben Grund dieselbe Aktion nutzt).
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "loeschen")),
+    ],
 )
 async def create_tag(
     body: TagCreate,
@@ -59,7 +70,10 @@ async def create_tag(
 @router.delete(
     "/{tag_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("vorgaenge", "loeschen")),
+    ],
 )
 async def delete_tag(
     tag_id: UUID,
@@ -97,7 +111,10 @@ async def list_assignments(
     "/{tag_id}/assignments",
     response_model=TagAssignmentRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
 )
 async def assign_tag(
     tag_id: UUID,
@@ -128,7 +145,10 @@ async def assign_tag(
 @router.delete(
     "/{tag_id}/assignments",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
 )
 async def unassign_tag(
     tag_id: UUID,

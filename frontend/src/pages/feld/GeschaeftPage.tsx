@@ -339,7 +339,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
 }
 
 export function GeschaeftPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -561,7 +561,7 @@ export function GeschaeftPage() {
     },
   });
 
-  if (currentUser && currentUser.role === "techniker") return <Navigate to="/feed" replace />;
+  if (currentUser && !hatRecht("dispo", "sehen")) return <Navigate to="/feed" replace />;
   if (sichtbareTabs.length === 0) return <Navigate to="/feed" replace />;
 
   const nameFuer = (kundeId: string) => kunden?.find((k) => k.id === kundeId)?.name ?? "—";

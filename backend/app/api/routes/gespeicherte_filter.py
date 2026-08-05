@@ -17,9 +17,7 @@ from app.schemas.gespeicherter_filter import (
 router = APIRouter(
     prefix="/api/gespeicherte-filter",
     tags=["gespeicherte-filter"],
-    dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
-    ],
+    dependencies=[Depends(require_roles("mandant_admin", "custom"))],
 )
 
 

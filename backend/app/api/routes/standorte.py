@@ -13,19 +13,13 @@ from app.schemas.kunde import KundeRead
 from app.schemas.profile import StandortProfil
 from app.schemas.standort import StandortCreate, StandortRead, StandortUpdate
 from app.services import papierkorb_service
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/standorte",
     tags=["standorte"],
-    dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        )
-    ],
+    dependencies=[Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))],
 )
 
 
@@ -53,7 +47,9 @@ async def list_standorte(
         stmt = stmt.where(Standort.kunde_id == kunde_id)
     if aktiv is not None:
         stmt = stmt.where(Standort.aktiv == aktiv)
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(Standort.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -64,8 +60,8 @@ async def list_standorte(
     response_model=StandortRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
-        Depends(require_recht("kunden", "bearbeiten")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "erstellen")),
     ],
 )
 async def create_standort(
@@ -89,9 +85,10 @@ async def create_standort(
 
 
 async def _require_standort_zugriff(session: AsyncSession, auth: AuthContext, standort: Standort) -> None:
-    if auth.role == "techniker" and standort.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
+    if beschraenkt and standort.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
 
 
@@ -159,7 +156,7 @@ async def get_standort_profil(
     "/{standort_id}",
     response_model=StandortRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_recht("kunden", "bearbeiten")),
     ],
 )
@@ -182,7 +179,10 @@ async def update_standort(
 @router.delete(
     "/{standort_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("kunden", "loeschen")),
+    ],
 )
 async def delete_standort(
     standort_id: UUID,

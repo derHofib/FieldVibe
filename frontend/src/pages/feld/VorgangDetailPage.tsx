@@ -207,7 +207,7 @@ export function VorgangDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [comment, setComment] = useState("");
@@ -246,14 +246,8 @@ export function VorgangDetailPage() {
   const [folgeLeistungstyp, setFolgeLeistungstyp] = useState<Leistungstyp | "">("");
   const [folgeVorgangId, setFolgeVorgangId] = useState<string | null>(null);
 
-  const kannDisponieren =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
-  const kannLoeschen =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
+  const kannDisponieren = hatRecht("vorgaenge", "bearbeiten");
+  const kannLoeschen = hatRecht("vorgaenge", "loeschen");
 
   const { data: vorgang } = useQuery({
     queryKey: ["vorgang", id],
@@ -461,7 +455,7 @@ export function VorgangDetailPage() {
   const { data: meinFahrzeug } = useQuery({
     queryKey: ["fahrzeug-mir"],
     queryFn: fahrzeugZuweisungenApi.mir,
-    enabled: showMaterialForm && currentUser?.role === "techniker",
+    enabled: showMaterialForm && !!currentUser?.nur_zugewiesene_kunden,
   });
 
   const materialVerwendenMutation = useMutation({
@@ -1049,7 +1043,9 @@ export function VorgangDetailPage() {
                   const ende = new Date(start.getTime() + 60 * 60 * 1000);
                   setTerminStart(toLocalInputValue(start));
                   setTerminEnde(toLocalInputValue(ende));
-                  setTerminTechnikerId(users?.find((u) => u.role === "techniker")?.id ?? "");
+                  setTerminTechnikerId(
+                    users?.find((u) => u.role === "mandant_admin" || u.role === "custom")?.id ?? "",
+                  );
                 }
               }}
               className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -1081,7 +1077,7 @@ export function VorgangDetailPage() {
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             >
               {(users ?? [])
-                .filter((u) => u.role === "techniker")
+                .filter((u) => u.role === "mandant_admin" || u.role === "custom")
                 .map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name}

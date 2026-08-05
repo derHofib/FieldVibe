@@ -45,12 +45,7 @@ router = APIRouter(
     prefix="/api/angebote",
     tags=["angebote"],
     dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        ),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("abrechnung")),
         Depends(require_recht("abrechnung", "sehen")),
     ],
@@ -86,7 +81,10 @@ async def get_angebot(angebot_id: UUID, session: AsyncSession = Depends(get_db))
 @router.delete(
     "/{angebot_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("abrechnung", "loeschen")),
+    ],
 )
 async def delete_angebot(
     angebot_id: UUID,
@@ -146,7 +144,10 @@ def _neue_positionen(angebot_id: UUID, mandant_id: UUID, eintraege: list[Angebot
     "",
     response_model=AngebotRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "erstellen")),
+    ],
 )
 async def create_angebot(
     body: AngebotCreate,
@@ -178,7 +179,10 @@ async def create_angebot(
     "/from-maengel",
     response_model=AngebotRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "erstellen")),
+    ],
 )
 async def create_angebot_from_maengel(
     body: AngebotAusMaengelnCreate,
@@ -349,7 +353,10 @@ async def _angebot_aus_bedarfen(
     "/from-material-bedarfe",
     response_model=AngebotRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "erstellen")),
+    ],
 )
 async def create_angebot_from_material_bedarfe(
     body: AngebotAusMaterialBedarfenCreate,
@@ -382,7 +389,10 @@ async def create_angebot_from_material_bedarfe(
     "/from-vorgang",
     response_model=AngebotRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "erstellen")),
+    ],
 )
 async def create_angebot_from_vorgang(
     body: AngebotAusVorgangCreate,
@@ -438,7 +448,10 @@ async def create_angebot_from_vorgang(
 @router.post(
     "/{angebot_id}/positionen",
     response_model=AngebotRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
 )
 async def add_position(
     angebot_id: UUID,
@@ -475,7 +488,10 @@ async def add_position(
 @router.patch(
     "/{angebot_id}",
     response_model=AngebotRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
 )
 async def update_angebot(
     angebot_id: UUID,
@@ -546,7 +562,10 @@ async def list_angebot_emails(
     "/{angebot_id}/email",
     response_model=EmailLogRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
 )
 async def send_angebot_email(
     angebot_id: UUID,

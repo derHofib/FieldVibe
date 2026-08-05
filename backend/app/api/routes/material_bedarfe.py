@@ -22,12 +22,7 @@ router = APIRouter(
     prefix="/api/material-bedarfe",
     tags=["material-bedarfe"],
     dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        ),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("material")),
     ],
 )
@@ -93,12 +88,13 @@ async def list_material_bedarfe(
     response_model=MaterialBedarfRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"
-            )
-        ),
-        Depends(require_recht("material", "bearbeiten")),
+        # Ein Materialbedarf haengt an einem Vorgang (der Techniker meldet
+        # Material-Bedarf fuer SEINEN Auftrag) -- das ist naeher an
+        # "Vorgang bearbeiten" als an "Material-Stammdaten anlegen"
+        # (dafuer gibt es die eigene, engere Freigabe material.erstellen
+        # in app/api/routes/material.py:create_material).
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
     ],
 )
 async def create_material_bedarf(
@@ -152,7 +148,7 @@ async def create_material_bedarf(
 @router.delete(
     "/{bedarf_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_recht("material", "bearbeiten"))],
+    dependencies=[Depends(require_recht("material", "loeschen"))],
 )
 async def delete_material_bedarf(
     bedarf_id: UUID,

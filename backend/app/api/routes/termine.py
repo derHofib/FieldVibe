@@ -25,12 +25,7 @@ router = APIRouter(
     prefix="/api/termine",
     tags=["termine"],
     dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        ),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("dispo")),
         Depends(require_recht("dispo", "sehen")),
     ],
@@ -50,7 +45,7 @@ async def _load_vorgang_and_techniker(
     if (
         techniker is None
         or techniker.mandant_id != vorgang.mandant_id
-        or techniker.role not in ("mandant_admin", "disponent", "techniker")
+        or techniker.role not in ("mandant_admin", "custom")
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -92,7 +87,10 @@ async def get_termin(termin_id: UUID, session: AsyncSession = Depends(get_db)) -
     "",
     response_model=TerminCreateResult,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "erstellen")),
+    ],
 )
 async def create_termin(
     body: TerminCreate,
@@ -134,7 +132,10 @@ async def create_termin(
 @router.patch(
     "/{termin_id}",
     response_model=TerminCreateResult,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "bearbeiten")),
+    ],
 )
 async def update_termin(
     termin_id: UUID,
@@ -195,7 +196,10 @@ async def update_termin(
 @router.delete(
     "/{termin_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("dispo", "loeschen")),
+    ],
 )
 async def delete_termin(
     termin_id: UUID,

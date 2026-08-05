@@ -38,7 +38,7 @@ const meldungenItem = { to: "/benachrichtigungen", label: "Meldungen", icon: "�
 const papierkorbItem = { to: "/papierkorb", label: "Papierkorb", icon: "🗑️" };
 
 export function BottomNav() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const [mehrOffen, setMehrOffen] = useState(false);
   // loesch_ansicht sieht ausschliesslich den Papierkorb (siehe
   // app/api/routes/papierkorb.py) -- Feed/Meldungen/etc. wuerden fuer diese
@@ -54,13 +54,10 @@ export function BottomNav() {
 
   // Dispo-Board ist Disposition, nicht Kommunikation -- bewusst kein
   // Feed-Ersatz, aber trotzdem ueber die Hauptnavigation erreichbar statt
-  // in einem versteckten Menue, da es fuer Disponent/Admin Kernarbeit ist.
-  // loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
-  // app/api/deps.py:require_roles()) und sieht daher dieselbe Navigation.
-  const canDisponieren =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
+  // in einem versteckten Menue, da es fuer Account-Typen mit Dispo-Zugriff
+  // Kernarbeit ist. mandant_admin/loesch_operativ sehen dieselbe Navigation,
+  // da hatRecht() fuer diese Rollen immer true liefert (siehe AuthContext).
+  const canDisponieren = hatRecht("dispo", "sehen");
 
   // Nur die Kernaktionen (Feed, Neu, Profil) bleiben dauerhaft sichtbar --
   // alles andere ist seltener und wandert ins aufklappbare "Mehr"-Menue,

@@ -5,18 +5,27 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.highlight import Highlight
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.highlight import HighlightCreate, HighlightRead
 from app.services import storage_service
+from app.services.rechte_service import hat_recht
 
 router = APIRouter(
     prefix="/api/highlights",
     tags=["highlights"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "sehen")),
         Depends(require_module("highlights")),
     ],
 )
@@ -97,9 +106,15 @@ async def delete_highlight(
     highlight = await session.get(Highlight, highlight_id)
     if highlight is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Highlight nicht gefunden")
-    # mandant_admin/disponent duerfen jedes Highlight entfernen
-    # (Moderation); ein techniker nur sein eigenes.
-    if auth.role == "techniker" and highlight.erstellt_von != auth.user_id:
+    # Account-Typen mit vorgaenge:loeschen duerfen jedes Highlight entfernen
+    # (Moderation); alle anderen nur ihr eigenes.
+    darf_alle_loeschen = auth.role == "mandant_admin" or (
+        auth.role == "custom"
+        and await hat_recht(
+            session, account_typ_id=auth.account_typ_id, bereich="vorgaenge", aktion="loeschen"
+        )
+    )
+    if not darf_alle_loeschen and highlight.erstellt_von != auth.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Highlights können entfernt werden"
         )

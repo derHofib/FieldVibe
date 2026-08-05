@@ -51,7 +51,7 @@ async def test_create_user_normalizes_email_case(client, make_mandant, make_user
             "mandant_id": str(mandant.id),
             "email": "Neuer.Techniker@Firma.DE",
             "password": "hunter2!!",
-            "role": "techniker",
+            "role": "mandant_admin",
             "name": "Neuer Techniker",
         },
     )

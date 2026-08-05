@@ -1,12 +1,12 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { AccountTypenPage } from "./pages/AccountTypenPage";
 import { FeldLayout } from "./components/FeldLayout";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantenPage } from "./pages/MandantenPage";
-import { RechteMatrixPage } from "./pages/RechteMatrixPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
 import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
@@ -31,6 +31,7 @@ import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { SearchPage } from "./pages/feld/SearchPage";
+import { SettingsPage } from "./pages/feld/SettingsPage";
 import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
 import { StatistikPage } from "./pages/feld/StatistikPage";
 import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
@@ -49,9 +50,9 @@ export function App() {
   // Platform administration (Mandanten/Accounts/Audit-Log, no Social-UX) is
   // only for a genuine, non-impersonating super_admin. The moment that
   // person starts "Login als Mandant", they should see exactly what a real
-  // mandant_admin/disponent/techniker in that tenant would see -- the whole
-  // point of impersonation as a support tool -- so they get routed into the
-  // Feld-App below instead, same as any real tenant user.
+  // mandant_admin or custom-Account-Typ in that tenant would see -- the
+  // whole point of impersonation as a support tool -- so they get routed
+  // into the Feld-App below instead, same as any real tenant user.
   const isPlatformAdmin = currentUser?.role === "super_admin" && !isImpersonating;
 
   // loesch_ansicht sieht ausschliesslich den Papierkorb (siehe
@@ -107,7 +108,8 @@ export function App() {
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="/accounts" element={<UsersPage />} />
-          <Route path="/rechte-matrix" element={<RechteMatrixPage />} />
+          <Route path="/account-typen" element={<AccountTypenPage />} />
+          <Route path="/einstellungen" element={<SettingsPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
           <Route path="/papierkorb" element={<PapierkorbPage />} />

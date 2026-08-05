@@ -55,7 +55,7 @@ interface NeuerTerminForm {
 }
 
 export function DispoBoardPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -68,7 +68,12 @@ export function DispoBoardPage() {
   const weekEnd = addDays(weekStart, 7);
 
   const { data: technikerListe } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
-  const technikers = (technikerListe ?? []).filter((u) => u.role === "techniker" && u.aktiv);
+  // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
+  // aktive mandant_admin/custom-Account kann als Techniker fuer einen
+  // Termin eingeplant werden, seit die vier festen Rollen entfallen sind.
+  const technikers = (technikerListe ?? []).filter(
+    (u) => u.aktiv && (u.role === "mandant_admin" || u.role === "custom"),
+  );
 
   const { data: offeneVorgaenge } = useQuery({
     queryKey: ["vorgaenge", "offen"],
@@ -103,7 +108,7 @@ export function DispoBoardPage() {
     },
   });
 
-  if (currentUser && currentUser.role === "techniker") return <Navigate to="/feed" replace />;
+  if (currentUser && !hatRecht("dispo", "sehen")) return <Navigate to="/feed" replace />;
 
   const terminenNachTechnikerUndTag = new Map<string, Map<string, Termin[]>>();
   for (const t of termine ?? []) {

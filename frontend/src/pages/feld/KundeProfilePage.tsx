@@ -374,7 +374,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
     queryFn: usersApi.list,
     enabled: bearbeiten,
   });
-  const techniker = alleUser?.filter((u) => u.role === "techniker") ?? [];
+  const techniker = alleUser?.filter((u) => u.nur_zugewiesene_kunden) ?? [];
 
   const speichernMutation = useMutation({
     mutationFn: () => kundenApi.technikerSetzen(kundeId, auswahl),
@@ -1075,7 +1075,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
 export function KundeProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const [anlageFilter, setAnlageFilter] = useState("");
 
   const kundenverwaltungAktiv = istModulAktiv(currentUser, "kundenverwaltung");
@@ -1135,10 +1135,7 @@ export function KundeProfilePage() {
 
   if (profilLoading || !profil) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
-  const kannVerwalten =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
+  const kannVerwalten = hatRecht("kunden", "bearbeiten");
 
   return (
     <div className="space-y-4">

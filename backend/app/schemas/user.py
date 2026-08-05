@@ -7,10 +7,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 Role = Literal[
     "super_admin",
     "mandant_admin",
-    "disponent",
-    "techniker",
-    "controller",
-    "mitarbeiter",
+    "custom",
     "loesch_ansicht",
     "loesch_operativ",
 ]
@@ -21,6 +18,9 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     role: Role
+    # Nur bei role == "custom" gesetzt -- zeigt auf den vom mandant_admin
+    # definierten Account-Typ (siehe app/models/account_typ.py).
+    account_typ_id: UUID | None = None
     name: str
 
     @field_validator("email")
@@ -39,12 +39,15 @@ class UserCreate(BaseModel):
             raise ValueError("super_admin darf keinem Mandanten zugeordnet sein")
         if self.role != "super_admin" and self.mandant_id is None:
             raise ValueError("mandant_id ist für diese Rolle erforderlich")
+        if self.role == "custom" and self.account_typ_id is None:
+            raise ValueError("account_typ_id ist für role='custom' erforderlich")
         return self
 
 
 class UserUpdate(BaseModel):
     name: str | None = None
     role: Role | None = None
+    account_typ_id: UUID | None = None
     aktiv: bool | None = None
     password: str | None = Field(default=None, min_length=8)
 
@@ -56,6 +59,16 @@ class UserRead(BaseModel):
     mandant_id: UUID | None
     email: str
     role: Role
+    account_typ_id: UUID | None = None
+    # Name des Account-Typs (None fuer role != "custom") -- dem Frontend
+    # erspart das eine Zusatzabfrage gegen /api/account-typen nur fuer die
+    # Anzeige in Listen/Dropdowns.
+    account_typ_name: str | None = None
+    # Gespiegelt aus AccountTyp.nur_zugewiesene_kunden (False fuer
+    # role != "custom") -- ersetzt das fruehere role == "techniker" beim
+    # Filtern von Zuweisungs-Dropdowns (Termine/Fahrzeuge/Kunde-Zuweisungen)
+    # im Frontend.
+    nur_zugewiesene_kunden: bool = False
     name: str
     avatar_url: str | None
     aktiv: bool

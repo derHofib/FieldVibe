@@ -17,7 +17,7 @@ from app.schemas.story import Ampel, StoriesResponse, StoryItem
 router = APIRouter(
     prefix="/api/stories",
     tags=["stories"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[Depends(require_roles("mandant_admin", "custom"))],
 )
 
 WARTET_KUNDE_SCHWELLE_TAGE = 3

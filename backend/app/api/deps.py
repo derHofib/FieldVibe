@@ -21,6 +21,7 @@ class AuthContext:
     mandant_id: UUID | None
     role: str
     impersonated_by: UUID | None = None
+    account_typ_id: UUID | None = None
 
 
 async def get_current_user(
@@ -47,11 +48,15 @@ async def get_current_user(
     impersonated_by = (
         UUID(payload["impersonated_by"]) if payload.get("impersonated_by") else None
     )
+    account_typ_id = (
+        UUID(payload["account_typ_id"]) if payload.get("account_typ_id") else None
+    )
     return AuthContext(
         user_id=UUID(payload["sub"]),
         mandant_id=mandant_id,
         role=payload["role"],
         impersonated_by=impersonated_by,
+        account_typ_id=account_typ_id,
     )
 
 
@@ -119,21 +124,21 @@ def require_module(*modules: str):
 
 
 def require_recht(bereich: str, aktion: str = "sehen"):
-    """Zusaetzlich zu require_roles: schraenkt die frei konfigurierbaren
-    Account-Typen controller/mitarbeiter gemaess der vom mandant_admin
-    gepflegten Rechte-Matrix ein (siehe app/services/rechte_service.py).
-    super_admin/mandant_admin/disponent/techniker sind hier immer erlaubt --
-    deren Zugriff wird ausschliesslich ueber require_roles an der jeweiligen
-    Route gesteuert und bleibt von dieser Matrix unberuehrt."""
+    """Zusaetzlich zu require_roles: schraenkt frei vom mandant_admin
+    definierte Account-Typen (role == 'custom', siehe app/models/account_typ.py)
+    gemaess ihrer individuellen Rechte-Matrix ein (siehe
+    app/services/rechte_service.py). super_admin/mandant_admin sind hier immer
+    erlaubt -- deren Zugriff wird ausschliesslich ueber require_roles an der
+    jeweiligen Route gesteuert und bleibt von dieser Matrix unberuehrt."""
 
     async def checker(
         auth: AuthContext = Depends(get_current_user),
         session: AsyncSession = Depends(get_db),
     ) -> AuthContext:
-        if auth.role not in ("controller", "mitarbeiter"):
+        if auth.role != "custom":
             return auth
         erlaubt = await hat_recht(
-            session, mandant_id=auth.mandant_id, rolle=auth.role, bereich=bereich, aktion=aktion
+            session, account_typ_id=auth.account_typ_id, bereich=bereich, aktion=aktion
         )
         if not erlaubt:
             raise HTTPException(

@@ -337,11 +337,8 @@ export function AnlageProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
-  const kannVerwalten =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
+  const { currentUser, hatRecht } = useAuth();
+  const kannVerwalten = hatRecht("kunden", "bearbeiten");
 
   const [showForm, setShowForm] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");

@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.pruefmittel import PRUEFMITTEL_STATUS, Pruefmittel
 from app.models.user import User
 from app.schemas.pruefmittel import PruefmittelCreate, PruefmittelRead, PruefmittelUpdate
@@ -19,13 +26,15 @@ router = APIRouter(
     prefix="/api/pruefmittel",
     tags=["pruefmittel"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("pruefzyklen")),
     ],
 )
 
 
-@router.get("", response_model=list[PruefmittelRead])
+@router.get(
+    "", response_model=list[PruefmittelRead], dependencies=[Depends(require_recht("material", "sehen"))]
+)
 async def list_pruefmittel(
     zugewiesen_an: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
@@ -56,7 +65,10 @@ async def _validate_zugewiesen_an(session: AsyncSession, user_id: UUID | None) -
     "",
     response_model=PruefmittelRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_pruefmittel(
     body: PruefmittelCreate,
@@ -81,7 +93,11 @@ async def create_pruefmittel(
     return pruefmittel
 
 
-@router.get("/{pruefmittel_id}", response_model=PruefmittelRead)
+@router.get(
+    "/{pruefmittel_id}",
+    response_model=PruefmittelRead,
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def get_pruefmittel(
     pruefmittel_id: UUID, session: AsyncSession = Depends(get_db)
 ) -> Pruefmittel:
@@ -96,7 +112,10 @@ async def get_pruefmittel(
 @router.patch(
     "/{pruefmittel_id}",
     response_model=PruefmittelRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_pruefmittel(
     pruefmittel_id: UUID,
@@ -135,7 +154,10 @@ async def update_pruefmittel(
 @router.delete(
     "/{pruefmittel_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("material", "loeschen")),
+    ],
 )
 async def delete_pruefmittel(
     pruefmittel_id: UUID,

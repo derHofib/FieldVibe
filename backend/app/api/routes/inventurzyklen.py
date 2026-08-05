@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.inventurzyklus import InventurZyklus
 from app.schemas.inventurzyklus import InventurZyklusCreate, InventurZyklusRead, InventurZyklusUpdate
@@ -18,7 +25,7 @@ router = APIRouter(
     prefix="/api/inventurzyklen",
     tags=["inventurzyklen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("fahrzeuge")),
     ],
 )
@@ -35,7 +42,11 @@ async def _require_lagerort(session: AsyncSession, lager_id: UUID) -> Anlage:
     return lager
 
 
-@router.get("", response_model=list[InventurZyklusRead])
+@router.get(
+    "",
+    response_model=list[InventurZyklusRead],
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def list_inventurzyklen(
     lager_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
@@ -55,7 +66,10 @@ async def list_inventurzyklen(
     "",
     response_model=InventurZyklusRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_inventurzyklus(
     body: InventurZyklusCreate,
@@ -91,7 +105,11 @@ async def create_inventurzyklus(
     return zyklus
 
 
-@router.get("/{inventurzyklus_id}", response_model=InventurZyklusRead)
+@router.get(
+    "/{inventurzyklus_id}",
+    response_model=InventurZyklusRead,
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def get_inventurzyklus(
     inventurzyklus_id: UUID, session: AsyncSession = Depends(get_db)
 ) -> InventurZyklus:
@@ -106,7 +124,10 @@ async def get_inventurzyklus(
 @router.delete(
     "/{inventurzyklus_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("material", "loeschen")),
+    ],
 )
 async def delete_inventurzyklus(
     inventurzyklus_id: UUID,
@@ -125,7 +146,10 @@ async def delete_inventurzyklus(
 @router.patch(
     "/{inventurzyklus_id}",
     response_model=InventurZyklusRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_inventurzyklus(
     inventurzyklus_id: UUID,

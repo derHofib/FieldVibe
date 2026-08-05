@@ -11,6 +11,7 @@ from app.models.rechnung import Rechnung
 from app.models.user import User
 from app.models.vorgang_event import VorgangEvent
 from app.db.session import system_session
+from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
 
 MAHNWESEN_AKTION = "mahnwesen_eskalation_run"
 
@@ -27,13 +28,10 @@ def _ziel_mahnstufe(tage_ueberfaellig: int) -> int:
 
 
 async def _admins_und_disponenten(session: AsyncSession, mandant_id) -> list[User]:
-    result = await session.execute(
-        select(User).where(
-            User.mandant_id == mandant_id,
-            User.role.in_(("mandant_admin", "disponent")),
-            User.aktiv.is_(True),
-        )
-    )
+    user_ids = await abrechnung_verantwortliche_user_ids(session, mandant_id)
+    if not user_ids:
+        return []
+    result = await session.execute(select(User).where(User.id.in_(user_ids)))
     return list(result.scalars().all())
 
 

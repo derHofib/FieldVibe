@@ -1,6 +1,9 @@
 import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import type {
+  AccountTyp,
+  AccountTypCreate,
+  AccountTypUpdate,
   Adresse,
   Angebot,
   AngebotPosition,
@@ -57,7 +60,6 @@ import type {
   RechteAktion,
   RechteBereich,
   RechteMatrixEintrag,
-  RechteRolle,
   SearchResponse,
   Standort,
   StandortProfil,
@@ -115,18 +117,44 @@ export const usersApi = {
     email: string;
     password: string;
     role: string;
+    account_typ_id?: string | null;
     name: string;
   }) =>
     apiFetch<User>("/api/users", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (id: string, body: Partial<Pick<User, "name" | "role" | "aktiv">>) =>
+  update: (
+    id: string,
+    body: Partial<Pick<User, "name" | "role" | "account_typ_id" | "aktiv">>,
+  ) =>
     apiFetch<User>(`/api/users/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
   remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
+};
+
+export const accountTypenApi = {
+  list: () => apiFetch<AccountTyp[]>("/api/account-typen"),
+  create: (body: AccountTypCreate) =>
+    apiFetch<AccountTyp>("/api/account-typen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: AccountTypUpdate) =>
+    apiFetch<AccountTyp>(`/api/account-typen/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/account-typen/${id}`, { method: "DELETE" }),
+  getRechte: (id: string) =>
+    apiFetch<RechteMatrixEintrag[]>(`/api/account-typen/${id}/rechte`),
+  setRecht: (id: string, bereich: RechteBereich, aktion: RechteAktion, erlaubt: boolean) =>
+    apiFetch<RechteMatrixEintrag[]>(`/api/account-typen/${id}/rechte`, {
+      method: "PUT",
+      body: JSON.stringify({ bereich, aktion, erlaubt }),
+    }),
 };
 
 export const auditLogApi = {
@@ -419,15 +447,6 @@ export const vorgangAnfragenApi = {
     apiFetch<VorgangAnfrage>(`/api/vorgang-anfragen/${id}/ablehnen`, {
       method: "POST",
       body: JSON.stringify({ ablehnungsgrund }),
-    }),
-};
-
-export const rechteMatrixApi = {
-  get: () => apiFetch<RechteMatrixEintrag[]>("/api/rechte-matrix"),
-  set: (rolle: RechteRolle, bereich: RechteBereich, aktion: RechteAktion, erlaubt: boolean) =>
-    apiFetch<RechteMatrixEintrag[]>("/api/rechte-matrix", {
-      method: "PUT",
-      body: JSON.stringify({ rolle, bereich, aktion, erlaubt }),
     }),
 };
 

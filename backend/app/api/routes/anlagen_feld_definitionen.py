@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.models.anlagen_feld_definition import AnlagenFeldDefinition
 from app.schemas.anlagen_feld_definition import (
     AnlagenFeldDefinitionCreate,
@@ -17,7 +17,8 @@ router = APIRouter(
     prefix="/api/anlagen-feld-definitionen",
     tags=["anlagen-feld-definitionen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "controller", "mitarbeiter"))
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "sehen")),
     ],
 )
 

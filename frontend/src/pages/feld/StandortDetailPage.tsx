@@ -278,12 +278,9 @@ export function StandortDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
-  const kannVerwalten =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
-  const kannLoeschen = currentUser?.role === "loesch_operativ";
+  const { hatRecht } = useAuth();
+  const kannVerwalten = hatRecht("kunden", "bearbeiten");
+  const kannLoeschen = hatRecht("kunden", "loeschen");
 
   const { data: profil, isLoading } = useQuery({
     queryKey: ["standort-profil", id],

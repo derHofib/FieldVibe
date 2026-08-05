@@ -1,11 +1,12 @@
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
+// "custom" ersetzt die vormals fest verdrahteten disponent/techniker/
+// controller/mitarbeiter -- ein mandant_admin definiert beliebig viele
+// eigene Account-Typen (siehe AccountTyp weiter unten) mit je eigener
+// Rechte-Matrix statt einer festen Rollen-Liste.
 export type Role =
   | "super_admin"
   | "mandant_admin"
-  | "disponent"
-  | "techniker"
-  | "controller"
-  | "mitarbeiter"
+  | "custom"
   | "loesch_ansicht"
   | "loesch_operativ";
 
@@ -42,6 +43,9 @@ export interface User {
   mandant_id: string | null;
   email: string;
   role: Role;
+  account_typ_id: string | null;
+  account_typ_name: string | null;
+  nur_zugewiesene_kunden: boolean;
   name: string;
   avatar_url: string | null;
   aktiv: boolean;
@@ -99,10 +103,17 @@ export interface CurrentUser {
   mandant_id: string | null;
   mandant_name: string | null;
   role: Role;
+  account_typ_id: string | null;
+  account_typ_name: string | null;
+  nur_zugewiesene_kunden: boolean;
   name: string;
   email: string;
   impersonated_by: string | null;
   deaktivierte_module: MandantModul[];
+  // Bereich -> Liste erlaubter Aktionen fuer diese Session (siehe
+  // app/api/routes/auth.py:me) -- role != "custom" bekommt immer alle
+  // Bereiche/Aktionen.
+  rechte: Partial<Record<RechteBereich, RechteAktion[]>>;
 }
 
 export interface TokenPair {
@@ -815,9 +826,8 @@ export interface KundeLogoUrl {
   url: string | null;
 }
 
-// --- Rechte-Matrix (Account-Typen controller/mitarbeiter) -------------------
+// --- Account-Typen (frei vom mandant_admin definierbare Rollen) ------------
 
-export type RechteRolle = "controller" | "mitarbeiter";
 export type RechteBereich =
   | "vorgaenge"
   | "kunden"
@@ -826,13 +836,37 @@ export type RechteBereich =
   | "abrechnung"
   | "statistik"
   | "mitarbeiterverwaltung";
-export type RechteAktion = "sehen" | "bearbeiten";
+export type RechteAktion = "sehen" | "erstellen" | "bearbeiten" | "loeschen";
 
 export interface RechteMatrixEintrag {
-  rolle: RechteRolle;
   bereich: RechteBereich;
   aktion: RechteAktion;
   erlaubt: boolean;
+}
+
+export interface AccountTyp {
+  id: string;
+  name: string;
+  icon: string | null;
+  farbe: string | null;
+  nur_zugewiesene_kunden: boolean;
+  reihenfolge: number;
+  anzahl_nutzer: number;
+}
+
+export interface AccountTypCreate {
+  name: string;
+  icon?: string | null;
+  farbe?: string | null;
+  nur_zugewiesene_kunden?: boolean;
+}
+
+export interface AccountTypUpdate {
+  name?: string;
+  icon?: string | null;
+  farbe?: string | null;
+  nur_zugewiesene_kunden?: boolean;
+  reihenfolge?: number;
 }
 
 // --- Mandant-Einstellungen (Nacharbeit) -------------------------------------

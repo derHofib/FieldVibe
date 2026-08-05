@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 export function HighlightsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
 
   const { data: highlights, isLoading } = useQuery({
     queryKey: ["highlights"],
@@ -60,9 +60,12 @@ export function HighlightsPage() {
                   <div className="text-xs text-slate-400 dark:text-slate-500">{h.vorgangsnummer}</div>
                 </div>
               </button>
+              {/* Spiegelt app/api/routes/highlights.py:delete_highlight -- nur
+                  mandant_admin (explizit, nicht "jede nicht-custom-Rolle")
+                  oder ein custom-Account mit vorgaenge:loeschen darf fremde
+                  Highlights entfernen, alle anderen nur ihr eigenes. */}
               {(currentUser?.role === "mandant_admin" ||
-                currentUser?.role === "disponent" ||
-                currentUser?.role === "loesch_operativ" ||
+                (currentUser?.role === "custom" && hatRecht("vorgaenge", "loeschen")) ||
                 h.erstellt_von === currentUser?.id) && (
                 <button
                   onClick={() => removeMutation.mutate(h.id)}

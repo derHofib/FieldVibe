@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
@@ -19,6 +26,7 @@ from app.schemas.dauerauftrag import (
     DauerauftragZielRead,
 )
 from app.services import papierkorb_service
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
@@ -28,7 +36,7 @@ router = APIRouter(
     prefix="/api/dauerauftraege",
     tags=["dauerauftraege"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("dauerauftrag")),
     ],
 )
@@ -65,7 +73,9 @@ def _read_mit_zielen(dauerauftrag: Dauerauftrag, ziele: list[DauerauftragZiel]) 
     )
 
 
-@router.get("", response_model=list[DauerauftragRead])
+@router.get(
+    "", response_model=list[DauerauftragRead], dependencies=[Depends(require_recht("dispo", "sehen"))]
+)
 async def list_dauerauftraege(
     kunde_id: UUID | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
@@ -78,7 +88,9 @@ async def list_dauerauftraege(
     )
     if kunde_id:
         stmt = stmt.where(Dauerauftrag.kunde_id == kunde_id)
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(Dauerauftrag.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     dauerauftraege = list((await session.execute(stmt)).scalars().all())
 
@@ -108,7 +120,10 @@ async def _validierte_anlage_ids(
     "",
     response_model=DauerauftragRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "erstellen")),
+    ],
 )
 async def create_dauerauftrag(
     body: DauerauftragCreate,
@@ -158,7 +173,10 @@ async def create_dauerauftrag(
 async def _require_dauerauftrag_zugriff(
     session: AsyncSession, auth: AuthContext, dauerauftrag: Dauerauftrag
 ) -> None:
-    if auth.role == "techniker" and dauerauftrag.kunde_id not in await assigned_kunde_ids(
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
+    if beschraenkt and dauerauftrag.kunde_id not in await assigned_kunde_ids(
         session, auth.user_id
     ):
         raise HTTPException(
@@ -166,7 +184,11 @@ async def _require_dauerauftrag_zugriff(
         )
 
 
-@router.get("/{dauerauftrag_id}", response_model=DauerauftragMitVerlauf)
+@router.get(
+    "/{dauerauftrag_id}",
+    response_model=DauerauftragMitVerlauf,
+    dependencies=[Depends(require_recht("dispo", "sehen"))],
+)
 async def get_dauerauftrag(
     dauerauftrag_id: UUID,
     auth: AuthContext = Depends(get_current_user),
@@ -194,7 +216,10 @@ async def get_dauerauftrag(
 @router.patch(
     "/{dauerauftrag_id}",
     response_model=DauerauftragRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "bearbeiten")),
+    ],
 )
 async def update_dauerauftrag(
     dauerauftrag_id: UUID,
@@ -220,7 +245,10 @@ async def update_dauerauftrag(
 @router.put(
     "/{dauerauftrag_id}/anlagen",
     response_model=DauerauftragRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "bearbeiten")),
+    ],
 )
 async def set_dauerauftrag_anlagen(
     dauerauftrag_id: UUID,
@@ -266,7 +294,10 @@ async def set_dauerauftrag_anlagen(
 @router.delete(
     "/{dauerauftrag_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("dispo", "loeschen")),
+    ],
 )
 async def delete_dauerauftrag(
     dauerauftrag_id: UUID,

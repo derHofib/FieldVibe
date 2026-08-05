@@ -8,12 +8,13 @@ from app.models.kunde import Kunde
 from app.models.tag import Tag
 from app.models.vorgang import Vorgang
 from app.schemas.search import SearchHit, SearchResponse
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/search",
     tags=["search"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[Depends(require_roles("mandant_admin", "custom"))],
 )
 
 HITS_PER_KATEGORIE = 8
@@ -25,7 +26,10 @@ async def search(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SearchResponse:
-    kunde_ids = await assigned_kunde_ids(session, auth.user_id) if auth.role == "techniker" else None
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
+    kunde_ids = await assigned_kunde_ids(session, auth.user_id) if beschraenkt else None
 
     # Ein führendes '#' durchsucht ausschließlich Tags (Abschnitt 5.3).
     if q.startswith("#"):

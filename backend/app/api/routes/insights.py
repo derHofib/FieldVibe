@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, require_module, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.angebot import Angebot
 from app.models.rechnung import Rechnung
 from app.models.user import User
@@ -13,6 +13,7 @@ from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.insights import Insights, TechnikerAuslastung
 from app.services.rechnung_service import netto_betrag, positionen_fuer
+from app.services.zuweisung_service import technik_user_ids
 
 router = APIRouter(
     prefix="/api/insights",
@@ -31,7 +32,9 @@ def _montag_dieser_woche(jetzt: datetime) -> datetime:
 
 
 @router.get("", response_model=Insights)
-async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
+async def get_insights(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> Insights:
     status_result = await session.execute(
         select(Vorgang.status, func.count()).group_by(Vorgang.status)
     )
@@ -62,9 +65,10 @@ async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
     )
 
     wochenstart = _montag_dieser_woche(datetime.now(timezone.utc))
+    techniker_ids = await technik_user_ids(session, auth.mandant_id)
     technikers = (
         await session.execute(
-            select(User).where(User.role == "techniker", User.aktiv.is_(True)).order_by(User.name)
+            select(User).where(User.id.in_(techniker_ids), User.aktiv.is_(True)).order_by(User.name)
         )
     ).scalars().all()
 

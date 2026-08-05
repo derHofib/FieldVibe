@@ -9,11 +9,8 @@ export function MaterialDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
-  const kannLoeschen =
-    currentUser?.role === "mandant_admin" ||
-    currentUser?.role === "disponent" ||
-    currentUser?.role === "loesch_operativ";
+  const { hatRecht } = useAuth();
+  const kannLoeschen = hatRecht("material", "loeschen");
 
   const deleteMutation = useMutation({
     mutationFn: () => materialApi.remove(id!),

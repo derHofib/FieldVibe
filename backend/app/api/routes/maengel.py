@@ -5,7 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.mandant import Mandant
 from app.models.mangel import MANGEL_SCHWEREGRADE, Mangel
 from app.models.vorgang import Vorgang
@@ -16,13 +23,17 @@ from app.services.pdf_service import generate_maengel_protokoll_pdf
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
-# diesen Router.
+# diesen Router. Maengel entstehen waehrend der Vorgangsbearbeitung (siehe
+# create_mangel, das dabei auch ein VorgangEvent anlegt) -- die Rechte-
+# Matrix nutzt daher denselben Bereich "vorgaenge" wie app/api/routes/
+# vorgang_events.py, statt einen eigenen Bereich nur fuer Maengel zu fuehren.
 router = APIRouter(
     prefix="/api/maengel",
     tags=["maengel"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("abrechnung")),
+        Depends(require_recht("vorgaenge", "sehen")),
     ],
 )
 
@@ -82,7 +93,10 @@ async def get_mangel(mangel_id: UUID, session: AsyncSession = Depends(get_db)) -
 @router.delete(
     "/{mangel_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "loesch_operativ"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("vorgaenge", "loeschen")),
+    ],
 )
 async def delete_mangel(
     mangel_id: UUID,
@@ -100,7 +114,10 @@ async def delete_mangel(
     "",
     response_model=MangelRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "erstellen")),
+    ],
 )
 async def create_mangel(
     body: MangelCreate,
@@ -154,7 +171,10 @@ async def create_mangel(
 @router.patch(
     "/{mangel_id}",
     response_model=MangelRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
 )
 async def update_mangel(
     mangel_id: UUID,

@@ -26,7 +26,7 @@ from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from moto.moto_server.threaded_moto_server import ThreadedMotoServer
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 
 from app.core.config import get_settings
 from app.core.rate_limit import (
@@ -37,6 +37,7 @@ from app.core.rate_limit import (
 from app.core.security import hash_password
 from app.db.session import engine, system_session
 from app.main import app
+from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
@@ -48,6 +49,87 @@ from app.services import storage_service
 
 _settings = get_settings()
 _BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Best-effort-Nachbildung der vier vormals fest verdrahteten Rollen als
+# Account-Typen fuer Tests, die noch den alten Rollennamen als `role=`
+# uebergeben (siehe make_user unten) -- identisch zu LEGACY_DEFAULTS in
+# alembic/versions/0037_account_typen.py, damit bestehende Tests weiterhin
+# dasselbe Zugriffsverhalten pruefen wie vor dem Umbau auf frei definierbare
+# Account-Typen.
+_LEGACY_ROLLEN = ("disponent", "techniker", "controller", "mitarbeiter")
+_LEGACY_RECHTE: dict[str, dict[str, set[str]]] = {
+    "disponent": {
+        "vorgaenge": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+        "kunden": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+        "material": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+        "dispo": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+        "abrechnung": {"sehen", "erstellen", "bearbeiten", "loeschen"},
+        "statistik": {"sehen"},
+        "mitarbeiterverwaltung": {"sehen", "bearbeiten"},
+    },
+    "techniker": {
+        "vorgaenge": {"sehen", "erstellen", "bearbeiten"},
+        "kunden": {"sehen"},
+        "material": {"sehen"},
+        "dispo": {"sehen"},
+        "abrechnung": {"sehen"},
+        "statistik": {"sehen"},
+        "mitarbeiterverwaltung": {"sehen"},
+    },
+    "controller": {
+        "vorgaenge": {"sehen"},
+        "kunden": {"sehen"},
+        "material": {"sehen"},
+        "dispo": {"sehen"},
+        "abrechnung": {"sehen"},
+        "statistik": {"sehen"},
+        "mitarbeiterverwaltung": {"sehen", "bearbeiten"},
+    },
+    "mitarbeiter": {
+        "vorgaenge": {"sehen", "erstellen", "bearbeiten"},
+        "kunden": {"sehen", "erstellen", "bearbeiten"},
+        "material": {"sehen", "erstellen", "bearbeiten"},
+        "dispo": {"sehen"},
+        "abrechnung": set(),
+        "statistik": {"sehen"},
+        "mitarbeiterverwaltung": {"bearbeiten"},
+    },
+}
+_LEGACY_LABEL = {
+    "disponent": "Disponent",
+    "techniker": "Techniker",
+    "controller": "Controller",
+    "mitarbeiter": "Mitarbeiter",
+}
+
+
+async def _get_or_create_legacy_account_typ(session, *, mandant_id: uuid.UUID, rolle: str) -> AccountTyp:
+    name = _LEGACY_LABEL[rolle]
+    result = await session.execute(
+        select(AccountTyp).where(AccountTyp.mandant_id == mandant_id, AccountTyp.name == name)
+    )
+    account_typ = result.scalar_one_or_none()
+    if account_typ is not None:
+        return account_typ
+
+    account_typ = AccountTyp(
+        mandant_id=mandant_id, name=name, nur_zugewiesene_kunden=(rolle == "techniker")
+    )
+    session.add(account_typ)
+    await session.flush()
+    rechte = _LEGACY_RECHTE[rolle]
+    for bereich, aktionen in rechte.items():
+        for aktion in ("sehen", "erstellen", "bearbeiten", "loeschen"):
+            session.add(
+                AccountTypRecht(
+                    account_typ_id=account_typ.id,
+                    bereich=bereich,
+                    aktion=aktion,
+                    erlaubt=aktion in aktionen,
+                )
+            )
+    await session.flush()
+    return account_typ
 
 
 def _ensure_test_database_exists() -> None:
@@ -183,11 +265,22 @@ async def make_user():
         aktiv: bool = True,
     ) -> User:
         async with system_session() as session:
+            account_typ_id = None
+            effective_role = role
+            if role in _LEGACY_ROLLEN:
+                if mandant is None:
+                    raise ValueError(f"role={role!r} braucht einen Mandanten (Account-Typ ist mandantengebunden)")
+                account_typ = await _get_or_create_legacy_account_typ(
+                    session, mandant_id=mandant.id, rolle=role
+                )
+                effective_role = "custom"
+                account_typ_id = account_typ.id
             user = User(
                 mandant_id=mandant.id if mandant else None,
                 email=email or f"{uuid.uuid4().hex[:10]}@example.de",
                 password_hash=hash_password(password),
-                role=role,
+                role=effective_role,
+                account_typ_id=account_typ_id,
                 name=name,
                 aktiv=aktiv,
             )

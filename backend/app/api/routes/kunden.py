@@ -36,7 +36,8 @@ from app.schemas.user import UserRead
 from app.services import papierkorb_service, storage_service
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
+from app.services.zuweisung_service import assigned_kunde_ids, technik_user_ids
 
 # super_admin is deliberately excluded: fachliche Daten sind immer
 # mandantengebunden, und ein nicht-impersonierender super_admin hat kein
@@ -49,12 +50,7 @@ router = APIRouter(
     prefix="/api/kunden",
     tags=["kunden"],
     dependencies=[
-        Depends(
-            require_roles(
-                "mandant_admin", "disponent", "techniker", "controller", "mitarbeiter",
-                "loesch_operativ",
-            )
-        )
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))
     ],
 )
 
@@ -68,7 +64,9 @@ async def list_kunden(
     stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(Kunde.id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -79,8 +77,8 @@ async def list_kunden(
     response_model=KundeRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
-        Depends(require_recht("kunden", "bearbeiten")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "erstellen")),
     ],
 )
 async def create_kunde(
@@ -115,9 +113,10 @@ async def create_kunde(
 async def _require_kunde_zugriff(
     session: AsyncSession, auth: AuthContext, kunde_id: UUID
 ) -> None:
-    if auth.role == "techniker" and kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
+    if beschraenkt and kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
 
 
@@ -242,7 +241,8 @@ async def get_kunde_profil(
     "/{kunde_id}/techniker",
     response_model=list[UserRead],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "sehen")),
         Depends(require_module("kundenverwaltung")),
     ],
 )
@@ -264,7 +264,8 @@ async def list_kunde_techniker(
     "/{kunde_id}/techniker",
     response_model=list[UserRead],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenverwaltung")),
     ],
 )
@@ -279,10 +280,7 @@ async def set_kunde_techniker(
 
     user_ids = set(body.user_ids)
     if user_ids:
-        gueltige_result = await session.execute(
-            select(User.id).where(User.id.in_(user_ids), User.role == "techniker")
-        )
-        gueltige_ids = set(gueltige_result.scalars().all())
+        gueltige_ids = await technik_user_ids(session, auth.mandant_id) & user_ids
         if gueltige_ids != user_ids:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -316,7 +314,7 @@ async def set_kunde_techniker(
     "/{kunde_id}",
     response_model=KundeRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "controller", "mitarbeiter")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_module("kundenverwaltung")),
         Depends(require_recht("kunden", "bearbeiten")),
     ],
@@ -345,7 +343,8 @@ async def update_kunde(
     "/{kunde_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "loesch_operativ")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("kunden", "loeschen")),
         Depends(require_module("kundenverwaltung")),
     ],
 )
@@ -387,7 +386,8 @@ async def list_portal_zugaenge(
     response_model=KundenportalZugangRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
@@ -425,7 +425,8 @@ async def create_portal_zugang(
     "/{kunde_id}/portal-zugaenge/{zugang_id}",
     response_model=KundenportalZugangRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )

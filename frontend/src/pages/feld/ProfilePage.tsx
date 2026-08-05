@@ -5,13 +5,14 @@ import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
 
 export function ProfilePage() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, hatRecht, logout } = useAuth();
   const navigate = useNavigate();
-  // loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
-  // app/api/deps.py:require_roles()) -- die Verwaltungs-Links hier folgen
-  // demselben Muster, sonst waeren die Backend-Rechte ohne Navigation dazu.
-  const istMandantAdminAehnlich =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
+
+  // "Disponieren" (Techniker einteilen, Dauer-Auftraege verwalten) bleibt
+  // hier auf dem Profil, weil es operative Alltagsarbeit ist, nicht
+  // Verwaltung -- die Einstellungen-Seite (Zahnrad im Header) buendelt
+  // stattdessen Account-Verwaltung/Firmendaten/Integrationen.
+  const kannDisponieren = hatRecht("dispo", "bearbeiten");
 
   return (
     <div className="space-y-4">
@@ -23,7 +24,10 @@ export function ProfilePage() {
           <div>
             <div className="font-semibold text-slate-800 dark:text-slate-100">{currentUser?.name}</div>
             <div className="text-sm text-slate-500 dark:text-slate-400">
-              {currentUser && ROLE_LABEL[currentUser.role]}
+              {currentUser &&
+                (currentUser.role === "custom"
+                  ? (currentUser.account_typ_name ?? "Account")
+                  : ROLE_LABEL[currentUser.role])}
             </div>
           </div>
         </div>
@@ -39,43 +43,7 @@ export function ProfilePage() {
         </dl>
       </div>
 
-      {istMandantAdminAehnlich && istModulAktiv(currentUser, "statistik") && (
-        <button
-          onClick={() => navigate("/insights")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
-        >
-          📊 Insights ansehen
-        </button>
-      )}
-
-      {istMandantAdminAehnlich && (
-        <button
-          onClick={() => navigate("/integrationen")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
-        >
-          🔌 Integrationen verwalten
-        </button>
-      )}
-
-      {istMandantAdminAehnlich && (
-        <button
-          onClick={() => navigate("/accounts")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
-        >
-          👥 Nutzer verwalten
-        </button>
-      )}
-
-      {istMandantAdminAehnlich && (
-        <button
-          onClick={() => navigate("/anlagen-felder")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
-        >
-          🏷️ Anlagen-Zusatzfelder
-        </button>
-      )}
-
-      {(istMandantAdminAehnlich || currentUser?.role === "disponent") && (
+      {kannDisponieren && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
@@ -84,22 +52,21 @@ export function ProfilePage() {
         </button>
       )}
 
-      {(istMandantAdminAehnlich || currentUser?.role === "disponent") &&
-        istModulAktiv(currentUser, "dauerauftrag") && (
-          <button
-            onClick={() => navigate("/dauerauftraege")}
-            className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
-          >
-            🔁 Dauer-Aufträge
-          </button>
-        )}
+      {kannDisponieren && istModulAktiv(currentUser, "dauerauftrag") && (
+        <button
+          onClick={() => navigate("/dauerauftraege")}
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+        >
+          🔁 Dauer-Aufträge
+        </button>
+      )}
 
       {istModulAktiv(currentUser, "statistik") && (
         <button
           onClick={() => navigate("/statistik")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
-          📊 {currentUser?.role === "techniker" ? "Meine Statistik" : "Statistik"}
+          📊 {currentUser?.nur_zugewiesene_kunden ? "Meine Statistik" : "Statistik"}
         </button>
       )}
 
