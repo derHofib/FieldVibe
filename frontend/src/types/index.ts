@@ -711,7 +711,7 @@ export interface Rechnung {
   betrag_brutto: string;
 }
 
-export type EingangsrechnungStatus = "offen" | "bezahlt" | "storniert";
+export type EingangsrechnungStatus = "entwurf" | "offen" | "bezahlt" | "storniert";
 export type EingangsrechnungKategorie =
   | "wareneinkauf"
   | "betriebskosten"
@@ -759,7 +759,9 @@ export interface Eingangsrechnung {
   bezahlt_am: string | null;
   beleg_object_key: string | null;
   notiz: string | null;
-  erstellt_von: string;
+  erstellt_von: string | null;
+  email_absender: string | null;
+  email_betreff: string | null;
   created_at: string;
   updated_at: string;
   zahlungen: EingangsrechnungZahlung[];

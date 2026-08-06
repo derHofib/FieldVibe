@@ -1,7 +1,11 @@
 """Hintergrund-Worker: prueft stuendlich, welche Mandanten gerade ihre
 konfigurierte taegliche Scheduler-Stunde erreicht haben, und fuehrt fuer
 genau diese den Pruefzyklen-Scheduler, die Mahnwesen-Eskalation und den
-Kreditorenbuchhaltung-Faelligkeits-Check aus.
+Kreditorenbuchhaltung-Faelligkeits-Check aus. Der E-Mail-Rechnungseingang-
+Import (siehe email_ingest_service.py) laeuft dagegen unabhaengig von der
+mandantenindividuellen Scheduler-Stunde bei jedem stuendlichen Tick fuer
+alle Mandanten mit aktiver IMAP-Integration -- ein neuer Beleg soll nicht
+bis zu 24 Stunden auf die naechste Verarbeitung warten.
 
 Laeuft als eigener Compose-Service (siehe docker-compose.yml, Service
 "worker") -- getrennt vom Backend-Container, damit ein API-Neustart/Deploy
@@ -16,6 +20,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.db.session import system_session
+from app.services.email_ingest_service import run_email_ingest
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
 from app.services.scheduler_service import (
@@ -40,10 +45,6 @@ async def _run_hourly_tick() -> None:
     async with system_session() as session:
         mandant_ids = await mandanten_faellig_um(session, jetzt.hour)
 
-    if not mandant_ids:
-        logger.info("Keine Mandanten für Stunde %02d:00 UTC fällig", jetzt.hour)
-        return
-
     async with worker_lock() as acquired:
         if not acquired:
             # Ein anderer Worker-Container haelt den Lock bereits fuer
@@ -51,6 +52,16 @@ async def _run_hourly_tick() -> None:
             # Tick greift wieder (der Zustand in der DB, nicht der Timer,
             # ist die Quelle der Wahrheit dafuer, was faellig ist).
             logger.info("Ein anderer Worker hält den Lock bereits, dieser Tick wird übersprungen")
+            return
+
+        try:
+            email_ergebnis = await run_email_ingest()
+            logger.info("E-Mail-Rechnungseingang-Import abgeschlossen: %s", email_ergebnis)
+        except Exception:
+            logger.exception("E-Mail-Rechnungseingang-Import fehlgeschlagen")
+
+        if not mandant_ids:
+            logger.info("Keine Mandanten für Stunde %02d:00 UTC fällig", jetzt.hour)
             return
 
         try:

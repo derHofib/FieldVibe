@@ -1,6 +1,10 @@
+from datetime import date
+from decimal import Decimal
+
 import pytest
 
 from app.db.session import system_session
+from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.vorgang_event import VorgangEvent
 from tests.conftest import auth_headers, login
 
@@ -464,9 +468,10 @@ async def test_reine_entwurfsrechnung_kann_endgueltig_geloescht_werden(
 async def test_eingangsrechnung_kann_nie_endgueltig_geloescht_werden(
     client, make_mandant, make_user
 ):
-    # Eine Eingangsrechnung repraesentiert immer einen tatsaechlich
-    # erhaltenen Beleg (kein "Entwurf"-Status vorgesehen) -- unterliegt daher
-    # immer der Aufbewahrungspflicht.
+    # Manuell (nicht per E-Mail-Import) angelegte Eingangsrechnungen starten
+    # direkt als "offen" (bestaetigter Beleg) -- unterliegen daher immer der
+    # Aufbewahrungspflicht. Nur der Status "entwurf" (unbestaetigter
+    # E-Mail-Import, siehe email_ingest_service.py) ist davon ausgenommen.
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     admin_token = await login(client, admin.email, "pw-123456")
@@ -494,3 +499,41 @@ async def test_eingangsrechnung_kann_nie_endgueltig_geloescht_werden(
     )
     assert purge_resp.status_code == 409
     assert "Aufbewahrungspflicht" in purge_resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_unbestaetigter_email_entwurf_kann_endgueltig_geloescht_werden(
+    client, make_mandant, make_user
+):
+    # Anders als ein bestaetigter Beleg ist ein per E-Mail-Import
+    # angelegter, noch unbestaetigter Entwurf (status "entwurf", siehe
+    # email_ingest_service.py) kein realer Geschaeftsvorfall -- z.B. wenn
+    # eine PDF-Anlage in einer Spam-Mail faelschlich als Rechnung erkannt
+    # wurde. Der duerfen nicht wie ein echter Beleg fuer immer im Papierkorb
+    # haengen bleiben.
+    mandant = await make_mandant()
+
+    async with system_session() as session:
+        eingangsrechnung = Eingangsrechnung(
+            mandant_id=mandant.id,
+            lieferant_name="spam@nirgendwo.de",
+            rechnungsnummer_lieferant="",
+            rechnungsdatum=date.today(),
+            betrag_netto=Decimal("0"),
+            status="entwurf",
+        )
+        session.add(eingangsrechnung)
+        await session.flush()
+        er_id = eingangsrechnung.id
+
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    admin_token = await login(client, admin.email, "pw-123456")
+    await client.delete(f"/api/eingangsrechnungen/{er_id}", headers=auth_headers(admin_token))
+
+    operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
+    token = await login(client, operativ.email, "pw-123456")
+
+    purge_resp = await client.delete(
+        f"/api/papierkorb/eingangsrechnung/{er_id}", headers=auth_headers(token)
+    )
+    assert purge_resp.status_code == 204

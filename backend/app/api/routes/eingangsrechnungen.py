@@ -44,7 +44,7 @@ router = APIRouter(
     ],
 )
 
-_GUELTIGE_UEBERGAENGE = {"offen": {"bezahlt", "storniert"}}
+_GUELTIGE_UEBERGAENGE = {"entwurf": {"offen"}, "offen": {"bezahlt", "storniert"}}
 _BELEG_MAX_BYTES = 10 * 1024 * 1024
 
 
@@ -139,10 +139,10 @@ async def delete_eingangsrechnung(
     eingangsrechnung = await session.get(Eingangsrechnung, eingangsrechnung_id)
     if eingangsrechnung is None or eingangsrechnung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eingangsrechnung nicht gefunden")
-    if eingangsrechnung.status != "offen":
+    if eingangsrechnung.status not in ("offen", "entwurf"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Nur offene Eingangsrechnungen können gelöscht werden",
+            detail="Nur offene Eingangsrechnungen oder unbestätigte Entwürfe können gelöscht werden",
         )
     await papierkorb_service.soft_delete(
         session, entity_typ="eingangsrechnung", entity_id=eingangsrechnung_id, actor_user_id=auth.user_id
@@ -286,10 +286,43 @@ async def update_eingangsrechnung(
     if eingangsrechnung is None or eingangsrechnung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eingangsrechnung nicht gefunden")
 
-    if body.betrag_netto is not None:
-        if eingangsrechnung.status != "offen":
+    if body.lieferant_id is not None or body.lieferant_name is not None:
+        if eingangsrechnung.status != "entwurf":
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Betrag kann nur bei offenen Rechnungen geändert werden"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Lieferant kann nur bei einem unbestätigten Entwurf geändert werden",
+            )
+        if body.lieferant_id is not None:
+            lieferant = await session.get(Lieferant, body.lieferant_id)
+            if lieferant is None or lieferant.geloescht_am is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Lieferant nicht gefunden oder gehört nicht zum eigenen Mandanten",
+                )
+            eingangsrechnung.lieferant_id = lieferant.id
+            eingangsrechnung.lieferant_name = lieferant.name
+        elif body.lieferant_name is not None:
+            eingangsrechnung.lieferant_id = None
+            eingangsrechnung.lieferant_name = body.lieferant_name
+    if body.rechnungsnummer_lieferant is not None:
+        if eingangsrechnung.status != "entwurf":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rechnungsnummer kann nur bei einem unbestätigten Entwurf geändert werden",
+            )
+        eingangsrechnung.rechnungsnummer_lieferant = body.rechnungsnummer_lieferant
+    if body.rechnungsdatum is not None:
+        if eingangsrechnung.status != "entwurf":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rechnungsdatum kann nur bei einem unbestätigten Entwurf geändert werden",
+            )
+        eingangsrechnung.rechnungsdatum = body.rechnungsdatum
+
+    if body.betrag_netto is not None:
+        if eingangsrechnung.status not in ("entwurf", "offen"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Betrag kann nur bei offenen Rechnungen oder Entwürfen geändert werden"
             )
         bestehende_positionen = await positionen_fuer(session, eingangsrechnung_id)
         if bestehende_positionen:
@@ -301,9 +334,9 @@ async def update_eingangsrechnung(
     if body.faellig_am is not None:
         eingangsrechnung.faellig_am = body.faellig_am
     if body.skonto_prozent is not None or body.skonto_tage is not None:
-        if eingangsrechnung.status != "offen":
+        if eingangsrechnung.status not in ("entwurf", "offen"):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Skonto kann nur bei offenen Rechnungen geändert werden"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Skonto kann nur bei offenen Rechnungen oder Entwürfen geändert werden"
             )
         if body.skonto_prozent is not None:
             eingangsrechnung.skonto_prozent = body.skonto_prozent
@@ -321,6 +354,12 @@ async def update_eingangsrechnung(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Statuswechsel von '{eingangsrechnung.status}' nach '{neuer_status}' nicht erlaubt",
             )
+        if eingangsrechnung.status == "entwurf" and neuer_status == "offen":
+            if not eingangsrechnung.rechnungsnummer_lieferant or eingangsrechnung.betrag_netto <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Rechnungsnummer und Betrag müssen vor der Bestätigung ausgefüllt sein",
+                )
         if neuer_status == "bezahlt":
             eingangsrechnung.bezahlt_am = datetime.now(timezone.utc)
         eingangsrechnung.status = neuer_status

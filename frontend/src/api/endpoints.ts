@@ -785,6 +785,10 @@ export const eingangsrechnungenApi = {
     id: string,
     body: {
       status?: string;
+      lieferant_id?: string | null;
+      lieferant_name?: string;
+      rechnungsnummer_lieferant?: string;
+      rechnungsdatum?: string;
       betrag_netto?: string;
       faellig_am?: string;
       skonto_prozent?: string;

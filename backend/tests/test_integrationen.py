@@ -37,6 +37,29 @@ async def test_admin_can_create_smtp_integration_with_encrypted_secret(
 
 
 @pytest.mark.asyncio
+async def test_admin_can_create_imap_integration_for_rechnungseingang_import(
+    client, make_mandant, make_user
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/integrationen",
+        headers=auth_headers(token),
+        json={
+            "typ": "imap",
+            "config": {"host": "imap.example.de", "port": 993, "user": "rechnung@example.de", "mailbox": "INBOX"},
+            "secret": "postfach-passwort",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["typ"] == "imap"
+    assert body["hat_secret"] is True
+
+
+@pytest.mark.asyncio
 async def test_unknown_typ_rejected(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")

@@ -7,6 +7,7 @@ import type { NotificationEntry } from "../../types";
 function targetPath(n: NotificationEntry): string | null {
   if (n.ref_entity_type === "vorgang" && n.ref_entity_id) return `/vorgaenge/${n.ref_entity_id}`;
   if (n.ref_entity_type === "anlage" && n.ref_entity_id) return `/anlagen/${n.ref_entity_id}`;
+  if (n.ref_entity_type === "eingangsrechnung" && n.ref_entity_id) return `/rechnungseingang/${n.ref_entity_id}`;
   return null;
 }
 

@@ -66,6 +66,14 @@ class EingangsrechnungCreate(BaseModel):
 
 class EingangsrechnungUpdate(BaseModel):
     status: str | None = None
+    # Nur bei status "entwurf" aenderbar -- siehe app/api/routes/
+    # eingangsrechnungen.py: das sind die per E-Mail-Import vorbelegten
+    # Platzhalterwerte, die vor der Bestaetigung (Uebergang zu "offen")
+    # noch korrigiert werden muessen.
+    lieferant_id: UUID | None = None
+    lieferant_name: str | None = None
+    rechnungsnummer_lieferant: str | None = None
+    rechnungsdatum: date | None = None
     betrag_netto: Decimal | None = None
     faellig_am: date | None = None
     skonto_prozent: Decimal | None = None
@@ -92,7 +100,9 @@ class EingangsrechnungRead(BaseModel):
     bezahlt_am: datetime | None
     beleg_object_key: str | None
     notiz: str | None
-    erstellt_von: UUID
+    erstellt_von: UUID | None
+    email_absender: str | None
+    email_betreff: str | None
     created_at: datetime
     updated_at: datetime
     positionen: list[EingangsrechnungPositionRead]

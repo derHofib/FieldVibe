@@ -2,11 +2,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { eingangsrechnungenApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
-import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
+import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
+  entwurf: "Entwurf (E-Mail-Import)",
   offen: "Offen",
   bezahlt: "Bezahlt",
   storniert: "Storniert",
@@ -21,6 +23,164 @@ const KATEGORIE_LABEL: Record<EingangsrechnungKategorie, string> = {
   versicherung: "Versicherung",
   sonstiges: "Sonstiges",
 };
+
+function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingangsrechnung }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [lieferantId, setLieferantId] = useState("");
+  const [lieferantName, setLieferantName] = useState(eingangsrechnung.lieferant_name);
+  const [rechnungsnummer, setRechnungsnummer] = useState(eingangsrechnung.rechnungsnummer_lieferant);
+  const [rechnungsdatum, setRechnungsdatum] = useState(eingangsrechnung.rechnungsdatum.slice(0, 10));
+  const [betragNetto, setBetragNetto] = useState(eingangsrechnung.betrag_netto);
+  const [kategorie, setKategorie] = useState("");
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  const { data: lieferanten } = useQuery({ queryKey: ["lieferanten"], queryFn: () => lieferantenApi.list() });
+  const { data: belegUrl } = useQuery({
+    queryKey: ["eingangsrechnung-beleg-url", eingangsrechnung.id],
+    queryFn: () => eingangsrechnungenApi.belegUrl(eingangsrechnung.id),
+  });
+
+  const bestaetigenMutation = useMutation({
+    mutationFn: () =>
+      eingangsrechnungenApi.update(eingangsrechnung.id, {
+        lieferant_id: lieferantId || null,
+        lieferant_name: lieferantId ? undefined : lieferantName,
+        rechnungsnummer_lieferant: rechnungsnummer,
+        rechnungsdatum,
+        betrag_netto: betragNetto,
+        kategorie: kategorie || undefined,
+        status: "offen",
+      }),
+    onSuccess: () => {
+      setFehler(null);
+      queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", eingangsrechnung.id] });
+      queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
+    },
+    onError: (err) => setFehler(err instanceof ApiError ? err.message : "Bestätigen fehlgeschlagen"),
+  });
+
+  const verwerfenMutation = useMutation({
+    mutationFn: () => eingangsrechnungenApi.remove(eingangsrechnung.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
+      navigate("/rechnungseingang");
+    },
+  });
+
+  const inputClass =
+    "w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        ← Zurück
+      </button>
+
+      <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        📥 Per E-Mail importiert{eingangsrechnung.email_absender && ` von ${eingangsrechnung.email_absender}`}
+        {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} -- bitte Angaben gegen den
+        Beleg prüfen und bestätigen.
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-lg bg-white p-2 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+          {belegUrl?.url ? (
+            <iframe title="Beleg" src={belegUrl.url} className="h-[70vh] w-full rounded-md" />
+          ) : (
+            <p className="p-4 text-sm text-slate-400 dark:text-slate-500">Kein Beleg vorhanden.</p>
+          )}
+        </div>
+
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+          <div>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Lieferant</label>
+            <select value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
+              <option value="">Name manuell eintragen…</option>
+              {(lieferanten ?? []).map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {!lieferantId && (
+            <input
+              value={lieferantName}
+              onChange={(e) => setLieferantName(e.target.value)}
+              placeholder="Name des Ausstellers"
+              className={inputClass}
+            />
+          )}
+          <div>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Rechnungsnummer</label>
+            <input
+              value={rechnungsnummer}
+              onChange={(e) => setRechnungsnummer(e.target.value)}
+              placeholder="Rechnungsnummer (vom Aussteller)"
+              className={inputClass}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Rechnungsdatum</label>
+              <input
+                type="date"
+                value={rechnungsdatum}
+                onChange={(e) => setRechnungsdatum(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Betrag netto</label>
+              <input
+                type="number"
+                step="0.01"
+                value={betragNetto}
+                onChange={(e) => setBetragNetto(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Kategorie</label>
+            <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
+              <option value="">Kategorie…</option>
+              {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
+
+          <div className="flex gap-2 pt-2">
+            <button
+              disabled={!rechnungsnummer || !betragNetto || Number(betragNetto) <= 0 || bestaetigenMutation.isPending}
+              onClick={() => bestaetigenMutation.mutate()}
+              className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              ✓ Als Rechnung übernehmen
+            </button>
+            <button
+              onClick={() => {
+                if (window.confirm("Entwurf verwerfen (z.B. keine echte Rechnung)? Wandert in den Papierkorb.")) {
+                  verwerfenMutation.mutate();
+                }
+              }}
+              disabled={verwerfenMutation.isPending}
+              className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-slate-800 dark:text-red-400"
+            >
+              Verwerfen
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function EingangsrechnungDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -95,6 +255,10 @@ export function EingangsrechnungDetailPage() {
   });
 
   if (!eingangsrechnung) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+
+  if (eingangsrechnung.status === "entwurf") {
+    return <EntwurfBestaetigenView eingangsrechnung={eingangsrechnung} />;
+  }
 
   return (
     <div className="space-y-4">

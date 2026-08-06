@@ -164,7 +164,10 @@ def _kind(entity_typ: str) -> EntityKind:
 
 def _gobd_gesperrt(entity_typ: str, obj: Any) -> bool:
     if entity_typ == "eingangsrechnung":
-        return True
+        # "entwurf" = unbestaetigter E-Mail-Import (siehe
+        # email_ingest_service.py) -- noch kein echter Geschaeftsvorfall,
+        # also (anders als ein bestaetigter Beleg) nicht GoBD-gesperrt.
+        return obj.status != "entwurf"
     if entity_typ == "rechnung":
         return obj.status != "entwurf"
     return False

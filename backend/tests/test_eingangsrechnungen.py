@@ -1,7 +1,11 @@
 import io
+from datetime import date
+from decimal import Decimal
 
 import pytest
 
+from app.db.session import system_session
+from app.models.eingangsrechnung import Eingangsrechnung
 from tests.conftest import auth_headers, login
 
 
@@ -464,3 +468,108 @@ async def test_export_csv_enthaelt_offenen_betrag(client, make_mandant, make_use
     assert rechnungsnummer in text
     assert "119.00" in text
     assert "0.00" in text
+
+
+async def _make_entwurf(mandant_id, *, email_absender="rechnung@lieferant.de", email_betreff="Ihre Rechnung"):
+    async with system_session() as session:
+        eingangsrechnung = Eingangsrechnung(
+            mandant_id=mandant_id,
+            lieferant_name=email_absender,
+            rechnungsnummer_lieferant="",
+            rechnungsdatum=date.today(),
+            betrag_netto=Decimal("0"),
+            status="entwurf",
+            email_absender=email_absender,
+            email_betreff=email_betreff,
+        )
+        session.add(eingangsrechnung)
+        await session.flush()
+        await session.refresh(eingangsrechnung)
+        return eingangsrechnung.id
+
+
+@pytest.mark.asyncio
+async def test_entwurf_kann_zu_offen_bestaetigt_werden(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    entwurf_id = await _make_entwurf(mandant.id)
+
+    get_resp = await client.get(f"/api/eingangsrechnungen/{entwurf_id}", headers=auth_headers(token))
+    assert get_resp.status_code == 200
+    assert get_resp.json()["status"] == "entwurf"
+    assert get_resp.json()["email_absender"] == "rechnung@lieferant.de"
+    assert get_resp.json()["erstellt_von"] is None
+
+    # Ohne ausgefuellte Rechnungsnummer/Betrag darf nicht bestaetigt werden.
+    zu_frueh = await client.patch(
+        f"/api/eingangsrechnungen/{entwurf_id}", headers=auth_headers(token), json={"status": "offen"}
+    )
+    assert zu_frueh.status_code == 400
+
+    bestaetigt = await client.patch(
+        f"/api/eingangsrechnungen/{entwurf_id}",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar GmbH",
+            "rechnungsnummer_lieferant": "RE-2026-001",
+            "rechnungsdatum": "2026-07-15",
+            "betrag_netto": "80.00",
+            "status": "offen",
+        },
+    )
+    assert bestaetigt.status_code == 200
+    body = bestaetigt.json()
+    assert body["status"] == "offen"
+    assert body["lieferant_name"] == "Sonepar GmbH"
+    assert body["rechnungsnummer_lieferant"] == "RE-2026-001"
+    assert body["betrag_netto"] == "80.00"
+
+    # Nach der Bestaetigung sind Lieferant/Rechnungsnummer/-datum wieder
+    # gesperrt -- das sind jetzt die massgeblichen Belegdaten.
+    nachtraeglich = await client.patch(
+        f"/api/eingangsrechnungen/{entwurf_id}",
+        headers=auth_headers(token),
+        json={"rechnungsnummer_lieferant": "RE-ANDERS"},
+    )
+    assert nachtraeglich.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_entwurf_ohne_pdf_kann_verworfen_werden(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    entwurf_id = await _make_entwurf(mandant.id, email_absender="spam@nirgendwo.de", email_betreff="Werbung")
+
+    delete_resp = await client.delete(f"/api/eingangsrechnungen/{entwurf_id}", headers=auth_headers(token))
+    assert delete_resp.status_code == 204
+
+    get_resp = await client.get(f"/api/eingangsrechnungen/{entwurf_id}", headers=auth_headers(token))
+    assert get_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_entwurf_lieferant_kann_ueber_lieferant_id_gesetzt_werden(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    lieferant_resp = await client.post(
+        "/api/lieferanten", headers=auth_headers(token), json={"name": "Rexel Deutschland"}
+    )
+    assert lieferant_resp.status_code == 201
+    lieferant_id = lieferant_resp.json()["id"]
+
+    entwurf_id = await _make_entwurf(mandant.id)
+
+    resp = await client.patch(
+        f"/api/eingangsrechnungen/{entwurf_id}",
+        headers=auth_headers(token),
+        json={"lieferant_id": lieferant_id},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["lieferant_id"] == lieferant_id
+    assert resp.json()["lieferant_name"] == "Rexel Deutschland"

@@ -9,6 +9,7 @@ import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
+  entwurf: "Entwurf",
   offen: "Offen",
   bezahlt: "Bezahlt",
   storniert: "Storniert",
@@ -213,7 +214,7 @@ export function RechnungseingangPage() {
       )}
 
       <div className="flex gap-2 text-xs">
-        {(["", "offen", "bezahlt", "storniert"] as const).map((s) => (
+        {(["", "entwurf", "offen", "bezahlt", "storniert"] as const).map((s) => (
           <button
             key={s}
             onClick={() => setStatusFilter(s)}

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
-EINGANGSRECHNUNG_STATUS = ("offen", "bezahlt", "storniert")
+EINGANGSRECHNUNG_STATUS = ("entwurf", "offen", "bezahlt", "storniert")
 EINGANGSRECHNUNG_KATEGORIEN = (
     "wareneinkauf",
     "betriebskosten",
@@ -71,9 +71,15 @@ class Eingangsrechnung(SoftDeleteMixin, TimestampMixin, Base):
     # korrigierbar, solange status == "offen".
     beleg_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     notiz: Mapped[str | None] = mapped_column(Text)
-    erstellt_von: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    # NULL bedeutet: automatisch per E-Mail-Import angelegt (status "entwurf"),
+    # kein Mitarbeiter hat sie erfasst -- siehe email_ingest_service.py.
+    erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+    # Herkunft bei automatischem E-Mail-Import (siehe email_ingest_service.py)
+    # -- NULL bei manueller Erfassung ueber das Formular.
+    email_absender: Mapped[str | None] = mapped_column(Text, nullable=True)
+    email_betreff: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class EingangsrechnungPosition(Base):

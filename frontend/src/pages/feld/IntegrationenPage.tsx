@@ -342,6 +342,110 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   );
 }
 
+function ImapZeile({ integration }: { integration: MandantIntegration }) {
+  const queryClient = useQueryClient();
+  const [host, setHost] = useState(String(integration.config.host ?? ""));
+  const [port, setPort] = useState(String(integration.config.port ?? "993"));
+  const [user, setUser] = useState(String(integration.config.user ?? ""));
+  const [mailbox, setMailbox] = useState(String(integration.config.mailbox ?? "INBOX"));
+  const [secret, setSecret] = useState("");
+
+  const updateMutation = useMutation({
+    mutationFn: (body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean }) =>
+      integrationenApi.update(integration.id, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => integrationenApi.delete(integration.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
+  });
+
+  return (
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          IMAP (Rechnungseingang-Import)
+        </span>
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+            integration.aktiv
+              ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
+              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+          }`}
+        >
+          {integration.aktiv ? "Aktiv" : "Inaktiv"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          value={host}
+          onChange={(e) => setHost(e.target.value)}
+          placeholder="Host"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          value={port}
+          onChange={(e) => setPort(e.target.value)}
+          placeholder="Port"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
+          placeholder="Postfach-Adresse"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+        <input
+          value={mailbox}
+          onChange={(e) => setMailbox(e.target.value)}
+          placeholder="Ordner (z.B. INBOX)"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        />
+      </div>
+      <input
+        type="password"
+        value={secret}
+        onChange={(e) => setSecret(e.target.value)}
+        placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+      />
+
+      <div className="flex gap-2">
+        <button
+          onClick={() =>
+            updateMutation.mutate({
+              config: { host, port: Number(port) || port, user, mailbox },
+              ...(secret ? { secret } : {}),
+            })
+          }
+          disabled={updateMutation.isPending}
+          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        <button
+          onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
+          disabled={updateMutation.isPending}
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+        >
+          {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm("IMAP-Integration wirklich löschen?")) deleteMutation.mutate();
+          }}
+          disabled={deleteMutation.isPending}
+          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400"
+        >
+          Löschen
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function IntegrationenPage() {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
@@ -352,6 +456,13 @@ export function IntegrationenPage() {
   const [user, setUser] = useState("");
   const [fromAddress, setFromAddress] = useState("");
   const [secret, setSecret] = useState("");
+
+  const [showImapForm, setShowImapForm] = useState(false);
+  const [imapHost, setImapHost] = useState("");
+  const [imapPort, setImapPort] = useState("993");
+  const [imapUser, setImapUser] = useState("");
+  const [imapMailbox, setImapMailbox] = useState("INBOX");
+  const [imapSecret, setImapSecret] = useState("");
 
   const { data: integrationen, isLoading } = useQuery({
     queryKey: ["integrationen"],
@@ -386,11 +497,30 @@ export function IntegrationenPage() {
     },
   });
 
+  const createImapMutation = useMutation({
+    mutationFn: () =>
+      integrationenApi.create({
+        typ: "imap",
+        config: { host: imapHost, port: Number(imapPort) || imapPort, user: imapUser, mailbox: imapMailbox },
+        secret: imapSecret || undefined,
+      }),
+    onSuccess: () => {
+      setShowImapForm(false);
+      setImapHost("");
+      setImapPort("993");
+      setImapUser("");
+      setImapMailbox("INBOX");
+      setImapSecret("");
+      queryClient.invalidateQueries({ queryKey: ["integrationen"] });
+    },
+  });
+
   if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
     return <Navigate to="/feed" replace />;
   if (isLoading) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
+  const imap = integrationen?.find((i) => i.typ === "imap");
 
   return (
     <div className="space-y-4">
@@ -490,6 +620,66 @@ export function IntegrationenPage() {
           className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
           + SMTP einrichten
+        </button>
+      )}
+
+      <p className="text-sm text-slate-500 dark:text-slate-400">
+        Mit einem IMAP-Postfach (z.B. rechnung@deine-domain.de) werden Rechnungs-E-Mails automatisch
+        abgeholt: jeder PDF-Anhang landet als Entwurf im Rechnungseingang, den ein Mitarbeiter dort
+        gegen den Beleg prüft und bestätigt.
+      </p>
+
+      {imap ? (
+        <ImapZeile integration={imap} />
+      ) : showImapForm ? (
+        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              value={imapHost}
+              onChange={(e) => setImapHost(e.target.value)}
+              placeholder="Host"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <input
+              value={imapPort}
+              onChange={(e) => setImapPort(e.target.value)}
+              placeholder="Port"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <input
+              value={imapUser}
+              onChange={(e) => setImapUser(e.target.value)}
+              placeholder="Postfach-Adresse"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <input
+              value={imapMailbox}
+              onChange={(e) => setImapMailbox(e.target.value)}
+              placeholder="Ordner (z.B. INBOX)"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+          </div>
+          <input
+            type="password"
+            value={imapSecret}
+            onChange={(e) => setImapSecret(e.target.value)}
+            placeholder="Passwort"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          />
+          <button
+            disabled={!imapHost || !imapUser || createImapMutation.isPending}
+            onClick={() => createImapMutation.mutate()}
+            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            IMAP einrichten
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowImapForm(true)}
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+        >
+          + IMAP einrichten
         </button>
       )}
     </div>
