@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { mandantenApi } from "../api/endpoints";
+import { mandantenApi, systemApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { Mandant, MandantModul, MandantStatus } from "../types";
@@ -78,6 +78,36 @@ function ModulListe({ mandant }: { mandant: Mandant }) {
   );
 }
 
+function SystemStatus() {
+  const { data: health, isLoading, isError } = useQuery({
+    queryKey: ["system-health"],
+    queryFn: systemApi.healthz,
+    // /healthz braucht kein Login, aber ein haengender Backend-Container
+    // soll hier trotzdem sichtbar werden statt endlos zu laden.
+    retry: 1,
+  });
+
+  if (isLoading) return null;
+
+  const ok = !isError && health?.status === "ok";
+  return (
+    <div
+      className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${
+        ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+      }`}
+    >
+      <span className="font-medium">
+        {ok ? "✅ Backend erreichbar" : "⚠️ Backend nicht erreichbar"}
+      </span>
+      <span className="text-xs">
+        {health?.scheduler_letzter_lauf
+          ? `Letzter Scheduler-Lauf: ${new Date(health.scheduler_letzter_lauf).toLocaleString("de-DE")}`
+          : "Scheduler noch ohne erfolgreichen Lauf"}
+      </span>
+    </div>
+  );
+}
+
 export function MandantenPage() {
   const queryClient = useQueryClient();
   const { startImpersonation, isImpersonating } = useAuth();
@@ -120,6 +150,8 @@ export function MandantenPage() {
 
   return (
     <div className="space-y-8">
+      <SystemStatus />
+
       <section>
         <h2 className="mb-4 text-lg font-bold text-slate-800">Neuen Mandanten anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">

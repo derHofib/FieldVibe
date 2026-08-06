@@ -67,6 +67,7 @@ import type {
   Standort,
   StandortProfil,
   StoriesResponse,
+  SystemHealth,
   Tag,
   TagAssignment,
   TagEntityType,
@@ -91,6 +92,13 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => apiFetch<CurrentUser>("/api/auth/me"),
+};
+
+export const systemApi = {
+  // /healthz liegt bewusst ausserhalb von /api und braucht kein Login (fuer
+  // externes Infra-Monitoring per curl) -- dieselbe Antwort wird hier
+  // wiederverwendet, um sie zusaetzlich im Super-Admin-Bereich anzuzeigen.
+  healthz: () => apiFetch<SystemHealth>("/healthz"),
 };
 
 export const mandantenApi = {

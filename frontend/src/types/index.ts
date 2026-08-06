@@ -1,4 +1,14 @@
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
+
+// Antwort von GET /healthz (unauthentifiziert, fuer Infra-Monitoring UND
+// die System-Status-Anzeige im Super-Admin-Bereich). scheduler_letzter_lauf
+// ist null, solange der worker-Container noch keinen erfolgreichen
+// stuendlichen Tick hatte (frisches Deployment).
+export interface SystemHealth {
+  status: string;
+  scheduler_letzter_lauf: string | null;
+}
+
 // "custom" ersetzt die vormals fest verdrahteten disponent/techniker/
 // controller/mitarbeiter -- ein mandant_admin definiert beliebig viele
 // eigene Account-Typen (siehe AccountTyp weiter unten) mit je eigener
