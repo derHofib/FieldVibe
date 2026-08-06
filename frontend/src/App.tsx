@@ -12,6 +12,7 @@ import { AnfragenPage } from "./pages/feld/AnfragenPage";
 import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
 import { AnlagenFelderPage } from "./pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
+import { AuswertungPage } from "./pages/feld/AuswertungPage";
 import { BestellungDetailPage } from "./pages/feld/BestellungDetailPage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
@@ -106,6 +107,7 @@ export function App() {
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
           <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
+          <Route path="/auswertung" element={<AuswertungPage />} />
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
           <Route path="/material/:id" element={<MaterialDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />

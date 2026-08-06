@@ -10,6 +10,7 @@ from app.api.routes import (
     anlagen,
     anlagen_feld_definitionen,
     audit_log,
+    auswertung,
     auth,
     bestellungen,
     dauerauftraege,
@@ -112,6 +113,7 @@ app.include_router(pruefmittel.router)
 app.include_router(maengel.router)
 app.include_router(rechnungen.router)
 app.include_router(eingangsrechnungen.router)
+app.include_router(auswertung.router)
 app.include_router(kundenportal_auth.router)
 app.include_router(kundenportal.router)
 app.include_router(highlights.router)

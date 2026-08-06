@@ -1001,3 +1001,21 @@ export interface EmailLog {
   gesendet_von: string | null;
   created_at: string;
 }
+
+// --- Auswertung (USt-VA / DATEV) ---------------------------------------------
+
+export interface UstVaSatzZeile {
+  satz: string;
+  netto: string;
+  steuer: string;
+}
+
+export interface UstVaBericht {
+  von: string;
+  bis: string;
+  umsatzsteuer_saetze: UstVaSatzZeile[];
+  vorsteuer_saetze: UstVaSatzZeile[];
+  summe_umsatzsteuer: string;
+  summe_vorsteuer: string;
+  zahllast: string;
+}

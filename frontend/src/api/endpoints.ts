@@ -74,6 +74,7 @@ import type {
   Termin,
   TerminCreateResult,
   TokenPair,
+  UstVaBericht,
   User,
   Vorgang,
   VorgangAnfrage,
@@ -885,6 +886,13 @@ export const exportApi = {
   vorgaengeCsv: () => apiFetchBlob("/api/vorgaenge/export/csv"),
   zeiterfassungCsv: () => apiFetchBlob("/api/zeiterfassung/export/csv"),
   materialCsv: () => apiFetchBlob("/api/material/export/csv"),
+};
+
+export const auswertungApi = {
+  ustVa: (von: string, bis: string) =>
+    apiFetch<UstVaBericht>(`/api/auswertung/ust-va?von=${von}&bis=${bis}`),
+  datevExportCsv: (von: string, bis: string) =>
+    apiFetchBlob(`/api/auswertung/datev-export?von=${von}&bis=${bis}`),
 };
 
 export const kundenportalZugaengeApi = {
