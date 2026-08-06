@@ -34,6 +34,7 @@ function NavItem({ to, label, icon }: { to: string; label: string; icon: string 
 
 const dispoItem = { to: "/dispo", label: "Dispo", icon: "📅" };
 const geschaeftItem = { to: "/geschaeft", label: "Geschäft", icon: "💼" };
+const rechnungseingangItem = { to: "/rechnungseingang", label: "Rechnungseingang", icon: "📥" };
 const meldungenItem = { to: "/benachrichtigungen", label: "Meldungen", icon: "🔔" };
 const papierkorbItem = { to: "/papierkorb", label: "Papierkorb", icon: "🗑️" };
 
@@ -71,6 +72,9 @@ export function BottomNav() {
     // ueber die Inline-Anlage in "+Neu" erreichbar, siehe GeschaeftPage).
     ...(canDisponieren && istModulAktiv(currentUser, "kundenverwaltung", "abrechnung", "material")
       ? [{ ...geschaeftItem, badge: 0 }]
+      : []),
+    ...(hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung")
+      ? [{ ...rechnungseingangItem, badge: 0 }]
       : []),
     ...(istPapierkorbRolle ? [{ ...papierkorbItem, badge: 0 }] : []),
   ];

@@ -664,6 +664,53 @@ export interface Rechnung {
   betrag_brutto: string;
 }
 
+export type EingangsrechnungStatus = "offen" | "bezahlt" | "storniert";
+export type EingangsrechnungKategorie =
+  | "wareneinkauf"
+  | "betriebskosten"
+  | "miete"
+  | "personal"
+  | "fahrzeug"
+  | "versicherung"
+  | "sonstiges";
+
+export interface EingangsrechnungPosition {
+  id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  gesamt: string;
+}
+
+export interface Eingangsrechnung {
+  id: string;
+  lieferant_id: string | null;
+  lieferant_name: string;
+  vorgang_id: string | null;
+  rechnungsnummer_lieferant: string;
+  rechnungsdatum: string;
+  eingegangen_am: string;
+  faellig_am: string | null;
+  betrag_netto: string;
+  mwst_satz: string;
+  kategorie: EingangsrechnungKategorie | null;
+  status: EingangsrechnungStatus;
+  bezahlt_am: string | null;
+  beleg_object_key: string | null;
+  notiz: string | null;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+  positionen: EingangsrechnungPosition[];
+  betrag_brutto: string;
+}
+
+export interface EingangsrechnungBelegUrl {
+  url: string | null;
+}
+
 // --- Ausbau (Phase 7) -----------------------------------------------------
 
 export interface Highlight {

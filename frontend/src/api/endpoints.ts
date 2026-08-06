@@ -21,6 +21,9 @@ import type {
   Dauerauftrag,
   DauerauftragMitVerlauf,
   DauerauftragModus,
+  Eingangsrechnung,
+  EingangsrechnungBelegUrl,
+  EingangsrechnungPosition,
   EmailLog,
   FahrzeugZuweisungUebersicht,
   FeedResponse,
@@ -705,6 +708,45 @@ export const rechnungenApi = {
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/rechnungen/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff?: string; inhalt?: string }) =>
     apiFetch<EmailLog>(`/api/rechnungen/${id}/email`, { method: "POST", body: JSON.stringify(body) }),
+};
+
+export const eingangsrechnungenApi = {
+  list: (params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<Eingangsrechnung[]>(`/api/eingangsrechnungen${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}`),
+  create: (body: {
+    lieferant_id?: string | null;
+    lieferant_name?: string;
+    vorgang_id?: string | null;
+    rechnungsnummer_lieferant: string;
+    rechnungsdatum: string;
+    faellig_am?: string;
+    betrag_netto?: string;
+    kategorie?: string;
+    notiz?: string;
+    positionen?: Pick<EingangsrechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
+  }) => apiFetch<Eingangsrechnung>("/api/eingangsrechnungen", { method: "POST", body: JSON.stringify(body) }),
+  addPosition: (
+    id: string,
+    body: Pick<EingangsrechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">,
+  ) =>
+    apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/positionen`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: { status?: string; betrag_netto?: string; faellig_am?: string; kategorie?: string; notiz?: string }) =>
+    apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/eingangsrechnungen/${id}`, { method: "DELETE" }),
+  belegUpload: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiFetchForm<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/beleg`, formData);
+  },
+  belegUrl: (id: string) => apiFetch<EingangsrechnungBelegUrl>(`/api/eingangsrechnungen/${id}/beleg-url`),
+  belegRemove: (id: string) =>
+    apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/beleg`, { method: "DELETE" }),
 };
 
 export const tagsApi = {

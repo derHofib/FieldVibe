@@ -26,6 +26,7 @@ from app.models.anlage import Anlage
 from app.models.bestellung import Bestellung
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
+from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
@@ -99,6 +100,7 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
             ("mangel", "vorgang_id"),
             ("angebot", "vorgang_id"),
             ("rechnung", "vorgang_id"),
+            ("eingangsrechnung", "vorgang_id"),
             ("material_bedarf", "vorgang_id"),
             ("termin", "vorgang_id"),
             ("vorgang", "parent_vorgang_id"),
@@ -107,7 +109,9 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     "termin": EntityKind(Termin, "titel"),
     "pruefzyklus": EntityKind(Pruefzyklus, "bezeichnung"),
     "pruefmittel": EntityKind(Pruefmittel, "bezeichnung"),
-    "lieferant": EntityKind(Lieferant, "name", (("bestellung", "lieferant_id"),)),
+    "lieferant": EntityKind(
+        Lieferant, "name", (("bestellung", "lieferant_id"), ("eingangsrechnung", "lieferant_id"))
+    ),
     "material": EntityKind(Material, "bezeichnung", (("material_bedarf", "material_id"),)),
     "material_bedarf": EntityKind(MaterialBedarf, None),
     "bestellung": EntityKind(Bestellung, "bestellnummer"),
@@ -118,6 +122,7 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     "mangel": EntityKind(Mangel, "beschreibung"),
     "angebot": EntityKind(Angebot, "angebotsnummer"),
     "rechnung": EntityKind(Rechnung, "rechnungsnummer"),
+    "eingangsrechnung": EntityKind(Eingangsrechnung, "rechnungsnummer_lieferant"),
     "inventurzyklus": EntityKind(InventurZyklus, None),
     "fahrzeug_zuweisung": EntityKind(FahrzeugZuweisung, None),
     "tag": EntityKind(Tag, "label"),

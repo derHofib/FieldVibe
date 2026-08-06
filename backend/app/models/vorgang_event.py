@@ -21,6 +21,7 @@ EVENT_TYPEN = (
     "rechnung_status",
     "system",
     "unterschrift",
+    "eingangsrechnung_status",
 )
 
 

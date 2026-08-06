@@ -17,6 +17,7 @@ import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
 import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
+import { EingangsrechnungDetailPage } from "./pages/feld/EingangsrechnungDetailPage";
 import { FeedPage } from "./pages/feld/FeedPage";
 import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
@@ -30,6 +31,7 @@ import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
+import { RechnungseingangPage } from "./pages/feld/RechnungseingangPage";
 import { SearchPage } from "./pages/feld/SearchPage";
 import { SettingsPage } from "./pages/feld/SettingsPage";
 import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
@@ -102,6 +104,8 @@ export function App() {
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
+          <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
+          <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
           <Route path="/material/:id" element={<MaterialDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
