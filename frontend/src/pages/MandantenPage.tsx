@@ -13,9 +13,9 @@ const STATUS_LABEL: Record<MandantStatus, string> = {
 };
 
 const STATUS_BADGE: Record<MandantStatus, string> = {
-  aktiv: "bg-green-100 text-green-800",
-  pausiert: "bg-amber-100 text-amber-800",
-  gekuendigt: "bg-red-100 text-red-800",
+  aktiv: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
+  pausiert: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+  gekuendigt: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300",
 };
 
 const MODUL_LABEL: Record<MandantModul, string> = {
@@ -52,17 +52,17 @@ function ModulListe({ mandant }: { mandant: Mandant }) {
 
   return (
     <div>
-      <button onClick={() => setOffen((v) => !v)} className="btn-touch text-xs font-medium text-blue-700 underline">
+      <button onClick={() => setOffen((v) => !v)} className="btn-touch text-xs font-medium text-blue-700 underline dark:text-blue-400">
         {offen ? "Module ausblenden" : "Module verwalten"}
       </button>
       {offen && (
-        <div className="mt-2 space-y-1.5 rounded-md bg-slate-50 p-3">
-          <p className="text-xs text-slate-400">
+        <div className="mt-2 space-y-1.5 rounded-md bg-slate-50 p-3 dark:bg-slate-800">
+          <p className="text-xs text-slate-400 dark:text-slate-500">
             "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
             abwählbar.
           </p>
           {ALLE_MODULE.map((modul) => (
-            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-slate-700">
+            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input
                 type="checkbox"
                 checked={!mandant.deaktivierte_module.includes(modul)}
@@ -93,7 +93,9 @@ function SystemStatus() {
   return (
     <div
       className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${
-        ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+        ok
+          ? "bg-green-50 text-green-800 dark:bg-green-500/10 dark:text-green-300"
+          : "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-300"
       }`}
     >
       <span className="font-medium">
@@ -153,19 +155,19 @@ export function MandantenPage() {
       <SystemStatus />
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800">Neuen Mandanten anlegen</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Neuen Mandanten anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Slug (Subdomain)
             </label>
             <input
@@ -173,35 +175,35 @@ export function MandantenPage() {
               pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Branche</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Branche</label>
             <input
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           </div>
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
           >
             Anlegen
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-red-700">{formError}</p>}
+        {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800">Mandanten</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Mandanten</h2>
         {isLoading ? (
-          <p>Lädt…</p>
+          <p className="text-slate-500 dark:text-slate-400">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm">
-            <thead className="bg-slate-50 text-sm text-slate-600">
+          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-400">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Slug</th>
@@ -211,12 +213,12 @@ export function MandantenPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
+            <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
               {mandanten?.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-4 py-3 font-medium">{m.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.slug}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.branche ?? "–"}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{m.name}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{m.slug}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{m.branche ?? "–"}</td>
                   <td className="px-4 py-3">
                     <select
                       value={m.status}
