@@ -1,15 +1,17 @@
+import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { IconBadge, TONE_ROW_ACTIVE, type IconTone } from "./IconBadge";
 import { ThemeToggle } from "./ThemeToggle";
 
-const NAV_ITEMS = [
-  { to: "/uebersicht", label: "Übersicht", icon: "📊" },
-  { to: "/mandanten", label: "Mandanten", icon: "🏢" },
-  { to: "/accounts", label: "Accounts", icon: "👥" },
-  { to: "/audit-log", label: "Audit-Log", icon: "📋" },
-  { to: "/dsgvo", label: "DSGVO", icon: "🔒" },
-  { to: "/update", label: "Update", icon: "⬆️" },
+const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard; tone: IconTone }[] = [
+  { to: "/uebersicht", label: "Übersicht", icon: LayoutDashboard, tone: "sky" },
+  { to: "/mandanten", label: "Mandanten", icon: Building2, tone: "violet" },
+  { to: "/accounts", label: "Accounts", icon: Users, tone: "amber" },
+  { to: "/audit-log", label: "Audit-Log", icon: ScrollText, tone: "rose" },
+  { to: "/dsgvo", label: "DSGVO", icon: ShieldCheck, tone: "emerald" },
+  { to: "/update", label: "Update", icon: ArrowUpCircle, tone: "indigo" },
 ];
 
 function useSeitentitel(): string {
@@ -36,15 +38,19 @@ export function Layout() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `btn-touch flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium ${
+                  `btn-touch flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-slate-900 text-white dark:bg-cyan-600"
-                      : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                      ? TONE_ROW_ACTIVE[item.tone]
+                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                   }`
                 }
               >
-                <span aria-hidden>{item.icon}</span>
-                {item.label}
+                {({ isActive }) => (
+                  <>
+                    <IconBadge icon={item.icon} tone={item.tone} size="sm" active={isActive} />
+                    {item.label}
+                  </>
+                )}
               </NavLink>
             ))}
           </nav>

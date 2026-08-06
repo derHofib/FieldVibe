@@ -1,30 +1,38 @@
 import { useQuery } from "@tanstack/react-query";
+import {
+  BarChart3,
+  Bell,
+  Briefcase,
+  CalendarDays,
+  EllipsisVertical,
+  Inbox,
+  type LucideIcon,
+  Plus,
+  Rss,
+  Trash2,
+  User,
+} from "lucide-react";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
+import { IconBadge, type IconTone } from "./IconBadge";
 import { istModulAktiv } from "../utils/module";
 
-function NavItem({ to, label, icon }: { to: string; label: string; icon: string }) {
+function NavItem({ to, label, icon, tone }: { to: string; label: string; icon: LucideIcon; tone: IconTone }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
         `btn-touch flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium ${
-          isActive ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"
+          isActive ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <span
-            className={`text-lg leading-none transition-all ${
-              isActive ? "scale-110 drop-shadow-[0_0_6px_rgba(34,211,238,0.65)]" : "opacity-50 grayscale"
-            }`}
-          >
-            {icon}
-          </span>
+          <IconBadge icon={icon} tone={tone} size="sm" active={isActive} />
           {label}
         </>
       )}
@@ -32,12 +40,17 @@ function NavItem({ to, label, icon }: { to: string; label: string; icon: string 
   );
 }
 
-const dispoItem = { to: "/dispo", label: "Dispo", icon: "📅" };
-const geschaeftItem = { to: "/geschaeft", label: "Geschäft", icon: "💼" };
-const rechnungseingangItem = { to: "/rechnungseingang", label: "Rechnungseingang", icon: "📥" };
-const auswertungItem = { to: "/auswertung", label: "Auswertung", icon: "📊" };
-const meldungenItem = { to: "/benachrichtigungen", label: "Meldungen", icon: "🔔" };
-const papierkorbItem = { to: "/papierkorb", label: "Papierkorb", icon: "🗑️" };
+const dispoItem = { to: "/dispo", label: "Dispo", icon: CalendarDays, tone: "amber" as const };
+const geschaeftItem = { to: "/geschaeft", label: "Geschäft", icon: Briefcase, tone: "emerald" as const };
+const rechnungseingangItem = {
+  to: "/rechnungseingang",
+  label: "Rechnungseingang",
+  icon: Inbox,
+  tone: "cyan" as const,
+};
+const auswertungItem = { to: "/auswertung", label: "Auswertung", icon: BarChart3, tone: "indigo" as const };
+const meldungenItem = { to: "/benachrichtigungen", label: "Meldungen", icon: Bell, tone: "rose" as const };
+const papierkorbItem = { to: "/papierkorb", label: "Papierkorb", icon: Trash2, tone: "slate" as const };
 
 export function BottomNav() {
   const { currentUser, hatRecht } = useAuth();
@@ -106,7 +119,7 @@ export function BottomNav() {
                 }`
               }
             >
-              <span className="text-lg leading-none">{item.icon}</span>
+              <IconBadge icon={item.icon} tone={item.tone} size="sm" />
               {item.label}
               {item.badge > 0 && (
                 <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
@@ -122,26 +135,26 @@ export function BottomNav() {
         className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-full border border-slate-200 bg-white/90 py-1.5 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/85"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <NavItem to="/feed" label="Feed" icon="📋" />
+        <NavItem to="/feed" label="Feed" icon={Rss} tone="sky" />
 
         <NavLink
           to="/neu"
-          className="btn-touch -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-2xl text-white shadow-lg shadow-cyan-500/40 ring-4 ring-slate-100 dark:ring-slate-950"
+          className="btn-touch -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/40 ring-4 ring-slate-100 dark:ring-slate-950"
           aria-label="Neuer Vorgang"
         >
-          ➕
+          <Plus size={26} strokeWidth={2.5} />
         </NavLink>
 
-        <NavItem to="/profil" label="Profil" icon="👤" />
+        <NavItem to="/profil" label="Profil" icon={User} tone="violet" />
 
         <button
           onClick={() => setMehrOffen((v) => !v)}
           aria-label="Mehr"
           className={`btn-touch relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium ${
-            mehrOffen ? "text-cyan-600 dark:text-cyan-400" : "text-slate-400 dark:text-slate-500"
+            mehrOffen ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"
           }`}
         >
-          <span className="text-lg leading-none">•••</span>
+          <IconBadge icon={EllipsisVertical} tone="slate" size="sm" active={mehrOffen} />
           Mehr
           {mehrBadge > 0 && (
             <span className="absolute right-4 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">

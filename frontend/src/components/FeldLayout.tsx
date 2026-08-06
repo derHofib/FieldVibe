@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Clock, Search, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
@@ -75,7 +76,7 @@ export function FeldLayout() {
               title={`${outboxCount} noch nicht synchronisiert`}
               className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
             >
-              🕘 {outboxCount}
+              <Clock size={13} strokeWidth={2.25} /> {outboxCount}
             </span>
           )}
           <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-300">
@@ -85,9 +86,9 @@ export function FeldLayout() {
             onClick={() => navigate("/suche")}
             aria-label="Suche"
             title="Suche"
-            className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
           >
-            🔍
+            <Search size={18} strokeWidth={2} />
           </button>
           <ThemeToggle />
           {kannEinstellungenSehen && (
@@ -95,9 +96,9 @@ export function FeldLayout() {
               onClick={() => navigate("/einstellungen")}
               aria-label="Einstellungen"
               title="Einstellungen"
-              className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+              className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
             >
-              ⚙️
+              <Settings size={18} strokeWidth={2} />
             </button>
           )}
           <button
