@@ -19,6 +19,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc libpq-dev \
     && apt-get purge -y gcc libpq-dev && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
+# Nur fuer die rein informative Update-Anzeige im Super-Admin-Bereich
+# (siehe app/services/version_service.py) -- kein Docker-Socket/SSH-Zugriff,
+# das Backend fuehrt daraus keine Aktualisierung selbst aus.
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 COPY --chown=app:app . .
 USER app
 

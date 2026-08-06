@@ -44,6 +44,7 @@ from app.api.routes import (
     tags,
     termine,
     users,
+    version,
     vertraege,
     vorgaenge,
     vorgang_anfragen,
@@ -90,6 +91,7 @@ app.include_router(mandanten.router)
 app.include_router(users.router)
 app.include_router(impersonation.router)
 app.include_router(audit_log.router)
+app.include_router(version.router)
 app.include_router(kunden.router)
 app.include_router(anlagen.router)
 app.include_router(anlagen_feld_definitionen.router)

@@ -9,6 +9,21 @@ export interface SystemHealth {
   scheduler_letzter_lauf: string | null;
 }
 
+// Antwort von GET /api/admin/version -- rein informativ (aktuell
+// deployter Commit vs. neuester Commit auf GitHub). Zeigt bewusst keinen
+// Update-Button: das Backend fuehrt kein Update selbst aus, siehe
+// app/services/version_service.py.
+export interface VersionInfo {
+  deployed_commit: string;
+  branch: string;
+  latest_commit_sha: string | null;
+  latest_commit_message: string | null;
+  latest_commit_date: string | null;
+  latest_commit_url: string | null;
+  update_available: boolean | null;
+  fehler: string | null;
+}
+
 // "custom" ersetzt die vormals fest verdrahteten disponent/techniker/
 // controller/mitarbeiter -- ein mandant_admin definiert beliebig viele
 // eigene Account-Typen (siehe AccountTyp weiter unten) mit je eigener

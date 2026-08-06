@@ -208,6 +208,11 @@ if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
 fi
 
 # --- 8. Stack starten -------------------------------------------------------
+# GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken -- rein fuer die
+# informative Update-Anzeige im Super-Admin-Bereich (aktueller vs. neuester
+# Commit auf GitHub), siehe app/services/version_service.py. Kein git-
+# Repo (z.B. per curl heruntergeladenes Tarball) -> bleibt "unknown".
+export GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 log "Baue und starte den Stack (Postgres, MinIO, Backend, Frontend, Worker$([[ "$DEPLOY_MODE" == "domain" ]] && echo ", Caddy"))..."
 "${COMPOSE[@]}" up -d --build
 

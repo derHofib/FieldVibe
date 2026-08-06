@@ -77,6 +77,7 @@ import type {
   TokenPair,
   UstVaBericht,
   User,
+  VersionInfo,
   Vorgang,
   VorgangAnfrage,
   VorgangEvent,
@@ -99,6 +100,10 @@ export const systemApi = {
   // externes Infra-Monitoring per curl) -- dieselbe Antwort wird hier
   // wiederverwendet, um sie zusaetzlich im Super-Admin-Bereich anzuzeigen.
   healthz: () => apiFetch<SystemHealth>("/healthz"),
+};
+
+export const versionApi = {
+  get: () => apiFetch<VersionInfo>("/api/admin/version"),
 };
 
 export const mandantenApi = {

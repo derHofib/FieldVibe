@@ -39,6 +39,7 @@ import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
 import { StatistikPage } from "./pages/feld/StatistikPage";
 import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
+import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
 
 export function App() {
@@ -80,6 +81,7 @@ export function App() {
           <Route path="/mandanten" element={<MandantenPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/update" element={<UpdatePage />} />
           <Route path="*" element={<Navigate to="/mandanten" replace />} />
         </Route>
       )}
