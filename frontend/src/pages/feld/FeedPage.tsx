@@ -66,7 +66,7 @@ function StoryChip({ item }: { item: StoryItem }) {
   return (
     <button
       onClick={() => navigate(path)}
-      className={`btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+      className={`card-interactive btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
         item.ampel ? AMPEL_COLOR[item.ampel] : "border-slate-300 dark:border-slate-600"
       }`}
     >
@@ -93,7 +93,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
   return (
     <button
       onClick={() => navigate(`/vorgaenge/${card.id}`)}
-      className={`btn-touch flex w-full flex-col gap-2 rounded-lg bg-white p-4 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+      className={`card-interactive btn-touch flex w-full flex-col gap-2 rounded-lg bg-white p-4 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
         card.status === "storniert" ? "opacity-60 grayscale" : ""
       }`}
     >

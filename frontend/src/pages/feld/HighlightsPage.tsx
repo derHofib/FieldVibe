@@ -44,7 +44,7 @@ export function HighlightsPage() {
           {highlights!.map((h) => (
             <div
               key={h.id}
-              className="group relative overflow-hidden rounded-lg bg-white shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="card-interactive group relative overflow-hidden rounded-lg bg-white shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
             >
               <button
                 onClick={() => navigate(`/vorgaenge/${h.vorgang_id}`)}

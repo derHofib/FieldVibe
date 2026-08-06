@@ -105,7 +105,7 @@ function MaterialZeile({
   });
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="card-interactive rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(`/material/${material.id}`)}
@@ -293,7 +293,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             <button
               key={l.id}
               onClick={() => navigate(`/anlagen/${l.id}`)}
-              className="btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800"
+              className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800"
             >
               <span className="text-slate-700 dark:text-slate-200">{l.bezeichnung}</span>
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
@@ -897,7 +897,7 @@ export function GeschaeftPage() {
                 <button
                   key={k.id}
                   onClick={() => navigate(`/kunden/${k.id}`)}
-                  className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
                 >
                   <div>
                     <div className="text-xs text-slate-400 dark:text-slate-500">{k.kundennummer}</div>
@@ -924,7 +924,7 @@ export function GeschaeftPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/angebote/${a.id}`)}
-                className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
               >
                 <div>
                   <div className="text-xs text-slate-400 dark:text-slate-500">{a.angebotsnummer}</div>
@@ -951,7 +951,7 @@ export function GeschaeftPage() {
               <button
                 key={r.id}
                 onClick={() => navigate(`/rechnungen/${r.id}`)}
-                className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
               >
                 <div>
                   <div className="text-xs text-slate-400 dark:text-slate-500">{r.rechnungsnummer}</div>
@@ -1201,7 +1201,7 @@ export function GeschaeftPage() {
                   <button
                     key={b.id}
                     onClick={() => navigate(`/bestellungen/${b.id}`)}
-                    className="btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800"
+                    className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800"
                   >
                     <span className="text-slate-700 dark:text-slate-200">{b.bestellnummer}</span>
                     <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">

@@ -60,7 +60,7 @@ export function NotificationsPage() {
             <button
               key={n.id}
               onClick={() => handleClick(n)}
-              className={`btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+              className={`card-interactive btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
                 n.gelesen_am ? "bg-white dark:bg-slate-900" : "bg-blue-50 dark:bg-blue-500/10"
               }`}
             >

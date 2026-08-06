@@ -158,7 +158,7 @@ export function StatistikPage() {
                 <button
                   key={e.id}
                   onClick={() => navigate(`/vorgaenge/${e.vorgang_id}`)}
-                  className="btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800/60"
+                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800/60"
                 >
                   <span className="text-slate-600 dark:text-slate-300">
                     {new Date(e.start_at).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}

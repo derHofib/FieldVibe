@@ -34,7 +34,7 @@ export function PortalVorgaengePage() {
             <button
               key={v.id}
               onClick={() => navigate(`/portal/vorgaenge/${v.id}`)}
-              className="block w-full rounded-lg bg-white p-4 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="card-interactive btn-touch block w-full rounded-lg bg-white p-4 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
             >
               <div className="flex items-start justify-between">
                 <div>
