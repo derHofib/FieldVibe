@@ -89,6 +89,16 @@ class Settings(BaseSettings):
     kreditoren_faelligkeit_erinnerung_tage: int = 3
     kreditoren_skonto_erinnerung_tage: int = 2
 
+    # --- Kartenansicht (Modul "karten"): Mapbox-Access-Token fuer die
+    # server-seitige Geocoding-API (Adresse -> geo_lat/geo_lng auf Anlage/
+    # Standort). Derselbe Token kann als VITE_MAPBOX_TOKEN auch fuers
+    # Kartenrendering im Frontend verwendet werden -- ein einzelner "default
+    # public token" (pk...) aus dem Mapbox-Account reicht fuer beides, ein
+    # separates Secret-Token ist nicht erforderlich. None = Geocoding wird
+    # ueberall uebersprungen (kein Fehler, Anlage/Standort bleiben ohne
+    # Koordinaten), auch wenn ein Mandant das Modul aktiviert hat.
+    mapbox_access_token: str | None = None
+
     # --- Update-Anzeige im Super-Admin-Bereich (rein informativ, kein
     # automatisches Ausfuehren von Updates aus der Web-App heraus -- siehe
     # app/services/version_service.py). git_commit wird beim Docker-Build

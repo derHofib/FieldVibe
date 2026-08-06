@@ -22,6 +22,7 @@ MANDANT_MODULE = (
     "statistik",
     "fahrzeuge",
     "highlights",
+    "karten",
 )
 
 
@@ -51,7 +52,13 @@ class Mandant(TimestampMixin, Base):
     # Uhrzeit zu legen, statt fest fuer alle Mandanten auf 03:00 UTC.
     scheduler_stunde_utc: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     # Opt-out: leer = alles an. Siehe MANDANT_MODULE fuer die gueltigen Werte.
-    deaktivierte_module: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    # Ausnahme "karten": anders als alle anderen Module bewusst opt-IN
+    # (Default-Liste enthaelt "karten"), weil eine aktivierte Kartenansicht
+    # laufende Mapbox-Kosten verursacht -- siehe Migration 0048, die
+    # bestehende Mandanten auf denselben Stand bringt.
+    deaktivierte_module: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=lambda: ["karten"]
+    )
     # Firmenstammdaten fuer den PDF-Briefkopf (Angebot): adresse (dict mit
     # strasse/plz/ort, gleiche Form wie Kunde.adresse), telefon, email,
     # website, bank_name, iban, bic, handelsregister, geschaeftsfuehrung,

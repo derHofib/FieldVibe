@@ -164,6 +164,30 @@ ausführen – das ist nur für lokale Entwicklung gedacht.
 Danach: `https://<DOMAIN_APP>` aufrufen, mit dem Superadmin-Account
 einloggen und den ersten echten Mandanten anlegen.
 
+## 4b. Kartenansicht (optional, Modul "karten")
+
+Voraussetzung: ein Mapbox-Account mit einem Access-Token (der Standard
+"public token", pk...) genügt für Geocoding und Kartenrendering.
+
+1. `MAPBOX_ACCESS_TOKEN` und `VITE_MAPBOX_TOKEN` in der `.env` setzen
+   (derselbe Token-Wert in beiden Variablen).
+2. Neu bauen/starten, damit das Backend den Token einliest (siehe
+   Abschnitt 6, "Updates").
+3. Im Super-Admin-Bereich unter dem jeweiligen Mandanten das Modul
+   "Kartenansicht (Mapbox)" aktivieren – ist standardmäßig **aus**, damit
+   keine Mandanten ungewollt Mapbox-Kosten verursachen.
+4. Optional: bestehende Standorte/Anlagen mit Adresse aber ohne
+   Koordinaten einmalig nachgeocodieren:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+     run --rm backend python -m app.backfill_geocode
+   ```
+
+   Ohne gesetzten Token bricht das Skript sofort ab, ohne etwas zu tun.
+   Neue Standorte/Anlagen werden ab aktiviertem Modul automatisch beim
+   Anlegen/Ändern der Adresse geocodiert.
+
 ## 5. Backups
 
 `scripts/backup.sh` sichert täglich per Host-Cron einen `pg_dump` der

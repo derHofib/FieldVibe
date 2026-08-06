@@ -24,6 +24,7 @@ from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_anfrage import VorgangAnfrageCreate, VorgangAnfrageRead
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.pdf_service import generate_angebot_pdf, generate_rechnung_pdf
 from app.services.rechnung_service import (
     positionen_fuer as rechnung_positionen_fuer,
@@ -229,13 +230,19 @@ async def create_eigenen_standort(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
 ) -> Standort:
+    geo_lat, geo_lng = body.geo_lat, body.geo_lng
+    if geo_lat is None and geo_lng is None:
+        koordinaten = await geocode_falls_modul_aktiv(session, auth.mandant_id, body.adresse)
+        if koordinaten is not None:
+            geo_lat, geo_lng = koordinaten
+
     standort = Standort(
         mandant_id=auth.mandant_id,
         kunde_id=auth.kunde_id,
         bezeichnung=body.bezeichnung,
         adresse=body.adresse,
-        geo_lat=body.geo_lat,
-        geo_lng=body.geo_lng,
+        geo_lat=geo_lat,
+        geo_lng=geo_lng,
         erstellt_von_kundenportal_zugang_id=auth.zugang_id,
     )
     session.add(standort)
@@ -270,6 +277,12 @@ async def create_eigene_anlage(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Standort nicht gefunden"
             )
 
+    geo_lat, geo_lng = body.geo_lat, body.geo_lng
+    if geo_lat is None and geo_lng is None:
+        koordinaten = await geocode_falls_modul_aktiv(session, auth.mandant_id, body.adresse)
+        if koordinaten is not None:
+            geo_lat, geo_lng = koordinaten
+
     anlage = Anlage(
         mandant_id=auth.mandant_id,
         kunde_id=auth.kunde_id,
@@ -278,8 +291,8 @@ async def create_eigene_anlage(
         bezeichnung=body.bezeichnung,
         adresse=body.adresse,
         anlagentyp=body.anlagentyp,
-        geo_lat=body.geo_lat,
-        geo_lng=body.geo_lng,
+        geo_lat=geo_lat,
+        geo_lng=geo_lng,
         erstellt_von_kundenportal_zugang_id=auth.zugang_id,
     )
     session.add(anlage)

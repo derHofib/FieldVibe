@@ -24,6 +24,7 @@ from app.schemas.anlage import AnlageCreate, AnlageRead, AnlageUpdate
 from app.schemas.kunde import KundeRead
 from app.schemas.profile import AnlageProfil
 from app.services import papierkorb_service
+from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -118,6 +119,12 @@ async def create_anlage(
     if body.standort_id is not None:
         await _require_standort_fuer_kunde(session, body.standort_id, body.kunde_id)
 
+    geo_lat, geo_lng = body.geo_lat, body.geo_lng
+    if geo_lat is None and geo_lng is None:
+        koordinaten = await geocode_falls_modul_aktiv(session, auth.mandant_id, body.adresse)
+        if koordinaten is not None:
+            geo_lat, geo_lng = koordinaten
+
     anlage = Anlage(
         mandant_id=auth.mandant_id,
         kunde_id=body.kunde_id,
@@ -133,8 +140,8 @@ async def create_anlage(
         anschaffungsdatum=body.anschaffungsdatum,
         notiz=body.notiz,
         stammdaten=body.stammdaten,
-        geo_lat=body.geo_lat,
-        geo_lng=body.geo_lng,
+        geo_lat=geo_lat,
+        geo_lng=geo_lng,
     )
     session.add(anlage)
     try:
@@ -281,6 +288,10 @@ async def update_anlage(
     changes = body.model_dump(exclude_unset=True)
     if changes.get("standort_id") is not None:
         await _require_standort_fuer_kunde(session, changes["standort_id"], anlage.kunde_id)
+    if "adresse" in changes and "geo_lat" not in changes and "geo_lng" not in changes:
+        koordinaten = await geocode_falls_modul_aktiv(session, anlage.mandant_id, changes["adresse"])
+        if koordinaten is not None:
+            changes["geo_lat"], changes["geo_lng"] = koordinaten
     for field, value in changes.items():
         setattr(anlage, field, value)
     try:

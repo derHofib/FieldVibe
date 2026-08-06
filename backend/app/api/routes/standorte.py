@@ -13,6 +13,7 @@ from app.schemas.kunde import KundeRead
 from app.schemas.profile import StandortProfil
 from app.schemas.standort import StandortCreate, StandortRead, StandortUpdate
 from app.services import papierkorb_service
+from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -71,13 +72,19 @@ async def create_standort(
 ) -> Standort:
     await _require_own_kunde(session, body.kunde_id)
 
+    geo_lat, geo_lng = body.geo_lat, body.geo_lng
+    if geo_lat is None and geo_lng is None:
+        koordinaten = await geocode_falls_modul_aktiv(session, auth.mandant_id, body.adresse)
+        if koordinaten is not None:
+            geo_lat, geo_lng = koordinaten
+
     standort = Standort(
         mandant_id=auth.mandant_id,
         kunde_id=body.kunde_id,
         bezeichnung=body.bezeichnung,
         adresse=body.adresse,
-        geo_lat=body.geo_lat,
-        geo_lng=body.geo_lng,
+        geo_lat=geo_lat,
+        geo_lng=geo_lng,
     )
     session.add(standort)
     await session.flush()
@@ -168,6 +175,10 @@ async def update_standort(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)
+    if "adresse" in changes and "geo_lat" not in changes and "geo_lng" not in changes:
+        koordinaten = await geocode_falls_modul_aktiv(session, standort.mandant_id, changes["adresse"])
+        if koordinaten is not None:
+            changes["geo_lat"], changes["geo_lng"] = koordinaten
     for field, value in changes.items():
         setattr(standort, field, value)
     await session.flush()

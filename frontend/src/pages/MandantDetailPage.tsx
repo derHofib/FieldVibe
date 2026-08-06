@@ -33,6 +33,7 @@ const MODUL_LABEL: Record<MandantModul, string> = {
   statistik: "Statistik/Insights + Export",
   fahrzeuge: "Fahrzeug-Zuweisung & Inventur",
   highlights: "Highlights (Story-Feature)",
+  karten: "Kartenansicht (Mapbox)",
 };
 const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];
 

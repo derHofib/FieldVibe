@@ -71,7 +71,8 @@ export type MandantModul =
   | "dauerauftrag"
   | "statistik"
   | "fahrzeuge"
-  | "highlights";
+  | "highlights"
+  | "karten";
 
 export interface Mandant {
   id: string;

@@ -13,6 +13,8 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 FROM deps AS build
 ARG VITE_API_BASE_URL=http://localhost:8000
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ARG VITE_MAPBOX_TOKEN=
+ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
 COPY . .
 RUN npm run build
 
