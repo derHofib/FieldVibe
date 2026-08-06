@@ -3,6 +3,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -56,6 +57,21 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     # Lauf des Workers fuer weiterhin ueberfaellige, unbezahlte Rechnungen.
     mahnstufe: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     letzte_mahnung_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # True auf dem Storno-Beleg selbst (negative Positionen, storniert eine
+    # andere Rechnung) -- nie auf der urspruenglichen Rechnung gesetzt.
+    ist_storno: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Nur auf dem Storno-Beleg gesetzt: welche Rechnung er stornoriert. GoBD
+    # verbietet, eine einmal versendete Rechnung zu aendern oder zu loeschen
+    # -- die Korrektur braucht einen eigenen, referenzierten Gegenbeleg statt
+    # eines simplen Status-Flips (siehe rechnung_service.erstelle_stornorechnung).
+    storniert_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id"), nullable=True
+    )
+    # Unveraenderliches Abbild des tatsaechlich versendeten PDFs (S3/MinIO-
+    # Objektschluessel) -- ab dem Versand-Zeitpunkt archiviert statt bei
+    # jedem Abruf neu erzeugt, damit spaetere Aenderungen an Firmendaten/Logo
+    # das bereits verschickte Dokument nicht nachtraeglich veraendern.
+    pdf_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class RechnungPosition(Base):

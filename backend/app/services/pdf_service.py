@@ -336,17 +336,31 @@ def generate_angebot_pdf(
 
 
 def generate_rechnung_pdf(
-    mandant: Mandant, rechnung: Rechnung, kunde: Kunde, positionen: list[RechnungPosition] | None = None
+    mandant: Mandant,
+    rechnung: Rechnung,
+    kunde: Kunde,
+    positionen: list[RechnungPosition] | None = None,
+    storniert_rechnung: Rechnung | None = None,
 ) -> bytes:
     pdf = FPDF()
     pdf.add_page()
-    _kopf(pdf, mandant, "Rechnung", rechnung.rechnungsnummer, kunde)
+    titel = "Stornorechnung" if rechnung.ist_storno else "Rechnung"
+    _kopf(pdf, mandant, titel, rechnung.rechnungsnummer, kunde)
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(0, 6, f"Rechnungsdatum: {_fmt_datum(rechnung.created_at)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     if rechnung.leistungsdatum:
         pdf.cell(0, 6, f"Leistungsdatum: {_fmt_datum(rechnung.leistungsdatum)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     if rechnung.faellig_am:
         pdf.cell(0, 6, f"Faellig am: {_fmt_datum(rechnung.faellig_am)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if storniert_rechnung is not None:
+        pdf.cell(
+            0,
+            6,
+            f"Diese Stornorechnung storniert Rechnung {storniert_rechnung.rechnungsnummer} "
+            f"vom {_fmt_datum(storniert_rechnung.created_at)}.",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
     pdf.ln(4)
 
     if positionen:

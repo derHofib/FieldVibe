@@ -42,10 +42,23 @@ export function RechnungDetailPage() {
     queryFn: () => kundenApi.get(rechnung!.kunde_id),
     enabled: !!rechnung,
   });
+  const { data: storniertRechnung } = useQuery({
+    queryKey: ["rechnung", rechnung?.storniert_rechnung_id],
+    queryFn: () => rechnungenApi.get(rechnung!.storniert_rechnung_id!),
+    enabled: !!rechnung?.storniert_rechnung_id,
+  });
 
   const statusMutation = useMutation({
     mutationFn: (status: string) => rechnungenApi.updateStatus(id!, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
+  });
+
+  const stornoMutation = useMutation({
+    mutationFn: () => rechnungenApi.storno(id!),
+    onSuccess: (storno) => {
+      queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
+      navigate(`/rechnungen/${storno.id}`);
+    },
   });
 
   const addPositionMutation = useMutation({
@@ -90,6 +103,23 @@ export function RechnungDetailPage() {
           </button>
         )}
       </div>
+
+      {rechnung.ist_storno && (
+        <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+          Diese Rechnung storniert{" "}
+          {storniertRechnung ? (
+            <button
+              onClick={() => navigate(`/rechnungen/${storniertRechnung.id}`)}
+              className="btn-touch underline-offset-2 hover:underline"
+            >
+              {storniertRechnung.rechnungsnummer}
+            </button>
+          ) : (
+            "eine andere Rechnung"
+          )}
+          .
+        </div>
+      )}
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
         <div className="flex items-start justify-between">
@@ -251,13 +281,28 @@ export function RechnungDetailPage() {
             Als bezahlt markieren
           </button>
           <button
-            onClick={() => statusMutation.mutate("storniert")}
-            disabled={statusMutation.isPending}
+            onClick={() => {
+              if (window.confirm("Diese Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+                stornoMutation.mutate();
+            }}
+            disabled={stornoMutation.isPending}
             className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
             Stornieren
           </button>
         </div>
+      )}
+      {rechnung.status === "bezahlt" && !rechnung.ist_storno && (
+        <button
+          onClick={() => {
+            if (window.confirm("Diese bereits bezahlte Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+              stornoMutation.mutate();
+          }}
+          disabled={stornoMutation.isPending}
+          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+        >
+          Stornieren
+        </button>
       )}
     </div>
   );

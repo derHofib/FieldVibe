@@ -25,8 +25,13 @@ from app.schemas.rechnung import RechnungCreate, RechnungPositionCreate, Rechnun
 from app.services import papierkorb_service
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
-from app.services.pdf_service import generate_rechnung_pdf
-from app.services.rechnung_service import positionen_fuer, to_read_model
+from app.services.rechnung_service import (
+    archiviere_pdf,
+    erstelle_stornorechnung,
+    pdf_bytes_fuer,
+    positionen_fuer,
+    to_read_model,
+)
 
 router = APIRouter(
     prefix="/api/rechnungen",
@@ -40,8 +45,18 @@ router = APIRouter(
 
 _GUELTIGE_UEBERGAENGE = {
     "entwurf": {"versendet", "storniert"},
-    "versendet": {"bezahlt", "storniert"},
+    # "storniert" ist ab "versendet" bewusst NICHT mehr per einfachem
+    # Status-Flip erreichbar -- eine bereits versendete Rechnung darf GoBD-
+    # konform nicht einfach umgeschrieben werden, dafuer gibt es den eigenen
+    # Endpunkt POST /{id}/storno (siehe erstelle_stornorechnung).
+    "versendet": {"bezahlt"},
 }
+
+
+async def _storniert_rechnung_fuer(session: AsyncSession, rechnung: Rechnung) -> Rechnung | None:
+    if rechnung.storniert_rechnung_id is None:
+        return None
+    return await session.get(Rechnung, rechnung.storniert_rechnung_id)
 
 
 @router.get("", response_model=list[RechnungRead])
@@ -276,6 +291,11 @@ async def update_rechnung(
 
         rechnung.status = neuer_status
 
+        if neuer_status == "versendet":
+            kunde = await session.get(Kunde, rechnung.kunde_id)
+            mandant = await session.get(Mandant, auth.mandant_id)
+            await archiviere_pdf(session, rechnung, mandant, kunde)
+
         if rechnung.vorgang_id is not None:
             vorgang = await session.get(Vorgang, rechnung.vorgang_id)
             if vorgang is not None:
@@ -297,6 +317,53 @@ async def update_rechnung(
     return await to_read_model(session, rechnung)
 
 
+@router.post(
+    "/{rechnung_id}/storno",
+    response_model=RechnungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def storno_rechnung(
+    rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status not in ("versendet", "bezahlt"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nur versendete oder bezahlte Rechnungen können storniert werden",
+        )
+
+    storno = await erstelle_stornorechnung(session, rechnung, auth.user_id)
+
+    kunde = await session.get(Kunde, storno.kunde_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    await archiviere_pdf(session, storno, mandant, kunde, storniert_rechnung=rechnung)
+
+    if rechnung.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, rechnung.vorgang_id)
+        if vorgang is not None:
+            session.add(
+                VorgangEvent(
+                    mandant_id=auth.mandant_id,
+                    vorgang_id=vorgang.id,
+                    event_type="rechnung_status",
+                    author_user_id=auth.user_id,
+                    body=f"Rechnung {rechnung.rechnungsnummer} storniert durch {storno.rechnungsnummer}",
+                    payload={"rechnung_id": str(rechnung.id), "storno_rechnung_id": str(storno.id)},
+                )
+            )
+    await session.flush()
+    await session.refresh(storno)
+    return await to_read_model(session, storno)
+
+
 @router.get("/{rechnung_id}/pdf")
 async def rechnung_pdf(
     rechnung_id: UUID,
@@ -308,9 +375,9 @@ async def rechnung_pdf(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
-    positionen = await positionen_fuer(session, rechnung.id)
+    storniert_rechnung = await _storniert_rechnung_fuer(session, rechnung)
 
-    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde, positionen)
+    pdf_bytes = await pdf_bytes_fuer(session, rechnung, mandant, kunde, storniert_rechnung=storniert_rechnung)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -353,8 +420,8 @@ async def send_rechnung_email(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
-    positionen = await positionen_fuer(session, rechnung.id)
-    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde, positionen)
+    storniert_rechnung = await _storniert_rechnung_fuer(session, rechnung)
+    pdf_bytes = await pdf_bytes_fuer(session, rechnung, mandant, kunde, storniert_rechnung=storniert_rechnung)
     dateiname = f"{rechnung.rechnungsnummer}.pdf"
 
     log = await send_email_and_log(

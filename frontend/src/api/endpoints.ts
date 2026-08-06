@@ -699,6 +699,7 @@ export const rechnungenApi = {
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  storno: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}/storno`, { method: "POST" }),
   remove: (id: string) => apiFetch<void>(`/api/rechnungen/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/pdf`),
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/rechnungen/${id}/emails`),

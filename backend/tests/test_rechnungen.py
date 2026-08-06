@@ -1,6 +1,9 @@
+import asyncio
+
 import pytest
 
 from app.db.session import system_session
+from app.models.rechnung import Rechnung
 from app.models.vorgang import Vorgang
 from tests.conftest import auth_headers, login
 
@@ -277,6 +280,133 @@ async def test_rechnung_pdf_mit_positionen(client, make_mandant, make_user, make
         json={"kunde_id": str(kunde.id), "positionen": [{"beschreibung": "Arbeit", "einzelpreis": "42.00"}]},
     )
     rechnung_id = created.json()["id"]
+
+    resp = await client.get(f"/api/rechnungen/{rechnung_id}/pdf", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.content.startswith(b"%PDF")
+
+
+@pytest.mark.asyncio
+async def test_parallele_rechnungserstellung_vergibt_unterschiedliche_nummern(
+    client, make_mandant, make_user, make_kunde
+):
+    """Reproduziert die frueher COUNT(*)-basierte Race-Condition: zwei
+    gleichzeitige Anfragen duerfen nie dieselbe Rechnungsnummer bekommen
+    (und keine 500er durch eine verletzte Unique-Constraint ausloesen)."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    async def _erstelle() -> object:
+        return await client.post(
+            "/api/rechnungen",
+            headers=auth_headers(token),
+            json={"kunde_id": str(kunde.id), "betrag_netto": "10.00"},
+        )
+
+    responses = await asyncio.gather(*[_erstelle() for _ in range(8)])
+    assert all(r.status_code == 201 for r in responses)
+    nummern = [r.json()["rechnungsnummer"] for r in responses]
+    assert len(nummern) == len(set(nummern))
+
+
+@pytest.mark.asyncio
+async def test_storno_erzeugt_eigenen_beleg_mit_negativen_betraegen(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    created = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "betrag_netto": "150.00"},
+    )
+    rechnung_id = created.json()["id"]
+    original_nummer = created.json()["rechnungsnummer"]
+
+    versendet = await client.patch(
+        f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token), json={"status": "versendet"}
+    )
+    assert versendet.status_code == 200
+
+    # Ein einfacher Status-Flip auf "storniert" ist ab "versendet" bewusst
+    # nicht mehr erlaubt -- nur noch ueber den eigenen Storno-Endpunkt.
+    rejected = await client.patch(
+        f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token), json={"status": "storniert"}
+    )
+    assert rejected.status_code == 400
+
+    storno_resp = await client.post(f"/api/rechnungen/{rechnung_id}/storno", headers=auth_headers(token))
+    assert storno_resp.status_code == 201
+    storno = storno_resp.json()
+    assert storno["ist_storno"] is True
+    assert storno["storniert_rechnung_id"] == rechnung_id
+    assert storno["rechnungsnummer"] != original_nummer
+    assert storno["rechnungsnummer"].startswith("R-")
+    assert storno["betrag_netto"] == "-150.00"
+    assert storno["status"] == "versendet"
+
+    original = await client.get(f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token))
+    assert original.json()["status"] == "storniert"
+
+    # Beide PDFs (Original weiterhin live generierbar, Storno bereits
+    # archiviert) muessen abrufbar bleiben.
+    original_pdf = await client.get(f"/api/rechnungen/{rechnung_id}/pdf", headers=auth_headers(token))
+    assert original_pdf.status_code == 200
+    assert original_pdf.content.startswith(b"%PDF")
+    storno_pdf = await client.get(f"/api/rechnungen/{storno['id']}/pdf", headers=auth_headers(token))
+    assert storno_pdf.status_code == 200
+    assert storno_pdf.content.startswith(b"%PDF")
+
+    async with system_session() as session:
+        row = await session.get(Rechnung, storno["id"])
+        assert row.pdf_object_key is not None
+
+
+@pytest.mark.asyncio
+async def test_storno_nicht_moeglich_fuer_entwurf(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    created = await client.post(
+        "/api/rechnungen", headers=auth_headers(token), json={"kunde_id": str(kunde.id), "betrag_netto": "10"}
+    )
+    rechnung_id = created.json()["id"]
+
+    resp = await client.post(f"/api/rechnungen/{rechnung_id}/storno", headers=auth_headers(token))
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_versendet_archiviert_pdf(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    created = await client.post(
+        "/api/rechnungen", headers=auth_headers(token), json={"kunde_id": str(kunde.id), "betrag_netto": "50"}
+    )
+    rechnung_id = created.json()["id"]
+
+    async with system_session() as session:
+        row = await session.get(Rechnung, rechnung_id)
+        assert row.pdf_object_key is None
+
+    patched = await client.patch(
+        f"/api/rechnungen/{rechnung_id}", headers=auth_headers(token), json={"status": "versendet"}
+    )
+    assert patched.status_code == 200
+
+    async with system_session() as session:
+        row = await session.get(Rechnung, rechnung_id)
+        assert row.pdf_object_key is not None
 
     resp = await client.get(f"/api/rechnungen/{rechnung_id}/pdf", headers=auth_headers(token))
     assert resp.status_code == 200

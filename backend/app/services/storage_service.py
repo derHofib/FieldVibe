@@ -61,6 +61,10 @@ def new_mandant_logo_key(mandant_id: uuid.UUID, filename: str) -> str:
     return f"mandanten/{mandant_id}/logo/{uuid.uuid4()}.{suffix}"
 
 
+def new_rechnung_pdf_key(rechnung_id: uuid.UUID) -> str:
+    return f"rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.pdf"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     await run_in_threadpool(
         _internal_client.put_object,

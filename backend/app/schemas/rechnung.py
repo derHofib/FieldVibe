@@ -66,6 +66,8 @@ class RechnungRead(BaseModel):
     bezahlt_am: datetime | None
     mahnstufe: int
     letzte_mahnung_am: datetime | None
+    ist_storno: bool
+    storniert_rechnung_id: UUID | None
     created_at: datetime
     updated_at: datetime
     positionen: list[RechnungPositionRead]

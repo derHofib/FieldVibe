@@ -651,6 +651,8 @@ export interface Rechnung {
   status: RechnungStatus;
   faellig_am: string | null;
   leistungsdatum: string | null;
+  ist_storno: boolean;
+  storniert_rechnung_id: string | null;
   erstellt_von: string;
   versendet_am: string | null;
   bezahlt_am: string | null;
