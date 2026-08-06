@@ -36,7 +36,7 @@ class VorgangEvent(Base):
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
     vorgang_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("vorgaenge.id", ondelete="CASCADE"), nullable=False
     )
     event_type: Mapped[str] = mapped_column(Text, nullable=False)
     author_user_id: Mapped[uuid.UUID | None] = mapped_column(

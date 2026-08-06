@@ -1,5 +1,7 @@
 import pytest
 
+from app.db.session import system_session
+from app.models.vorgang_event import VorgangEvent
 from tests.conftest import auth_headers, login
 
 
@@ -304,6 +306,77 @@ async def test_endgueltiges_loeschen_entfernt_datensatz_dauerhaft(
         f"/api/papierkorb/kunde/{kunde.id}", headers=auth_headers(token)
     )
     assert purge_again_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_kunde_mit_events_zeiterfassung_highlight_und_portal_zugang_kann_endgueltig_geloescht_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    # vorgang_events, highlights, zeiterfassung und kundenportal_zugaenge sind
+    # bewusst nicht im Papierkorb (siehe Migration 0032) -- vorher hatten ihre
+    # FKs kein ON DELETE CASCADE, wodurch das endgueltige Loeschen schon an
+    # einem einzigen Kommentar/einer Zeiterfassung/einem Portal-Zugang
+    # scheiterte (generische IntegrityError), praktisch bei jedem Kunden mit
+    # echter Aktivitaet.
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    admin_token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    event_resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events",
+        headers=auth_headers(admin_token),
+        json={"event_type": "kommentar", "body": "Testkommentar"},
+    )
+    assert event_resp.status_code == 201
+
+    # Highlights sind nur fuer Foto-Events erlaubt (siehe
+    # app/api/routes/highlights.py) -- ein echter Foto-Upload braucht MinIO,
+    # daher wird das Foto-Event hier direkt angelegt statt ueber den Upload-
+    # Endpoint.
+    async with system_session() as session:
+        foto_event = VorgangEvent(
+            mandant_id=mandant.id,
+            vorgang_id=vorgang.id,
+            event_type="foto",
+            author_user_id=admin.id,
+            payload={},
+        )
+        session.add(foto_event)
+        await session.flush()
+        foto_event_id = foto_event.id
+
+    highlight_resp = await client.post(
+        "/api/highlights",
+        headers=auth_headers(admin_token),
+        json={"vorgang_event_id": foto_event_id},
+    )
+    assert highlight_resp.status_code == 201
+
+    zeit_resp = await client.post(
+        "/api/zeiterfassung/start",
+        headers=auth_headers(admin_token),
+        json={"vorgang_id": str(vorgang.id)},
+    )
+    assert zeit_resp.status_code == 201
+
+    portal_resp = await client.post(
+        f"/api/kunden/{kunde.id}/portal-zugaenge",
+        headers=auth_headers(admin_token),
+        json={"email": "kunde-portal@example.de", "password": "pw-1234567890", "name": "Kunde Portal"},
+    )
+    assert portal_resp.status_code == 201
+
+    await client.delete(f"/api/kunden/{kunde.id}", headers=auth_headers(admin_token))
+
+    operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
+    token = await login(client, operativ.email, "pw-123456")
+
+    purge_resp = await client.delete(
+        f"/api/papierkorb/kunde/{kunde.id}", headers=auth_headers(token)
+    )
+    assert purge_resp.status_code == 204
 
 
 @pytest.mark.asyncio

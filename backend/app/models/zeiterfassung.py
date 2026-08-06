@@ -18,7 +18,7 @@ class Zeiterfassung(TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
     vorgang_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("vorgaenge.id", ondelete="CASCADE"), nullable=False
     )
     techniker_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
