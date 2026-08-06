@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -41,6 +41,11 @@ import type {
   VorgangEvent,
   VorgangStatus,
 } from "../../types";
+
+// Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
+// sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
+// (und den PWA-Precache-Limit von 2 MiB sprengen).
+const MapboxMap = lazy(() => import("../../components/MapboxMap").then((m) => ({ default: m.MapboxMap })));
 
 const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
   { value: "niedrig", label: "Niedrig" },
@@ -695,6 +700,17 @@ export function VorgangDetailPage() {
   // des zugeordneten Standorts bzw. ersatzweise der Anlage, damit die Karte
   // auch beim reinen Auswaehlen eines Standorts erscheint.
   const anzeigeAdresse: Adresse | null = vorgang.adresse ?? standort?.adresse ?? anlage?.adresse ?? null;
+  // Koordinaten nur vertrauen, wenn die angezeigte Adresse tatsaechlich vom
+  // Standort/der Anlage kommt (siehe Kommentar zu anzeigeAdresse) -- ein
+  // manueller Adress-Override am Vorgang selbst hat keine eigenen
+  // geo_lat/geo_lng-Spalten und darf nicht versehentlich die Koordinaten
+  // eines ganz anderen Orts anzeigen.
+  const kartenKoordinaten: { lng: number; lat: number } | null =
+    !vorgang.adresse && standort?.geo_lat != null && standort?.geo_lng != null
+      ? { lng: standort.geo_lng, lat: standort.geo_lat }
+      : !vorgang.adresse && anlage?.geo_lat != null && anlage?.geo_lng != null
+        ? { lng: anlage.geo_lng, lat: anlage.geo_lat }
+        : null;
 
   // Neuestes Ereignis oben, ältestes unten -- der Backend-Endpunkt liefert
   // bereits "ORDER BY id DESC" (siehe app/api/routes/vorgang_events.py),
@@ -868,12 +884,21 @@ export function VorgangDetailPage() {
                     </span>
                   )}
                 </p>
-                <iframe
-                  title="Karte zur Adresse"
-                  className="mt-2 h-40 w-full rounded-lg border-0"
-                  loading="lazy"
-                  src={`https://www.google.com/maps?q=${encodeURIComponent(adresseAlsZeile(anzeigeAdresse))}&output=embed`}
-                />
+                {kartenKoordinaten ? (
+                  <Suspense
+                    fallback={<div className="mt-2 h-40 w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700/60" />}
+                  >
+                    <MapboxMap
+                      lng={kartenKoordinaten.lng}
+                      lat={kartenKoordinaten.lat}
+                      className="mt-2 h-40 w-full rounded-lg"
+                    />
+                  </Suspense>
+                ) : (
+                  <div className="mt-2 flex h-40 w-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-500">
+                    Keine Kartenposition verfügbar
+                  </div>
+                )}
               </>
             ) : (
               <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">Keine Adresse hinterlegt.</p>
