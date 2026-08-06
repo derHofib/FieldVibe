@@ -33,7 +33,10 @@ class EmailLog(Base):
     anhang_dateiname: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, nullable=False)
     fehlermeldung: Mapped[str | None] = mapped_column(Text)
-    gesendet_von: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    # NULL bei automatisch vom Mahnwesen-Scheduler versendeten Mahnungen --
+    # es gibt dabei keinen handelnden Nutzer (analog zu
+    # AuditLog.actor_user_id bei Scheduler-Laeufen).
+    gesendet_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)

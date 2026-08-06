@@ -92,7 +92,7 @@ async def send_email_and_log(
     to: str,
     subject: str,
     body: str,
-    gesendet_von: UUID,
+    gesendet_von: UUID | None = None,
     attachment: tuple[str, bytes, str] | None = None,
 ) -> EmailLog:
     """Wie send_email, schreibt aber -- egal ob Versand gelingt oder

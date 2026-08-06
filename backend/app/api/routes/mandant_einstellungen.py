@@ -58,7 +58,11 @@ async def update_einstellungen(
     if "scheduler_stunde_utc" in updates:
         mandant.scheduler_stunde_utc = updates["scheduler_stunde_utc"]
     if updates.get("firmendaten") is not None:
-        mandant.firmendaten = updates["firmendaten"]
+        # Mergen statt Ersetzen: mehrere unabhaengige Formulare (Firmenprofil,
+        # Mahnwesen-Auto-Versand, ...) speichern jeweils nur ihren eigenen
+        # Ausschnitt -- ein blindes Ueberschreiben wuerde sonst die zuletzt
+        # gespeicherten Felder der anderen Formulare verwerfen.
+        mandant.firmendaten = {**(mandant.firmendaten or {}), **updates["firmendaten"]}
     await session.flush()
     await session.refresh(mandant)
     return _to_read_model(mandant)

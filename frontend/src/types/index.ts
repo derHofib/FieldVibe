@@ -890,6 +890,11 @@ export interface MandantFirmendaten {
   // Kleinunternehmer nach §19 UStG: Rechnungs-PDF weist dann keine USt.
   // aus und zeigt statt der Summenzeilen den gesetzlichen Hinweistext.
   ist_kleinunternehmer?: boolean;
+  // Je Mahnstufe: automatischer E-Mail-Versand an den Kunden statt nur
+  // interner Benachrichtigung. Standard (fehlender Key) ist "aus".
+  mahnung_1_automatisch?: boolean;
+  mahnung_2_automatisch?: boolean;
+  mahnung_3_automatisch?: boolean;
 }
 
 export interface MandantEinstellungen {
@@ -931,6 +936,6 @@ export interface EmailLog {
   anhang_dateiname: string | null;
   status: EmailStatus;
   fehlermeldung: string | null;
-  gesendet_von: string;
+  gesendet_von: string | null;
   created_at: string;
 }

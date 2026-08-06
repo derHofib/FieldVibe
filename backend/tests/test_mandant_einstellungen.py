@@ -143,6 +143,34 @@ async def test_firmendaten_speichern_lasst_scheduler_stunde_unangetastet(
 
 
 @pytest.mark.asyncio
+async def test_firmendaten_speichern_mergt_statt_zu_ersetzen(client, make_mandant, make_user):
+    """Zwei unabhaengige Formulare (Firmenprofil, Mahnwesen-Auto-Versand)
+    speichern jeweils nur ihren eigenen Ausschnitt von firmendaten -- ein
+    zweiter PATCH-Aufruf darf die zuerst gespeicherten Felder nicht
+    verwerfen."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    await client.patch(
+        "/api/mandant/einstellungen",
+        headers=auth_headers(token),
+        json={"firmendaten": {"telefon": "+49 30 1234567", "ust_idnr": "DE123456789"}},
+    )
+
+    resp = await client.patch(
+        "/api/mandant/einstellungen",
+        headers=auth_headers(token),
+        json={"firmendaten": {"mahnung_1_automatisch": True}},
+    )
+    assert resp.status_code == 200
+    body = resp.json()["firmendaten"]
+    assert body["telefon"] == "+49 30 1234567"
+    assert body["ust_idnr"] == "DE123456789"
+    assert body["mahnung_1_automatisch"] is True
+
+
+@pytest.mark.asyncio
 async def test_mandant_admin_kann_logo_hochladen_und_entfernen(client, make_mandant, make_user):
     import io
 

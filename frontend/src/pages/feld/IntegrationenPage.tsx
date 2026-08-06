@@ -186,6 +186,60 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   );
 }
 
+function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
+  const queryClient = useQueryClient();
+  const fd = einstellungen.firmendaten;
+  const [mahnung1, setMahnung1] = useState(fd.mahnung_1_automatisch ?? false);
+  const [mahnung2, setMahnung2] = useState(fd.mahnung_2_automatisch ?? false);
+  const [mahnung3, setMahnung3] = useState(fd.mahnung_3_automatisch ?? false);
+
+  const speichernMutation = useMutation({
+    mutationFn: () =>
+      mandantEinstellungenApi.firmendatenSpeichern({
+        mahnung_1_automatisch: mahnung1,
+        mahnung_2_automatisch: mahnung2,
+        mahnung_3_automatisch: mahnung3,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
+  });
+
+  return (
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div>
+        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">✉️ Mahnwesen</h2>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Standard ist ein reiner interner Hinweis. Aktiviere hier je Mahnstufe, dass die Mahnung
+          automatisch per E-Mail an den Kunden geschickt wird (inkl. Verzugszinsen).
+        </p>
+      </div>
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <input type="checkbox" checked={mahnung1} onChange={(e) => setMahnung1(e.target.checked)} />
+        1. Mahnung automatisch versenden
+      </label>
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <input type="checkbox" checked={mahnung2} onChange={(e) => setMahnung2(e.target.checked)} />
+        2. Mahnung automatisch versenden
+      </label>
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <input type="checkbox" checked={mahnung3} onChange={(e) => setMahnung3(e.target.checked)} />
+        3. Mahnung automatisch versenden
+      </label>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={speichernMutation.isPending}
+          className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        {speichernMutation.isSuccess && (
+          <span className="text-xs text-green-700 dark:text-green-400">Gespeichert.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
@@ -346,6 +400,7 @@ export function IntegrationenPage() {
       <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">🔌 Integrationen</h1>
 
       {einstellungen && <FirmenprofilSection einstellungen={einstellungen} />}
+      {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 
       {einstellungen && (
         <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">

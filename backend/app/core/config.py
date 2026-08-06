@@ -75,6 +75,13 @@ class Settings(BaseSettings):
     mahnstufe_2_tage: int = 28
     mahnstufe_3_tage: int = 42
 
+    # Basiszinssatz nach §247 BGB, halbjaehrlich von der Bundesbank
+    # festgesetzt (Stand 1.7.2026: 1,52%) -- fuer die Verzugszinsen-
+    # Berechnung nach §288 BGB auf automatisch versendeten Mahnungen. Muss
+    # bei jeder Bundesbank-Anpassung per ENV aktualisiert werden, da es
+    # keine automatisierte Anbindung dafuer gibt.
+    basiszinssatz_prozent: float = 1.52
+
 
 @lru_cache
 def get_settings() -> Settings:

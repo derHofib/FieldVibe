@@ -375,6 +375,49 @@ def generate_rechnung_pdf(
     return bytes(pdf.output())
 
 
+_MAHNSTUFEN_LABEL = {1: "1. Mahnung", 2: "2. Mahnung", 3: "3. Mahnung"}
+
+
+def generate_mahnung_pdf(
+    mandant: Mandant,
+    rechnung: Rechnung,
+    kunde: Kunde,
+    mahnstufe: int,
+    tage_ueberfaellig: int,
+    betrag_brutto: Decimal,
+    verzugszinsen: Decimal,
+    mahnpauschale: Decimal,
+) -> bytes:
+    pdf = FPDF()
+    pdf.add_page()
+    _kopf(pdf, mandant, _MAHNSTUFEN_LABEL.get(mahnstufe, "Mahnung"), rechnung.rechnungsnummer, kunde)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(
+        0,
+        6,
+        f"Rechnung {rechnung.rechnungsnummer} vom {_fmt_datum(rechnung.created_at)}, "
+        f"{tage_ueberfaellig} Tage ueberfaellig.",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.ln(4)
+
+    zeilen = [("Offener Rechnungsbetrag", betrag_brutto), ("Verzugszinsen (§ 288 BGB)", verzugszinsen)]
+    if mahnpauschale:
+        zeilen.append(("Mahnpauschale (§ 288 Abs. 5 BGB)", mahnpauschale))
+    pdf.set_font("Helvetica", "", 10)
+    for label, wert in zeilen:
+        pdf.cell(148, 7, "", border=0)
+        pdf.cell(22, 7, label)
+        pdf.cell(22, 7, _fmt_betrag(wert), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    gesamt = betrag_brutto + verzugszinsen + mahnpauschale
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(148, 8, "", border=0)
+    pdf.cell(22, 8, "Gesamt fällig")
+    pdf.cell(22, 8, _fmt_betrag(gesamt), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    return bytes(pdf.output())
+
+
 def generate_maengel_protokoll_pdf(mandant: Mandant, vorgang: Vorgang, maengel: list[Mangel]) -> bytes:
     pdf = FPDF()
     pdf.add_page()

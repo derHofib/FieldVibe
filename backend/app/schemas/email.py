@@ -36,5 +36,5 @@ class EmailLogRead(BaseModel):
     anhang_dateiname: str | None
     status: EmailStatus
     fehlermeldung: str | None
-    gesendet_von: UUID
+    gesendet_von: UUID | None
     created_at: datetime
