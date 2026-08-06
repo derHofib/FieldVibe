@@ -1,17 +1,26 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { ThemeToggle } from "./ThemeToggle";
 
 const NAV_ITEMS = [
+  { to: "/uebersicht", label: "Übersicht", icon: "📊" },
   { to: "/mandanten", label: "Mandanten", icon: "🏢" },
   { to: "/accounts", label: "Accounts", icon: "👥" },
   { to: "/audit-log", label: "Audit-Log", icon: "📋" },
   { to: "/update", label: "Update", icon: "⬆️" },
 ];
 
+function useSeitentitel(): string {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/mandanten/")) return "Mandant bearbeiten";
+  const treffer = NAV_ITEMS.find((item) => pathname.startsWith(item.to));
+  return treffer?.label ?? "";
+}
+
 export function Layout() {
   const { currentUser, logout } = useAuth();
+  const seitentitel = useSeitentitel();
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -41,10 +50,11 @@ export function Layout() {
         </aside>
         <div className="flex flex-1 flex-col">
           <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-800 dark:bg-slate-900">
-            <span className="text-sm text-slate-600 dark:text-slate-300">
-              Angemeldet als <strong>{currentUser?.name}</strong> ({currentUser?.role})
-            </span>
-            <div className="flex items-center gap-1">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{seitentitel}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-600 dark:text-slate-300">
+                Angemeldet als <strong>{currentUser?.name}</strong> ({currentUser?.role})
+              </span>
               <ThemeToggle />
               <button
                 onClick={logout}

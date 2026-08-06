@@ -108,6 +108,7 @@ export const versionApi = {
 
 export const mandantenApi = {
   list: () => apiFetch<Mandant[]>("/api/admin/mandanten"),
+  get: (id: string) => apiFetch<Mandant>(`/api/admin/mandanten/${id}`),
   create: (body: { name: string; slug: string; branche?: string }) =>
     apiFetch<Mandant>("/api/admin/mandanten", {
       method: "POST",
@@ -175,7 +176,11 @@ export const accountTypenApi = {
 };
 
 export const auditLogApi = {
-  list: () => apiFetch<AuditLogEntry[]>("/api/admin/audit-log"),
+  list: (params: { mandant_id?: string; aktion?: string; von?: string; bis?: string; limit?: number } = {}) => {
+    const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "");
+    const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
+    return apiFetch<AuditLogEntry[]>(`/api/admin/audit-log${qs ? `?${qs}` : ""}`);
+  },
 };
 
 export const papierkorbApi = {

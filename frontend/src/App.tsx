@@ -6,7 +6,9 @@ import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
 import { LoginPage } from "./pages/LoginPage";
+import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
+import { UebersichtPage } from "./pages/UebersichtPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
 import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
@@ -78,11 +80,13 @@ export function App() {
 
       {isAuthenticated && isPlatformAdmin && (
         <Route element={<Layout />}>
+          <Route path="/uebersicht" element={<UebersichtPage />} />
           <Route path="/mandanten" element={<MandantenPage />} />
+          <Route path="/mandanten/:id" element={<MandantDetailPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/update" element={<UpdatePage />} />
-          <Route path="*" element={<Navigate to="/mandanten" replace />} />
+          <Route path="*" element={<Navigate to="/uebersicht" replace />} />
         </Route>
       )}
 

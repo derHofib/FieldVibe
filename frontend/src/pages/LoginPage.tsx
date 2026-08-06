@@ -19,7 +19,9 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate("/mandanten", { replace: true });
+      // Fuer Nicht-Platform-Admins faengt das Catch-All in App.tsx diesen
+      // Pfad ab und leitet zur echten Startseite (Feed/Papierkorb) um.
+      navigate("/uebersicht", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Anmeldung fehlgeschlagen");
     } finally {
