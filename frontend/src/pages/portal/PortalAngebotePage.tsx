@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import type { AngebotStatus } from "../../types";
 
 const STATUS_LABEL: Record<AngebotStatus, string> = {
@@ -18,13 +21,13 @@ export function PortalAngebotePage() {
     queryFn: kundenportalApi.angebote,
   });
 
-  if (isLoading) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
-
   return (
     <div className="space-y-3">
       <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Ihre Angebote</h1>
-      {!angebote || angebote.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Keine Angebote vorhanden.</p>
+      {isLoading ? (
+        <SkeletonList count={3} />
+      ) : !angebote || angebote.length === 0 ? (
+        <EmptyState icon={FileText} text="Keine Angebote vorhanden." />
       ) : (
         <div className="space-y-2">
           {angebote.map((a) => (

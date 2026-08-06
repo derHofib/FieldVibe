@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { Clock, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
+import { EmptyState } from "../../components/EmptyState";
 import { usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
@@ -151,7 +152,7 @@ export function StatistikPage() {
           </div>
 
           {(wochenEintraege ?? []).length === 0 ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500">Keine Zeiterfassungen in dieser Woche.</p>
+            <EmptyState icon={Clock} text="Keine Zeiterfassungen in dieser Woche." />
           ) : (
             <div className="space-y-1">
               {wochenEintraege!.map((e) => (

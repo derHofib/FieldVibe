@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { notificationsApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import type { NotificationEntry } from "../../types";
 
 function targetPath(n: NotificationEntry): string | null {
@@ -51,9 +54,9 @@ export function NotificationsPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !notifications || notifications.length === 0 ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Keine Benachrichtigungen.</p>
+        <EmptyState icon={Bell} text="Keine Benachrichtigungen." />
       ) : (
         <div className="space-y-2">
           {notifications.map((n) => (

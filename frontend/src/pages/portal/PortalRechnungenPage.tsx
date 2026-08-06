@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { FileText, Receipt } from "lucide-react";
 
 import { kundenportalApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import { openPdfBlob } from "../../utils/pdf";
 import type { Rechnung, RechnungStatus } from "../../types";
 
@@ -51,13 +53,13 @@ export function PortalRechnungenPage() {
     queryFn: kundenportalApi.rechnungen,
   });
 
-  if (isLoading) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
-
   return (
     <div className="space-y-3">
       <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Ihre Rechnungen</h1>
-      {!rechnungen || rechnungen.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Keine Rechnungen vorhanden.</p>
+      {isLoading ? (
+        <SkeletonList count={3} />
+      ) : !rechnungen || rechnungen.length === 0 ? (
+        <EmptyState icon={Receipt} text="Keine Rechnungen vorhanden." />
       ) : (
         <div className="space-y-2">
           {rechnungen.map((r) => (

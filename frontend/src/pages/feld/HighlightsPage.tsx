@@ -3,6 +3,8 @@ import { Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { highlightsApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { Skeleton } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 
 export function HighlightsPage() {
@@ -33,12 +35,21 @@ export function HighlightsPage() {
       </p>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="aspect-square rounded-lg" />
+          ))}
+        </div>
       ) : (highlights ?? []).length === 0 ? (
-        <p className="text-center text-sm text-slate-400 dark:text-slate-500">
-          Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit{" "}
-          <Star size={12} strokeWidth={2} className="inline text-amber-500" /> markieren.
-        </p>
+        <EmptyState
+          icon={Star}
+          text={
+            <>
+              Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit{" "}
+              <Star size={12} strokeWidth={2} className="inline text-amber-500" /> markieren.
+            </>
+          }
+        />
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {highlights!.map((h) => (

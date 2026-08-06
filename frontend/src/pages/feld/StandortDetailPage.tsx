@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Repeat } from "lucide-react";
+import { Boxes, Inbox, Repeat } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, standorteApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
 
@@ -377,7 +378,7 @@ export function StandortDetailPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Assets an diesem Standort</h2>
         {profil.anlagen.length === 0 ? (
-          <p className="mb-2 text-sm text-slate-400 dark:text-slate-500">Keine Assets an diesem Standort.</p>
+          <EmptyState icon={Boxes} text="Keine Assets an diesem Standort." className="py-4" />
         ) : (
           <div className="mb-2 space-y-2">
             {profil.anlagen.map((a) => (
@@ -412,7 +413,7 @@ export function StandortDetailPage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Vorgänge an diesem Standort</h2>
         {profil.vorgaenge.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Vorgänge.</p>
+          <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
           <div className="space-y-2">
             {profil.vorgaenge.map((v) => (

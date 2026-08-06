@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Repeat } from "lucide-react";
+import { Inbox, Repeat } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -11,6 +11,7 @@ import {
   pruefzyklenApi,
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
@@ -511,7 +512,7 @@ export function AnlageProfilePage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Vorgänge</h2>
         {profil.vorgaenge.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Vorgänge.</p>
+          <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
           <div className="space-y-2">
             {profil.vorgaenge.map((v) => (

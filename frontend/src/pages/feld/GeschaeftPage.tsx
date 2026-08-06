@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText, Package, Receipt, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -14,6 +15,8 @@ import {
   rechnungenApi,
   tagsApi,
 } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import type {
@@ -393,23 +396,26 @@ export function GeschaeftPage() {
   const materialAktiv = istModulAktiv(currentUser, "material");
   const bestellwesenAktiv = tab === "bestellwesen" && materialAktiv;
 
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: kunden, isLoading: kundenLoading } = useQuery({
+    queryKey: ["kunden"],
+    queryFn: () => kundenApi.list(),
+  });
   const kundenGefiltert = (kunden ?? []).filter((k) => {
     if (!kundenSuche.trim()) return true;
     const q = kundenSuche.trim().toLowerCase();
     return k.name.toLowerCase().includes(q) || (k.kundennummer ?? "").toLowerCase().includes(q);
   });
-  const { data: angebote } = useQuery({
+  const { data: angebote, isLoading: angeboteLoading } = useQuery({
     queryKey: ["angebote"],
     queryFn: () => angeboteApi.list(),
     enabled: abrechnungAktiv,
   });
-  const { data: rechnungen } = useQuery({
+  const { data: rechnungen, isLoading: rechnungenLoading } = useQuery({
     queryKey: ["rechnungen"],
     queryFn: () => rechnungenApi.list(),
     enabled: abrechnungAktiv,
   });
-  const { data: material } = useQuery({
+  const { data: material, isLoading: materialLoading } = useQuery({
     queryKey: ["material"],
     queryFn: () => materialApi.list(),
     enabled: materialAktiv,
@@ -883,8 +889,10 @@ export function GeschaeftPage() {
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
             />
           )}
-          {(kunden ?? []).length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-slate-500">Keine Kunden vorhanden.</p>
+          {kundenLoading ? (
+            <SkeletonList count={3} />
+          ) : (kunden ?? []).length === 0 ? (
+            <EmptyState icon={Users} text="Keine Kunden vorhanden." />
           ) : kundenGefiltert.length === 0 ? (
             <p className="text-center text-sm text-slate-400 dark:text-slate-500">
               Keine Kunden gefunden für „{kundenSuche}“.
@@ -917,8 +925,10 @@ export function GeschaeftPage() {
 
       {tab === "angebote" && (
         <div className="space-y-2">
-          {(angebote ?? []).length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-slate-500">Keine Angebote vorhanden.</p>
+          {angeboteLoading ? (
+            <SkeletonList count={3} />
+          ) : (angebote ?? []).length === 0 ? (
+            <EmptyState icon={FileText} text="Keine Angebote vorhanden." />
           ) : (
             angebote!.map((a) => (
               <button
@@ -944,8 +954,10 @@ export function GeschaeftPage() {
 
       {tab === "rechnungen" && (
         <div className="space-y-2">
-          {(rechnungen ?? []).length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-slate-500">Keine Rechnungen vorhanden.</p>
+          {rechnungenLoading ? (
+            <SkeletonList count={3} />
+          ) : (rechnungen ?? []).length === 0 ? (
+            <EmptyState icon={Receipt} text="Keine Rechnungen vorhanden." />
           ) : (
             rechnungen!.map((r) => (
               <button
@@ -1019,8 +1031,10 @@ export function GeschaeftPage() {
             </div>
           )}
 
-          {(material ?? []).length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-slate-500">Kein Material erfasst.</p>
+          {materialLoading ? (
+            <SkeletonList count={3} />
+          ) : (material ?? []).length === 0 ? (
+            <EmptyState icon={Package} text="Kein Material erfasst." />
           ) : materialGefiltert.length === 0 ? (
             <p className="text-center text-sm text-slate-400 dark:text-slate-500">Kein Material entspricht dem Filter.</p>
           ) : (

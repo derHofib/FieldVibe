@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { Inbox } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import type { VorgangStatus } from "../../types";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
@@ -21,13 +24,13 @@ export function PortalVorgaengePage() {
     queryFn: kundenportalApi.vorgaenge,
   });
 
-  if (isLoading) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
-
   return (
     <div className="space-y-3">
       <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Ihre Aufträge</h1>
-      {!vorgaenge || vorgaenge.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Keine Aufträge vorhanden.</p>
+      {isLoading ? (
+        <SkeletonList count={3} />
+      ) : !vorgaenge || vorgaenge.length === 0 ? (
+        <EmptyState icon={Inbox} text="Keine Aufträge vorhanden." />
       ) : (
         <div className="space-y-2">
           {vorgaenge.map((v) => (

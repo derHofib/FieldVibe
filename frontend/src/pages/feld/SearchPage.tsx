@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { SearchX } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { searchApi, tagsApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import type { SearchHit } from "../../types";
 
 const KATEGORIE_LABEL: Record<string, string> = {
@@ -66,7 +69,7 @@ export function SearchPage() {
       {q && (
         <div className="space-y-2">
           {isFetching ? (
-            <p className="text-center text-slate-500 dark:text-slate-400">Suche…</p>
+            <SkeletonList count={3} />
           ) : results && results.treffer.length > 0 ? (
             results.treffer.map((hit) => (
               <button
@@ -86,7 +89,7 @@ export function SearchPage() {
               </button>
             ))
           ) : (
-            <p className="text-center text-slate-500 dark:text-slate-400">Keine Treffer.</p>
+            <EmptyState icon={SearchX} text="Keine Treffer." />
           )}
         </div>
       )}

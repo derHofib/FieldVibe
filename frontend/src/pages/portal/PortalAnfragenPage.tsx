@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MessageSquareText } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { kundenportalApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 import type { Leistungstyp, VorgangAnfrageStatus } from "../../types";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
@@ -247,9 +250,9 @@ export function PortalAnfragenPage() {
       <NeueAnfrage />
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
+        <SkeletonList count={3} />
       ) : !anfragen || anfragen.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine Anfragen gestellt.</p>
+        <EmptyState icon={MessageSquareText} text="Noch keine Anfragen gestellt." />
       ) : (
         <div className="space-y-2">
           {anfragen.map((a) => (

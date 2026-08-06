@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Repeat } from "lucide-react";
+import { Boxes, Inbox, MapPin, Repeat } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -13,6 +13,7 @@ import {
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { EmailSection } from "../../components/EmailSection";
+import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { downloadBlob } from "../../utils/download";
@@ -719,7 +720,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
     <div>
       <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Standorte</h2>
       {!standorte || standorte.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Keine Standorte.</p>
+        <EmptyState icon={MapPin} text="Keine Standorte." className="py-4" />
       ) : (
         <div className="space-y-2">
           {standorte.map((s) => (
@@ -1032,7 +1033,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
     <div>
       <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Dauer-Aufträge</h2>
       {!dauerauftraege || dauerauftraege.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Keine Dauer-Aufträge.</p>
+        <EmptyState icon={Repeat} text="Keine Dauer-Aufträge." className="py-4" />
       ) : (
         <div className="space-y-2">
           {dauerauftraege.map((d) => (
@@ -1229,7 +1230,7 @@ export function KundeProfilePage() {
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Anlagen</h2>
         {profil.anlagen.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Anlagen.</p>
+          <EmptyState icon={Boxes} text="Keine Anlagen." className="py-4" />
         ) : (
           <div className="space-y-2">
             {profil.anlagen.map((a) => (
@@ -1281,7 +1282,7 @@ export function KundeProfilePage() {
           )}
         </div>
         {sichtbareVorgaenge.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Vorgänge.</p>
+          <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
           <div className="space-y-2">
             {sichtbareVorgaenge.map((v) => (

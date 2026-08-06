@@ -1,10 +1,12 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Repeat, Search, Star } from "lucide-react";
+import { Inbox, Repeat, Search, Star } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { feedApi, kundenApi, storiesApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
+import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { cacheFeedItems, getCachedFeedItems } from "../../offline/cache";
 import { istModulAktiv } from "../../utils/module";
@@ -354,9 +356,9 @@ export function FeedPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
+        <SkeletonList count={4} />
       ) : cards.length === 0 ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Keine Vorgänge gefunden.</p>
+        <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
       ) : (
         <div className="space-y-3">
           {cards.map((card) => (
