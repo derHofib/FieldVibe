@@ -227,6 +227,19 @@ async def get_feed(
             anlage_kurzadresse = ", ".join(t for t in teile if t) or None
         standort = standorte_by_id.get(vorgang.standort_id) if vorgang.standort_id else None
 
+        # Koordinaten nur vertrauen, wenn die tatsaechlich angezeigte Adresse
+        # von Standort/Anlage kommt -- ein manueller Adress-Override am
+        # Vorgang selbst hat keine eigenen geo_lat/geo_lng-Spalten (siehe
+        # gleiche Regel in VorgangDetailPage.tsx/MapboxMap, Phase 2).
+        # Standort ist die spezifischere "Ausfuehrungsadresse" und hat daher
+        # Vorrang vor der Anlage.
+        geo_lat = geo_lng = None
+        if not vorgang.adresse:
+            if standort and standort.geo_lat is not None and standort.geo_lng is not None:
+                geo_lat, geo_lng = standort.geo_lat, standort.geo_lng
+            elif anlage and anlage.geo_lat is not None and anlage.geo_lng is not None:
+                geo_lat, geo_lng = anlage.geo_lat, anlage.geo_lng
+
         ersteller_name = None
         if vorgang.erstellt_von:
             ersteller = ersteller_by_id.get(vorgang.erstellt_von)
@@ -253,6 +266,8 @@ async def get_feed(
                 last_activity_at=vorgang.last_activity_at,
                 letztes_event_vorschau=_preview_text(last_events_by_vorgang.get(vorgang.id)),
                 tags=tags_by_vorgang.get(vorgang.id, []),
+                geo_lat=geo_lat,
+                geo_lng=geo_lng,
                 timer_laeuft=vorgang.id in vorgaenge_mit_laufendem_timer,
                 dauerauftrag_id=vorgang.dauerauftrag_id,
             )

@@ -172,6 +172,141 @@ async def test_feed_zeigt_anlage_standort_und_ersteller(
 
 
 @pytest.mark.asyncio
+async def test_feed_zeigt_koordinaten_vom_standort_wenn_vorhanden(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    standort = await client.post(
+        "/api/standorte",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "bezeichnung": "Filiale Nord",
+            "geo_lat": 52.52,
+            "geo_lng": 13.405,
+        },
+    )
+    standort_id = standort.json()["id"]
+    anlage = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "standort_id": standort_id,
+            "bezeichnung": "Hauptverteilung",
+            "geo_lat": 1.0,
+            "geo_lng": 2.0,
+        },
+    )
+    anlage_id = anlage.json()["id"]
+
+    await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "anlage_id": anlage_id,
+            "standort_id": standort_id,
+            "titel": "Wartung",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "wartung",
+        },
+    )
+
+    resp = await client.get("/api/feed", headers=auth_headers(token))
+    card = resp.json()["items"][0]
+    # Standort hat Vorrang vor der Anlage (siehe app/api/routes/feed.py).
+    assert card["geo_lat"] == pytest.approx(52.52)
+    assert card["geo_lng"] == pytest.approx(13.405)
+
+
+@pytest.mark.asyncio
+async def test_feed_zeigt_koordinaten_von_anlage_ohne_standort(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    anlage = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "bezeichnung": "Hauptverteilung",
+            "geo_lat": 48.14,
+            "geo_lng": 11.58,
+        },
+    )
+    anlage_id = anlage.json()["id"]
+
+    await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "anlage_id": anlage_id,
+            "titel": "Wartung",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "wartung",
+        },
+    )
+
+    resp = await client.get("/api/feed", headers=auth_headers(token))
+    card = resp.json()["items"][0]
+    assert card["geo_lat"] == pytest.approx(48.14)
+    assert card["geo_lng"] == pytest.approx(11.58)
+
+
+@pytest.mark.asyncio
+async def test_feed_ohne_koordinaten_wenn_vorgang_eigene_adresse_hat(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    anlage = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "bezeichnung": "Hauptverteilung",
+            "geo_lat": 48.14,
+            "geo_lng": 11.58,
+        },
+    )
+    anlage_id = anlage.json()["id"]
+
+    # Manueller Adress-Override am Vorgang -- die Anlage-Koordinaten
+    # gehoeren dann zu einem ganz anderen Ort und duerfen nicht mit
+    # angezeigt werden (siehe gleiche Regel in VorgangDetailPage.tsx).
+    await client.post(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "anlage_id": anlage_id,
+            "titel": "Wartung",
+            "abrechnungsart": "aufwand",
+            "leistungstyp": "wartung",
+            "adresse": {"strasse": "Andere Str. 5", "ort": "Woanders"},
+        },
+    )
+
+    resp = await client.get("/api/feed", headers=auth_headers(token))
+    card = resp.json()["items"][0]
+    assert card["geo_lat"] is None
+    assert card["geo_lng"] is None
+
+
+@pytest.mark.asyncio
 async def test_feed_filtert_nach_faelligkeit(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):

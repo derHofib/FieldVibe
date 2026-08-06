@@ -1,16 +1,34 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Inbox, Repeat, Search, Star } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Inbox, List, Map as MapIcon, Repeat, Search, Star } from "lucide-react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { feedApi, kundenApi, storiesApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
+import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { cacheFeedItems, getCachedFeedItems } from "../../offline/cache";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, FeedResponse, StoryItem, VorgangStatus } from "../../types";
+
+// Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
+// geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
+// gleiche Begruendung bei MapboxMap.tsx in der Vorgang-Detailseite).
+const MapboxFeedMap = lazy(() =>
+  import("../../components/MapboxFeedMap").then((m) => ({ default: m.MapboxFeedMap })),
+);
+
+const STATUS_HEX: Record<VorgangStatus, string> = {
+  neu: "#3b82f6",
+  geplant: "#a855f7",
+  in_arbeit: "#f59e0b",
+  wartet_kunde: "#f97316",
+  abgeschlossen: "#22c55e",
+  abgerechnet: "#64748b",
+  storniert: "#94a3b8",
+};
 
 const LEISTUNGSTYP_LABEL: Record<string, string> = {
   installation: "Installation",
@@ -166,6 +184,7 @@ export function FeedPage() {
   const { currentUser } = useAuth();
   const [filter, setFilter] = useState<Record<string, string>>(LEER_FILTER);
   const [zeigeFilter, setZeigeFilter] = useState(false);
+  const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
@@ -220,11 +239,40 @@ export function FeedPage() {
     getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
   });
 
+  // Die Liste zeigt bewusst nur Seite fuer Seite ("Mehr laden"), aber die
+  // Kartenansicht braucht alle zum aktuellen Filter passenden Vorgaenge auf
+  // einmal, sonst wuerden Pins fehlen, die einfach noch nicht nachgeladen
+  // wurden. hasNextPage/fetchNextPage per Ref, damit der Effekt nicht bei
+  // jeder neu geladenen Seite neu startet, sondern einmalig pro
+  // Ansicht-Wechsel durchlaeuft.
+  const hasNextPageRef = useRef(hasNextPage);
+  hasNextPageRef.current = hasNextPage;
+  const fetchNextPageRef = useRef(fetchNextPage);
+  fetchNextPageRef.current = fetchNextPage;
+  useEffect(() => {
+    if (ansicht !== "karte") return;
+    let abgebrochen = false;
+    (async () => {
+      let seiten = 0;
+      while (!abgebrochen && hasNextPageRef.current && seiten < 20) {
+        await fetchNextPageRef.current();
+        seiten++;
+      }
+    })();
+    return () => {
+      abgebrochen = true;
+    };
+  }, [ansicht]);
+
   const storyGroups = stories
     ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen]
     : [];
   const cards = data?.pages.flatMap((p) => p.items) ?? [];
   const aktiveFilterAnzahl = Object.keys(filter).length;
+  const punkte: FeedMapPunkt[] = cards
+    .filter((c) => c.geo_lat != null && c.geo_lng != null)
+    .map((c) => ({ id: c.id, lng: c.geo_lng as number, lat: c.geo_lat as number, farbe: STATUS_HEX[c.status] }));
+  const ohneKoordinatenAnzahl = cards.length - punkte.length;
 
   return (
     <div className="space-y-4">
@@ -355,26 +403,79 @@ export function FeedPage() {
         <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
       </div>
 
-      {isLoading ? (
-        <SkeletonList count={4} />
-      ) : cards.length === 0 ? (
-        <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
-      ) : (
-        <div className="space-y-3">
-          {cards.map((card) => (
-            <FeedCardView key={card.id} card={card} />
-          ))}
-        </div>
-      )}
-
-      {hasNextPage && (
+      <div className="flex justify-end gap-1">
         <button
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-          className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-sm disabled:opacity-50 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+          onClick={() => setAnsicht("liste")}
+          className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+            ansicht === "liste"
+              ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          }`}
         >
-          {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
+          <List size={13} strokeWidth={2} /> Liste
         </button>
+        <button
+          onClick={() => setAnsicht("karte")}
+          className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+            ansicht === "karte"
+              ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+          }`}
+        >
+          <MapIcon size={13} strokeWidth={2} /> Karte
+        </button>
+      </div>
+
+      {ansicht === "karte" ? (
+        isLoading ? (
+          <div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700/60" />
+        ) : punkte.length === 0 ? (
+          <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
+        ) : (
+          <>
+            <Suspense
+              fallback={<div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700/60" />}
+            >
+              <MapboxFeedMap
+                punkte={punkte}
+                onPunktClick={(id) => navigate(`/vorgaenge/${id}`)}
+                className="h-[65vh] w-full rounded-lg"
+              />
+            </Suspense>
+            {ohneKoordinatenAnzahl > 0 && (
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                {ohneKoordinatenAnzahl} von {cards.length} Vorgängen ohne Standort nicht auf der Karte angezeigt.
+              </p>
+            )}
+            {hasNextPage && (
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">Lädt weitere Vorgänge…</p>
+            )}
+          </>
+        )
+      ) : (
+        <>
+          {isLoading ? (
+            <SkeletonList count={4} />
+          ) : cards.length === 0 ? (
+            <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
+          ) : (
+            <div className="space-y-3">
+              {cards.map((card) => (
+                <FeedCardView key={card.id} card={card} />
+              ))}
+            </div>
+          )}
+
+          {hasNextPage && (
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-sm disabled:opacity-50 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+            >
+              {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
+            </button>
+          )}
+        </>
       )}
     </div>
   );

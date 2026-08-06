@@ -405,6 +405,8 @@ export interface FeedCard {
   tags: string[];
   timer_laeuft: boolean;
   dauerauftrag_id: string | null;
+  geo_lat: number | null;
+  geo_lng: number | null;
 }
 
 export interface FeedResponse {

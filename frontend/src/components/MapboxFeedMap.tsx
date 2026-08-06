@@ -1,0 +1,176 @@
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+import { useEffect, useRef } from "react";
+
+import { useTheme } from "../context/ThemeContext";
+
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+
+const STYLE_URL = {
+  light: "mapbox://styles/mapbox/streets-v12",
+  dark: "mapbox://styles/mapbox/dark-v11",
+} as const;
+
+const SOURCE_ID = "vorgaenge";
+
+export interface FeedMapPunkt {
+  id: string;
+  lng: number;
+  lat: number;
+  farbe: string;
+}
+
+function punkteAlsGeojson(punkte: FeedMapPunkt[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
+  return {
+    type: "FeatureCollection",
+    features: punkte.map((p) => ({
+      type: "Feature",
+      properties: { id: p.id, farbe: p.farbe },
+      geometry: { type: "Point", coordinates: [p.lng, p.lat] },
+    })),
+  };
+}
+
+export function MapboxFeedMap({
+  punkte,
+  onPunktClick,
+  className = "h-full w-full",
+}: {
+  punkte: FeedMapPunkt[];
+  onPunktClick: (id: string) => void;
+  className?: string;
+}) {
+  const { theme } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const punkteRef = useRef(punkte);
+  punkteRef.current = punkte;
+  const onPunktClickRef = useRef(onPunktClick);
+  onPunktClickRef.current = onPunktClick;
+
+  useEffect(() => {
+    if (!MAPBOX_TOKEN || !containerRef.current) return;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: STYLE_URL[theme],
+      center: [10.4515, 51.1657],
+      zoom: 5,
+    });
+    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+
+    // Quelle/Layer leben im Style und verschwinden bei jedem setStyle()
+    // (Theme-Wechsel) -- deshalb hier wiederholbar statt nur beim ersten
+    // "load" registriert, siehe Theme-Effekt unten.
+    function ensureLayers() {
+      if (map.getSource(SOURCE_ID)) return;
+      map.addSource(SOURCE_ID, {
+        type: "geojson",
+        data: punkteAlsGeojson(punkteRef.current),
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 40,
+      });
+      map.addLayer({
+        id: "cluster-circle",
+        type: "circle",
+        source: SOURCE_ID,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": "#0284c7",
+          "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 25, 26],
+          "circle-opacity": 0.9,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+      map.addLayer({
+        id: "cluster-count",
+        type: "symbol",
+        source: SOURCE_ID,
+        filter: ["has", "point_count"],
+        layout: { "text-field": "{point_count_abbreviated}", "text-size": 12, "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"] },
+        paint: { "text-color": "#ffffff" },
+      });
+      map.addLayer({
+        id: "unclustered-point",
+        type: "circle",
+        source: SOURCE_ID,
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": ["get", "farbe"],
+          "circle-radius": 8,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+    }
+
+    map.on("style.load", ensureLayers);
+
+    map.on("click", "unclustered-point", (e) => {
+      const id = e.features?.[0]?.properties?.id as string | undefined;
+      if (id) onPunktClickRef.current(id);
+    });
+    map.on("click", "cluster-circle", (e) => {
+      const feature = e.features?.[0];
+      const clusterId = feature?.properties?.cluster_id as number | undefined;
+      const source = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+      if (clusterId === undefined || !source || feature?.geometry.type !== "Point") return;
+      source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err || zoom == null || feature.geometry.type !== "Point") return;
+        map.easeTo({ center: feature.geometry.coordinates as [number, number], zoom });
+      });
+    });
+    for (const layer of ["unclustered-point", "cluster-circle"]) {
+      map.on("mouseenter", layer, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", layer, () => {
+        map.getCanvas().style.cursor = "";
+      });
+    }
+
+    mapRef.current = map;
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Karte einmalig
+    // aufbauen, Style-Wechsel und Daten-Updates laufen ueber eigene Effekte.
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    function updateData() {
+      if (!map) return;
+      const source = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+      if (!source) return;
+      source.setData(punkteAlsGeojson(punkte));
+      if (punkte.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        punkte.forEach((p) => bounds.extend([p.lng, p.lat]));
+        map.fitBounds(bounds, { padding: 48, maxZoom: 15, duration: 0 });
+      }
+    }
+    if (map.isStyleLoaded()) updateData();
+    else map.once("style.load", updateData);
+  }, [punkte]);
+
+  useEffect(() => {
+    mapRef.current?.setStyle(STYLE_URL[theme]);
+  }, [theme]);
+
+  if (!MAPBOX_TOKEN) {
+    return (
+      <div
+        className={`flex items-center justify-center border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-500 ${className}`}
+      >
+        Karte nicht verfügbar (kein Mapbox-Token konfiguriert)
+      </div>
+    );
+  }
+
+  return <div ref={containerRef} className={`bg-slate-100 dark:bg-slate-800 ${className}`} />;
+}
