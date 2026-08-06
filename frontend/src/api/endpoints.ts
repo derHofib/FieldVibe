@@ -724,6 +724,8 @@ export const eingangsrechnungenApi = {
     rechnungsdatum: string;
     faellig_am?: string;
     betrag_netto?: string;
+    skonto_prozent?: string;
+    skonto_tage?: number;
     kategorie?: string;
     notiz?: string;
     positionen?: Pick<EingangsrechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
@@ -736,8 +738,23 @@ export const eingangsrechnungenApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (id: string, body: { status?: string; betrag_netto?: string; faellig_am?: string; kategorie?: string; notiz?: string }) =>
-    apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  addZahlung: (id: string, body: { betrag: string; datum?: string }) =>
+    apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/zahlungen`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (
+    id: string,
+    body: {
+      status?: string;
+      betrag_netto?: string;
+      faellig_am?: string;
+      skonto_prozent?: string;
+      skonto_tage?: number;
+      kategorie?: string;
+      notiz?: string;
+    },
+  ) => apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/eingangsrechnungen/${id}`, { method: "DELETE" }),
   belegUpload: (id: string, file: File) => {
     const formData = new FormData();

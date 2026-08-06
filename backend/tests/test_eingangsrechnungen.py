@@ -262,3 +262,177 @@ async def test_techniker_cannot_create_eingangsrechnung(client, make_mandant, ma
         },
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_skonto_felder_gespeichert_und_berechnet(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-300",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+            "skonto_prozent": "2.00",
+            "skonto_tage": 10,
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["betrag_brutto"] == "119.00"
+    assert body["skonto_frist"] == "2026-08-11"
+    assert body["skonto_betrag"] == "2.38"
+
+
+@pytest.mark.asyncio
+async def test_teilzahlung_reduziert_offenen_betrag(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-301",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+        },
+    )
+    eingangsrechnung_id = resp.json()["id"]
+
+    zahlung = await client.post(
+        f"/api/eingangsrechnungen/{eingangsrechnung_id}/zahlungen",
+        headers=auth_headers(token),
+        json={"betrag": "50.00"},
+    )
+    assert zahlung.status_code == 201
+    body = zahlung.json()
+    assert body["status"] == "offen"
+    assert body["bezahlter_betrag"] == "50.00"
+    assert body["offener_betrag"] == "69.00"
+    assert len(body["zahlungen"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_vollzahlung_setzt_status_bezahlt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-302",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+        },
+    )
+    eingangsrechnung_id = resp.json()["id"]
+
+    zahlung = await client.post(
+        f"/api/eingangsrechnungen/{eingangsrechnung_id}/zahlungen",
+        headers=auth_headers(token),
+        json={"betrag": "119.00"},
+    )
+    assert zahlung.status_code == 201
+    body = zahlung.json()
+    assert body["status"] == "bezahlt"
+    assert body["bezahlt_am"] is not None
+    assert body["offener_betrag"] == "0.00"
+
+
+@pytest.mark.asyncio
+async def test_zahlung_uebersteigt_offenen_betrag_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-303",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+        },
+    )
+    eingangsrechnung_id = resp.json()["id"]
+
+    zahlung = await client.post(
+        f"/api/eingangsrechnungen/{eingangsrechnung_id}/zahlungen",
+        headers=auth_headers(token),
+        json={"betrag": "200.00"},
+    )
+    assert zahlung.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_zahlung_nur_bei_offener_rechnung(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-304",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+        },
+    )
+    eingangsrechnung_id = resp.json()["id"]
+    await client.patch(
+        f"/api/eingangsrechnungen/{eingangsrechnung_id}",
+        headers=auth_headers(token),
+        json={"status": "storniert"},
+    )
+
+    zahlung = await client.post(
+        f"/api/eingangsrechnungen/{eingangsrechnung_id}/zahlungen",
+        headers=auth_headers(token),
+        json={"betrag": "10.00"},
+    )
+    assert zahlung.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_skonto_kann_nur_bei_offener_rechnung_geaendert_werden(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-305",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+        },
+    )
+    eingangsrechnung_id = resp.json()["id"]
+    await client.patch(
+        f"/api/eingangsrechnungen/{eingangsrechnung_id}",
+        headers=auth_headers(token),
+        json={"status": "storniert"},
+    )
+
+    patch_resp = await client.patch(
+        f"/api/eingangsrechnungen/{eingangsrechnung_id}",
+        headers=auth_headers(token),
+        json={"skonto_prozent": "3.00"},
+    )
+    assert patch_resp.status_code == 400

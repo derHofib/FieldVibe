@@ -684,6 +684,14 @@ export interface EingangsrechnungPosition {
   gesamt: string;
 }
 
+export interface EingangsrechnungZahlung {
+  id: string;
+  betrag: string;
+  datum: string;
+  erstellt_von: string;
+  created_at: string;
+}
+
 export interface Eingangsrechnung {
   id: string;
   lieferant_id: string | null;
@@ -695,6 +703,10 @@ export interface Eingangsrechnung {
   faellig_am: string | null;
   betrag_netto: string;
   mwst_satz: string;
+  skonto_prozent: string | null;
+  skonto_tage: number | null;
+  skonto_frist: string | null;
+  skonto_betrag: string | null;
   kategorie: EingangsrechnungKategorie | null;
   status: EingangsrechnungStatus;
   bezahlt_am: string | null;
@@ -703,6 +715,9 @@ export interface Eingangsrechnung {
   erstellt_von: string;
   created_at: string;
   updated_at: string;
+  zahlungen: EingangsrechnungZahlung[];
+  bezahlter_betrag: string;
+  offener_betrag: string;
   positionen: EingangsrechnungPosition[];
   betrag_brutto: string;
 }

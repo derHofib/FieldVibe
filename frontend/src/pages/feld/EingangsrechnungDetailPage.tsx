@@ -31,6 +31,8 @@ export function EingangsrechnungDetailPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
+  const [showZahlungForm, setShowZahlungForm] = useState(false);
+  const [zahlungBetrag, setZahlungBetrag] = useState("");
 
   const { data: eingangsrechnung } = useQuery({
     queryKey: ["eingangsrechnung", id],
@@ -80,6 +82,15 @@ export function EingangsrechnungDetailPage() {
     mutationFn: () => eingangsrechnungenApi.belegUrl(id!),
     onSuccess: (res) => {
       if (res.url) window.open(res.url, "_blank");
+    },
+  });
+
+  const addZahlungMutation = useMutation({
+    mutationFn: () => eingangsrechnungenApi.addZahlung(id!, { betrag: zahlungBetrag }),
+    onSuccess: () => {
+      setShowZahlungForm(false);
+      setZahlungBetrag("");
+      queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", id] });
     },
   });
 
@@ -136,12 +147,23 @@ export function EingangsrechnungDetailPage() {
         {eingangsrechnung.notiz && (
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{eingangsrechnung.notiz}</p>
         )}
+        {eingangsrechnung.skonto_prozent && eingangsrechnung.skonto_frist && (
+          <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-400">
+            Skonto {eingangsrechnung.skonto_prozent}% bis {new Date(eingangsrechnung.skonto_frist).toLocaleDateString("de-DE")}
+            {" "}(Ersparnis {eingangsrechnung.skonto_betrag} EUR)
+          </p>
+        )}
 
         <div className="mt-3 text-right text-sm">
           <div className="text-slate-500 dark:text-slate-400">Netto: {eingangsrechnung.betrag_netto} EUR</div>
           <div className="font-semibold text-slate-800 dark:text-slate-100">
             Brutto: {eingangsrechnung.betrag_brutto} EUR
           </div>
+          {Number(eingangsrechnung.bezahlter_betrag) > 0 && (
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              Bezahlt: {eingangsrechnung.bezahlter_betrag} EUR · Offen: {eingangsrechnung.offener_betrag} EUR
+            </div>
+          )}
         </div>
       </div>
 
@@ -268,23 +290,76 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      {eingangsrechnung.status === "offen" && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => statusMutation.mutate("bezahlt")}
-            disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Als bezahlt markieren
-          </button>
-          <button
-            onClick={() => statusMutation.mutate("storniert")}
-            disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
-          >
-            Stornieren
-          </button>
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Zahlungen</h2>
+          {eingangsrechnung.status === "offen" && (
+            <button
+              onClick={() => {
+                setZahlungBetrag(eingangsrechnung.offener_betrag);
+                setShowZahlungForm((v) => !v);
+              }}
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            >
+              {showZahlungForm ? "Abbrechen" : "+ Zahlung"}
+            </button>
+          )}
         </div>
+
+        {showZahlungForm && (
+          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
+            <input
+              type="number"
+              step="0.01"
+              value={zahlungBetrag}
+              onChange={(e) => setZahlungBetrag(e.target.value)}
+              placeholder="Betrag"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            {addZahlungMutation.isError && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                Zahlung übersteigt den offenen Betrag oder ist ungültig.
+              </p>
+            )}
+            <button
+              disabled={!zahlungBetrag || addZahlungMutation.isPending}
+              onClick={() => addZahlungMutation.mutate()}
+              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Zahlung erfassen
+            </button>
+          </div>
+        )}
+
+        {eingangsrechnung.zahlungen.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine Zahlung erfasst.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {eingangsrechnung.zahlungen.map((z) => (
+              <div
+                key={z.id}
+                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60"
+              >
+                <span className="text-slate-500 dark:text-slate-400">
+                  {new Date(z.datum).toLocaleDateString("de-DE")}
+                </span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{z.betrag} EUR</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {eingangsrechnung.status === "offen" && (
+        <button
+          onClick={() => {
+            if (window.confirm("Diese Eingangsrechnung stornieren?")) statusMutation.mutate("storniert");
+          }}
+          disabled={statusMutation.isPending}
+          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+        >
+          Stornieren
+        </button>
       )}
     </div>
   );

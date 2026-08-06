@@ -43,6 +43,8 @@ export function RechnungseingangPage() {
     faelligAm: "",
     betragNetto: "",
     kategorie: "",
+    skontoProzent: "",
+    skontoTage: "",
   });
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -67,6 +69,8 @@ export function RechnungseingangPage() {
         faellig_am: form.faelligAm || undefined,
         betrag_netto: form.betragNetto || "0",
         kategorie: form.kategorie || undefined,
+        skonto_prozent: form.skontoProzent || undefined,
+        skonto_tage: form.skontoTage ? Number(form.skontoTage) : undefined,
       }),
     onSuccess: (eingangsrechnung) => {
       setShowForm(false);
@@ -75,6 +79,8 @@ export function RechnungseingangPage() {
         lieferantName: "",
         rechnungsnummerLieferant: "",
         rechnungsdatum: new Date().toISOString().slice(0, 10),
+        skontoProzent: "",
+        skontoTage: "",
         faelligAm: "",
         betragNetto: "",
         kategorie: "",
@@ -171,6 +177,24 @@ export function RechnungseingangPage() {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              step="0.01"
+              value={form.skontoProzent}
+              onChange={(e) => setForm({ ...form, skontoProzent: e.target.value })}
+              placeholder="Skonto %"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+            <input
+              type="number"
+              step="1"
+              value={form.skontoTage}
+              onChange={(e) => setForm({ ...form, skontoTage: e.target.value })}
+              placeholder="Skonto-Frist (Tage)"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
           </div>
           {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
           <button

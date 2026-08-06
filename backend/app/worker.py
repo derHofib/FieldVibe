@@ -1,6 +1,7 @@
 """Hintergrund-Worker: prueft stuendlich, welche Mandanten gerade ihre
 konfigurierte taegliche Scheduler-Stunde erreicht haben, und fuehrt fuer
-genau diese den Pruefzyklen-Scheduler und die Mahnwesen-Eskalation aus.
+genau diese den Pruefzyklen-Scheduler, die Mahnwesen-Eskalation und den
+Kreditorenbuchhaltung-Faelligkeits-Check aus.
 
 Laeuft als eigener Compose-Service (siehe docker-compose.yml, Service
 "worker") -- getrennt vom Backend-Container, damit ein API-Neustart/Deploy
@@ -15,6 +16,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.db.session import system_session
+from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
 from app.services.scheduler_service import (
     mandanten_faellig_um,
@@ -77,6 +79,15 @@ async def _run_hourly_tick() -> None:
             )
         except Exception:
             logger.exception("Mahnwesen-Lauf fehlgeschlagen")
+
+        try:
+            kreditoren_ergebnis = await run_kreditoren_faelligkeits_check(mandant_ids)
+            logger.info(
+                "Kreditorenbuchhaltung-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
+                jetzt.hour, len(mandant_ids), kreditoren_ergebnis,
+            )
+        except Exception:
+            logger.exception("Kreditorenbuchhaltung-Lauf fehlgeschlagen")
 
 
 async def main() -> None:

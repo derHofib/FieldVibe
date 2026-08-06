@@ -1,8 +1,10 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+_CENT = Decimal("0.01")
 
 
 class EingangsrechnungPositionCreate(BaseModel):
@@ -25,7 +27,22 @@ class EingangsrechnungPositionRead(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def gesamt(self) -> Decimal:
-        return (self.menge * self.einzelpreis).quantize(Decimal("0.01"))
+        return (self.menge * self.einzelpreis).quantize(_CENT)
+
+
+class EingangsrechnungZahlungCreate(BaseModel):
+    betrag: Decimal
+    datum: date | None = None
+
+
+class EingangsrechnungZahlungRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    betrag: Decimal
+    datum: date
+    erstellt_von: UUID
+    created_at: datetime
 
 
 class EingangsrechnungCreate(BaseModel):
@@ -40,6 +57,8 @@ class EingangsrechnungCreate(BaseModel):
     faellig_am: date | None = None
     betrag_netto: Decimal = Decimal("0")
     mwst_satz: Decimal = Decimal("19.00")
+    skonto_prozent: Decimal | None = None
+    skonto_tage: int | None = None
     kategorie: str | None = None
     notiz: str | None = None
     positionen: list[EingangsrechnungPositionCreate] = Field(default_factory=list)
@@ -49,6 +68,8 @@ class EingangsrechnungUpdate(BaseModel):
     status: str | None = None
     betrag_netto: Decimal | None = None
     faellig_am: date | None = None
+    skonto_prozent: Decimal | None = None
+    skonto_tage: int | None = None
     kategorie: str | None = None
     notiz: str | None = None
 
@@ -64,6 +85,8 @@ class EingangsrechnungRead(BaseModel):
     faellig_am: date | None
     betrag_netto: Decimal
     mwst_satz: Decimal
+    skonto_prozent: Decimal | None
+    skonto_tage: int | None
     kategorie: str | None
     status: str
     bezahlt_am: datetime | None
@@ -73,8 +96,33 @@ class EingangsrechnungRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     positionen: list[EingangsrechnungPositionRead]
+    zahlungen: list[EingangsrechnungZahlungRead]
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def betrag_brutto(self) -> Decimal:
-        return (self.betrag_netto + self.betrag_netto * self.mwst_satz / Decimal("100")).quantize(Decimal("0.01"))
+        return (self.betrag_netto + self.betrag_netto * self.mwst_satz / Decimal("100")).quantize(_CENT)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def bezahlter_betrag(self) -> Decimal:
+        return sum((z.betrag for z in self.zahlungen), Decimal("0")).quantize(_CENT)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def offener_betrag(self) -> Decimal:
+        return (self.betrag_brutto - self.bezahlter_betrag).quantize(_CENT)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def skonto_frist(self) -> date | None:
+        if self.skonto_tage is None:
+            return None
+        return self.rechnungsdatum + timedelta(days=self.skonto_tage)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def skonto_betrag(self) -> Decimal | None:
+        if self.skonto_prozent is None:
+            return None
+        return (self.betrag_brutto * self.skonto_prozent / Decimal("100")).quantize(_CENT)

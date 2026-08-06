@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -13,7 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
-from app.models.eingangsrechnung import Eingangsrechnung, EingangsrechnungPosition
+from app.models.eingangsrechnung import Eingangsrechnung, EingangsrechnungPosition, EingangsrechnungZahlung
 from app.models.lieferant import Lieferant
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
@@ -22,9 +22,16 @@ from app.schemas.eingangsrechnung import (
     EingangsrechnungPositionCreate,
     EingangsrechnungRead,
     EingangsrechnungUpdate,
+    EingangsrechnungZahlungCreate,
 )
 from app.services import papierkorb_service, storage_service
-from app.services.eingangsrechnung_service import positionen_fuer, to_read_model
+from app.services.eingangsrechnung_service import (
+    bezahlter_betrag,
+    brutto_betrag,
+    positionen_fuer,
+    to_read_model,
+    zahlungen_fuer,
+)
 
 router = APIRouter(
     prefix="/api/eingangsrechnungen",
@@ -165,6 +172,8 @@ async def create_eingangsrechnung(
         faellig_am=body.faellig_am,
         betrag_netto=body.betrag_netto,
         mwst_satz=body.mwst_satz,
+        skonto_prozent=body.skonto_prozent,
+        skonto_tage=body.skonto_tage,
         kategorie=body.kategorie,
         notiz=body.notiz,
         erstellt_von=auth.user_id,
@@ -250,6 +259,15 @@ async def update_eingangsrechnung(
         eingangsrechnung.betrag_netto = body.betrag_netto
     if body.faellig_am is not None:
         eingangsrechnung.faellig_am = body.faellig_am
+    if body.skonto_prozent is not None or body.skonto_tage is not None:
+        if eingangsrechnung.status != "offen":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Skonto kann nur bei offenen Rechnungen geändert werden"
+            )
+        if body.skonto_prozent is not None:
+            eingangsrechnung.skonto_prozent = body.skonto_prozent
+        if body.skonto_tage is not None:
+            eingangsrechnung.skonto_tage = body.skonto_tage
     if body.kategorie is not None:
         eingangsrechnung.kategorie = body.kategorie
     if body.notiz is not None:
@@ -280,6 +298,77 @@ async def update_eingangsrechnung(
                     payload={"eingangsrechnung_id": str(eingangsrechnung.id), "status": neuer_status},
                 )
             )
+
+    await session.flush()
+    await session.refresh(eingangsrechnung)
+    return await to_read_model(session, eingangsrechnung)
+
+
+@router.post(
+    "/{eingangsrechnung_id}/zahlungen",
+    response_model=EingangsrechnungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def add_zahlung(
+    eingangsrechnung_id: UUID,
+    body: EingangsrechnungZahlungCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EingangsrechnungRead:
+    eingangsrechnung = await session.get(Eingangsrechnung, eingangsrechnung_id)
+    if eingangsrechnung is None or eingangsrechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eingangsrechnung nicht gefunden")
+    if eingangsrechnung.status != "offen":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Zahlungen sind nur bei offenen Rechnungen möglich"
+        )
+    if body.betrag <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zahlungsbetrag muss positiv sein")
+
+    positionen = await positionen_fuer(session, eingangsrechnung_id)
+    zahlungen = await zahlungen_fuer(session, eingangsrechnung_id)
+    brutto = brutto_betrag(eingangsrechnung, positionen)
+    offener_betrag = brutto - bezahlter_betrag(zahlungen)
+    if body.betrag > offener_betrag:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Zahlung übersteigt den offenen Betrag ({offener_betrag} EUR)",
+        )
+
+    session.add(
+        EingangsrechnungZahlung(
+            mandant_id=eingangsrechnung.mandant_id,
+            eingangsrechnung_id=eingangsrechnung_id,
+            betrag=body.betrag,
+            datum=body.datum or date.today(),
+            erstellt_von=auth.user_id,
+        )
+    )
+    await session.flush()
+
+    verbleibt = offener_betrag - body.betrag
+    if verbleibt <= 0:
+        eingangsrechnung.status = "bezahlt"
+        eingangsrechnung.bezahlt_am = datetime.now(timezone.utc)
+
+    if eingangsrechnung.vorgang_id is not None:
+        session.add(
+            VorgangEvent(
+                mandant_id=auth.mandant_id,
+                vorgang_id=eingangsrechnung.vorgang_id,
+                event_type="eingangsrechnung_status",
+                author_user_id=auth.user_id,
+                body=(
+                    f"Eingangsrechnung {eingangsrechnung.rechnungsnummer_lieferant} "
+                    f"({eingangsrechnung.lieferant_name}): Zahlung über {body.betrag} EUR erfasst"
+                ),
+                payload={"eingangsrechnung_id": str(eingangsrechnung.id), "betrag": str(body.betrag)},
+            )
+        )
 
     await session.flush()
     await session.refresh(eingangsrechnung)
