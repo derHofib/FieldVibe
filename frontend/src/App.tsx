@@ -5,6 +5,7 @@ import { FeldLayout } from "./components/FeldLayout";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
+import { DsgvoPage } from "./pages/DsgvoPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
@@ -85,6 +86,7 @@ export function App() {
           <Route path="/mandanten/:id" element={<MandantDetailPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/dsgvo" element={<DsgvoPage />} />
           <Route path="/update" element={<UpdatePage />} />
           <Route path="*" element={<Navigate to="/uebersicht" replace />} />
         </Route>

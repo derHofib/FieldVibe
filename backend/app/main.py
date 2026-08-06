@@ -14,6 +14,7 @@ from app.api.routes import (
     auth,
     bestellungen,
     dauerauftraege,
+    dsgvo,
     eingangsrechnungen,
     fahrzeug_zuweisungen,
     feed,
@@ -92,6 +93,7 @@ app.include_router(users.router)
 app.include_router(impersonation.router)
 app.include_router(audit_log.router)
 app.include_router(version.router)
+app.include_router(dsgvo.router)
 app.include_router(kunden.router)
 app.include_router(anlagen.router)
 app.include_router(anlagen_feld_definitionen.router)

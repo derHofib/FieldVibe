@@ -70,6 +70,11 @@ def new_eingangsrechnung_beleg_key(eingangsrechnung_id: uuid.UUID, filename: str
     return f"eingangsrechnungen/{eingangsrechnung_id}/beleg/{uuid.uuid4()}.{suffix}"
 
 
+def new_dsgvo_dokument_key(typ: str, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"dsgvo/{typ}/{uuid.uuid4()}.{suffix}"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) -- kein KMS/eigenes
     # Schluesselmanagement noetig, verschluesselt aber Kundenfotos/

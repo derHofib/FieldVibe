@@ -24,6 +24,28 @@ export interface VersionInfo {
   fehler: string | null;
 }
 
+// Muss mit DSGVO_DOKUMENT_TYPEN in backend/app/models/dsgvo_dokument.py
+// uebereinstimmen.
+export type DsgvoDokumentTyp =
+  | "avv_vorlage"
+  | "datenschutzerklaerung"
+  | "impressum"
+  | "loeschkonzept"
+  | "tom_dokument"
+  | "meldeprozess"
+  | "verzeichnis_verarbeitungstaetigkeiten";
+
+export interface DsgvoDokument {
+  id: string;
+  typ: DsgvoDokumentTyp;
+  dateiname: string;
+  content_type: string;
+  groesse_bytes: number;
+  hochgeladen_von: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // "custom" ersetzt die vormals fest verdrahteten disponent/techniker/
 // controller/mitarbeiter -- ein mandant_admin definiert beliebig viele
 // eigene Account-Typen (siehe AccountTyp weiter unten) mit je eigener

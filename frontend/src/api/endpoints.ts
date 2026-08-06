@@ -21,6 +21,8 @@ import type {
   Dauerauftrag,
   DauerauftragMitVerlauf,
   DauerauftragModus,
+  DsgvoDokument,
+  DsgvoDokumentTyp,
   Eingangsrechnung,
   EingangsrechnungBelegUrl,
   EingangsrechnungPosition,
@@ -181,6 +183,19 @@ export const auditLogApi = {
     const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
     return apiFetch<AuditLogEntry[]>(`/api/admin/audit-log${qs ? `?${qs}` : ""}`);
   },
+};
+
+export const dsgvoApi = {
+  list: () => apiFetch<DsgvoDokument[]>("/api/admin/dsgvo-dokumente"),
+  upload: (typ: DsgvoDokumentTyp, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<DsgvoDokument>(`/api/admin/dsgvo-dokumente/${typ}`, formData);
+  },
+  downloadUrl: (typ: DsgvoDokumentTyp) =>
+    apiFetch<{ url: string }>(`/api/admin/dsgvo-dokumente/${typ}/download-url`),
+  remove: (typ: DsgvoDokumentTyp) =>
+    apiFetch<void>(`/api/admin/dsgvo-dokumente/${typ}`, { method: "DELETE" }),
 };
 
 export const papierkorbApi = {

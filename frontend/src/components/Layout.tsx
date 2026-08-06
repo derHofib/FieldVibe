@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: "/mandanten", label: "Mandanten", icon: "🏢" },
   { to: "/accounts", label: "Accounts", icon: "👥" },
   { to: "/audit-log", label: "Audit-Log", icon: "📋" },
+  { to: "/dsgvo", label: "DSGVO", icon: "🔒" },
   { to: "/update", label: "Update", icon: "⬆️" },
 ];
 
