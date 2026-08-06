@@ -108,6 +108,17 @@ async def endgueltig_loeschen(
         geloescht = await papierkorb_service.purge(
             session, entity_typ=entity_typ, entity_id=entity_id
         )
+    except papierkorb_service.GobdLoeschsperre as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Datensatz kann nicht endgültig gelöscht werden: "
+                f"{exc.entity_typ}{f' ({exc.beleg_nummer})' if exc.beleg_nummer else ''} "
+                "unterliegt der gesetzlichen Aufbewahrungspflicht (§147 AO/§257 HGB, "
+                "10 Jahre) -- das gilt auch bei einem DSGVO-Löschbegehren "
+                "(Art. 17 Abs. 3 lit. b DSGVO)."
+            ),
+        ) from exc
     except IntegrityError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

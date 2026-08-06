@@ -134,11 +134,45 @@ class UnbekannterEntityTyp(ValueError):
     pass
 
 
+class GobdLoeschsperre(Exception):
+    """Ein Beleg mit gesetzlicher Aufbewahrungspflicht (§147 AO/§257 HGB,
+    10 Jahre) darf nicht endgueltig geloescht werden -- auch dann nicht,
+    wenn ein Kunde sein DSGVO-Loeschrecht ausueben moechte: Art. 17 Abs. 3
+    lit. b DSGVO nimmt genau diesen Fall (gesetzliche Aufbewahrungspflicht)
+    ausdruecklich von der Loeschpflicht aus. Betroffen: jede Eingangsrechnung
+    (repraesentiert immer einen tatsaechlich erhaltenen Beleg) sowie jede
+    Rechnung ausser im Status "entwurf" (noch nicht versendet, also noch kein
+    tatsaechlich ausgestellter Beleg)."""
+
+    def __init__(self, entity_typ: str, entity_id: UUID, beleg_nummer: str | None):
+        self.entity_typ = entity_typ
+        self.entity_id = entity_id
+        self.beleg_nummer = beleg_nummer
+        bezeichner = f" ({beleg_nummer})" if beleg_nummer else ""
+        super().__init__(
+            f"{entity_typ}{bezeichner} unterliegt der GoBD-Aufbewahrungspflicht "
+            "und darf nicht endgueltig geloescht werden."
+        )
+
+
 def _kind(entity_typ: str) -> EntityKind:
     try:
         return ENTITY_REGISTRY[entity_typ]
     except KeyError:
         raise UnbekannterEntityTyp(entity_typ) from None
+
+
+def _gobd_gesperrt(entity_typ: str, obj: Any) -> bool:
+    if entity_typ == "eingangsrechnung":
+        return True
+    if entity_typ == "rechnung":
+        return obj.status != "entwurf"
+    return False
+
+
+def _beleg_nummer(entity_typ: str, obj: Any) -> str | None:
+    kind = _kind(entity_typ)
+    return getattr(obj, kind.titel_feld) if kind.titel_feld else None
 
 
 async def _aktive_kinder(
@@ -221,11 +255,18 @@ async def purge(session: AsyncSession, *, entity_typ: str, entity_id: UUID) -> b
     DELETE), Kinder zuerst. Kann eine IntegrityError auswerfen, wenn noch ein
     nicht kaskadiertes, lediglich referenzierendes Feld (z.B.
     Vorgang.dauerauftrag_id, Pruefzyklus.offener_vorgang_id) auf den
-    Datensatz zeigt -- das faengt die aufrufende Route ab."""
+    Datensatz zeigt -- das faengt die aufrufende Route ab. Wirft
+    GobdLoeschsperre (und loescht dabei nichts, auch nicht Geschwister-
+    Knoten, die vor dem gesperrten Beleg an der Reihe waren -- die
+    aufrufende Route rollt die Transaktion beim Abfangen zurueck), wenn
+    irgendein Knoten im Teilbaum ein GoBD-pflichtiger Beleg ist."""
     kind = _kind(entity_typ)
     obj = await session.get(kind.modell, entity_id)
     if obj is None or obj.geloescht_am is None:
         return False
+
+    if _gobd_gesperrt(entity_typ, obj):
+        raise GobdLoeschsperre(entity_typ, entity_id, _beleg_nummer(entity_typ, obj))
 
     for kind_typ, fk_attr in kind.kinder:
         for kind_id in await _geloeschte_kinder(

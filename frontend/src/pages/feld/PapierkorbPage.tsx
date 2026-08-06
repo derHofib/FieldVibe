@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 
 import { papierkorbApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { ApiError } from "../../api/client";
 import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
@@ -72,9 +73,11 @@ export function PapierkorbPage() {
       setFehler(null);
       queryClient.invalidateQueries({ queryKey: ["papierkorb"] });
     },
-    onError: () =>
+    onError: (err) =>
       setFehler(
-        "Endgültiges Löschen fehlgeschlagen -- vermutlich verweisen noch andere Daten darauf.",
+        err instanceof ApiError
+          ? err.message
+          : "Endgültiges Löschen fehlgeschlagen -- vermutlich verweisen noch andere Daten darauf.",
       ),
   });
 

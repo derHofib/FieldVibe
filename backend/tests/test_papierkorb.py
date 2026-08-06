@@ -304,3 +304,120 @@ async def test_endgueltiges_loeschen_entfernt_datensatz_dauerhaft(
         f"/api/papierkorb/kunde/{kunde.id}", headers=auth_headers(token)
     )
     assert purge_again_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_kunde_mit_versendeter_rechnung_kann_nicht_endgueltig_geloescht_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    # §147 AO/§257 HGB verlangt 10 Jahre Aufbewahrung fuer ausgestellte
+    # Rechnungen -- das DSGVO-Loeschrecht (Art. 17 Abs. 3 lit. b) nimmt genau
+    # diesen Fall ausdruecklich aus, das endgueltige Loeschen muss also
+    # verweigert werden, auch wenn der ganze Kunde geloescht werden soll.
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    admin_token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    rechnung_resp = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(admin_token),
+        json={"kunde_id": str(kunde.id), "vorgang_id": str(vorgang.id), "betrag_netto": "100.00"},
+    )
+    assert rechnung_resp.status_code == 201
+    rechnung_id = rechnung_resp.json()["id"]
+    status_resp = await client.patch(
+        f"/api/rechnungen/{rechnung_id}",
+        headers=auth_headers(admin_token),
+        json={"status": "versendet"},
+    )
+    assert status_resp.status_code == 200
+
+    await client.delete(f"/api/kunden/{kunde.id}", headers=auth_headers(admin_token))
+
+    operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
+    token = await login(client, operativ.email, "pw-123456")
+
+    purge_resp = await client.delete(
+        f"/api/papierkorb/kunde/{kunde.id}", headers=auth_headers(token)
+    )
+    assert purge_resp.status_code == 409
+    assert "Aufbewahrungspflicht" in purge_resp.json()["detail"]
+
+    # Nichts wurde geloescht -- der Kunde ist unveraendert weiter im
+    # Papierkorb (die Transaktion wurde komplett zurueckgerollt).
+    papierkorb_resp = await client.get("/api/papierkorb", headers=auth_headers(token))
+    assert any(e["id"] == str(kunde.id) for e in papierkorb_resp.json())
+
+
+@pytest.mark.asyncio
+async def test_reine_entwurfsrechnung_kann_endgueltig_geloescht_werden(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    # Eine Rechnung im Entwurf ist noch kein tatsaechlich ausgestellter Beleg
+    # -- fuer sie greift keine Aufbewahrungspflicht, das Loeschen bleibt
+    # moeglich. Direkt (nicht ueber eine Kunde-Kaskade) geloescht, damit der
+    # Test ausschliesslich die GoBD-Sperre prueft.
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    admin_token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    rechnung_resp = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(admin_token),
+        json={"kunde_id": str(kunde.id), "vorgang_id": str(vorgang.id), "betrag_netto": "100.00"},
+    )
+    assert rechnung_resp.status_code == 201
+    rechnung_id = rechnung_resp.json()["id"]
+
+    del_resp = await client.delete(
+        f"/api/rechnungen/{rechnung_id}", headers=auth_headers(admin_token)
+    )
+    assert del_resp.status_code == 204
+
+    operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
+    token = await login(client, operativ.email, "pw-123456")
+
+    purge_resp = await client.delete(
+        f"/api/papierkorb/rechnung/{rechnung_id}", headers=auth_headers(token)
+    )
+    assert purge_resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_eingangsrechnung_kann_nie_endgueltig_geloescht_werden(
+    client, make_mandant, make_user
+):
+    # Eine Eingangsrechnung repraesentiert immer einen tatsaechlich
+    # erhaltenen Beleg (kein "Entwurf"-Status vorgesehen) -- unterliegt daher
+    # immer der Aufbewahrungspflicht.
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    admin_token = await login(client, admin.email, "pw-123456")
+
+    er_resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(admin_token),
+        json={
+            "lieferant_name": "Test-Lieferant",
+            "rechnungsnummer_lieferant": "RE-1",
+            "rechnungsdatum": "2026-01-01",
+            "betrag_netto": "50.00",
+        },
+    )
+    assert er_resp.status_code == 201
+    er_id = er_resp.json()["id"]
+
+    await client.delete(f"/api/eingangsrechnungen/{er_id}", headers=auth_headers(admin_token))
+
+    operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
+    token = await login(client, operativ.email, "pw-123456")
+
+    purge_resp = await client.delete(
+        f"/api/papierkorb/eingangsrechnung/{er_id}", headers=auth_headers(token)
+    )
+    assert purge_resp.status_code == 409
+    assert "Aufbewahrungspflicht" in purge_resp.json()["detail"]
