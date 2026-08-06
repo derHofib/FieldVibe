@@ -56,7 +56,10 @@ export function FeldLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-100 pb-24 dark:bg-slate-950">
+    <div
+      className="min-h-screen bg-slate-100 dark:bg-slate-950"
+      style={{ paddingBottom: "calc(7.5rem + env(safe-area-inset-bottom))" }}
+    >
       <ImpersonationBanner />
       {!isOnline && (
         <div className="bg-slate-800 px-4 py-1.5 text-center text-xs font-medium text-white">

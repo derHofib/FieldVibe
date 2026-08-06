@@ -28,8 +28,8 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="flex min-h-screen">
-        <aside className="w-56 shrink-0 border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-8 flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-white">
+        <aside className="w-16 shrink-0 border-r border-slate-200 bg-white p-2 sm:w-56 sm:p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-8 hidden items-center gap-1.5 text-lg font-bold text-slate-800 sm:flex dark:text-white">
             Field<span className="text-cyan-500 dark:text-cyan-400">Vibe</span>
           </div>
           <nav className="flex flex-col gap-1">
@@ -38,7 +38,7 @@ export function Layout() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `btn-touch flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors ${
+                  `btn-touch flex items-center justify-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors sm:justify-start ${
                     isActive
                       ? TONE_ROW_ACTIVE[item.tone]
                       : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
@@ -48,18 +48,20 @@ export function Layout() {
                 {({ isActive }) => (
                   <>
                     <IconBadge icon={item.icon} tone={item.tone} size="sm" active={isActive} />
-                    {item.label}
+                    <span className="hidden sm:inline">{item.label}</span>
                   </>
                 )}
               </NavLink>
             ))}
           </nav>
         </aside>
-        <div className="flex flex-1 flex-col">
-          <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-800 dark:bg-slate-900">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{seitentitel}</span>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-3 sm:px-6 dark:border-slate-800 dark:bg-slate-900">
+            <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+              {seitentitel}
+            </span>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-slate-600 dark:text-slate-300">
+              <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-300">
                 Angemeldet als <strong>{currentUser?.name}</strong> ({currentUser?.role})
               </span>
               <ThemeToggle />
@@ -71,7 +73,7 @@ export function Layout() {
               </button>
             </div>
           </header>
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-3 sm:p-6">
             <Outlet />
           </main>
         </div>

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ScanLine } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -202,7 +203,7 @@ export function NewVorgangPage() {
         onClick={() => setShowScanner(true)}
         className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-3 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
       >
-        📷 QR-Code an Anlage scannen
+        <ScanLine size={16} strokeWidth={2} /> QR-Code an Anlage scannen
       </button>
       {scanError && <p className="text-sm text-red-700 dark:text-red-400">{scanError}</p>}
       {anlage && (

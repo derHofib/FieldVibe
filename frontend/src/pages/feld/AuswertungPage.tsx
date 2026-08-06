@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -137,9 +138,9 @@ export function AuswertungPage() {
         <button
           onClick={() => datevMutation.mutate()}
           disabled={datevMutation.isPending}
-          className="btn-touch w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
         >
-          ⬇️ DATEV-Export (CSV)
+          <Download size={15} strokeWidth={2} /> DATEV-Export (CSV)
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, Mail, Plug } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -70,7 +71,9 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   return (
     <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
       <div>
-        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">🏢 Firmenprofil</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <Building2 size={15} strokeWidth={2} className="text-violet-500" /> Firmenprofil
+        </h2>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Diese Angaben erscheinen im Briefkopf und in der Fußzeile eurer Angebots-PDFs.
         </p>
@@ -206,7 +209,9 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   return (
     <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
       <div>
-        <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300">✉️ Mahnwesen</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <Mail size={15} strokeWidth={2} className="text-rose-500" /> Mahnwesen
+        </h2>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
           Standard ist ein reiner interner Hinweis. Aktiviere hier je Mahnstufe, dass die Mahnung
           automatisch per E-Mail an den Kunden geschickt wird (inkl. Verzugszinsen).
@@ -527,7 +532,9 @@ export function IntegrationenPage() {
       <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">🔌 Integrationen</h1>
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-slate-100">
+        <Plug size={19} strokeWidth={2} className="text-indigo-500" /> Integrationen
+      </h1>
 
       {einstellungen && <FirmenprofilSection einstellungen={einstellungen} />}
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}

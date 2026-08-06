@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { BarChart3, Download } from "lucide-react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { exportApi, insightsApi } from "../../api/endpoints";
@@ -63,7 +64,9 @@ export function InsightsPage() {
       <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">📊 Insights</h1>
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-slate-100">
+        <BarChart3 size={19} strokeWidth={2} className="text-sky-500" /> Insights
+      </h1>
 
       <div className="grid grid-cols-2 gap-3">
         <Kachel label="Offene Rechnungssumme" wert={`${insights.offene_rechnungssumme} EUR`} />
@@ -130,28 +133,28 @@ export function InsightsPage() {
             disabled={vorgaengeExportMutation.isPending}
             className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
-            ⬇️ Vorgänge (CSV)
+            <Download size={15} strokeWidth={2} className="inline mr-1" /> Vorgänge (CSV)
           </button>
           <button
             onClick={() => zeiterfassungExportMutation.mutate()}
             disabled={zeiterfassungExportMutation.isPending}
             className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
-            ⬇️ Zeiterfassung (CSV)
+            <Download size={15} strokeWidth={2} className="inline mr-1" /> Zeiterfassung (CSV)
           </button>
           <button
             onClick={() => materialExportMutation.mutate()}
             disabled={materialExportMutation.isPending}
             className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
-            ⬇️ Material-Bestand (CSV)
+            <Download size={15} strokeWidth={2} className="inline mr-1" /> Material-Bestand (CSV)
           </button>
           <button
             onClick={() => eingangsrechnungenExportMutation.mutate()}
             disabled={eingangsrechnungenExportMutation.isPending}
             className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
-            ⬇️ Eingangsrechnungen (CSV)
+            <Download size={15} strokeWidth={2} className="inline mr-1" /> Eingangsrechnungen (CSV)
           </button>
         </div>
       </div>

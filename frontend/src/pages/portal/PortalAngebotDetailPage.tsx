@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { FileText } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
@@ -59,9 +60,9 @@ export function PortalAngebotDetailPage() {
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch mt-3 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
         >
-          📄 PDF anzeigen
+          <FileText size={14} strokeWidth={2} /> PDF anzeigen
         </button>
       </div>
 

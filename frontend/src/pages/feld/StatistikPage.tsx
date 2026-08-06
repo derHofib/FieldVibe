@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
@@ -177,9 +178,9 @@ export function StatistikPage() {
             </span>
             <button
               onClick={exportieren}
-              className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+              className="btn-touch flex items-center gap-1.5 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
             >
-              📄 Als PDF exportieren
+              <FileText size={15} strokeWidth={2} /> Als PDF exportieren
             </button>
           </div>
         </div>

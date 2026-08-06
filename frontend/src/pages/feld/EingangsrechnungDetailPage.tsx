@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, FileText, Inbox, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -77,8 +78,9 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-        📥 Per E-Mail importiert{eingangsrechnung.email_absender && ` von ${eingangsrechnung.email_absender}`}
+      <div className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <Inbox size={15} strokeWidth={2} className="mt-0.5 shrink-0" />
+        Per E-Mail importiert{eingangsrechnung.email_absender && ` von ${eingangsrechnung.email_absender}`}
         {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} -- bitte Angaben gegen den
         Beleg prüfen und bestätigen.
       </div>
@@ -160,9 +162,9 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             <button
               disabled={!rechnungsnummer || !betragNetto || Number(betragNetto) <= 0 || bestaetigenMutation.isPending}
               onClick={() => bestaetigenMutation.mutate()}
-              className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
-              ✓ Als Rechnung übernehmen
+              <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
             <button
               onClick={() => {
@@ -338,9 +340,9 @@ export function EingangsrechnungDetailPage() {
             <button
               onClick={() => belegAnzeigenMutation.mutate()}
               disabled={belegAnzeigenMutation.isPending}
-              className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
             >
-              📄 Beleg anzeigen
+              <FileText size={14} strokeWidth={2} /> Beleg anzeigen
             </button>
             {eingangsrechnung.status === "offen" && (
               <button
@@ -367,9 +369,9 @@ export function EingangsrechnungDetailPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={belegUploadMutation.isPending}
-              className="btn-touch w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
             >
-              📎 Beleg hochladen
+              <Paperclip size={14} strokeWidth={2} /> Beleg hochladen
             </button>
           </div>
         )}

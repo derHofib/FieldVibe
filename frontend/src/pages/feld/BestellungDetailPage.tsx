@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, FileText } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { bestellungenApi, lieferantenApi } from "../../api/endpoints";
@@ -107,16 +108,16 @@ export function BestellungDetailPage() {
           <button
             onClick={() => csvMutation.mutate()}
             disabled={csvMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
-            ⬇️ CSV
+            <Download size={14} strokeWidth={2} /> CSV
           </button>
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
           >
-            📄 PDF
+            <FileText size={14} strokeWidth={2} /> PDF
           </button>
         </div>
       </div>

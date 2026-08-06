@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ArrowUpCircle, CheckCircle2 } from "lucide-react";
 
 import { versionApi } from "../api/endpoints";
 
@@ -35,13 +36,13 @@ export function UpdatePage() {
           )}
 
           {data.update_available === true && (
-            <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
-              ⬆️ Update verfügbar
+            <div className="flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+              <ArrowUpCircle size={15} strokeWidth={2} /> Update verfügbar
             </div>
           )}
           {data.update_available === false && (
-            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-              ✅ Aktuellste Version deployt
+            <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <CheckCircle2 size={15} strokeWidth={2} /> Aktuellste Version deployt
             </div>
           )}
 

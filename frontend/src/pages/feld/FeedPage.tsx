@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { Repeat, Search, Star } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -118,8 +119,8 @@ function FeedCardView({ card }: { card: FeedCard }) {
             <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" title="Timer läuft" />
           )}
           {card.dauerauftrag_id && (
-            <span title="Dauerauftrag" className="text-sm">
-              🔁
+            <span title="Dauerauftrag" className="text-amber-500">
+              <Repeat size={14} strokeWidth={2} />
             </span>
           )}
           <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[card.status]}`}>
@@ -230,7 +231,7 @@ export function FeedPage() {
           onClick={() => navigate("/highlights")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm dark:bg-slate-900 dark:text-amber-400 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
-          ⭐ Highlights ansehen
+          <Star size={15} strokeWidth={2} /> Highlights ansehen
         </button>
       )}
 
@@ -248,7 +249,7 @@ export function FeedPage() {
             onClick={() => setZeigeFilter((v) => !v)}
             className="btn-touch flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
           >
-            🔎 Filter
+            <Search size={14} strokeWidth={2} /> Filter
             {aktiveFilterAnzahl > 0 && (
               <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-semibold text-white">
                 {aktiveFilterAnzahl}

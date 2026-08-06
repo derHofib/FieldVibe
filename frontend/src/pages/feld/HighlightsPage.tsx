@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { highlightsApi } from "../../api/endpoints";
@@ -24,7 +25,9 @@ export function HighlightsPage() {
       <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">⭐ Highlights</h1>
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-slate-100">
+        <Star size={19} strokeWidth={2} className="text-amber-500" /> Highlights
+      </h1>
       <p className="text-sm text-slate-500 dark:text-slate-400">
         Markierte Fotos aus abgeschlossenen und laufenden Vorgängen – eine kleine Werkschau.
       </p>
@@ -33,7 +36,8 @@ export function HighlightsPage() {
         <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
       ) : (highlights ?? []).length === 0 ? (
         <p className="text-center text-sm text-slate-400 dark:text-slate-500">
-          Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit ⭐ markieren.
+          Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit{" "}
+          <Star size={12} strokeWidth={2} className="inline text-amber-500" /> markieren.
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2">

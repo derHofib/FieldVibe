@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -182,7 +183,9 @@ export function DispoBoardPage() {
       {warnungen.length > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
           {warnungen.map((w, i) => (
-            <p key={i}>⚠️ {w.meldung}</p>
+            <p key={i} className="flex items-center gap-1">
+              <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
+            </p>
           ))}
           <button onClick={() => setWarnungen([])} className="mt-1 text-xs underline">
             Ausblenden

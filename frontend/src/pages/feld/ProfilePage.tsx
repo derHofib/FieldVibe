@@ -1,3 +1,4 @@
+import { BarChart3, Repeat, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
@@ -48,7 +49,7 @@ export function ProfilePage() {
           onClick={() => navigate("/techniker-zuweisungen")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
-          🧑‍🔧 Techniker-Zuweisungen
+          <Wrench size={16} strokeWidth={2} className="text-emerald-500" /> Techniker-Zuweisungen
         </button>
       )}
 
@@ -57,7 +58,7 @@ export function ProfilePage() {
           onClick={() => navigate("/dauerauftraege")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
-          🔁 Dauer-Aufträge
+          <Repeat size={16} strokeWidth={2} className="text-amber-500" /> Dauer-Aufträge
         </button>
       )}
 
@@ -66,7 +67,8 @@ export function ProfilePage() {
           onClick={() => navigate("/statistik")}
           className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
         >
-          📊 {currentUser?.nur_zugewiesene_kunden ? "Meine Statistik" : "Statistik"}
+          <BarChart3 size={16} strokeWidth={2} className="text-sky-500" />{" "}
+          {currentUser?.nur_zugewiesene_kunden ? "Meine Statistik" : "Statistik"}
         </button>
       )}
 

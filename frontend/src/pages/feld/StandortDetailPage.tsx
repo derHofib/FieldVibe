@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Repeat } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -425,7 +426,12 @@ export function StandortDetailPage() {
                 <div>
                   <div className="text-xs text-slate-400 dark:text-slate-500">
                     {v.vorgangsnummer}
-                    {v.dauerauftrag_id && " · 🔁"}
+                    {v.dauerauftrag_id && (
+                      <>
+                        {" · "}
+                        <Repeat size={11} strokeWidth={2} className="inline text-amber-500" />
+                      </>
+                    )}
                   </div>
                   <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{v.titel}</div>
                 </div>

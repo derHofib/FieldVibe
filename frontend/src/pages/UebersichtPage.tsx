@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { auditLogApi, mandantenApi, systemApi, usersApi } from "../api/endpoints";
@@ -24,8 +25,16 @@ function SystemStatus() {
           : "bg-red-50 text-red-800 dark:bg-red-500/10 dark:text-red-300"
       }`}
     >
-      <span className="font-medium">
-        {ok ? "✅ Backend erreichbar" : "⚠️ Backend nicht erreichbar"}
+      <span className="flex items-center gap-1.5 font-medium">
+        {ok ? (
+          <>
+            <CheckCircle2 size={15} strokeWidth={2} /> Backend erreichbar
+          </>
+        ) : (
+          <>
+            <AlertTriangle size={15} strokeWidth={2} /> Backend nicht erreichbar
+          </>
+        )}
       </span>
       <span className="text-xs">
         {health?.scheduler_letzter_lauf

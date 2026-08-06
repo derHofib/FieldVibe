@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -133,9 +134,9 @@ function EventBubble({
           </a>
           <button
             onClick={() => onHighlight(event.id)}
-            className="btn-touch mb-2 text-xs font-medium text-amber-600 dark:text-amber-400"
+            className="btn-touch mb-2 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400"
           >
-            ⭐ Als Highlight markieren
+            <Star size={13} strokeWidth={2} /> Als Highlight markieren
           </button>
         </>
       )}
@@ -173,10 +174,12 @@ function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clien
     >
       <div className="mb-1 flex items-center justify-between gap-1 text-xs">
         {item.failed ? (
-          <span className="text-red-500 dark:text-red-400">⚠ Vom Server abgelehnt{item.errorMessage ? `: ${item.errorMessage}` : ""}</span>
+          <span className="flex items-center gap-1 text-red-500 dark:text-red-400">
+            <AlertTriangle size={13} strokeWidth={2} /> Vom Server abgelehnt{item.errorMessage ? `: ${item.errorMessage}` : ""}
+          </span>
         ) : (
           <span className="flex items-center gap-1 text-slate-400 dark:text-slate-500">
-            <span>🕘</span>
+            <Clock size={13} strokeWidth={2} />
             <span>Nicht synchronisiert</span>
           </span>
         )}
@@ -190,7 +193,9 @@ function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clien
         )}
       </div>
       {item.kind === "foto" ? (
-        <p className="text-sm text-slate-600 dark:text-slate-300">📷 Foto wartet auf Synchronisierung</p>
+        <p className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-300">
+          <Camera size={14} strokeWidth={2} /> Foto wartet auf Synchronisierung
+        </p>
       ) : item.kind === "status" ? (
         <p className="text-sm text-slate-600 dark:text-slate-300">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
@@ -1184,7 +1189,9 @@ export function VorgangDetailPage() {
         {terminWarnungen.length > 0 && (
           <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
             {terminWarnungen.map((w, i) => (
-              <p key={i}>⚠️ {w.meldung}</p>
+              <p key={i} className="flex items-center gap-1">
+                <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
+              </p>
             ))}
           </div>
         )}
@@ -1291,9 +1298,9 @@ export function VorgangDetailPage() {
               <button
                 onClick={() => maengelProtokollMutation.mutate()}
                 disabled={maengelProtokollMutation.isPending}
-                className="btn-touch text-xs font-medium text-slate-500 dark:text-slate-400"
+                className="btn-touch flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-slate-400"
               >
-                📄 Protokoll
+                <FileText size={13} strokeWidth={2} /> Protokoll
               </button>
             )}
             <button
@@ -1735,30 +1742,30 @@ export function VorgangDetailPage() {
                 disabled={fotoMutation.isPending}
                 title="Foto anhängen"
                 aria-label="Foto anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-base text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
               >
-                📷
+                <Camera size={16} strokeWidth={2} />
               </button>
               <button
                 onClick={() => setShowUnterschriftPad((v) => !v)}
                 title="Unterschrift erfassen"
                 aria-label="Unterschrift erfassen"
-                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-base text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
               >
-                ✍️
+                <PenLine size={16} strokeWidth={2} />
               </button>
               <button
                 onClick={() => setKundensichtbar((v) => !v)}
                 title={kundensichtbar ? "Für Kunde sichtbar – antippen zum Verbergen" : "Nur intern – antippen um für Kunde sichtbar zu machen"}
                 aria-label="Für Kunde sichtbar umschalten"
                 aria-pressed={kundensichtbar}
-                className={`btn-touch flex h-9 w-9 items-center justify-center rounded-full text-base ${
+                className={`btn-touch flex h-9 w-9 items-center justify-center rounded-full ${
                   kundensichtbar
                     ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
                     : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
                 }`}
               >
-                {kundensichtbar ? "👁️" : "🚫"}
+                {kundensichtbar ? <Eye size={16} strokeWidth={2} /> : <EyeOff size={16} strokeWidth={2} />}
               </button>
             </div>
             <button

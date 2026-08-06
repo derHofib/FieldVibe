@@ -381,6 +381,7 @@ export function GeschaeftPage() {
   const [matFilterTagId, setMatFilterTagId] = useState("");
   const [matFilterUnterbestand, setMatFilterUnterbestand] = useState(false);
   const [matSuche, setMatSuche] = useState("");
+  const [kundenSuche, setKundenSuche] = useState("");
   const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
   const [ausgewaehlteBedarfe, setAusgewaehlteBedarfe] = useState<Set<string>>(new Set());
   const [bestellLieferantId, setBestellLieferantId] = useState("");
@@ -393,6 +394,11 @@ export function GeschaeftPage() {
   const bestellwesenAktiv = tab === "bestellwesen" && materialAktiv;
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const kundenGefiltert = (kunden ?? []).filter((k) => {
+    if (!kundenSuche.trim()) return true;
+    const q = kundenSuche.trim().toLowerCase();
+    return k.name.toLowerCase().includes(q) || (k.kundennummer ?? "").toLowerCase().includes(q);
+  });
   const { data: angebote } = useQuery({
     queryKey: ["angebote"],
     queryFn: () => angeboteApi.list(),
@@ -869,26 +875,42 @@ export function GeschaeftPage() {
 
       {tab === "kunden" && (
         <div className="space-y-2">
+          {(kunden ?? []).length > 0 && (
+            <input
+              value={kundenSuche}
+              onChange={(e) => setKundenSuche(e.target.value)}
+              placeholder="Suche nach Name oder Kundennummer…"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            />
+          )}
           {(kunden ?? []).length === 0 ? (
             <p className="text-center text-sm text-slate-400 dark:text-slate-500">Keine Kunden vorhanden.</p>
+          ) : kundenGefiltert.length === 0 ? (
+            <p className="text-center text-sm text-slate-400 dark:text-slate-500">
+              Keine Kunden gefunden für „{kundenSuche}“.
+            </p>
           ) : (
-            kunden!.map((k) => (
-              <button
-                key={k.id}
-                onClick={() => navigate(`/kunden/${k.id}`)}
-                className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
-              >
-                <div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">{k.kundennummer}</div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{k.name}</div>
-                </div>
-                {k.typ && (
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                    {k.typ}
-                  </span>
-                )}
-              </button>
-            ))
+            // Eigener scrollbarer Bereich statt die ganze Seite runterzuscrollen
+            // -- Suchfeld/Tabs bleiben oben fixiert sichtbar.
+            <div className="max-h-[65vh] space-y-2 overflow-y-auto pr-0.5">
+              {kundenGefiltert.map((k) => (
+                <button
+                  key={k.id}
+                  onClick={() => navigate(`/kunden/${k.id}`)}
+                  className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                >
+                  <div>
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{k.kundennummer}</div>
+                    <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{k.name}</div>
+                  </div>
+                  {k.typ && (
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {k.typ}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}
