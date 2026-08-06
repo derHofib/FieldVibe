@@ -255,6 +255,10 @@ export const kundenApi = {
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/kunden/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
     apiFetch<EmailLog>(`/api/kunden/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),
+  // Auskunftsersuchen/Datenuebertragbarkeit (Art. 15/20 DSGVO) -- liefert
+  // JSON, wird aber wie ein Datei-Download behandelt statt getypt zu werden,
+  // da der Inhalt nur zum Speichern gedacht ist.
+  datenexport: (id: string) => apiFetchBlob(`/api/kunden/${id}/datenexport`),
 };
 
 export const technikerZuweisungenApi = {

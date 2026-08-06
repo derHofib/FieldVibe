@@ -71,12 +71,16 @@ def new_eingangsrechnung_beleg_key(eingangsrechnung_id: uuid.UUID, filename: str
 
 
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
+    # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) -- kein KMS/eigenes
+    # Schluesselmanagement noetig, verschluesselt aber Kundenfotos/
+    # Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der Festplatte.
     await run_in_threadpool(
         _internal_client.put_object,
         Bucket=BUCKET,
         Key=key,
         Body=data,
         ContentType=content_type,
+        ServerSideEncryption="AES256",
     )
 
 

@@ -178,16 +178,40 @@ crontab -e
 30 2 * * * /pfad/zu/SocialCRM/scripts/backup.sh >> /var/log/fieldvibe-backup.log 2>&1
 ```
 
+**Verschlüsselung (`BACKUP_GPG_RECIPIENT`, dringend empfohlen):** Backups
+enthalten alle Kunden-/Rechnungsdaten unverschlüsselt, sofern kein
+GPG-Empfänger konfiguriert ist. Einrichtung (einmalig, auf einem **anderen**
+Rechner als dem Server – der private Schlüssel darf nie auf den Server, sonst
+schützt die Verschlüsselung nichts, wenn genau dieser Server kompromittiert
+wird):
+```bash
+gpg --full-generate-key                    # auf dem lokalen Rechner
+gpg --export --armor deine@email.de > pub.asc
+# pub.asc auf den Server kopieren, dort:
+gpg --import pub.asc
+```
+Dann `BACKUP_GPG_RECIPIENT=deine@email.de` in `.env` setzen – ab dem nächsten
+Lauf werden `db-*.sql.gz` und `minio-*.tar.gz` zu `.gpg`-Dateien verschlüsselt
+und die unverschlüsselten Zwischendateien gelöscht.
+
+**Offsite-Kopie (`BACKUP_OFFSITE_REMOTE`, dringend empfohlen):** Ein Backup,
+das nur auf demselben Server liegt, überlebt einen Festplattendefekt oder
+eine kompromittierte Maschine nicht. Mit [rclone](https://rclone.org/)
+einmalig ein Remote einrichten (`rclone config`, z. B. gegen einen Hetzner
+Storage Box, Backblaze B2, S3-Bucket o. ä.), dann
+`BACKUP_OFFSITE_REMOTE=<remote>:<pfad>` in `.env` setzen – jeder Backup-Lauf
+kopiert den gesamten `$BACKUP_DIR` automatisch dorthin.
+
 Wiederherstellen:
 ```bash
 scripts/restore.sh db backups/db-20260101-020000.sql.gz
 scripts/restore.sh minio backups/minio-20260101-020000.tar.gz
+# Bei verschluesselten Backups (.gpg): einfach den Dateinamen mit .gpg angeben,
+# restore.sh entschluesselt automatisch (braucht den privaten Schluessel im
+# Schluesselbund des ausfuehrenden Nutzers):
+scripts/restore.sh db backups/db-20260101-020000.sql.gz.gpg
 ```
-Beide fragen vor dem Überschreiben explizit nach Bestätigung. Die
-Backup-Dateien selbst sollten zusätzlich außerhalb des Servers gesichert
-werden (z. B. per `rsync`/`rclone` auf einen zweiten Host) – ein Backup,
-das nur auf demselben Server liegt, überlebt einen Festplattendefekt
-oder eine kompromittierte Maschine nicht.
+Beide fragen vor dem Überschreiben explizit nach Bestätigung.
 
 ## 6. Updates
 

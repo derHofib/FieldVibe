@@ -226,3 +226,68 @@ async def test_unknown_kunde_returns_404(client, make_mandant, make_user):
         "/api/kunden/00000000-0000-0000-0000-000000000000", headers=auth_headers(token)
     )
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_datenexport_enthaelt_alle_personenbezogenen_daten(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    # Auskunftsersuchen/Datenuebertragbarkeit (Art. 15/20 DSGVO): der Export
+    # muss Stammdaten, Vorgaenge mit Ereignissen, Rechnungen/Angebote und
+    # Kundenportal-Zugaenge (ohne Passwort-Hash) enthalten.
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant, name="Export-Kunde")
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    event_resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/events",
+        headers=auth_headers(token),
+        json={"event_type": "kommentar", "body": "Testkommentar"},
+    )
+    assert event_resp.status_code == 201
+
+    rechnung_resp = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "vorgang_id": str(vorgang.id), "betrag_netto": "100.00"},
+    )
+    assert rechnung_resp.status_code == 201
+
+    portal_resp = await client.post(
+        f"/api/kunden/{kunde.id}/portal-zugaenge",
+        headers=auth_headers(token),
+        json={"email": "export-kunde@example.de", "password": "pw-1234567890", "name": "Export Kunde"},
+    )
+    assert portal_resp.status_code == 201
+
+    resp = await client.get(f"/api/kunden/{kunde.id}/datenexport", headers=auth_headers(token))
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert body["kunde"]["name"] == "Export-Kunde"
+    assert len(body["vorgaenge"]) == 1
+    assert body["vorgaenge"][0]["id"] == str(vorgang.id)
+    assert any(e["body"] == "Testkommentar" for e in body["vorgaenge"][0]["ereignisse"])
+    assert len(body["rechnungen"]) == 1
+    assert len(body["kundenportal_zugaenge"]) == 1
+    assert body["kundenportal_zugaenge"][0]["email"] == "export-kunde@example.de"
+    assert "password_hash" not in body["kundenportal_zugaenge"][0]
+
+
+@pytest.mark.asyncio
+async def test_techniker_ohne_zuweisung_cannot_export_daten(
+    client, make_mandant, make_user, make_kunde
+):
+    # techniker ist per Account-Typ auf zugewiesene Kunden beschraenkt (siehe
+    # rechte_service.ist_auf_zugewiesene_kunden_beschraenkt) -- ein nicht
+    # zugewiesener Kunde liefert wie ueberall sonst 404 statt 403, um dessen
+    # Existenz nicht zu verraten.
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.get(f"/api/kunden/{kunde.id}/datenexport", headers=auth_headers(token))
+    assert resp.status_code == 404

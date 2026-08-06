@@ -14,6 +14,7 @@ import { ApiError } from "../../api/client";
 import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
+import { downloadBlob } from "../../utils/download";
 import type {
   Adresse,
   Ansprechpartner,
@@ -1117,6 +1118,11 @@ export function KundeProfilePage() {
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
+  const datenexportMutation = useMutation({
+    mutationFn: () => kundenApi.datenexport(id!),
+    onSuccess: (blob) => downloadBlob(blob, `Datenexport-${kunde?.name ?? profil?.name ?? id}.json`),
+  });
+
   if (!kundenverwaltungAktiv) {
     if (kundeLoading || !kunde) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
     return (
@@ -1151,20 +1157,30 @@ export function KundeProfilePage() {
             {profil.typ && <span className="text-sm text-slate-500 dark:text-slate-400">{profil.typ}</span>}
           </div>
           {kannVerwalten && (
-            <button
-              onClick={() => {
-                if (
-                  window.confirm(
-                    `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
-                  )
-                ) {
-                  deleteMutation.mutate();
-                }
-              }}
-              className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
-            >
-              Löschen
-            </button>
+            <div className="flex shrink-0 gap-2">
+              <button
+                onClick={() => datenexportMutation.mutate()}
+                disabled={datenexportMutation.isPending}
+                title="Alle personenbezogenen Daten zu diesem Kunden herunterladen (Art. 15/20 DSGVO)"
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              >
+                Datenexport
+              </button>
+              <button
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
+                    )
+                  ) {
+                    deleteMutation.mutate();
+                  }
+                }}
+                className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+              >
+                Löschen
+              </button>
+            </div>
           )}
         </div>
         {deleteError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}

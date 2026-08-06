@@ -1,4 +1,5 @@
 import secrets
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
@@ -15,14 +16,21 @@ from app.api.deps import (
     require_roles,
 )
 from app.core.security import hash_password
+from app.models.angebot import Angebot
 from app.models.anlage import Anlage
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
+from app.models.rechnung import Rechnung
+from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
+from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.models.vorgang_event import VorgangEvent
+from app.schemas.anlage import AnlageRead
+from app.schemas.datenexport import KundeDatenexport, VorgangMitEreignissen
 from app.schemas.email import EmailLogRead, EmailSenden
 from app.schemas.kunde import KundeCreate, KundeLogoUrl, KundeRead, KundeUpdate
 from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
@@ -32,8 +40,12 @@ from app.schemas.kundenportal import (
     KundenportalZugangUpdate,
 )
 from app.schemas.profile import KundeProfil
+from app.schemas.standort import StandortRead
 from app.schemas.user import UserRead
-from app.services import papierkorb_service, storage_service
+from app.schemas.vertrag import VertragRead
+from app.schemas.vorgang import VorgangRead
+from app.schemas.vorgang_event import VorgangEventRead
+from app.services import angebot_service, papierkorb_service, rechnung_service, storage_service
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
@@ -234,6 +246,107 @@ async def get_kunde_profil(
         vorgaenge=list(vorgaenge_result.scalars().all()),
         tags=list(tags_result.scalars().all()),
         techniker=list(techniker_result.scalars().all()),
+    )
+
+
+@router.get(
+    "/{kunde_id}/datenexport",
+    response_model=KundeDatenexport,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def get_kunde_datenexport(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> KundeDatenexport:
+    """Alle personenbezogenen Daten zu diesem Kunden als maschinenlesbare
+    Struktur -- fuer Auskunftsersuchen (Art. 15 DSGVO) und Datenuebertragbarkeit
+    (Art. 20 DSGVO). Siehe app/schemas/datenexport.py fuer den bewussten
+    Ausschluss von Passwort-Hashes/Binaerdaten."""
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+
+    standorte = (
+        await session.execute(
+            select(Standort).where(Standort.kunde_id == kunde_id, Standort.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    anlagen = (
+        await session.execute(
+            select(Anlage).where(Anlage.kunde_id == kunde_id, Anlage.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    vertraege = (
+        await session.execute(
+            select(Vertrag).where(Vertrag.kunde_id == kunde_id, Vertrag.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    vorgaenge = (
+        await session.execute(
+            select(Vorgang)
+            .where(Vorgang.kunde_id == kunde_id, Vorgang.geloescht_am.is_(None))
+            .order_by(Vorgang.created_at)
+        )
+    ).scalars().all()
+    events_by_vorgang: dict[UUID, list[VorgangEvent]] = {v.id: [] for v in vorgaenge}
+    if vorgaenge:
+        events = (
+            await session.execute(
+                select(VorgangEvent)
+                .where(VorgangEvent.vorgang_id.in_(events_by_vorgang.keys()))
+                .order_by(VorgangEvent.created_at)
+            )
+        ).scalars().all()
+        for event in events:
+            events_by_vorgang[event.vorgang_id].append(event)
+    angebote = (
+        await session.execute(
+            select(Angebot).where(Angebot.kunde_id == kunde_id, Angebot.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    rechnungen = (
+        await session.execute(
+            select(Rechnung).where(Rechnung.kunde_id == kunde_id, Rechnung.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    emails = (
+        await session.execute(
+            select(EmailLog)
+            .where(EmailLog.entity_type == "kunde", EmailLog.entity_id == kunde_id)
+            .order_by(EmailLog.created_at)
+        )
+    ).scalars().all()
+    portal_zugaenge = (
+        await session.execute(select(KundenportalZugang).where(KundenportalZugang.kunde_id == kunde_id))
+    ).scalars().all()
+    tags = (
+        await session.execute(
+            select(Tag.label)
+            .join(TagAssignment, TagAssignment.tag_id == Tag.id)
+            .where(TagAssignment.entity_type == "kunde", TagAssignment.entity_id == kunde_id)
+        )
+    ).scalars().all()
+
+    return KundeDatenexport(
+        exportiert_am=datetime.now(UTC),
+        kunde=KundeRead.model_validate(kunde),
+        standorte=[StandortRead.model_validate(s) for s in standorte],
+        anlagen=[AnlageRead.model_validate(a) for a in anlagen],
+        vertraege=[VertragRead.model_validate(v) for v in vertraege],
+        vorgaenge=[
+            VorgangMitEreignissen(
+                **VorgangRead.model_validate(v).model_dump(),
+                ereignisse=[VorgangEventRead.model_validate(e) for e in events_by_vorgang[v.id]],
+            )
+            for v in vorgaenge
+        ],
+        angebote=[await angebot_service.to_read_model(session, a) for a in angebote],
+        rechnungen=[await rechnung_service.to_read_model(session, r) for r in rechnungen],
+        emails=[EmailLogRead.model_validate(e) for e in emails],
+        kundenportal_zugaenge=[KundenportalZugangRead.model_validate(z) for z in portal_zugaenge],
+        tags=list(tags),
     )
 
 
