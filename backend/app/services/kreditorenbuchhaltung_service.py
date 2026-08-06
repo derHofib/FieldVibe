@@ -10,16 +10,11 @@ from app.models.audit_log import AuditLog
 from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.notification import Notification
 from app.models.user import User
+from app.core.config import get_settings
 from app.services.eingangsrechnung_service import bezahlter_betrag, brutto_betrag, positionen_fuer, zahlungen_fuer
 from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
 
 KREDITOREN_AKTION = "kreditorenbuchhaltung_faelligkeits_check_run"
-# Wie viele Tage vor Faelligkeit bzw. Skonto-Frist eine interne Erinnerung
-# ausgeloest wird -- bewusst zwei unterschiedliche Vorlaufzeiten, da eine
-# verpasste Skonto-Frist (typischerweise wenige Tage) dringlicher ist als
-# die eigentliche Zahlungsfrist.
-FAELLIGKEIT_ERINNERUNG_TAGE_VORHER = 3
-SKONTO_ERINNERUNG_TAGE_VORHER = 2
 
 
 async def _verantwortliche(session: AsyncSession, mandant_id: UUID) -> list[User]:
@@ -54,6 +49,7 @@ async def run_kreditoren_faelligkeits_check(mandant_ids: list[UUID] | None = Non
     Dedupliziert ueber die bereits fuer Pruefzyklen/Inventurzyklen genutzte
     "ungelesene Notification mit gleicher ref_entity" Pruefung, damit nicht
     jeden Tag erneut benachrichtigt wird."""
+    settings = get_settings()
     heute = date.today()
     faelligkeit_erinnerungen = 0
     skonto_erinnerungen = 0
@@ -77,7 +73,7 @@ async def run_kreditoren_faelligkeits_check(mandant_ids: list[UUID] | None = Non
 
             if eingangsrechnung.faellig_am is not None:
                 tage_bis_faellig = (eingangsrechnung.faellig_am - heute).days
-                if tage_bis_faellig <= FAELLIGKEIT_ERINNERUNG_TAGE_VORHER:
+                if tage_bis_faellig <= settings.kreditoren_faelligkeit_erinnerung_tage:
                     hinweis = (
                         f"überfällig seit {-tage_bis_faellig} Tag(en)"
                         if tage_bis_faellig < 0
@@ -114,7 +110,7 @@ async def run_kreditoren_faelligkeits_check(mandant_ids: list[UUID] | None = Non
                 noch_offen = brutto - bezahlter_betrag(zahlungen)
                 skonto_frist = eingangsrechnung.rechnungsdatum + timedelta(days=eingangsrechnung.skonto_tage)
                 tage_bis_skonto = (skonto_frist - heute).days
-                if noch_offen > 0 and 0 <= tage_bis_skonto <= SKONTO_ERINNERUNG_TAGE_VORHER:
+                if noch_offen > 0 and 0 <= tage_bis_skonto <= settings.kreditoren_skonto_erinnerung_tage:
                     ersparnis = (noch_offen * eingangsrechnung.skonto_prozent / Decimal("100")).quantize(
                         Decimal("0.01")
                     )

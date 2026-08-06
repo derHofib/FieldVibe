@@ -1,7 +1,7 @@
 from datetime import date, datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,7 @@ from app.schemas.eingangsrechnung import (
     EingangsrechnungZahlungCreate,
 )
 from app.services import papierkorb_service, storage_service
+from app.services.csv_service import csv_response
 from app.services.eingangsrechnung_service import (
     bezahlter_betrag,
     brutto_betrag,
@@ -70,6 +71,46 @@ async def list_eingangsrechnungen(
         stmt = stmt.where(Eingangsrechnung.kategorie == kategorie)
     result = await session.execute(stmt)
     return [await to_read_model(session, e) for e in result.scalars().all()]
+
+
+@router.get("/export/csv")
+async def export_eingangsrechnungen_csv(
+    status_filter: str | None = Query(default=None, alias="status"),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    stmt = (
+        select(Eingangsrechnung)
+        .where(Eingangsrechnung.geloescht_am.is_(None))
+        .order_by(Eingangsrechnung.rechnungsdatum.desc())
+    )
+    if status_filter:
+        stmt = stmt.where(Eingangsrechnung.status == status_filter)
+    eingangsrechnungen = (await session.execute(stmt)).scalars().all()
+
+    rows = []
+    for e in eingangsrechnungen:
+        positionen = await positionen_fuer(session, e.id)
+        zahlungen = await zahlungen_fuer(session, e.id)
+        brutto = brutto_betrag(e, positionen)
+        rows.append(
+            [
+                e.lieferant_name,
+                e.rechnungsnummer_lieferant,
+                e.rechnungsdatum.strftime("%d.%m.%Y"),
+                e.faellig_am.strftime("%d.%m.%Y") if e.faellig_am else "",
+                e.kategorie or "",
+                e.status,
+                str(brutto),
+                str(bezahlter_betrag(zahlungen)),
+                str(brutto - bezahlter_betrag(zahlungen)),
+            ]
+        )
+
+    return csv_response(
+        ["Lieferant", "Rechnungsnummer", "Rechnungsdatum", "Fällig am", "Kategorie", "Status", "Brutto", "Bezahlt", "Offen"],
+        rows,
+        "Eingangsrechnungen.csv",
+    )
 
 
 @router.get("/{eingangsrechnung_id}", response_model=EingangsrechnungRead)

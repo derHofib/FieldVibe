@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     # keine automatisierte Anbindung dafuer gibt.
     basiszinssatz_prozent: float = 1.52
 
+    # --- Kreditorenbuchhaltung: Vorlaufzeit in Tagen fuer die interne
+    # Faelligkeits-/Skonto-Erinnerung (siehe kreditorenbuchhaltung_service.py)
+    # -- gleiches Prinzip wie bei den Mahnstufen: feste, env-konfigurierbare
+    # Werte statt einer eigenen Konfigurations-UI.
+    kreditoren_faelligkeit_erinnerung_tage: int = 3
+    kreditoren_skonto_erinnerung_tage: int = 2
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -436,3 +436,31 @@ async def test_skonto_kann_nur_bei_offener_rechnung_geaendert_werden(client, mak
         json={"skonto_prozent": "3.00"},
     )
     assert patch_resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_export_csv_enthaelt_offenen_betrag(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-400",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+            "mwst_satz": "19.00",
+        },
+    )
+    rechnungsnummer = resp.json()["rechnungsnummer_lieferant"]
+
+    export = await client.get("/api/eingangsrechnungen/export/csv", headers=auth_headers(token))
+    assert export.status_code == 200
+    assert export.headers["content-type"].startswith("text/csv")
+    text = export.content.decode("utf-8-sig")
+    assert rechnungsnummer in text
+    assert "119.00" in text
+    assert "0.00" in text

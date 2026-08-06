@@ -886,6 +886,7 @@ export const exportApi = {
   vorgaengeCsv: () => apiFetchBlob("/api/vorgaenge/export/csv"),
   zeiterfassungCsv: () => apiFetchBlob("/api/zeiterfassung/export/csv"),
   materialCsv: () => apiFetchBlob("/api/material/export/csv"),
+  eingangsrechnungenCsv: () => apiFetchBlob("/api/eingangsrechnungen/export/csv"),
 };
 
 export const auswertungApi = {

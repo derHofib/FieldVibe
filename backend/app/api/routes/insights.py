@@ -7,11 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.angebot import Angebot
+from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.rechnung import Rechnung
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.insights import Insights, TechnikerAuslastung
+from app.services import eingangsrechnung_service
 from app.services.rechnung_service import netto_betrag, positionen_fuer
 from app.services.zuweisung_service import technik_user_ids
 
@@ -54,6 +56,17 @@ async def get_insights(
         offene_rechnungssumme += netto * (Decimal("1") + r.mwst_satz / Decimal("100"))
     offene_rechnungssumme = offene_rechnungssumme.quantize(Decimal("0.01"))
 
+    offene_eingangsrechnungen = (
+        await session.execute(select(Eingangsrechnung).where(Eingangsrechnung.status == "offen"))
+    ).scalars().all()
+    offene_verbindlichkeiten = Decimal("0")
+    for e in offene_eingangsrechnungen:
+        positionen = await eingangsrechnung_service.positionen_fuer(session, e.id)
+        zahlungen = await eingangsrechnung_service.zahlungen_fuer(session, e.id)
+        brutto = eingangsrechnung_service.brutto_betrag(e, positionen)
+        offene_verbindlichkeiten += brutto - eingangsrechnung_service.bezahlter_betrag(zahlungen)
+    offene_verbindlichkeiten = offene_verbindlichkeiten.quantize(Decimal("0.01"))
+
     angebote_versendet = (
         await session.scalar(select(func.count()).select_from(Angebot).where(Angebot.versendet_am.isnot(None)))
     ) or 0
@@ -92,6 +105,7 @@ async def get_insights(
     return Insights(
         vorgaenge_nach_status=vorgaenge_nach_status,
         offene_rechnungssumme=offene_rechnungssumme,
+        offene_verbindlichkeiten=offene_verbindlichkeiten,
         angebote_versendet=angebote_versendet,
         angebote_angenommen=angebote_angenommen,
         angebote_annahmequote=angebote_annahmequote,

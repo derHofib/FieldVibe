@@ -856,6 +856,7 @@ export interface Bestellung {
 export interface Insights {
   vorgaenge_nach_status: Record<string, number>;
   offene_rechnungssumme: string;
+  offene_verbindlichkeiten: string;
   angebote_versendet: number;
   angebote_angenommen: number;
   angebote_annahmequote: number | null;
