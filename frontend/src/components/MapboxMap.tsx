@@ -34,13 +34,18 @@ export function MapboxMap({
       style: STYLE_URL[theme],
       center: [lng, lat],
       zoom,
-      // Statische Uebersichtskarte -- keine Interaktion nötig, damit ein
-      // Scroll ueber die Karte nicht versehentlich als Zoom-Geste
-      // interpretiert wird (siehe Mobile-Kollisionscheck der Design-
-      // Ueberarbeitung).
+      // Statische Uebersichtskarte, kein Explorations-Werkzeug -- jede Form
+      // von Pan/Zoom bewusst deaktiviert, sonst faengt die kleine Karte auf
+      // Mobilgeraeten eine Scroll-Geste ueber der Seite ab, statt sie
+      // durchzulassen (siehe Mobile-Kollisionscheck der Design-
+      // Ueberarbeitung). Die Vollbild-Kartenansicht im Feed (MapboxFeedMap)
+      // ist bewusst anders: dort ist Pan/Zoom das eigentliche Werkzeug.
       scrollZoom: false,
+      dragPan: false,
       dragRotate: false,
+      touchZoomRotate: false,
       touchPitch: false,
+      doubleClickZoom: false,
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
     new mapboxgl.Marker({ color: "#0284c7" }).setLngLat([lng, lat]).addTo(map);
