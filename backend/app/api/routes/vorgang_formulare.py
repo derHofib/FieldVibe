@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.models.formular import Formular, VorgangFormular
+from app.models.mandant import Mandant
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.formular import (
@@ -17,6 +18,7 @@ from app.schemas.formular import (
 )
 from app.services import formular_service, storage_service
 from app.services.event_bus import event_bus
+from app.services.pdf_service import generate_formular_pdf
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import assigned_kunde_ids
@@ -120,6 +122,42 @@ async def get_vorgang_formular(
 ) -> VorgangFormularRead:
     vorgang_formular = await _get_own_vorgang_formular(session, auth, vorgang_formular_id)
     return formular_service.to_vorgang_formular_read(vorgang_formular)
+
+
+@router.get("/{vorgang_formular_id}/pdf")
+async def vorgang_formular_pdf(
+    vorgang_formular_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    vorgang_formular = await _get_own_vorgang_formular(session, auth, vorgang_formular_id)
+    if vorgang_formular.status != "abgeschlossen":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Nur ein abgeschlossenes Formular kann als PDF exportiert werden",
+        )
+    vorgang = await session.get(Vorgang, vorgang_formular.vorgang_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+
+    bilder: dict[str, bytes] = {}
+    for feld in vorgang_formular.formular_snapshot.get("felder", []):
+        if feld["feld_typ"] not in formular_service.FELDTYPEN_MIT_DATEI:
+            continue
+        antwort = vorgang_formular.antworten.get(feld["id"])
+        if isinstance(antwort, dict) and antwort.get("key"):
+            bilder[feld["id"]] = await storage_service.download_bytes(antwort["key"])
+
+    pdf_bytes = generate_formular_pdf(mandant, vorgang, vorgang_formular, bilder)
+    formular_name = vorgang_formular.formular_snapshot.get("name", "Formular")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": (
+                f'inline; filename="{formular_name}-{vorgang.vorgangsnummer}.pdf"'
+            )
+        },
+    )
 
 
 @router.patch("/{vorgang_formular_id}", response_model=VorgangFormularRead)

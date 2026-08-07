@@ -7,6 +7,7 @@ from fpdf.enums import XPos, YPos
 
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.bestellung import Bestellung, BestellungPosition
+from app.models.formular import VorgangFormular
 from app.models.kunde import Kunde
 from app.models.lieferant import Lieferant
 from app.models.mandant import Mandant
@@ -549,5 +550,80 @@ def generate_bestellung_pdf(
         pdf.cell(0, 6, "Notiz", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_font("Helvetica", "", 10)
         pdf.multi_cell(0, 6, bestellung.notiz)
+
+    return bytes(pdf.output())
+
+
+def _formular_antwort_text(feld: dict, antwort: object) -> str:
+    if antwort is None or antwort == "":
+        return "-"
+    if feld["feld_typ"] == "ja_nein":
+        return "Ja" if antwort else "Nein"
+    if feld["feld_typ"] == "mehrfachauswahl" and isinstance(antwort, list):
+        return ", ".join(str(v) for v in antwort) or "-"
+    return str(antwort)
+
+
+def generate_formular_pdf(
+    mandant: Mandant,
+    vorgang: Vorgang,
+    vorgang_formular: VorgangFormular,
+    bilder: dict[str, bytes],
+) -> bytes:
+    """bilder enthaelt die heruntergeladenen Rohbytes je Foto-/
+    Unterschrift-Feld (feld_id -> Bilddaten) -- der Route-Handler laedt
+    diese vorher async aus dem Storage, da diese Funktion selbst
+    synchron laeuft (siehe app/api/routes/vorgang_formulare.py)."""
+    snapshot = vorgang_formular.formular_snapshot
+    antworten = vorgang_formular.antworten
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(
+        0,
+        6,
+        f"{snapshot.get('name', 'Formular')}: {vorgang.vorgangsnummer} - {vorgang.titel}",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.cell(
+        0,
+        6,
+        f"Ausgefuellt am {_fmt_datum(vorgang_formular.abgeschlossen_am or vorgang_formular.created_at)}",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.ln(6)
+
+    for feld in sorted(snapshot.get("felder", []), key=lambda f: f["reihenfolge"]):
+        if feld["feld_typ"] == "abschnitt":
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.cell(0, 8, feld["label"], new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.ln(1)
+            continue
+
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 6, feld["label"], new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_font("Helvetica", "", 10)
+
+        antwort = antworten.get(feld["id"])
+        if feld["feld_typ"] in ("foto", "unterschrift"):
+            bild = bilder.get(feld["id"])
+            if bild:
+                try:
+                    pdf.image(BytesIO(bild), h=40)
+                except RuntimeError:
+                    pdf.cell(0, 6, "[Bild konnte nicht eingebettet werden]", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            else:
+                pdf.cell(0, 6, "-", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        else:
+            pdf.multi_cell(0, 6, _formular_antwort_text(feld, antwort))
+        pdf.ln(2)
+
+    if not snapshot.get("felder"):
+        pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     return bytes(pdf.output())
