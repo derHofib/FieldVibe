@@ -16,7 +16,7 @@ from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, TokenPair
 from app.services.auth_service import authenticate
-from app.services.rechte_service import rechte_matrix_fuer_account_typ
+from app.services.rechte_service import darf_vorgang_selbst_uebernehmen, rechte_matrix_fuer_account_typ
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -107,6 +107,10 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
                 account_typ_name = account_typ.name
                 nur_zugewiesene_kunden = account_typ.nur_zugewiesene_kunden
 
+        selbst_uebernehmen = await darf_vorgang_selbst_uebernehmen(
+            session, role=auth.role, account_typ_id=auth.account_typ_id
+        )
+
         if auth.role == "custom" and auth.account_typ_id is not None:
             matrix = await rechte_matrix_fuer_account_typ(session, auth.account_typ_id)
             rechte = {
@@ -127,6 +131,7 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             account_typ_id=auth.account_typ_id,
             account_typ_name=account_typ_name,
             nur_zugewiesene_kunden=nur_zugewiesene_kunden,
+            darf_vorgaenge_selbst_uebernehmen=selbst_uebernehmen,
             name=user.name,
             email=user.email,
             impersonated_by=auth.impersonated_by,

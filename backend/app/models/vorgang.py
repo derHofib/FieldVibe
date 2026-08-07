@@ -118,3 +118,9 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     # (z.B. einmaliger Auftrag) -- der Ausfuehrende muss trotzdem wissen,
     # wo er hin muss.
     adresse: Mapped[dict | None] = mapped_column(JSONB)
+    # Wer ist gerade fuer diesen Vorgang zustaendig -- per Selbst-Zuweisung
+    # ("Ticket übernehmen", siehe app/api/routes/vorgaenge.py:uebernehmen) oder
+    # manuell per PATCH durch mandant_admin/Dispo gesetzt. NULL = unzugewiesen.
+    zugewiesener_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )

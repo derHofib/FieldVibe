@@ -48,6 +48,15 @@ class AccountTyp(TimestampMixin, Base):
     # ehemals an den Rollennamen "techniker" gebundene Einschraenkung ist
     # jetzt ein Schalter je Account-Typ (siehe app/services/kunde_zuweisung_service.py).
     nur_zugewiesene_kunden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Duerfen Nutzer dieses Account-Typs einen Vorgang per Klick selbst
+    # uebernehmen ("Ticket übernehmen", siehe app/api/routes/vorgaenge.py),
+    # oder muessen sie auf eine manuelle Zuweisung durch mandant_admin/Dispo
+    # warten (siehe app/services/rechte_service.py:darf_vorgang_selbst_uebernehmen)?
+    # Default false -- selbstaendige Techniker koennen das gezielt bekommen,
+    # ohne dass es fuer alle automatisch mit aktiviert wird.
+    darf_vorgaenge_selbst_uebernehmen: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
 
 
 class AccountTypRecht(Base):

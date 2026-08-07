@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star } from "lucide-react";
+import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star, UserCheck } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -82,6 +82,11 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
   abgerechnet: "Abgerechnet",
   storniert: "Storniert",
 };
+
+// Spiegelt app/services/vorgang_completion_service.py:VORGANG_STATUS_GESCHLOSSEN
+// -- "Ticket übernehmen" ergibt fuer bereits geschlossene Vorgaenge keinen
+// Sinn mehr (das Backend lehnt es dort ohnehin mit 409 ab).
+const VORGANG_STATUS_GESCHLOSSEN: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
 
 const EVENT_LABEL: Partial<Record<string, string>> = {
   status_change: "Status geändert",
@@ -617,6 +622,14 @@ export function VorgangDetailPage() {
     },
   });
 
+  const uebernehmenMutation = useMutation({
+    mutationFn: () => vorgaengeApi.uebernehmen(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+  });
+
   const commentMutation = useMutation({
     mutationFn: async () => {
       try {
@@ -1054,6 +1067,41 @@ export function VorgangDetailPage() {
             Priorität {vorgang.prioritaet}
           </span>
         </div>
+
+        {!VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-500 dark:text-slate-400">
+              {vorgang.zugewiesener_name ? (
+                <>
+                  Zugewiesen an: <span className="font-medium text-slate-700 dark:text-slate-200">{vorgang.zugewiesener_name}</span>
+                </>
+              ) : (
+                "Nicht zugewiesen"
+              )}
+            </span>
+            {currentUser?.darf_vorgaenge_selbst_uebernehmen && (
+              <button
+                onClick={() => {
+                  if (
+                    vorgang.zugewiesener_user_id &&
+                    vorgang.zugewiesener_user_id !== currentUser.id &&
+                    !window.confirm(
+                      `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`,
+                    )
+                  ) {
+                    return;
+                  }
+                  uebernehmenMutation.mutate();
+                }}
+                disabled={uebernehmenMutation.isPending || vorgang.zugewiesener_user_id === currentUser.id}
+                className="btn-touch flex items-center gap-1 rounded-md border border-cyan-600 px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-500 dark:text-cyan-400 dark:hover:bg-cyan-500/10"
+              >
+                <UserCheck size={13} strokeWidth={2} />
+                {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Ticket übernehmen"}
+              </button>
+            )}
+          </div>
+        )}
 
         {showFolgeDialog && (
           <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">

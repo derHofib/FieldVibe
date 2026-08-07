@@ -154,6 +154,9 @@ export interface CurrentUser {
   account_typ_id: string | null;
   account_typ_name: string | null;
   nur_zugewiesene_kunden: boolean;
+  // Steuert den "Ticket übernehmen"-Button auf der Vorgang-Detailseite
+  // (siehe app/services/rechte_service.py:darf_vorgang_selbst_uebernehmen).
+  darf_vorgaenge_selbst_uebernehmen: boolean;
   name: string;
   email: string;
   impersonated_by: string | null;
@@ -300,6 +303,9 @@ export interface Vorgang {
   prioritaet: number;
   faelligkeit_am: string | null;
   adresse: Adresse | null;
+  zugewiesener_user_id: string | null;
+  // Vom Backend server-seitig aufgeloest (siehe VorgangRead.zugewiesener_name).
+  zugewiesener_name: string | null;
   last_activity_at: string;
   abgeschlossen_am: string | null;
   erstellt_von_kundenportal_zugang_id: string | null;
@@ -407,6 +413,7 @@ export interface FeedCard {
   dauerauftrag_id: string | null;
   geo_lat: number | null;
   geo_lng: number | null;
+  zugewiesener_name: string | null;
 }
 
 export interface FeedResponse {
@@ -969,6 +976,7 @@ export interface AccountTyp {
   icon: string | null;
   farbe: string | null;
   nur_zugewiesene_kunden: boolean;
+  darf_vorgaenge_selbst_uebernehmen: boolean;
   reihenfolge: number;
   anzahl_nutzer: number;
 }
@@ -978,6 +986,7 @@ export interface AccountTypCreate {
   icon?: string | null;
   farbe?: string | null;
   nur_zugewiesene_kunden?: boolean;
+  darf_vorgaenge_selbst_uebernehmen?: boolean;
 }
 
 export interface AccountTypUpdate {
@@ -985,6 +994,7 @@ export interface AccountTypUpdate {
   icon?: string | null;
   farbe?: string | null;
   nur_zugewiesene_kunden?: boolean;
+  darf_vorgaenge_selbst_uebernehmen?: boolean;
   reihenfolge?: number;
 }
 

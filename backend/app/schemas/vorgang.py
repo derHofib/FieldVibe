@@ -63,6 +63,10 @@ class VorgangUpdate(BaseModel):
     prioritaet: int | None = Field(default=None, ge=1, le=5)
     faelligkeit_am: datetime | None = None
     adresse: dict | None = None
+    # Manuelle (Neu-)Zuweisung durch mandant_admin/Dispo -- unabhaengig vom
+    # Selbst-Uebernehmen-Endpoint (siehe app/api/routes/vorgaenge.py:
+    # uebernehmen). Explizit auf null setzbar, um die Zuweisung aufzuheben.
+    zugewiesener_user_id: UUID | None = None
     # Nur zusammen mit status="abgeschlossen" auf einem Vorgang mit
     # leistungstyp="beratung" gueltig: legt einen Folge-Vorgang mit diesem
     # Leistungstyp an, der Kunde/Anlage(n)/Standort sowie die offenen
@@ -89,6 +93,12 @@ class VorgangRead(BaseModel):
     prioritaet: int
     faelligkeit_am: datetime | None
     adresse: dict | None
+    zugewiesener_user_id: UUID | None
+    # Nicht persistiert, sondern in get_vorgang/update_vorgang/uebernehmen
+    # transient auf dem ORM-Objekt gesetzt (siehe folge_vorgang_id unten fuer
+    # dasselbe Muster) -- erspart dem Frontend einen zusaetzlichen User-Fetch
+    # nur fuer den Namen.
+    zugewiesener_name: str | None = None
     last_activity_at: datetime
     abgeschlossen_am: datetime | None
     erstellt_von_kundenportal_zugang_id: UUID | None

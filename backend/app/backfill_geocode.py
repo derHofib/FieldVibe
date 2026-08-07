@@ -5,15 +5,22 @@ Auto-Geocoding, siehe app/services/geocoding_service.py). Ohne konfigurierten
 MAPBOX_ACCESS_TOKEN bricht der Lauf sofort ab, statt fuer jede Zeile einzeln
 zu scheitern.
 
+`backfill_geocode_fuer_mandant()` ist die pro-Mandant-Kernlogik und wird auch
+direkt beim Aktivieren des Moduls "karten" in app/api/routes/mandanten.py
+aufgerufen (siehe update_mandant) -- Admins muessen nach dem Aktivieren also
+nicht mehr wissen, dass es dieses Skript ueberhaupt gibt.
+
 Idempotent: ueberspringt Zeilen, die schon Koordinaten haben. Sicher mehrfach
-ausfuehrbar, z.B. nach dem erstmaligen Aktivieren des Moduls fuer einen
-Mandanten. Run mit:
+ausfuehrbar. Manueller Lauf ueber alle Mandanten (z.B. nach nachtraeglichem
+Setzen von MAPBOX_ACCESS_TOKEN) mit:
 
     docker compose run --rm backend python -m app.backfill_geocode
 """
 import asyncio
+from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import system_session
@@ -21,6 +28,36 @@ from app.models.anlage import Anlage
 from app.models.mandant import Mandant
 from app.models.standort import Standort
 from app.services.geocoding_service import geocode_adresse
+
+
+async def backfill_geocode_fuer_mandant(session: AsyncSession, mandant_id: UUID) -> tuple[int, int]:
+    """Geocodiert Standorte/Anlagen eines einzelnen Mandanten nach. Setzt
+    voraus, dass der Aufrufer bereits geprueft hat, dass ein
+    MAPBOX_ACCESS_TOKEN konfiguriert ist. Gibt (anzahl_geocodiert,
+    anzahl_ohne_treffer) zurueck, committet aber nicht selbst."""
+    anzahl_geocodiert = 0
+    anzahl_ohne_treffer = 0
+
+    for model in (Standort, Anlage):
+        result = await session.execute(
+            select(model).where(
+                model.mandant_id == mandant_id,
+                model.geloescht_am.is_(None),
+                model.geo_lat.is_(None),
+                model.geo_lng.is_(None),
+            )
+        )
+        for zeile in result.scalars().all():
+            if not zeile.adresse:
+                continue
+            koordinaten = await geocode_adresse(zeile.adresse)
+            if koordinaten is None:
+                anzahl_ohne_treffer += 1
+                continue
+            zeile.geo_lat, zeile.geo_lng = koordinaten
+            anzahl_geocodiert += 1
+
+    return anzahl_geocodiert, anzahl_ohne_treffer
 
 
 async def backfill_geocode() -> None:
@@ -40,26 +77,10 @@ async def backfill_geocode() -> None:
 
         anzahl_geocodiert = 0
         anzahl_ohne_treffer = 0
-
-        for model, label in ((Standort, "Standort"), (Anlage, "Anlage")):
-            result = await session.execute(
-                select(model).where(
-                    model.mandant_id.in_(mandant_ids),
-                    model.geloescht_am.is_(None),
-                    model.geo_lat.is_(None),
-                    model.geo_lng.is_(None),
-                )
-            )
-            for zeile in result.scalars().all():
-                if not zeile.adresse:
-                    continue
-                koordinaten = await geocode_adresse(zeile.adresse)
-                if koordinaten is None:
-                    anzahl_ohne_treffer += 1
-                    continue
-                zeile.geo_lat, zeile.geo_lng = koordinaten
-                anzahl_geocodiert += 1
-                print(f"[backfill_geocode] {label} {zeile.id}: {koordinaten}")
+        for mandant_id in mandant_ids:
+            geocodiert, ohne_treffer = await backfill_geocode_fuer_mandant(session, mandant_id)
+            anzahl_geocodiert += geocodiert
+            anzahl_ohne_treffer += ohne_treffer
 
         await session.flush()
 

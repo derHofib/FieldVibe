@@ -167,7 +167,12 @@ async def get_feed(
         standorte_result = await session.execute(select(Standort).where(Standort.id.in_(standort_ids)))
         standorte_by_id = {s.id: s for s in standorte_result.scalars().all()}
 
-    ersteller_ids = {v.erstellt_von for v in page if v.erstellt_von}
+    # Eine gemeinsame Query fuer Ersteller UND zugewiesenen Mitarbeiter --
+    # beide sind User-IDs, eine zweite Roundtrip nur fuer zugewiesener_name
+    # waere unnoetig.
+    ersteller_ids = {v.erstellt_von for v in page if v.erstellt_von} | {
+        v.zugewiesener_user_id for v in page if v.zugewiesener_user_id
+    }
     ersteller_by_id: dict[UUID, User] = {}
     if ersteller_ids:
         ersteller_result = await session.execute(select(User).where(User.id.in_(ersteller_ids)))
@@ -248,6 +253,11 @@ async def get_feed(
             portal_ersteller = portal_ersteller_by_id.get(vorgang.erstellt_von_kundenportal_zugang_id)
             ersteller_name = f"{portal_ersteller.name} (Kunde)" if portal_ersteller else None
 
+        zugewiesener_name = None
+        if vorgang.zugewiesener_user_id:
+            zugewiesener = ersteller_by_id.get(vorgang.zugewiesener_user_id)
+            zugewiesener_name = zugewiesener.name if zugewiesener else None
+
         items.append(
             FeedCard(
                 id=vorgang.id,
@@ -270,6 +280,7 @@ async def get_feed(
                 geo_lng=geo_lng,
                 timer_laeuft=vorgang.id in vorgaenge_mit_laufendem_timer,
                 dauerauftrag_id=vorgang.dauerauftrag_id,
+                zugewiesener_name=zugewiesener_name,
             )
         )
 

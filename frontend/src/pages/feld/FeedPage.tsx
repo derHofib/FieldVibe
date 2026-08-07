@@ -133,6 +133,11 @@ function FeedCardView({ card }: { card: FeedCard }) {
           {card.ersteller_name && (
             <div className="text-xs text-slate-400 dark:text-slate-500">von {card.ersteller_name}</div>
           )}
+          {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
+            <div className="text-xs text-slate-400 dark:text-slate-500">
+              {card.zugewiesener_name ? `Zugewiesen: ${card.zugewiesener_name}` : "Nicht zugewiesen"}
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1">
           {card.timer_laeuft && (

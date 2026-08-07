@@ -463,6 +463,7 @@ export const vorgaengeApi = {
         | "standort_id"
         | "faelligkeit_am"
         | "adresse"
+        | "zugewiesener_user_id"
       >
     > & {
       // Nur bei status="abgeschlossen" auf einem Vorgang mit
@@ -472,6 +473,8 @@ export const vorgaengeApi = {
     }
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/vorgaenge/${id}`, { method: "DELETE" }),
+  uebernehmen: (id: string) =>
+    apiFetch<Vorgang>(`/api/vorgaenge/${id}/uebernehmen`, { method: "POST" }),
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/vorgaenge/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
     apiFetch<EmailLog>(`/api/vorgaenge/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),

@@ -37,6 +37,10 @@ class CurrentUser(BaseModel):
     # Frontend das fruehere role === "techniker" fuer rein UX-seitige
     # Unterscheidungen (z.B. "eigenes Fahrzeug"-Materialbestand vorschlagen).
     nur_zugewiesene_kunden: bool = False
+    # Gespiegelt aus darf_vorgang_selbst_uebernehmen (siehe
+    # app/services/rechte_service.py) -- steuert, ob das Frontend den
+    # "Ticket übernehmen"-Button auf der Vorgang-Detailseite anzeigt.
+    darf_vorgaenge_selbst_uebernehmen: bool = False
     name: str
     email: str
     impersonated_by: UUID | None = None

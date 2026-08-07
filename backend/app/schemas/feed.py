@@ -25,6 +25,7 @@ class FeedCard(BaseModel):
     dauerauftrag_id: UUID | None = None
     geo_lat: float | None = None
     geo_lng: float | None = None
+    zugewiesener_name: str | None = None
 
 
 class FeedResponse(BaseModel):

@@ -21,6 +21,24 @@ async def ist_auf_zugewiesene_kunden_beschraenkt(
     return account_typ is not None and account_typ.nur_zugewiesene_kunden
 
 
+async def darf_vorgang_selbst_uebernehmen(
+    session: AsyncSession, *, role: str, account_typ_id: UUID | None
+) -> bool:
+    """Steuert den "Ticket übernehmen"-Button auf der Vorgang-Detailseite
+    (siehe app/api/routes/vorgaenge.py:uebernehmen). mandant_admin/super_admin
+    duerfen immer selbst uebernehmen; fuer role='custom' ist es ein Schalter
+    je Account-Typ (siehe app/models/account_typ.py:
+    AccountTyp.darf_vorgaenge_selbst_uebernehmen), damit ein mandant_admin
+    selbstaendigen Technikern das erlauben und weniger selbstaendigen
+    stattdessen manuell zuweisen kann."""
+    if role != "custom":
+        return True
+    if account_typ_id is None:
+        return False
+    account_typ = await session.get(AccountTyp, account_typ_id)
+    return account_typ is not None and account_typ.darf_vorgaenge_selbst_uebernehmen
+
+
 async def darf_fremde_mitarbeiterdaten_einsehen(
     session: AsyncSession, *, role: str, account_typ_id: UUID | None
 ) -> bool:

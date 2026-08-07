@@ -269,3 +269,69 @@ async def test_anlage_mit_karten_modul_wird_automatisch_geocodiert(
     assert resp.status_code == 201
     assert resp.json()["geo_lat"] == pytest.approx(52.52)
     assert resp.json()["geo_lng"] == pytest.approx(13.405)
+
+
+# --- Automatischer Backfill beim Aktivieren des Moduls "karten" ------------
+
+
+@pytest.mark.asyncio
+async def test_karten_modul_aktivieren_geocodiert_bestehenden_standort_nach(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()  # "karten" ist per Default deaktiviert
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    create = await client.post(
+        "/api/standorte",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "bezeichnung": "Filiale Nord",
+            "adresse": {"strasse": "Teststr. 1", "plz": "10117", "ort": "Berlin"},
+        },
+    )
+    assert create.status_code == 201
+    assert create.json()["geo_lat"] is None
+    standort_id = create.json()["id"]
+
+    super_admin = await make_user(mandant=None, role="super_admin", password="admin-pass-5")
+    super_admin_token = await login(client, super_admin.email, "admin-pass-5")
+    with patch.object(get_settings(), "mapbox_access_token", "pk.test-token"):
+        with patch("app.services.geocoding_service.httpx.AsyncClient", _FakeAsyncClient):
+            await _deaktiviere_module(client, super_admin_token, mandant.id, [])
+
+    nachher = await client.get(f"/api/standorte/{standort_id}", headers=auth_headers(token))
+    assert nachher.status_code == 200
+    assert nachher.json()["geo_lat"] == pytest.approx(52.52)
+    assert nachher.json()["geo_lng"] == pytest.approx(13.405)
+
+
+@pytest.mark.asyncio
+async def test_karten_modul_aktivieren_ohne_token_bricht_backfill_folgenlos_ab(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    create = await client.post(
+        "/api/standorte",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "bezeichnung": "Filiale Nord",
+            "adresse": {"strasse": "Teststr. 1", "plz": "10117", "ort": "Berlin"},
+        },
+    )
+    standort_id = create.json()["id"]
+
+    super_admin = await make_user(mandant=None, role="super_admin", password="admin-pass-6")
+    super_admin_token = await login(client, super_admin.email, "admin-pass-6")
+    with patch.object(get_settings(), "mapbox_access_token", None):
+        await _deaktiviere_module(client, super_admin_token, mandant.id, [])
+
+    nachher = await client.get(f"/api/standorte/{standort_id}", headers=auth_headers(token))
+    assert nachher.json()["geo_lat"] is None

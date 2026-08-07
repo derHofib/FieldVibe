@@ -110,6 +110,7 @@ export function AccountTypenPage() {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
   const [nurZugewieseneKunden, setNurZugewieseneKunden] = useState(false);
+  const [darfSelbstUebernehmen, setDarfSelbstUebernehmen] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: accountTypenApi.create,
@@ -118,9 +119,16 @@ export function AccountTypenPage() {
       setName("");
       setIcon("");
       setNurZugewieseneKunden(false);
+      setDarfSelbstUebernehmen(false);
       setExpandedId(typ.id);
     },
     onError: (err) => setFormError(err instanceof ApiError ? err.message : "Fehler"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: { id: string; darf_vorgaenge_selbst_uebernehmen: boolean }) =>
+      accountTypenApi.update(id, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["account-typen"] }),
   });
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -140,6 +148,7 @@ export function AccountTypenPage() {
       name,
       icon: icon.trim() || null,
       nur_zugewiesene_kunden: nurZugewieseneKunden,
+      darf_vorgaenge_selbst_uebernehmen: darfSelbstUebernehmen,
     });
   }
 
@@ -190,6 +199,15 @@ export function AccountTypenPage() {
             />
             Sieht nur zugewiesene Kunden
           </label>
+          <label className="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-cyan-600"
+              checked={darfSelbstUebernehmen}
+              onChange={(e) => setDarfSelbstUebernehmen(e.target.checked)}
+            />
+            Darf Aufträge selbst übernehmen
+          </label>
           <button
             type="submit"
             disabled={createMutation.isPending}
@@ -221,6 +239,7 @@ export function AccountTypenPage() {
                   <span className="block text-xs text-slate-500 dark:text-slate-400">
                     {typ.anzahl_nutzer} {typ.anzahl_nutzer === 1 ? "Nutzer" : "Nutzer"}
                     {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
+                    {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Aufträge selbst übernehmen"}
                   </span>
                 </span>
                 <button
@@ -249,7 +268,25 @@ export function AccountTypenPage() {
                   {expandedId === typ.id ? "▲" : "▼"}
                 </span>
               </button>
-              {expandedId === typ.id && <RechteMatrixEditor accountTypId={typ.id} />}
+              {expandedId === typ.id && (
+                <>
+                  <label className="flex items-center gap-2 border-t border-slate-100 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-cyan-600"
+                      checked={typ.darf_vorgaenge_selbst_uebernehmen}
+                      onChange={(e) =>
+                        updateMutation.mutate({
+                          id: typ.id,
+                          darf_vorgaenge_selbst_uebernehmen: e.target.checked,
+                        })
+                      }
+                    />
+                    Darf Aufträge selbst übernehmen ("Ticket übernehmen"-Button)
+                  </label>
+                  <RechteMatrixEditor accountTypId={typ.id} />
+                </>
+              )}
             </div>
           ))
         ) : (

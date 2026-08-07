@@ -38,6 +38,7 @@ async def _to_read(session: AsyncSession, typ: AccountTyp) -> AccountTypRead:
         icon=typ.icon,
         farbe=typ.farbe,
         nur_zugewiesene_kunden=typ.nur_zugewiesene_kunden,
+        darf_vorgaenge_selbst_uebernehmen=typ.darf_vorgaenge_selbst_uebernehmen,
         reihenfolge=typ.reihenfolge,
         anzahl_nutzer=await _anzahl_nutzer(session, typ.id),
     )
@@ -68,6 +69,7 @@ async def create_account_typ(
         icon=body.icon,
         farbe=body.farbe,
         nur_zugewiesene_kunden=body.nur_zugewiesene_kunden,
+        darf_vorgaenge_selbst_uebernehmen=body.darf_vorgaenge_selbst_uebernehmen,
     )
     session.add(typ)
     try:

@@ -18,6 +18,7 @@ from app.models.anlage import Anlage
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.standort import Standort
+from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anlage import VorgangAnlage
@@ -36,12 +37,24 @@ from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
+from app.services.rechte_service import (
+    darf_vorgang_selbst_uebernehmen,
+    ist_auf_zugewiesene_kunden_beschraenkt,
+)
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
 )
 from app.services.zuweisung_service import assigned_kunde_ids
+
+
+async def _mit_zugewiesenem_namen(session: AsyncSession, vorgang: Vorgang) -> Vorgang:
+    # Kein echtes Feld auf Vorgang -- nur transient fuer diese eine Antwort
+    # gesetzt, siehe VorgangRead.zugewiesener_name.
+    if vorgang.zugewiesener_user_id is not None:
+        zugewiesener = await session.get(User, vorgang.zugewiesener_user_id)
+        vorgang.zugewiesener_name = zugewiesener.name if zugewiesener else None
+    return vorgang
 
 router = APIRouter(
     prefix="/api/vorgaenge",
@@ -347,7 +360,7 @@ async def get_vorgang(
     if vorgang is None or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     await _require_vorgang_zugriff(session, auth, vorgang)
-    return vorgang
+    return await _mit_zugewiesenem_namen(session, vorgang)
 
 
 @router.get("/{vorgang_id}/anlagen", response_model=list[AnlageRead])
@@ -594,8 +607,41 @@ async def update_vorgang(
                 detail="Vertrag gehört nicht zum (neuen) Kunden dieses Vorgangs",
             )
 
+    if changes.get("zugewiesener_user_id") is not None:
+        if await session.get(User, changes["zugewiesener_user_id"]) is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Nutzer nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+
+    alter_zugewiesener_user_id = vorgang.zugewiesener_user_id
+
     for field, value in changes.items():
         setattr(vorgang, field, value)
+
+    if (
+        "zugewiesener_user_id" in changes
+        and changes["zugewiesener_user_id"] != alter_zugewiesener_user_id
+    ):
+        neuer_zugewiesener = (
+            await session.get(User, changes["zugewiesener_user_id"])
+            if changes["zugewiesener_user_id"] is not None
+            else None
+        )
+        session.add(
+            VorgangEvent(
+                mandant_id=vorgang.mandant_id,
+                vorgang_id=vorgang.id,
+                event_type="system",
+                is_system=True,
+                author_user_id=auth.user_id,
+                body=(
+                    f"Zugewiesen an: {neuer_zugewiesener.name}"
+                    if neuer_zugewiesener is not None
+                    else "Zuweisung aufgehoben"
+                ),
+            )
+        )
 
     if "kunde_id" in changes and changes["kunde_id"] != alter_kunde_id:
         alter_kunde = await session.get(Kunde, alter_kunde_id)
@@ -645,7 +691,77 @@ async def update_vorgang(
         # Kein echtes Feld auf Vorgang -- nur transient auf dieser einen
         # Antwort gesetzt, siehe VorgangRead.folge_vorgang_id.
         vorgang.folge_vorgang_id = folge_vorgang.id
-    return vorgang
+    return await _mit_zugewiesenem_namen(session, vorgang)
+
+
+@router.post(
+    "/{vorgang_id}/uebernehmen",
+    response_model=VorgangRead,
+    dependencies=[Depends(require_recht("vorgaenge", "sehen"))],
+)
+async def uebernehmen(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Vorgang:
+    """Ticket übernehmen: jeder Mitarbeiter mit "vorgaenge"."sehen" (also
+    praktisch jeder) darf einen Vorgang selbst uebernehmen, sofern sein
+    Account-Typ das erlaubt (siehe app/services/rechte_service.py:
+    darf_vorgang_selbst_uebernehmen) -- bewusst eine eigene, engere
+    Berechtigung statt "vorgaenge"."bearbeiten", damit auch Mitarbeiter ohne
+    generelle Bearbeiten-Rechte sich selbst zuweisen koennen. Ein bereits
+    zugewiesener Vorgang darf ueberschrieben werden (z.B. Vertretung/Urlaub)."""
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgeschlossen und kann nicht mehr geändert werden",
+        )
+    if not await darf_vorgang_selbst_uebernehmen(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Du darfst Vorgänge nicht selbst übernehmen",
+        )
+
+    alter_status = vorgang.status
+    vorgang.zugewiesener_user_id = auth.user_id
+    if alter_status == "neu":
+        vorgang.status = "in_arbeit"
+
+    author = await session.get(User, auth.user_id)
+    session.add(
+        VorgangEvent(
+            mandant_id=vorgang.mandant_id,
+            vorgang_id=vorgang.id,
+            event_type="system",
+            is_system=True,
+            author_user_id=auth.user_id,
+            body=f"Übernommen von {author.name if author else '?'}",
+        )
+    )
+    if alter_status == "neu":
+        session.add(
+            VorgangEvent(
+                mandant_id=vorgang.mandant_id,
+                vorgang_id=vorgang.id,
+                event_type="status_change",
+                author_user_id=auth.user_id,
+                payload={"von": alter_status, "nach": "in_arbeit"},
+            )
+        )
+
+    await session.flush()
+    await session.refresh(vorgang)
+    await event_bus.publish(
+        auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
+    )
+    return await _mit_zugewiesenem_namen(session, vorgang)
 
 
 @router.delete(

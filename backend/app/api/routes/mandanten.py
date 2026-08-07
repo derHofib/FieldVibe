@@ -6,6 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_db, require_roles
+from app.backfill_geocode import backfill_geocode_fuer_mandant
+from app.core.config import get_settings
 from app.models.anlage import Anlage
 from app.models.mandant import Mandant
 from app.schemas.mandant import MandantCreate, MandantRead, MandantUpdate
@@ -96,6 +98,8 @@ async def update_mandant(
             status_code=status.HTTP_404_NOT_FOUND, detail="Mandant nicht gefunden"
         )
 
+    karten_war_deaktiviert = "karten" in mandant.deaktivierte_module
+
     changes = body.model_dump(exclude_unset=True)
     for field, value in changes.items():
         setattr(mandant, field, value)
@@ -106,6 +110,25 @@ async def update_mandant(
         # a later lazy-load during response serialization fails outside the
         # session's async context.
         await session.refresh(mandant)
+
+    # Wird "karten" frisch aktiviert, hatten bestehende Standorte/Anlagen
+    # bislang nie eine Chance auf Auto-Geocoding (das Modul war ja aus) --
+    # ohne diesen Nachzieh-Schritt muesste ein Admin sonst wissen, dass es
+    # dafuer ein separates CLI-Skript (app/backfill_geocode.py) gibt.
+    karten_frisch_aktiviert = karten_war_deaktiviert and "karten" not in mandant.deaktivierte_module
+    if karten_frisch_aktiviert and get_settings().mapbox_access_token:
+        anzahl_geocodiert, anzahl_ohne_treffer = await backfill_geocode_fuer_mandant(
+            session, mandant.id
+        )
+        await session.flush()
+        await log_action(
+            session,
+            aktion="mandant_karten_modul_backfill",
+            actor_user_id=auth.user_id,
+            entity_type="mandant",
+            entity_id=mandant.id,
+            payload={"geocodiert": anzahl_geocodiert, "ohne_treffer": anzahl_ohne_treffer},
+        )
 
     if changes:
         await log_action(
