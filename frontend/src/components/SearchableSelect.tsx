@@ -66,12 +66,12 @@ export function SearchableSelect({
           }
         }}
         placeholder={placeholder}
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       {open && (
-        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-800">
           {gefiltert.length === 0 ? (
-            <p className="px-2 py-1.5 text-sm text-slate-400 dark:text-slate-500">Keine Treffer</p>
+            <p className="px-2 py-1.5 text-sm text-slate-400 dark:text-stone-500">Keine Treffer</p>
           ) : (
             gefiltert.map((o) => (
               <button
@@ -82,13 +82,13 @@ export function SearchableSelect({
                   setOpen(false);
                   setQuery("");
                 }}
-                className={`btn-touch block w-full px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700 ${
-                  o.value === value ? "bg-slate-50 font-medium dark:bg-slate-700/60" : ""
+                className={`btn-touch block w-full px-2 py-1.5 text-left text-sm hover:bg-slate-100 dark:hover:bg-stone-700 ${
+                  o.value === value ? "bg-slate-50 font-medium dark:bg-stone-700/60" : ""
                 }`}
               >
                 {o.label}
                 {o.sublabel && (
-                  <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500">{o.sublabel}</span>
+                  <span className="ml-1.5 text-xs text-slate-400 dark:text-stone-500">{o.sublabel}</span>
                 )}
               </button>
             ))

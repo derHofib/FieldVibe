@@ -26,9 +26,9 @@ export function Layout() {
   const seitentitel = useSeitentitel();
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-100 text-slate-900 dark:bg-stone-950 dark:text-stone-100">
       <div className="flex min-h-screen">
-        <aside className="w-16 shrink-0 border-r border-slate-200 bg-white p-2 sm:w-56 sm:p-4 dark:border-slate-800 dark:bg-slate-900">
+        <aside className="w-16 shrink-0 border-r border-slate-200 bg-white p-2 sm:w-56 sm:p-4 dark:border-stone-800 dark:bg-stone-900">
           <div className="mb-8 hidden items-center gap-1.5 text-lg font-bold text-slate-800 sm:flex dark:text-white">
             Field<span className="text-cyan-500 dark:text-cyan-400">Vibe</span>
           </div>
@@ -41,7 +41,7 @@ export function Layout() {
                   `btn-touch flex items-center justify-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors sm:justify-start ${
                     isActive
                       ? TONE_ROW_ACTIVE[item.tone]
-                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                      : "text-slate-600 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
                   }`
                 }
               >
@@ -56,18 +56,18 @@ export function Layout() {
           </nav>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-3 sm:px-6 dark:border-slate-800 dark:bg-slate-900">
-            <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <header className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-3 sm:px-6 dark:border-stone-800 dark:bg-stone-900">
+            <span className="truncate text-sm font-semibold text-slate-800 dark:text-stone-100">
               {seitentitel}
             </span>
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-slate-600 sm:inline dark:text-slate-300">
+              <span className="hidden text-sm text-slate-600 sm:inline dark:text-stone-300">
                 Angemeldet als <strong>{currentUser?.name}</strong> ({currentUser?.role})
               </span>
               <ThemeToggle />
               <button
                 onClick={logout}
-                className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
               >
                 Abmelden
               </button>

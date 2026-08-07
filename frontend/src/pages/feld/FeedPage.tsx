@@ -75,8 +75,8 @@ const STATUS_BADGE: Record<VorgangStatus, string> = {
   in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
   abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500",
+  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
+  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
 };
 
 const AMPEL_COLOR: Record<string, string> = {
@@ -100,15 +100,15 @@ function StoryChip({ item }: { item: StoryItem }) {
   return (
     <button
       onClick={() => navigate(path)}
-      className={`card-interactive btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
-        item.ampel ? AMPEL_COLOR[item.ampel] : "border-slate-300 dark:border-slate-600"
+      className={`card-interactive btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+        item.ampel ? AMPEL_COLOR[item.ampel] : "border-slate-300 dark:border-stone-600"
       }`}
     >
-      <span className="line-clamp-2 text-sm font-semibold text-slate-800 dark:text-slate-100">
+      <span className="line-clamp-2 text-sm font-semibold text-slate-800 dark:text-stone-100">
         {item.titel}
       </span>
       {item.subtitel && (
-        <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.subtitel}</span>
+        <span className="mt-1 text-xs text-slate-500 dark:text-stone-400">{item.subtitel}</span>
       )}
     </button>
   );
@@ -118,7 +118,7 @@ function faelligkeitsFarbe(iso: string): string {
   const heute = heuteIso();
   if (iso < heute) return "text-red-600 dark:text-red-400";
   if (iso <= heuteIso(3)) return "text-amber-600 dark:text-amber-400";
-  return "text-slate-500 dark:text-slate-400";
+  return "text-slate-500 dark:text-stone-400";
 }
 
 function FeedCardView({ card }: { card: FeedCard }) {
@@ -131,26 +131,26 @@ function FeedCardView({ card }: { card: FeedCard }) {
     >
     <button
       onClick={() => navigate(`/vorgaenge/${card.id}`)}
-      className="card-soft-inner btn-touch flex w-full flex-col gap-2 bg-white p-4 text-left dark:bg-slate-900"
+      className="card-soft-inner btn-touch flex w-full flex-col gap-2 bg-white p-4 text-left dark:bg-stone-900"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-xs text-slate-400 dark:text-slate-500">{card.vorgangsnummer}</div>
-          <div className="font-semibold text-slate-800 dark:text-slate-100">{card.titel}</div>
-          <div className="text-sm text-slate-500 dark:text-slate-400">{card.kunde_name}</div>
+          <div className="text-xs text-slate-400 dark:text-stone-500">{card.vorgangsnummer}</div>
+          <div className="font-semibold text-slate-800 dark:text-stone-100">{card.titel}</div>
+          <div className="text-sm text-slate-500 dark:text-stone-400">{card.kunde_name}</div>
           {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">
+            <div className="text-xs text-slate-400 dark:text-stone-500">
               {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
             </div>
           )}
           {card.anlage_kurzadresse && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">{card.anlage_kurzadresse}</div>
+            <div className="text-xs text-slate-400 dark:text-stone-500">{card.anlage_kurzadresse}</div>
           )}
           {card.ersteller_name && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">von {card.ersteller_name}</div>
+            <div className="text-xs text-slate-400 dark:text-stone-500">von {card.ersteller_name}</div>
           )}
           {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">
+            <div className="text-xs text-slate-400 dark:text-stone-500">
               {card.zugewiesener_name ? `Zugewiesen: ${card.zugewiesener_name}` : "Nicht zugewiesen"}
             </div>
           )}
@@ -167,7 +167,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
           <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[card.status]}`}>
             {STATUS_LABEL[card.status]}
           </span>
-          <span className="whitespace-nowrap text-xs text-slate-400 dark:text-slate-500">
+          <span className="whitespace-nowrap text-xs text-slate-400 dark:text-stone-500">
             {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
           </span>
           {faelligkeitIso && (
@@ -178,7 +178,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
         </div>
       </div>
       {card.letztes_event_vorschau && (
-        <p className="line-clamp-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <p className="line-clamp-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
           {card.letztes_event_vorschau}
         </p>
       )}
@@ -187,7 +187,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
           {card.tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300"
             >
               #{tag}
             </span>
@@ -301,7 +301,7 @@ export function FeedPage() {
       {istModulAktiv(currentUser, "highlights") && (
         <button
           onClick={() => navigate("/highlights")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm dark:bg-slate-900 dark:text-amber-400 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm dark:bg-stone-900 dark:text-amber-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <Star size={15} strokeWidth={2} /> Highlights ansehen
         </button>
@@ -315,11 +315,11 @@ export function FeedPage() {
         </div>
       )}
 
-      <div className="space-y-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="space-y-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setZeigeFilter((v) => !v)}
-            className="btn-touch flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+            className="btn-touch flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-stone-200"
           >
             <Search size={14} strokeWidth={2} /> Filter
             {aktiveFilterAnzahl > 0 && (
@@ -331,13 +331,13 @@ export function FeedPage() {
           <div className="flex gap-1">
             <button
               onClick={() => setField("faellig_bis", heuteIso())}
-              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
             >
               Überfällig
             </button>
             <button
               onClick={() => setField("faellig_bis", heuteIso(7))}
-              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
             >
               Diese Woche fällig
             </button>
@@ -347,7 +347,7 @@ export function FeedPage() {
         {zeigeFilter && (
           <div className="space-y-2">
             <div>
-              <div className="mb-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <div className="mb-1 text-xs font-medium text-slate-500 dark:text-stone-400">
                 Status (Mehrfachauswahl möglich)
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -361,7 +361,7 @@ export function FeedPage() {
                       className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
                         aktiv
                           ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                          : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
                       }`}
                     >
                       {label}
@@ -374,7 +374,7 @@ export function FeedPage() {
             <select
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -386,7 +386,7 @@ export function FeedPage() {
             <select
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -401,22 +401,22 @@ export function FeedPage() {
                 value={filter.faellig_von ?? ""}
                 onChange={(e) => setField("faellig_von", e.target.value)}
                 title="Fällig ab"
-                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
-              <span className="text-xs text-slate-400 dark:text-slate-500">bis</span>
+              <span className="text-xs text-slate-400 dark:text-stone-500">bis</span>
               <input
                 type="date"
                 value={filter.faellig_bis ?? ""}
                 onChange={(e) => setField("faellig_bis", e.target.value)}
                 title="Fällig bis"
-                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <input
               value={filter.tag ?? ""}
               onChange={(e) => setField("tag", e.target.value)}
               placeholder="#Tag"
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             </div>
           </div>
@@ -431,7 +431,7 @@ export function FeedPage() {
           className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             ansicht === "liste"
               ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
           }`}
         >
           <List size={13} strokeWidth={2} /> Liste
@@ -441,7 +441,7 @@ export function FeedPage() {
           className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             ansicht === "karte"
               ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
           }`}
         >
           <MapIcon size={13} strokeWidth={2} /> Karte
@@ -450,13 +450,13 @@ export function FeedPage() {
 
       {ansicht === "karte" ? (
         isLoading ? (
-          <div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700/60" />
+          <div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-stone-700/60" />
         ) : punkte.length === 0 ? (
           <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
         ) : (
           <>
             <Suspense
-              fallback={<div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700/60" />}
+              fallback={<div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-stone-700/60" />}
             >
               <MapboxFeedMap
                 punkte={punkte}
@@ -465,12 +465,12 @@ export function FeedPage() {
               />
             </Suspense>
             {ohneKoordinatenAnzahl > 0 && (
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+              <p className="text-center text-xs text-slate-400 dark:text-stone-500">
                 {ohneKoordinatenAnzahl} von {cards.length} Vorgängen ohne Standort nicht auf der Karte angezeigt.
               </p>
             )}
             {hasNextPage && (
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500">Lädt weitere Vorgänge…</p>
+              <p className="text-center text-xs text-slate-400 dark:text-stone-500">Lädt weitere Vorgänge…</p>
             )}
           </>
         )
@@ -492,7 +492,7 @@ export function FeedPage() {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-sm disabled:opacity-50 dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-sm disabled:opacity-50 dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
             </button>

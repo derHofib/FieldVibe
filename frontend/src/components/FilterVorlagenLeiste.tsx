@@ -87,7 +87,7 @@ export function FilterVorlagenLeiste({
                 className={`flex shrink-0 items-center gap-1 rounded-full py-1.5 pl-3 pr-1.5 text-xs font-medium ${
                   aktiv
                     ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                    : "bg-white text-slate-600 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                    : "bg-white text-slate-600 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
                 }`}
               >
                 <button onClick={() => onApply(v.filter_json)} className="btn-touch whitespace-nowrap">
@@ -97,7 +97,7 @@ export function FilterVorlagenLeiste({
                 <button
                   onClick={() => standardMutation.mutate(v)}
                   title={v.ist_standard ? "Als Standard entfernen" : "Als Standard setzen"}
-                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-slate-400 dark:text-slate-500"}`}
+                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-slate-400 dark:text-stone-500"}`}
                 >
                   {v.ist_standard ? "★" : "☆"}
                 </button>
@@ -105,7 +105,7 @@ export function FilterVorlagenLeiste({
                   onClick={() => {
                     if (window.confirm(`Filter-Vorlage "${v.name}" löschen?`)) deleteMutation.mutate(v.id);
                   }}
-                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-slate-400 dark:text-slate-500"}`}
+                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-slate-400 dark:text-stone-500"}`}
                 >
                   ×
                 </button>
@@ -119,7 +119,7 @@ export function FilterVorlagenLeiste({
         {hatAktivenFilter && (
           <button
             onClick={() => onApply({})}
-            className="btn-touch text-xs text-slate-500 underline dark:text-slate-400"
+            className="btn-touch text-xs text-slate-500 underline dark:text-stone-400"
           >
             Filter zurücksetzen
           </button>
@@ -134,15 +134,15 @@ export function FilterVorlagenLeiste({
       </div>
 
       {zeigeSpeichern && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-2 dark:bg-slate-800/60">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-2 dark:bg-stone-800/60">
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name der Vorlage"
-            className="btn-touch min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="btn-touch min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
-          <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600 dark:text-slate-300">
+          <label className="flex shrink-0 items-center gap-1 text-xs text-slate-600 dark:text-stone-300">
             <input type="checkbox" checked={alsStandard} onChange={(e) => setAlsStandard(e.target.checked)} />
             Als Standard
           </label>

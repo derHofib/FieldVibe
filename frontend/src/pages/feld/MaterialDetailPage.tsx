@@ -93,7 +93,7 @@ export function MaterialDetailPage() {
     },
   });
 
-  if (!material) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+  if (!material) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   const zugewieseneTags = (material.tag_ids ?? [])
     .map((tagId) => alleTags?.find((t) => t.id === tagId))
@@ -103,7 +103,7 @@ export function MaterialDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -121,15 +121,15 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{material.bezeichnung}</h1>
-        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{material.bezeichnung}</h1>
+        <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
           Gesamtbestand: {material.bestand_gesamt} {material.einheit}
         </p>
         {material.bestaende.length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs dark:border-slate-800">
+          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs dark:border-stone-800">
             {material.bestaende.map((b) => (
-              <div key={b.lager_id} className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+              <div key={b.lager_id} className="flex items-center justify-between text-slate-500 dark:text-stone-400">
                 <span>{b.lager_bezeichnung}</span>
                 <span>
                   {b.menge} {material.einheit}
@@ -140,46 +140,46 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Stammdaten</h2>
+      <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten</h2>
         <div>
-          <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Bezeichnung</label>
+          <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Bezeichnung</label>
           <input
             value={form.bezeichnung}
             onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Einheit</label>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Einheit</label>
             <input
               value={form.einheit}
               onChange={(e) => setForm({ ...form, einheit: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Mindestbestand</label>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Mindestbestand</label>
             <input
               type="number"
               step="0.01"
               value={form.mindestbestand}
               onChange={(e) => setForm({ ...form, mindestbestand: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Artikelnummer</label>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Artikelnummer</label>
             <input
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="z.B. 5SY4116-7"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
               Einkaufspreis (EUR, Richtwert)
             </label>
             <input
@@ -187,15 +187,15 @@ export function MaterialDetailPage() {
               step="0.01"
               value={form.einzelpreis}
               onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Lieferant</label>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Lieferant</label>
             <select
               value={form.lieferant_id}
               onChange={(e) => setForm({ ...form, lieferant_id: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Kein Lieferant hinterlegt</option>
               {(lieferanten ?? []).map((l) => (
@@ -206,7 +206,7 @@ export function MaterialDetailPage() {
             </select>
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
               Bestell-Link (Lieferanten-/Produktseite)
             </label>
             <input
@@ -214,7 +214,7 @@ export function MaterialDetailPage() {
               value={form.bestell_url}
               onChange={(e) => setForm({ ...form, bestell_url: e.target.value })}
               placeholder="https://…"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             {material.bestell_url && (
               <a
@@ -240,21 +240,21 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Tags</h2>
+      <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Tags</h2>
         <div className="flex flex-wrap gap-1.5">
           {zugewieseneTags.length === 0 && (
-            <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine Tags zugewiesen.</p>
+            <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Tags zugewiesen.</p>
           )}
           {zugewieseneTags.map((t) => (
             <span
               key={t.id}
-              className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
             >
               #{t.label}
               <button
                 onClick={() => tagEntfernenMutation.mutate(t.id)}
-                className="btn-touch text-slate-400 hover:text-red-600 dark:text-slate-500 dark:hover:text-red-400"
+                className="btn-touch text-slate-400 hover:text-red-600 dark:text-stone-500 dark:hover:text-red-400"
                 aria-label={`Tag ${t.label} entfernen`}
               >
                 ✕
@@ -268,7 +268,7 @@ export function MaterialDetailPage() {
             value={neuerTag}
             onChange={(e) => setNeuerTag(e.target.value)}
             placeholder="Tag hinzufügen…"
-            className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
           <datalist id="material-tag-vorschlaege">
             {verfuegbareTags.map((t) => (
@@ -278,7 +278,7 @@ export function MaterialDetailPage() {
           <button
             disabled={!neuerTag.trim() || tagHinzufuegenMutation.isPending}
             onClick={() => tagHinzufuegenMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+            className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
           >
             + Hinzufügen
           </button>

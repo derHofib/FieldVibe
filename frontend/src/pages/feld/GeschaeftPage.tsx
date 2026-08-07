@@ -108,41 +108,41 @@ function MaterialZeile({
   });
 
   return (
-    <div className="card-interactive rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="card-interactive rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(`/material/${material.id}`)}
           className="btn-touch text-left"
         >
-          <div className="text-sm font-medium text-slate-800 underline-offset-2 hover:underline dark:text-slate-100">
+          <div className="text-sm font-medium text-slate-800 underline-offset-2 hover:underline dark:text-stone-100">
             {material.bezeichnung}
           </div>
           <div
             className={`text-xs ${
               istUnterbestand(material)
                 ? "font-semibold text-red-600 dark:text-red-400"
-                : "text-slate-500 dark:text-slate-400"
+                : "text-slate-500 dark:text-stone-400"
             }`}
           >
             Gesamt: {material.bestand_gesamt} {material.einheit} (Mindestbestand {material.mindestbestand})
           </div>
           {material.artikelnummer && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">Art.-Nr. {material.artikelnummer}</div>
+            <div className="text-xs text-slate-400 dark:text-stone-500">Art.-Nr. {material.artikelnummer}</div>
           )}
           {material.einzelpreis && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">
+            <div className="text-xs text-slate-400 dark:text-stone-500">
               {material.einzelpreis} EUR/Einheit{lieferantName ? ` · ${lieferantName}` : ""}
             </div>
           )}
           {!material.einzelpreis && lieferantName && (
-            <div className="text-xs text-slate-400 dark:text-slate-500">{lieferantName}</div>
+            <div className="text-xs text-slate-400 dark:text-stone-500">{lieferantName}</div>
           )}
           {tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {tags.map((t) => (
                 <span
                   key={t.id}
-                  className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 dark:bg-stone-800 dark:text-stone-400"
                 >
                   #{t.label}
                 </span>
@@ -160,10 +160,10 @@ function MaterialZeile({
         )}
       </div>
 
-      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-slate-800">
+      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-stone-800">
         {material.bestaende.map((b) => (
           <div key={b.lager_id} className="flex items-center justify-between text-xs">
-            <span className="text-slate-600 dark:text-slate-300">{b.lager_bezeichnung}</span>
+            <span className="text-slate-600 dark:text-stone-300">{b.lager_bezeichnung}</span>
             {editingLagerId === b.lager_id ? (
               <span className="flex items-center gap-1">
                 <input
@@ -171,7 +171,7 @@ function MaterialZeile({
                   step="0.01"
                   value={neueMenge}
                   onChange={(e) => setNeueMenge(e.target.value)}
-                  className="w-16 rounded border border-slate-300 px-1 py-0.5 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-16 rounded border border-slate-300 px-1 py-0.5 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 />
                 <button
                   onClick={() => bestandSetzenMutation.mutate(b.lager_id)}
@@ -182,7 +182,7 @@ function MaterialZeile({
                 </button>
                 <button
                   onClick={() => setEditingLagerId(null)}
-                  className="btn-touch text-slate-400 dark:text-slate-500"
+                  className="btn-touch text-slate-400 dark:text-stone-500"
                 >
                   ✕
                 </button>
@@ -193,7 +193,7 @@ function MaterialZeile({
                   setEditingLagerId(b.lager_id);
                   setNeueMenge(b.menge);
                 }}
-                className="btn-touch font-medium text-slate-700 underline-offset-2 hover:underline dark:text-slate-300"
+                className="btn-touch font-medium text-slate-700 underline-offset-2 hover:underline dark:text-stone-300"
               >
                 {b.menge} {material.einheit}
               </button>
@@ -203,12 +203,12 @@ function MaterialZeile({
       </div>
 
       {zeigeUmlagern && (
-        <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
+        <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
           <div className="grid grid-cols-2 gap-2">
             <select
               value={umlagernVon}
               onChange={(e) => setUmlagernVon(e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Von…</option>
               {lagerorte.map((l) => (
@@ -220,7 +220,7 @@ function MaterialZeile({
             <select
               value={umlagernNach}
               onChange={(e) => setUmlagernNach(e.target.value)}
-              className="rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Nach…</option>
               {lagerorte.map((l) => (
@@ -237,7 +237,7 @@ function MaterialZeile({
               placeholder="Menge"
               value={umlagernMenge}
               onChange={(e) => setUmlagernMenge(e.target.value)}
-              className="flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <button
               disabled={
@@ -277,9 +277,9 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   });
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Fahrzeuge & Lagerorte</h2>
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Fahrzeuge & Lagerorte</h2>
         <button
           onClick={() => setShowForm((v) => !v)}
           className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -289,17 +289,17 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
       </div>
 
       {lagerorte.length === 0 ? (
-        <p className="mt-2 text-sm text-slate-400 dark:text-slate-500">Noch keine weiteren Lagerorte.</p>
+        <p className="mt-2 text-sm text-slate-400 dark:text-stone-500">Noch keine weiteren Lagerorte.</p>
       ) : (
         <div className="mt-2 space-y-1">
           {lagerorte.map((l) => (
             <button
               key={l.id}
               onClick={() => navigate(`/anlagen/${l.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800"
+              className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
             >
-              <span className="text-slate-700 dark:text-slate-200">{l.bezeichnung}</span>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+              <span className="text-slate-700 dark:text-stone-200">{l.bezeichnung}</span>
+              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
                 {OBJEKTTYP_LABEL[l.objekttyp]}
               </span>
             </button>
@@ -308,23 +308,23 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
       )}
 
       {showForm && (
-        <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+        <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-stone-800">
           <input
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
             placeholder="Bezeichnung (z.B. Transporter VW)"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
           <select
             value={objekttyp}
             onChange={(e) => setObjekttyp(e.target.value as AnlagenObjekttyp)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           >
             <option value="fahrzeug">Fahrzeug</option>
             <option value="lager">Lager</option>
             <option value="baustelle">Baustelle</option>
           </select>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-slate-400 dark:text-stone-500">
             Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material -- keine Kunde-
             Zuordnung nötig.
           </p>
@@ -587,18 +587,18 @@ export function GeschaeftPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Geschäft</h1>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Geschäft</h1>
         {istModulAktiv(currentUser, "kundenportal") && (
           <button
             onClick={() => navigate("/anfragen")}
-            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
           >
             Auftragsanfragen
           </button>
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="flex gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         {sichtbareTabs.map((t) => (
           <button
             key={t}
@@ -609,7 +609,7 @@ export function GeschaeftPage() {
             className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium capitalize ${
               tab === t
                 ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                : "text-slate-600 dark:text-slate-400"
+                : "text-slate-600 dark:text-stone-400"
             }`}
           >
             {t}
@@ -620,7 +620,7 @@ export function GeschaeftPage() {
       {tab !== "bestellwesen" && (
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
         >
           {showForm
             ? "Abbrechen"
@@ -635,34 +635,34 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab === "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Name *</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name *</label>
             <input
               autoFocus
               value={neuerKunde.name}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Kundennummer (optional)
               </label>
               <input
                 value={neuerKunde.kundennummer}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
                 placeholder="wird sonst vergeben"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Typ</label>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Typ</label>
               <select
                 value={neuerKunde.typ}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 <option value="">Bitte wählen…</option>
                 <option value="privat">Privat</option>
@@ -673,41 +673,41 @@ export function GeschaeftPage() {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Straße + Hausnr.</label>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Straße + Hausnr.</label>
             <input
               value={neuerKunde.strasse}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">PLZ</label>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">PLZ</label>
               <input
                 value={neuerKunde.plz}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Ort</label>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Ort</label>
               <input
                 value={neuerKunde.ort}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Notiz</label>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Notiz</label>
             <textarea
               value={neuerKunde.notiz}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
               rows={2}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-slate-400 dark:text-stone-500">
             Ansprechpartner können anschließend auf der Kunden-Detailseite angelegt werden.
           </p>
           <button
@@ -721,13 +721,13 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab !== "material" && tab !== "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Kunde</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
             <select
               value={kundeId}
               onChange={(e) => setKundeId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Bitte wählen…</option>
               {kunden?.map((k) => (
@@ -740,7 +740,7 @@ export function GeschaeftPage() {
           {tab === "rechnungen" && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
                   Betrag netto (EUR)
                 </label>
                 <input
@@ -749,20 +749,20 @@ export function GeschaeftPage() {
                   min="0"
                   value={betragNetto}
                   onChange={(e) => setBetragNetto(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
                   Leistungsdatum (optional)
                 </label>
                 <input
                   type="date"
                   value={leistungsdatum}
                   onChange={(e) => setLeistungsdatum(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 />
-                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
                   Nur nötig, wenn abweichend vom Rechnungsdatum.
                 </p>
               </div>
@@ -784,24 +784,24 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab === "material" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <input
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
             placeholder="Bezeichnung"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Einheit</label>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Einheit</label>
               <input
                 value={materialForm.einheit}
                 onChange={(e) => setMaterialForm({ ...materialForm, einheit: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Einzelpreis (EUR, optional)
               </label>
               <input
@@ -809,37 +809,37 @@ export function GeschaeftPage() {
                 step="0.01"
                 value={materialForm.einzelpreis}
                 onChange={(e) => setMaterialForm({ ...materialForm, einzelpreis: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Anfangsbestand</label>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Anfangsbestand</label>
               <input
                 type="number"
                 step="0.01"
                 value={materialForm.menge}
                 onChange={(e) => setMaterialForm({ ...materialForm, menge: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">Mindestbestand</label>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Mindestbestand</label>
               <input
                 type="number"
                 step="0.01"
                 value={materialForm.mindestbestand}
                 onChange={(e) => setMaterialForm({ ...materialForm, mindestbestand: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Standard-Lieferant (optional)
               </label>
               <select
                 value={materialForm.lieferantId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lieferantId: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 <option value="">Kein Lieferant hinterlegt</option>
                 {(lieferanten ?? []).map((l) => (
@@ -850,13 +850,13 @@ export function GeschaeftPage() {
               </select>
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-slate-500 dark:text-slate-400">
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
                 Lagerort für Anfangsbestand
               </label>
               <select
                 value={materialForm.lagerId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lagerId: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 <option value="">Zentrallager (Standard)</option>
                 {lagerorte
@@ -886,7 +886,7 @@ export function GeschaeftPage() {
               value={kundenSuche}
               onChange={(e) => setKundenSuche(e.target.value)}
               placeholder="Suche nach Name oder Kundennummer…"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           )}
           {kundenLoading ? (
@@ -894,7 +894,7 @@ export function GeschaeftPage() {
           ) : (kunden ?? []).length === 0 ? (
             <EmptyState icon={Users} text="Keine Kunden vorhanden." />
           ) : kundenGefiltert.length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-slate-500">
+            <p className="text-center text-sm text-slate-400 dark:text-stone-500">
               Keine Kunden gefunden für „{kundenSuche}“.
             </p>
           ) : (
@@ -905,14 +905,14 @@ export function GeschaeftPage() {
                 <button
                   key={k.id}
                   onClick={() => navigate(`/kunden/${k.id}`)}
-                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
                 >
                   <div>
-                    <div className="text-xs text-slate-400 dark:text-slate-500">{k.kundennummer}</div>
-                    <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{k.name}</div>
+                    <div className="text-xs text-slate-400 dark:text-stone-500">{k.kundennummer}</div>
+                    <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{k.name}</div>
                   </div>
                   {k.typ && (
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                       {k.typ}
                     </span>
                   )}
@@ -934,16 +934,16 @@ export function GeschaeftPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/angebote/${a.id}`)}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">{a.angebotsnummer}</div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  <div className="text-xs text-slate-400 dark:text-stone-500">{a.angebotsnummer}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
                     {nameFuer(a.kunde_id)}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">{a.gesamt_brutto} EUR</div>
+                  <div className="text-xs text-slate-500 dark:text-stone-400">{a.gesamt_brutto} EUR</div>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                   {ANGEBOT_STATUS_LABEL[a.status]}
                 </span>
               </button>
@@ -963,16 +963,16 @@ export function GeschaeftPage() {
               <button
                 key={r.id}
                 onClick={() => navigate(`/rechnungen/${r.id}`)}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">{r.rechnungsnummer}</div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  <div className="text-xs text-slate-400 dark:text-stone-500">{r.rechnungsnummer}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
                     {nameFuer(r.kunde_id)}
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">{r.betrag_brutto} EUR</div>
+                  <div className="text-xs text-slate-500 dark:text-stone-400">{r.betrag_brutto} EUR</div>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                   {RECHNUNG_STATUS_LABEL[r.status]}
                 </span>
               </button>
@@ -986,18 +986,18 @@ export function GeschaeftPage() {
           <LagerorteVerwaltung lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")} />
 
           {(material ?? []).length > 0 && (
-            <div className="space-y-2 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+            <div className="space-y-2 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
               <input
                 value={matSuche}
                 onChange={(e) => setMatSuche(e.target.value)}
                 placeholder="Suche nach Bezeichnung oder Artikelnummer…"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
               <div className="grid grid-cols-2 gap-2">
                 <select
                   value={matFilterLieferantId}
                   onChange={(e) => setMatFilterLieferantId(e.target.value)}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 >
                   <option value="">Alle Lieferanten</option>
                   {(lieferanten ?? []).map((l) => (
@@ -1009,7 +1009,7 @@ export function GeschaeftPage() {
                 <select
                   value={matFilterTagId}
                   onChange={(e) => setMatFilterTagId(e.target.value)}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 >
                   <option value="">Alle Tags</option>
                   {(materialTags ?? []).map((t) => (
@@ -1019,7 +1019,7 @@ export function GeschaeftPage() {
                   ))}
                 </select>
               </div>
-              <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+              <label className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-stone-300">
                 <input
                   type="checkbox"
                   checked={matFilterUnterbestand}
@@ -1036,7 +1036,7 @@ export function GeschaeftPage() {
           ) : (material ?? []).length === 0 ? (
             <EmptyState icon={Package} text="Kein Material erfasst." />
           ) : materialGefiltert.length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-slate-500">Kein Material entspricht dem Filter.</p>
+            <p className="text-center text-sm text-slate-400 dark:text-stone-500">Kein Material entspricht dem Filter.</p>
           ) : (
             materialGefiltert.map((m) => (
               <MaterialZeile
@@ -1053,9 +1053,9 @@ export function GeschaeftPage() {
 
       {tab === "bestellwesen" && (
         <div className="space-y-4">
-          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Lieferanten</h2>
+              <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Lieferanten</h2>
               <button
                 onClick={() => setShowLieferantForm((v) => !v)}
                 className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -1064,18 +1064,18 @@ export function GeschaeftPage() {
               </button>
             </div>
             {showLieferantForm && (
-              <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
+              <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
                 <input
                   value={lieferantName}
                   onChange={(e) => setLieferantName(e.target.value)}
                   placeholder="Name"
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 />
                 <input
                   value={lieferantEmail}
                   onChange={(e) => setLieferantEmail(e.target.value)}
                   placeholder="E-Mail (optional)"
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 />
                 <button
                   disabled={!lieferantName.trim() || createLieferantMutation.isPending}
@@ -1087,17 +1087,17 @@ export function GeschaeftPage() {
               </div>
             )}
             {(lieferanten ?? []).length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine Lieferanten angelegt.</p>
+              <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Lieferanten angelegt.</p>
             ) : (
               <div className="space-y-1">
                 {lieferanten!.map((l) => (
                   <div
                     key={l.id}
-                    className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-slate-800/60"
+                    className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
                   >
                     <div>
-                      <span className="text-slate-700 dark:text-slate-200">{l.name}</span>
-                      {l.email && <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{l.email}</span>}
+                      <span className="text-slate-700 dark:text-stone-200">{l.name}</span>
+                      {l.email && <span className="ml-2 text-xs text-slate-400 dark:text-stone-500">{l.email}</span>}
                     </div>
                     {kannLieferantenLoeschen && (
                       <button
@@ -1118,15 +1118,15 @@ export function GeschaeftPage() {
             )}
           </div>
 
-          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-            <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Offene Materialbedarfe</h2>
-            <div className="mb-2 flex gap-2 rounded-md bg-slate-100 p-1 dark:bg-slate-800">
+          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Offene Materialbedarfe</h2>
+            <div className="mb-2 flex gap-2 rounded-md bg-slate-100 p-1 dark:bg-stone-800">
               <button
                 onClick={() => setBedarfZweck("bestellung")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "bestellung"
-                    ? "bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-100"
-                    : "text-slate-500 dark:text-slate-400"
+                    ? "bg-white text-slate-800 shadow-sm dark:bg-stone-700 dark:text-stone-100"
+                    : "text-slate-500 dark:text-stone-400"
                 }`}
               >
                 Zur Bestellung
@@ -1135,8 +1135,8 @@ export function GeschaeftPage() {
                 onClick={() => setBedarfZweck("angebot")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "angebot"
-                    ? "bg-white text-slate-800 shadow-sm dark:bg-slate-700 dark:text-slate-100"
-                    : "text-slate-500 dark:text-slate-400"
+                    ? "bg-white text-slate-800 shadow-sm dark:bg-stone-700 dark:text-stone-100"
+                    : "text-slate-500 dark:text-stone-400"
                 }`}
               >
                 Für Angebot
@@ -1144,13 +1144,13 @@ export function GeschaeftPage() {
             </div>
 
             {(offeneBedarfe ?? []).length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500">Keine offenen Materialbedarfe.</p>
+              <p className="text-sm text-slate-400 dark:text-stone-500">Keine offenen Materialbedarfe.</p>
             ) : (
               <div className="space-y-1">
                 {offeneBedarfe!.map((b) => (
                   <label
                     key={b.id}
-                    className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-slate-800/60"
+                    className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
                   >
                     <input
                       type="checkbox"
@@ -1158,9 +1158,9 @@ export function GeschaeftPage() {
                       onChange={() => toggleBedarf(b.id)}
                       className="h-4 w-4"
                     />
-                    <span className="flex-1 text-slate-700 dark:text-slate-200">
+                    <span className="flex-1 text-slate-700 dark:text-stone-200">
                       {b.menge} {b.material_einheit} {b.material_bezeichnung}
-                      <span className="ml-1.5 text-xs text-slate-400 dark:text-slate-500">
+                      <span className="ml-1.5 text-xs text-slate-400 dark:text-stone-500">
                         {b.vorgang_vorgangsnummer} · {b.kunde_name}
                       </span>
                     </span>
@@ -1170,11 +1170,11 @@ export function GeschaeftPage() {
             )}
 
             {ausgewaehlteBedarfe.size > 0 && bedarfZweck === "bestellung" && (
-              <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+              <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-stone-800">
                 <select
                   value={bestellLieferantId}
                   onChange={(e) => setBestellLieferantId(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 >
                   <option value="">Kein Lieferant hinterlegt</option>
                   {(lieferanten ?? []).map((l) => (
@@ -1193,7 +1193,7 @@ export function GeschaeftPage() {
               </div>
             )}
             {ausgewaehlteBedarfe.size > 0 && bedarfZweck === "angebot" && (
-              <div className="mt-2 border-t border-slate-100 pt-2 dark:border-slate-800">
+              <div className="mt-2 border-t border-slate-100 pt-2 dark:border-stone-800">
                 <button
                   disabled={angebotAusBedarfenMutation.isPending}
                   onClick={() => angebotAusBedarfenMutation.mutate()}
@@ -1205,20 +1205,20 @@ export function GeschaeftPage() {
             )}
           </div>
 
-          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-            <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Bestellungen</h2>
+          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Bestellungen</h2>
             {(bestellungen ?? []).length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine Bestellungen vorhanden.</p>
+              <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Bestellungen vorhanden.</p>
             ) : (
               <div className="space-y-1">
                 {bestellungen!.map((b) => (
                   <button
                     key={b.id}
                     onClick={() => navigate(`/bestellungen/${b.id}`)}
-                    className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800"
+                    className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
                   >
-                    <span className="text-slate-700 dark:text-slate-200">{b.bestellnummer}</span>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                    <span className="text-slate-700 dark:text-stone-200">{b.bestellnummer}</span>
+                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
                       {BESTELLUNG_STATUS_LABEL[b.status]}
                     </span>
                   </button>

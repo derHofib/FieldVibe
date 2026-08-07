@@ -15,7 +15,7 @@ const TONE_BADGE: Record<IconTone, string> = {
   emerald: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
   indigo: "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
   cyan: "bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-300",
-  slate: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
+  slate: "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400",
 };
 
 export const TONE_ROW_ACTIVE: Record<IconTone, string> = {
@@ -26,7 +26,7 @@ export const TONE_ROW_ACTIVE: Record<IconTone, string> = {
   emerald: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
   indigo: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300",
   cyan: "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300",
-  slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+  slate: "bg-slate-100 text-slate-700 dark:bg-stone-800 dark:text-stone-200",
 };
 
 const SIZE_BOX: Record<"sm" | "md", string> = {
@@ -39,7 +39,7 @@ const SIZE_ICON: Record<"sm" | "md", number> = {
   md: 18,
 };
 
-const MUTED = "bg-slate-100 text-slate-400 dark:bg-slate-800/80 dark:text-slate-500";
+const MUTED = "bg-slate-100 text-slate-400 dark:bg-stone-800/80 dark:text-stone-500";
 
 export function IconBadge({
   icon: Icon,

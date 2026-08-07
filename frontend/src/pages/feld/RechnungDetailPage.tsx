@@ -82,12 +82,12 @@ export function RechnungDetailPage() {
     onSuccess: openPdfBlob,
   });
 
-  if (!rechnung) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+  if (!rechnung) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -122,23 +122,23 @@ export function RechnungDetailPage() {
         </div>
       )}
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">{rechnung.rechnungsnummer}</div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{kunde?.name ?? "…"}</h1>
+            <div className="text-xs text-slate-400 dark:text-stone-500">{rechnung.rechnungsnummer}</div>
+            <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{kunde?.name ?? "…"}</h1>
           </div>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
             {STATUS_LABEL[rechnung.status]}
           </span>
         </div>
         {rechnung.leistungsdatum && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
             Leistungsdatum {new Date(rechnung.leistungsdatum).toLocaleDateString("de-DE")}
           </p>
         )}
         {rechnung.faellig_am && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
             Fällig am {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
           </p>
         )}
@@ -151,8 +151,8 @@ export function RechnungDetailPage() {
         )}
 
         <div className="mt-3 text-right text-sm">
-          <div className="text-slate-500 dark:text-slate-400">Netto: {rechnung.betrag_netto} EUR</div>
-          <div className="font-semibold text-slate-800 dark:text-slate-100">
+          <div className="text-slate-500 dark:text-stone-400">Netto: {rechnung.betrag_netto} EUR</div>
+          <div className="font-semibold text-slate-800 dark:text-stone-100">
             Brutto: {rechnung.betrag_brutto} EUR
           </div>
         </div>
@@ -160,15 +160,15 @@ export function RechnungDetailPage() {
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
         >
           <FileText size={14} strokeWidth={2} /> PDF anzeigen
         </button>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Positionen</h2>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
           {rechnung.status === "entwurf" && (
             <button
               onClick={() => setShowForm((v) => !v)}
@@ -180,12 +180,12 @@ export function RechnungDetailPage() {
         </div>
 
         {showForm && (
-          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
+          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">
             <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -194,13 +194,13 @@ export function RechnungDetailPage() {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
               <input
                 type="number"
@@ -208,7 +208,7 @@ export function RechnungDetailPage() {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <button
@@ -222,7 +222,7 @@ export function RechnungDetailPage() {
         )}
 
         {rechnung.positionen.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">
+          <p className="text-sm text-slate-400 dark:text-stone-500">
             Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
           </p>
         ) : (
@@ -230,15 +230,15 @@ export function RechnungDetailPage() {
             {rechnung.positionen.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60"
+                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
               >
                 <div>
-                  <div className="text-slate-700 dark:text-slate-300">{p.beschreibung}</div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">
+                  <div className="text-slate-700 dark:text-stone-300">{p.beschreibung}</div>
+                  <div className="text-xs text-slate-400 dark:text-stone-500">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
-                <div className="font-medium text-slate-700 dark:text-slate-300">{p.gesamt} EUR</div>
+                <div className="font-medium text-slate-700 dark:text-stone-300">{p.gesamt} EUR</div>
               </div>
             ))}
           </div>
@@ -266,7 +266,7 @@ export function RechnungDetailPage() {
           <button
             onClick={() => statusMutation.mutate("storniert")}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
           >
             Stornieren
           </button>
@@ -287,7 +287,7 @@ export function RechnungDetailPage() {
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
           >
             Stornieren
           </button>
@@ -300,7 +300,7 @@ export function RechnungDetailPage() {
               stornoMutation.mutate();
           }}
           disabled={stornoMutation.isPending}
-          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
         >
           Stornieren
         </button>

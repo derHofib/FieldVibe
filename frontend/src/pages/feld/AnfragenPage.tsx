@@ -59,16 +59,16 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   });
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-slate-400 dark:text-slate-500">
+          <div className="text-xs text-slate-400 dark:text-stone-500">
             {kunde?.name ?? "…"}
             {standort && ` · ${standort.bezeichnung}`}
             {anlage && ` · ${anlage.bezeichnung}`}
           </div>
-          <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{anfrage.titel}</div>
-          <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{anfrage.titel}</div>
+          <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
             {LEISTUNGSTYP_LABEL[anfrage.leistungstyp]}
           </span>
         </div>
@@ -77,7 +77,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
             className={`rounded-full px-2 py-1 text-xs font-semibold ${
               anfrage.status === "angenommen"
                 ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
-                : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+                : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-300"
             }`}
           >
             {anfrage.status === "angenommen" ? "Angenommen" : "Abgelehnt"}
@@ -85,10 +85,10 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
         )}
       </div>
       {anfrage.beschreibung && (
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{anfrage.beschreibung}</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{anfrage.beschreibung}</p>
       )}
       {anfrage.ablehnungsgrund && (
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Grund: {anfrage.ablehnungsgrund}</p>
+        <p className="mt-2 text-xs text-slate-400 dark:text-stone-500">Grund: {anfrage.ablehnungsgrund}</p>
       )}
 
       {anfrage.status === "offen" && (
@@ -105,7 +105,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
               </button>
               <button
                 onClick={() => setZeigeAblehnen(true)}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
               >
                 Ablehnen
               </button>
@@ -113,12 +113,12 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAnnehmen && (
-            <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
-              <label className="block text-xs font-medium text-slate-500 dark:text-slate-400">Abrechnungsart</label>
+            <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+              <label className="block text-xs font-medium text-slate-500 dark:text-stone-400">Abrechnungsart</label>
               <select
                 value={abrechnungsart}
                 onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 {ABRECHNUNGSARTEN.map((a) => (
                   <option key={a.value} value={a.value}>
@@ -136,7 +136,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 </button>
                 <button
                   onClick={() => setZeigeAnnehmen(false)}
-                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
                 >
                   Abbrechen
                 </button>
@@ -145,13 +145,13 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAblehnen && (
-            <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+            <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
               <textarea
                 value={ablehnungsgrund}
                 onChange={(e) => setAblehnungsgrund(e.target.value)}
                 placeholder="Grund (optional, für interne Notiz)"
                 rows={2}
-                className="w-full rounded-md border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 p-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
               <div className="flex gap-2">
                 <button
@@ -163,7 +163,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 </button>
                 <button
                   onClick={() => setZeigeAblehnen(false)}
-                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
                 >
                   Abbrechen
                 </button>
@@ -191,8 +191,8 @@ export function AnfragenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Auftragsanfragen</h1>
-      <div className="flex gap-2 rounded-lg bg-white p-1 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Auftragsanfragen</h1>
+      <div className="flex gap-2 rounded-lg bg-white p-1 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         {(["offen", "alle"] as const).map((f) => (
           <button
             key={f}
@@ -200,7 +200,7 @@ export function AnfragenPage() {
             className={`btn-touch flex-1 rounded-md py-2 text-sm font-medium capitalize ${
               statusFilter === f
                 ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                : "text-slate-600 dark:text-slate-400"
+                : "text-slate-600 dark:text-stone-400"
             }`}
           >
             {f === "offen" ? "Offen" : "Alle"}
@@ -209,9 +209,9 @@ export function AnfragenPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
+        <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>
       ) : !anfragen || anfragen.length === 0 ? (
-        <p className="text-center text-sm text-slate-400 dark:text-slate-500">Keine Anfragen vorhanden.</p>
+        <p className="text-center text-sm text-slate-400 dark:text-stone-500">Keine Anfragen vorhanden.</p>
       ) : (
         <div className="space-y-2">
           {anfragen.map((a) => (

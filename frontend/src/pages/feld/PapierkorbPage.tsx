@@ -94,13 +94,13 @@ export function PapierkorbPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Papierkorb</h1>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Papierkorb</h1>
       </div>
 
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <p className="text-sm text-slate-500 dark:text-stone-400">
         {istOperativ
           ? "Gelöschte Datensätze können hier wiederhergestellt oder endgültig entfernt werden."
           : "Nur-Ansicht: Wiederherstellen und endgültiges Löschen sind der Rolle „Papierkorb (operativ)“ vorbehalten."}
@@ -109,13 +109,13 @@ export function PapierkorbPage() {
       {fehler && <p className="text-sm text-red-700 dark:text-red-400">{fehler}</p>}
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
           Nach Typ filtern
         </label>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as PapierkorbEntityTyp | "")}
-          className="btn-touch rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+          className="btn-touch rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
         >
           <option value="">Alle Typen</option>
           {Object.entries(ENTITY_TYP_LABEL).map(([value, label]) => (
@@ -127,9 +127,9 @@ export function PapierkorbPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 dark:text-slate-400">Lädt…</p>
+        <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
       ) : !eintraege || eintraege.length === 0 ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow-sm dark:bg-slate-900 dark:text-slate-400">
+        <p className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow-sm dark:bg-stone-900 dark:text-stone-400">
           Der Papierkorb ist leer.
         </p>
       ) : (
@@ -137,18 +137,18 @@ export function PapierkorbPage() {
           {eintraege.map((eintrag) => (
             <li
               key={`${eintrag.entity_typ}-${eintrag.id}`}
-              className="flex items-center justify-between gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900"
+              className="flex items-center justify-between gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                     {ENTITY_TYP_LABEL[eintrag.entity_typ]}
                   </span>
-                  <span className="truncate font-medium text-slate-800 dark:text-slate-100">
+                  <span className="truncate font-medium text-slate-800 dark:text-stone-100">
                     {anzeigeName(eintrag)}
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-stone-400">
                   Gelöscht am {formatDatum(eintrag.geloescht_am)}
                   {eintrag.geloescht_von_name ? ` von ${eintrag.geloescht_von_name}` : ""}
                 </p>

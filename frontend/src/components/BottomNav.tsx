@@ -26,7 +26,7 @@ function NavItem({ to, label, icon, tone }: { to: string; label: string; icon: L
       to={to}
       className={({ isActive }) =>
         `btn-touch flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium ${
-          isActive ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"
+          isActive ? "text-slate-700 dark:text-stone-200" : "text-slate-400 dark:text-stone-500"
         }`
       }
     >
@@ -105,7 +105,7 @@ export function BottomNav() {
       )}
 
       {mehrOffen && (
-        <div className="fixed bottom-24 right-3 z-50 w-52 overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+        <div className="fixed bottom-24 right-3 z-50 w-52 overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 dark:bg-stone-900 dark:ring-stone-800">
           {mehrItems.map((item) => (
             <NavLink
               key={item.to}
@@ -115,7 +115,7 @@ export function BottomNav() {
                 `flex items-center gap-2.5 px-4 py-3 text-sm font-medium ${
                   isActive
                     ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300"
-                    : "text-slate-600 dark:text-slate-300"
+                    : "text-slate-600 dark:text-stone-300"
                 }`
               }
             >
@@ -132,14 +132,14 @@ export function BottomNav() {
       )}
 
       <nav
-        className="navbar-soft fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-full bg-white py-1.5 dark:bg-slate-900"
+        className="navbar-soft fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-full bg-white py-1.5 dark:bg-stone-900"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <NavItem to="/feed" label="Feed" icon={Rss} tone="sky" />
 
         <NavLink
           to="/neu"
-          className="btn-clay -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-slate-950"
+          className="btn-clay -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-stone-950"
           aria-label="Neuer Vorgang"
         >
           <Plus size={26} strokeWidth={2.5} />
@@ -151,7 +151,7 @@ export function BottomNav() {
           onClick={() => setMehrOffen((v) => !v)}
           aria-label="Mehr"
           className={`btn-touch relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium ${
-            mehrOffen ? "text-slate-700 dark:text-slate-200" : "text-slate-400 dark:text-slate-500"
+            mehrOffen ? "text-slate-700 dark:text-stone-200" : "text-slate-400 dark:text-stone-500"
           }`}
         >
           <IconBadge icon={EllipsisVertical} tone="slate" size="sm" active={mehrOffen} />

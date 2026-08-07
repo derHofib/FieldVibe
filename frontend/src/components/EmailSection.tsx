@@ -58,9 +58,9 @@ export function EmailSection({
   });
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">E-Mail</h2>
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">E-Mail</h2>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
@@ -72,38 +72,38 @@ export function EmailSection({
       </div>
 
       {showForm && (
-        <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
-          {hinweis && <p className="text-xs text-slate-500 dark:text-slate-400">{hinweis}</p>}
+        <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+          {hinweis && <p className="text-xs text-slate-500 dark:text-stone-400">{hinweis}</p>}
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Empfänger
             </label>
             <input
               type="email"
               value={empfaenger}
               onChange={(e) => setEmpfaenger(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Betreff {!betreffPflicht && "(optional)"}
             </label>
             <input
               value={betreff}
               onChange={(e) => setBetreff(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Nachricht {!betreffPflicht && "(optional)"}
             </label>
             <textarea
               value={inhalt}
               onChange={(e) => setInhalt(e.target.value)}
               rows={3}
-              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
@@ -124,7 +124,7 @@ export function EmailSection({
                 setShowForm(false);
                 setError(null);
               }}
-              className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+              className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
             >
               Abbrechen
             </button>
@@ -133,13 +133,13 @@ export function EmailSection({
       )}
 
       {(emails ?? []).length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine E-Mails versendet.</p>
+        <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine E-Mails versendet.</p>
       ) : (
         <div className="space-y-1.5">
           {emails!.map((e) => (
-            <div key={e.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60">
+            <div key={e.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
               <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-slate-700 dark:text-slate-300">{e.betreff}</span>
+                <span className="font-medium text-slate-700 dark:text-stone-300">{e.betreff}</span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     e.status === "gesendet"
@@ -150,7 +150,7 @@ export function EmailSection({
                   {e.status === "gesendet" ? "Gesendet" : "Fehler"}
                 </span>
               </div>
-              <div className="text-xs text-slate-400 dark:text-slate-500">
+              <div className="text-xs text-slate-400 dark:text-stone-500">
                 an {e.empfaenger} ·{" "}
                 {new Date(e.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
                 {e.anhang_dateiname && ` · ${e.anhang_dateiname}`}

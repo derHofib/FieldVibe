@@ -105,44 +105,44 @@ export function UsersPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Neuen Account anlegen</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Neuen Account anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">E-Mail</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">E-Mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Passwort</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Passwort</label>
             <input
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Rolle</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Rolle</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               {(isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).map((value) => (
                 <option key={value} value={value}>
@@ -153,7 +153,7 @@ export function UsersPage() {
           </div>
           {role === "custom" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
                 Account-Typ
               </label>
               {accountTypen && accountTypen.length > 0 ? (
@@ -161,7 +161,7 @@ export function UsersPage() {
                   required
                   value={accountTypId}
                   onChange={(e) => setAccountTypId(e.target.value)}
-                  className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 >
                   <option value="" disabled>
                     Bitte wählen…
@@ -185,12 +185,12 @@ export function UsersPage() {
           )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Mandant</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
               <select
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 <option value="" disabled>
                   Bitte wählen…
@@ -215,13 +215,13 @@ export function UsersPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Accounts</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Accounts</h2>
         {deleteError && <p className="mb-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-slate-500 dark:text-slate-400">Lädt…</p>
+          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-400">
+          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">E-Mail</th>
@@ -231,16 +231,16 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
               {users?.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{u.name}</td>
-                  <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{u.email}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-stone-100">{u.name}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-stone-400">{u.email}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-stone-300">
                     {u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role]}
                   </td>
                   {isSuperAdmin && (
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
+                    <td className="px-4 py-3 text-slate-500 dark:text-stone-400">
                       {u.mandant_id ? mandantNameById.get(u.mandant_id) ?? "–" : "–"}
                     </td>
                   )}
@@ -249,7 +249,7 @@ export function UsersPage() {
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
                         u.aktiv
                           ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
-                          : "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400"
+                          : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-400"
                       }`}
                     >
                       {u.aktiv ? "Aktiv" : "Deaktiviert"}
@@ -261,7 +261,7 @@ export function UsersPage() {
                         onClick={() =>
                           toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
                         }
-                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
                       >
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
                       </button>

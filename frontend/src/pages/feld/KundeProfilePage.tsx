@@ -73,9 +73,9 @@ function Stammdaten({
       .filter(Boolean)
       .join(", ");
     return (
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Stammdaten</h2>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten</h2>
           {kannVerwalten && (
             <button
               onClick={() => {
@@ -89,36 +89,36 @@ function Stammdaten({
           )}
         </div>
         {adressZeile ? (
-          <p className="text-sm text-slate-700 dark:text-slate-300">{adressZeile}</p>
+          <p className="text-sm text-slate-700 dark:text-stone-300">{adressZeile}</p>
         ) : (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Adresse hinterlegt.</p>
+          <p className="text-sm text-slate-400 dark:text-stone-500">Keine Adresse hinterlegt.</p>
         )}
-        {notiz && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{notiz}</p>}
+        {notiz && <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">{notiz}</p>}
       </div>
     );
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Stammdaten bearbeiten</h2>
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten bearbeiten</h2>
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       <textarea
@@ -126,7 +126,7 @@ function Stammdaten({
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
         placeholder="Notiz"
         rows={2}
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <div className="flex gap-2">
         <button
@@ -138,7 +138,7 @@ function Stammdaten({
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -165,33 +165,33 @@ function AnsprechpartnerForm({
   const [form, setForm] = useState(eintrag);
 
   return (
-    <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+    <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
       <input
         autoFocus
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         placeholder="Name *"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <input
         value={form.position ?? ""}
         onChange={(e) => setForm({ ...form, position: e.target.value })}
         placeholder="Position (z.B. Geschäftsführer, Hausmeister)"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.telefon ?? ""}
           onChange={(e) => setForm({ ...form, telefon: e.target.value })}
           placeholder="Telefon"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           type="email"
           value={form.email ?? ""}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           placeholder="E-Mail"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       <select
@@ -199,7 +199,7 @@ function AnsprechpartnerForm({
         onChange={(e) =>
           setForm({ ...form, eskalationsstufe: e.target.value ? (Number(e.target.value) as Eskalationsstufe) : null })
         }
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       >
         <option value="">Keine Eskalationsstufe</option>
         {([1, 2, 3] as Eskalationsstufe[]).map((stufe) => (
@@ -208,7 +208,7 @@ function AnsprechpartnerForm({
           </option>
         ))}
       </select>
-      <label className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+      <label className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
         <input
           type="checkbox"
           checked={form.operativ}
@@ -226,7 +226,7 @@ function AnsprechpartnerForm({
         </button>
         <button
           onClick={onAbbrechen}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -272,7 +272,7 @@ function AnsprechpartnerVerwaltung({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Ansprechpartner</h2>
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Ansprechpartner</h2>
         {kannVerwalten && !neuAnlegen && (
           <button onClick={() => setNeuAnlegen(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
             + Neu
@@ -281,7 +281,7 @@ function AnsprechpartnerVerwaltung({
       </div>
 
       {liste.length === 0 && !neuAnlegen && (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine Ansprechpartner hinterlegt.</p>
+        <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Ansprechpartner hinterlegt.</p>
       )}
 
       <div className="space-y-2">
@@ -297,12 +297,12 @@ function AnsprechpartnerVerwaltung({
           ) : (
             <div
               key={a.id}
-              className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{a.name}</div>
-                  {a.position && <div className="text-xs text-slate-400 dark:text-slate-500">{a.position}</div>}
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{a.name}</div>
+                  {a.position && <div className="text-xs text-slate-400 dark:text-stone-500">{a.position}</div>}
                 </div>
                 <div className="flex gap-1">
                   {a.operativ && (
@@ -318,11 +318,11 @@ function AnsprechpartnerVerwaltung({
                 </div>
               </div>
               {(a.telefon || a.email) && (
-                <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <div className="mt-1 text-xs text-slate-500 dark:text-stone-400">
                   {[a.telefon, a.email].filter(Boolean).join(" · ")}
                 </div>
               )}
-              {a.notiz && <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{a.notiz}</p>}
+              {a.notiz && <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">{a.notiz}</p>}
               {kannVerwalten && (
                 <div className="mt-2 flex gap-3">
                   <button
@@ -363,8 +363,8 @@ const STATUS_BADGE: Record<string, string> = {
   in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
   abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500",
+  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
+  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
 };
 
 function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewiesen: User[] }) {
@@ -396,13 +396,13 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
   if (!bearbeiten) {
     return (
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Zugewiesene Techniker</h2>
+        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Zugewiesene Techniker</h2>
         {zugewiesen.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Kein Techniker zugewiesen.</p>
+          <p className="text-sm text-slate-400 dark:text-stone-500">Kein Techniker zugewiesen.</p>
         ) : (
           <div className="flex flex-wrap gap-1">
             {zugewiesen.map((t) => (
-              <span key={t.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <span key={t.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                 {t.name}
               </span>
             ))}
@@ -422,14 +422,14 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
   }
 
   return (
-    <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Zugewiesene Techniker</h2>
+    <div className="rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Zugewiesene Techniker</h2>
       {techniker.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Keine Techniker in diesem Mandanten angelegt.</p>
+        <p className="text-sm text-slate-400 dark:text-stone-500">Keine Techniker in diesem Mandanten angelegt.</p>
       ) : (
         <div className="space-y-1">
           {techniker.map((u) => (
-            <label key={u.id} className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <label key={u.id} className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
               <input
                 type="checkbox"
                 checked={auswahl.includes(u.id)}
@@ -450,7 +450,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -518,28 +518,28 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Bezeichnung</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Typ (optional)</label>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
         <input
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label className="block text-sm font-medium text-slate-700 dark:text-stone-300">
             Standort (optional)
           </label>
           <button
@@ -557,7 +557,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
               value={neuerStandortName}
               onChange={(e) => setNeuerStandortName(e.target.value)}
               placeholder="Bezeichnung (z.B. Filiale Nord)"
-              className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <button
               type="button"
@@ -572,7 +572,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
           <select
             value={standortId}
             onChange={(e) => setStandortId(e.target.value)}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           >
             <option value="">Kein Standort</option>
             {standorte.map((s) => (
@@ -595,7 +595,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -654,32 +654,32 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
       <input
         autoFocus
         value={bezeichnung}
         onChange={(e) => setBezeichnung(e.target.value)}
         placeholder="Bezeichnung (z.B. Filiale Nord)"
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <input
         value={strasse}
         onChange={(e) => setStrasse(e.target.value)}
         placeholder="Straße + Hausnr."
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={plz}
           onChange={(e) => setPlz(e.target.value)}
           placeholder="PLZ"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={ort}
           onChange={(e) => setOrt(e.target.value)}
           placeholder="Ort"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
@@ -694,7 +694,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -718,7 +718,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Standorte</h2>
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Standorte</h2>
       {!standorte || standorte.length === 0 ? (
         <EmptyState icon={MapPin} text="Keine Standorte." className="py-4" />
       ) : (
@@ -726,7 +726,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
           {standorte.map((s) => (
             <div
               key={s.id}
-              className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+              className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                 s.aktiv ? "" : "opacity-60"
               }`}
             >
@@ -734,11 +734,11 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
                 onClick={() => navigate(`/standorte/${s.id}`)}
                 className="btn-touch flex-1 text-left"
               >
-                <div className="text-sm font-medium text-slate-800 dark:text-slate-100 hover:underline">
+                <div className="text-sm font-medium text-slate-800 dark:text-stone-100 hover:underline">
                   {s.bezeichnung}
                 </div>
                 {s.adresse?.ort && (
-                  <div className="text-xs text-slate-400 dark:text-slate-500">
+                  <div className="text-xs text-slate-400 dark:text-stone-500">
                     {[s.adresse.strasse, [s.adresse.plz, s.adresse.ort].filter(Boolean).join(" ")]
                       .filter(Boolean)
                       .join(", ")}
@@ -748,7 +748,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
               {kannVerwalten && (
                 <button
                   onClick={() => toggleAktivMutation.mutate({ id: s.id, aktiv: !s.aktiv })}
-                  className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                  className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
                 >
                   {s.aktiv ? "Deaktivieren" : "Aktivieren"}
                 </button>
@@ -777,7 +777,7 @@ function AnlageAktivToggle({ anlage, kundeId }: { anlage: Anlage; kundeId: strin
     <button
       onClick={() => toggleMutation.mutate()}
       disabled={toggleMutation.isPending}
-      className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+      className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
     >
       {anlage.aktiv ? "Deaktivieren" : "Aktivieren"}
     </button>
@@ -794,17 +794,17 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
 
   return (
     <div
-      className={`flex items-start justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+      className={`flex items-start justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
         zugang.aktiv ? "" : "opacity-60"
       }`}
     >
       <div>
-        <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{zugang.name}</div>
-        <div className="text-xs text-slate-400 dark:text-slate-500">{zugang.email}</div>
+        <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{zugang.name}</div>
+        <div className="text-xs text-slate-400 dark:text-stone-500">{zugang.email}</div>
       </div>
       <button
         onClick={() => toggleMutation.mutate()}
-        className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+        className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
       >
         {zugang.aktiv ? "Deaktivieren" : "Aktivieren"}
       </button>
@@ -849,16 +849,16 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
   }
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
         Portal-Link für {kunde.name}
       </h2>
-      <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
+      <p className="mb-2 text-xs text-slate-400 dark:text-stone-500">
         Ein Link für den ganzen Kunden -- jeder Mitarbeiter mit eigenem Kundenportal-Zugang meldet
         sich darüber mit seiner eigenen E-Mail und seinem eigenen Passwort an.
       </p>
-      <div className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-slate-800/60">
-        <span className="flex-1 truncate text-xs text-slate-500 dark:text-slate-400">{link}</span>
+      <div className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-stone-800/60">
+        <span className="flex-1 truncate text-xs text-slate-500 dark:text-stone-400">{link}</span>
         <button
           onClick={kopieren}
           className="btn-touch shrink-0 text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -868,8 +868,8 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
       </div>
 
       {istMandantAdmin && (
-        <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
-          <h3 className="mb-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <div className="mt-3 border-t border-slate-100 pt-3 dark:border-stone-800">
+          <h3 className="mb-2 text-xs font-semibold text-slate-500 dark:text-stone-400">
             Logo für die Portal-Login-Seite
           </h3>
           <div className="flex items-center gap-3">
@@ -877,10 +877,10 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
               <img
                 src={logoUrl.url}
                 alt={`Logo ${kunde.name}`}
-                className="h-12 w-12 rounded-md object-contain ring-1 ring-slate-200 dark:ring-slate-700"
+                className="h-12 w-12 rounded-md object-contain ring-1 ring-slate-200 dark:ring-stone-700"
               />
             )}
-            <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300">
               {kunde.logo_object_key ? "Logo ersetzen" : "Logo hochladen"}
               <input
                 type="file"
@@ -954,27 +954,27 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
       <input
         autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Name des Ansprechpartners"
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="E-Mail"
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Passwort (mind. 10 Zeichen)"
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
@@ -988,7 +988,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -1005,9 +1005,9 @@ function PortalZugaengeVerwaltung({ kundeId }: { kundeId: string }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Kundenportal-Zugänge</h2>
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Kundenportal-Zugänge</h2>
       {!zugaenge || zugaenge.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">Noch kein Zugang angelegt.</p>
+        <p className="text-sm text-slate-400 dark:text-stone-500">Noch kein Zugang angelegt.</p>
       ) : (
         <div className="space-y-2">
           {zugaenge.map((z) => (
@@ -1031,7 +1031,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Dauer-Aufträge</h2>
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Dauer-Aufträge</h2>
       {!dauerauftraege || dauerauftraege.length === 0 ? (
         <EmptyState icon={Repeat} text="Keine Dauer-Aufträge." className="py-4" />
       ) : (
@@ -1040,24 +1040,24 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
             <button
               key={d.id}
               onClick={() => navigate(`/dauerauftraege/${d.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
                   {d.titel}
                   {d.anzahl_ziele > 1 && (
-                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500 dark:bg-stone-800 dark:text-stone-400">
                       {d.anzahl_ziele} Anlagen
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-400 dark:text-slate-500">
+                <div className="text-xs text-slate-400 dark:text-stone-500">
                   alle {d.intervall_tage} Tage
                   {d.naechste_faelligkeit_am && ` · nächste Fälligkeit ${d.naechste_faelligkeit_am}`}
                 </div>
               </div>
               {!d.aktiv && (
-                <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
                   pausiert
                 </span>
               )}
@@ -1126,37 +1126,37 @@ export function KundeProfilePage() {
   });
 
   if (!kundenverwaltungAktiv) {
-    if (kundeLoading || !kunde) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+    if (kundeLoading || !kunde) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
-        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-          <div className="text-xs text-slate-400 dark:text-slate-500">{kunde.kundennummer}</div>
-          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{kunde.name}</h1>
-          {kunde.typ && <span className="text-sm text-slate-500 dark:text-slate-400">{kunde.typ}</span>}
+        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="text-xs text-slate-400 dark:text-stone-500">{kunde.kundennummer}</div>
+          <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{kunde.name}</h1>
+          {kunde.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{kunde.typ}</span>}
         </div>
       </div>
     );
   }
 
-  if (profilLoading || !profil) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+  if (profilLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-slate-400 dark:text-slate-500">{profil.kundennummer}</div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{profil.name}</h1>
-            {profil.typ && <span className="text-sm text-slate-500 dark:text-slate-400">{profil.typ}</span>}
+            <div className="text-xs text-slate-400 dark:text-stone-500">{profil.kundennummer}</div>
+            <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.name}</h1>
+            {profil.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{profil.typ}</span>}
           </div>
           {kannVerwalten && (
             <div className="flex shrink-0 gap-2">
@@ -1164,7 +1164,7 @@ export function KundeProfilePage() {
                 onClick={() => datenexportMutation.mutate()}
                 disabled={datenexportMutation.isPending}
                 title="Alle personenbezogenen Daten zu diesem Kunden herunterladen (Art. 15/20 DSGVO)"
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
               >
                 Datenexport
               </button>
@@ -1189,7 +1189,7 @@ export function KundeProfilePage() {
         {profil.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {profil.tags.map((t) => (
-              <span key={t.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <span key={t.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                 #{t.label}
               </span>
             ))}
@@ -1228,7 +1228,7 @@ export function KundeProfilePage() {
       )}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Anlagen</h2>
+        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Anlagen</h2>
         {profil.anlagen.length === 0 ? (
           <EmptyState icon={Boxes} text="Keine Anlagen." className="py-4" />
         ) : (
@@ -1236,13 +1236,13 @@ export function KundeProfilePage() {
             {profil.anlagen.map((a) => (
               <div
                 key={a.id}
-                className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+                className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
                 <button onClick={() => navigate(`/anlagen/${a.id}`)} className="btn-touch flex-1 text-left">
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{a.bezeichnung}</div>
-                  {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-slate-500">{a.anlagentyp}</div>}
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{a.bezeichnung}</div>
+                  {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-stone-500">{a.anlagentyp}</div>}
                 </button>
                 {kannVerwalten && (
                   <AnlageAktivToggle anlage={a} kundeId={id!} />
@@ -1265,12 +1265,12 @@ export function KundeProfilePage() {
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Vorgänge</h2>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Vorgänge</h2>
           {profil.anlagen.length > 0 && (
             <select
               value={anlageFilter}
               onChange={(e) => setAnlageFilter(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Alle Anlagen</option>
               {profil.anlagen.map((a) => (
@@ -1289,12 +1289,12 @@ export function KundeProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">
+                  <div className="text-xs text-slate-400 dark:text-stone-500">
                     {v.vorgangsnummer}
                     {v.anlage_id && anlageNameById.get(v.anlage_id) && ` · ${anlageNameById.get(v.anlage_id)}`}
                     {v.dauerauftrag_id && (
@@ -1304,7 +1304,7 @@ export function KundeProfilePage() {
                       </>
                     )}
                   </div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{v.titel}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
                 </div>
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
                   {v.status}

@@ -42,7 +42,7 @@ export function NotificationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Benachrichtigungen</h1>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Benachrichtigungen</h1>
         {notifications && notifications.some((n) => !n.gelesen_am) && (
           <button
             onClick={() => markAllReadMutation.mutate()}
@@ -63,13 +63,13 @@ export function NotificationsPage() {
             <button
               key={n.id}
               onClick={() => handleClick(n)}
-              className={`card-interactive btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-sm dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
-                n.gelesen_am ? "bg-white dark:bg-slate-900" : "bg-blue-50 dark:bg-blue-500/10"
+              className={`card-interactive btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-sm dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                n.gelesen_am ? "bg-white dark:bg-stone-900" : "bg-blue-50 dark:bg-blue-500/10"
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{n.titel}</div>
-                <div className="text-xs text-slate-400 dark:text-slate-500">
+                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{n.titel}</div>
+                <div className="text-xs text-slate-400 dark:text-stone-500">
                   {new Date(n.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </div>
               </div>

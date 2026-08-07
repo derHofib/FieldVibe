@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+  @apply bg-slate-100 text-slate-900 dark:bg-stone-950 dark:text-stone-100;
 }
 
 .btn-touch {
@@ -25,7 +25,7 @@ body {
   background: linear-gradient(to right, var(--frame-color, theme(colors.slate.300)), transparent 78%);
 }
 .dark .card-soft {
-  background: linear-gradient(to right, var(--frame-color, theme(colors.slate.600)), transparent 78%);
+  background: linear-gradient(to right, var(--frame-color, theme(colors.stone.600)), transparent 78%);
 }
 
 .card-soft-inner {

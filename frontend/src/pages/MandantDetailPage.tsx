@@ -107,8 +107,8 @@ export function MandantDetailPage() {
     moduleMutation.mutate(naechste);
   }
 
-  if (isLoading) return <p className="text-slate-500 dark:text-slate-400">Lädt…</p>;
-  if (!mandant) return <p className="text-slate-500 dark:text-slate-400">Mandant nicht gefunden.</p>;
+  if (isLoading) return <p className="text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!mandant) return <p className="text-slate-500 dark:text-stone-400">Mandant nicht gefunden.</p>;
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -117,34 +117,34 @@ export function MandantDetailPage() {
       </Link>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Stammdaten</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Stammdaten</h2>
         <form onSubmit={handleSaveStammdaten} className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Slug (Subdomain)
             </label>
             <input
               disabled
               value={mandant.slug}
               title="Der Slug ist mit dem Kundenportal-Link verknuepft und kann nachtraeglich nicht geaendert werden."
-              className="btn-touch w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-500"
+              className="btn-touch w-full rounded-md border border-slate-200 bg-slate-100 px-3 py-2 text-slate-500 dark:border-stone-800 dark:bg-stone-950 dark:text-stone-500"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Branche</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Branche</label>
             <input
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -164,12 +164,12 @@ export function MandantDetailPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Status</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Status</h2>
         <select
           value={mandant.status}
           disabled={statusMutation.isPending}
           onChange={(e) => handleStatusChange(e.target.value as MandantStatus)}
-          className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         >
           {Object.entries(STATUS_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
@@ -190,14 +190,14 @@ export function MandantDetailPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-100">Module</h2>
-        <p className="mb-2 text-xs text-slate-400 dark:text-slate-500">
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Module</h2>
+        <p className="mb-2 text-xs text-slate-400 dark:text-stone-500">
           "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
           abwählbar.
         </p>
-        <div className="space-y-1.5 rounded-md bg-slate-50 p-3 dark:bg-slate-800">
+        <div className="space-y-1.5 rounded-md bg-slate-50 p-3 dark:bg-stone-800">
           {ALLE_MODULE.map((modul) => (
-            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
               <input
                 type="checkbox"
                 checked={!mandant.deaktivierte_module.includes(modul)}
@@ -212,7 +212,7 @@ export function MandantDetailPage() {
 
       <button
         onClick={() => navigate("/mandanten")}
-        className="btn-touch text-sm font-medium text-slate-500 hover:underline dark:text-slate-400"
+        className="btn-touch text-sm font-medium text-slate-500 hover:underline dark:text-stone-400"
       >
         ← Zurück zu Mandanten
       </button>

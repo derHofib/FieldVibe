@@ -47,12 +47,12 @@ function SystemStatus() {
 
 function StatKachel({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-stone-400">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{sub}</div>}
+      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-stone-100">{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-slate-500 dark:text-stone-400">{sub}</div>}
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function UebersichtPage() {
 
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Letzte Aktivität</h2>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-stone-100">Letzte Aktivität</h2>
           <Link
             to="/audit-log"
             className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400"
@@ -109,18 +109,18 @@ export function UebersichtPage() {
           </Link>
         </div>
         {letzteEintraege && letzteEintraege.length > 0 ? (
-          <ul className="divide-y divide-slate-100 rounded-lg bg-white text-sm shadow-sm dark:divide-slate-800 dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+          <ul className="divide-y divide-slate-100 rounded-lg bg-white text-sm shadow-sm dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
-                <span className="font-medium text-slate-800 dark:text-slate-100">{e.aktion}</span>
-                <span className="text-slate-500 dark:text-slate-400">
+                <span className="font-medium text-slate-800 dark:text-stone-100">{e.aktion}</span>
+                <span className="text-slate-500 dark:text-stone-400">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Noch keine Einträge.</p>
+          <p className="text-sm text-slate-500 dark:text-stone-400">Noch keine Einträge.</p>
         )}
       </section>
     </div>

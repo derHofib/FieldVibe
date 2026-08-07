@@ -66,15 +66,15 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const inputClass =
-    "rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100";
+    "rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100";
 
   return (
-    <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-stone-300">
           <Building2 size={15} strokeWidth={2} className="text-violet-500" /> Firmenprofil
         </h2>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
           Diese Angaben erscheinen im Briefkopf und in der Fußzeile eurer Angebots-PDFs.
         </p>
       </div>
@@ -83,9 +83,9 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         {logoUrl?.url ? (
           <img src={logoUrl.url} alt="Firmenlogo" className="h-12 max-w-[160px] object-contain" />
         ) : (
-          <span className="text-xs text-slate-400 dark:text-slate-500">Kein Logo hinterlegt</span>
+          <span className="text-xs text-slate-400 dark:text-stone-500">Kein Logo hinterlegt</span>
         )}
-        <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300">
           Logo hochladen
           <input
             type="file"
@@ -164,7 +164,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
         <input
           type="checkbox"
           checked={istKleinunternehmer}
@@ -207,25 +207,25 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-stone-300">
           <Mail size={15} strokeWidth={2} className="text-rose-500" /> Mahnwesen
         </h2>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
           Standard ist ein reiner interner Hinweis. Aktiviere hier je Mahnstufe, dass die Mahnung
           automatisch per E-Mail an den Kunden geschickt wird (inkl. Verzugszinsen).
         </p>
       </div>
-      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
         <input type="checkbox" checked={mahnung1} onChange={(e) => setMahnung1(e.target.checked)} />
         1. Mahnung automatisch versenden
       </label>
-      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
         <input type="checkbox" checked={mahnung2} onChange={(e) => setMahnung2(e.target.checked)} />
         2. Mahnung automatisch versenden
       </label>
-      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
         <input type="checkbox" checked={mahnung3} onChange={(e) => setMahnung3(e.target.checked)} />
         3. Mahnung automatisch versenden
       </label>
@@ -265,14 +265,14 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">SMTP (E-Mail-Versand)</span>
+        <span className="text-sm font-semibold text-slate-700 dark:text-stone-300">SMTP (E-Mail-Versand)</span>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
-              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -284,25 +284,25 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Benutzername"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={fromAddress}
           onChange={(e) => setFromAddress(e.target.value)}
           placeholder="Absender-Adresse"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       <input
@@ -310,7 +310,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
 
       <div className="flex gap-2">
@@ -329,7 +329,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -367,16 +367,16 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <span className="text-sm font-semibold text-slate-700 dark:text-stone-300">
           IMAP (Rechnungseingang-Import)
         </span>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
-              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+              : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -388,25 +388,25 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Postfach-Adresse"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={mailbox}
           onChange={(e) => setMailbox(e.target.value)}
           placeholder="Ordner (z.B. INBOX)"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       <input
@@ -414,7 +414,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
 
       <div className="flex gap-2">
@@ -433,7 +433,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -522,17 +522,17 @@ export function IntegrationenPage() {
 
   if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
     return <Navigate to="/feed" replace />;
-  if (isLoading) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
   const imap = integrationen?.find((i) => i.typ === "imap");
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-slate-100">
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-stone-100">
         <Plug size={19} strokeWidth={2} className="text-indigo-500" /> Integrationen
       </h1>
 
@@ -540,11 +540,11 @@ export function IntegrationenPage() {
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 
       {einstellungen && (
-        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-          <h2 className="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">
+        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <h2 className="mb-1 text-sm font-semibold text-slate-700 dark:text-stone-300">
             Prüfzyklen-/Mahnwesen-Uhrzeit
           </h2>
-          <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mb-2 text-xs text-slate-500 dark:text-stone-400">
             Uhrzeit (UTC), zu der der tägliche Hintergrund-Lauf für diesen Betrieb
             geprüfte/überfällige Vorgänge und Rechnungen bearbeitet.
           </p>
@@ -554,7 +554,7 @@ export function IntegrationenPage() {
               onChange={(e) =>
                 schedulerMutation.mutate(e.target.value === "" ? null : Number(e.target.value))
               }
-              className="btn-touch rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Standard ({einstellungen.effektive_scheduler_stunde_utc.toString().padStart(2, "0")}:00 UTC)</option>
               {Array.from({ length: 24 }, (_, h) => (
@@ -564,13 +564,13 @@ export function IntegrationenPage() {
               ))}
             </select>
             {schedulerMutation.isPending && (
-              <span className="text-xs text-slate-400 dark:text-slate-500">Speichert…</span>
+              <span className="text-xs text-slate-400 dark:text-stone-500">Speichert…</span>
             )}
           </div>
         </div>
       )}
 
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <p className="text-sm text-slate-500 dark:text-stone-400">
         SMTP wird für den "Passwort vergessen"-Link im Kundenportal genutzt. Ohne
         konfiguriertes SMTP kann ein Mitarbeiter das Passwort eines Kunden weiterhin
         direkt über den Kunden setzen.
@@ -579,31 +579,31 @@ export function IntegrationenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="Host"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
               placeholder="Port"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <input
               value={user}
               onChange={(e) => setUser(e.target.value)}
               placeholder="Benutzername"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <input
               value={fromAddress}
               onChange={(e) => setFromAddress(e.target.value)}
               placeholder="Absender-Adresse"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <input
@@ -611,7 +611,7 @@ export function IntegrationenPage() {
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
@@ -624,13 +624,13 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           + SMTP einrichten
         </button>
       )}
 
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <p className="text-sm text-slate-500 dark:text-stone-400">
         Mit einem IMAP-Postfach (z.B. rechnung@deine-domain.de) werden Rechnungs-E-Mails automatisch
         abgeholt: jeder PDF-Anhang landet als Entwurf im Rechnungseingang, den ein Mitarbeiter dort
         gegen den Beleg prüft und bestätigt.
@@ -639,31 +639,31 @@ export function IntegrationenPage() {
       {imap ? (
         <ImapZeile integration={imap} />
       ) : showImapForm ? (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={imapHost}
               onChange={(e) => setImapHost(e.target.value)}
               placeholder="Host"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <input
               value={imapPort}
               onChange={(e) => setImapPort(e.target.value)}
               placeholder="Port"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <input
               value={imapUser}
               onChange={(e) => setImapUser(e.target.value)}
               placeholder="Postfach-Adresse"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <input
               value={imapMailbox}
               onChange={(e) => setImapMailbox(e.target.value)}
               placeholder="Ordner (z.B. INBOX)"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <input
@@ -671,7 +671,7 @@ export function IntegrationenPage() {
             value={imapSecret}
             onChange={(e) => setImapSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
           <button
             disabled={!imapHost || !imapUser || createImapMutation.isPending}
@@ -684,7 +684,7 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowImapForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-300 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           + IMAP einrichten
         </button>

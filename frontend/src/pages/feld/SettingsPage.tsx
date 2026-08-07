@@ -21,14 +21,14 @@ function SettingsLink({
   return (
     <button
       onClick={onClick}
-      className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-4 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+      className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-4 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
     >
       <IconBadge icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">
-        <span className="block font-medium text-slate-800 dark:text-slate-100">{label}</span>
-        <span className="block text-xs text-slate-500 dark:text-slate-400">{beschreibung}</span>
+        <span className="block font-medium text-slate-800 dark:text-stone-100">{label}</span>
+        <span className="block text-xs text-slate-500 dark:text-stone-400">{beschreibung}</span>
       </span>
-      <span className="text-slate-300 dark:text-slate-600">›</span>
+      <span className="text-slate-300 dark:text-stone-600">›</span>
     </button>
   );
 }
@@ -40,14 +40,14 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Einstellungen</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Einstellungen</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
           Verwaltung für {currentUser?.mandant_name ?? "diesen Mandanten"}.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
           Team
         </h2>
         <SettingsLink
@@ -74,7 +74,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
           Betrieb
         </h2>
         <SettingsLink
@@ -96,7 +96,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
           Unternehmen
         </h2>
         <SettingsLink

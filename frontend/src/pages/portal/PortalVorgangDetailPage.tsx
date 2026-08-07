@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 function PortalEventBubble({ event }: { event: VorgangEvent }) {
   if (event.is_system) {
     return (
-      <div className="my-2 text-center text-xs text-slate-400 dark:text-slate-500">
+      <div className="my-2 text-center text-xs text-slate-400 dark:text-stone-500">
         {event.body ?? event.event_type} ·{" "}
         {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
@@ -25,8 +25,8 @@ function PortalEventBubble({ event }: { event: VorgangEvent }) {
   }
 
   return (
-    <div className="mb-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-      <div className="mb-1 text-xs text-slate-400 dark:text-slate-500">
+    <div className="mb-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="mb-1 text-xs text-slate-400 dark:text-stone-500">
         {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
       {event.event_type === "foto" && event.foto_url && (
@@ -39,7 +39,7 @@ function PortalEventBubble({ event }: { event: VorgangEvent }) {
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-100">{event.body}</p>
+        <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-stone-100">{event.body}</p>
       )}
     </div>
   );
@@ -60,30 +60,30 @@ export function PortalVorgangDetailPage() {
     enabled: !!id,
   });
 
-  if (!vorgang) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+  if (!vorgang) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   const eventsChronological = [...(events ?? [])].reverse();
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-        <div className="text-xs text-slate-400 dark:text-slate-500">{vorgang.vorgangsnummer}</div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{vorgang.titel}</h1>
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="text-xs text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</div>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{vorgang.titel}</h1>
         {vorgang.beschreibung && (
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{vorgang.beschreibung}</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{vorgang.beschreibung}</p>
         )}
-        <span className="mt-2 inline-block rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+        <span className="mt-2 inline-block rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
           {STATUS_LABEL[vorgang.status]}
         </span>
       </div>
 
       <div>
         {eventsChronological.length === 0 ? (
-          <p className="text-center text-sm text-slate-400 dark:text-slate-500">Noch keine Einträge.</p>
+          <p className="text-center text-sm text-slate-400 dark:text-stone-500">Noch keine Einträge.</p>
         ) : (
           eventsChronological.map((event) => <PortalEventBubble key={event.id} event={event} />)
         )}

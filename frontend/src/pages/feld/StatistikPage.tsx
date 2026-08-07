@@ -78,17 +78,17 @@ export function StatistikPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Statistik</h1>
+      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Statistik</h1>
 
       {kannAuswaehlen && (
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
             Techniker
           </label>
           <select
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
           >
             <option value="">Bitte wählen…</option>
             {techniker.map((t) => (
@@ -102,29 +102,29 @@ export function StatistikPage() {
 
       {statistik && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-            <div className="text-xl font-bold text-slate-800 dark:text-slate-100">
+          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <div className="text-xl font-bold text-slate-800 dark:text-stone-100">
               {formatStundenAlsHHMM(Number(statistik.wochenstunden))}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Std. diese Woche</div>
+            <div className="text-xs text-slate-500 dark:text-stone-400">Std. diese Woche</div>
           </div>
-          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-            <div className="text-xl font-bold text-slate-800 dark:text-slate-100">
+          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <div className="text-xl font-bold text-slate-800 dark:text-stone-100">
               {formatStundenAlsHHMM(Number(statistik.monatsstunden))}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Std. dieser Monat</div>
+            <div className="text-xs text-slate-500 dark:text-stone-400">Std. dieser Monat</div>
           </div>
-          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-            <div className="text-xl font-bold text-slate-800 dark:text-slate-100">
+          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <div className="text-xl font-bold text-slate-800 dark:text-stone-100">
               {formatStundenAlsHHMM(Number(statistik.jahresstunden))}
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">Std. dieses Jahr</div>
+            <div className="text-xs text-slate-500 dark:text-stone-400">Std. dieses Jahr</div>
           </div>
         </div>
       )}
 
       {(istTechniker || technikerId) && (
-        <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="mb-2 flex items-center justify-between">
             <button
               onClick={() => {
@@ -132,11 +132,11 @@ export function StatistikPage() {
                 vorherigeWoche.setDate(wocheMontag.getDate() - 7);
                 setWocheMontag(vorherigeWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
             >
               ← Woche
             </button>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
               {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
             </span>
             <button
@@ -145,7 +145,7 @@ export function StatistikPage() {
                 naechsteWoche.setDate(wocheMontag.getDate() + 7);
                 setWocheMontag(naechsteWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
             >
               Woche →
             </button>
@@ -159,13 +159,13 @@ export function StatistikPage() {
                 <button
                   key={e.id}
                   onClick={() => navigate(`/vorgaenge/${e.vorgang_id}`)}
-                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-slate-800/60"
+                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800/60"
                 >
-                  <span className="text-slate-600 dark:text-slate-300">
+                  <span className="text-slate-600 dark:text-stone-300">
                     {new Date(e.start_at).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}
                     {e.taetigkeit && ` · ${e.taetigkeit}`}
                   </span>
-                  <span className="shrink-0 font-medium text-slate-700 dark:text-slate-300">
+                  <span className="shrink-0 font-medium text-slate-700 dark:text-stone-300">
                     {formatStundenAlsHHMM(formatDauer(e.start_at, e.ende_at))} Std.
                   </span>
                 </button>
@@ -173,8 +173,8 @@ export function StatistikPage() {
             </div>
           )}
 
-          <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-slate-800">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-stone-800">
+            <span className="text-sm font-semibold text-slate-700 dark:text-stone-300">
               Wochensumme: {formatStundenAlsHHMM(wochensumme)} Std.
             </span>
             <button

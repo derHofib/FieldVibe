@@ -15,8 +15,8 @@ const STATUS_BADGE: Record<string, string> = {
   in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
   wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
   abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500",
+  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
+  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
 };
 
 function AdresseBearbeiten({
@@ -55,9 +55,9 @@ function AdresseBearbeiten({
     return (
       <div className="mt-1 flex items-center gap-2">
         {zeile ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">{zeile}</p>
+          <p className="text-sm text-slate-500 dark:text-stone-400">{zeile}</p>
         ) : (
-          kannVerwalten && <p className="text-sm text-slate-400 dark:text-slate-500">Keine Adresse hinterlegt.</p>
+          kannVerwalten && <p className="text-sm text-slate-400 dark:text-stone-500">Keine Adresse hinterlegt.</p>
         )}
         {kannVerwalten && (
           <button
@@ -75,25 +75,25 @@ function AdresseBearbeiten({
   }
 
   return (
-    <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
+    <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
       <div className="flex gap-2">
@@ -106,7 +106,7 @@ function AdresseBearbeiten({
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -200,19 +200,19 @@ function AnlagenVerwaltung({
 
   if (modus === "neu") {
     return (
-      <form onSubmit={handleSubmitNeu} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+      <form onSubmit={handleSubmitNeu} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
           placeholder="Bezeichnung"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         <input
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="Typ (optional)"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
         <div className="flex gap-2">
@@ -226,7 +226,7 @@ function AnlagenVerwaltung({
           <button
             type="button"
             onClick={reset}
-            className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+            className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
           >
             Abbrechen
           </button>
@@ -236,16 +236,16 @@ function AnlagenVerwaltung({
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+    <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
       {zuordenbar.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500">
+        <p className="text-sm text-slate-400 dark:text-stone-500">
           Keine weiteren Anlagen dieses Kunden verfügbar.
         </p>
       ) : (
         <select
           value={zuordnenId}
           onChange={(e) => setZuordnenId(e.target.value)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         >
           <option value="">Anlage wählen…</option>
           {zuordenbar.map((a) => (
@@ -267,7 +267,7 @@ function AnlagenVerwaltung({
         <button
           type="button"
           onClick={reset}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
         >
           Abbrechen
         </button>
@@ -303,12 +303,12 @@ export function StandortDetailPage() {
     },
   });
 
-  if (isLoading || !profil) return <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>;
+  if (isLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -326,21 +326,21 @@ export function StandortDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{profil.bezeichnung}</h1>
+          <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
               onClick={() => toggleAktivMutation.mutate()}
               disabled={toggleAktivMutation.isPending}
-              className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
             >
               {profil.aktiv ? "Deaktivieren" : "Aktivieren"}
             </button>
           )}
         </div>
         {!profil.aktiv && (
-          <span className="mt-1 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+          <span className="mt-1 inline-block rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
             inaktiv
           </span>
         )}
@@ -355,17 +355,17 @@ export function StandortDetailPage() {
         <AdresseBearbeiten standortId={id!} adresse={profil.adresse} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Auswertung</h2>
+      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Auswertung</h2>
         {Object.keys(profil.vorgaenge_nach_status).length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Noch keine Vorgänge an diesem Standort.</p>
+          <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Vorgänge an diesem Standort.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
               <span
                 key={status}
                 className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                  STATUS_BADGE[status] ?? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  STATUS_BADGE[status] ?? "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
                 }`}
               >
                 {anzahl}× {status}
@@ -376,7 +376,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Assets an diesem Standort</h2>
+        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Assets an diesem Standort</h2>
         {profil.anlagen.length === 0 ? (
           <EmptyState icon={Boxes} text="Keine Assets an diesem Standort." className="py-4" />
         ) : (
@@ -385,16 +385,16 @@ export function StandortDetailPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/anlagen/${a.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
                 <div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{a.bezeichnung}</div>
-                  {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-slate-500">{a.anlagentyp}</div>}
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{a.bezeichnung}</div>
+                  {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-stone-500">{a.anlagentyp}</div>}
                 </div>
                 {!a.aktiv && (
-                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
                     inaktiv
                   </span>
                 )}
@@ -411,7 +411,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-slate-400">Vorgänge an diesem Standort</h2>
+        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Vorgänge an diesem Standort</h2>
         {profil.vorgaenge.length === 0 ? (
           <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
@@ -420,12 +420,12 @@ export function StandortDetailPage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">
+                  <div className="text-xs text-slate-400 dark:text-stone-500">
                     {v.vorgangsnummer}
                     {v.dauerauftrag_id && (
                       <>
@@ -434,7 +434,7 @@ export function StandortDetailPage() {
                       </>
                     )}
                   </div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{v.titel}</div>
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
                 </div>
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
                   {v.status}

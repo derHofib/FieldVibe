@@ -56,12 +56,12 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
     return rechte?.find((e) => e.bereich === bereich && e.aktion === aktion)?.erlaubt ?? false;
   }
 
-  if (isLoading) return <p className="p-4 text-sm text-slate-500 dark:text-slate-400">Lädt…</p>;
+  if (isLoading) return <p className="p-4 text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
 
   return (
-    <div className="overflow-x-auto border-t border-slate-100 dark:border-slate-800">
+    <div className="overflow-x-auto border-t border-slate-100 dark:border-stone-800">
       <table className="w-full text-left text-sm">
-        <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+        <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-stone-800/60 dark:text-stone-400">
           <tr>
             <th className="px-4 py-2">Bereich</th>
             {AKTIONEN.map((aktion) => (
@@ -71,10 +71,10 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+        <tbody className="divide-y divide-slate-100 dark:divide-stone-800">
           {BEREICHE.map((bereich) => (
             <tr key={bereich}>
-              <td className="px-4 py-2 font-medium text-slate-700 dark:text-slate-300">
+              <td className="px-4 py-2 font-medium text-slate-700 dark:text-stone-300">
                 {BEREICH_LABEL[bereich]}
               </td>
               {AKTIONEN.map((aktion) => (
@@ -158,39 +158,39 @@ export function AccountTypenPage() {
         <Link to="/einstellungen" className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">
           ← Zurück zu Einstellungen
         </Link>
-        <h1 className="mt-2 text-lg font-bold text-slate-800 dark:text-slate-100">Account-Typen & Rechte</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h1 className="mt-2 text-lg font-bold text-slate-800 dark:text-stone-100">Account-Typen & Rechte</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
           Definiere beliebig viele eigene Account-Typen (z.B. "Techniker", "Bürokraft") und lege je Typ
           fest, was er in jedem Funktionsbereich sehen, erstellen, bearbeiten und löschen darf.
           mandant_admin ist von dieser Matrix nicht betroffen und hat immer vollen Zugriff.
         </p>
       </div>
 
-      <section className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-        <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-slate-100">Neuen Account-Typ anlegen</h2>
+      <section className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-stone-100">Neuen Account-Typ anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
             <input
               required
               placeholder="z.B. Techniker"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Icon (optional)
             </label>
             <input
               placeholder="🔧"
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
-              className="btn-touch w-20 rounded-md border border-slate-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch w-20 rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
-          <label className="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-slate-300">
+          <label className="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-stone-300">
             <input
               type="checkbox"
               className="h-4 w-4 accent-cyan-600"
@@ -199,7 +199,7 @@ export function AccountTypenPage() {
             />
             Sieht nur zugewiesene Kunden
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-slate-300">
+          <label className="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-stone-300">
             <input
               type="checkbox"
               className="h-4 w-4 accent-cyan-600"
@@ -222,12 +222,12 @@ export function AccountTypenPage() {
       <section className="space-y-3">
         {deleteError && <p className="text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-slate-500 dark:text-slate-400">Lädt…</p>
+          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
         ) : typen && typen.length > 0 ? (
           typen.map((typ) => (
             <div
               key={typ.id}
-              className="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <button
                 onClick={() => setExpandedId(expandedId === typ.id ? null : typ.id)}
@@ -235,8 +235,8 @@ export function AccountTypenPage() {
               >
                 <span className="text-xl">{typ.icon || "🧩"}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-slate-800 dark:text-slate-100">{typ.name}</span>
-                  <span className="block text-xs text-slate-500 dark:text-slate-400">
+                  <span className="block font-semibold text-slate-800 dark:text-stone-100">{typ.name}</span>
+                  <span className="block text-xs text-slate-500 dark:text-stone-400">
                     {typ.anzahl_nutzer} {typ.anzahl_nutzer === 1 ? "Nutzer" : "Nutzer"}
                     {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
                     {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Aufträge selbst übernehmen"}
@@ -264,13 +264,13 @@ export function AccountTypenPage() {
                 >
                   Löschen
                 </button>
-                <span className="text-slate-300 dark:text-slate-600">
+                <span className="text-slate-300 dark:text-stone-600">
                   {expandedId === typ.id ? "▲" : "▼"}
                 </span>
               </button>
               {expandedId === typ.id && (
                 <>
-                  <label className="flex items-center gap-2 border-t border-slate-100 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-300">
+                  <label className="flex items-center gap-2 border-t border-slate-100 px-4 py-3 text-sm text-slate-700 dark:border-stone-800 dark:text-stone-300">
                     <input
                       type="checkbox"
                       className="h-4 w-4 accent-cyan-600"
@@ -290,7 +290,7 @@ export function AccountTypenPage() {
             </div>
           ))
         ) : (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-slate-500 dark:text-stone-400">
             Noch keine Account-Typen angelegt.
           </p>
         )}
