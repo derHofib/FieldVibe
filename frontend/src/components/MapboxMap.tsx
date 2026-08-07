@@ -25,6 +25,10 @@ export function MapboxMap({
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  // Verhindert ein redundantes setStyle() direkt nach dem Aufbau -- die
+  // Karte wird ja schon mit dem richtigen Style konstruiert (siehe gleiche
+  // Begruendung in MapboxFeedMap.tsx).
+  const isErsterRenderRef = useRef(true);
 
   useEffect(() => {
     if (!MAPBOX_TOKEN || !containerRef.current) return;
@@ -60,6 +64,10 @@ export function MapboxMap({
   }, [lng, lat, zoom]);
 
   useEffect(() => {
+    if (isErsterRenderRef.current) {
+      isErsterRenderRef.current = false;
+      return;
+    }
     mapRef.current?.setStyle(STYLE_URL[theme]);
   }, [theme]);
 

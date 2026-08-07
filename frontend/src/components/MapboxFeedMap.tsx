@@ -86,6 +86,14 @@ export function MapboxFeedMap({
 
   const gespeicherterViewportRef = useRef(ladeGespeichertenViewport());
   const autoFitErledigtRef = useRef(false);
+  // Verhindert, dass der Theme-Sync-Effekt unten gleich beim ersten Rendern
+  // ein redundantes setStyle() auf die Karte feuert -- die Karte wird ja
+  // bereits mit dem korrekten Style konstruiert. Ein setStyle() so kurz nach
+  // dem Aufbau, bevor der erste Style ueberhaupt fertig geladen ist, kann
+  // dazu fuehren, dass das "style.load"-Event, auf das ensureLayers/
+  // updateData warten, nie in der erwarteten Form ankommt -- die Punkte
+  // wuerden dann nie auf die Karte gezeichnet.
+  const isErsterRenderRef = useRef(true);
 
   useEffect(() => {
     if (!MAPBOX_TOKEN || !containerRef.current) return;
@@ -217,6 +225,10 @@ export function MapboxFeedMap({
   }, [punkte]);
 
   useEffect(() => {
+    if (isErsterRenderRef.current) {
+      isErsterRenderRef.current = false;
+      return;
+    }
     mapRef.current?.setStyle(STYLE_URL[theme]);
   }, [theme]);
 
