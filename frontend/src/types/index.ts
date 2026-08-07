@@ -996,7 +996,8 @@ export type RechteBereich =
   | "dispo"
   | "abrechnung"
   | "statistik"
-  | "mitarbeiterverwaltung";
+  | "mitarbeiterverwaltung"
+  | "formulare";
 export type RechteAktion = "sehen" | "erstellen" | "bearbeiten" | "loeschen";
 
 export interface RechteMatrixEintrag {
@@ -1116,4 +1117,70 @@ export interface UstVaBericht {
   summe_umsatzsteuer: string;
   summe_vorsteuer: string;
   zahllast: string;
+}
+
+// --- Formular-Baukasten ------------------------------------------------------
+
+export type FormularfeldTyp =
+  | "text"
+  | "textarea"
+  | "zahl"
+  | "datum"
+  | "dropdown"
+  | "mehrfachauswahl"
+  | "ja_nein"
+  | "bewertung"
+  | "foto"
+  | "unterschrift"
+  | "gps"
+  | "qr_scan"
+  | "abschnitt";
+
+export interface Formularfeld {
+  id: string;
+  feld_typ: FormularfeldTyp;
+  label: string;
+  hilfetext: string | null;
+  pflichtfeld: boolean;
+  reihenfolge: number;
+  optionen: Record<string, unknown>;
+}
+
+export interface FormularAuftragstypZuordnung {
+  id: string;
+  leistungstyp: Leistungstyp;
+  pflicht_vor_abschluss: boolean;
+}
+
+export interface Formular {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  aktiv: boolean;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+  felder: Formularfeld[];
+  zuordnungen: FormularAuftragstypZuordnung[];
+}
+
+export interface FormularVerfuegbar {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  pflicht_vor_abschluss: boolean;
+}
+
+export interface VorgangFormular {
+  id: string;
+  vorgang_id: string;
+  formular_id: string;
+  formular_snapshot: { name: string; felder: Formularfeld[] };
+  antworten: Record<string, unknown>;
+  status: "offen" | "abgeschlossen";
+  ausgefuellt_von: string | null;
+  kundensichtbar: boolean;
+  abgeschlossen_am: string | null;
+  created_at: string;
+  updated_at: string;
 }

@@ -23,6 +23,7 @@ const BEREICH_LABEL: Record<RechteBereich, string> = {
   abrechnung: "Angebote & Rechnungen",
   statistik: "Statistik & Exporte",
   mitarbeiterverwaltung: "Mitarbeiterliste",
+  formulare: "Formular-Baukasten",
 };
 const AKTIONEN: RechteAktion[] = ["sehen", "erstellen", "bearbeiten", "loeschen"];
 const AKTION_LABEL: Record<RechteAktion, string> = {

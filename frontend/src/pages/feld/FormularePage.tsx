@@ -1,0 +1,140 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ClipboardList, Plus } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { ApiError } from "../../api/client";
+import { formulareApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+
+export function FormularePage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [formularOffen, setFormularOffen] = useState(false);
+  const [name, setName] = useState("");
+  const [beschreibung, setBeschreibung] = useState("");
+  const [fehler, setFehler] = useState<string | null>(null);
+
+  const { data: formulare, isLoading } = useQuery({
+    queryKey: ["formulare"],
+    queryFn: () => formulareApi.list(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => formulareApi.create({ name: name.trim(), beschreibung: beschreibung.trim() || undefined }),
+    onSuccess: (formular) => {
+      queryClient.invalidateQueries({ queryKey: ["formulare"] });
+      navigate(`/formulare/${formular.id}`);
+    },
+    onError: (err) => setFehler(err instanceof ApiError ? err.message : "Formular konnte nicht angelegt werden"),
+  });
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    setFehler(null);
+    if (!name.trim()) {
+      setFehler("Bitte einen Namen angeben");
+      return;
+    }
+    createMutation.mutate();
+  }
+
+  return (
+    <div className="space-y-4">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        ← Zurück
+      </button>
+
+      <div>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Formulare</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+          Eigene Checklisten und Protokolle, die Technikern beim passenden Auftragstyp zum Ausfüllen
+          angeboten werden.
+        </p>
+      </div>
+
+      {formularOffen ? (
+        <form
+          onSubmit={submit}
+          className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        >
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="z.B. Wartungsprotokoll Heizung"
+              autoFocus
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+              Beschreibung (optional)
+            </label>
+            <input
+              value={beschreibung}
+              onChange={(e) => setBeschreibung(e.target.value)}
+              placeholder="Kurze Erklärung, wofür dieses Formular gedacht ist"
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
+          </div>
+          {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setFormularOffen(false)}
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              disabled={createMutation.isPending}
+              className="btn-touch btn-clay rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Anlegen & bearbeiten
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button
+          onClick={() => setFormularOffen(true)}
+          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
+        >
+          <Plus size={16} strokeWidth={2} /> Neues Formular
+        </button>
+      )}
+
+      {isLoading ? (
+        <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>
+      ) : !formulare || formulare.length === 0 ? (
+        <EmptyState icon={ClipboardList} text="Noch keine Formulare angelegt." />
+      ) : (
+        <div className="space-y-2">
+          {formulare.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => navigate(`/formulare/${f.id}`)}
+              className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+            >
+              <div>
+                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{f.name}</div>
+                <div className="text-xs text-slate-400 dark:text-stone-500">
+                  {f.felder.length} {f.felder.length === 1 ? "Feld" : "Felder"}
+                  {f.zuordnungen.length > 0 &&
+                    ` · ${f.zuordnungen.length} ${f.zuordnungen.length === 1 ? "Auftragstyp" : "Auftragstypen"}`}
+                </div>
+              </div>
+              {!f.aktiv && (
+                <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                  inaktiv
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

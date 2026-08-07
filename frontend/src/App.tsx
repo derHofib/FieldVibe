@@ -23,6 +23,8 @@ import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
 import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { EingangsrechnungDetailPage } from "./pages/feld/EingangsrechnungDetailPage";
 import { FeedPage } from "./pages/feld/FeedPage";
+import { FormularDetailPage } from "./pages/feld/FormularDetailPage";
+import { FormularePage } from "./pages/feld/FormularePage";
 import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
@@ -105,6 +107,8 @@ export function App() {
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
+          <Route path="/formulare" element={<FormularePage />} />
+          <Route path="/formulare/:id" element={<FormularDetailPage />} />
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />

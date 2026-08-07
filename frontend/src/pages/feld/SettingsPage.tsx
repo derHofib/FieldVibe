@@ -1,4 +1,14 @@
-import { BarChart3, Clock, type LucideIcon, Plug, Tags, UserCog, Users, Wrench } from "lucide-react";
+import {
+  BarChart3,
+  ClipboardList,
+  Clock,
+  type LucideIcon,
+  Plug,
+  Tags,
+  UserCog,
+  Users,
+  Wrench,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { IconBadge, type IconTone } from "../../components/IconBadge";
@@ -93,6 +103,15 @@ export function SettingsPage() {
           beschreibung="Eigene Felder je Anlagentyp definieren"
           onClick={() => navigate("/anlagen-felder")}
         />
+        {hatRecht("formulare", "sehen") && (
+          <SettingsLink
+            icon={ClipboardList}
+            tone="violet"
+            label="Formulare"
+            beschreibung="Checklisten & Protokolle für Auftragstypen erstellen"
+            onClick={() => navigate("/formulare")}
+          />
+        )}
         {istModulAktiv(currentUser, "statistik") && (
           <SettingsLink
             icon={BarChart3}
