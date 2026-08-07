@@ -36,6 +36,7 @@ from app.services.audit_service import log_action
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
+from app.services.formular_service import offene_pflichtformulare
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.rechte_service import (
     darf_vorgang_selbst_uebernehmen,
@@ -663,6 +664,15 @@ async def update_vorgang(
     folge_vorgang = None
     if "status" in changes and changes["status"] != alter_status:
         if changes["status"] == "abgeschlossen":
+            offene_formulare = await offene_pflichtformulare(session, vorgang)
+            if offene_formulare:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(
+                        "Vorgang kann nicht abgeschlossen werden, folgende Pflicht-Formulare "
+                        f"fehlen noch: {', '.join(offene_formulare)}"
+                    ),
+                )
             folge_vorgang = await close_vorgang(
                 session,
                 vorgang,
