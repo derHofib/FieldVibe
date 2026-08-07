@@ -7,10 +7,86 @@ import { ApiError } from "../../api/client";
 import { formulareApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { IconBadge } from "../../components/IconBadge";
-import type { Formularfeld, FormularfeldTyp } from "../../types";
-import { FORMULARFELD_TYP_ICON, FORMULARFELD_TYP_LABEL } from "../../utils/formular";
+import type { Formular, Formularfeld, FormularfeldTyp, Leistungstyp } from "../../types";
+import { FORMULARFELD_TYP_ICON, FORMULARFELD_TYP_LABEL, LEISTUNGSTYP_LABEL } from "../../utils/formular";
 
 const FELD_TYP_OPTIONEN = Object.entries(FORMULARFELD_TYP_LABEL) as [FormularfeldTyp, string][];
+const LEISTUNGSTYPEN: Leistungstyp[] = [
+  "installation",
+  "pruefung",
+  "wartung",
+  "stoerung",
+  "beratung",
+  "planung",
+];
+
+function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["formular", formular.id] });
+
+  const createMutation = useMutation({
+    mutationFn: (leistungstyp: Leistungstyp) => formulareApi.createZuordnung(formular.id, { leistungstyp }),
+    onSuccess: invalidate,
+  });
+  const updateMutation = useMutation({
+    mutationFn: ({ zuordnungId, pflicht }: { zuordnungId: string; pflicht: boolean }) =>
+      formulareApi.updateZuordnung(formular.id, zuordnungId, pflicht),
+    onSuccess: invalidate,
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (zuordnungId: string) => formulareApi.deleteZuordnung(formular.id, zuordnungId),
+    onSuccess: invalidate,
+  });
+
+  return (
+    <div>
+      <h2 className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        Auftragstypen
+      </h2>
+      <p className="mb-2 px-1 text-xs text-slate-400 dark:text-stone-500">
+        Bei welchen Auftragstypen wird dieses Formular Technikern zum Ausfüllen angeboten?
+      </p>
+      <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-sm dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        {LEISTUNGSTYPEN.map((typ) => {
+          const zuordnung = formular.zuordnungen.find((z) => z.leistungstyp === typ);
+          const zugeordnet = !!zuordnung;
+          return (
+            <div key={typ} className="flex items-center gap-3 p-3">
+              <label className="flex flex-1 items-center gap-2 text-sm text-slate-700 dark:text-stone-200">
+                <input
+                  type="checkbox"
+                  checked={zugeordnet}
+                  onChange={(e) => {
+                    if (e.target.checked) createMutation.mutate(typ);
+                    else if (zuordnung) deleteMutation.mutate(zuordnung.id);
+                  }}
+                  className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+                />
+                {LEISTUNGSTYP_LABEL[typ]}
+              </label>
+              <label
+                className={`flex items-center gap-1.5 text-xs ${
+                  zugeordnet ? "text-slate-500 dark:text-stone-400" : "text-slate-300 dark:text-stone-600"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  disabled={!zugeordnet}
+                  checked={zuordnung?.pflicht_vor_abschluss ?? false}
+                  onChange={(e) =>
+                    zuordnung && updateMutation.mutate({ zuordnungId: zuordnung.id, pflicht: e.target.checked })
+                  }
+                  className="h-3.5 w-3.5 rounded border-slate-300 disabled:opacity-40 dark:border-stone-600"
+                />
+                Pflicht vor Abschluss
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 interface FeldFormValues {
   feld_typ: FormularfeldTyp;
@@ -302,6 +378,8 @@ export function FormularDetailPage() {
           Aktiv (für Techniker sichtbar)
         </label>
       </div>
+
+      <AuftragstypZuordnungen formular={formular} />
 
       <div>
         <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
