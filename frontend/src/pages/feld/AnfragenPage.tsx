@@ -99,7 +99,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
             <div className="flex gap-2">
               <button
                 onClick={() => setZeigeAnnehmen(true)}
-                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
+                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
               >
                 Annehmen
               </button>
@@ -130,7 +130,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 <button
                   onClick={() => annehmenMutation.mutate()}
                   disabled={annehmenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Vorgang anlegen
                 </button>
@@ -199,7 +199,7 @@ export function AnfragenPage() {
             onClick={() => setStatusFilter(f)}
             className={`btn-touch flex-1 rounded-md py-2 text-sm font-medium capitalize ${
               statusFilter === f
-                ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
                 : "text-slate-600 dark:text-slate-400"
             }`}
           >

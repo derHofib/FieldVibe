@@ -162,7 +162,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             <button
               disabled={!rechnungsnummer || !betragNetto || Number(betragNetto) <= 0 || bestaetigenMutation.isPending}
               onClick={() => bestaetigenMutation.mutate()}
-              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
@@ -425,7 +425,7 @@ export function EingangsrechnungDetailPage() {
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -490,7 +490,7 @@ export function EingangsrechnungDetailPage() {
             <button
               disabled={!zahlungBetrag || addZahlungMutation.isPending}
               onClick={() => addZahlungMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Zahlung erfassen
             </button>

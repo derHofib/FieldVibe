@@ -98,7 +98,7 @@ function NeueAnfrage() {
     return (
       <button
         onClick={() => setZeigen(true)}
-        className="btn-touch w-full rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 py-3 text-sm font-medium text-white"
+        className="btn-touch w-full rounded-lg btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-3 text-sm font-medium text-white"
       >
         + Neue Auftragsanfrage stellen
       </button>
@@ -222,7 +222,7 @@ function NeueAnfrage() {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anfrage senden
         </button>

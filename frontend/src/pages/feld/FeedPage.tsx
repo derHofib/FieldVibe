@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Inbox, List, Map as MapIcon, Repeat, Search, Star } from "lucide-react";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { feedApi, kundenApi, storiesApi } from "../../api/endpoints";
@@ -28,6 +29,19 @@ const STATUS_HEX: Record<VorgangStatus, string> = {
   abgeschlossen: "#22c55e",
   abgerechnet: "#64748b",
   storniert: "#94a3b8",
+};
+
+// Etwas heller/weniger gesaettigt als STATUS_HEX -- dient als ausfadender
+// Rahmen um die Feed-Karte (.card-soft), nicht als vollflaechige Farbe wie
+// bei den Kartenpins, siehe Design-Vorschlag.
+const STATUS_FRAME: Record<VorgangStatus, string> = {
+  neu: "#60a5fa",
+  geplant: "#c084fc",
+  in_arbeit: "#fbbf24",
+  wartet_kunde: "#fb923c",
+  abgeschlossen: "#4ade80",
+  abgerechnet: "#94a3b8",
+  storniert: "#cbd5e1",
 };
 
 const LEISTUNGSTYP_LABEL: Record<string, string> = {
@@ -111,11 +125,13 @@ function FeedCardView({ card }: { card: FeedCard }) {
   const navigate = useNavigate();
   const faelligkeitIso = card.faelligkeit_am?.slice(0, 10);
   return (
+    <div
+      className={`card-soft ${card.status === "storniert" ? "opacity-60 grayscale" : ""}`}
+      style={{ "--frame-color": STATUS_FRAME[card.status] } as CSSProperties}
+    >
     <button
       onClick={() => navigate(`/vorgaenge/${card.id}`)}
-      className={`card-interactive btn-touch flex w-full flex-col gap-2 rounded-lg bg-white p-4 text-left shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800 ${
-        card.status === "storniert" ? "opacity-60 grayscale" : ""
-      }`}
+      className="card-soft-inner btn-touch flex w-full flex-col gap-2 bg-white p-4 text-left dark:bg-slate-900"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -179,6 +195,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
         </div>
       )}
     </button>
+    </div>
   );
 }
 
@@ -343,7 +360,7 @@ export function FeedPage() {
                       onClick={() => toggleStatus(value)}
                       className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
                         aktiv
-                          ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                          ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
                           : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                       }`}
                     >
@@ -413,7 +430,7 @@ export function FeedPage() {
           onClick={() => setAnsicht("liste")}
           className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             ansicht === "liste"
-              ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
               : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           }`}
         >
@@ -423,7 +440,7 @@ export function FeedPage() {
           onClick={() => setAnsicht("karte")}
           className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             ansicht === "karte"
-              ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
               : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
           }`}
         >

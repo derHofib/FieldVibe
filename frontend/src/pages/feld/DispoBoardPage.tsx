@@ -208,7 +208,7 @@ export function DispoBoardPage() {
             ende: toLocalInputValue(ende),
           });
         }}
-        className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
+        className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
         + Neuer Termin
       </button>
@@ -294,7 +294,7 @@ export function DispoBoardPage() {
                   ende_at: new Date(form.ende).toISOString(),
                 })
               }
-              className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>

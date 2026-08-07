@@ -177,7 +177,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -233,7 +233,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -322,7 +322,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -426,7 +426,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -616,7 +616,7 @@ export function IntegrationenPage() {
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             SMTP einrichten
           </button>
@@ -676,7 +676,7 @@ export function IntegrationenPage() {
           <button
             disabled={!imapHost || !imapUser || createImapMutation.isPending}
             onClick={() => createImapMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             IMAP einrichten
           </button>

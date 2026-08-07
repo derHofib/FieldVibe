@@ -100,7 +100,7 @@ function AdresseBearbeiten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -219,7 +219,7 @@ function AnlagenVerwaltung({
           <button
             type="submit"
             disabled={neuMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -260,7 +260,7 @@ function AnlagenVerwaltung({
         <button
           disabled={!zuordnenId || zuordnenMutation.isPending}
           onClick={() => zuordnenMutation.mutate()}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Zuordnen
         </button>

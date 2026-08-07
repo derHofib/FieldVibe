@@ -216,7 +216,7 @@ export function AngebotDetailPage() {
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -275,7 +275,7 @@ export function AngebotDetailPage() {
         <button
           onClick={() => statusMutation.mutate("versendet")}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           An Kunden senden
         </button>

@@ -68,7 +68,7 @@ export function AuswertungPage() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="btn-touch mt-3 w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch mt-3 w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           USt-VA-Bericht laden
         </button>

@@ -115,7 +115,7 @@ export function EmailSection({
                 (betreffPflicht && (!betreff.trim() || !inhalt.trim())) ||
                 sendMutation.isPending
               }
-              className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Senden
             </button>

@@ -303,7 +303,7 @@ export function NewVorgangPage() {
                 type="button"
                 onClick={handleCreateKunde}
                 disabled={createKundeMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 Kunde anlegen
               </button>
@@ -426,7 +426,7 @@ export function NewVorgangPage() {
                 type="button"
                 onClick={handleCreateAnlage}
                 disabled={createAnlageMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
               >
                 Anlage anlegen
               </button>
@@ -529,7 +529,7 @@ export function NewVorgangPage() {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white disabled:opacity-50"
         >
           Vorgang anlegen
         </button>

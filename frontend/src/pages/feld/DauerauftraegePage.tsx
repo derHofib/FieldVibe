@@ -58,7 +58,7 @@ export function DauerauftraegePage() {
 
       <button
         onClick={() => navigate("/dauerauftraege/neu")}
-        className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white"
+        className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white"
       >
         + Neuer Dauer-Auftrag
       </button>

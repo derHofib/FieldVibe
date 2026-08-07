@@ -102,7 +102,7 @@ export function RechnungseingangPage() {
         {kannErstellen && (
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+            className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
           >
             {showForm ? "Abbrechen" : "+ Neu"}
           </button>
@@ -206,7 +206,7 @@ export function RechnungseingangPage() {
               createMutation.isPending
             }
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>

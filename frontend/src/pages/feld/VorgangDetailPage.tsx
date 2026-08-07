@@ -853,7 +853,7 @@ export function VorgangDetailPage() {
               <button
                 onClick={() => zuordnungMutation.mutate()}
                 disabled={!editKundeId || zuordnungMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Speichern
               </button>
@@ -943,7 +943,7 @@ export function VorgangDetailPage() {
                 <button
                   onClick={() => adresseMutation.mutate()}
                   disabled={adresseMutation.isPending}
-                  className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Speichern
                 </button>
@@ -1020,7 +1020,7 @@ export function VorgangDetailPage() {
                 <button
                   onClick={() => anlageHinzufuegenMutation.mutate(neueAnlageId)}
                   disabled={!neueAnlageId || anlageHinzufuegenMutation.isPending}
-                  className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   OK
                 </button>
@@ -1094,7 +1094,7 @@ export function VorgangDetailPage() {
                   uebernehmenMutation.mutate();
                 }}
                 disabled={uebernehmenMutation.isPending || vorgang.zugewiesener_user_id === currentUser.id}
-                className="btn-touch flex items-center gap-1 rounded-md border border-cyan-600 px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-500 dark:text-cyan-400 dark:hover:bg-cyan-500/10"
+                className="btn-touch btn-clay flex items-center gap-1 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <UserCheck size={13} strokeWidth={2} />
                 {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Ticket übernehmen"}
@@ -1131,7 +1131,7 @@ export function VorgangDetailPage() {
                   setShowFolgeDialog(false);
                 }}
                 disabled={statusMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Abschließen
               </button>
@@ -1196,7 +1196,7 @@ export function VorgangDetailPage() {
               onClick={() => startTimerMutation.mutate()}
               disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
               title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
-              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Zeit starten
             </button>
@@ -1307,7 +1307,7 @@ export function VorgangDetailPage() {
             <button
               disabled={!terminTitel || !terminTechnikerId || terminMutation.isPending}
               onClick={() => terminMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -1408,7 +1408,7 @@ export function VorgangDetailPage() {
             <button
               disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
               onClick={() => mangelMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Erfassen
             </button>
@@ -1586,7 +1586,7 @@ export function VorgangDetailPage() {
                 materialBedarfMutation.isPending
               }
               onClick={() => materialBedarfMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Vormerken
             </button>
@@ -1691,7 +1691,7 @@ export function VorgangDetailPage() {
               <button
                 disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
                 onClick={() => materialVerwendenMutation.mutate()}
-                className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Erfassen
               </button>
@@ -1844,7 +1844,7 @@ export function VorgangDetailPage() {
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               Senden
             </button>

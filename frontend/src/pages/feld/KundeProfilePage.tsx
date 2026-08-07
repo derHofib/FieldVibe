@@ -132,7 +132,7 @@ function Stammdaten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -220,7 +220,7 @@ function AnsprechpartnerForm({
         <button
           disabled={!form.name.trim() || speichernLaeuft}
           onClick={() => onSpeichern(form)}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -444,7 +444,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -563,7 +563,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
               type="button"
               disabled={!neuerStandortName.trim() || neuerStandortMutation.isPending}
               onClick={() => neuerStandortMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -588,7 +588,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -687,7 +687,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -981,7 +981,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anlegen
         </button>

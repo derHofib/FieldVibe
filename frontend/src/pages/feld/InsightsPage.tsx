@@ -93,7 +93,7 @@ export function InsightsPage() {
               </span>
               <div className="h-4 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-600"
+                  className="h-full rounded-full btn-clay bg-gradient-to-r from-cyan-500 to-blue-600"
                   style={{ width: `${gesamtVorgaenge > 0 ? (count / gesamtVorgaenge) * 100 : 0}%` }}
                 />
               </div>

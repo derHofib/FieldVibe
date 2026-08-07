@@ -176,7 +176,7 @@ function MaterialZeile({
                 <button
                   onClick={() => bestandSetzenMutation.mutate(b.lager_id)}
                   disabled={bestandSetzenMutation.isPending}
-                  className="btn-touch rounded bg-gradient-to-r from-cyan-500 to-blue-600 px-2 py-0.5 text-white"
+                  className="btn-touch rounded btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-2 py-0.5 text-white"
                 >
                   ✓
                 </button>
@@ -244,7 +244,7 @@ function MaterialZeile({
                 !umlagernVon || !umlagernNach || umlagernVon === umlagernNach || !umlagernMenge || umlagernMutation.isPending
               }
               onClick={() => umlagernMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             >
               Umlagern
             </button>
@@ -331,7 +331,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
           <button
             disabled={!bezeichnung || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -608,7 +608,7 @@ export function GeschaeftPage() {
             }}
             className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium capitalize ${
               tab === t
-                ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
                 : "text-slate-600 dark:text-slate-400"
             }`}
           >
@@ -713,7 +713,7 @@ export function GeschaeftPage() {
           <button
             disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
             onClick={() => createKundeMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -776,7 +776,7 @@ export function GeschaeftPage() {
               createRechnungMutation.isPending
             }
             onClick={() => (tab === "angebote" ? createAngebotMutation.mutate() : createRechnungMutation.mutate())}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -872,7 +872,7 @@ export function GeschaeftPage() {
           <button
             disabled={!materialForm.bezeichnung || createMaterialMutation.isPending}
             onClick={() => createMaterialMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -1080,7 +1080,7 @@ export function GeschaeftPage() {
                 <button
                   disabled={!lieferantName.trim() || createLieferantMutation.isPending}
                   onClick={() => createLieferantMutation.mutate()}
-                  className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Anlegen
                 </button>
@@ -1186,7 +1186,7 @@ export function GeschaeftPage() {
                 <button
                   disabled={bestellungErstellenMutation.isPending}
                   onClick={() => bestellungErstellenMutation.mutate()}
-                  className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Bestellung aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>
@@ -1197,7 +1197,7 @@ export function GeschaeftPage() {
                 <button
                   disabled={angebotAusBedarfenMutation.isPending}
                   onClick={() => angebotAusBedarfenMutation.mutate()}
-                  className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Angebot aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>

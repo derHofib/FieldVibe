@@ -132,14 +132,14 @@ export function BottomNav() {
       )}
 
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-full border border-slate-200 bg-white/90 py-1.5 shadow-lg backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/85"
+        className="navbar-soft fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-full bg-white py-1.5 dark:bg-slate-900"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <NavItem to="/feed" label="Feed" icon={Rss} tone="sky" />
 
         <NavLink
           to="/neu"
-          className="btn-touch -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/40 ring-4 ring-slate-100 dark:ring-slate-950"
+          className="btn-clay -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-slate-950"
           aria-label="Neuer Vorgang"
         >
           <Plus size={26} strokeWidth={2.5} />

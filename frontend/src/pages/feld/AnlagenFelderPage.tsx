@@ -132,7 +132,7 @@ export function AnlagenFelderPage() {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Feld hinzufügen
         </button>

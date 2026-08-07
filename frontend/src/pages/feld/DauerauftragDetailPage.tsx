@@ -144,7 +144,7 @@ export function DauerauftragDetailPage() {
                   <button
                     onClick={() => intervallMutation.mutate(Number(editIntervall))}
                     disabled={intervallMutation.isPending}
-                    className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
+                    className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
                   >
                     Speichern
                   </button>
@@ -272,7 +272,7 @@ export function DauerauftragDetailPage() {
                 <button
                   onClick={() => setAnlagenMutation.mutate()}
                   disabled={setAnlagenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Speichern
                 </button>

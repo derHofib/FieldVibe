@@ -124,7 +124,7 @@ function AdresseBearbeiten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -282,7 +282,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -596,7 +596,7 @@ export function AnlageProfilePage() {
                     intervall_einheit: intervallEinheit,
                   })
                 }
-                className="btn-touch ml-auto rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch ml-auto rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Anlegen
               </button>
@@ -675,7 +675,7 @@ export function AnlageProfilePage() {
                   <button
                     disabled={inventurAnlegenMutation.isPending}
                     onClick={() => inventurAnlegenMutation.mutate()}
-                    className="btn-touch ml-auto rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                    className="btn-touch ml-auto rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                   >
                     Einrichten
                   </button>
