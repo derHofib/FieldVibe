@@ -86,6 +86,7 @@ import type {
   VorgangEvent,
   VorgangEventType,
   Zeiterfassung,
+  ZeiterfassungKategorie,
   ZeiterfassungStatistik,
 } from "../types";
 
@@ -571,6 +572,33 @@ export const zeiterfassungApi = {
         technikerId ? `&techniker_id=${technikerId}` : ""
       }`
     ),
+  manuellErfassen: (body: {
+    start_at: string;
+    ende_at: string;
+    kategorie: ZeiterfassungKategorie;
+    vorgang_id?: string;
+    taetigkeit?: string;
+    abrechenbar?: boolean;
+  }) =>
+    apiFetch<Zeiterfassung>("/api/zeiterfassung/manuell", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  aktualisieren: (
+    id: string,
+    body: Partial<{
+      start_at: string;
+      ende_at: string;
+      kategorie: ZeiterfassungKategorie;
+      vorgang_id: string | null;
+      taetigkeit: string;
+      abrechenbar: boolean;
+    }>
+  ) => apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  loeschen: (id: string) => apiFetch<void>(`/api/zeiterfassung/${id}`, { method: "DELETE" }),
+  freigeben: (id: string) =>
+    apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/freigeben`, { method: "PATCH" }),
+  unfreigegeben: () => apiFetch<Zeiterfassung[]>("/api/zeiterfassung?freigegeben=false"),
 };
 
 export const termineApi = {

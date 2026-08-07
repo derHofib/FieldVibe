@@ -15,6 +15,7 @@ from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
+from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
 
 # fpdf2s core fonts (Helvetica/Times/Courier) sind Windows-1252-kodiert --
 # das deckt deutsche Umlaute/ß ab, aber NICHT das Euro-Zeichen zuverlaessig
@@ -482,7 +483,12 @@ def generate_wochenzettel_pdf(
         )
         gesamt_sekunden += dauer_sekunden
         pdf.cell(25, 8, _fmt_datum(eintrag.start_at), border=1)
-        pdf.cell(30, 8, vorgang.vorgangsnummer if vorgang else "-", border=1)
+        vorgang_spalte = (
+            vorgang.vorgangsnummer
+            if vorgang
+            else ZEITERFASSUNG_KATEGORIE_LABEL.get(eintrag.kategorie, "-")
+        )
+        pdf.cell(30, 8, vorgang_spalte, border=1)
         pdf.cell(75, 8, (eintrag.taetigkeit or "-")[:45], border=1)
         pdf.cell(20, 8, eintrag.start_at.strftime("%H:%M"), border=1, align="R")
         pdf.cell(

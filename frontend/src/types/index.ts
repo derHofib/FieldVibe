@@ -557,15 +557,27 @@ export interface DauerauftragMitVerlauf extends Dauerauftrag {
 
 // --- Feld-Tauglichkeit (Phase 4) -----------------------------------------
 
+// Muss mit ZEITERFASSUNG_KATEGORIEN in backend/app/models/zeiterfassung.py
+// uebereinstimmen.
+export type ZeiterfassungKategorie =
+  | "auftrag"
+  | "verwaltung"
+  | "fahrzeit"
+  | "schulung"
+  | "urlaub"
+  | "krankheit"
+  | "sonstiges";
+
 export interface Zeiterfassung {
   id: string;
-  vorgang_id: string;
+  vorgang_id: string | null;
   techniker_id: string;
   start_at: string;
   ende_at: string | null;
   taetigkeit: string | null;
   abrechenbar: boolean;
   freigegeben: boolean;
+  kategorie: ZeiterfassungKategorie;
   created_at: string;
   updated_at: string;
 }

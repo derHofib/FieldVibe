@@ -40,6 +40,7 @@ import { SearchPage } from "./pages/feld/SearchPage";
 import { SettingsPage } from "./pages/feld/SettingsPage";
 import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
 import { StatistikPage } from "./pages/feld/StatistikPage";
+import { TeamZeitenPage } from "./pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
 import { UpdatePage } from "./pages/UpdatePage";
@@ -126,6 +127,7 @@ export function App() {
           <Route path="/einstellungen" element={<SettingsPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
+          <Route path="/team-zeiten" element={<TeamZeitenPage />} />
           <Route path="/papierkorb" element={<PapierkorbPage />} />
           <Route path="*" element={<Navigate to={standardStartseite} replace />} />
         </Route>

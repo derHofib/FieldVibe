@@ -1,4 +1,4 @@
-import { BarChart3, type LucideIcon, Plug, Tags, UserCog, Users, Wrench } from "lucide-react";
+import { BarChart3, Clock, type LucideIcon, Plug, Tags, UserCog, Users, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { IconBadge, type IconTone } from "../../components/IconBadge";
@@ -35,7 +35,7 @@ function SettingsLink({
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -71,6 +71,15 @@ export function SettingsPage() {
           beschreibung="Welcher Account sieht welche Kunden"
           onClick={() => navigate("/techniker-zuweisungen")}
         />
+        {hatRecht("mitarbeiterverwaltung", "bearbeiten") && (
+          <SettingsLink
+            icon={Clock}
+            tone="cyan"
+            label="Team-Zeiten"
+            beschreibung="Arbeitszeiten je Mitarbeiter einsehen, freigeben, als PDF exportieren"
+            onClick={() => navigate("/team-zeiten")}
+          />
+        )}
       </section>
 
       <section className="space-y-2">
