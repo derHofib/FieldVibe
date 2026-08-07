@@ -4,7 +4,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 RechteBereich = Literal[
-    "vorgaenge", "kunden", "material", "dispo", "abrechnung", "statistik", "mitarbeiterverwaltung"
+    "vorgaenge",
+    "kunden",
+    "material",
+    "dispo",
+    "abrechnung",
+    "statistik",
+    "mitarbeiterverwaltung",
+    "formulare",
 ]
 RechteAktion = Literal["sehen", "erstellen", "bearbeiten", "loeschen"]
 

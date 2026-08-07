@@ -8,6 +8,12 @@ from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.email_log import EmailLog
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
+from app.models.formular import (
+    Formular,
+    FormularAuftragstypZuordnung,
+    Formularfeld,
+    VorgangFormular,
+)
 from app.models.gespeicherter_filter import GespeicherterFilter
 from app.models.highlight import Highlight
 from app.models.integration import MandantIntegration
@@ -49,6 +55,10 @@ __all__ = [
     "DauerauftragZiel",
     "EmailLog",
     "FahrzeugZuweisung",
+    "Formular",
+    "FormularAuftragstypZuordnung",
+    "Formularfeld",
+    "VorgangFormular",
     "GespeicherterFilter",
     "Highlight",
     "MandantIntegration",
