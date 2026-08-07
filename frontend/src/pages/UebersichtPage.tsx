@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { auditLogApi, mandantenApi, systemApi, usersApi } from "../api/endpoints";
+import { Sparkline } from "../components/Sparkline";
 import { useAuth } from "../context/AuthContext";
 
 function SystemStatus() {
@@ -42,6 +43,88 @@ function SystemStatus() {
           : "Scheduler noch ohne erfolgreichen Lauf"}
       </span>
     </div>
+  );
+}
+
+// Ampel-Schwellen fuer CPU/RAM/Speicher: <70% unauffaellig, 70-90% Warnung,
+// >90% kritisch -- dieselbe Einteilung fuer alle drei Metriken, damit die
+// Kacheln auf den ersten Blick vergleichbar sind.
+function ampelFarbe(percent: number): { bar: string; text: string; spark: string } {
+  if (percent >= 90) return { bar: "bg-red-500", text: "text-red-600 dark:text-red-400", spark: "#ef4444" };
+  if (percent >= 70) return { bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400", spark: "#f59e0b" };
+  return { bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400", spark: "#10b981" };
+}
+
+function ResourceRow({
+  label,
+  percent,
+  detail,
+  verlauf,
+}: {
+  label: string;
+  percent: number;
+  detail: string;
+  verlauf: number[];
+}) {
+  const farbe = ampelFarbe(percent);
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm font-medium text-slate-700 dark:text-stone-200">{label}</span>
+        <span className={`text-sm font-bold ${farbe.text}`}>{Math.round(percent)}%</span>
+      </div>
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-stone-800">
+        <div
+          className={`h-full rounded-full transition-all ${farbe.bar}`}
+          style={{ width: `${Math.min(percent, 100)}%` }}
+        />
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-3">
+        <span className="text-xs text-slate-500 dark:text-stone-400">{detail}</span>
+        <Sparkline values={verlauf} color={farbe.spark} />
+      </div>
+    </div>
+  );
+}
+
+function ServerAuslastung() {
+  // Alle 15s neu laden, passend zum Sample-Takt im Backend (siehe
+  // app/services/system_resources_service.py) -- so hinkt die Anzeige nicht
+  // unnoetig hinter frischen Werten her.
+  const { data } = useQuery({
+    queryKey: ["system-resources"],
+    queryFn: systemApi.resources,
+    refetchInterval: 15000,
+  });
+
+  if (!data) return null;
+  const { aktuell, verlauf } = data;
+  // Ringpuffer-Verlauf + aktueller Live-Wert als letzter Punkt, damit die
+  // Sparkline nicht bis zum naechsten Poll hinter der Prozent-Zahl zurueckbleibt.
+  const reihe = (feld: "cpu_percent" | "ram_percent" | "disk_percent") => [
+    ...verlauf.map((s) => s[feld]),
+    aktuell[feld],
+  ];
+
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-bold text-slate-800 dark:text-stone-100">Server-Auslastung</h2>
+      <div className="grid grid-cols-1 gap-5 rounded-lg bg-white p-4 shadow-sm sm:grid-cols-3 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <ResourceRow label="CPU" percent={aktuell.cpu_percent} detail="aktuelle Auslastung" verlauf={reihe("cpu_percent")} />
+        <ResourceRow
+          label="RAM"
+          percent={aktuell.ram_percent}
+          detail={`${(aktuell.ram_used_mb / 1024).toFixed(1)} / ${(aktuell.ram_total_mb / 1024).toFixed(1)} GB`}
+          verlauf={reihe("ram_percent")}
+        />
+        <ResourceRow
+          label="Speicher"
+          percent={aktuell.disk_percent}
+          detail={`${aktuell.disk_used_gb.toFixed(0)} / ${aktuell.disk_total_gb.toFixed(0)} GB`}
+          verlauf={reihe("disk_percent")}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -97,6 +180,8 @@ export function UebersichtPage() {
           sub="letzte Einträge (siehe unten)"
         />
       </div>
+
+      <ServerAuslastung />
 
       <section>
         <div className="mb-4 flex items-center justify-between">

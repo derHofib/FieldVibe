@@ -70,6 +70,7 @@ import type {
   StandortProfil,
   StoriesResponse,
   SystemHealth,
+  SystemResources,
   Tag,
   TagAssignment,
   TagEntityType,
@@ -102,6 +103,9 @@ export const systemApi = {
   // externes Infra-Monitoring per curl) -- dieselbe Antwort wird hier
   // wiederverwendet, um sie zusaetzlich im Super-Admin-Bereich anzuzeigen.
   healthz: () => apiFetch<SystemHealth>("/healthz"),
+  // CPU/RAM/Speicher stecken bewusst hinter super_admin-Login (anders als
+  // /healthz), da sie mehr ueber die Infrastruktur verraten.
+  resources: () => apiFetch<SystemResources>("/api/admin/system/resources"),
 };
 
 export const versionApi = {

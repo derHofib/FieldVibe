@@ -9,6 +9,26 @@ export interface SystemHealth {
   scheduler_letzter_lauf: string | null;
 }
 
+// Antwort von GET /api/admin/system/resources -- super_admin-only, siehe
+// app/services/system_resources_service.py. "verlauf" ist ein In-Memory-
+// Ringpuffer (verliert Werte bei Backend-Neustart), fuer die Sparkline im
+// Super-Admin-Dashboard.
+export interface SystemResourceSample {
+  timestamp: string;
+  cpu_percent: number;
+  ram_percent: number;
+  ram_used_mb: number;
+  ram_total_mb: number;
+  disk_percent: number;
+  disk_used_gb: number;
+  disk_total_gb: number;
+}
+
+export interface SystemResources {
+  aktuell: SystemResourceSample;
+  verlauf: SystemResourceSample[];
+}
+
 // Antwort von GET /api/admin/version -- rein informativ (aktuell
 // deployter Commit vs. neuester Commit auf GitHub). Zeigt bewusst keinen
 // Update-Button: das Backend fuehrt kein Update selbst aus, siehe

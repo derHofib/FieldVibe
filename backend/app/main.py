@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -42,6 +43,7 @@ from app.api.routes import (
     standorte,
     stories,
     stream,
+    system_resources,
     tags,
     termine,
     users,
@@ -57,6 +59,7 @@ from app.core.config import get_settings
 from app.db.session import engine
 from app.services.scheduler_service import get_last_scheduler_run
 from app.services.storage_service import ensure_bucket
+from app.services.system_resources_service import resource_sampler_loop
 
 settings = get_settings()
 
@@ -64,7 +67,9 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await ensure_bucket()
+    sampler_task = asyncio.create_task(resource_sampler_loop())
     yield
+    sampler_task.cancel()
 
 
 app = FastAPI(
@@ -132,6 +137,7 @@ app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
 app.include_router(papierkorb.router)
+app.include_router(system_resources.router)
 
 
 @app.get("/healthz")
