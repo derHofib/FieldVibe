@@ -22,6 +22,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import (
     ZEITERFASSUNG_KATEGORIE_LABEL,
+    ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT,
     ZeiterfassungManuellCreate,
     ZeiterfassungRead,
     ZeiterfassungStart,
@@ -58,13 +59,30 @@ def _tagesbeginn(d: date) -> datetime:
     return datetime.combine(d, time.min, tzinfo=timezone.utc)
 
 
+async def _mit_vorgangsnummern(
+    session: AsyncSession, eintraege: list[Zeiterfassung]
+) -> list[Zeiterfassung]:
+    """Setzt das transiente ZeiterfassungRead.vorgangsnummer-Feld -- ein
+    einzelner Batch-Lookup statt N+1, siehe gleiches Muster bei
+    VorgangRead.zugewiesener_name in app/api/routes/vorgaenge.py."""
+    vorgang_ids = {e.vorgang_id for e in eintraege if e.vorgang_id is not None}
+    vorgaenge_by_id: dict[UUID, Vorgang] = {}
+    for vorgang_id in vorgang_ids:
+        vorgang = await session.get(Vorgang, vorgang_id)
+        if vorgang is not None:
+            vorgaenge_by_id[vorgang_id] = vorgang
+    for eintrag in eintraege:
+        vorgang = vorgaenge_by_id.get(eintrag.vorgang_id) if eintrag.vorgang_id else None
+        eintrag.vorgangsnummer = vorgang.vorgangsnummer if vorgang else None
+    return eintraege
+
+
 @router.get("", response_model=list[ZeiterfassungRead])
 async def list_zeiterfassung(
     vorgang_id: UUID | None = Query(default=None),
     techniker_id: UUID | None = Query(default=None),
     von: date | None = Query(default=None),
     bis: date | None = Query(default=None),
-    freigegeben: bool | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Zeiterfassung]:
@@ -75,8 +93,6 @@ async def list_zeiterfassung(
         stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
     if bis:
         stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
-    if freigegeben is not None:
-        stmt = stmt.where(Zeiterfassung.freigegeben == freigegeben)
 
     if techniker_id:
         # Ausdruecklich nach einem Techniker gefiltert (z.B. die eigene
@@ -103,7 +119,7 @@ async def list_zeiterfassung(
             )
         )
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await _mit_vorgangsnummern(session, list(result.scalars().all()))
 
 
 @router.get(
@@ -205,9 +221,9 @@ async def get_statistik(
                 Zeiterfassung.techniker_id == ziel_id,
                 Zeiterfassung.start_at >= start,
                 Zeiterfassung.ende_at.isnot(None),
-                # Urlaub/Krankheit sind Abwesenheit, keine Arbeitszeit --
+                # Pause/Urlaub/Krankheit sind keine geleistete Arbeitszeit --
                 # zaehlen bewusst nicht in die Stunden-Summen mit ein.
-                Zeiterfassung.kategorie.notin_(("urlaub", "krankheit")),
+                Zeiterfassung.kategorie.notin_(ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT),
             )
         )
         sekunden = sum(
@@ -284,7 +300,10 @@ async def get_laufender_timer(
             Zeiterfassung.techniker_id == auth.user_id, Zeiterfassung.ende_at.is_(None)
         )
     )
-    return result.scalar_one_or_none()
+    eintrag = result.scalar_one_or_none()
+    if eintrag is not None:
+        await _mit_vorgangsnummern(session, [eintrag])
+    return eintrag
 
 
 @router.post(
@@ -349,6 +368,7 @@ async def start_timer(
         "timer",
         {"vorgang_id": str(body.vorgang_id), "techniker_id": str(auth.user_id), "laeuft": True},
     )
+    await _mit_vorgangsnummern(session, [eintrag])
     return eintrag
 
 
@@ -391,6 +411,7 @@ async def stop_timer(
         "timer",
         {"vorgang_id": str(eintrag.vorgang_id), "techniker_id": str(auth.user_id), "laeuft": False},
     )
+    await _mit_vorgangsnummern(session, [eintrag])
     return eintrag
 
 
@@ -446,6 +467,7 @@ async def manuellen_eintrag_anlegen(
     session.add(eintrag)
     await session.flush()
     await session.refresh(eintrag)
+    await _mit_vorgangsnummern(session, [eintrag])
     return eintrag
 
 
@@ -460,11 +482,6 @@ async def zeiterfassung_aktualisieren(
     if eintrag is None or eintrag.techniker_id != auth.user_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
-        )
-    if eintrag.freigegeben:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Bereits freigegebene Zeiterfassungen können nicht mehr geändert werden",
         )
     if eintrag.ende_at is None:
         raise HTTPException(
@@ -494,6 +511,7 @@ async def zeiterfassung_aktualisieren(
         setattr(eintrag, feld, wert)
     await session.flush()
     await session.refresh(eintrag)
+    await _mit_vorgangsnummern(session, [eintrag])
     return eintrag
 
 
@@ -508,37 +526,5 @@ async def zeiterfassung_loeschen(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
-    if eintrag.freigegeben:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Bereits freigegebene Zeiterfassungen können nicht mehr gelöscht werden",
-        )
     await session.delete(eintrag)
     await session.flush()
-
-
-@router.patch(
-    "/{zeiterfassung_id}/freigeben",
-    response_model=ZeiterfassungRead,
-    dependencies=[
-        Depends(require_module("statistik")),
-        Depends(require_recht("mitarbeiterverwaltung", "bearbeiten")),
-    ],
-)
-async def zeiterfassung_freigeben(
-    zeiterfassung_id: UUID,
-    session: AsyncSession = Depends(get_db),
-) -> Zeiterfassung:
-    eintrag = await session.get(Zeiterfassung, zeiterfassung_id)
-    if eintrag is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
-        )
-    if eintrag.ende_at is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Ein laufender Timer kann nicht freigegeben werden"
-        )
-    eintrag.freigegeben = True
-    await session.flush()
-    await session.refresh(eintrag)
-    return eintrag

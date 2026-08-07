@@ -76,7 +76,7 @@ export function SettingsPage() {
             icon={Clock}
             tone="cyan"
             label="Team-Zeiten"
-            beschreibung="Arbeitszeiten je Mitarbeiter einsehen, freigeben, als PDF exportieren"
+            beschreibung="Arbeitszeiten je Mitarbeiter einsehen und als PDF exportieren"
             onClick={() => navigate("/team-zeiten")}
           />
         )}

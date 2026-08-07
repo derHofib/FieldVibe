@@ -10,6 +10,7 @@ const KATEGORIE_OPTIONEN: { value: ZeiterfassungKategorie; label: string }[] = [
   { value: "verwaltung", label: "Verwaltung" },
   { value: "fahrzeit", label: "Fahrzeit" },
   { value: "schulung", label: "Schulung" },
+  { value: "pause", label: "Pause" },
   { value: "urlaub", label: "Urlaub" },
   { value: "krankheit", label: "Krankheit" },
   { value: "sonstiges", label: "Sonstiges" },

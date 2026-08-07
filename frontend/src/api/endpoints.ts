@@ -596,9 +596,6 @@ export const zeiterfassungApi = {
     }>
   ) => apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   loeschen: (id: string) => apiFetch<void>(`/api/zeiterfassung/${id}`, { method: "DELETE" }),
-  freigeben: (id: string) =>
-    apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/freigeben`, { method: "PATCH" }),
-  unfreigegeben: () => apiFetch<Zeiterfassung[]>("/api/zeiterfassung?freigegeben=false"),
 };
 
 export const termineApi = {

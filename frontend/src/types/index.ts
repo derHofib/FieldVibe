@@ -564,6 +564,7 @@ export type ZeiterfassungKategorie =
   | "verwaltung"
   | "fahrzeit"
   | "schulung"
+  | "pause"
   | "urlaub"
   | "krankheit"
   | "sonstiges";
@@ -571,12 +572,14 @@ export type ZeiterfassungKategorie =
 export interface Zeiterfassung {
   id: string;
   vorgang_id: string | null;
+  // Transient, vom Backend aufgeloest -- siehe _mit_vorgangsnummern in
+  // backend/app/api/routes/zeiterfassung.py.
+  vorgangsnummer: string | null;
   techniker_id: string;
   start_at: string;
   ende_at: string | null;
   taetigkeit: string | null;
   abrechenbar: boolean;
-  freigegeben: boolean;
   kategorie: ZeiterfassungKategorie;
   created_at: string;
   updated_at: string;

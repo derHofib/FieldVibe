@@ -16,6 +16,7 @@ ZEITERFASSUNG_KATEGORIEN = (
     "verwaltung",
     "fahrzeit",
     "schulung",
+    "pause",
     "urlaub",
     "krankheit",
     "sonstiges",
@@ -49,5 +50,4 @@ class Zeiterfassung(TimestampMixin, Base):
     ende_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     taetigkeit: Mapped[str | None] = mapped_column(Text)
     abrechenbar: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    freigegeben: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     kategorie: Mapped[str] = mapped_column(Text, nullable=False, default="auftrag")

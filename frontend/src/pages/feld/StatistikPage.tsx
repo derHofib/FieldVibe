@@ -4,40 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 import { EmptyState } from "../../components/EmptyState";
+import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
+import { ZeiterfassungTagesliste } from "../../components/ZeiterfassungTagesliste";
 import { zeiterfassungApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
-import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
-
-function montagDerWoche(datum: Date): Date {
-  const tag = datum.getDay();
-  const diffZuMontag = tag === 0 ? -6 : 1 - tag;
-  const montag = new Date(datum);
-  montag.setDate(datum.getDate() + diffZuMontag);
-  montag.setHours(0, 0, 0, 0);
-  return montag;
-}
-
-function toDateInput(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function formatDauer(startAt: string, endeAt: string | null): number {
-  if (!endeAt) return 0;
-  return (new Date(endeAt).getTime() - new Date(startAt).getTime()) / 1000 / 3600;
-}
-
-// Muss mit ZEITERFASSUNG_KATEGORIE_LABEL in backend/app/schemas/zeiterfassung.py
-// uebereinstimmen ("auftrag" hat bewusst kein Label, siehe Kommentar dort --
-// stattdessen zeigt die Zeile die Vorgangsnummer).
-const KATEGORIE_LABEL: Record<string, string> = {
-  verwaltung: "Verwaltung",
-  fahrzeit: "Fahrzeit",
-  schulung: "Schulung",
-  urlaub: "Urlaub",
-  krankheit: "Krankheit",
-  sonstiges: "Sonstiges",
-};
+import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
 
 export function StatistikPage() {
   const navigate = useNavigate();
@@ -53,10 +25,7 @@ export function StatistikPage() {
   const wocheEnde = new Date(wocheMontag);
   wocheEnde.setDate(wocheMontag.getDate() + 6);
 
-  const {
-    data: wochenEintraege,
-    refetch: wocheNeuLaden,
-  } = useQuery({
+  const { data: wochenEintraege, refetch: wocheNeuLaden } = useQuery({
     queryKey: ["zeiterfassung-woche", currentUser?.id, toDateInput(wocheMontag)],
     queryFn: () =>
       zeiterfassungApi.listFuerZeitraum({
@@ -72,11 +41,6 @@ export function StatistikPage() {
     window.open(url, "_blank");
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
-
-  const wochensumme = (wochenEintraege ?? []).reduce(
-    (summe, e) => summe + formatDauer(e.start_at, e.ende_at),
-    0
-  );
 
   return (
     <div className="space-y-4">
@@ -154,39 +118,13 @@ export function StatistikPage() {
         {(wochenEintraege ?? []).length === 0 ? (
           <EmptyState icon={Clock} text="Keine Zeiterfassungen in dieser Woche." />
         ) : (
-          <div className="space-y-1">
-            {wochenEintraege!.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => e.vorgang_id && navigate(`/vorgaenge/${e.vorgang_id}`)}
-                disabled={!e.vorgang_id}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm disabled:cursor-default dark:bg-stone-800/60"
-              >
-                <span className="text-slate-600 dark:text-stone-300">
-                  {new Date(e.start_at).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })}
-                  {" · "}
-                  <span className="font-medium">
-                    {e.vorgang_id ? "Auftrag" : KATEGORIE_LABEL[e.kategorie] ?? e.kategorie}
-                  </span>
-                  {e.taetigkeit && ` · ${e.taetigkeit}`}
-                  {!e.freigegeben && (
-                    <span className="ml-1.5 text-xs text-amber-600 dark:text-amber-400">
-                      (offen)
-                    </span>
-                  )}
-                </span>
-                <span className="shrink-0 font-medium text-slate-700 dark:text-stone-300">
-                  {formatStundenAlsHHMM(formatDauer(e.start_at, e.ende_at))} Std.
-                </span>
-              </button>
-            ))}
-          </div>
+          <ZeiterfassungTagesliste
+            eintraege={wochenEintraege!}
+            onEintragKlick={(vorgangId) => navigate(`/vorgaenge/${vorgangId}`)}
+          />
         )}
 
-        <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-stone-800">
-          <span className="text-sm font-semibold text-slate-700 dark:text-stone-300">
-            Wochensumme: {formatStundenAlsHHMM(wochensumme)} Std.
-          </span>
+        <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
           <button
             onClick={exportieren}
             className="btn-touch flex items-center gap-1.5 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
