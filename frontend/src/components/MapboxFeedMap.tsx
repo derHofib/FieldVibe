@@ -12,6 +12,42 @@ const STYLE_URL = {
 } as const;
 
 const SOURCE_ID = "vorgaenge";
+const VIEWPORT_STORAGE_KEY = "fieldvibe:feed-karte-viewport";
+
+interface GespeicherterViewport {
+  center: [number, number];
+  zoom: number;
+}
+
+function ladeGespeichertenViewport(): GespeicherterViewport | null {
+  try {
+    const raw = localStorage.getItem(VIEWPORT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (
+      Array.isArray(parsed.center) &&
+      parsed.center.length === 2 &&
+      typeof parsed.zoom === "number"
+    ) {
+      return parsed as GespeicherterViewport;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function speichereViewport(map: mapboxgl.Map): void {
+  const center = map.getCenter();
+  const viewport: GespeicherterViewport = { center: [center.lng, center.lat], zoom: map.getZoom() };
+  try {
+    localStorage.setItem(VIEWPORT_STORAGE_KEY, JSON.stringify(viewport));
+  } catch {
+    // localStorage kann in seltenen Faellen (privater Modus, voller Speicher)
+    // fehlschlagen -- das Merken des Kartenausschnitts ist ein reines
+    // Komfort-Feature, kein Grund die Karte abstuerzen zu lassen.
+  }
+}
 
 export interface FeedMapPunkt {
   id: string;
@@ -48,16 +84,33 @@ export function MapboxFeedMap({
   const onPunktClickRef = useRef(onPunktClick);
   onPunktClickRef.current = onPunktClick;
 
+  const gespeicherterViewportRef = useRef(ladeGespeichertenViewport());
+  const autoFitErledigtRef = useRef(false);
+
   useEffect(() => {
     if (!MAPBOX_TOKEN || !containerRef.current) return;
     mapboxgl.accessToken = MAPBOX_TOKEN;
+    const gespeichert = gespeicherterViewportRef.current;
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE_URL[theme],
-      center: [10.4515, 51.1657],
-      zoom: 5,
+      center: gespeichert?.center ?? [10.4515, 51.1657],
+      zoom: gespeichert?.zoom ?? 5,
     });
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(
+      new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: true,
+        showUserHeading: true,
+      }),
+      "top-right",
+    );
+    // Kartenausschnitt merken, damit Techniker/Disponenten nicht bei jedem
+    // Wechsel in die Kartenansicht wieder auf ihre bevorzugte Region zoomen
+    // muessen -- nur bei echtem Ende der Bewegung speichern, nicht bei jedem
+    // Zwischenschritt.
+    map.on("moveend", () => speichereViewport(map));
 
     // Quelle/Layer leben im Style und verschwinden bei jedem setStyle()
     // (Theme-Wechsel) -- deshalb hier wiederholbar statt nur beim ersten
@@ -148,7 +201,12 @@ export function MapboxFeedMap({
       const source = map.getSource(SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
       if (!source) return;
       source.setData(punkteAlsGeojson(punkte));
-      if (punkte.length > 0) {
+      // Nur einmalig automatisch auf alle Punkte zoomen, und gar nicht, wenn
+      // bereits ein gemerkter Kartenausschnitt geladen wurde -- sonst wuerde
+      // jede weitere Seite, die beim Wechsel in die Kartenansicht nachgeladen
+      // wird, den vom Nutzer gewaehlten (oder gemerkten) Ausschnitt ueberschreiben.
+      if (punkte.length > 0 && !autoFitErledigtRef.current && !gespeicherterViewportRef.current) {
+        autoFitErledigtRef.current = true;
         const bounds = new mapboxgl.LngLatBounds();
         punkte.forEach((p) => bounds.extend([p.lng, p.lat]));
         map.fitBounds(bounds, { padding: 48, maxZoom: 15, duration: 0 });
