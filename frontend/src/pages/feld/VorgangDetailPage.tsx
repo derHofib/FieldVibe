@@ -22,6 +22,7 @@ import {
   zeiterfassungApi,
 } from "../../api/endpoints";
 import { EmailSection } from "../../components/EmailSection";
+import { FormularAbschnitt } from "../../components/FormularAbschnitt";
 import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
@@ -1362,6 +1363,8 @@ export function VorgangDetailPage() {
           </div>
         )}
       </div>
+
+      {vorgang && <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
 
       <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
