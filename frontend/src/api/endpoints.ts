@@ -32,6 +32,8 @@ import type {
   Formular,
   FormularAuftragstypZuordnung,
   Formularfeld,
+  FormularfeldDatenquelle,
+  FormularfeldPosition,
   FormularfeldTyp,
   FormularVerfuegbar,
   GespeicherterFilter,
@@ -555,10 +557,12 @@ export const formulareApi = {
   list: (aktiv?: boolean) =>
     apiFetch<Formular[]>(`/api/formulare${aktiv !== undefined ? `?aktiv=${aktiv}` : ""}`),
   get: (id: string) => apiFetch<Formular>(`/api/formulare/${id}`),
-  create: (body: { name: string; beschreibung?: string }) =>
+  create: (body: { name: string; beschreibung?: string; zeilenhoehe_mm?: number }) =>
     apiFetch<Formular>("/api/formulare", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<{ name: string; beschreibung: string; aktiv: boolean }>) =>
-    apiFetch<Formular>(`/api/formulare/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<{ name: string; beschreibung: string; aktiv: boolean; zeilenhoehe_mm: number }>,
+  ) => apiFetch<Formular>(`/api/formulare/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   createFeld: (
     formularId: string,
     body: {
@@ -566,8 +570,12 @@ export const formulareApi = {
       label: string;
       hilfetext?: string;
       pflichtfeld?: boolean;
-      reihenfolge?: number;
       optionen?: Record<string, unknown>;
+      raster_zeile?: number;
+      raster_spalte?: number;
+      raster_breite?: number;
+      raster_hoehe?: number;
+      datenquelle?: FormularfeldDatenquelle | null;
     },
   ) =>
     apiFetch<Formularfeld>(`/api/formulare/${formularId}/felder`, {
@@ -582,18 +590,18 @@ export const formulareApi = {
       label: string;
       hilfetext: string | null;
       pflichtfeld: boolean;
-      reihenfolge: number;
       optionen: Record<string, unknown>;
+      datenquelle: FormularfeldDatenquelle | null;
     }>,
   ) =>
     apiFetch<Formularfeld>(`/api/formulare/${formularId}/felder/${feldId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
-  reihenfolgeFelder: (formularId: string, feldIds: string[]) =>
-    apiFetch<Formularfeld[]>(`/api/formulare/${formularId}/felder/reihenfolge`, {
-      method: "POST",
-      body: JSON.stringify(feldIds),
+  updatePositionen: (formularId: string, positionen: FormularfeldPosition[]) =>
+    apiFetch<Formularfeld[]>(`/api/formulare/${formularId}/felder/positionen`, {
+      method: "PUT",
+      body: JSON.stringify(positionen),
     }),
   deleteFeld: (formularId: string, feldId: string) =>
     apiFetch<void>(`/api/formulare/${formularId}/felder/${feldId}`, { method: "DELETE" }),

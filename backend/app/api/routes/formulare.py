@@ -13,6 +13,7 @@ from app.schemas.formular import (
     FormularAuftragstypZuordnungUpdate,
     FormularCreate,
     FormularfeldCreate,
+    FormularfeldPosition,
     FormularfeldRead,
     FormularfeldUpdate,
     FormularRead,
@@ -99,6 +100,17 @@ async def update_formular(
 # --- Formularfelder -------------------------------------------------------
 
 
+async def _recompute_reihenfolge(session: AsyncSession, formular_id: UUID) -> None:
+    """Berechnet die reihenfolge-Cache-Spalte neu aus der aktuellen
+    Rasterposition (siehe Formularfeld.reihenfolge-Docstring) -- aufgerufen
+    nach jeder Aenderung, die die Anzahl/Position der Felder betrifft
+    (Anlegen, Bulk-Positionierung, Loeschen)."""
+    felder = await formular_service.felder_fuer(session, formular_id)
+    for position, feld in enumerate(felder):
+        feld.reihenfolge = position
+    await session.flush()
+
+
 @router.post(
     "/{formular_id}/felder",
     response_model=FormularfeldRead,
@@ -112,6 +124,13 @@ async def create_formularfeld(
     session: AsyncSession = Depends(get_db),
 ) -> Formularfeld:
     await _get_formular_or_404(session, formular_id)
+    raster_zeile = body.raster_zeile
+    if "raster_zeile" not in body.model_fields_set:
+        # Kein explizites Ziel angegeben (Standardfall "Feld hinzufügen"):
+        # neues Feld als volle Zeile unterhalb aller bestehenden anhaengen,
+        # damit es garantiert nicht mit etwas Vorhandenem ueberlappt.
+        bestehende = await formular_service.felder_fuer(session, formular_id)
+        raster_zeile = max((f.raster_zeile + f.raster_hoehe for f in bestehende), default=0)
     feld = Formularfeld(
         mandant_id=auth.mandant_id,
         formular_id=formular_id,
@@ -119,11 +138,16 @@ async def create_formularfeld(
         label=body.label,
         hilfetext=body.hilfetext,
         pflichtfeld=body.pflichtfeld,
-        reihenfolge=body.reihenfolge,
         optionen=body.optionen,
+        raster_zeile=raster_zeile,
+        raster_spalte=body.raster_spalte,
+        raster_breite=body.raster_breite,
+        raster_hoehe=body.raster_hoehe,
+        datenquelle=body.datenquelle,
     )
     session.add(feld)
     await session.flush()
+    await _recompute_reihenfolge(session, formular_id)
     await session.refresh(feld)
     return feld
 
@@ -149,29 +173,38 @@ async def update_formularfeld(
     return feld
 
 
-@router.post(
-    "/{formular_id}/felder/reihenfolge",
+@router.put(
+    "/{formular_id}/felder/positionen",
     response_model=list[FormularfeldRead],
     dependencies=[Depends(require_recht("formulare", "bearbeiten"))],
 )
-async def umsortieren_formularfelder(
+async def update_formularfeld_positionen(
     formular_id: UUID,
-    feld_ids: list[UUID],
+    positionen: list[FormularfeldPosition],
     session: AsyncSession = Depends(get_db),
 ) -> list[Formularfeld]:
-    """Setzt reihenfolge anhand der uebergebenen Feld-Id-Reihenfolge in
-    einem Zug -- erspart dem Baukasten-Editor N einzelne PATCH-Aufrufe bei
-    Drag&Drop/Auf-Ab-Sortierung."""
+    """Bulk-Update aller Rasterpositionen nach Drag&Drop/Resize im
+    Canvas-Editor -- erspart N einzelne PATCH-Aufrufe und prueft
+    Ueberlappung, die als DB-CHECK-Constraint nicht ausdrueckbar ist."""
     felder = await formular_service.felder_fuer(session, formular_id)
     felder_by_id = {f.id: f for f in felder}
-    if set(feld_ids) != set(felder_by_id):
+    if {p.id for p in positionen} != set(felder_by_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Feld-Liste stimmt nicht mit den vorhandenen Feldern dieses Formulars überein",
+            detail="Positions-Liste stimmt nicht mit den vorhandenen Feldern dieses Formulars überein",
         )
-    for position, feld_id in enumerate(feld_ids):
-        felder_by_id[feld_id].reihenfolge = position
+    if formular_service.raster_ueberlappung(positionen):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Felder überlappen sich im Raster"
+        )
+    for p in positionen:
+        feld = felder_by_id[p.id]
+        feld.raster_zeile = p.raster_zeile
+        feld.raster_spalte = p.raster_spalte
+        feld.raster_breite = p.raster_breite
+        feld.raster_hoehe = p.raster_hoehe
     await session.flush()
+    await _recompute_reihenfolge(session, formular_id)
     return await formular_service.felder_fuer(session, formular_id)
 
 
@@ -188,6 +221,7 @@ async def delete_formularfeld(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feld nicht gefunden")
     await session.delete(feld)
     await session.flush()
+    await _recompute_reihenfolge(session, formular_id)
 
 
 # --- Zuordnungen zu Auftragstypen (Leistungstyp) --------------------------

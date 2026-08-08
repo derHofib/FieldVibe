@@ -6,8 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.models.anlage import Anlage
 from app.models.formular import Formular, VorgangFormular
+from app.models.kunde import Kunde
 from app.models.mandant import Mandant
+from app.models.standort import Standort
+from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.formular import (
@@ -101,11 +105,20 @@ async def start_vorgang_formular(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formular nicht gefunden")
 
     felder = await formular_service.felder_fuer(session, formular.id)
+    kunde = await session.get(Kunde, vorgang.kunde_id) if vorgang.kunde_id else None
+    anlage = await session.get(Anlage, vorgang.anlage_id) if vorgang.anlage_id else None
+    standort = await session.get(Standort, vorgang.standort_id) if vorgang.standort_id else None
+    zugewiesener = (
+        await session.get(User, vorgang.zugewiesener_user_id) if vorgang.zugewiesener_user_id else None
+    )
     vorgang_formular = VorgangFormular(
         mandant_id=auth.mandant_id,
         vorgang_id=vorgang_id,
         formular_id=formular.id,
         formular_snapshot=formular_service.snapshot_von(formular, felder),
+        antworten=formular_service.auto_fill_werte(
+            felder, vorgang, kunde, anlage, standort, zugewiesener.name if zugewiesener else None
+        ),
         ausgefuellt_von=auth.user_id,
     )
     session.add(vorgang_formular)

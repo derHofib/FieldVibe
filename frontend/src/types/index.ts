@@ -1136,6 +1136,31 @@ export type FormularfeldTyp =
   | "qr_scan"
   | "abschnitt";
 
+// Feste Rasterbreite des Canvas-Editors/PDF-Exports -- projektweit fix,
+// siehe GRID_SPALTEN in backend/app/models/formular.py.
+export const FORMULAR_GRID_SPALTEN = 12;
+
+export type FormularfeldDatenquelle =
+  | "vorgang.vorgangsnummer"
+  | "vorgang.titel"
+  | "vorgang.beschreibung"
+  | "vorgang.leistungstyp"
+  | "vorgang.faelligkeit_am"
+  | "vorgang.adresse"
+  | "vorgang.zugewiesener_name"
+  | "kunde.kundennummer"
+  | "kunde.name"
+  | "kunde.adresse"
+  | "kunde.ansprechpartner"
+  | "anlage.bezeichnung"
+  | "anlage.adresse"
+  | "anlage.hersteller"
+  | "anlage.modell"
+  | "anlage.seriennummer"
+  | "anlage.anlagentyp"
+  | "standort.bezeichnung"
+  | "standort.adresse";
+
 export interface Formularfeld {
   id: string;
   feld_typ: FormularfeldTyp;
@@ -1144,6 +1169,19 @@ export interface Formularfeld {
   pflichtfeld: boolean;
   reihenfolge: number;
   optionen: Record<string, unknown>;
+  raster_zeile: number;
+  raster_spalte: number;
+  raster_breite: number;
+  raster_hoehe: number;
+  datenquelle: FormularfeldDatenquelle | null;
+}
+
+export interface FormularfeldPosition {
+  id: string;
+  raster_zeile: number;
+  raster_spalte: number;
+  raster_breite: number;
+  raster_hoehe: number;
 }
 
 export interface FormularAuftragstypZuordnung {
@@ -1158,6 +1196,7 @@ export interface Formular {
   beschreibung: string | null;
   aktiv: boolean;
   erstellt_von: string | null;
+  zeilenhoehe_mm: number;
   created_at: string;
   updated_at: string;
   felder: Formularfeld[];
@@ -1175,7 +1214,12 @@ export interface VorgangFormular {
   id: string;
   vorgang_id: string;
   formular_id: string;
-  formular_snapshot: { name: string; felder: Formularfeld[] };
+  formular_snapshot: {
+    snapshot_version?: number;
+    name: string;
+    zeilenhoehe_mm?: number;
+    felder: Formularfeld[];
+  };
   antworten: Record<string, unknown>;
   status: "offen" | "abgeschlossen";
   ausgefuellt_von: string | null;

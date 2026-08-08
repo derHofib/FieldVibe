@@ -1,9 +1,13 @@
+import re
 import uuid
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
 from app.db.session import system_session
 from app.models.account_typ import AccountTyp, AccountTypRecht
+from app.services.pdf_service import generate_formular_pdf
 from tests.conftest import auth_headers, login
 
 
@@ -121,7 +125,10 @@ async def test_doppelte_zuordnung_gleicher_leistungstyp_wird_abgelehnt(
 
 
 @pytest.mark.asyncio
-async def test_felder_umsortieren(client, make_mandant, make_user):
+async def test_felder_werden_beim_anlegen_automatisch_gestapelt(client, make_mandant, make_user):
+    """Ohne explizite raster_zeile haengt create_formularfeld ein neues Feld
+    unterhalb aller bestehenden an -- Absicherung gegen versehentliche
+    Ueberlappung bei der Standard-"Feld hinzufügen"-Bedienung."""
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
@@ -133,26 +140,140 @@ async def test_felder_umsortieren(client, make_mandant, make_user):
         await client.post(
             f"/api/formulare/{formular['id']}/felder",
             headers=auth_headers(token),
-            json={"feld_typ": "text", "label": "A", "reihenfolge": 0},
+            json={"feld_typ": "text", "label": "A"},
         )
     ).json()
     feld_b = (
         await client.post(
             f"/api/formulare/{formular['id']}/felder",
             headers=auth_headers(token),
-            json={"feld_typ": "text", "label": "B", "reihenfolge": 1},
+            json={"feld_typ": "text", "label": "B"},
+        )
+    ).json()
+    assert feld_a["raster_zeile"] == 0
+    assert feld_b["raster_zeile"] == 1
+    assert feld_a["reihenfolge"] == 0
+    assert feld_b["reihenfolge"] == 1
+
+
+@pytest.mark.asyncio
+async def test_felder_positionen_bulk_update(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+    feld_a = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "A"},
+        )
+    ).json()
+    feld_b = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "B"},
         )
     ).json()
 
-    resp = await client.post(
-        f"/api/formulare/{formular['id']}/felder/reihenfolge",
+    # Nebeneinander in Zeile 0 statt gestapelt anordnen.
+    resp = await client.put(
+        f"/api/formulare/{formular['id']}/felder/positionen",
         headers=auth_headers(token),
-        json=[feld_b["id"], feld_a["id"]],
+        json=[
+            {"id": feld_a["id"], "raster_zeile": 0, "raster_spalte": 0, "raster_breite": 6, "raster_hoehe": 1},
+            {"id": feld_b["id"], "raster_zeile": 0, "raster_spalte": 6, "raster_breite": 6, "raster_hoehe": 1},
+        ],
     )
     assert resp.status_code == 200
-    reihenfolgen = {f["id"]: f["reihenfolge"] for f in resp.json()}
-    assert reihenfolgen[feld_b["id"]] == 0
-    assert reihenfolgen[feld_a["id"]] == 1
+    body = {f["id"]: f for f in resp.json()}
+    assert body[feld_a["id"]]["raster_spalte"] == 0
+    assert body[feld_b["id"]]["raster_spalte"] == 6
+    assert body[feld_a["id"]]["reihenfolge"] == 0
+    assert body[feld_b["id"]]["reihenfolge"] == 1
+
+
+@pytest.mark.asyncio
+async def test_felder_positionen_ueberlappung_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+    feld_a = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "A"},
+        )
+    ).json()
+    feld_b = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "B"},
+        )
+    ).json()
+
+    resp = await client.put(
+        f"/api/formulare/{formular['id']}/felder/positionen",
+        headers=auth_headers(token),
+        json=[
+            {"id": feld_a["id"], "raster_zeile": 0, "raster_spalte": 0, "raster_breite": 8, "raster_hoehe": 1},
+            {"id": feld_b["id"], "raster_zeile": 0, "raster_spalte": 4, "raster_breite": 8, "raster_hoehe": 1},
+        ],
+    )
+    assert resp.status_code == 400
+    assert "überlappen" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_raster_bounds_werden_validiert(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+    resp = await client.post(
+        f"/api/formulare/{formular['id']}/felder",
+        headers=auth_headers(token),
+        json={"feld_typ": "text", "label": "Zu breit", "raster_spalte": 8, "raster_breite": 8},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_datenquelle_nur_fuer_passende_feldtypen(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+
+    abgelehnt = await client.post(
+        f"/api/formulare/{formular['id']}/felder",
+        headers=auth_headers(token),
+        json={"feld_typ": "dropdown", "label": "X", "datenquelle": "kunde.name"},
+    )
+    assert abgelehnt.status_code == 422
+
+    erlaubt = await client.post(
+        f"/api/formulare/{formular['id']}/felder",
+        headers=auth_headers(token),
+        json={"feld_typ": "text", "label": "Kunde", "datenquelle": "kunde.name"},
+    )
+    assert erlaubt.status_code == 201
+    assert erlaubt.json()["datenquelle"] == "kunde.name"
 
 
 @pytest.mark.asyncio
@@ -458,3 +579,115 @@ async def test_offenen_entwurf_verwerfen_aber_abgeschlossenen_nicht(
         f"/api/vorgang-formulare/{start2['id']}", headers=auth_headers(token)
     )
     assert delete_abgeschlossen.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_auto_fill_beim_start_vorbelegt_und_ueberschreibbar(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant, name="Café Sonnenschein")
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "Auto-Fill-Test"})
+    ).json()
+    feld = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "Kundenname", "datenquelle": "kunde.name"},
+        )
+    ).json()
+    feld_ohne_quelle = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "Notiz"},
+        )
+    ).json()
+
+    start = (
+        await client.post(
+            f"/api/vorgang-formulare?vorgang_id={vorgang.id}",
+            headers=auth_headers(token),
+            json={"formular_id": formular["id"]},
+        )
+    ).json()
+    assert start["antworten"][feld["id"]] == "Café Sonnenschein"
+    assert feld_ohne_quelle["id"] not in start["antworten"]
+
+    # Bleibt trotz Vorbelegung durch den Techniker ueberschreibbar.
+    ueberschrieben = await client.patch(
+        f"/api/vorgang-formulare/{start['id']}",
+        headers=auth_headers(token),
+        json={"antworten": {**start["antworten"], feld["id"]: "Anderer Name"}},
+    )
+    assert ueberschrieben.status_code == 200
+    assert ueberschrieben.json()["antworten"][feld["id"]] == "Anderer Name"
+
+
+def _fake_mandant(name: str = "Test GmbH") -> SimpleNamespace:
+    return SimpleNamespace(name=name)
+
+
+def _fake_vorgang(vorgangsnummer: str = "V-00001", titel: str = "Testvorgang") -> SimpleNamespace:
+    return SimpleNamespace(vorgangsnummer=vorgangsnummer, titel=titel)
+
+
+def test_pdf_export_legacy_snapshot_ohne_version_faellt_auf_flow_renderer_zurueck():
+    """Ein VorgangFormular-Snapshot ohne snapshot_version stammt aus einer
+    Ausfuellung von vor der Raster-Umstellung -- generate_formular_pdf muss
+    dafuer weiterhin den urspruenglichen, rein sequenziellen Renderer
+    verwenden, damit bereits ausgestellte PDFs bit-identisch bleiben."""
+    vorgang_formular = SimpleNamespace(
+        formular_snapshot={
+            "name": "Altes Formular",
+            "felder": [
+                {"id": "f1", "feld_typ": "text", "label": "Notiz", "reihenfolge": 0, "pflichtfeld": False},
+            ],
+        },
+        antworten={"f1": "Alles ok"},
+        abgeschlossen_am=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+    )
+    pdf_bytes = generate_formular_pdf(_fake_mandant(), _fake_vorgang(), vorgang_formular, bilder={})
+    assert pdf_bytes.startswith(b"%PDF")
+
+
+def test_pdf_export_raster_snapshot_mit_seitenumbruch():
+    """40 volle Zeilen a 8mm sprengen definitiv eine A4-Seite -- erzwingt den
+    Seitenumbruch-Zweig im Raster-Renderer (Feld wird komplett auf die
+    naechste Seite verschoben statt angeschnitten)."""
+    felder = [
+        {
+            "id": f"f{i}",
+            "feld_typ": "text",
+            "label": f"Feld {i}",
+            "reihenfolge": i,
+            "pflichtfeld": False,
+            "raster_zeile": i,
+            "raster_spalte": 0,
+            "raster_breite": 12,
+            "raster_hoehe": 1,
+            "datenquelle": None,
+        }
+        for i in range(40)
+    ]
+    vorgang_formular = SimpleNamespace(
+        formular_snapshot={
+            "snapshot_version": 2,
+            "name": "Grosses Formular",
+            "zeilenhoehe_mm": 8,
+            "felder": felder,
+        },
+        antworten={f["id"]: f"Wert {f['id']}" for f in felder},
+        abgeschlossen_am=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+    )
+    pdf_bytes = generate_formular_pdf(_fake_mandant(), _fake_vorgang(), vorgang_formular, bilder={})
+    assert pdf_bytes.startswith(b"%PDF")
+    seiten = re.findall(rb"/Type\s*/Page\b", pdf_bytes)
+    assert len(seiten) >= 2

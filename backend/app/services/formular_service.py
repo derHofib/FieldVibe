@@ -1,17 +1,22 @@
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.anlage import Anlage
 from app.models.formular import (
     Formular,
     FormularAuftragstypZuordnung,
     Formularfeld,
     VorgangFormular,
 )
+from app.models.kunde import Kunde
+from app.models.standort import Standort
 from app.models.vorgang import Vorgang
 from app.schemas.formular import (
     FormularAuftragstypZuordnungRead,
+    FormularfeldPosition,
     FormularfeldRead,
     FormularRead,
     FormularVerfuegbar,
@@ -21,12 +26,25 @@ from app.services import storage_service
 
 FELDTYPEN_MIT_DATEI = ("foto", "unterschrift")
 
+# Deutsche Labels fuer Leistungstyp-Werte beim Auto-Fill (siehe
+# auto_fill_werte) -- Frontend-Pendant ist LEISTUNGSTYP_LABEL in
+# frontend/src/utils/formular.ts, hier bewusst dupliziert statt geteilt, da
+# Backend und Frontend keine gemeinsame Konstanten-Quelle haben.
+LEISTUNGSTYP_LABEL = {
+    "installation": "Installation",
+    "pruefung": "Prüfung",
+    "wartung": "Wartung",
+    "stoerung": "Störung",
+    "beratung": "Beratung",
+    "planung": "Planung",
+}
+
 
 async def felder_fuer(session: AsyncSession, formular_id: UUID) -> list[Formularfeld]:
     result = await session.execute(
         select(Formularfeld)
         .where(Formularfeld.formular_id == formular_id)
-        .order_by(Formularfeld.reihenfolge)
+        .order_by(Formularfeld.raster_zeile, Formularfeld.raster_spalte)
     )
     return list(result.scalars().all())
 
@@ -51,11 +69,17 @@ async def to_read_model(session: AsyncSession, formular: Formular) -> FormularRe
 
 
 def snapshot_von(formular: Formular, felder: list[Formularfeld]) -> dict:
-    """Friert Name und Felddefinitionen zum Startzeitpunkt einer Ausfuellung
-    ein (siehe VorgangFormular.formular_snapshot) -- spaetere Aenderungen an
-    der Formular-Vorlage duerfen diese Ausfuellung nicht mehr beeinflussen."""
+    """Friert Name, Raster-Layout und Felddefinitionen zum Startzeitpunkt
+    einer Ausfuellung ein (siehe VorgangFormular.formular_snapshot) --
+    spaetere Aenderungen an der Formular-Vorlage duerfen diese Ausfuellung
+    nicht mehr beeinflussen. snapshot_version unterscheidet das neue
+    Raster-Layout (2) von aelteren, bereits abgeschlossenen Ausfuellungen
+    ohne Rasterdaten (siehe generate_formular_pdf, das fuer Version 1 auf
+    den bisherigen Flow-Renderer zurueckfaellt)."""
     return {
+        "snapshot_version": 2,
         "name": formular.name,
+        "zeilenhoehe_mm": formular.zeilenhoehe_mm,
         "felder": [
             {
                 "id": str(f.id),
@@ -65,10 +89,98 @@ def snapshot_von(formular: Formular, felder: list[Formularfeld]) -> dict:
                 "pflichtfeld": f.pflichtfeld,
                 "reihenfolge": f.reihenfolge,
                 "optionen": f.optionen,
+                "raster_zeile": f.raster_zeile,
+                "raster_spalte": f.raster_spalte,
+                "raster_breite": f.raster_breite,
+                "raster_hoehe": f.raster_hoehe,
+                "datenquelle": f.datenquelle,
             }
             for f in felder
         ],
     }
+
+
+def _adresse_einzeilig(adresse: dict | None) -> str | None:
+    adresse = adresse or {}
+    teile = []
+    if adresse.get("strasse"):
+        teile.append(str(adresse["strasse"]))
+    ort = " ".join(str(adresse[k]) for k in ("plz", "ort") if adresse.get(k))
+    if ort:
+        teile.append(ort)
+    return ", ".join(teile) or None
+
+
+def auto_fill_werte(
+    felder: list[Formularfeld],
+    vorgang: Vorgang,
+    kunde: Kunde | None,
+    anlage: Anlage | None,
+    standort: Standort | None,
+    zugewiesener_name: str | None,
+) -> dict[str, Any]:
+    """Loest fuer jedes Feld mit gesetzter datenquelle (siehe
+    FORMULARFELD_DATENQUELLEN) den passenden Wert aus dem Vorgang/Kunde/
+    Anlage/Standort auf -- Ergebnis wird beim Start einer Ausfuellung als
+    initiale antworten uebergeben (siehe start_vorgang_formular in
+    app/api/routes/vorgang_formulare.py). Fehlt die referenzierte Entitaet
+    (z.B. anlage.* an einem Vorgang ohne anlage_id), wird das Feld einfach
+    ausgelassen statt einen Fehler zu werfen -- der Techniker fuellt es
+    dann wie gewohnt manuell aus."""
+    quellen: dict[str, Any] = {
+        "vorgang.vorgangsnummer": vorgang.vorgangsnummer,
+        "vorgang.titel": vorgang.titel,
+        "vorgang.beschreibung": vorgang.beschreibung,
+        "vorgang.leistungstyp": LEISTUNGSTYP_LABEL.get(vorgang.leistungstyp, vorgang.leistungstyp),
+        "vorgang.faelligkeit_am": (
+            vorgang.faelligkeit_am.date().isoformat() if vorgang.faelligkeit_am else None
+        ),
+        "vorgang.adresse": _adresse_einzeilig(vorgang.adresse),
+        "vorgang.zugewiesener_name": zugewiesener_name,
+    }
+    if kunde is not None:
+        quellen["kunde.kundennummer"] = kunde.kundennummer
+        quellen["kunde.name"] = kunde.name
+        quellen["kunde.adresse"] = _adresse_einzeilig(kunde.adresse)
+        erster_ansprechpartner = kunde.ansprechpartner[0] if kunde.ansprechpartner else None
+        quellen["kunde.ansprechpartner"] = (
+            erster_ansprechpartner.get("name") if erster_ansprechpartner else None
+        )
+    if anlage is not None:
+        quellen["anlage.bezeichnung"] = anlage.bezeichnung
+        quellen["anlage.adresse"] = _adresse_einzeilig(anlage.adresse)
+        quellen["anlage.hersteller"] = anlage.hersteller
+        quellen["anlage.modell"] = anlage.modell
+        quellen["anlage.seriennummer"] = anlage.seriennummer
+        quellen["anlage.anlagentyp"] = anlage.anlagentyp
+    if standort is not None:
+        quellen["standort.bezeichnung"] = standort.bezeichnung
+        quellen["standort.adresse"] = _adresse_einzeilig(standort.adresse)
+
+    antworten: dict[str, Any] = {}
+    for feld in felder:
+        if feld.datenquelle is None:
+            continue
+        wert = quellen.get(feld.datenquelle)
+        if wert is not None:
+            antworten[str(feld.id)] = wert
+    return antworten
+
+
+def raster_ueberlappung(positionen: list[FormularfeldPosition]) -> bool:
+    """Prueft paarweise (O(n^2), unkritisch bei realistischer Feldanzahl je
+    Formular), ob sich zwei Rechtecke im Raster ueberlappen -- verwendet vom
+    Bulk-Positions-Endpunkt (siehe app/api/routes/formulare.py), da
+    Ueberlappung als DB-CHECK-Constraint nicht ausdrueckbar ist."""
+    for i, a in enumerate(positionen):
+        a_links, a_rechts = a.raster_spalte, a.raster_spalte + a.raster_breite
+        a_oben, a_unten = a.raster_zeile, a.raster_zeile + a.raster_hoehe
+        for b in positionen[i + 1 :]:
+            b_links, b_rechts = b.raster_spalte, b.raster_spalte + b.raster_breite
+            b_oben, b_unten = b.raster_zeile, b.raster_zeile + b.raster_hoehe
+            if a_links < b_rechts and b_links < a_rechts and a_oben < b_unten and b_oben < a_unten:
+                return True
+    return False
 
 
 async def verfuegbare_formulare_fuer(

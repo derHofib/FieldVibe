@@ -7,7 +7,7 @@ from fpdf.enums import XPos, YPos
 
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.bestellung import Bestellung, BestellungPosition
-from app.models.formular import VorgangFormular
+from app.models.formular import GRID_SPALTEN, VorgangFormular
 from app.models.kunde import Kunde
 from app.models.lieferant import Lieferant
 from app.models.mandant import Mandant
@@ -573,7 +573,24 @@ def generate_formular_pdf(
     """bilder enthaelt die heruntergeladenen Rohbytes je Foto-/
     Unterschrift-Feld (feld_id -> Bilddaten) -- der Route-Handler laedt
     diese vorher async aus dem Storage, da diese Funktion selbst
-    synchron laeuft (siehe app/api/routes/vorgang_formulare.py)."""
+    synchron laeuft (siehe app/api/routes/vorgang_formulare.py).
+    snapshot_version 2 (siehe formular_service.snapshot_von) traegt ein
+    Raster-Layout und wird 1:1 wie im Canvas-Editor positioniert gerendert;
+    aeltere, bereits abgeschlossene Ausfuellungen ohne dieses Feld laufen
+    unveraendert ueber den bisherigen Flow-Renderer, damit einmal
+    ausgestellte PDFs bit-identisch reproduzierbar bleiben."""
+    snapshot = vorgang_formular.formular_snapshot
+    if snapshot.get("snapshot_version") != 2:
+        return _generate_formular_pdf_legacy(mandant, vorgang, vorgang_formular, bilder)
+    return _generate_formular_pdf_raster(mandant, vorgang, vorgang_formular, bilder)
+
+
+def _generate_formular_pdf_legacy(
+    mandant: Mandant,
+    vorgang: Vorgang,
+    vorgang_formular: VorgangFormular,
+    bilder: dict[str, bytes],
+) -> bytes:
     snapshot = vorgang_formular.formular_snapshot
     antworten = vorgang_formular.antworten
 
@@ -625,5 +642,153 @@ def generate_formular_pdf(
 
     if not snapshot.get("felder"):
         pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    return bytes(pdf.output())
+
+
+_FORMULAR_RAND_LR = 15
+_FORMULAR_RAND_OBEN_FOLGESEITE = 22
+_FORMULAR_RAND_UNTEN = 15
+
+
+class _FormularPDF(FPDF):
+    """Eigene Subklasse fuer den Raster-Renderer (snapshot_version 2) --
+    Seite 1 traegt den vollen Kopf (Mandant/Formularname/Vorgang/Datum) als
+    normalen Flow-Text (siehe _generate_formular_pdf_raster), Folgeseiten nur
+    eine schmale Kennzeile, analog zum Muster in _AngebotPDF."""
+
+    def __init__(self, mandant: Mandant, formular_name: str, vorgangsnummer: str):
+        super().__init__()
+        self._mandant = mandant
+        self._formular_name = formular_name
+        self._vorgangsnummer = vorgangsnummer
+        self.set_margins(_FORMULAR_RAND_LR, 15, _FORMULAR_RAND_LR)
+
+    def header(self) -> None:
+        if self.page_no() == 1:
+            return
+        self.set_xy(_FORMULAR_RAND_LR, 12)
+        self.set_font("Helvetica", "", 9)
+        self.set_text_color(120, 120, 120)
+        self.cell(
+            0,
+            6,
+            f"{self._mandant.name} · {self._formular_name} · {self._vorgangsnummer} · Seite {self.page_no()}",
+        )
+        self.set_text_color(0, 0, 0)
+
+
+def _formular_spaltenbreite_mm(pdf: FPDF) -> float:
+    nutzbare_breite = pdf.w - pdf.l_margin - pdf.r_margin
+    return nutzbare_breite / GRID_SPALTEN
+
+
+def _render_formular_feld_zelle(
+    pdf: FPDF,
+    feld: dict,
+    antwort: object,
+    bild: bytes | None,
+    x: float,
+    y: float,
+    breite: float,
+    hoehe: float,
+) -> None:
+    if feld["feld_typ"] == "abschnitt":
+        pdf.set_xy(x, y + hoehe / 2 - 3)
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(breite, 6, feld["label"])
+        pdf.line(x, y + hoehe - 1, x + breite, y + hoehe - 1)
+        return
+
+    label_hoehe = min(4.0, hoehe / 2)
+    pdf.set_xy(x, y)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.set_text_color(110, 110, 110)
+    pdf.cell(breite, label_hoehe, feld["label"])
+    pdf.set_text_color(0, 0, 0)
+
+    wert_y = y + label_hoehe
+    wert_hoehe = max(hoehe - label_hoehe, 3.0)
+    if feld["feld_typ"] in ("foto", "unterschrift"):
+        if bild:
+            try:
+                pdf.image(BytesIO(bild), x=x, y=wert_y, w=breite, h=wert_hoehe)
+            except RuntimeError:
+                pdf.set_xy(x, wert_y)
+                pdf.set_font("Helvetica", "", 9)
+                pdf.cell(breite, wert_hoehe, "[Bild konnte nicht eingebettet werden]")
+        else:
+            pdf.set_xy(x, wert_y)
+            pdf.set_font("Helvetica", "", 9)
+            pdf.cell(breite, wert_hoehe, "-")
+        return
+
+    pdf.set_xy(x, wert_y)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.multi_cell(breite, min(wert_hoehe, 5.0), _formular_antwort_text(feld, antwort))
+
+
+def _generate_formular_pdf_raster(
+    mandant: Mandant,
+    vorgang: Vorgang,
+    vorgang_formular: VorgangFormular,
+    bilder: dict[str, bytes],
+) -> bytes:
+    snapshot = vorgang_formular.formular_snapshot
+    antworten = vorgang_formular.antworten
+    formular_name = snapshot.get("name", "Formular")
+    zeilenhoehe_mm = snapshot.get("zeilenhoehe_mm", 8)
+    felder = sorted(snapshot.get("felder", []), key=lambda f: (f["raster_zeile"], f["raster_spalte"]))
+
+    pdf = _FormularPDF(mandant, formular_name, vorgang.vorgangsnummer)
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(
+        0, 6, f"{formular_name}: {vorgang.vorgangsnummer} - {vorgang.titel}", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+    )
+    pdf.cell(
+        0,
+        6,
+        f"Ausgefuellt am {_fmt_datum(vorgang_formular.abgeschlossen_am or vorgang_formular.created_at)}",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.ln(4)
+
+    if not felder:
+        pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        return bytes(pdf.output())
+
+    spaltenbreite_mm = _formular_spaltenbreite_mm(pdf)
+    raster_start_y = pdf.get_y()
+    seite_start_zeile = 0
+
+    def zeilen_kapazitaet(start_y: float) -> int:
+        verfuegbar = pdf.h - pdf.b_margin - start_y
+        return max(int(verfuegbar // zeilenhoehe_mm), 1)
+
+    kapazitaet = zeilen_kapazitaet(raster_start_y)
+
+    for feld in felder:
+        lokale_zeile = feld["raster_zeile"] - seite_start_zeile
+        if lokale_zeile + feld["raster_hoehe"] > kapazitaet:
+            # Feld wuerde ueber die Seitengrenze ragen -- komplett auf die
+            # naechste Seite verschieben statt anzuschneiden (siehe Docstring
+            # von generate_formular_pdf).
+            pdf.add_page()
+            seite_start_zeile = feld["raster_zeile"]
+            raster_start_y = _FORMULAR_RAND_OBEN_FOLGESEITE
+            kapazitaet = zeilen_kapazitaet(raster_start_y)
+            lokale_zeile = 0
+
+        x = pdf.l_margin + feld["raster_spalte"] * spaltenbreite_mm
+        y = raster_start_y + lokale_zeile * zeilenhoehe_mm
+        breite = feld["raster_breite"] * spaltenbreite_mm
+        hoehe = feld["raster_hoehe"] * zeilenhoehe_mm
+        antwort = antworten.get(feld["id"])
+        bild = bilder.get(feld["id"]) if feld["feld_typ"] in ("foto", "unterschrift") else None
+        _render_formular_feld_zelle(pdf, feld, antwort, bild, x, y, breite, hoehe)
 
     return bytes(pdf.output())
