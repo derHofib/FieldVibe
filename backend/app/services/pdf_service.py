@@ -24,6 +24,41 @@ from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
 # Einbettung, ohne dass Betraege missverstaendlich waeren.
 _WAEHRUNG = "EUR"
 
+# Freitext im Formular-Baukasten (Feldlabels, Antworten) kommt direkt vom
+# Nutzer -- Zeichen ausserhalb von Windows-1252 (z.B. "Ω", "∆") liess fpdf2
+# bislang mit einer FPDFUnicodeEncodingException abbrechen und den gesamten
+# PDF-Export mit 500 fehlschlagen. _pdf_safe_text() ersetzt die gaengigsten
+# technischen Sonderzeichen durch ASCII-Entsprechungen und faengt alles
+# uebrige als Fallback ab, damit ein einzelnes unbekanntes Zeichen nie mehr
+# den kompletten Export zum Absturz bringt.
+_PDF_TEXT_REPLACEMENTS: dict[str, str] = {
+    "Ω": "Ohm",
+    "μ": "u",
+    "µ": "u",
+    "Δ": "d",
+    "∆": "d",
+    "√": "sqrt",
+    "±": "+/-",
+    "→": "->",
+    "≈": "~",
+    "≤": "<=",
+    "≥": ">=",
+    "–": "-",
+    "—": "-",
+    "…": "...",
+}
+
+
+def _pdf_safe_text(text: object) -> str:
+    s = "" if text is None else str(text)
+    for src, dst in _PDF_TEXT_REPLACEMENTS.items():
+        s = s.replace(src, dst)
+    try:
+        s.encode("cp1252")
+    except UnicodeEncodeError:
+        s = s.encode("cp1252", errors="replace").decode("cp1252")
+    return s
+
 
 def _fmt_zahl(zahl: Decimal) -> str:
     return f"{zahl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -560,8 +595,8 @@ def _formular_antwort_text(feld: dict, antwort: object) -> str:
     if feld["feld_typ"] == "ja_nein":
         return "Ja" if antwort else "Nein"
     if feld["feld_typ"] == "mehrfachauswahl" and isinstance(antwort, list):
-        return ", ".join(str(v) for v in antwort) or "-"
-    return str(antwort)
+        return _pdf_safe_text(", ".join(str(v) for v in antwort) or "-")
+    return _pdf_safe_text(antwort)
 
 
 def generate_formular_pdf(
@@ -597,12 +632,12 @@ def _generate_formular_pdf_legacy(
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 10, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(
         0,
         6,
-        f"{snapshot.get('name', 'Formular')}: {vorgang.vorgangsnummer} - {vorgang.titel}",
+        _pdf_safe_text(f"{snapshot.get('name', 'Formular')}: {vorgang.vorgangsnummer} - {vorgang.titel}"),
         new_x=XPos.LMARGIN,
         new_y=YPos.NEXT,
     )
@@ -618,12 +653,12 @@ def _generate_formular_pdf_legacy(
     for feld in sorted(snapshot.get("felder", []), key=lambda f: f["reihenfolge"]):
         if feld["feld_typ"] == "abschnitt":
             pdf.set_font("Helvetica", "B", 12)
-            pdf.cell(0, 8, feld["label"], new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.cell(0, 8, _pdf_safe_text(feld["label"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.ln(1)
             continue
 
         pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 6, feld["label"], new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.cell(0, 6, _pdf_safe_text(feld["label"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.set_font("Helvetica", "", 10)
 
         antwort = antworten.get(feld["id"])
@@ -673,7 +708,9 @@ class _FormularPDF(FPDF):
         self.cell(
             0,
             6,
-            f"{self._mandant.name} · {self._formular_name} · {self._vorgangsnummer} · Seite {self.page_no()}",
+            _pdf_safe_text(
+                f"{self._mandant.name} · {self._formular_name} · {self._vorgangsnummer} · Seite {self.page_no()}"
+            ),
         )
         self.set_text_color(0, 0, 0)
 
@@ -696,7 +733,7 @@ def _render_formular_feld_zelle(
     if feld["feld_typ"] == "abschnitt":
         pdf.set_xy(x, y + hoehe / 2 - 3)
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(breite, 6, feld["label"])
+        pdf.cell(breite, 6, _pdf_safe_text(feld["label"]))
         pdf.line(x, y + hoehe - 1, x + breite, y + hoehe - 1)
         return
 
@@ -704,7 +741,7 @@ def _render_formular_feld_zelle(
     pdf.set_xy(x, y)
     pdf.set_font("Helvetica", "", 7)
     pdf.set_text_color(110, 110, 110)
-    pdf.cell(breite, label_hoehe, feld["label"])
+    pdf.cell(breite, label_hoehe, _pdf_safe_text(feld["label"]))
     pdf.set_text_color(0, 0, 0)
 
     wert_y = y + label_hoehe
@@ -743,10 +780,14 @@ def _generate_formular_pdf_raster(
     pdf = _FormularPDF(mandant, formular_name, vorgang.vorgangsnummer)
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 10, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(
-        0, 6, f"{formular_name}: {vorgang.vorgangsnummer} - {vorgang.titel}", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+        0,
+        6,
+        _pdf_safe_text(f"{formular_name}: {vorgang.vorgangsnummer} - {vorgang.titel}"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
     )
     pdf.cell(
         0,
