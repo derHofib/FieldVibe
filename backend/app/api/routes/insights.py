@@ -14,7 +14,7 @@ from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.insights import Insights, TechnikerAuslastung
 from app.services import eingangsrechnung_service
-from app.services.rechnung_service import netto_betrag, positionen_fuer
+from app.services.rechnung_service import bezahlter_betrag, brutto_betrag, positionen_fuer, zahlungen_fuer
 from app.services.zuweisung_service import technik_user_ids
 
 router = APIRouter(
@@ -44,16 +44,17 @@ async def get_insights(
 
     offene_rechnungen = (
         await session.execute(
-            select(Rechnung).where(Rechnung.status.in_(("entwurf", "versendet")))
+            select(Rechnung).where(Rechnung.status.in_(("entwurf", "versendet", "teilweise_bezahlt")))
         )
     ).scalars().all()
-    # netto_betrag() statt r.betrag_netto direkt: bei Teil-/Sammelrechnungen
-    # mit eigenen Positionen (Nacharbeit) ist deren Summe die Quelle der
-    # Wahrheit, nicht das (dann ungenutzte) Feld auf der Rechnung selbst.
+    # brutto_betrag() minus bereits gebuchter Zahlungen statt des vollen
+    # Bruttobetrags -- sonst zaehlt eine zu 90% bezahlte Rechnung (Status
+    # teilweise_bezahlt) hier weiterhin mit ihrem vollen Betrag mit.
     offene_rechnungssumme = Decimal("0")
     for r in offene_rechnungen:
-        netto = netto_betrag(r, await positionen_fuer(session, r.id))
-        offene_rechnungssumme += netto * (Decimal("1") + r.mwst_satz / Decimal("100"))
+        positionen = await positionen_fuer(session, r.id)
+        zahlungen = await zahlungen_fuer(session, r.id)
+        offene_rechnungssumme += brutto_betrag(r, positionen) - bezahlter_betrag(zahlungen)
     offene_rechnungssumme = offene_rechnungssumme.quantize(Decimal("0.01"))
 
     offene_eingangsrechnungen = (

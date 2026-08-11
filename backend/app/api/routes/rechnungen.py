@@ -17,7 +17,7 @@ from app.api.deps import (
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
-from app.models.rechnung import Rechnung, RechnungPosition
+from app.models.rechnung import RECHNUNG_ZAHLUNGSARTEN, Rechnung, RechnungPosition, RechnungZahlung
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
@@ -27,6 +27,7 @@ from app.schemas.rechnung import (
     RechnungPositionCreate,
     RechnungRead,
     RechnungUpdate,
+    RechnungZahlungCreate,
 )
 from app.services import papierkorb_service
 from app.services.csv_service import csv_response
@@ -34,14 +35,19 @@ from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
 from app.services.rechnung_service import (
     archiviere_pdf,
+    bezahlter_betrag,
+    brutto_betrag,
     brutto_sql,
     erstelle_stornorechnung,
     kunden_namen_fuer,
     netto_sql,
+    offen_sql,
     pdf_bytes_fuer,
     positionen_fuer,
+    status_nach_zahlung,
     to_read_model,
     to_read_model_bulk,
+    zahlungen_fuer,
 )
 
 router = APIRouter(
@@ -61,6 +67,11 @@ _GUELTIGE_UEBERGAENGE = {
     # konform nicht einfach umgeschrieben werden, dafuer gibt es den eigenen
     # Endpunkt POST /{id}/storno (siehe erstelle_stornorechnung).
     "versendet": {"bezahlt"},
+    # "teilweise_bezahlt" ist nie Ziel eines PATCH-Uebergangs -- es ist ein
+    # abgeleiteter Zustand, den ausschliesslich POST /{id}/zahlungen setzt
+    # (siehe status_nach_zahlung). "bezahlt" bleibt hier als manueller
+    # Notausgang ("Rest ist abgehakt") erreichbar.
+    "teilweise_bezahlt": {"bezahlt"},
 }
 
 
@@ -72,7 +83,7 @@ async def _storniert_rechnung_fuer(session: AsyncSession, rechnung: Rechnung) ->
 
 # Statuswerte, bei denen noch Geld aussteht -- Grundlage fuer "nur_offen",
 # "nur_ueberfaellig" und die Spalte summe_offen der Uebersicht.
-_OFFENE_STATUS = ("entwurf", "versendet")
+_OFFENE_STATUS = ("entwurf", "versendet", "teilweise_bezahlt")
 
 # Sortierschluessel der Uebersicht. Ein "-" davor kehrt die Richtung um.
 # brutto_sql() statt einer Spalte, weil Brutto nirgends persistiert ist.
@@ -194,8 +205,11 @@ async def list_rechnungen(
     )
     rechnungen = list(seite.scalars().all())
 
+    # offen_sql() statt einer festen "voller Betrag oder 0"-Fallunterscheidung,
+    # sonst zaehlt eine teilweise_bezahlt-Rechnung mit dem vollen Bruttobetrag
+    # statt dem tatsaechlich noch offenen Rest.
     offen_wenn_unbezahlt = case(
-        (Rechnung.status.in_(_OFFENE_STATUS), brutto_sql()), else_=Decimal("0")
+        (Rechnung.status.in_(_OFFENE_STATUS), offen_sql()), else_=Decimal("0")
     )
     summen = (
         await session.execute(
@@ -455,6 +469,21 @@ async def add_position(
     return await to_read_model(session, rechnung)
 
 
+async def _auf_bezahlt_setzen(
+    session: AsyncSession, rechnung: Rechnung, auth: AuthContext, *, bezahlt_am: datetime
+) -> None:
+    """Einzige Stelle, die eine Rechnung auf 'bezahlt' abschliesst und dabei
+    den Vorgang auf 'abgerechnet' setzt -- aufgerufen sowohl vom manuellen
+    PATCH-Abschluss als auch vom Zahlungs-Endpunkt, damit der Nebeneffekt in
+    beiden Faellen identisch ist und NIE bei teilweise_bezahlt feuert."""
+    rechnung.status = "bezahlt"
+    rechnung.bezahlt_am = bezahlt_am
+    if rechnung.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, rechnung.vorgang_id)
+        if vorgang is not None and vorgang.status != "abgerechnet":
+            vorgang.status = "abgerechnet"
+
+
 @router.patch(
     "/{rechnung_id}",
     response_model=RechnungRead,
@@ -485,10 +514,19 @@ async def update_rechnung(
                 detail="Diese Rechnung hat eigene Positionen -- der Betrag ergibt sich aus deren Summe",
             )
         rechnung.betrag_netto = body.betrag_netto
-    if body.faellig_am is not None:
-        rechnung.faellig_am = body.faellig_am
-    if body.leistungsdatum is not None:
-        rechnung.leistungsdatum = body.leistungsdatum
+    if body.faellig_am is not None or body.leistungsdatum is not None:
+        # GoBD: beide Felder stehen im archivierten PDF, leistungsdatum ist
+        # zudem Pflichtangabe nach Paragraph 14 Abs. 4 Nr. 6 UStG -- nach dem
+        # Versand duerfen sie sich nicht mehr aendern.
+        if rechnung.status != "entwurf":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Fälligkeit und Leistungsdatum können nur im Entwurf geändert werden",
+            )
+        if body.faellig_am is not None:
+            rechnung.faellig_am = body.faellig_am
+        if body.leistungsdatum is not None:
+            rechnung.leistungsdatum = body.leistungsdatum
 
     neuer_status = body.status
     if neuer_status is not None:
@@ -500,21 +538,34 @@ async def update_rechnung(
         jetzt = datetime.now(timezone.utc)
         if neuer_status == "versendet":
             rechnung.versendet_am = jetzt
-        elif neuer_status == "bezahlt":
-            rechnung.bezahlt_am = jetzt
-
-        rechnung.status = neuer_status
-
-        if neuer_status == "versendet":
+            rechnung.status = neuer_status
             kunde = await session.get(Kunde, rechnung.kunde_id)
             mandant = await session.get(Mandant, auth.mandant_id)
             await archiviere_pdf(session, rechnung, mandant, kunde)
+        elif neuer_status == "bezahlt":
+            # Invariante offener_betrag == brutto - Summe(Zahlungen) muss
+            # immer gelten -- ein manueller "als bezahlt markieren"-Abschluss
+            # ohne Gegenbuchung wuerde sie brechen (das genaue Altdaten-
+            # problem, das der Backfill in Migration 0056 behoben hat).
+            positionen = await positionen_fuer(session, rechnung_id)
+            zahlungen = await zahlungen_fuer(session, rechnung_id)
+            offen = brutto_betrag(rechnung, positionen) - bezahlter_betrag(zahlungen)
+            if offen > 0:
+                session.add(
+                    RechnungZahlung(
+                        mandant_id=rechnung.mandant_id,
+                        rechnung_id=rechnung.id,
+                        betrag=offen,
+                        datum=date.today(),
+                        erstellt_von=auth.user_id,
+                        notiz="Restbetrag beim manuellen Abschluss gebucht",
+                    )
+                )
+            await _auf_bezahlt_setzen(session, rechnung, auth, bezahlt_am=jetzt)
 
         if rechnung.vorgang_id is not None:
             vorgang = await session.get(Vorgang, rechnung.vorgang_id)
             if vorgang is not None:
-                if neuer_status == "bezahlt" and vorgang.status != "abgerechnet":
-                    vorgang.status = "abgerechnet"
                 session.add(
                     VorgangEvent(
                         mandant_id=auth.mandant_id,
@@ -548,10 +599,10 @@ async def storno_rechnung(
     rechnung = await session.get(Rechnung, rechnung_id)
     if rechnung is None or rechnung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
-    if rechnung.status not in ("versendet", "bezahlt"):
+    if rechnung.status not in ("versendet", "teilweise_bezahlt", "bezahlt"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Nur versendete oder bezahlte Rechnungen können storniert werden",
+            detail="Nur versendete, teilweise bezahlte oder bezahlte Rechnungen können storniert werden",
         )
 
     storno = await erstelle_stornorechnung(session, rechnung, auth.user_id)
@@ -576,6 +627,184 @@ async def storno_rechnung(
     await session.flush()
     await session.refresh(storno)
     return await to_read_model(session, storno)
+
+
+@router.post(
+    "/{rechnung_id}/zahlungen",
+    response_model=RechnungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def add_zahlung(
+    rechnung_id: UUID,
+    body: RechnungZahlungCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status not in ("versendet", "teilweise_bezahlt"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Zahlungen sind erst ab dem Versand möglich",
+        )
+    if body.betrag <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zahlungsbetrag muss positiv sein")
+    zahlungsdatum = body.datum or date.today()
+    if zahlungsdatum > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Zahlungsdatum darf nicht in der Zukunft liegen"
+        )
+    if body.zahlungsart is not None and body.zahlungsart not in RECHNUNG_ZAHLUNGSARTEN:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unbekannte Zahlungsart")
+
+    positionen = await positionen_fuer(session, rechnung_id)
+    zahlungen = await zahlungen_fuer(session, rechnung_id)
+    brutto = brutto_betrag(rechnung, positionen)
+    offener_betrag = brutto - bezahlter_betrag(zahlungen)
+    if body.betrag > offener_betrag:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Zahlung übersteigt den offenen Betrag ({offener_betrag} EUR)",
+        )
+
+    session.add(
+        RechnungZahlung(
+            mandant_id=rechnung.mandant_id,
+            rechnung_id=rechnung_id,
+            betrag=body.betrag,
+            datum=zahlungsdatum,
+            zahlungsart=body.zahlungsart,
+            notiz=body.notiz,
+            erstellt_von=auth.user_id,
+        )
+    )
+    await session.flush()
+
+    neuer_offener_betrag = offener_betrag - body.betrag
+    neuer_status = status_nach_zahlung(brutto, bezahlter_betrag(zahlungen) + body.betrag, rechnung.status)
+    if neuer_status == "bezahlt":
+        # bezahlt_am wird das Datum der Zahlung, die die Rechnung schliesst
+        # -- nicht mehr immer "jetzt" wie vor Phase 2, das war der Kern des
+        # fehlenden rueckdatierbaren Zahlungsdatums.
+        await _auf_bezahlt_setzen(
+            session, rechnung, auth, bezahlt_am=datetime.combine(zahlungsdatum, datetime.min.time(), timezone.utc)
+        )
+    else:
+        rechnung.status = neuer_status
+
+    if rechnung.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, rechnung.vorgang_id)
+        if vorgang is not None:
+            session.add(
+                VorgangEvent(
+                    mandant_id=auth.mandant_id,
+                    vorgang_id=vorgang.id,
+                    event_type="rechnung_status",
+                    author_user_id=auth.user_id,
+                    body=(
+                        f"Rechnung {rechnung.rechnungsnummer}: Zahlung über {body.betrag} EUR erfasst "
+                        f"({neuer_offener_betrag} EUR offen)"
+                    ),
+                    payload={"rechnung_id": str(rechnung.id), "betrag": str(body.betrag)},
+                )
+            )
+
+    await session.flush()
+    await session.refresh(rechnung)
+    return await to_read_model(session, rechnung)
+
+
+@router.post(
+    "/{rechnung_id}/zahlungen/{zahlung_id}/storno",
+    response_model=RechnungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def storno_zahlung(
+    rechnung_id: UUID,
+    zahlung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    """Korrigiert eine Fehlbuchung durch eine negative Gegenbuchung statt
+    die Zeile zu aendern/loeschen -- das Zahlungs-Ledger bleibt additiv
+    (siehe RechnungZahlung-Docstring). Umgeht bewusst _GUELTIGE_UEBERGAENGE:
+    dieser Pfad korrigiert Bewegungsdaten, schreibt keinen Belegstatus fort."""
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status == "storniert":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Rechnung ist storniert"
+        )
+
+    original = await session.get(RechnungZahlung, zahlung_id)
+    if original is None or original.rechnung_id != rechnung_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zahlung nicht gefunden")
+    if original.betrag <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Nur Zahlungen können storniert werden"
+        )
+
+    bereits_stornierte = await session.execute(
+        select(RechnungZahlung).where(RechnungZahlung.storniert_zahlung_id == zahlung_id)
+    )
+    if bereits_stornierte.scalars().first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Diese Zahlung wurde bereits storniert"
+        )
+
+    session.add(
+        RechnungZahlung(
+            mandant_id=rechnung.mandant_id,
+            rechnung_id=rechnung_id,
+            betrag=-original.betrag,
+            datum=date.today(),
+            erstellt_von=auth.user_id,
+            notiz=f"Storno der Zahlung vom {original.datum.strftime('%d.%m.%Y')}",
+            storniert_zahlung_id=zahlung_id,
+        )
+    )
+    await session.flush()
+
+    positionen = await positionen_fuer(session, rechnung_id)
+    zahlungen = await zahlungen_fuer(session, rechnung_id)
+    brutto = brutto_betrag(rechnung, positionen)
+    bezahlt = bezahlter_betrag(zahlungen)
+    if bezahlt <= 0:
+        rechnung.status = "versendet"
+        rechnung.bezahlt_am = None
+    elif bezahlt < brutto:
+        rechnung.status = "teilweise_bezahlt"
+        rechnung.bezahlt_am = None
+    # bezahlt >= brutto bliebe "bezahlt" -- praktisch nur bei einem Storno,
+    # das den offenen Betrag nicht wirklich veraendert.
+
+    if rechnung.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, rechnung.vorgang_id)
+        if vorgang is not None:
+            session.add(
+                VorgangEvent(
+                    mandant_id=auth.mandant_id,
+                    vorgang_id=vorgang.id,
+                    event_type="rechnung_status",
+                    author_user_id=auth.user_id,
+                    body=f"Rechnung {rechnung.rechnungsnummer}: Zahlung über {original.betrag} EUR storniert",
+                    payload={"rechnung_id": str(rechnung.id), "zahlung_id": str(zahlung_id)},
+                )
+            )
+
+    await session.flush()
+    await session.refresh(rechnung)
+    return await to_read_model(session, rechnung)
 
 
 @router.get("/{rechnung_id}/pdf")

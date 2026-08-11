@@ -16,7 +16,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.db.session import system_session
 from app.services.email_service import send_email_and_log
 from app.services.pdf_service import generate_mahnung_pdf
-from app.services.rechnung_service import netto_betrag, positionen_fuer
+from app.services.rechnung_service import bezahlter_betrag, brutto_betrag, positionen_fuer, zahlungen_fuer
 from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
 
 MAHNWESEN_AKTION = "mahnwesen_eskalation_run"
@@ -84,8 +84,11 @@ async def run_mahnwesen_eskalation(mandant_ids: list[UUID] | None = None) -> dic
     mandanten_cache: dict[UUID, Mandant] = {}
 
     async with system_session() as session:
+        # teilweise_bezahlt mahnt weiter -- eine Rechnung, die zu 90%
+        # bezahlt ist, aber ueberfaellig bleibt, soll nicht aufhoeren zu
+        # mahnen, nur weil sie den Status gewechselt hat.
         ueberfaellig_stmt = select(Rechnung).where(
-            Rechnung.status == "versendet",
+            Rechnung.status.in_(("versendet", "teilweise_bezahlt")),
             Rechnung.faellig_am.isnot(None),
             Rechnung.faellig_am < heute,
         )
@@ -94,6 +97,12 @@ async def run_mahnwesen_eskalation(mandant_ids: list[UUID] | None = None) -> dic
         ueberfaellig = (await session.execute(ueberfaellig_stmt)).scalars().all()
 
         for rechnung in ueberfaellig:
+            positionen = await positionen_fuer(session, rechnung.id)
+            zahlungen = await zahlungen_fuer(session, rechnung.id)
+            offener_betrag = brutto_betrag(rechnung, positionen) - bezahlter_betrag(zahlungen)
+            if offener_betrag <= 0:
+                continue
+
             tage_ueberfaellig = (heute - rechnung.faellig_am).days
             ziel_stufe = _ziel_mahnstufe(tage_ueberfaellig)
             if ziel_stufe <= rechnung.mahnstufe:
@@ -116,14 +125,21 @@ async def run_mahnwesen_eskalation(mandant_ids: list[UUID] | None = None) -> dic
                 kunde = await session.get(Kunde, rechnung.kunde_id)
                 empfaenger = _empfaenger_email(kunde) if kunde is not None else None
                 if kunde is not None and empfaenger:
-                    positionen = await positionen_fuer(session, rechnung.id)
-                    netto = netto_betrag(rechnung, positionen)
-                    brutto = (netto + netto * rechnung.mwst_satz / Decimal("100")).quantize(Decimal("0.01"))
+                    # Gemahnt wird der noch offene Betrag, nicht der volle
+                    # Bruttobetrag -- sonst wuerde eine bereits teilweise
+                    # bezahlte Rechnung ueber den Restbetrag hinaus gemahnt.
                     ist_unternehmer = _ist_unternehmer(kunde)
-                    verzugszinsen = berechne_verzugszinsen(brutto, tage_ueberfaellig, ist_unternehmer)
+                    verzugszinsen = berechne_verzugszinsen(offener_betrag, tage_ueberfaellig, ist_unternehmer)
                     pauschale = MAHNPAUSCHALE if ist_unternehmer else Decimal("0")
                     pdf_bytes = generate_mahnung_pdf(
-                        mandant, rechnung, kunde, ziel_stufe, tage_ueberfaellig, brutto, verzugszinsen, pauschale
+                        mandant,
+                        rechnung,
+                        kunde,
+                        ziel_stufe,
+                        tage_ueberfaellig,
+                        offener_betrag,
+                        verzugszinsen,
+                        pauschale,
                     )
                     await send_email_and_log(
                         session,

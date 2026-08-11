@@ -28,6 +28,26 @@ class RechnungPositionRead(BaseModel):
         return (self.menge * self.einzelpreis).quantize(Decimal("0.01"))
 
 
+class RechnungZahlungCreate(BaseModel):
+    betrag: Decimal
+    datum: date | None = None
+    zahlungsart: str | None = None
+    notiz: str | None = None
+
+
+class RechnungZahlungRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    betrag: Decimal
+    datum: date
+    zahlungsart: str | None
+    notiz: str | None
+    storniert_zahlung_id: UUID | None
+    erstellt_von: UUID
+    created_at: datetime
+
+
 class RechnungCreate(BaseModel):
     kunde_id: UUID
     vorgang_id: UUID | None = None
@@ -71,6 +91,7 @@ class RechnungRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     positionen: list[RechnungPositionRead]
+    zahlungen: list[RechnungZahlungRead] = Field(default_factory=list)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -79,10 +100,21 @@ class RechnungRead(BaseModel):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
+    def bezahlter_betrag(self) -> Decimal:
+        return sum((z.betrag for z in self.zahlungen), Decimal("0")).quantize(Decimal("0.01"))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def offener_betrag(self) -> Decimal:
+        return (self.betrag_brutto - self.bezahlter_betrag).quantize(Decimal("0.01"))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def ist_ueberfaellig(self) -> bool:
         """Faellig, unbezahlt und das Datum ist durch -- die Kennzahl, nach der
-        die Uebersicht farblich warnt und der Ueberfaellig-Filter greift."""
-        if self.faellig_am is None or self.status not in ("versendet",):
+        die Uebersicht farblich warnt und der Ueberfaellig-Filter greift.
+        Ab teilweise_bezahlt weiterhin ueberfaellig, weil noch Geld aussteht."""
+        if self.faellig_am is None or self.status not in ("versendet", "teilweise_bezahlt"):
             return False
         return self.faellig_am < date.today()
 

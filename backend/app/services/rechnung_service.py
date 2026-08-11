@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
-from app.models.rechnung import Rechnung, RechnungPosition
-from app.schemas.rechnung import RechnungPositionRead, RechnungRead
+from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
+from app.schemas.rechnung import RechnungPositionRead, RechnungRead, RechnungZahlungRead
 from app.services import pdf_service, storage_service
 from app.services.numbering_service import next_rechnungsnummer
 
@@ -33,6 +33,54 @@ def netto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Deci
     if positionen:
         return sum((p.menge * p.einzelpreis for p in positionen), Decimal("0")).quantize(_CENT)
     return rechnung.betrag_netto.quantize(_CENT)
+
+
+async def zahlungen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[RechnungZahlung]:
+    result = await session.execute(
+        select(RechnungZahlung)
+        .where(RechnungZahlung.rechnung_id == rechnung_id)
+        .order_by(RechnungZahlung.datum, RechnungZahlung.created_at)
+    )
+    return list(result.scalars().all())
+
+
+async def zahlungen_fuer_mehrere(
+    session: AsyncSession, rechnung_ids: list[UUID]
+) -> dict[UUID, list[RechnungZahlung]]:
+    """Bulk-Pendant zu positionen_fuer_mehrere -- dieselbe N+1-Vermeidung."""
+    if not rechnung_ids:
+        return {}
+    result = await session.execute(
+        select(RechnungZahlung)
+        .where(RechnungZahlung.rechnung_id.in_(rechnung_ids))
+        .order_by(RechnungZahlung.rechnung_id, RechnungZahlung.datum, RechnungZahlung.created_at)
+    )
+    gruppiert: dict[UUID, list[RechnungZahlung]] = {rid: [] for rid in rechnung_ids}
+    for zahlung in result.scalars().all():
+        gruppiert[zahlung.rechnung_id].append(zahlung)
+    return gruppiert
+
+
+def bezahlter_betrag(zahlungen: list[RechnungZahlung]) -> Decimal:
+    return sum((z.betrag for z in zahlungen), Decimal("0")).quantize(_CENT)
+
+
+def brutto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Decimal:
+    netto = netto_betrag(rechnung, positionen)
+    return (netto + netto * rechnung.mwst_satz / Decimal("100")).quantize(_CENT)
+
+
+def status_nach_zahlung(brutto: Decimal, bezahlt: Decimal, aktueller_status: str) -> str:
+    """Die einzige Stelle, die entscheidet, ob eine Rechnung nach einer
+    Zahlungsbuchung versendet/teilweise_bezahlt/bezahlt ist -- Zahlungen
+    fuehren den Status, nicht der Nutzer. entwurf/storniert werden hier nie
+    hereingegeben (siehe Aufrufer-Gates in den Routen)."""
+    offen = brutto - bezahlt
+    if offen <= 0:
+        return "bezahlt"
+    if bezahlt > 0:
+        return "teilweise_bezahlt"
+    return aktueller_status
 
 
 def netto_sql():
@@ -61,6 +109,27 @@ def brutto_sql():
     return func.round(
         netto_sql() * (Decimal("1") + Rechnung.mwst_satz / Decimal("100")), 2
     )
+
+
+def bezahlt_sql():
+    """Summe der Zahlungen als SQL-Ausdruck -- Gegenstueck zu
+    RechnungRead.bezahlter_betrag. Negative Gegenbuchungen (Zahlungs-Storno)
+    rechnen sich hier arithmetisch von selbst heraus."""
+    zahlungen_summe = (
+        select(func.sum(RechnungZahlung.betrag))
+        .where(RechnungZahlung.rechnung_id == Rechnung.id)
+        .correlate(Rechnung)
+        .scalar_subquery()
+    )
+    return func.coalesce(zahlungen_summe, Decimal("0"))
+
+
+def offen_sql():
+    """Offener Betrag als SQL-Ausdruck -- brutto_sql() minus bezahlt_sql().
+    Fuer die Summenzeile/den nur_offen-Filter der Uebersicht: reicht NICHT,
+    einfach den vollen Bruttobetrag zu nehmen, sobald es teilweise_bezahlt
+    gibt -- sonst zaehlt eine zu 90% bezahlte Rechnung als voll offen."""
+    return brutto_sql() - bezahlt_sql()
 
 
 async def positionen_fuer_mehrere(
@@ -96,37 +165,45 @@ async def kunden_namen_fuer(
     return {kunde_id: name for kunde_id, name in result.all()}
 
 
-def _read_model_aus(rechnung: Rechnung, positionen: list[RechnungPosition]) -> RechnungRead:
+_AUSGESCHLOSSENE_FELDER = (
+    "positionen",
+    "zahlungen",
+    "betrag_netto",
+    "betrag_brutto",
+    "bezahlter_betrag",
+    "offener_betrag",
+    "ist_ueberfaellig",
+    "tage_ueberfaellig",
+)
+
+
+def _read_model_aus(
+    rechnung: Rechnung, positionen: list[RechnungPosition], zahlungen: list[RechnungZahlung]
+) -> RechnungRead:
     return RechnungRead(
-        **{
-            k: getattr(rechnung, k)
-            for k in RechnungRead.model_fields
-            if k not in ("positionen", "betrag_netto", "betrag_brutto")
-        },
+        **{k: getattr(rechnung, k) for k in RechnungRead.model_fields if k not in _AUSGESCHLOSSENE_FELDER},
         betrag_netto=netto_betrag(rechnung, positionen),
         positionen=[RechnungPositionRead.model_validate(p) for p in positionen],
+        zahlungen=[RechnungZahlungRead.model_validate(z) for z in zahlungen],
     )
 
 
 async def to_read_model_bulk(
     session: AsyncSession, rechnungen: list[Rechnung]
 ) -> list[RechnungRead]:
-    positionen_je_rechnung = await positionen_fuer_mehrere(session, [r.id for r in rechnungen])
-    return [_read_model_aus(r, positionen_je_rechnung.get(r.id, [])) for r in rechnungen]
+    ids = [r.id for r in rechnungen]
+    positionen_je_rechnung = await positionen_fuer_mehrere(session, ids)
+    zahlungen_je_rechnung = await zahlungen_fuer_mehrere(session, ids)
+    return [
+        _read_model_aus(r, positionen_je_rechnung.get(r.id, []), zahlungen_je_rechnung.get(r.id, []))
+        for r in rechnungen
+    ]
 
 
 async def to_read_model(session: AsyncSession, rechnung: Rechnung) -> RechnungRead:
     positionen = await positionen_fuer(session, rechnung.id)
-    netto = netto_betrag(rechnung, positionen)
-    return RechnungRead(
-        **{
-            k: getattr(rechnung, k)
-            for k in RechnungRead.model_fields
-            if k not in ("positionen", "betrag_netto", "betrag_brutto")
-        },
-        betrag_netto=netto,
-        positionen=[RechnungPositionRead.model_validate(p) for p in positionen],
-    )
+    zahlungen = await zahlungen_fuer(session, rechnung.id)
+    return _read_model_aus(rechnung, positionen, zahlungen)
 
 
 async def erstelle_stornorechnung(
