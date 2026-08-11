@@ -474,6 +474,18 @@ export function FormularAusfuellenPage() {
     onSuccess: openPdfBlob,
   });
 
+  // Speichert den aktuellen Stand vor dem Export, genau wie beim Abschliessen
+  // -- sonst wuerde die Vorschau den zuletzt GESPEICHERTEN Stand zeigen statt
+  // das, was gerade eben noch eingetippt wurde.
+  const vorschauMutation = useMutation({
+    mutationFn: async () => {
+      await vorgangFormulareApi.updateAntworten(id!, antworten);
+      return vorgangFormulareApi.pdf(id!);
+    },
+    onSuccess: openPdfBlob,
+    onError: (err) => setFehler(err instanceof ApiError ? err.message : "Vorschau konnte nicht erzeugt werden"),
+  });
+
   if (isLoading) return <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
   if (!vf) return <EmptyState icon={FileText} text="Formular nicht gefunden." />;
 
@@ -536,7 +548,15 @@ export function FormularAusfuellenPage() {
           <FileText size={16} /> Als PDF öffnen
         </button>
       ) : (
-        <div className="fixed inset-x-0 bottom-16 z-10 flex gap-2 px-4">
+        <>
+          <button
+            onClick={() => vorschauMutation.mutate()}
+            disabled={vorschauMutation.isPending}
+            className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          >
+            <FileText size={16} /> PDF-Vorschau ansehen
+          </button>
+          <div className="fixed inset-x-0 bottom-16 z-10 flex gap-2 px-4">
           <button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
@@ -551,7 +571,8 @@ export function FormularAusfuellenPage() {
           >
             Abschließen
           </button>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
