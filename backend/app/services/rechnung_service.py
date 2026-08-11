@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kunde import Kunde
@@ -33,6 +33,83 @@ def netto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Deci
     if positionen:
         return sum((p.menge * p.einzelpreis for p in positionen), Decimal("0")).quantize(_CENT)
     return rechnung.betrag_netto.quantize(_CENT)
+
+
+def netto_sql():
+    """Netto als SQL-Ausdruck -- Gegenstueck zu netto_betrag() fuer alles, was
+    in der Datenbank gefiltert, sortiert oder summiert werden muss (Betrags-
+    filter und Summenzeile der Rechnungsuebersicht). Muss dieselbe Regel
+    abbilden: Positionen gewinnen, sonst der manuell gesetzte betrag_netto.
+    sum() ueber 0 Zeilen ist NULL, daher coalesce."""
+    positionen_summe = (
+        select(func.sum(RechnungPosition.menge * RechnungPosition.einzelpreis))
+        .where(RechnungPosition.rechnung_id == Rechnung.id)
+        .correlate(Rechnung)
+        .scalar_subquery()
+    )
+    return func.coalesce(positionen_summe, Rechnung.betrag_netto)
+
+
+def brutto_sql():
+    """Brutto als SQL-Ausdruck. Brutto ist absichtlich nirgends persistiert
+    (siehe RechnungRead.betrag_brutto) -- fuers Filtern/Sortieren nach Betrag
+    braucht es die Formel trotzdem in SQL, statt eine redundante Spalte
+    einzufuehren, die gegen netto_betrag() auseinanderlaufen koennte."""
+    return func.round(
+        netto_sql() * (Decimal("1") + Rechnung.mwst_satz / Decimal("100")), 2
+    )
+
+
+async def positionen_fuer_mehrere(
+    session: AsyncSession, rechnung_ids: list[UUID]
+) -> dict[UUID, list[RechnungPosition]]:
+    """Eine Query fuer alle Positionen einer Seite statt einer pro Zeile --
+    die Uebersicht liefert bis zu 200 Rechnungen, positionen_fuer() waere
+    dort ein N+1."""
+    if not rechnung_ids:
+        return {}
+    result = await session.execute(
+        select(RechnungPosition)
+        .where(RechnungPosition.rechnung_id.in_(rechnung_ids))
+        .order_by(RechnungPosition.rechnung_id, RechnungPosition.position)
+    )
+    gruppiert: dict[UUID, list[RechnungPosition]] = {rid: [] for rid in rechnung_ids}
+    for position in result.scalars().all():
+        gruppiert[position.rechnung_id].append(position)
+    return gruppiert
+
+
+async def kunden_namen_fuer(
+    session: AsyncSession, kunde_ids: list[UUID]
+) -> dict[UUID, str]:
+    """Ein Lookup fuer alle Kundennamen einer Seite -- die Uebersicht und der
+    CSV-Export brauchen den Namen je Zeile, ein session.get() pro Zeile waere
+    erneut ein N+1."""
+    if not kunde_ids:
+        return {}
+    result = await session.execute(
+        select(Kunde.id, Kunde.name).where(Kunde.id.in_(set(kunde_ids)))
+    )
+    return {kunde_id: name for kunde_id, name in result.all()}
+
+
+def _read_model_aus(rechnung: Rechnung, positionen: list[RechnungPosition]) -> RechnungRead:
+    return RechnungRead(
+        **{
+            k: getattr(rechnung, k)
+            for k in RechnungRead.model_fields
+            if k not in ("positionen", "betrag_netto", "betrag_brutto")
+        },
+        betrag_netto=netto_betrag(rechnung, positionen),
+        positionen=[RechnungPositionRead.model_validate(p) for p in positionen],
+    )
+
+
+async def to_read_model_bulk(
+    session: AsyncSession, rechnungen: list[Rechnung]
+) -> list[RechnungRead]:
+    positionen_je_rechnung = await positionen_fuer_mehrere(session, [r.id for r in rechnungen])
+    return [_read_model_aus(r, positionen_je_rechnung.get(r.id, [])) for r in rechnungen]
 
 
 async def to_read_model(session: AsyncSession, rechnung: Rechnung) -> RechnungRead:

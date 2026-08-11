@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
@@ -21,16 +21,27 @@ from app.models.rechnung import Rechnung, RechnungPosition
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
-from app.schemas.rechnung import RechnungCreate, RechnungPositionCreate, RechnungRead, RechnungUpdate
+from app.schemas.rechnung import (
+    RechnungCreate,
+    RechnungListe,
+    RechnungPositionCreate,
+    RechnungRead,
+    RechnungUpdate,
+)
 from app.services import papierkorb_service
+from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
 from app.services.rechnung_service import (
     archiviere_pdf,
+    brutto_sql,
     erstelle_stornorechnung,
+    kunden_namen_fuer,
+    netto_sql,
     pdf_bytes_fuer,
     positionen_fuer,
     to_read_model,
+    to_read_model_bulk,
 )
 
 router = APIRouter(
@@ -59,22 +70,225 @@ async def _storniert_rechnung_fuer(session: AsyncSession, rechnung: Rechnung) ->
     return await session.get(Rechnung, rechnung.storniert_rechnung_id)
 
 
-@router.get("", response_model=list[RechnungRead])
+# Statuswerte, bei denen noch Geld aussteht -- Grundlage fuer "nur_offen",
+# "nur_ueberfaellig" und die Spalte summe_offen der Uebersicht.
+_OFFENE_STATUS = ("entwurf", "versendet")
+
+# Sortierschluessel der Uebersicht. Ein "-" davor kehrt die Richtung um.
+# brutto_sql() statt einer Spalte, weil Brutto nirgends persistiert ist.
+_SORTIERBAR = {
+    "datum": lambda: Rechnung.created_at,
+    "faellig": lambda: Rechnung.faellig_am,
+    "betrag": brutto_sql,
+    "nummer": lambda: Rechnung.rechnungsnummer,
+}
+
+
+def _filter_bedingungen(
+    kunde_id: UUID | None,
+    vorgang_id: UUID | None,
+    status_filter: list[str] | None,
+    q: str | None,
+    von: date | None,
+    bis: date | None,
+    faellig_von: date | None,
+    faellig_bis: date | None,
+    betrag_von: Decimal | None,
+    betrag_bis: Decimal | None,
+    nur_offen: bool,
+    nur_ueberfaellig: bool,
+) -> list:
+    """Die Filter einmal bauen und sowohl auf die Seiten- als auch auf die
+    Summen-Query anwenden, damit Summenzeile und Liste nie auseinanderlaufen."""
+    bedingungen = [Rechnung.geloescht_am.is_(None)]
+    if kunde_id:
+        bedingungen.append(Rechnung.kunde_id == kunde_id)
+    if vorgang_id:
+        bedingungen.append(Rechnung.vorgang_id == vorgang_id)
+    if status_filter:
+        bedingungen.append(Rechnung.status.in_(status_filter))
+    if q:
+        # Kundenname per Subquery statt Join -- so bleibt die Query auch fuer
+        # die Summen-Aggregation unveraendert einsetzbar.
+        muster = f"%{q}%"
+        passende_kunden = select(Kunde.id).where(Kunde.name.ilike(muster)).scalar_subquery()
+        bedingungen.append(
+            or_(Rechnung.rechnungsnummer.ilike(muster), Rechnung.kunde_id.in_(passende_kunden))
+        )
+    if von:
+        bedingungen.append(func.date(Rechnung.created_at) >= von)
+    if bis:
+        bedingungen.append(func.date(Rechnung.created_at) <= bis)
+    if faellig_von:
+        bedingungen.append(Rechnung.faellig_am >= faellig_von)
+    if faellig_bis:
+        bedingungen.append(Rechnung.faellig_am <= faellig_bis)
+    if betrag_von is not None:
+        bedingungen.append(brutto_sql() >= betrag_von)
+    if betrag_bis is not None:
+        bedingungen.append(brutto_sql() <= betrag_bis)
+    if nur_offen and not nur_ueberfaellig:
+        bedingungen.append(Rechnung.status.in_(_OFFENE_STATUS))
+    if nur_ueberfaellig:
+        # Bewusst enger als _OFFENE_STATUS: ein Entwurf ist nie ueberfaellig,
+        # weil er den Kunden nie erreicht hat. Muss deckungsgleich mit
+        # RechnungRead.ist_ueberfaellig bleiben, sonst liefert der Filter
+        # Zeilen, die sich selbst als "nicht ueberfaellig" ausweisen.
+        bedingungen.append(Rechnung.status == "versendet")
+        bedingungen.append(Rechnung.faellig_am.is_not(None))
+        bedingungen.append(Rechnung.faellig_am < date.today())
+    return bedingungen
+
+
+@router.get("", response_model=RechnungListe)
 async def list_rechnungen(
     kunde_id: UUID | None = Query(default=None),
     vorgang_id: UUID | None = Query(default=None),
-    status_filter: str | None = Query(default=None, alias="status"),
+    status_filter: list[str] | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None, description="Rechnungsnummer oder Kundenname"),
+    von: date | None = Query(default=None, description="Rechnungsdatum ab"),
+    bis: date | None = Query(default=None, description="Rechnungsdatum bis"),
+    faellig_von: date | None = Query(default=None),
+    faellig_bis: date | None = Query(default=None),
+    betrag_von: Decimal | None = Query(default=None, description="Bruttobetrag ab"),
+    betrag_bis: Decimal | None = Query(default=None, description="Bruttobetrag bis"),
+    nur_offen: bool = Query(default=False),
+    nur_ueberfaellig: bool = Query(default=False),
+    sort: str = Query(default="-datum"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
-) -> list[RechnungRead]:
-    stmt = select(Rechnung).where(Rechnung.geloescht_am.is_(None)).order_by(Rechnung.created_at.desc())
-    if kunde_id:
-        stmt = stmt.where(Rechnung.kunde_id == kunde_id)
-    if vorgang_id:
-        stmt = stmt.where(Rechnung.vorgang_id == vorgang_id)
-    if status_filter:
-        stmt = stmt.where(Rechnung.status == status_filter)
-    result = await session.execute(stmt)
-    return [await to_read_model(session, r) for r in result.scalars().all()]
+) -> RechnungListe:
+    bedingungen = _filter_bedingungen(
+        kunde_id,
+        vorgang_id,
+        status_filter,
+        q,
+        von,
+        bis,
+        faellig_von,
+        faellig_bis,
+        betrag_von,
+        betrag_bis,
+        nur_offen,
+        nur_ueberfaellig,
+    )
+
+    absteigend = sort.startswith("-")
+    schluessel = sort.lstrip("-")
+    if schluessel not in _SORTIERBAR:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unbekannter Sortierschlüssel '{schluessel}' "
+            f"(erlaubt: {', '.join(sorted(_SORTIERBAR))})",
+        )
+    spalte = _SORTIERBAR[schluessel]()
+    richtung = spalte.desc() if absteigend else spalte.asc()
+    # nulls_last: Rechnungen ohne Faelligkeit sollen die Sortierung nicht
+    # anfuehren. Rechnung.id als Tiebreaker, sonst wackelt die Seitengrenze
+    # bei gleichen Sortierwerten und Zeilen erscheinen doppelt oder fehlen.
+    sortierung = (richtung.nulls_last(), Rechnung.id.asc())
+
+    seite = await session.execute(
+        select(Rechnung).where(*bedingungen).order_by(*sortierung).limit(limit).offset(offset)
+    )
+    rechnungen = list(seite.scalars().all())
+
+    offen_wenn_unbezahlt = case(
+        (Rechnung.status.in_(_OFFENE_STATUS), brutto_sql()), else_=Decimal("0")
+    )
+    summen = (
+        await session.execute(
+            select(
+                func.count(Rechnung.id),
+                func.coalesce(func.sum(netto_sql()), Decimal("0")),
+                func.coalesce(func.sum(brutto_sql()), Decimal("0")),
+                func.coalesce(func.sum(offen_wenn_unbezahlt), Decimal("0")),
+            ).where(*bedingungen)
+        )
+    ).one()
+
+    return RechnungListe(
+        eintraege=await to_read_model_bulk(session, rechnungen),
+        gesamt_anzahl=summen[0],
+        summe_netto=summen[1],
+        summe_brutto=summen[2],
+        summe_offen=summen[3],
+    )
+
+
+# Muss VOR "/{rechnung_id}" stehen, sonst versucht FastAPI "export" als UUID
+# zu parsen und antwortet mit 422 statt mit der CSV.
+@router.get("/export/csv")
+async def export_rechnungen_csv(
+    kunde_id: UUID | None = Query(default=None),
+    vorgang_id: UUID | None = Query(default=None),
+    status_filter: list[str] | None = Query(default=None, alias="status"),
+    q: str | None = Query(default=None),
+    von: date | None = Query(default=None),
+    bis: date | None = Query(default=None),
+    faellig_von: date | None = Query(default=None),
+    faellig_bis: date | None = Query(default=None),
+    betrag_von: Decimal | None = Query(default=None),
+    betrag_bis: Decimal | None = Query(default=None),
+    nur_offen: bool = Query(default=False),
+    nur_ueberfaellig: bool = Query(default=False),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    bedingungen = _filter_bedingungen(
+        kunde_id,
+        vorgang_id,
+        status_filter,
+        q,
+        von,
+        bis,
+        faellig_von,
+        faellig_bis,
+        betrag_von,
+        betrag_bis,
+        nur_offen,
+        nur_ueberfaellig,
+    )
+    result = await session.execute(
+        select(Rechnung).where(*bedingungen).order_by(Rechnung.created_at.desc(), Rechnung.id.asc())
+    )
+    rechnungen = list(result.scalars().all())
+    gelesen = await to_read_model_bulk(session, rechnungen)
+
+    kunden_namen = await kunden_namen_fuer(session, [r.kunde_id for r in rechnungen])
+    rows = [
+        [
+            r.rechnungsnummer,
+            kunden_namen.get(r.kunde_id, ""),
+            r.created_at.strftime("%d.%m.%Y"),
+            r.leistungsdatum.strftime("%d.%m.%Y") if r.leistungsdatum else "",
+            r.faellig_am.strftime("%d.%m.%Y") if r.faellig_am else "",
+            r.status,
+            str(r.betrag_netto),
+            str(r.mwst_satz),
+            str(r.betrag_brutto),
+            str(r.tage_ueberfaellig),
+            str(r.mahnstufe),
+        ]
+        for r in gelesen
+    ]
+    return csv_response(
+        [
+            "Rechnungsnummer",
+            "Kunde",
+            "Rechnungsdatum",
+            "Leistungsdatum",
+            "Fällig am",
+            "Status",
+            "Netto",
+            "MwSt-Satz",
+            "Brutto",
+            "Tage überfällig",
+            "Mahnstufe",
+        ],
+        rows,
+        "Rechnungen.csv",
+    )
 
 
 @router.get("/{rechnung_id}", response_model=RechnungRead)

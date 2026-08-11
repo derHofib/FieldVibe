@@ -76,3 +76,31 @@ class RechnungRead(BaseModel):
     @property
     def betrag_brutto(self) -> Decimal:
         return (self.betrag_netto + self.betrag_netto * self.mwst_satz / Decimal("100")).quantize(Decimal("0.01"))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def ist_ueberfaellig(self) -> bool:
+        """Faellig, unbezahlt und das Datum ist durch -- die Kennzahl, nach der
+        die Uebersicht farblich warnt und der Ueberfaellig-Filter greift."""
+        if self.faellig_am is None or self.status not in ("versendet",):
+            return False
+        return self.faellig_am < date.today()
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def tage_ueberfaellig(self) -> int:
+        if not self.ist_ueberfaellig or self.faellig_am is None:
+            return 0
+        return (date.today() - self.faellig_am).days
+
+
+class RechnungListe(BaseModel):
+    """Antwort der Rechnungsuebersicht. Die Summen beziehen sich bewusst auf
+    die komplette gefilterte Menge, nicht auf die ausgelieferte Seite -- eine
+    Summenzeile, die nur die ersten 50 Treffer addiert, waere irrefuehrend."""
+
+    eintraege: list[RechnungRead]
+    gesamt_anzahl: int
+    summe_netto: Decimal
+    summe_brutto: Decimal
+    summe_offen: Decimal
