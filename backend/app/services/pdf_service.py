@@ -609,15 +609,21 @@ def generate_formular_pdf(
     Unterschrift-Feld (feld_id -> Bilddaten) -- der Route-Handler laedt
     diese vorher async aus dem Storage, da diese Funktion selbst
     synchron laeuft (siehe app/api/routes/vorgang_formulare.py).
-    snapshot_version 2 (siehe formular_service.snapshot_von) traegt ein
-    Raster-Layout und wird 1:1 wie im Canvas-Editor positioniert gerendert;
-    aeltere, bereits abgeschlossene Ausfuellungen ohne dieses Feld laufen
-    unveraendert ueber den bisherigen Flow-Renderer, damit einmal
-    ausgestellte PDFs bit-identisch reproduzierbar bleiben."""
+    snapshot_version unterscheidet drei historisch gewachsene Layout-
+    Formate (siehe formular_service.snapshot_von): 3 = freie Positionierung
+    auf expliziten A4-Seiten (aktuell, wie MS-Access-Formular-Designer),
+    2 = 12-Spalten-Raster mit automatischem Seitenumbruch, kein Feld/fehlend
+    = urspruenglicher Flow-Renderer. Aeltere, bereits abgeschlossene
+    Ausfuellungen laufen immer ueber den zu ihrer Version passenden
+    Renderer, damit einmal ausgestellte PDFs bit-identisch reproduzierbar
+    bleiben -- neue Snapshots werden nur noch in Version 3 erzeugt."""
     snapshot = vorgang_formular.formular_snapshot
-    if snapshot.get("snapshot_version") != 2:
-        return _generate_formular_pdf_legacy(mandant, vorgang, vorgang_formular, bilder)
-    return _generate_formular_pdf_raster(mandant, vorgang, vorgang_formular, bilder)
+    version = snapshot.get("snapshot_version")
+    if version == 3:
+        return _generate_formular_pdf_freeform(mandant, vorgang, vorgang_formular, bilder)
+    if version == 2:
+        return _generate_formular_pdf_raster(mandant, vorgang, vorgang_formular, bilder)
+    return _generate_formular_pdf_legacy(mandant, vorgang, vorgang_formular, bilder)
 
 
 def _generate_formular_pdf_legacy(
@@ -687,10 +693,12 @@ _FORMULAR_RAND_UNTEN = 15
 
 
 class _FormularPDF(FPDF):
-    """Eigene Subklasse fuer den Raster-Renderer (snapshot_version 2) --
-    Seite 1 traegt den vollen Kopf (Mandant/Formularname/Vorgang/Datum) als
-    normalen Flow-Text (siehe _generate_formular_pdf_raster), Folgeseiten nur
-    eine schmale Kennzeile, analog zum Muster in _AngebotPDF."""
+    """Eigene Subklasse fuer die positionsbasierten Renderer (snapshot_
+    version 2 = Raster, 3 = freie Positionierung) -- Seite 1 traegt den
+    vollen Kopf (Mandant/Formularname/Vorgang/Datum) als normalen Flow-Text
+    (siehe _generate_formular_pdf_raster/_generate_formular_pdf_freeform),
+    Folgeseiten nur eine schmale Kennzeile, analog zum Muster in
+    _AngebotPDF."""
 
     def __init__(self, mandant: Mandant, formular_name: str, vorgangsnummer: str):
         super().__init__()
@@ -831,5 +839,67 @@ def _generate_formular_pdf_raster(
         antwort = antworten.get(feld["id"])
         bild = bilder.get(feld["id"]) if feld["feld_typ"] in ("foto", "unterschrift") else None
         _render_formular_feld_zelle(pdf, feld, antwort, bild, x, y, breite, hoehe)
+
+    return bytes(pdf.output())
+
+
+def _generate_formular_pdf_freeform(
+    mandant: Mandant,
+    vorgang: Vorgang,
+    vorgang_formular: VorgangFormular,
+    bilder: dict[str, bytes],
+) -> bytes:
+    """snapshot_version 3 -- jede Seite ist eine feste A4-Flaeche, auf der
+    Felder frei per x_mm/y_mm/breite_mm/hoehe_mm positioniert sind (wie
+    Steuerelemente im MS-Access-Formular-Designer). Die Seitenaufteilung
+    legt der Nutzer im Canvas-Editor explizit fest ("Seite hinzufuegen",
+    siehe Formular.anzahl_seiten) -- anders als beim aelteren Raster-
+    Renderer gibt es hier keinen automatischen Seitenumbruch und keine
+    Sonderbehandlung fuer Felder, die ueber den Seitenrand ragen wuerden:
+    das liegt vollstaendig in der Verantwortung des Nutzers."""
+    snapshot = vorgang_formular.formular_snapshot
+    antworten = vorgang_formular.antworten
+    formular_name = snapshot.get("name", "Formular")
+    anzahl_seiten = snapshot.get("anzahl_seiten", 1)
+    felder_je_seite: dict[int, list[dict]] = {}
+    for feld in snapshot.get("felder", []):
+        felder_je_seite.setdefault(feld["seite"], []).append(feld)
+
+    pdf = _FormularPDF(mandant, formular_name, vorgang.vorgangsnummer)
+
+    for seite_idx in range(anzahl_seiten):
+        pdf.add_page()
+        if seite_idx == 0:
+            pdf.set_font("Helvetica", "B", 18)
+            pdf.cell(0, 10, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.set_font("Helvetica", "", 10)
+            pdf.cell(
+                0,
+                6,
+                _pdf_safe_text(f"{formular_name}: {vorgang.vorgangsnummer} - {vorgang.titel}"),
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
+            pdf.cell(
+                0,
+                6,
+                f"Ausgefuellt am {_fmt_datum(vorgang_formular.abgeschlossen_am or vorgang_formular.created_at)}",
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
+            pdf.ln(4)
+            seiten_top_mm = pdf.get_y()
+        else:
+            seiten_top_mm = _FORMULAR_RAND_OBEN_FOLGESEITE
+
+        for feld in sorted(felder_je_seite.get(seite_idx, []), key=lambda f: (f["y_mm"], f["x_mm"])):
+            x = pdf.l_margin + feld["x_mm"]
+            y = seiten_top_mm + feld["y_mm"]
+            antwort = antworten.get(feld["id"])
+            bild = bilder.get(feld["id"]) if feld["feld_typ"] in ("foto", "unterschrift") else None
+            _render_formular_feld_zelle(pdf, feld, antwort, bild, x, y, feld["breite_mm"], feld["hoehe_mm"])
+
+    if not snapshot.get("felder"):
+        pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     return bytes(pdf.output())
