@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Rnd } from "react-rnd";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { ApiError } from "../../api/client";
 import { formulareApi } from "../../api/endpoints";
@@ -463,21 +463,31 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
   const [markiertId, setMarkiertId] = useState<string | null>(null);
   const [zoomWahl, setZoomWahl] = useState<"fit" | number>("fit");
-  const [ansicht, setAnsicht] = useState({ breite: 0, hoehe: 0 });
+  const [ansichtHoehe, setAnsichtHoehe] = useState(0);
+  // Tatsaechliche Breite des Canvas-Bereichs (Content-Box, Padding schon
+  // abgezogen) -- per ResizeObserver statt geschaetzt aus der Fensterbreite.
+  // Reagiert dadurch sofort und exakt auf jede Ursache einer Breitenaenderung
+  // (Fenster resize, Panel ein/ausblenden, Scrollbalken erscheint nach dem
+  // Laden der Formulardaten) statt nur auf ein "resize"-Event des Fensters,
+  // das bei einem nachtraeglich erscheinenden Scrollbalken gar nicht feuert.
+  const [canvasBreite, setCanvasBreite] = useState(0);
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    function messen() {
-      // clientWidth des Root-Elements ist die Viewport-Breite OHNE Scrollbar --
-      // 100vw wuerde die Scrollbar mitzaehlen und dadurch einen horizontalen
-      // Scrollbalken erzeugen.
-      setAnsicht({
-        breite: document.documentElement.clientWidth,
-        hoehe: Math.max(window.innerHeight - CHROME_HOEHE_PX, 260),
-      });
+    function messenHoehe() {
+      setAnsichtHoehe(Math.max(window.innerHeight - CHROME_HOEHE_PX, 260));
     }
-    messen();
-    window.addEventListener("resize", messen);
-    return () => window.removeEventListener("resize", messen);
+    messenHoehe();
+    window.addEventListener("resize", messenHoehe);
+    return () => window.removeEventListener("resize", messenHoehe);
+  }, []);
+
+  useEffect(() => {
+    const el = canvasWrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => setCanvasBreite(entry.contentRect.width));
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["formular", formular.id] });
@@ -598,16 +608,13 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
 
   // "Einpassen" skaliert die Seite so, dass sie KOMPLETT sichtbar ist -- also
   // nach Breite UND Hoehe, sonst bleibt die A4-Hoehe (1188px bei 4px/mm)
-  // weiterhin ausserhalb des Viewports. Panel-Breite und Rahmen-Padding
-  // grob abgezogen.
-  const canvasBreite = Math.max(ansicht.breite - (ansicht.breite >= 1024 ? 300 : 48), 320);
-  const fitFaktor = Math.min(canvasBreite / seitenBreitePx, ansicht.hoehe / seitenHoehePx, 1);
+  // weiterhin ausserhalb des Viewports. canvasBreite kommt vom ResizeObserver
+  // oben und ist bereits die tatsaechliche Content-Box (Panel/Umbruch schon
+  // beruecksichtigt) -- vor der ersten Messung (canvasBreite === 0) auf 100%
+  // ausweichen statt durch 0 zu teilen.
+  const fitFaktor =
+    canvasBreite > 0 ? Math.min(canvasBreite / seitenBreitePx, ansichtHoehe / seitenHoehePx, 1) : 1;
   const zoomFaktor = zoomWahl === "fit" ? Math.max(fitFaktor, 0.2) : zoomWahl;
-  // Volle Fensterbreite, obwohl der Editor in <main class="max-w-2xl"> steckt:
-  // eine A4-Seite passt in 672px sonst gar nicht sinnvoll hinein.
-  const vollbreiteStyle = ansicht.breite
-    ? { width: ansicht.breite, marginLeft: `calc(50% - ${ansicht.breite / 2}px)` }
-    : undefined;
 
   return (
     <div>
@@ -687,8 +694,22 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
         )}
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start" style={vollbreiteStyle}>
-      <div className="min-w-0 flex-1 overflow-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950">
+      {/* Bricht rein per CSS aus dem max-w-2xl-Elternrahmen aus (main in
+          FeldLayout) -- eine A4-Seite braucht mehr Platz, als das enge
+          Formular-Layout sonst zulaesst. Kein gemessenes Fenstermass mehr:
+          der Browser rechnet das bei jedem Reflow selbst neu, reagiert also
+          auch sofort, wenn z.B. nach dem Laden der Formulardaten ein
+          Scrollbalken erscheint (dabei feuert kein "resize"-Event). */}
+      <div className="lg:relative lg:left-1/2 lg:right-1/2 lg:-mx-[50vw] lg:w-screen">
+      {/* Zweite Ebene: Canvas + Panel als EINE Gruppe zentrieren (mx-auto),
+          statt die Karte ueber die volle (womoeglich sehr breite) Fenster-
+          breite zu strecken -- sonst klafft auf grossen Monitoren links vom
+          Canvas ein Leerraum, waehrend das Panel weit rechts alleine steht. */}
+      <div className="flex flex-col gap-3 lg:mx-auto lg:max-w-[1280px] lg:flex-row lg:items-start lg:justify-center lg:px-4">
+      <div
+        ref={canvasWrapRef}
+        className="min-w-0 flex-1 overflow-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950"
+      >
         {/* Aeusserer Kasten in der SKALIERTEN Groesse -- transform:scale
             aendert den Platzbedarf im Layout nicht, ohne ihn bliebe unter der
             Seite bei <100% ein grosser Leerraum stehen. */}
@@ -825,6 +846,7 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
             persistGeometrie(markiertId, patch);
           }}
         />
+      </div>
       </div>
 
       {(updateFeldMutation.isError || createFeldMutation.isError || positionenMutation.isError) && (
