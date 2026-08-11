@@ -90,7 +90,20 @@ async def update_formular(
     session: AsyncSession = Depends(get_db),
 ) -> FormularRead:
     formular = await _get_formular_or_404(session, formular_id)
-    for field, value in body.model_dump(exclude_unset=True).items():
+    daten = body.model_dump(exclude_unset=True)
+    if "anzahl_seiten" in daten and daten["anzahl_seiten"] < formular.anzahl_seiten:
+        letzte_seite = daten["anzahl_seiten"]
+        felder_auf_wegfallenden_seiten = await session.execute(
+            select(Formularfeld).where(
+                Formularfeld.formular_id == formular_id, Formularfeld.seite >= letzte_seite
+            )
+        )
+        if felder_auf_wegfallenden_seiten.scalars().first() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Bitte zuerst Felder von den wegfallenden Seiten entfernen oder verschieben",
+            )
+    for field, value in daten.items():
         setattr(formular, field, value)
     await session.flush()
     await session.refresh(formular)
@@ -102,9 +115,9 @@ async def update_formular(
 
 async def _recompute_reihenfolge(session: AsyncSession, formular_id: UUID) -> None:
     """Berechnet die reihenfolge-Cache-Spalte neu aus der aktuellen
-    Rasterposition (siehe Formularfeld.reihenfolge-Docstring) -- aufgerufen
-    nach jeder Aenderung, die die Anzahl/Position der Felder betrifft
-    (Anlegen, Bulk-Positionierung, Loeschen)."""
+    Position (Seite, dann y_mm/x_mm, siehe Formularfeld.reihenfolge-
+    Docstring) -- aufgerufen nach jeder Aenderung, die die Anzahl/Position
+    der Felder betrifft (Anlegen, Bulk-Positionierung, Loeschen)."""
     felder = await formular_service.felder_fuer(session, formular_id)
     for position, feld in enumerate(felder):
         feld.reihenfolge = position
@@ -123,14 +136,22 @@ async def create_formularfeld(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Formularfeld:
-    await _get_formular_or_404(session, formular_id)
-    raster_zeile = body.raster_zeile
-    if "raster_zeile" not in body.model_fields_set:
+    formular = await _get_formular_or_404(session, formular_id)
+    if body.seite >= formular.anzahl_seiten:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Formular hat nur {formular.anzahl_seiten} Seite(n)",
+        )
+    y_mm = body.y_mm
+    if "y_mm" not in body.model_fields_set:
         # Kein explizites Ziel angegeben (Standardfall "Feld hinzufügen"):
-        # neues Feld als volle Zeile unterhalb aller bestehenden anhaengen,
-        # damit es garantiert nicht mit etwas Vorhandenem ueberlappt.
+        # neues Feld unterhalb aller bestehenden Felder DERSELBEN Seite
+        # anhaengen, damit es garantiert nicht mit etwas Vorhandenem
+        # ueberlappt.
         bestehende = await formular_service.felder_fuer(session, formular_id)
-        raster_zeile = max((f.raster_zeile + f.raster_hoehe for f in bestehende), default=0)
+        y_mm = max(
+            (f.y_mm + f.hoehe_mm for f in bestehende if f.seite == body.seite), default=0
+        )
     feld = Formularfeld(
         mandant_id=auth.mandant_id,
         formular_id=formular_id,
@@ -139,10 +160,11 @@ async def create_formularfeld(
         hilfetext=body.hilfetext,
         pflichtfeld=body.pflichtfeld,
         optionen=body.optionen,
-        raster_zeile=raster_zeile,
-        raster_spalte=body.raster_spalte,
-        raster_breite=body.raster_breite,
-        raster_hoehe=body.raster_hoehe,
+        seite=body.seite,
+        x_mm=body.x_mm,
+        y_mm=y_mm,
+        breite_mm=body.breite_mm,
+        hoehe_mm=body.hoehe_mm,
         datenquelle=body.datenquelle,
     )
     session.add(feld)
@@ -183,9 +205,12 @@ async def update_formularfeld_positionen(
     positionen: list[FormularfeldPosition],
     session: AsyncSession = Depends(get_db),
 ) -> list[Formularfeld]:
-    """Bulk-Update aller Rasterpositionen nach Drag&Drop/Resize im
-    Canvas-Editor -- erspart N einzelne PATCH-Aufrufe und prueft
-    Ueberlappung, die als DB-CHECK-Constraint nicht ausdrueckbar ist."""
+    """Bulk-Update aller freien Positionen nach Drag&Drop/Resize im
+    Canvas-Editor -- erspart N einzelne PATCH-Aufrufe. Ueberlappende Felder
+    sind erlaubt (wie im MS-Access-Formular-Designer), es wird nur
+    geprueft, dass jedes Feld auf eine tatsaechlich vorhandene Seite des
+    Formulars gesetzt wird."""
+    formular = await _get_formular_or_404(session, formular_id)
     felder = await formular_service.felder_fuer(session, formular_id)
     felder_by_id = {f.id: f for f in felder}
     if {p.id for p in positionen} != set(felder_by_id):
@@ -193,16 +218,18 @@ async def update_formularfeld_positionen(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Positions-Liste stimmt nicht mit den vorhandenen Feldern dieses Formulars überein",
         )
-    if formular_service.raster_ueberlappung(positionen):
+    if any(p.seite >= formular.anzahl_seiten for p in positionen):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Felder überlappen sich im Raster"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Formular hat nur {formular.anzahl_seiten} Seite(n)",
         )
     for p in positionen:
         feld = felder_by_id[p.id]
-        feld.raster_zeile = p.raster_zeile
-        feld.raster_spalte = p.raster_spalte
-        feld.raster_breite = p.raster_breite
-        feld.raster_hoehe = p.raster_hoehe
+        feld.seite = p.seite
+        feld.x_mm = p.x_mm
+        feld.y_mm = p.y_mm
+        feld.breite_mm = p.breite_mm
+        feld.hoehe_mm = p.hoehe_mm
     await session.flush()
     await _recompute_reihenfolge(session, formular_id)
     return await formular_service.felder_fuer(session, formular_id)
