@@ -68,6 +68,8 @@ import type {
   Pruefzyklus,
   PruefzyklusEinheit,
   Rechnung,
+  RechnungenFilter,
+  RechnungListe,
   RechnungPosition,
   RechteAktion,
   RechteBereich,
@@ -863,10 +865,31 @@ export const angeboteApi = {
     apiFetch<EmailLog>(`/api/angebote/${id}/email`, { method: "POST", body: JSON.stringify(body) }),
 };
 
+// Baut einen Query-String aus dem RechnungenFilter -- status ist ein Array
+// (wiederholbarer Query-Param, das Backend liest ihn per FastAPI list[str]),
+// alle anderen Felder sind einfache Werte. undefined/leere Werte werden
+// weggelassen statt als "undefined" mitgeschickt.
+function rechnungenQueryString(filter: RechnungenFilter): string {
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(filter)) {
+    if (value === undefined || value === null || value === "") continue;
+    if (Array.isArray(value)) {
+      for (const v of value) qs.append(key, String(v));
+    } else {
+      qs.append(key, String(value));
+    }
+  }
+  return qs.toString();
+}
+
 export const rechnungenApi = {
-  list: (params: Record<string, string> = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return apiFetch<Rechnung[]>(`/api/rechnungen${qs ? `?${qs}` : ""}`);
+  list: (filter: RechnungenFilter = {}) => {
+    const qs = rechnungenQueryString(filter);
+    return apiFetch<RechnungListe>(`/api/rechnungen${qs ? `?${qs}` : ""}`);
+  },
+  exportCsv: (filter: RechnungenFilter = {}) => {
+    const qs = rechnungenQueryString(filter);
+    return apiFetchBlob(`/api/rechnungen/export/csv${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}`),
   create: (body: {

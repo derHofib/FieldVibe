@@ -346,10 +346,21 @@ export function GeschaeftPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // Jeder Tab braucht sowohl das aktive Modul ALS AUCH das passende Recht --
+  // vorher haengte die ganze Seite zusaetzlich an einem harten
+  // hatRecht("dispo","sehen")-Gate weiter unten, wodurch ein Account-Typ mit
+  // abrechnung:sehen aber ohne dispo:sehen (z.B. ein reiner Buchhalter) gar
+  // nicht an Angebote/Rechnungen kam.
   const sichtbareTabs: GeschaeftTab[] = [
-    ...(istModulAktiv(currentUser, "kundenverwaltung") ? (["kunden"] as const) : []),
-    ...(istModulAktiv(currentUser, "abrechnung") ? (["angebote", "rechnungen"] as const) : []),
-    ...(istModulAktiv(currentUser, "material") ? (["material", "bestellwesen"] as const) : []),
+    ...(istModulAktiv(currentUser, "kundenverwaltung") && hatRecht("kunden", "sehen")
+      ? (["kunden"] as const)
+      : []),
+    ...(istModulAktiv(currentUser, "abrechnung") && hatRecht("abrechnung", "sehen")
+      ? (["angebote", "rechnungen"] as const)
+      : []),
+    ...(istModulAktiv(currentUser, "material") && hatRecht("material", "sehen")
+      ? (["material", "bestellwesen"] as const)
+      : []),
   ];
   const [tab, setTab] = useState<GeschaeftTab>(sichtbareTabs[0] ?? "kunden");
   useEffect(() => {
@@ -410,11 +421,12 @@ export function GeschaeftPage() {
     queryFn: () => angeboteApi.list(),
     enabled: abrechnungAktiv,
   });
-  const { data: rechnungen, isLoading: rechnungenLoading } = useQuery({
+  const { data: rechnungenListe, isLoading: rechnungenLoading } = useQuery({
     queryKey: ["rechnungen"],
     queryFn: () => rechnungenApi.list(),
     enabled: abrechnungAktiv,
   });
+  const rechnungen = rechnungenListe?.eintraege;
   const { data: material, isLoading: materialLoading } = useQuery({
     queryKey: ["material"],
     queryFn: () => materialApi.list(),
@@ -579,7 +591,6 @@ export function GeschaeftPage() {
     },
   });
 
-  if (currentUser && !hatRecht("dispo", "sehen")) return <Navigate to="/feed" replace />;
   if (sichtbareTabs.length === 0) return <Navigate to="/feed" replace />;
 
   const nameFuer = (kundeId: string) => kunden?.find((k) => k.id === kundeId)?.name ?? "—";
@@ -616,6 +627,16 @@ export function GeschaeftPage() {
           </button>
         ))}
       </div>
+
+      {tab === "rechnungen" && (
+        <button
+          onClick={() => navigate("/rechnungen")}
+          className="btn-touch mb-2 flex w-full items-center justify-between rounded-lg bg-white p-3 text-left text-sm font-medium text-cyan-700 shadow-sm dark:bg-stone-900 dark:text-cyan-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        >
+          <span>Vollständige Übersicht mit Filtern &amp; Suche</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      )}
 
       {tab !== "bestellwesen" && (
         <button

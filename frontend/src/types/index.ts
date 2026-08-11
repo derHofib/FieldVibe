@@ -494,7 +494,12 @@ export interface TechnikerZuweisungUebersicht {
 
 // --- Gespeicherte Filter-Vorlagen -----------------------------------------
 
-export type GespeicherterFilterEntitaet = "vorgaenge" | "anlagen" | "kunden" | "standorte";
+export type GespeicherterFilterEntitaet =
+  | "vorgaenge"
+  | "anlagen"
+  | "kunden"
+  | "standorte"
+  | "rechnungen";
 
 export interface GespeicherterFilter {
   id: string;
@@ -754,6 +759,34 @@ export interface Rechnung {
   updated_at: string;
   positionen: RechnungPosition[];
   betrag_brutto: string;
+  ist_ueberfaellig: boolean;
+  tage_ueberfaellig: number;
+}
+
+export interface RechnungListe {
+  eintraege: Rechnung[];
+  gesamt_anzahl: number;
+  summe_netto: string;
+  summe_brutto: string;
+  summe_offen: string;
+}
+
+export interface RechnungenFilter {
+  kunde_id?: string;
+  vorgang_id?: string;
+  status?: RechnungStatus[];
+  q?: string;
+  von?: string;
+  bis?: string;
+  faellig_von?: string;
+  faellig_bis?: string;
+  betrag_von?: string;
+  betrag_bis?: string;
+  nur_offen?: boolean;
+  nur_ueberfaellig?: boolean;
+  sort?: string;
+  limit?: number;
+  offset?: number;
 }
 
 export type EingangsrechnungStatus = "entwurf" | "offen" | "bezahlt" | "storniert";

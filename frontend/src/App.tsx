@@ -38,6 +38,7 @@ import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
+import { RechnungenPage } from "./pages/feld/RechnungenPage";
 import { RechnungseingangPage } from "./pages/feld/RechnungseingangPage";
 import { SearchPage } from "./pages/feld/SearchPage";
 import { SettingsPage } from "./pages/feld/SettingsPage";
@@ -119,6 +120,7 @@ export function App() {
           <Route path="/geschaeft" element={<GeschaeftPage />} />
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
+          <Route path="/rechnungen" element={<RechnungenPage />} />
           <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
           <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
           <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />

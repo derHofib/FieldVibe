@@ -8,6 +8,7 @@ import {
   Inbox,
   type LucideIcon,
   Plus,
+  Receipt,
   Rss,
   Trash2,
   User,
@@ -42,6 +43,7 @@ function NavItem({ to, label, icon, tone }: { to: string; label: string; icon: L
 
 const dispoItem = { to: "/dispo", label: "Dispo", icon: CalendarDays, tone: "amber" as const };
 const geschaeftItem = { to: "/geschaeft", label: "Geschäft", icon: Briefcase, tone: "emerald" as const };
+const rechnungenItem = { to: "/rechnungen", label: "Rechnungen", icon: Receipt, tone: "cyan" as const };
 const rechnungseingangItem = {
   to: "/rechnungseingang",
   label: "Rechnungseingang",
@@ -84,11 +86,20 @@ export function BottomNav() {
     // weg, wenn alle drei Bereiche fuer diesen Mandanten deaktiviert sind
     // (die Kunde-Basisfunktionen fuers Vorgang-Anlegen bleiben trotzdem
     // ueber die Inline-Anlage in "+Neu" erreichbar, siehe GeschaeftPage).
-    ...(canDisponieren && istModulAktiv(currentUser, "kundenverwaltung", "abrechnung", "material")
+    // Bewusst NICHT laenger an canDisponieren (dispo:sehen) gehaengt -- ein
+    // Account-Typ mit z.B. nur abrechnung:sehen (ein reiner Buchhalter) kam
+    // dadurch vorher gar nicht an "Geschäft" heran, siehe GeschaeftPage.tsx.
+    ...((hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung")) ||
+    (hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung")) ||
+    (hatRecht("material", "sehen") && istModulAktiv(currentUser, "material"))
       ? [{ ...geschaeftItem, badge: 0 }]
       : []),
     ...(hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung")
-      ? [{ ...rechnungseingangItem, badge: 0 }, { ...auswertungItem, badge: 0 }]
+      ? [
+          { ...rechnungenItem, badge: 0 },
+          { ...rechnungseingangItem, badge: 0 },
+          { ...auswertungItem, badge: 0 },
+        ]
       : []),
     ...(istPapierkorbRolle ? [{ ...papierkorbItem, badge: 0 }] : []),
   ];
