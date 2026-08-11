@@ -29,7 +29,7 @@ from app.schemas.rechnung import (
     RechnungUpdate,
     RechnungZahlungCreate,
 )
-from app.services import papierkorb_service
+from app.services import papierkorb_service, storage_service
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
@@ -825,6 +825,25 @@ async def rechnung_pdf(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{rechnung.rechnungsnummer}.pdf"'},
+    )
+
+
+@router.get("/{rechnung_id}/xml")
+async def rechnung_xml(
+    rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if not rechnung.xml_object_key:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Keine ZUGFeRD-XML fuer diese Rechnung vorhanden")
+    xml_bytes = await storage_service.download_bytes(rechnung.xml_object_key)
+    return Response(
+        content=xml_bytes,
+        media_type="application/xml",
+        headers={"Content-Disposition": 'inline; filename="factur-x.xml"'},
     )
 
 

@@ -9,7 +9,7 @@ from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
 from app.schemas.rechnung import RechnungPositionRead, RechnungRead, RechnungZahlungRead
-from app.services import pdf_service, storage_service
+from app.services import e_invoice_service, pdf_service, storage_service
 from app.services.numbering_service import next_rechnungsnummer
 
 _CENT = Decimal("0.01")
@@ -256,6 +256,37 @@ async def erstelle_stornorechnung(
     return storno
 
 
+def _rechnung_dokument_bytes(
+    rechnung: Rechnung,
+    mandant: Mandant,
+    kunde: Kunde,
+    positionen: list[RechnungPosition],
+    storniert_rechnung: Rechnung | None,
+) -> tuple[bytes, bytes | None]:
+    """Normales PDF ist immer der Ausgangspunkt. Nur wenn der Mandant
+    e_rechnung_aktiv gesetzt hat UND alle EN16931-Pflichtangaben vorhanden
+    sind, wird stattdessen ein ZUGFeRD-Hybrid-PDF (mit eingebetteter CII-XML)
+    erzeugt -- sonst stiller Fallback aufs normale PDF, kein Versand-Block."""
+    pdf_bytes = pdf_service.generate_rechnung_pdf(
+        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung
+    )
+    if not (mandant.firmendaten or {}).get("e_rechnung_aktiv"):
+        return pdf_bytes, None
+    probleme = e_invoice_service.pruefe_en16931_vollstaendigkeit(mandant, rechnung, kunde, positionen)
+    if probleme:
+        return pdf_bytes, None
+
+    netto = netto_betrag(rechnung, positionen)
+    brutto = brutto_betrag(rechnung, positionen)
+    dokument = e_invoice_service.baue_cii_dokument(mandant, rechnung, kunde, positionen, netto, brutto)
+    xml_bytes = e_invoice_service.cii_xml_bytes(dokument)
+    pdf_bytes_mit_output_intent = pdf_service.generate_rechnung_pdf(
+        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung, pdfa_output_intent=True
+    )
+    hybrid_pdf_bytes = e_invoice_service.baue_hybrid_pdf(pdf_bytes_mit_output_intent, xml_bytes)
+    return hybrid_pdf_bytes, xml_bytes
+
+
 async def archiviere_pdf(
     session: AsyncSession,
     rechnung: Rechnung,
@@ -270,12 +301,14 @@ async def archiviere_pdf(
     der Aufrufer sie z.B. direkt als E-Mail-Anhang weiterverwenden kann,
     ohne sie erneut aus MinIO abzurufen."""
     positionen = await positionen_fuer(session, rechnung.id)
-    pdf_bytes = pdf_service.generate_rechnung_pdf(
-        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung
-    )
+    pdf_bytes, xml_bytes = _rechnung_dokument_bytes(rechnung, mandant, kunde, positionen, storniert_rechnung)
     key = storage_service.new_rechnung_pdf_key(rechnung.id)
     await storage_service.upload_bytes(key, pdf_bytes, "application/pdf")
     rechnung.pdf_object_key = key
+    if xml_bytes is not None:
+        xml_key = storage_service.new_rechnung_xml_key(rechnung.id)
+        await storage_service.upload_bytes(xml_key, xml_bytes, "application/xml")
+        rechnung.xml_object_key = xml_key
     return pdf_bytes
 
 
