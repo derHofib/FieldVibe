@@ -126,9 +126,10 @@ async def test_doppelte_zuordnung_gleicher_leistungstyp_wird_abgelehnt(
 
 @pytest.mark.asyncio
 async def test_felder_werden_beim_anlegen_automatisch_gestapelt(client, make_mandant, make_user):
-    """Ohne explizite raster_zeile haengt create_formularfeld ein neues Feld
-    unterhalb aller bestehenden an -- Absicherung gegen versehentliche
-    Ueberlappung bei der Standard-"Feld hinzufügen"-Bedienung."""
+    """Ohne explizites y_mm haengt create_formularfeld ein neues Feld
+    unterhalb aller bestehenden Felder DERSELBEN Seite an -- Absicherung
+    gegen versehentliche Ueberlappung bei der Standard-"Feld hinzufügen"-
+    Bedienung."""
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
@@ -150,8 +151,8 @@ async def test_felder_werden_beim_anlegen_automatisch_gestapelt(client, make_man
             json={"feld_typ": "text", "label": "B"},
         )
     ).json()
-    assert feld_a["raster_zeile"] == 0
-    assert feld_b["raster_zeile"] == 1
+    assert feld_a["y_mm"] == 0
+    assert feld_b["y_mm"] == feld_a["hoehe_mm"]
     assert feld_a["reihenfolge"] == 0
     assert feld_b["reihenfolge"] == 1
 
@@ -180,25 +181,28 @@ async def test_felder_positionen_bulk_update(client, make_mandant, make_user):
         )
     ).json()
 
-    # Nebeneinander in Zeile 0 statt gestapelt anordnen.
+    # Nebeneinander statt gestapelt anordnen.
     resp = await client.put(
         f"/api/formulare/{formular['id']}/felder/positionen",
         headers=auth_headers(token),
         json=[
-            {"id": feld_a["id"], "raster_zeile": 0, "raster_spalte": 0, "raster_breite": 6, "raster_hoehe": 1},
-            {"id": feld_b["id"], "raster_zeile": 0, "raster_spalte": 6, "raster_breite": 6, "raster_hoehe": 1},
+            {"id": feld_a["id"], "seite": 0, "x_mm": 0, "y_mm": 0, "breite_mm": 90, "hoehe_mm": 8},
+            {"id": feld_b["id"], "seite": 0, "x_mm": 90, "y_mm": 0, "breite_mm": 90, "hoehe_mm": 8},
         ],
     )
     assert resp.status_code == 200
     body = {f["id"]: f for f in resp.json()}
-    assert body[feld_a["id"]]["raster_spalte"] == 0
-    assert body[feld_b["id"]]["raster_spalte"] == 6
+    assert body[feld_a["id"]]["x_mm"] == 0
+    assert body[feld_b["id"]]["x_mm"] == 90
     assert body[feld_a["id"]]["reihenfolge"] == 0
     assert body[feld_b["id"]]["reihenfolge"] == 1
 
 
 @pytest.mark.asyncio
-async def test_felder_positionen_ueberlappung_wird_abgelehnt(client, make_mandant, make_user):
+async def test_ueberlappende_positionen_werden_akzeptiert(client, make_mandant, make_user):
+    """Anders als beim frueheren 12-Spalten-Raster ist Ueberlappung bei der
+    freien Positionierung erlaubt (wie im MS-Access-Formular-Designer) --
+    das Backend blockt nicht mehr, der Editor markiert das nur optisch."""
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
@@ -225,16 +229,15 @@ async def test_felder_positionen_ueberlappung_wird_abgelehnt(client, make_mandan
         f"/api/formulare/{formular['id']}/felder/positionen",
         headers=auth_headers(token),
         json=[
-            {"id": feld_a["id"], "raster_zeile": 0, "raster_spalte": 0, "raster_breite": 8, "raster_hoehe": 1},
-            {"id": feld_b["id"], "raster_zeile": 0, "raster_spalte": 4, "raster_breite": 8, "raster_hoehe": 1},
+            {"id": feld_a["id"], "seite": 0, "x_mm": 0, "y_mm": 0, "breite_mm": 100, "hoehe_mm": 8},
+            {"id": feld_b["id"], "seite": 0, "x_mm": 50, "y_mm": 0, "breite_mm": 100, "hoehe_mm": 8},
         ],
     )
-    assert resp.status_code == 400
-    assert "überlappen" in resp.json()["detail"]
+    assert resp.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_raster_bounds_werden_validiert(client, make_mandant, make_user):
+async def test_position_bounds_werden_validiert(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
@@ -245,9 +248,67 @@ async def test_raster_bounds_werden_validiert(client, make_mandant, make_user):
     resp = await client.post(
         f"/api/formulare/{formular['id']}/felder",
         headers=auth_headers(token),
-        json={"feld_typ": "text", "label": "Zu breit", "raster_spalte": 8, "raster_breite": 8},
+        json={"feld_typ": "text", "label": "Zu breit", "x_mm": 100, "breite_mm": 100},
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_seite_ausserhalb_anzahl_seiten_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+    assert formular["anzahl_seiten"] == 1
+
+    resp = await client.post(
+        f"/api/formulare/{formular['id']}/felder",
+        headers=auth_headers(token),
+        json={"feld_typ": "text", "label": "X", "seite": 1},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_anzahl_seiten_erhoehen_und_verringern(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+
+    erhoeht = await client.patch(
+        f"/api/formulare/{formular['id']}", headers=auth_headers(token), json={"anzahl_seiten": 2}
+    )
+    assert erhoeht.status_code == 200
+    assert erhoeht.json()["anzahl_seiten"] == 2
+
+    feld_auf_seite_2 = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "X", "seite": 1},
+        )
+    ).json()
+    assert feld_auf_seite_2["seite"] == 1
+
+    blockiert = await client.patch(
+        f"/api/formulare/{formular['id']}", headers=auth_headers(token), json={"anzahl_seiten": 1}
+    )
+    assert blockiert.status_code == 409
+
+    await client.delete(
+        f"/api/formulare/{formular['id']}/felder/{feld_auf_seite_2['id']}", headers=auth_headers(token)
+    )
+    verringert = await client.patch(
+        f"/api/formulare/{formular['id']}", headers=auth_headers(token), json={"anzahl_seiten": 1}
+    )
+    assert verringert.status_code == 200
 
 
 @pytest.mark.asyncio
@@ -691,3 +752,53 @@ def test_pdf_export_raster_snapshot_mit_seitenumbruch():
     assert pdf_bytes.startswith(b"%PDF")
     seiten = re.findall(rb"/Type\s*/Page\b", pdf_bytes)
     assert len(seiten) >= 2
+
+
+def test_pdf_export_freeform_snapshot_mit_mehreren_seiten():
+    """snapshot_version 3 -- Seitenaufteilung ist explizit im Snapshot
+    festgelegt (anzahl_seiten + Formularfeld.seite), kein automatischer
+    Umbruch mehr. Zwei Felder auf Seite 0, eines auf Seite 1 muessen als
+    genau zwei PDF-Seiten herauskommen."""
+    felder = [
+        {
+            "id": "f0",
+            "feld_typ": "text",
+            "label": "Feld auf Seite 1",
+            "reihenfolge": 0,
+            "pflichtfeld": False,
+            "seite": 0,
+            "x_mm": 0,
+            "y_mm": 0,
+            "breite_mm": 90,
+            "hoehe_mm": 8,
+            "datenquelle": None,
+        },
+        {
+            "id": "f1",
+            "feld_typ": "text",
+            "label": "Feld auf Seite 2",
+            "reihenfolge": 1,
+            "pflichtfeld": False,
+            "seite": 1,
+            "x_mm": 0,
+            "y_mm": 0,
+            "breite_mm": 90,
+            "hoehe_mm": 8,
+            "datenquelle": None,
+        },
+    ]
+    vorgang_formular = SimpleNamespace(
+        formular_snapshot={
+            "snapshot_version": 3,
+            "name": "Freiform-Formular",
+            "anzahl_seiten": 2,
+            "felder": felder,
+        },
+        antworten={f["id"]: f"Wert {f['id']}" for f in felder},
+        abgeschlossen_am=datetime.now(timezone.utc),
+        created_at=datetime.now(timezone.utc),
+    )
+    pdf_bytes = generate_formular_pdf(_fake_mandant(), _fake_vorgang(), vorgang_formular, bilder={})
+    assert pdf_bytes.startswith(b"%PDF")
+    seiten = re.findall(rb"/Type\s*/Page\b", pdf_bytes)
+    assert len(seiten) == 2
