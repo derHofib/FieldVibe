@@ -71,6 +71,7 @@ import type {
   RechnungenFilter,
   RechnungListe,
   RechnungPosition,
+  RechnungZahlungCreate,
   RechteAktion,
   RechteBereich,
   RechteMatrixEintrag,
@@ -912,6 +913,10 @@ export const rechnungenApi = {
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/rechnungen/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff?: string; inhalt?: string }) =>
     apiFetch<EmailLog>(`/api/rechnungen/${id}/email`, { method: "POST", body: JSON.stringify(body) }),
+  addZahlung: (id: string, body: RechnungZahlungCreate) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen`, { method: "POST", body: JSON.stringify(body) }),
+  stornoZahlung: (id: string, zahlungId: string) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen/${zahlungId}/storno`, { method: "POST" }),
 };
 
 export const eingangsrechnungenApi = {

@@ -726,7 +726,8 @@ export interface Angebot {
   gesamt_brutto: string;
 }
 
-export type RechnungStatus = "entwurf" | "versendet" | "bezahlt" | "storniert";
+export type RechnungStatus = "entwurf" | "versendet" | "teilweise_bezahlt" | "bezahlt" | "storniert";
+export type RechnungZahlungsart = "ueberweisung" | "bar" | "karte" | "lastschrift" | "sonstiges";
 
 export interface RechnungPosition {
   id: string;
@@ -736,6 +737,24 @@ export interface RechnungPosition {
   einheit: string;
   einzelpreis: string;
   gesamt: string;
+}
+
+export interface RechnungZahlung {
+  id: string;
+  betrag: string;
+  datum: string;
+  zahlungsart: RechnungZahlungsart | null;
+  notiz: string | null;
+  storniert_zahlung_id: string | null;
+  erstellt_von: string;
+  created_at: string;
+}
+
+export interface RechnungZahlungCreate {
+  betrag: string;
+  datum?: string;
+  zahlungsart?: RechnungZahlungsart;
+  notiz?: string;
 }
 
 export interface Rechnung {
@@ -761,6 +780,9 @@ export interface Rechnung {
   betrag_brutto: string;
   ist_ueberfaellig: boolean;
   tage_ueberfaellig: number;
+  zahlungen: RechnungZahlung[];
+  bezahlter_betrag: string;
+  offener_betrag: string;
 }
 
 export interface RechnungListe {

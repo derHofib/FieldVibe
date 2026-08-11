@@ -18,6 +18,7 @@ import {
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
+import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { istModulAktiv } from "../../utils/module";
 import type {
   Anlage,
@@ -26,7 +27,6 @@ import type {
   BestellungStatus,
   Material,
   MaterialBedarfZweck,
-  RechnungStatus,
   Tag,
 } from "../../types";
 
@@ -50,13 +50,6 @@ const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
   versendet: "Versendet",
   angenommen: "Angenommen",
   abgelehnt: "Abgelehnt",
-};
-
-const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  bezahlt: "Bezahlt",
-  storniert: "Storniert",
 };
 
 function istUnterbestand(m: Material): boolean {

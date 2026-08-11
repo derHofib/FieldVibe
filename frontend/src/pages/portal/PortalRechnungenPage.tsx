@@ -4,15 +4,9 @@ import { FileText, Receipt } from "lucide-react";
 import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
+import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { openPdfBlob } from "../../utils/pdf";
-import type { Rechnung, RechnungStatus } from "../../types";
-
-const STATUS_LABEL: Record<RechnungStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  bezahlt: "Bezahlt",
-  storniert: "Storniert",
-};
+import type { Rechnung } from "../../types";
 
 function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
   const pdfMutation = useMutation({
@@ -33,7 +27,7 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
           )}
         </div>
         <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-          {STATUS_LABEL[rechnung.status]}
+          {RECHNUNG_STATUS_LABEL[rechnung.status]}
         </span>
       </div>
       <button

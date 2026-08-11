@@ -14,7 +14,7 @@ import { formatDatum, formatEuro, heuteIso } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
 import type { RechnungStatus, RechnungenFilter } from "../../types";
 
-const STATUS_OPTIONEN: RechnungStatus[] = ["entwurf", "versendet", "bezahlt", "storniert"];
+const STATUS_OPTIONEN: RechnungStatus[] = ["entwurf", "versendet", "teilweise_bezahlt", "bezahlt", "storniert"];
 const SEITENGROESSE = 50;
 
 export function RechnungenPage() {
