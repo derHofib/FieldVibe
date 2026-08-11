@@ -1174,6 +1174,30 @@ export interface UstVaBericht {
   zahllast: string;
 }
 
+export interface OffenerPostenEintrag {
+  id: string;
+  nummer: string;
+  partner_name: string;
+  faellig_am: string | null;
+  tage_ueberfaellig: number;
+  offener_betrag: string;
+}
+
+export interface OffenePostenBucket {
+  label: string;
+  anzahl: number;
+  summe: string;
+}
+
+export interface OffenePostenBericht {
+  debitoren: OffenerPostenEintrag[];
+  kreditoren: OffenerPostenEintrag[];
+  summe_debitoren: string;
+  summe_kreditoren: string;
+  debitoren_buckets: OffenePostenBucket[];
+  kreditoren_buckets: OffenePostenBucket[];
+}
+
 // --- Formular-Baukasten ------------------------------------------------------
 
 export type FormularfeldTyp =

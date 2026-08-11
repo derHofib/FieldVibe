@@ -13,7 +13,13 @@ from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.kunde import Kunde
 from app.models.lieferant import Lieferant
 from app.models.rechnung import Rechnung
-from app.schemas.auswertung import UstVaBericht, UstVaSatzZeile
+from app.schemas.auswertung import (
+    OffenePostenBericht,
+    OffenePostenBucket,
+    OffenerPostenEintrag,
+    UstVaBericht,
+    UstVaSatzZeile,
+)
 from app.services import eingangsrechnung_service, rechnung_service
 
 _CENT = Decimal("0.01")
@@ -109,6 +115,99 @@ async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis
         summe_umsatzsteuer=summe_umsatzsteuer,
         summe_vorsteuer=summe_vorsteuer,
         zahllast=(summe_umsatzsteuer - summe_vorsteuer).quantize(_CENT),
+    )
+
+
+_BUCKET_REIHENFOLGE = ["Nicht fällig", "1-30 Tage", "31-60 Tage", "61-90 Tage", "90+ Tage"]
+
+
+def _bucket_label(tage_ueberfaellig: int) -> str:
+    if tage_ueberfaellig <= 0:
+        return "Nicht fällig"
+    if tage_ueberfaellig <= 30:
+        return "1-30 Tage"
+    if tage_ueberfaellig <= 60:
+        return "31-60 Tage"
+    if tage_ueberfaellig <= 90:
+        return "61-90 Tage"
+    return "90+ Tage"
+
+
+def _buckets_aus(eintraege: list[OffenerPostenEintrag]) -> list[OffenePostenBucket]:
+    summen = {label: Decimal("0") for label in _BUCKET_REIHENFOLGE}
+    anzahl = {label: 0 for label in _BUCKET_REIHENFOLGE}
+    for eintrag in eintraege:
+        label = _bucket_label(eintrag.tage_ueberfaellig)
+        summen[label] += eintrag.offener_betrag
+        anzahl[label] += 1
+    return [
+        OffenePostenBucket(label=label, anzahl=anzahl[label], summe=summen[label].quantize(_CENT))
+        for label in _BUCKET_REIHENFOLGE
+        if anzahl[label] > 0
+    ]
+
+
+async def offene_posten_bericht(session: AsyncSession, mandant_id: UUID, heute: date) -> OffenePostenBericht:
+    """OP-Liste: fasst offene Debitoren (Ausgangsrechnungen) und Kreditoren
+    (Eingangsrechnungen) in einem gemeinsamen Alterungsraster zusammen.
+    Entwuerfe zaehlen bewusst nicht mit -- fuer eine noch nicht versendete
+    Rechnung gibt es nichts zu mahnen oder zu bezahlen."""
+    debitoren_stmt = select(
+        Rechnung.id,
+        Rechnung.rechnungsnummer,
+        Rechnung.kunde_id,
+        Rechnung.faellig_am,
+        rechnung_service.offen_sql().label("offen"),
+    ).where(Rechnung.mandant_id == mandant_id, Rechnung.status.in_(("versendet", "teilweise_bezahlt")))
+    debitor_zeilen = [row for row in (await session.execute(debitoren_stmt)).all() if row.offen > 0]
+    kunden_namen = await rechnung_service.kunden_namen_fuer(session, [row.kunde_id for row in debitor_zeilen])
+
+    debitoren = [
+        OffenerPostenEintrag(
+            id=row.id,
+            nummer=row.rechnungsnummer,
+            partner_name=kunden_namen.get(row.kunde_id, "?"),
+            faellig_am=row.faellig_am,
+            tage_ueberfaellig=max((heute - row.faellig_am).days, 0) if row.faellig_am else 0,
+            offener_betrag=row.offen,
+        )
+        for row in debitor_zeilen
+    ]
+    debitoren.sort(key=lambda e: -e.tage_ueberfaellig)
+
+    eingang_stmt = select(Eingangsrechnung).where(
+        Eingangsrechnung.mandant_id == mandant_id, Eingangsrechnung.status == "offen"
+    )
+    eingangsrechnungen = (await session.execute(eingang_stmt)).scalars().all()
+
+    kreditoren: list[OffenerPostenEintrag] = []
+    for eingangsrechnung in eingangsrechnungen:
+        positionen = await eingangsrechnung_service.positionen_fuer(session, eingangsrechnung.id)
+        zahlungen = await eingangsrechnung_service.zahlungen_fuer(session, eingangsrechnung.id)
+        brutto = eingangsrechnung_service.brutto_betrag(eingangsrechnung, positionen)
+        offen = brutto - eingangsrechnung_service.bezahlter_betrag(zahlungen)
+        if offen <= 0:
+            continue
+        faellig_am = eingangsrechnung.faellig_am
+        kreditoren.append(
+            OffenerPostenEintrag(
+                id=eingangsrechnung.id,
+                nummer=eingangsrechnung.rechnungsnummer_lieferant,
+                partner_name=eingangsrechnung.lieferant_name,
+                faellig_am=faellig_am,
+                tage_ueberfaellig=max((heute - faellig_am).days, 0) if faellig_am else 0,
+                offener_betrag=offen,
+            )
+        )
+    kreditoren.sort(key=lambda e: -e.tage_ueberfaellig)
+
+    return OffenePostenBericht(
+        debitoren=debitoren,
+        kreditoren=kreditoren,
+        summe_debitoren=sum((e.offener_betrag for e in debitoren), Decimal("0")).quantize(_CENT),
+        summe_kreditoren=sum((e.offener_betrag for e in kreditoren), Decimal("0")).quantize(_CENT),
+        debitoren_buckets=_buckets_aus(debitoren),
+        kreditoren_buckets=_buckets_aus(kreditoren),
     )
 
 

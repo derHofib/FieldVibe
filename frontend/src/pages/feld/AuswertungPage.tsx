@@ -28,6 +28,12 @@ export function AuswertungPage() {
     enabled: false,
   });
 
+  const { data: offenePosten } = useQuery({
+    queryKey: ["offene-posten"],
+    queryFn: auswertungApi.offenePosten,
+    enabled: abrechnungAktiv && kannSehen,
+  });
+
   const datevMutation = useMutation({
     mutationFn: () => auswertungApi.datevExportCsv(von, bis),
     onSuccess: (blob) => downloadBlob(blob, `DATEV-Export_${von}_${bis}.csv`),
@@ -43,6 +49,87 @@ export function AuswertungPage() {
         </button>
         <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Auswertung</h1>
       </div>
+
+      {offenePosten && (offenePosten.debitoren.length > 0 || offenePosten.kreditoren.length > 0) && (
+        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Offene Posten</h2>
+
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-md bg-amber-50 p-2 dark:bg-amber-500/10">
+              <div className="text-xs text-amber-700 dark:text-amber-400">Debitoren (Kunden schulden)</div>
+              <div className="font-semibold text-amber-900 dark:text-amber-300">
+                {offenePosten.summe_debitoren} EUR
+              </div>
+            </div>
+            <div className="rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+              <div className="text-xs text-slate-500 dark:text-stone-400">Kreditoren (wir schulden)</div>
+              <div className="font-semibold text-slate-800 dark:text-stone-100">
+                {offenePosten.summe_kreditoren} EUR
+              </div>
+            </div>
+          </div>
+
+          {offenePosten.debitoren.length > 0 && (
+            <>
+              <div className="mb-1 mt-4 flex flex-wrap gap-1.5">
+                {offenePosten.debitoren_buckets.map((b) => (
+                  <span
+                    key={b.label}
+                    className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+                  >
+                    {b.label}: {b.summe} EUR ({b.anzahl})
+                  </span>
+                ))}
+              </div>
+              <div className="space-y-1">
+                {offenePosten.debitoren.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
+                    <div>
+                      <div className="text-slate-700 dark:text-stone-300">{d.nummer} · {d.partner_name}</div>
+                      <div className="text-xs text-slate-400 dark:text-stone-500">
+                        {d.faellig_am
+                          ? `Fällig ${new Date(d.faellig_am).toLocaleDateString("de-DE")}${d.tage_ueberfaellig > 0 ? ` · ${d.tage_ueberfaellig} Tage überfällig` : ""}`
+                          : "Kein Fälligkeitsdatum"}
+                      </div>
+                    </div>
+                    <div className="font-medium text-slate-700 dark:text-stone-300">{d.offener_betrag} EUR</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {offenePosten.kreditoren.length > 0 && (
+            <>
+              <div className="mb-1 mt-4 flex flex-wrap gap-1.5">
+                {offenePosten.kreditoren_buckets.map((b) => (
+                  <span
+                    key={b.label}
+                    className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                  >
+                    {b.label}: {b.summe} EUR ({b.anzahl})
+                  </span>
+                ))}
+              </div>
+              <div className="space-y-1">
+                {offenePosten.kreditoren.map((k) => (
+                  <div key={k.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
+                    <div>
+                      <div className="text-slate-700 dark:text-stone-300">{k.nummer} · {k.partner_name}</div>
+                      <div className="text-xs text-slate-400 dark:text-stone-500">
+                        {k.faellig_am
+                          ? `Fällig ${new Date(k.faellig_am).toLocaleDateString("de-DE")}${k.tage_ueberfaellig > 0 ? ` · ${k.tage_ueberfaellig} Tage überfällig` : ""}`
+                          : "Kein Fälligkeitsdatum"}
+                      </div>
+                    </div>
+                    <div className="font-medium text-slate-700 dark:text-stone-300">{k.offener_betrag} EUR</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="grid grid-cols-2 gap-2">

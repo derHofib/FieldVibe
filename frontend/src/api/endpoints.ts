@@ -62,6 +62,7 @@ import type {
   MaterialBewegung,
   MaterialVerwendung,
   NotificationEntry,
+  OffenePostenBericht,
   PapierkorbEintrag,
   PapierkorbEntityTyp,
   Pruefmittel,
@@ -1106,6 +1107,7 @@ export const auswertungApi = {
     apiFetch<UstVaBericht>(`/api/auswertung/ust-va?von=${von}&bis=${bis}`),
   datevExportCsv: (von: string, bis: string) =>
     apiFetchBlob(`/api/auswertung/datev-export?von=${von}&bis=${bis}`),
+  offenePosten: () => apiFetch<OffenePostenBericht>("/api/auswertung/offene-posten"),
 };
 
 export const kundenportalZugaengeApi = {
