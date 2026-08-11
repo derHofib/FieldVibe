@@ -13,6 +13,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   const [strasse, setStrasse] = useState(fd.adresse?.strasse ?? "");
   const [plz, setPlz] = useState(fd.adresse?.plz ?? "");
   const [ort, setOrt] = useState(fd.adresse?.ort ?? "");
+  const [land, setLand] = useState(fd.adresse?.land ?? "DE");
   const [telefon, setTelefon] = useState(fd.telefon ?? "");
   const [email, setEmail] = useState(fd.email ?? "");
   const [website, setWebsite] = useState(fd.website ?? "");
@@ -24,6 +25,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   const [ustIdnr, setUstIdnr] = useState(fd.ust_idnr ?? "");
   const [steuernummer, setSteuernummer] = useState(fd.steuernummer ?? "");
   const [istKleinunternehmer, setIstKleinunternehmer] = useState(fd.ist_kleinunternehmer ?? false);
+  const [eRechnungAktiv, setERechnungAktiv] = useState(fd.e_rechnung_aktiv ?? false);
 
   const { data: logoUrl } = useQuery({
     queryKey: ["mandant-logo-url"],
@@ -33,7 +35,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   const speichernMutation = useMutation({
     mutationFn: () =>
       mandantEinstellungenApi.firmendatenSpeichern({
-        adresse: { strasse, plz, ort },
+        adresse: { strasse, plz, ort, land },
         telefon,
         email,
         website,
@@ -45,6 +47,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         ust_idnr: ustIdnr,
         steuernummer,
         ist_kleinunternehmer: istKleinunternehmer,
+        e_rechnung_aktiv: eRechnungAktiv,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });
@@ -117,11 +120,13 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
       />
       <div className="grid grid-cols-3 gap-2">
         <input value={plz} onChange={(e) => setPlz(e.target.value)} placeholder="PLZ" className={inputClass} />
+        <input value={ort} onChange={(e) => setOrt(e.target.value)} placeholder="Ort" className={inputClass} />
         <input
-          value={ort}
-          onChange={(e) => setOrt(e.target.value)}
-          placeholder="Ort"
-          className={`col-span-2 ${inputClass}`}
+          value={land}
+          onChange={(e) => setLand(e.target.value.toUpperCase())}
+          placeholder="Land (z.B. DE)"
+          maxLength={2}
+          className={inputClass}
         />
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -171,6 +176,23 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
           onChange={(e) => setIstKleinunternehmer(e.target.checked)}
         />
         Kleinunternehmer nach § 19 UStG (keine Umsatzsteuer auf Rechnungen)
+      </label>
+
+      <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-stone-300">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={eRechnungAktiv}
+          onChange={(e) => setERechnungAktiv(e.target.checked)}
+        />
+        <span>
+          E-Rechnung (ZUGFeRD) aktivieren
+          <span className="mt-0.5 block text-xs text-slate-400 dark:text-stone-500">
+            Rechnungen werden beim Versand als ZUGFeRD-Hybrid-PDF mit eingebetteter E-Rechnungs-XML
+            erzeugt, sobald alle Pflichtangaben (u.a. USt-IdNr. des Kunden bei gewerblichen/öffentlichen
+            Kunden) vorhanden sind -- sonst automatisch normales PDF.
+          </span>
+        </span>
       </label>
 
       <div className="flex items-center gap-2">
