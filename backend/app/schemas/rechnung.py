@@ -88,6 +88,12 @@ class RechnungRead(BaseModel):
     letzte_mahnung_am: datetime | None
     ist_storno: bool
     storniert_rechnung_id: UUID | None
+    # Gesetzt, wenn beim Versand eine ZUGFeRD-konforme Hybrid-PDF mit
+    # eingebetteter XML erzeugt und archiviert wurde -- siehe
+    # rechnung_service._rechnung_dokument_bytes(). NULL bei Entwuerfen,
+    # bei deaktivierter E-Rechnung oder wenn Pflichtangaben zum
+    # Versand-Zeitpunkt fehlten (stiller Fallback auf normales PDF).
+    xml_object_key: str | None
     created_at: datetime
     updated_at: datetime
     positionen: list[RechnungPositionRead]

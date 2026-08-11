@@ -28,6 +28,11 @@ class Kunde(SoftDeleteMixin, TimestampMixin, Base):
     ansprechpartner: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     adresse: Mapped[dict | None] = mapped_column(JSONB)
     notiz: Mapped[str | None] = mapped_column(Text)
+    # Umsatzsteuer-Identifikationsnummer -- Pflichtangabe (EN16931 BT-48) in
+    # einer ZUGFeRD-Rechnung an gewerbliche/oeffentliche Kunden, siehe
+    # e_invoice_service.pruefe_en16931_vollstaendigkeit(). Bei privaten
+    # Kunden schlicht nicht vorhanden, daher nullable statt Pflichtfeld.
+    ust_idnr: Mapped[str | None] = mapped_column(Text)
     # Personalisierter Kundenportal-Login-Link (/portal/l/{portal_slug}): ein
     # Link pro Kunde, nicht pro Ansprechpartner -- jeder Mitarbeiter des
     # Kunden mit einem eigenen KundenportalZugang meldet sich darueber mit

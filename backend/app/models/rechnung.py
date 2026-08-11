@@ -74,6 +74,13 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     # jedem Abruf neu erzeugt, damit spaetere Aenderungen an Firmendaten/Logo
     # das bereits verschickte Dokument nicht nachtraeglich veraendern.
     pdf_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Analog zu pdf_object_key: die zum Versand-Zeitpunkt eingebettete
+    # ZUGFeRD-XML wird zusaetzlich einzeln archiviert, damit sie auch ohne
+    # das PDF abrufbar ist (siehe GET /rechnungen/{id}/xml). NULL, wenn
+    # E-Rechnung fuer den Mandanten nicht aktiv war oder die
+    # EN16931-Vollstaendigkeitspruefung zum Versand-Zeitpunkt fehlschlug --
+    # in beiden Faellen wurde stillschweigend nur ein normales PDF erzeugt.
+    xml_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class RechnungPosition(Base):

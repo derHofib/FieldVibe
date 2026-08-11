@@ -107,6 +107,7 @@ async def create_kunde(
         ansprechpartner=[a.model_dump(mode="json") for a in body.ansprechpartner],
         adresse=body.adresse,
         notiz=body.notiz,
+        ust_idnr=body.ust_idnr,
         # Ein Link fuer den gesamten Kunden (nicht pro Ansprechpartner) --
         # jeder Mitarbeiter des Kunden mit eigenem KundenportalZugang meldet
         # sich darueber mit seiner eigenen E-Mail/seinem eigenen Passwort an.
