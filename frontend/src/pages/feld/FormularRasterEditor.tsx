@@ -94,25 +94,28 @@ function MmFeld({
   max?: number;
   onCommit: (wert: number) => void;
 }) {
-  const [draft, setDraft] = useState(String(wert));
+  // Gerundet anzeigen: freies Ziehen ohne Einrasthilfe liefert Werte wie
+  // 53.19402985074625, die im Zahlenfeld unlesbar sind.
+  const gerundet = (n: number) => Math.round(n * 10) / 10;
+  const [draft, setDraft] = useState(String(gerundet(wert)));
   const [fokussiert, setFokussiert] = useState(false);
 
   useEffect(() => {
-    if (!fokussiert) setDraft(String(wert));
+    if (!fokussiert) setDraft(String(Math.round(wert * 10) / 10));
   }, [wert, fokussiert]);
 
   function commit() {
     setFokussiert(false);
     const zahl = Number(draft.replace(",", "."));
     if (!Number.isFinite(zahl)) {
-      setDraft(String(wert));
+      setDraft(String(gerundet(wert)));
       return;
     }
     let begrenzt = Math.max(zahl, min);
     if (max !== undefined) begrenzt = Math.min(begrenzt, max);
-    begrenzt = Math.round(begrenzt * 10) / 10;
+    begrenzt = gerundet(begrenzt);
     setDraft(String(begrenzt));
-    if (begrenzt !== wert) onCommit(begrenzt);
+    if (begrenzt !== gerundet(wert)) onCommit(begrenzt);
   }
 
   return (
