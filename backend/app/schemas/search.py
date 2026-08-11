@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-SearchKategorie = Literal["kunde", "anlage", "vorgang", "tag"]
+SearchKategorie = Literal["kunde", "anlage", "vorgang", "rechnung", "tag"]
 
 
 class SearchHit(BaseModel):

@@ -5,10 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.mandant import Mandant
+from app.models.rechnung import Rechnung
 from app.models.tag import Tag
 from app.models.vorgang import Vorgang
 from app.schemas.search import SearchHit, SearchResponse
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
+from app.services.rechnung_service import kunden_namen_fuer
+from app.services.rechte_service import hat_recht, ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
@@ -18,6 +21,25 @@ router = APIRouter(
 )
 
 HITS_PER_KATEGORIE = 8
+
+
+async def _darf_rechnungen_sehen(session: AsyncSession, auth: AuthContext) -> bool:
+    """Rechnungstreffer sind nur fuer Accounts sichtbar, die auch
+    /api/rechnungen aufrufen duerften. Dieser Router hat NUR require_roles,
+    kein require_recht/require_module -- ohne dieses Gate wuerde jeder
+    Mitarbeiter Rechnungsnummern, Kundennamen und Betraege sehen. Dieselben
+    zwei Bedingungen wie dort: das Modul 'abrechnung' und das Recht
+    abrechnung:sehen (nur 'custom'-Rollen werden gegen die Matrix geprueft,
+    siehe require_recht in app/api/deps.py)."""
+    if auth.mandant_id is not None:
+        mandant = await session.get(Mandant, auth.mandant_id)
+        if mandant is not None and "abrechnung" in mandant.deaktivierte_module:
+            return False
+    if auth.role != "custom":
+        return True
+    return await hat_recht(
+        session, account_typ_id=auth.account_typ_id, bereich="abrechnung", aktion="sehen"
+    )
 
 
 @router.get("", response_model=SearchResponse)
@@ -101,6 +123,30 @@ async def search(
         SearchHit(kategorie="vorgang", id=v.id, titel=f"{v.vorgangsnummer}: {v.titel}", subtitel=v.status)
         for v in vorgaenge_result.scalars()
     ]
+
+    # Rechnungen: "R-00042" muss auffindbar sein, das war fuer die
+    # Buchhaltung die spuerbarste Luecke. Gate ueber _darf_rechnungen_sehen,
+    # siehe deren Docstring fuer den Sicherheitshintergrund.
+    if await _darf_rechnungen_sehen(session, auth):
+        rechnungen_stmt = (
+            select(Rechnung)
+            .where(Rechnung.rechnungsnummer.ilike(f"%{q}%"), Rechnung.geloescht_am.is_(None))
+            .order_by(func.similarity(Rechnung.rechnungsnummer, q).desc())
+            .limit(HITS_PER_KATEGORIE)
+        )
+        if kunde_ids is not None:
+            rechnungen_stmt = rechnungen_stmt.where(Rechnung.kunde_id.in_(kunde_ids))
+        rechnungen = list((await session.execute(rechnungen_stmt)).scalars().all())
+        kunden_namen = await kunden_namen_fuer(session, [r.kunde_id for r in rechnungen])
+        treffer += [
+            SearchHit(
+                kategorie="rechnung",
+                id=r.id,
+                titel=r.rechnungsnummer,
+                subtitel=f"{kunden_namen.get(r.kunde_id, '')} · {r.status}",
+            )
+            for r in rechnungen
+        ]
 
     tags_result = await session.execute(
         select(Tag)

@@ -184,7 +184,8 @@ async def test_mandant_isolation_for_rechnungen(client, make_mandant, make_user,
     assert created.status_code == 201
 
     list_resp = await client.get("/api/rechnungen", headers=auth_headers(token2))
-    assert list_resp.json() == []
+    assert list_resp.json()["eintraege"] == []
+    assert list_resp.json()["gesamt_anzahl"] == 0
 
 
 @pytest.mark.asyncio

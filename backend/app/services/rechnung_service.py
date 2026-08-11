@@ -40,14 +40,17 @@ def netto_sql():
     in der Datenbank gefiltert, sortiert oder summiert werden muss (Betrags-
     filter und Summenzeile der Rechnungsuebersicht). Muss dieselbe Regel
     abbilden: Positionen gewinnen, sonst der manuell gesetzte betrag_netto.
-    sum() ueber 0 Zeilen ist NULL, daher coalesce."""
+    sum() ueber 0 Zeilen ist NULL, daher coalesce. round(...,2): die
+    Positionssumme menge*einzelpreis vergroessert in Postgres die Skala
+    (Numeric(10,2) * Numeric(10,2) -> Skala 4), sonst zeigt die Summenzeile
+    z.B. "3450.0000" statt "3450.00"."""
     positionen_summe = (
         select(func.sum(RechnungPosition.menge * RechnungPosition.einzelpreis))
         .where(RechnungPosition.rechnung_id == Rechnung.id)
         .correlate(Rechnung)
         .scalar_subquery()
     )
-    return func.coalesce(positionen_summe, Rechnung.betrag_netto)
+    return func.round(func.coalesce(positionen_summe, Rechnung.betrag_netto), 2)
 
 
 def brutto_sql():
