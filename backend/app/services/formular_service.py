@@ -16,7 +16,6 @@ from app.models.standort import Standort
 from app.models.vorgang import Vorgang
 from app.schemas.formular import (
     FormularAuftragstypZuordnungRead,
-    FormularfeldPosition,
     FormularfeldRead,
     FormularRead,
     FormularVerfuegbar,
@@ -44,7 +43,7 @@ async def felder_fuer(session: AsyncSession, formular_id: UUID) -> list[Formular
     result = await session.execute(
         select(Formularfeld)
         .where(Formularfeld.formular_id == formular_id)
-        .order_by(Formularfeld.raster_zeile, Formularfeld.raster_spalte)
+        .order_by(Formularfeld.seite, Formularfeld.y_mm, Formularfeld.x_mm)
     )
     return list(result.scalars().all())
 
@@ -69,17 +68,18 @@ async def to_read_model(session: AsyncSession, formular: Formular) -> FormularRe
 
 
 def snapshot_von(formular: Formular, felder: list[Formularfeld]) -> dict:
-    """Friert Name, Raster-Layout und Felddefinitionen zum Startzeitpunkt
+    """Friert Name, Seitenlayout und Felddefinitionen zum Startzeitpunkt
     einer Ausfuellung ein (siehe VorgangFormular.formular_snapshot) --
     spaetere Aenderungen an der Formular-Vorlage duerfen diese Ausfuellung
-    nicht mehr beeinflussen. snapshot_version unterscheidet das neue
-    Raster-Layout (2) von aelteren, bereits abgeschlossenen Ausfuellungen
-    ohne Rasterdaten (siehe generate_formular_pdf, das fuer Version 1 auf
-    den bisherigen Flow-Renderer zurueckfaellt)."""
+    nicht mehr beeinflussen. snapshot_version unterscheidet die freie
+    Positionierung (3) vom aelteren 12-Spalten-Raster (2) und den
+    urspruenglichen, bereits abgeschlossenen Ausfuellungen ohne Layout-Daten
+    (siehe generate_formular_pdf, das je Version auf den passenden
+    Renderer verzweigt und aeltere Versionen nie neu erzeugt)."""
     return {
-        "snapshot_version": 2,
+        "snapshot_version": 3,
         "name": formular.name,
-        "zeilenhoehe_mm": formular.zeilenhoehe_mm,
+        "anzahl_seiten": formular.anzahl_seiten,
         "felder": [
             {
                 "id": str(f.id),
@@ -89,10 +89,11 @@ def snapshot_von(formular: Formular, felder: list[Formularfeld]) -> dict:
                 "pflichtfeld": f.pflichtfeld,
                 "reihenfolge": f.reihenfolge,
                 "optionen": f.optionen,
-                "raster_zeile": f.raster_zeile,
-                "raster_spalte": f.raster_spalte,
-                "raster_breite": f.raster_breite,
-                "raster_hoehe": f.raster_hoehe,
+                "seite": f.seite,
+                "x_mm": f.x_mm,
+                "y_mm": f.y_mm,
+                "breite_mm": f.breite_mm,
+                "hoehe_mm": f.hoehe_mm,
                 "datenquelle": f.datenquelle,
             }
             for f in felder
@@ -165,22 +166,6 @@ def auto_fill_werte(
         if wert is not None:
             antworten[str(feld.id)] = wert
     return antworten
-
-
-def raster_ueberlappung(positionen: list[FormularfeldPosition]) -> bool:
-    """Prueft paarweise (O(n^2), unkritisch bei realistischer Feldanzahl je
-    Formular), ob sich zwei Rechtecke im Raster ueberlappen -- verwendet vom
-    Bulk-Positions-Endpunkt (siehe app/api/routes/formulare.py), da
-    Ueberlappung als DB-CHECK-Constraint nicht ausdrueckbar ist."""
-    for i, a in enumerate(positionen):
-        a_links, a_rechts = a.raster_spalte, a.raster_spalte + a.raster_breite
-        a_oben, a_unten = a.raster_zeile, a.raster_zeile + a.raster_hoehe
-        for b in positionen[i + 1 :]:
-            b_links, b_rechts = b.raster_spalte, b.raster_spalte + b.raster_breite
-            b_oben, b_unten = b.raster_zeile, b.raster_zeile + b.raster_hoehe
-            if a_links < b_rechts and b_links < a_rechts and a_oben < b_unten and b_oben < a_unten:
-                return True
-    return False
 
 
 async def verfuegbare_formulare_fuer(
