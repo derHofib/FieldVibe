@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Rnd } from "react-rnd";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { ApiError } from "../../api/client";
 import { formulareApi } from "../../api/endpoints";
@@ -24,7 +24,13 @@ const A4_HOEHE_MM = 297;
 const RAND_LR_MM = 15;
 const RAND_OBEN_SEITE1_MM = 41; // Platz fuer Mandant/Formularname/Vorgang/Datum
 const RAND_OBEN_FOLGESEITE_MM = 22; // schmale Kennzeile ab Seite 2
+const RAND_UNTEN_MM = 15; // _FORMULAR_RAND_UNTEN
 const PX_PRO_MM = 4;
+
+// Bewusst abgeleitet statt hart notiert, damit die Grenzen der Zahlenfelder im
+// Eigenschaften-Panel nicht gegen die Backend-Werte auseinanderlaufen
+// (NUTZBARE_BREITE_MM / NUTZBARE_HOEHE_* in app/models/formular.py).
+const NUTZBARE_BREITE_MM = A4_BREITE_MM - 2 * RAND_LR_MM;
 
 const SNAP_PRESETS: { label: string; mm: number | null }[] = [
   { label: "Aus", mm: null },
@@ -35,6 +41,10 @@ const SNAP_PRESETS: { label: string; mm: number | null }[] = [
 
 function randObenMm(seiteIndex: number): number {
   return seiteIndex === 0 ? RAND_OBEN_SEITE1_MM : RAND_OBEN_FOLGESEITE_MM;
+}
+
+function nutzbareHoeheMm(seiteIndex: number): number {
+  return A4_HOEHE_MM - randObenMm(seiteIndex) - RAND_UNTEN_MM;
 }
 
 function ueberlappendeFelder(felder: Formularfeld[]): Set<string> {
@@ -52,6 +62,177 @@ function ueberlappendeFelder(felder: Formularfeld[]): Set<string> {
     }
   }
   return result;
+}
+
+/** Zahlenfeld des Eigenschaften-Panels. Uebernimmt erst bei Blur/Enter statt
+ *  bei jedem Tastendruck -- sonst loest jede Ziffer einen PUT aus, und ein
+ *  Zwischenstand wie "1" beim Tippen von "120" wuerde das Feld im Canvas
+ *  kurz springen lassen. Werte von aussen (Drag&Drop) werden uebernommen,
+ *  solange das Feld nicht fokussiert ist. */
+function MmFeld({
+  label,
+  wert,
+  min = 0,
+  max,
+  onCommit,
+}: {
+  label: string;
+  wert: number;
+  min?: number;
+  max?: number;
+  onCommit: (wert: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(wert));
+  const [fokussiert, setFokussiert] = useState(false);
+
+  useEffect(() => {
+    if (!fokussiert) setDraft(String(wert));
+  }, [wert, fokussiert]);
+
+  function commit() {
+    setFokussiert(false);
+    const zahl = Number(draft.replace(",", "."));
+    if (!Number.isFinite(zahl)) {
+      setDraft(String(wert));
+      return;
+    }
+    let begrenzt = Math.max(zahl, min);
+    if (max !== undefined) begrenzt = Math.min(begrenzt, max);
+    begrenzt = Math.round(begrenzt * 10) / 10;
+    setDraft(String(begrenzt));
+    if (begrenzt !== wert) onCommit(begrenzt);
+  }
+
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-slate-500 dark:text-stone-400">{label}</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        step="1"
+        value={draft}
+        onFocus={() => setFokussiert(true)}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+      />
+    </label>
+  );
+}
+
+/** Eigenschaften-Panel im Access-Stil: zeigt Groesse/Position des markierten
+ *  Felds als Zahlenfelder, damit exakte Werte tippbar sind statt nur per Maus
+ *  gezogen. Alle Grenzen sind aus den A4-Massen abgeleitet -- das Backend
+ *  clampt zusaetzlich (siehe FormularfeldPosition._clamp_auf_seite). */
+function EigenschaftenPanel({
+  feld,
+  anzahlSeiten,
+  onGeometrie,
+  onBearbeiten,
+}: {
+  feld: Formularfeld | null;
+  anzahlSeiten: number;
+  onGeometrie: (patch: Partial<Formularfeld>) => void;
+  onBearbeiten: () => void;
+}) {
+  if (!feld) {
+    return (
+      <div className="rounded-lg bg-white p-3 shadow-sm lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+          Eigenschaften
+        </h3>
+        <p className="mt-2 text-xs text-slate-400 dark:text-stone-500">
+          Feld im Layout antippen, um Größe und Position exakt einzugeben.
+        </p>
+      </div>
+    );
+  }
+
+  const maxHoehe = nutzbareHoeheMm(feld.seite);
+  return (
+    <div className="space-y-3 rounded-lg bg-white p-3 shadow-sm lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+          Eigenschaften
+        </h3>
+        <p className="mt-1 truncate text-sm font-medium text-slate-800 dark:text-stone-100">{feld.label}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <MmFeld
+          label="Breite (mm)"
+          wert={feld.breite_mm}
+          min={5}
+          max={NUTZBARE_BREITE_MM - feld.x_mm}
+          onCommit={(breite_mm) => onGeometrie({ breite_mm })}
+        />
+        <MmFeld
+          label="Höhe (mm)"
+          wert={feld.hoehe_mm}
+          min={5}
+          max={maxHoehe - feld.y_mm}
+          onCommit={(hoehe_mm) => onGeometrie({ hoehe_mm })}
+        />
+        <MmFeld
+          label="X (mm)"
+          wert={feld.x_mm}
+          max={NUTZBARE_BREITE_MM - feld.breite_mm}
+          onCommit={(x_mm) => onGeometrie({ x_mm })}
+        />
+        <MmFeld
+          label="Y (mm)"
+          wert={feld.y_mm}
+          max={maxHoehe - feld.hoehe_mm}
+          onCommit={(y_mm) => onGeometrie({ y_mm })}
+        />
+      </div>
+
+      {anzahlSeiten > 1 && (
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Seite</span>
+          <select
+            value={feld.seite}
+            onChange={(e) => onGeometrie({ seite: Number(e.target.value) })}
+            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          >
+            {Array.from({ length: anzahlSeiten }, (_, i) => (
+              <option key={i} value={i}>
+                Seite {i + 1}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          onClick={() => onGeometrie({ breite_mm: NUTZBARE_BREITE_MM, x_mm: 0 })}
+          className="btn-touch rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+        >
+          Volle Breite
+        </button>
+        <button
+          onClick={() => onGeometrie({ breite_mm: NUTZBARE_BREITE_MM / 2 })}
+          className="btn-touch rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+        >
+          Halbe Breite
+        </button>
+      </div>
+
+      <button
+        onClick={onBearbeiten}
+        className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-slate-100 py-1.5 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+      >
+        <Pencil size={12} /> Inhalt bearbeiten
+      </button>
+    </div>
+  );
 }
 
 interface FeldFormValues {
@@ -265,6 +446,7 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
   const [aktiveSeite, setAktiveSeite] = useState(0);
   const [neuesFeldOffen, setNeuesFeldOffen] = useState(false);
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
+  const [markiertId, setMarkiertId] = useState<string | null>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["formular", formular.id] });
 
@@ -313,7 +495,10 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
 
   const deleteFeldMutation = useMutation({
     mutationFn: (feldId: string) => formulareApi.deleteFeld(formular.id, feldId),
-    onSuccess: invalidate,
+    onSuccess: (_daten, feldId) => {
+      if (markiertId === feldId) setMarkiertId(null);
+      invalidate();
+    },
   });
 
   const setFelderImCache = (felder: Formularfeld[]) =>
@@ -345,11 +530,24 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
     onError: invalidate, // Server-Stand statt optimistischem Layout wiederherstellen
   });
 
-  function persistPosition(feldId: string, x_mm: number, y_mm: number, breite_mm: number, hoehe_mm: number) {
+  /** Aendert Geometrie/Seite eines Felds und schickt den kompletten Satz an
+   *  den Bulk-Endpoint (der erwartet alle Felder des Formulars). */
+  function persistGeometrie(feldId: string, patch: Partial<Formularfeld>) {
     const aktualisiert = formular.felder.map((f) =>
-      f.id === feldId ? { ...f, x_mm: Math.max(x_mm, 0), y_mm: Math.max(y_mm, 0), breite_mm, hoehe_mm } : f,
+      f.id === feldId
+        ? {
+            ...f,
+            ...patch,
+            x_mm: Math.max(patch.x_mm ?? f.x_mm, 0),
+            y_mm: Math.max(patch.y_mm ?? f.y_mm, 0),
+          }
+        : f,
     );
     positionenMutation.mutate(aktualisiert);
+  }
+
+  function persistPosition(feldId: string, x_mm: number, y_mm: number, breite_mm: number, hoehe_mm: number) {
+    persistGeometrie(feldId, { x_mm, y_mm, breite_mm, hoehe_mm });
   }
 
   const feldById = new Map(formular.felder.map((f) => [f.id, f]));
@@ -426,7 +624,8 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+      <div className="flex-1 overflow-x-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950">
         <div
           className="relative mx-auto bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
           style={{ width: seitenBreitePx, height: seitenHoehePx }}
@@ -453,6 +652,8 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
                 position={{ x: randLrPx + feld.x_mm * PX_PRO_MM, y: randObenPx + feld.y_mm * PX_PRO_MM }}
                 size={{ width: feld.breite_mm * PX_PRO_MM, height: feld.hoehe_mm * PX_PRO_MM }}
                 enableResizing={{ bottomRight: true }}
+                onDragStart={() => setMarkiertId(feld.id)}
+                onResizeStart={() => setMarkiertId(feld.id)}
                 onDragStop={(_e, d) =>
                   persistPosition(
                     feld.id,
@@ -473,8 +674,11 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
                 }
               >
                 <div
+                  onPointerDown={() => setMarkiertId(feld.id)}
                   className={`flex h-full flex-col justify-between overflow-hidden rounded-md border bg-slate-50 p-1.5 dark:bg-stone-800/60 ${
-                    hatUeberlappung
+                    markiertId === feld.id
+                      ? "border-cyan-500 ring-2 ring-cyan-500 dark:border-cyan-400 dark:ring-cyan-400"
+                      : hatUeberlappung
                       ? "border-amber-400 ring-1 ring-amber-400 dark:border-amber-500 dark:ring-amber-500"
                       : "border-slate-200 dark:border-stone-700"
                   }`}
@@ -527,6 +731,20 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
             </p>
           )}
         </div>
+      </div>
+
+        <EigenschaftenPanel
+          feld={markiertId ? feldById.get(markiertId) ?? null : null}
+          anzahlSeiten={formular.anzahl_seiten}
+          onBearbeiten={() => markiertId && setBearbeitenId(markiertId)}
+          onGeometrie={(patch) => {
+            if (!markiertId) return;
+            // Bei Seitenwechsel mitspringen, sonst verschwindet das gerade
+            // bearbeitete Feld unsichtbar auf eine andere Seite.
+            if (patch.seite !== undefined) setAktiveSeite(patch.seite);
+            persistGeometrie(markiertId, patch);
+          }}
+        />
       </div>
 
       {(updateFeldMutation.isError || createFeldMutation.isError || positionenMutation.isError) && (
