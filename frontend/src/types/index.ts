@@ -232,6 +232,7 @@ export interface Kunde {
   ansprechpartner: Ansprechpartner[];
   adresse: Adresse | null;
   notiz: string | null;
+  ust_idnr: string | null;
   portal_slug: string;
   logo_object_key: string | null;
   created_at: string;
@@ -783,6 +784,8 @@ export interface Rechnung {
   zahlungen: RechnungZahlung[];
   bezahlter_betrag: string;
   offener_betrag: string;
+  // Nur gesetzt, wenn beim Versand ein ZUGFeRD-Hybrid-PDF archiviert wurde.
+  xml_object_key: string | null;
 }
 
 export interface RechnungListe {
@@ -1092,7 +1095,7 @@ export interface AccountTypUpdate {
 // --- Mandant-Einstellungen (Nacharbeit) -------------------------------------
 
 export interface MandantFirmendaten {
-  adresse?: { strasse?: string; plz?: string; ort?: string };
+  adresse?: { strasse?: string; plz?: string; ort?: string; land?: string };
   telefon?: string;
   email?: string;
   website?: string;
@@ -1111,6 +1114,10 @@ export interface MandantFirmendaten {
   mahnung_1_automatisch?: boolean;
   mahnung_2_automatisch?: boolean;
   mahnung_3_automatisch?: boolean;
+  // ZUGFeRD-Hybrid-PDF beim Rechnungsversand erzeugen, sobald alle
+  // EN16931-Pflichtangaben vorhanden sind -- sonst stiller Fallback auf ein
+  // normales PDF (siehe e_invoice_service.pruefe_en16931_vollstaendigkeit).
+  e_rechnung_aktiv?: boolean;
 }
 
 export interface MandantEinstellungen {

@@ -259,6 +259,7 @@ export const kundenApi = {
     kundennummer?: string;
     adresse?: Adresse;
     notiz?: string;
+    ust_idnr?: string;
   }) => apiFetch<Kunde>("/api/kunden", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
@@ -267,6 +268,7 @@ export const kundenApi = {
       typ: string | null;
       adresse: Adresse | null;
       notiz: string | null;
+      ust_idnr: string | null;
       ansprechpartner: Ansprechpartner[];
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -911,6 +913,7 @@ export const rechnungenApi = {
   storno: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}/storno`, { method: "POST" }),
   remove: (id: string) => apiFetch<void>(`/api/rechnungen/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/pdf`),
+  xml: (id: string) => apiFetchBlob(`/api/rechnungen/${id}/xml`),
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/rechnungen/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff?: string; inhalt?: string }) =>
     apiFetch<EmailLog>(`/api/rechnungen/${id}/email`, { method: "POST", body: JSON.stringify(body) }),
