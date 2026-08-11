@@ -701,14 +701,15 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
           auch sofort, wenn z.B. nach dem Laden der Formulardaten ein
           Scrollbalken erscheint (dabei feuert kein "resize"-Event). */}
       <div className="lg:relative lg:left-1/2 lg:right-1/2 lg:-mx-[50vw] lg:w-screen">
-      {/* Zweite Ebene: Canvas + Panel als EINE Gruppe zentrieren (mx-auto),
-          statt die Karte ueber die volle (womoeglich sehr breite) Fenster-
-          breite zu strecken -- sonst klafft auf grossen Monitoren links vom
-          Canvas ein Leerraum, waehrend das Panel weit rechts alleine steht. */}
-      <div className="flex flex-col gap-3 lg:mx-auto lg:max-w-[1280px] lg:flex-row lg:items-start lg:justify-center lg:px-4">
+      {/* Zweite Ebene: NUR der Canvas wird zentriert (mx-auto ueber die volle
+          Breite). Das Panel teilt sich ab lg absichtlich NICHT die Breite mit
+          dem Canvas -- sonst zentriert sich die eigentliche Seite nur inner-
+          halb des Rests, der nach Abzug der Panel-Spalte uebrig bleibt, und
+          landet dadurch sichtbar links von der echten Bildschirmmitte. */}
+      <div className="flex flex-col gap-3 lg:block lg:px-4">
       <div
         ref={canvasWrapRef}
-        className="min-w-0 flex-1 overflow-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950"
+        className="min-w-0 flex-1 overflow-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950 lg:mx-auto lg:max-w-[912px]"
       >
         {/* Aeusserer Kasten in der SKALIERTEN Groesse -- transform:scale
             aendert den Platzbedarf im Layout nicht, ohne ihn bliebe unter der
@@ -834,6 +835,12 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
         </div>
       </div>
 
+      {/* lg:fixed statt Teil der Flex-Zeile: das Panel reserviert dadurch
+          keine Breite mehr, ueber die sich der Canvas mit ihm teilen muesste
+          (das war die Ursache der Linksverschiebung oben), UND bleibt beim
+          Scrollen durch ein hohes/mehrseitiges Formular sichtbar und
+          bedienbar, statt mit dem Inhalt aus dem Bild zu laufen. */}
+      <div className="lg:fixed lg:right-4 lg:top-16 lg:z-20 lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto">
         <EigenschaftenPanel
           feld={markiertId ? feldById.get(markiertId) ?? null : null}
           anzahlSeiten={formular.anzahl_seiten}
@@ -846,6 +853,7 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
             persistGeometrie(markiertId, patch);
           }}
         />
+      </div>
       </div>
       </div>
 
