@@ -802,3 +802,72 @@ def test_pdf_export_freeform_snapshot_mit_mehreren_seiten():
     assert pdf_bytes.startswith(b"%PDF")
     seiten = re.findall(rb"/Type\s*/Page\b", pdf_bytes)
     assert len(seiten) == 2
+
+
+@pytest.mark.asyncio
+async def test_neues_feld_ist_halb_breit_und_verschiebbar(client, make_mandant, make_user):
+    """Ein neu angelegtes Feld darf nicht die volle nutzbare Breite belegen --
+    sonst ist es wegen ck_formularfelder_x_mm_passt_auf_seite bei x_mm=0
+    festgenagelt und laesst sich nicht zur Seite schieben."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+    feld = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "A"},
+        )
+    ).json()
+
+    assert feld["breite_mm"] == 85
+
+    # Nach rechts schieben muss ohne Fehler durchgehen und den Wert behalten.
+    resp = await client.put(
+        f"/api/formulare/{formular['id']}/felder/positionen",
+        headers=auth_headers(token),
+        json=[{"id": feld["id"], "seite": 0, "x_mm": 90, "y_mm": 20, "breite_mm": 85, "hoehe_mm": 8}],
+    )
+    assert resp.status_code == 200
+    assert resp.json()[0]["x_mm"] == 90
+    assert resp.json()[0]["y_mm"] == 20
+
+
+@pytest.mark.asyncio
+async def test_positionen_werden_auf_seitenrand_geclamped(client, make_mandant, make_user):
+    """Drag&Drop/Panel-Eingaben ueber den Seitenrand hinaus werden geclamped
+    statt abgelehnt -- ein Fehler wuerde das Feld im Editor zurueckspringen
+    lassen."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    formular = (
+        await client.post("/api/formulare", headers=auth_headers(token), json={"name": "F"})
+    ).json()
+    feld = (
+        await client.post(
+            f"/api/formulare/{formular['id']}/felder",
+            headers=auth_headers(token),
+            json={"feld_typ": "text", "label": "A"},
+        )
+    ).json()
+
+    resp = await client.put(
+        f"/api/formulare/{formular['id']}/felder/positionen",
+        headers=auth_headers(token),
+        json=[
+            {"id": feld["id"], "seite": 0, "x_mm": 500, "y_mm": 9000, "breite_mm": 300, "hoehe_mm": 8}
+        ],
+    )
+    assert resp.status_code == 200
+    geclamped = resp.json()[0]
+    # breite auf die nutzbare Breite begrenzt, x_mm dadurch zwingend 0
+    assert geclamped["breite_mm"] == 180
+    assert geclamped["x_mm"] == 0
+    # y_mm auf die nutzbare Hoehe der ersten Seite (241mm) minus Feldhoehe
+    assert geclamped["y_mm"] == 241 - 8

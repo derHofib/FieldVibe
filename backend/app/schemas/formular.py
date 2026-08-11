@@ -4,7 +4,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.formular import FORMULARFELD_TYPEN_MIT_DATENQUELLE, NUTZBARE_BREITE_MM
+from app.models.formular import (
+    FORMULARFELD_TYPEN_MIT_DATENQUELLE,
+    NUTZBARE_BREITE_MM,
+    STANDARD_FELDBREITE_MM,
+    nutzbare_hoehe_mm,
+)
 from app.schemas.vorgang import Leistungstyp
 
 FormularfeldTyp = Literal[
@@ -69,7 +74,7 @@ class FormularfeldCreate(BaseModel):
     seite: int = Field(default=0, ge=0)
     x_mm: float = Field(default=0, ge=0)
     y_mm: float = Field(default=0, ge=0)
-    breite_mm: float = Field(default=NUTZBARE_BREITE_MM, gt=0)
+    breite_mm: float = Field(default=STANDARD_FELDBREITE_MM, gt=0)
     hoehe_mm: float = Field(default=8, gt=0)
     datenquelle: FormularfeldDatenquelle | None = None
 
@@ -99,7 +104,14 @@ class FormularfeldPosition(BaseModel):
     Bulk-Update aller freien Positionen nach Drag&Drop/Resize im
     Canvas-Editor (ersetzt das frühere Einzel-PATCH je Feld). Ueberlappende
     Felder sind erlaubt (wie in Access) -- es wird nur geprueft, dass jedes
-    Feld auf eine vorhandene Seite passt."""
+    Feld auf eine vorhandene Seite passt.
+
+    Anders als FormularfeldCreate wird hier NICHT abgelehnt, sondern auf den
+    Seitenrand geclamped: dieser Endpoint bedient Drag&Drop/Resize und die
+    Zahlenfelder des Eigenschaften-Panels, und ein 4xx/5xx wuerde dort das
+    Feld sichtbar an seine alte Position zurueckspringen lassen. Ohne das
+    Clamping schlaegt schon eine kleine Bewegung nach rechts am
+    CHECK-Constraint ck_formularfelder_x_mm_passt_auf_seite fehl."""
 
     id: UUID
     seite: int = Field(ge=0)
@@ -107,6 +119,15 @@ class FormularfeldPosition(BaseModel):
     y_mm: float = Field(ge=0)
     breite_mm: float = Field(gt=0)
     hoehe_mm: float = Field(gt=0)
+
+    @model_validator(mode="after")
+    def _clamp_auf_seite(self) -> "FormularfeldPosition":
+        self.breite_mm = min(self.breite_mm, NUTZBARE_BREITE_MM)
+        self.x_mm = min(self.x_mm, NUTZBARE_BREITE_MM - self.breite_mm)
+        max_hoehe = nutzbare_hoehe_mm(self.seite)
+        self.hoehe_mm = min(self.hoehe_mm, max_hoehe)
+        self.y_mm = min(self.y_mm, max_hoehe - self.hoehe_mm)
+        return self
 
     @model_validator(mode="after")
     def _validate(self) -> "FormularfeldPosition":

@@ -48,6 +48,25 @@ GRID_SPALTEN = 12
 # Obergrenze fuer x_mm + breite_mm eines frei positionierten Formularfelds.
 NUTZBARE_BREITE_MM = 180
 
+# Nutzbare Hoehe je Seite in mm: 297mm A4-Hoehe minus unterer Rand
+# (_FORMULAR_RAND_UNTEN = 15) minus oberer Rand, der auf Seite 1 die
+# Kopfzeile mit Mandant/Formularname/Vorgang/Datum traegt (41mm) und ab
+# Seite 2 nur eine schmale Kennzeile (_FORMULAR_RAND_OBEN_FOLGESEITE = 22).
+# y_mm ist relativ zum oberen Rand, die Grenze ist also y_mm + hoehe_mm.
+NUTZBARE_HOEHE_SEITE1_MM = 241
+NUTZBARE_HOEHE_FOLGESEITE_MM = 260
+
+# Standardbreite eines neu angelegten Felds: halbe nutzbare Breite, damit
+# zwei Felder ohne vorheriges Verkleinern nebeneinander passen. Ein Feld mit
+# der vollen NUTZBARE_BREITE_MM waere bei x_mm=0 festgenagelt, weil jede
+# Bewegung nach rechts x_mm + breite_mm <= NUTZBARE_BREITE_MM verletzt.
+STANDARD_FELDBREITE_MM = 85
+
+
+def nutzbare_hoehe_mm(seite: int) -> float:
+    """Nutzbare Hoehe der gegebenen (0-indizierten) Seite in mm."""
+    return NUTZBARE_HOEHE_SEITE1_MM if seite == 0 else NUTZBARE_HOEHE_FOLGESEITE_MM
+
 # Vokabular fuer Formularfeld.datenquelle -- optionale Bindung eines Felds an
 # einen Wert des Vorgangs/Kunde/Anlage/Standort, der beim Start einer
 # Ausfuellung automatisch als Antwort vorbelegt wird (siehe
@@ -183,7 +202,7 @@ class Formularfeld(Base):
     seite: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     x_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0)
     y_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0)
-    breite_mm: Mapped[float] = mapped_column(Float, nullable=False, default=NUTZBARE_BREITE_MM)
+    breite_mm: Mapped[float] = mapped_column(Float, nullable=False, default=STANDARD_FELDBREITE_MM)
     hoehe_mm: Mapped[float] = mapped_column(Float, nullable=False, default=8)
     datenquelle: Mapped[str | None] = mapped_column(Text, nullable=True)
 
