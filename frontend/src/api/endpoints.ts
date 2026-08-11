@@ -557,11 +557,17 @@ export const formulareApi = {
   list: (aktiv?: boolean) =>
     apiFetch<Formular[]>(`/api/formulare${aktiv !== undefined ? `?aktiv=${aktiv}` : ""}`),
   get: (id: string) => apiFetch<Formular>(`/api/formulare/${id}`),
-  create: (body: { name: string; beschreibung?: string; zeilenhoehe_mm?: number }) =>
+  create: (body: { name: string; beschreibung?: string; snap_mm?: number | null }) =>
     apiFetch<Formular>("/api/formulare", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<{ name: string; beschreibung: string; aktiv: boolean; zeilenhoehe_mm: number }>,
+    body: Partial<{
+      name: string;
+      beschreibung: string;
+      aktiv: boolean;
+      snap_mm: number | null;
+      anzahl_seiten: number;
+    }>,
   ) => apiFetch<Formular>(`/api/formulare/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   createFeld: (
     formularId: string,
@@ -571,10 +577,11 @@ export const formulareApi = {
       hilfetext?: string;
       pflichtfeld?: boolean;
       optionen?: Record<string, unknown>;
-      raster_zeile?: number;
-      raster_spalte?: number;
-      raster_breite?: number;
-      raster_hoehe?: number;
+      seite?: number;
+      x_mm?: number;
+      y_mm?: number;
+      breite_mm?: number;
+      hoehe_mm?: number;
       datenquelle?: FormularfeldDatenquelle | null;
     },
   ) =>
