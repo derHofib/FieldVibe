@@ -316,6 +316,11 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
     onSuccess: invalidate,
   });
 
+  const setFelderImCache = (felder: Formularfeld[]) =>
+    queryClient.setQueryData<Formular>(["formular", formular.id], (alt) =>
+      alt ? { ...alt, felder } : alt,
+    );
+
   const positionenMutation = useMutation({
     mutationFn: (alleFelder: Formularfeld[]) =>
       formulareApi.updatePositionen(
@@ -329,6 +334,14 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
           hoehe_mm: f.hoehe_mm,
         })),
       ),
+    // Die Rnd-Boxen sind voll controlled aus formular.felder. Ohne sofortiges
+    // Cache-Update setzt react-rnd das Element beim Loslassen auf den alten
+    // Prop-Wert zurueck -- das Feld springt sichtbar zurueck, obwohl der
+    // Request laeuft und gleich erfolgreich sein wird.
+    onMutate: setFelderImCache,
+    // Der Server clampt auf den Seitenrand, seine Antwort ist die Wahrheit --
+    // sonst zeigt der Canvas eine Position, die so nie gespeichert wurde.
+    onSuccess: setFelderImCache,
     onError: invalidate, // Server-Stand statt optimistischem Layout wiederherstellen
   });
 
