@@ -3,7 +3,9 @@ from decimal import Decimal
 from io import BytesIO
 
 from fpdf import FPDF
-from fpdf.enums import XPos, YPos
+from fpdf.enums import OutputIntentSubType, XPos, YPos
+from fpdf.output import PDFICCProfile
+from fpdf.util import builtin_srgb2014_bytes
 
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.bestellung import Bestellung, BestellungPosition
@@ -378,7 +380,17 @@ def generate_rechnung_pdf(
     kunde: Kunde,
     positionen: list[RechnungPosition] | None = None,
     storniert_rechnung: Rechnung | None = None,
+    *,
+    pdfa_output_intent: bool = False,
 ) -> bytes:
+    """pdfa_output_intent=True fuegt einen sRGB-OutputIntent hinzu (Betriebs-
+    system fpdf2, kein "enforce_compliance"-Modus -- der wuerde ungebettete
+    Core-Fonts wie Helvetica verbieten, die dieses Layout bewusst weiter
+    nutzt). Wird ausschliesslich von e_invoice_service.baue_hybrid_pdf()
+    gebraucht: drafthorse.pdf.attach_xml() liest vorhandene OutputIntents aus
+    dem Quell-PDF aus und uebernimmt sie unveraendert in das ZUGFeRD-Hybrid-
+    PDF, erzeugt aber selbst keinen -- ohne diesen Aufruf bliebe das Hybrid-
+    PDF ohne ICC-Profil und damit nicht wirklich PDF/A-3-konform."""
     pdf = FPDF()
     pdf.add_page()
     titel = "Stornorechnung" if rechnung.ist_storno else "Rechnung"
@@ -409,6 +421,18 @@ def generate_rechnung_pdf(
         _summenblock_kleinunternehmer(pdf, gesamt_netto)
     else:
         _summenblock(pdf, gesamt_netto, rechnung.mwst_satz)
+
+    if pdfa_output_intent:
+        pdf.add_output_intent(
+            OutputIntentSubType.PDFA,
+            output_condition_identifier="sRGB",
+            output_condition="IEC 61966-2-1:1999",
+            registry_name="http://www.color.org",
+            dest_output_profile=PDFICCProfile(
+                contents=builtin_srgb2014_bytes(), n=3, alternate="DeviceRGB"
+            ),
+            info="sRGB2014 (v2)",
+        )
     return bytes(pdf.output())
 
 
