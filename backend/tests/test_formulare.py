@@ -508,9 +508,14 @@ async def test_pflicht_vor_abschluss_blockiert_vorgang_abschluss(
 
 
 @pytest.mark.asyncio
-async def test_pdf_export_nur_wenn_abgeschlossen(
+async def test_pdf_export_als_vorschau_vor_und_final_nach_abschluss(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
+    """PDF-Export ist jetzt schon VOR dem Abschliessen moeglich (Vorschau
+    waehrend des Ausfuellens) -- markiert durch den Dateinamens-Praefix
+    "Vorschau-" (siehe vorgang_formular_pdf/pdf_service._formular_vorschau_
+    banner). Nach dem Abschliessen liefert derselbe Endpoint das finale PDF
+    ohne diesen Praefix."""
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
@@ -528,16 +533,20 @@ async def test_pdf_export_nur_wenn_abgeschlossen(
         )
     ).json()
 
-    noch_offen = await client.get(
+    vorschau = await client.get(
         f"/api/vorgang-formulare/{start['id']}/pdf", headers=auth_headers(token)
     )
-    assert noch_offen.status_code == 409
+    assert vorschau.status_code == 200
+    assert vorschau.headers["content-type"] == "application/pdf"
+    assert vorschau.content.startswith(b"%PDF")
+    assert "Vorschau-" in vorschau.headers["content-disposition"]
 
     await client.post(f"/api/vorgang-formulare/{start['id']}/abschliessen", headers=auth_headers(token))
     fertig = await client.get(f"/api/vorgang-formulare/{start['id']}/pdf", headers=auth_headers(token))
     assert fertig.status_code == 200
     assert fertig.headers["content-type"] == "application/pdf"
     assert fertig.content.startswith(b"%PDF")
+    assert "Vorschau-" not in fertig.headers["content-disposition"]
 
 
 @pytest.mark.asyncio

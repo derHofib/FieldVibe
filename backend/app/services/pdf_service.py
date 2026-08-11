@@ -628,6 +628,7 @@ def generate_formular_pdf(
     vorgang: Vorgang,
     vorgang_formular: VorgangFormular,
     bilder: dict[str, bytes],
+    ist_vorschau: bool = False,
 ) -> bytes:
     """bilder enthaelt die heruntergeladenen Rohbytes je Foto-/
     Unterschrift-Feld (feld_id -> Bilddaten) -- der Route-Handler laedt
@@ -640,14 +641,34 @@ def generate_formular_pdf(
     = urspruenglicher Flow-Renderer. Aeltere, bereits abgeschlossene
     Ausfuellungen laufen immer ueber den zu ihrer Version passenden
     Renderer, damit einmal ausgestellte PDFs bit-identisch reproduzierbar
-    bleiben -- neue Snapshots werden nur noch in Version 3 erzeugt."""
+    bleiben -- neue Snapshots werden nur noch in Version 3 erzeugt.
+    ist_vorschau=True setzt einen Hinweisbanner auf Seite 1 (siehe
+    _formular_vorschau_banner) -- fuer einen Export VOR dem Abschliessen,
+    waehrend der Techniker noch ausfuellt (kein archiviertes, sondern ein
+    jederzeit neu gerendertes Dokument, siehe vorgang_formular_pdf)."""
     snapshot = vorgang_formular.formular_snapshot
     version = snapshot.get("snapshot_version")
     if version == 3:
-        return _generate_formular_pdf_freeform(mandant, vorgang, vorgang_formular, bilder)
+        return _generate_formular_pdf_freeform(mandant, vorgang, vorgang_formular, bilder, ist_vorschau)
     if version == 2:
-        return _generate_formular_pdf_raster(mandant, vorgang, vorgang_formular, bilder)
-    return _generate_formular_pdf_legacy(mandant, vorgang, vorgang_formular, bilder)
+        return _generate_formular_pdf_raster(mandant, vorgang, vorgang_formular, bilder, ist_vorschau)
+    return _generate_formular_pdf_legacy(mandant, vorgang, vorgang_formular, bilder, ist_vorschau)
+
+
+def _formular_vorschau_banner(pdf: FPDF) -> None:
+    """Auffaelliger Hinweis auf Seite 1, wenn das PDF vor dem Abschliessen
+    der Ausfuellung erzeugt wird -- verhindert, dass eine Vorschau mit
+    noch unvollstaendigen/nicht gespeicherten Antworten mit dem finalen
+    Dokument verwechselt wird."""
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.set_fill_color(255, 244, 214)
+    pdf.set_text_color(153, 105, 0)
+    pdf.cell(
+        0, 7, "VORSCHAU -- Formular noch nicht abgeschlossen", new_x=XPos.LMARGIN, new_y=YPos.NEXT, fill=True
+    )
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.ln(2)
 
 
 def _generate_formular_pdf_legacy(
@@ -655,6 +676,7 @@ def _generate_formular_pdf_legacy(
     vorgang: Vorgang,
     vorgang_formular: VorgangFormular,
     bilder: dict[str, bytes],
+    ist_vorschau: bool = False,
 ) -> bytes:
     snapshot = vorgang_formular.formular_snapshot
     antworten = vorgang_formular.antworten
@@ -679,6 +701,8 @@ def _generate_formular_pdf_legacy(
         new_y=YPos.NEXT,
     )
     pdf.ln(6)
+    if ist_vorschau:
+        _formular_vorschau_banner(pdf)
 
     for feld in sorted(snapshot.get("felder", []), key=lambda f: f["reihenfolge"]):
         if feld["feld_typ"] == "abschnitt":
@@ -802,6 +826,7 @@ def _generate_formular_pdf_raster(
     vorgang: Vorgang,
     vorgang_formular: VorgangFormular,
     bilder: dict[str, bytes],
+    ist_vorschau: bool = False,
 ) -> bytes:
     snapshot = vorgang_formular.formular_snapshot
     antworten = vorgang_formular.antworten
@@ -829,6 +854,8 @@ def _generate_formular_pdf_raster(
         new_y=YPos.NEXT,
     )
     pdf.ln(4)
+    if ist_vorschau:
+        _formular_vorschau_banner(pdf)
 
     if not felder:
         pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
@@ -872,6 +899,7 @@ def _generate_formular_pdf_freeform(
     vorgang: Vorgang,
     vorgang_formular: VorgangFormular,
     bilder: dict[str, bytes],
+    ist_vorschau: bool = False,
 ) -> bytes:
     """snapshot_version 3 -- jede Seite ist eine feste A4-Flaeche, auf der
     Felder frei per x_mm/y_mm/breite_mm/hoehe_mm positioniert sind (wie
@@ -912,6 +940,8 @@ def _generate_formular_pdf_freeform(
                 new_y=YPos.NEXT,
             )
             pdf.ln(4)
+            if ist_vorschau:
+                _formular_vorschau_banner(pdf)
             seiten_top_mm = pdf.get_y()
         else:
             seiten_top_mm = _FORMULAR_RAND_OBEN_FOLGESEITE

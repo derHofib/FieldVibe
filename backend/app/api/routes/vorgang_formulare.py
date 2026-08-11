@@ -143,12 +143,15 @@ async def vorgang_formular_pdf(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
+    """Liefert das Formular-PDF live gerendert aus dem aktuellen Stand --
+    anders als bei Rechnungen/Angeboten wird hier nichts archiviert, jeder
+    Aufruf erzeugt das PDF frisch aus formular_snapshot/antworten. Fuer eine
+    noch nicht abgeschlossene Ausfuellung ("offen") ist das eine reine
+    Vorschau mit Hinweisbanner (siehe pdf_service._formular_vorschau_banner)
+    -- der Techniker kann sich das Layout so schon waehrend des Ausfuellens
+    ansehen, ohne vorher abschliessen zu muessen."""
     vorgang_formular = await _get_own_vorgang_formular(session, auth, vorgang_formular_id)
-    if vorgang_formular.status != "abgeschlossen":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Nur ein abgeschlossenes Formular kann als PDF exportiert werden",
-        )
+    ist_vorschau = vorgang_formular.status != "abgeschlossen"
     vorgang = await session.get(Vorgang, vorgang_formular.vorgang_id)
     mandant = await session.get(Mandant, auth.mandant_id)
 
@@ -160,14 +163,15 @@ async def vorgang_formular_pdf(
         if isinstance(antwort, dict) and antwort.get("key"):
             bilder[feld["id"]] = await storage_service.download_bytes(antwort["key"])
 
-    pdf_bytes = generate_formular_pdf(mandant, vorgang, vorgang_formular, bilder)
+    pdf_bytes = generate_formular_pdf(mandant, vorgang, vorgang_formular, bilder, ist_vorschau=ist_vorschau)
     formular_name = vorgang_formular.formular_snapshot.get("name", "Formular")
+    praefix = "Vorschau-" if ist_vorschau else ""
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
             "Content-Disposition": (
-                f'inline; filename="{formular_name}-{vorgang.vorgangsnummer}.pdf"'
+                f'inline; filename="{praefix}{formular_name}-{vorgang.vorgangsnummer}.pdf"'
             )
         },
     )
