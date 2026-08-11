@@ -32,6 +32,18 @@ const PX_PRO_MM = 4;
 // (NUTZBARE_BREITE_MM / NUTZBARE_HOEHE_* in app/models/formular.py).
 const NUTZBARE_BREITE_MM = A4_BREITE_MM - 2 * RAND_LR_MM;
 
+const ZOOM_PRESETS: { label: string; wert: "fit" | number }[] = [
+  { label: "Einpassen", wert: "fit" },
+  { label: "50 %", wert: 0.5 },
+  { label: "75 %", wert: 0.75 },
+  { label: "100 %", wert: 1 },
+];
+
+// Platz, den Kopfzeile, Seiten-Tabs, Werkzeugleiste und der
+// "Feld hinzufuegen"-Button oberhalb/unterhalb des Canvas belegen -- davon
+// haengt ab, wie gross "Einpassen" die Seite skalieren darf.
+const CHROME_HOEHE_PX = 230;
+
 const SNAP_PRESETS: { label: string; mm: number | null }[] = [
   { label: "Aus", mm: null },
   { label: "Fein", mm: 2 },
@@ -447,6 +459,23 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
   const [neuesFeldOffen, setNeuesFeldOffen] = useState(false);
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
   const [markiertId, setMarkiertId] = useState<string | null>(null);
+  const [zoomWahl, setZoomWahl] = useState<"fit" | number>("fit");
+  const [ansicht, setAnsicht] = useState({ breite: 0, hoehe: 0 });
+
+  useEffect(() => {
+    function messen() {
+      // clientWidth des Root-Elements ist die Viewport-Breite OHNE Scrollbar --
+      // 100vw wuerde die Scrollbar mitzaehlen und dadurch einen horizontalen
+      // Scrollbalken erzeugen.
+      setAnsicht({
+        breite: document.documentElement.clientWidth,
+        hoehe: Math.max(window.innerHeight - CHROME_HOEHE_PX, 260),
+      });
+    }
+    messen();
+    window.addEventListener("resize", messen);
+    return () => window.removeEventListener("resize", messen);
+  }, []);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["formular", formular.id] });
 
@@ -564,27 +593,58 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
     ? [formular.snap_mm * PX_PRO_MM, formular.snap_mm * PX_PRO_MM]
     : undefined;
 
+  // "Einpassen" skaliert die Seite so, dass sie KOMPLETT sichtbar ist -- also
+  // nach Breite UND Hoehe, sonst bleibt die A4-Hoehe (1188px bei 4px/mm)
+  // weiterhin ausserhalb des Viewports. Panel-Breite und Rahmen-Padding
+  // grob abgezogen.
+  const canvasBreite = Math.max(ansicht.breite - (ansicht.breite >= 1024 ? 300 : 48), 320);
+  const fitFaktor = Math.min(canvasBreite / seitenBreitePx, ansicht.hoehe / seitenHoehePx, 1);
+  const zoomFaktor = zoomWahl === "fit" ? Math.max(fitFaktor, 0.2) : zoomWahl;
+  // Volle Fensterbreite, obwohl der Editor in <main class="max-w-2xl"> steckt:
+  // eine A4-Seite passt in 672px sonst gar nicht sinnvoll hinein.
+  const vollbreiteStyle = ansicht.breite
+    ? { width: ansicht.breite, marginLeft: `calc(50% - ${ansicht.breite / 2}px)` }
+    : undefined;
+
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
           Formular-Layout
         </h2>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-400 dark:text-stone-500">Einrasthilfe:</span>
-          {SNAP_PRESETS.map((preset) => (
-            <button
-              key={preset.label}
-              onClick={() => snapMutation.mutate(preset.mm)}
-              className={`btn-touch rounded-md px-2 py-1 text-xs font-medium ${
-                formular.snap_mm === preset.mm
-                  ? "bg-cyan-600 text-white"
-                  : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-              }`}
-            >
-              {preset.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-400 dark:text-stone-500">Ansicht:</span>
+            {ZOOM_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => setZoomWahl(preset.wert)}
+                className={`btn-touch rounded-md px-2 py-1 text-xs font-medium ${
+                  zoomWahl === preset.wert
+                    ? "bg-cyan-600 text-white"
+                    : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-400 dark:text-stone-500">Einrasthilfe:</span>
+            {SNAP_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => snapMutation.mutate(preset.mm)}
+                className={`btn-touch rounded-md px-2 py-1 text-xs font-medium ${
+                  formular.snap_mm === preset.mm
+                    ? "bg-cyan-600 text-white"
+                    : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -624,11 +684,23 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
         )}
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-      <div className="flex-1 overflow-x-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start" style={vollbreiteStyle}>
+      <div className="min-w-0 flex-1 overflow-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950">
+        {/* Aeusserer Kasten in der SKALIERTEN Groesse -- transform:scale
+            aendert den Platzbedarf im Layout nicht, ohne ihn bliebe unter der
+            Seite bei <100% ein grosser Leerraum stehen. */}
         <div
-          className="relative mx-auto bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-          style={{ width: seitenBreitePx, height: seitenHoehePx }}
+          className="mx-auto"
+          style={{ width: seitenBreitePx * zoomFaktor, height: seitenHoehePx * zoomFaktor }}
+        >
+        <div
+          className="relative bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          style={{
+            width: seitenBreitePx,
+            height: seitenHoehePx,
+            transform: `scale(${zoomFaktor})`,
+            transformOrigin: "top left",
+          }}
         >
           {/* Kopfzeilen-Platzhalter -- entspricht der tatsaechlichen PDF-Kopfzeile */}
           <div
@@ -645,6 +717,10 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
               <Rnd
                 key={feld.id}
                 bounds="parent"
+                // Ohne scale rechnet react-rnd die Maus-Deltas in Bildschirm-
+                // pixeln gegen unskalierte Positionen -- das Feld laeuft dem
+                // Zeiger dann weg, sobald der Zoom nicht 100% ist.
+                scale={zoomFaktor}
                 dragGrid={snapGrid}
                 resizeGrid={snapGrid}
                 minWidth={10 * PX_PRO_MM}
@@ -730,6 +806,7 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
               Noch keine Felder auf dieser Seite -- füge das erste Feld hinzu.
             </p>
           )}
+        </div>
         </div>
       </div>
 
