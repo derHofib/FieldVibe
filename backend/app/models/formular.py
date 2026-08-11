@@ -5,6 +5,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
     SmallInteger,
     Text,
@@ -35,10 +36,17 @@ FORMULARFELD_TYPEN = (
 # behandelt statt wie eine Frage.
 FORMULARFELD_TYPEN_OHNE_ANTWORT = ("abschnitt",)
 
-# Feste Spaltenanzahl des Raster-Layouts im Formular-Editor/PDF-Export --
-# projektweit fix (nicht pro Formular konfigurierbar), nur die Zeilenhoehe
-# ist einstellbar (siehe Formular.zeilenhoehe_mm).
+# Feste Spaltenanzahl des ALTEN Raster-Layouts (snapshot_version 2) --
+# wird nur noch fuer bereits abgeschlossene VorgangFormular-Snapshots
+# gebraucht, die vor der Umstellung auf freie Positionierung (siehe
+# Formularfeld.x_mm/y_mm/breite_mm/hoehe_mm) erzeugt wurden. Neue Formulare
+# verwenden dieses Raster nicht mehr -- NICHT fuer neuen Code verwenden.
 GRID_SPALTEN = 12
+
+# Nutzbare Breite einer A4-Seite in mm (210mm Seitenbreite minus 15mm Rand
+# links/rechts, siehe _FORMULAR_RAND_LR in app/services/pdf_service.py) --
+# Obergrenze fuer x_mm + breite_mm eines frei positionierten Formularfelds.
+NUTZBARE_BREITE_MM = 180
 
 # Vokabular fuer Formularfeld.datenquelle -- optionale Bindung eines Felds an
 # einen Wert des Vorgangs/Kunde/Anlage/Standort, der beim Start einer
@@ -93,26 +101,40 @@ class Formular(TimestampMixin, Base):
     erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
-    # Hoehe einer Rasterzeile im Canvas-Editor/PDF-Export in mm -- die
-    # Spaltenanzahl ist projektweit fix (GRID_SPALTEN), nur die Zeilenhoehe
-    # ist pro Formular einstellbar (UI bietet Presets fein/mittel/grob an,
-    # gespeichert wird immer der Rohwert in mm).
-    zeilenhoehe_mm: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=8)
+    # Anzahl der A4-Seiten dieses Formulars -- der Canvas-Editor zeigt je
+    # eine Seite als eigene Zeichenflaeche, "Seite hinzufuegen" erhoeht
+    # diesen Wert per PATCH. Ein Formularfeld referenziert seine Seite ueber
+    # Formularfeld.seite (0-indiziert), muss also < anzahl_seiten bleiben --
+    # als anwendungsseitige Pruefung in app/api/routes/formulare.py, da ein
+    # DB-Check ueber zwei Tabellen hinweg nicht abbildbar ist.
+    anzahl_seiten: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    # Feinheit der optionalen Einrasthilfe im Canvas-Editor in mm (wie
+    # Access' "An Raster ausrichten") -- rein editorielles Hilfsmittel ohne
+    # Einfluss auf den PDF-Export. NULL = Einrasthilfe ausgeschaltet, freies
+    # Positionieren ohne jede Rundung.
+    snap_mm: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     __table_args__ = (
+        CheckConstraint("anzahl_seiten >= 1", name="ck_formulare_anzahl_seiten_valid"),
         CheckConstraint(
-            "zeilenhoehe_mm BETWEEN 4 AND 20", name="ck_formulare_zeilenhoehe_valid"
+            "snap_mm IS NULL OR snap_mm BETWEEN 1 AND 50", name="ck_formulare_snap_mm_valid"
         ),
     )
 
 
 class Formularfeld(Base):
-    """Ein Baustein einer Formular-Vorlage, positioniert auf einem Raster
-    mit fester Spaltenanzahl (GRID_SPALTEN) und variabler Zeilenhoehe (siehe
-    Formular.zeilenhoehe_mm). raster_zeile/raster_spalte ist die obere linke
-    Ecke, raster_breite/raster_hoehe der Colspan/Rowspan. reihenfolge bleibt
+    """Ein Baustein einer Formular-Vorlage, frei positioniert auf einer von
+    formular.anzahl_seiten A4-Seiten (wie Steuerelemente im MS-Access-
+    Formular-Designer: beliebige x/y-Position und Breite/Hoehe in mm, ein
+    Raster ist nur eine optionale Einrasthilfe im Editor, siehe
+    Formular.snap_mm -- keine erzwungene Struktur). seite ist 0-indiziert
+    und muss < formular.anzahl_seiten bleiben (anwendungsseitig geprueft,
+    siehe app/api/routes/formulare.py). x_mm/y_mm ist die obere linke Ecke
+    relativ zum Seitenrand, breite_mm/hoehe_mm die Ausdehnung. Ueberlappende
+    Felder sind erlaubt (wie in Access) -- der Editor markiert sie nur
+    optisch als Hinweis, das Backend blockiert nichts. reihenfolge bleibt
     als serverseitig abgeleiteter Cache erhalten (neu berechnet aus
-    (raster_zeile, raster_spalte) bei jeder Positionsaenderung, siehe
+    (seite, y_mm, x_mm) bei jeder Positionsaenderung, siehe
     app/api/routes/formulare.py:update_formularfeld_positionen) --
     bestehende Consumer der Spalte (z.B. Snapshots) bleiben dadurch
     unangetastet. optionen transportiert je feld_typ unterschiedliche
@@ -132,15 +154,14 @@ class Formularfeld(Base):
             f"datenquelle IS NULL OR datenquelle IN {FORMULARFELD_DATENQUELLEN}",
             name="ck_formularfelder_datenquelle_valid",
         ),
+        CheckConstraint("seite >= 0", name="ck_formularfelder_seite_valid"),
+        CheckConstraint("x_mm >= 0", name="ck_formularfelder_x_mm_valid"),
+        CheckConstraint("y_mm >= 0", name="ck_formularfelder_y_mm_valid"),
+        CheckConstraint("breite_mm > 0", name="ck_formularfelder_breite_mm_valid"),
+        CheckConstraint("hoehe_mm > 0", name="ck_formularfelder_hoehe_mm_valid"),
         CheckConstraint(
-            "raster_spalte BETWEEN 0 AND 11", name="ck_formularfelder_raster_spalte_valid"
-        ),
-        CheckConstraint(
-            "raster_breite BETWEEN 1 AND 12", name="ck_formularfelder_raster_breite_valid"
-        ),
-        CheckConstraint("raster_hoehe >= 1", name="ck_formularfelder_raster_hoehe_valid"),
-        CheckConstraint(
-            "raster_spalte + raster_breite <= 12", name="ck_formularfelder_raster_passt_in_zeile"
+            f"x_mm + breite_mm <= {NUTZBARE_BREITE_MM}",
+            name="ck_formularfelder_x_mm_passt_auf_seite",
         ),
     )
 
@@ -159,10 +180,11 @@ class Formularfeld(Base):
     pflichtfeld: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     reihenfolge: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     optionen: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    raster_zeile: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
-    raster_spalte: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
-    raster_breite: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=12)
-    raster_hoehe: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    seite: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    x_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    y_mm: Mapped[float] = mapped_column(Float, nullable=False, default=0)
+    breite_mm: Mapped[float] = mapped_column(Float, nullable=False, default=NUTZBARE_BREITE_MM)
+    hoehe_mm: Mapped[float] = mapped_column(Float, nullable=False, default=8)
     datenquelle: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
