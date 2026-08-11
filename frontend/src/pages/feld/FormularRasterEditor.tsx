@@ -1,10 +1,7 @@
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
-import GridLayout, { useContainerWidth, type Layout } from "react-grid-layout";
-import { useEffect, useState, type FormEvent, type Ref } from "react";
+import { Rnd } from "react-rnd";
+import { useState, type FormEvent } from "react";
 
 import { ApiError } from "../../api/client";
 import { formulareApi } from "../../api/endpoints";
@@ -18,13 +15,44 @@ import {
 } from "../../utils/formular";
 
 const FELD_TYP_OPTIONEN = Object.entries(FORMULARFELD_TYP_LABEL) as [FormularfeldTyp, string][];
-const GRID_SPALTEN = 12;
+
+// Reale A4-Masse in mm, siehe backend/app/services/pdf_service.py
+// (_FORMULAR_RAND_LR/_FORMULAR_RAND_OBEN_FOLGESEITE) -- der Canvas zeigt
+// jede Seite in diesen Proportionen, damit WYSIWYG wirklich stimmt.
+const A4_BREITE_MM = 210;
+const A4_HOEHE_MM = 297;
+const RAND_LR_MM = 15;
+const RAND_OBEN_SEITE1_MM = 41; // Platz fuer Mandant/Formularname/Vorgang/Datum
+const RAND_OBEN_FOLGESEITE_MM = 22; // schmale Kennzeile ab Seite 2
 const PX_PRO_MM = 4;
-const ZEILENHOEHE_PRESETS: { label: string; mm: number }[] = [
-  { label: "Fein", mm: 6 },
-  { label: "Mittel", mm: 8 },
-  { label: "Grob", mm: 12 },
+
+const SNAP_PRESETS: { label: string; mm: number | null }[] = [
+  { label: "Aus", mm: null },
+  { label: "Fein", mm: 2 },
+  { label: "Mittel", mm: 5 },
+  { label: "Grob", mm: 10 },
 ];
+
+function randObenMm(seiteIndex: number): number {
+  return seiteIndex === 0 ? RAND_OBEN_SEITE1_MM : RAND_OBEN_FOLGESEITE_MM;
+}
+
+function ueberlappendeFelder(felder: Formularfeld[]): Set<string> {
+  const result = new Set<string>();
+  for (let i = 0; i < felder.length; i++) {
+    const a = felder[i];
+    for (let j = i + 1; j < felder.length; j++) {
+      const b = felder[j];
+      const ueberlapptX = a.x_mm < b.x_mm + b.breite_mm && b.x_mm < a.x_mm + a.breite_mm;
+      const ueberlapptY = a.y_mm < b.y_mm + b.hoehe_mm && b.y_mm < a.y_mm + a.hoehe_mm;
+      if (ueberlapptX && ueberlapptY) {
+        result.add(a.id);
+        result.add(b.id);
+      }
+    }
+  }
+  return result;
+}
 
 interface FeldFormValues {
   feld_typ: FormularfeldTyp;
@@ -232,31 +260,21 @@ function FeldForm({
   );
 }
 
-function layoutVonFeldern(felder: Formularfeld[]): Layout {
-  return felder.map((f) => ({
-    i: f.id,
-    x: f.raster_spalte,
-    y: f.raster_zeile,
-    w: f.raster_breite,
-    h: f.raster_hoehe,
-  }));
-}
-
 export function FormularRasterEditor({ formular }: { formular: Formular }) {
   const queryClient = useQueryClient();
-  const [layout, setLayout] = useState<Layout>(() => layoutVonFeldern(formular.felder));
+  const [aktiveSeite, setAktiveSeite] = useState(0);
   const [neuesFeldOffen, setNeuesFeldOffen] = useState(false);
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
-  const { width, containerRef, mounted } = useContainerWidth();
-
-  useEffect(() => {
-    setLayout(layoutVonFeldern(formular.felder));
-  }, [formular.felder]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["formular", formular.id] });
 
-  const zeilenhoeheMutation = useMutation({
-    mutationFn: (mm: number) => formulareApi.update(formular.id, { zeilenhoehe_mm: mm }),
+  const seitenMutation = useMutation({
+    mutationFn: (anzahlSeiten: number) => formulareApi.update(formular.id, { anzahl_seiten: anzahlSeiten }),
+    onSuccess: invalidate,
+  });
+
+  const snapMutation = useMutation({
+    mutationFn: (mm: number | null) => formulareApi.update(formular.id, { snap_mm: mm }),
     onSuccess: invalidate,
   });
 
@@ -269,6 +287,7 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
         pflichtfeld: values.pflichtfeld,
         optionen: baueOptionen(values),
         datenquelle: values.datenquelle || null,
+        seite: aktiveSeite,
       }),
     onSuccess: () => {
       invalidate();
@@ -298,44 +317,56 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
   });
 
   const positionenMutation = useMutation({
-    mutationFn: (neuesLayout: Layout) =>
+    mutationFn: (alleFelder: Formularfeld[]) =>
       formulareApi.updatePositionen(
         formular.id,
-        neuesLayout.map((item) => ({
-          id: item.i,
-          raster_zeile: item.y,
-          raster_spalte: item.x,
-          raster_breite: item.w,
-          raster_hoehe: item.h,
+        alleFelder.map((f) => ({
+          id: f.id,
+          seite: f.seite,
+          x_mm: f.x_mm,
+          y_mm: f.y_mm,
+          breite_mm: f.breite_mm,
+          hoehe_mm: f.hoehe_mm,
         })),
       ),
-    onError: invalidate, // bei Ueberlappung/Fehler: Server-Stand statt optimistischem Layout wiederherstellen
+    onError: invalidate, // Server-Stand statt optimistischem Layout wiederherstellen
   });
 
-  function persistLayout(neuesLayout: Layout) {
-    setLayout(neuesLayout);
-    positionenMutation.mutate(neuesLayout);
+  function persistPosition(feldId: string, x_mm: number, y_mm: number, breite_mm: number, hoehe_mm: number) {
+    const aktualisiert = formular.felder.map((f) =>
+      f.id === feldId ? { ...f, x_mm: Math.max(x_mm, 0), y_mm: Math.max(y_mm, 0), breite_mm, hoehe_mm } : f,
+    );
+    positionenMutation.mutate(aktualisiert);
   }
 
   const feldById = new Map(formular.felder.map((f) => [f.id, f]));
-  const rowHeightPx = formular.zeilenhoehe_mm * PX_PRO_MM;
+  const felderAufSeite = formular.felder.filter((f) => f.seite === aktiveSeite);
+  const ueberlappungen = ueberlappendeFelder(felderAufSeite);
   const fehlerText = (err: unknown) =>
     err instanceof ApiError ? err.message : "Änderung konnte nicht gespeichert werden";
 
+  const seitenBreitePx = A4_BREITE_MM * PX_PRO_MM;
+  const seitenHoehePx = A4_HOEHE_MM * PX_PRO_MM;
+  const randLrPx = RAND_LR_MM * PX_PRO_MM;
+  const randObenPx = randObenMm(aktiveSeite) * PX_PRO_MM;
+  const snapGrid: [number, number] | undefined = formular.snap_mm
+    ? [formular.snap_mm * PX_PRO_MM, formular.snap_mm * PX_PRO_MM]
+    : undefined;
+
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between px-1">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
           Formular-Layout
         </h2>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs text-slate-400 dark:text-stone-500">Rastergröße:</span>
-          {ZEILENHOEHE_PRESETS.map((preset) => (
+          <span className="text-xs text-slate-400 dark:text-stone-500">Einrasthilfe:</span>
+          {SNAP_PRESETS.map((preset) => (
             <button
-              key={preset.mm}
-              onClick={() => zeilenhoeheMutation.mutate(preset.mm)}
+              key={preset.label}
+              onClick={() => snapMutation.mutate(preset.mm)}
               className={`btn-touch rounded-md px-2 py-1 text-xs font-medium ${
-                formular.zeilenhoehe_mm === preset.mm
+                formular.snap_mm === preset.mm
                   ? "bg-cyan-600 text-white"
                   : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
               }`}
@@ -346,28 +377,94 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
         </div>
       </div>
 
-      <div
-        ref={containerRef as Ref<HTMLDivElement>}
-        className="overflow-x-auto rounded-lg bg-white p-2 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-      >
-        {mounted && formular.felder.length > 0 && (
-          <GridLayout
-            width={width}
-            layout={layout}
-            gridConfig={{ cols: GRID_SPALTEN, rowHeight: rowHeightPx, margin: [4, 4], containerPadding: [0, 0] }}
-            resizeConfig={{ enabled: true, handles: ["se"] }}
-            dragConfig={{ enabled: true }}
-            onDragStop={persistLayout}
-            onResizeStop={persistLayout}
+      <div className="mb-2 flex items-center gap-1.5 px-1">
+        {Array.from({ length: formular.anzahl_seiten }, (_, i) => i).map((seite) => (
+          <button
+            key={seite}
+            onClick={() => setAktiveSeite(seite)}
+            className={`btn-touch rounded-md px-3 py-1.5 text-sm font-medium ${
+              aktiveSeite === seite
+                ? "bg-cyan-600 text-white"
+                : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            }`}
           >
-            {layout.map((item) => {
-              const feld = feldById.get(item.i);
-              if (!feld) return <div key={item.i} />;
-              const Icon = FORMULARFELD_TYP_ICON[feld.feld_typ];
-              return (
+            Seite {seite + 1}
+          </button>
+        ))}
+        <button
+          onClick={() => seitenMutation.mutate(formular.anzahl_seiten + 1)}
+          className="btn-touch flex items-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+        >
+          <Plus size={14} /> Seite
+        </button>
+        {formular.anzahl_seiten > 1 && aktiveSeite === formular.anzahl_seiten - 1 && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Seite ${aktiveSeite + 1} wirklich entfernen?`)) {
+                setAktiveSeite(aktiveSeite - 1);
+                seitenMutation.mutate(formular.anzahl_seiten - 1);
+              }
+            }}
+            className="btn-touch rounded-md p-1.5 text-slate-400 hover:text-red-600 dark:text-stone-500 dark:hover:text-red-400"
+            aria-label="Letzte Seite entfernen"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+
+      <div className="overflow-x-auto rounded-lg bg-slate-100 p-4 dark:bg-stone-950">
+        <div
+          className="relative mx-auto bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          style={{ width: seitenBreitePx, height: seitenHoehePx }}
+        >
+          {/* Kopfzeilen-Platzhalter -- entspricht der tatsaechlichen PDF-Kopfzeile */}
+          <div
+            className="absolute inset-x-0 top-0 flex items-center border-b border-dashed border-slate-200 bg-slate-50/60 px-3 text-xs text-slate-400 dark:border-stone-700 dark:bg-stone-800/40 dark:text-stone-500"
+            style={{ height: randObenPx }}
+          >
+            {aktiveSeite === 0 ? "Mandant / Formularname / Vorgang / Datum" : "Mandant · Formular · Vorgang · Seite"}
+          </div>
+
+          {felderAufSeite.map((feld) => {
+            const Icon = FORMULARFELD_TYP_ICON[feld.feld_typ];
+            const hatUeberlappung = ueberlappungen.has(feld.id);
+            return (
+              <Rnd
+                key={feld.id}
+                bounds="parent"
+                dragGrid={snapGrid}
+                resizeGrid={snapGrid}
+                minWidth={10 * PX_PRO_MM}
+                minHeight={5 * PX_PRO_MM}
+                position={{ x: randLrPx + feld.x_mm * PX_PRO_MM, y: randObenPx + feld.y_mm * PX_PRO_MM }}
+                size={{ width: feld.breite_mm * PX_PRO_MM, height: feld.hoehe_mm * PX_PRO_MM }}
+                enableResizing={{ bottomRight: true }}
+                onDragStop={(_e, d) =>
+                  persistPosition(
+                    feld.id,
+                    (d.x - randLrPx) / PX_PRO_MM,
+                    (d.y - randObenPx) / PX_PRO_MM,
+                    feld.breite_mm,
+                    feld.hoehe_mm,
+                  )
+                }
+                onResizeStop={(_e, _dir, ref, _delta, position) =>
+                  persistPosition(
+                    feld.id,
+                    (position.x - randLrPx) / PX_PRO_MM,
+                    (position.y - randObenPx) / PX_PRO_MM,
+                    ref.offsetWidth / PX_PRO_MM,
+                    ref.offsetHeight / PX_PRO_MM,
+                  )
+                }
+              >
                 <div
-                  key={item.i}
-                  className="flex flex-col justify-between overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-1.5 dark:border-stone-700 dark:bg-stone-800/60"
+                  className={`flex h-full flex-col justify-between overflow-hidden rounded-md border bg-slate-50 p-1.5 dark:bg-stone-800/60 ${
+                    hatUeberlappung
+                      ? "border-amber-400 ring-1 ring-amber-400 dark:border-amber-500 dark:ring-amber-500"
+                      : "border-slate-200 dark:border-stone-700"
+                  }`}
                 >
                   <div className="flex items-start gap-1.5">
                     <IconBadge icon={Icon} tone="cyan" size="sm" />
@@ -404,15 +501,19 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
                     </button>
                   </div>
                 </div>
-              );
-            })}
-          </GridLayout>
-        )}
-        {formular.felder.length === 0 && (
-          <p className="p-3 text-center text-sm text-slate-400 dark:text-stone-500">
-            Noch keine Felder -- füge das erste Feld hinzu.
-          </p>
-        )}
+              </Rnd>
+            );
+          })}
+
+          {felderAufSeite.length === 0 && (
+            <p
+              className="absolute inset-x-0 text-center text-sm text-slate-400 dark:text-stone-500"
+              style={{ top: randObenPx + 24 }}
+            >
+              Noch keine Felder auf dieser Seite -- füge das erste Feld hinzu.
+            </p>
+          )}
+        </div>
       </div>
 
       {(updateFeldMutation.isError || createFeldMutation.isError || positionenMutation.isError) && (
