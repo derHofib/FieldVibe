@@ -7,6 +7,7 @@ import { kundenApi, rechnungenApi } from "../../api/endpoints";
 import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
+import { downloadBlob } from "../../utils/download";
 import { heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import type { RechnungZahlungsart } from "../../types";
@@ -89,6 +90,11 @@ export function RechnungDetailPage() {
     onSuccess: openPdfBlob,
   });
 
+  const xmlMutation = useMutation({
+    mutationFn: () => rechnungenApi.xml(id!),
+    onSuccess: (blob) => downloadBlob(blob, "factur-x.xml"),
+  });
+
   const addZahlungMutation = useMutation({
     mutationFn: () =>
       rechnungenApi.addZahlung(id!, {
@@ -153,6 +159,12 @@ export function RechnungDetailPage() {
         </div>
       )}
 
+      {rechnung.xml_object_key && (
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+          ZUGFeRD-Rechnung — diese PDF enthält eine eingebettete E-Rechnungs-XML.
+        </div>
+      )}
+
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
@@ -193,13 +205,24 @@ export function RechnungDetailPage() {
           )}
         </div>
 
-        <button
-          onClick={() => pdfMutation.mutate()}
-          disabled={pdfMutation.isPending}
-          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
-        >
-          <FileText size={14} strokeWidth={2} /> PDF anzeigen
-        </button>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={() => pdfMutation.mutate()}
+            disabled={pdfMutation.isPending}
+            className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          >
+            <FileText size={14} strokeWidth={2} /> PDF anzeigen
+          </button>
+          {rechnung.xml_object_key && (
+            <button
+              onClick={() => xmlMutation.mutate()}
+              disabled={xmlMutation.isPending}
+              className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            >
+              <FileText size={14} strokeWidth={2} /> XML herunterladen
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
