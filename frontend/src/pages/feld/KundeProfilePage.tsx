@@ -42,16 +42,25 @@ function Stammdaten({
   kundeId,
   adresse,
   notiz,
+  typ,
+  ustIdnr,
   kannVerwalten,
 }: {
   kundeId: string;
   adresse: Adresse | null;
   notiz: string | null;
+  typ: string | null;
+  ustIdnr: string | null;
   kannVerwalten: boolean;
 }) {
   const queryClient = useQueryClient();
   const [bearbeiten, setBearbeiten] = useState(false);
-  const [form, setForm] = useState(() => ({ ...leereAdresse(adresse), notiz: notiz ?? "" }));
+  const [form, setForm] = useState(() => ({
+    ...leereAdresse(adresse),
+    notiz: notiz ?? "",
+    ustIdnr: ustIdnr ?? "",
+  }));
+  const brauchtUstIdnr = typ === "gewerbe" || typ === "oeffentlich";
 
   const speichernMutation = useMutation({
     mutationFn: () =>
@@ -61,6 +70,7 @@ function Stammdaten({
             ? { strasse: form.strasse || undefined, plz: form.plz || undefined, ort: form.ort || undefined }
             : null,
         notiz: form.notiz || null,
+        ust_idnr: form.ustIdnr || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
@@ -79,7 +89,7 @@ function Stammdaten({
           {kannVerwalten && (
             <button
               onClick={() => {
-                setForm({ ...leereAdresse(adresse), notiz: notiz ?? "" });
+                setForm({ ...leereAdresse(adresse), notiz: notiz ?? "", ustIdnr: ustIdnr ?? "" });
                 setBearbeiten(true);
               }}
               className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -94,6 +104,12 @@ function Stammdaten({
           <p className="text-sm text-slate-400 dark:text-stone-500">Keine Adresse hinterlegt.</p>
         )}
         {notiz && <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">{notiz}</p>}
+        {brauchtUstIdnr && (
+          <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+            USt-IdNr.:{" "}
+            {ustIdnr || <span className="text-slate-400 dark:text-stone-500">nicht hinterlegt</span>}
+          </p>
+        )}
       </div>
     );
   }
@@ -121,6 +137,14 @@ function Stammdaten({
           className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
       </div>
+      {brauchtUstIdnr && (
+        <input
+          value={form.ustIdnr}
+          onChange={(e) => setForm({ ...form, ustIdnr: e.target.value })}
+          placeholder="USt-IdNr."
+          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        />
+      )}
       <textarea
         value={form.notiz}
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
@@ -1197,7 +1221,14 @@ export function KundeProfilePage() {
         )}
       </div>
 
-      <Stammdaten kundeId={id!} adresse={profil.adresse} notiz={profil.notiz} kannVerwalten={kannVerwalten} />
+      <Stammdaten
+        kundeId={id!}
+        adresse={profil.adresse}
+        notiz={profil.notiz}
+        typ={profil.typ}
+        ustIdnr={profil.ust_idnr}
+        kannVerwalten={kannVerwalten}
+      />
 
       <AnsprechpartnerVerwaltung kundeId={id!} liste={profil.ansprechpartner} kannVerwalten={kannVerwalten} />
 

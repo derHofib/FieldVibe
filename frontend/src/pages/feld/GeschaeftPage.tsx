@@ -374,6 +374,7 @@ export function GeschaeftPage() {
     plz: "",
     ort: "",
     notiz: "",
+    ustIdnr: "",
   });
   const [materialForm, setMaterialForm] = useState({
     bezeichnung: "",
@@ -547,12 +548,13 @@ export function GeschaeftPage() {
         typ: neuerKunde.typ || undefined,
         adresse,
         notiz: neuerKunde.notiz || undefined,
+        ust_idnr: neuerKunde.ustIdnr || undefined,
       });
     },
     onSuccess: (kunde) => {
       queryClient.invalidateQueries({ queryKey: ["kunden"] });
       setShowForm(false);
-      setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "" });
+      setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "", ustIdnr: "" });
       navigate(`/kunden/${kunde.id}`);
     },
   });
@@ -686,6 +688,17 @@ export function GeschaeftPage() {
               </select>
             </div>
           </div>
+          {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (
+            <div>
+              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">USt-IdNr.</label>
+              <input
+                value={neuerKunde.ustIdnr}
+                onChange={(e) => setNeuerKunde({ ...neuerKunde, ustIdnr: e.target.value })}
+                placeholder="DE123456789"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              />
+            </div>
+          )}
           <div>
             <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Straße + Hausnr.</label>
             <input
