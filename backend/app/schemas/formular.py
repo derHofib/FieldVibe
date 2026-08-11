@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.formular import FORMULARFELD_TYPEN_MIT_DATENQUELLE
+from app.models.formular import FORMULARFELD_TYPEN_MIT_DATENQUELLE, NUTZBARE_BREITE_MM
 from app.schemas.vorgang import Leistungstyp
 
 FormularfeldTyp = Literal[
@@ -55,9 +55,9 @@ def _pruefe_datenquelle(feld_typ: str | None, datenquelle: str | None) -> None:
         )
 
 
-def _pruefe_raster_bounds(spalte: int, breite: int) -> None:
-    if spalte + breite > 12:
-        raise ValueError("raster_spalte + raster_breite darf 12 nicht ueberschreiten")
+def _pruefe_position_bounds(x_mm: float, breite_mm: float) -> None:
+    if x_mm + breite_mm > NUTZBARE_BREITE_MM:
+        raise ValueError(f"x_mm + breite_mm darf {NUTZBARE_BREITE_MM} nicht ueberschreiten")
 
 
 class FormularfeldCreate(BaseModel):
@@ -66,16 +66,17 @@ class FormularfeldCreate(BaseModel):
     hilfetext: str | None = None
     pflichtfeld: bool = False
     optionen: dict = {}
-    raster_zeile: int = Field(default=0, ge=0)
-    raster_spalte: int = Field(default=0, ge=0, le=11)
-    raster_breite: int = Field(default=12, ge=1, le=12)
-    raster_hoehe: int = Field(default=1, ge=1)
+    seite: int = Field(default=0, ge=0)
+    x_mm: float = Field(default=0, ge=0)
+    y_mm: float = Field(default=0, ge=0)
+    breite_mm: float = Field(default=NUTZBARE_BREITE_MM, gt=0)
+    hoehe_mm: float = Field(default=8, gt=0)
     datenquelle: FormularfeldDatenquelle | None = None
 
     @model_validator(mode="after")
     def _validate(self) -> "FormularfeldCreate":
         _pruefe_datenquelle(self.feld_typ, self.datenquelle)
-        _pruefe_raster_bounds(self.raster_spalte, self.raster_breite)
+        _pruefe_position_bounds(self.x_mm, self.breite_mm)
         return self
 
 
@@ -95,18 +96,21 @@ class FormularfeldUpdate(BaseModel):
 
 class FormularfeldPosition(BaseModel):
     """Payload fuer PUT /api/formulare/{id}/felder/positionen -- ein
-    Bulk-Update aller Rasterpositionen nach Drag&Drop/Resize im
-    Canvas-Editor (ersetzt das frühere Einzel-PATCH je Feld)."""
+    Bulk-Update aller freien Positionen nach Drag&Drop/Resize im
+    Canvas-Editor (ersetzt das frühere Einzel-PATCH je Feld). Ueberlappende
+    Felder sind erlaubt (wie in Access) -- es wird nur geprueft, dass jedes
+    Feld auf eine vorhandene Seite passt."""
 
     id: UUID
-    raster_zeile: int = Field(ge=0)
-    raster_spalte: int = Field(ge=0, le=11)
-    raster_breite: int = Field(ge=1, le=12)
-    raster_hoehe: int = Field(ge=1)
+    seite: int = Field(ge=0)
+    x_mm: float = Field(ge=0)
+    y_mm: float = Field(ge=0)
+    breite_mm: float = Field(gt=0)
+    hoehe_mm: float = Field(gt=0)
 
     @model_validator(mode="after")
     def _validate(self) -> "FormularfeldPosition":
-        _pruefe_raster_bounds(self.raster_spalte, self.raster_breite)
+        _pruefe_position_bounds(self.x_mm, self.breite_mm)
         return self
 
 
@@ -120,10 +124,11 @@ class FormularfeldRead(BaseModel):
     pflichtfeld: bool
     reihenfolge: int
     optionen: dict
-    raster_zeile: int
-    raster_spalte: int
-    raster_breite: int
-    raster_hoehe: int
+    seite: int
+    x_mm: float
+    y_mm: float
+    breite_mm: float
+    hoehe_mm: float
     datenquelle: FormularfeldDatenquelle | None
 
 
@@ -147,14 +152,18 @@ class FormularAuftragstypZuordnungRead(BaseModel):
 class FormularCreate(BaseModel):
     name: str
     beschreibung: str | None = None
-    zeilenhoehe_mm: int = Field(default=8, ge=4, le=20)
+    snap_mm: int | None = Field(default=None, ge=1, le=50)
 
 
 class FormularUpdate(BaseModel):
     name: str | None = None
     beschreibung: str | None = None
     aktiv: bool | None = None
-    zeilenhoehe_mm: int | None = Field(default=None, ge=4, le=20)
+    snap_mm: int | None = Field(default=None, ge=1, le=50)
+    # Erhoehen fuegt eine leere A4-Seite hinzu ("Seite hinzufuegen" im
+    # Editor); Verringern wird in der Route abgelehnt, solange noch Felder
+    # auf einer wegfallenden Seite liegen (siehe update_formular).
+    anzahl_seiten: int | None = Field(default=None, ge=1)
 
 
 class FormularRead(BaseModel):
@@ -165,7 +174,8 @@ class FormularRead(BaseModel):
     beschreibung: str | None
     aktiv: bool
     erstellt_von: UUID | None
-    zeilenhoehe_mm: int
+    anzahl_seiten: int
+    snap_mm: int | None
     created_at: datetime
     updated_at: datetime
     felder: list[FormularfeldRead] = []
