@@ -14,9 +14,11 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.core.config import get_settings
 from app.models.anlage import Anlage
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
+from app.models.mandant import Mandant
 from app.models.standort import Standort
 from app.models.user import User
 from app.models.vertrag import Vertrag
@@ -28,6 +30,7 @@ from app.schemas.email import EmailLogRead, EmailSenden
 from app.schemas.vorgang import (
     VorgangAnlagenHinzufuegen,
     VorgangCreate,
+    VorgangFolgeAuftragErstellen,
     VorgangRead,
     VorgangUpdate,
 )
@@ -45,6 +48,7 @@ from app.services.rechte_service import (
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
+    create_folge_vorgang,
 )
 from app.services.zuweisung_service import assigned_kunde_ids
 
@@ -72,6 +76,7 @@ async def list_vorgaenge(
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
+    parent_vorgang_id: UUID | None = Query(default=None),
     faellig_von: date | None = Query(default=None),
     faellig_bis: date | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -92,6 +97,8 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.anlage_id == anlage_id)
     if standort_id:
         stmt = stmt.where(Vorgang.standort_id == standort_id)
+    if parent_vorgang_id:
+        stmt = stmt.where(Vorgang.parent_vorgang_id == parent_vorgang_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
@@ -519,16 +526,14 @@ async def update_vorgang(
             status_code=status.HTTP_409_CONFLICT,
             detail="Vorgang ist abgeschlossen und kann nicht mehr geändert werden",
         )
-    # Kein echtes Vorgang-Feld -- steuert nur close_vorgang() weiter unten,
-    # sonst wuerde die generische setattr-Schleife es als beliebiges
-    # Instanz-Attribut auf dem ORM-Objekt landen lassen.
-    folge_leistungstyp = changes.pop("folge_leistungstyp", None)
-    if folge_leistungstyp is not None and (
-        vorgang.leistungstyp != "beratung" or changes.get("status") != "abgeschlossen"
-    ):
+    # Kein echtes Vorgang-Feld -- steuert nur die Wiedervorlage-Berechnung
+    # weiter unten, sonst wuerde die generische setattr-Schleife es als
+    # beliebiges Instanz-Attribut auf dem ORM-Objekt landen lassen.
+    wiedervorlage_tage = changes.pop("wiedervorlage_tage", None)
+    if wiedervorlage_tage is not None and changes.get("status") != "wartet_kunde":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="folge_leistungstyp ist nur beim Abschluss eines Beratungs-Vorgangs gültig",
+            detail="wiedervorlage_tage ist nur beim Setzen von status=wartet_kunde gültig",
         )
     alter_status = vorgang.status
     alter_kunde_id = vorgang.kunde_id
@@ -661,7 +666,6 @@ async def update_vorgang(
             )
         )
 
-    folge_vorgang = None
     if "status" in changes and changes["status"] != alter_status:
         if changes["status"] == "abgeschlossen":
             offene_formulare = await offene_pflichtformulare(session, vorgang)
@@ -673,13 +677,13 @@ async def update_vorgang(
                         f"fehlen noch: {', '.join(offene_formulare)}"
                     ),
                 )
-            folge_vorgang = await close_vorgang(
+            await close_vorgang(
                 session,
                 vorgang,
                 alter_status=alter_status,
                 author_user_id=auth.user_id,
-                folge_leistungstyp=folge_leistungstyp,
             )
+            vorgang.wiedervorlage_am = None
         else:
             session.add(
                 VorgangEvent(
@@ -690,6 +694,20 @@ async def update_vorgang(
                     payload={"von": alter_status, "nach": changes["status"]},
                 )
             )
+            if changes["status"] == "wartet_kunde":
+                mandant = await session.get(Mandant, auth.mandant_id)
+                tage = (
+                    wiedervorlage_tage
+                    or mandant.wiedervorlage_standard_tage
+                    or get_settings().wiedervorlage_default_tage
+                )
+                vorgang.wiedervorlage_am = datetime.now(timezone.utc) + timedelta(days=tage)
+            else:
+                # Vorgang verlaesst wartet_kunde in einen anderen offenen
+                # Status (z.B. storniert oder zurueck in Bearbeitung) --
+                # eine noch ausstehende Wiedervorlage bezog sich auf den
+                # Warte-Zustand und ist damit hinfaellig.
+                vorgang.wiedervorlage_am = None
 
     await session.flush()
     if changes:
@@ -697,11 +715,41 @@ async def update_vorgang(
         await event_bus.publish(
             auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
         )
-    if folge_vorgang is not None:
-        # Kein echtes Feld auf Vorgang -- nur transient auf dieser einen
-        # Antwort gesetzt, siehe VorgangRead.folge_vorgang_id.
-        vorgang.folge_vorgang_id = folge_vorgang.id
     return await _mit_zugewiesenem_namen(session, vorgang)
+
+
+@router.post(
+    "/{vorgang_id}/folge-auftrag",
+    response_model=VorgangRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "erstellen")),
+    ],
+)
+async def folge_auftrag_erstellen(
+    vorgang_id: UUID,
+    body: VorgangFolgeAuftragErstellen,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Vorgang:
+    """Legt aus diesem Vorgang einen Folge-Auftrag an -- unabhaengig vom
+    aktuellen Status der Quelle (siehe create_folge_vorgang) und mit
+    beliebigem Leistungstyp. Ersetzt den frueheren Automatismus, der nur
+    beim Abschluss eines Beratungs-Vorgangs griff."""
+    quelle = await session.get(Vorgang, vorgang_id)
+    if quelle is None or quelle.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, quelle)
+
+    folge_vorgang = await create_folge_vorgang(
+        session, quelle, leistungstyp=body.leistungstyp, author_user_id=auth.user_id
+    )
+    await session.flush()
+    await event_bus.publish(
+        auth.mandant_id, "feed_update", {"vorgang_id": str(folge_vorgang.id), "reason": "erstellt"}
+    )
+    return folge_vorgang
 
 
 @router.post(

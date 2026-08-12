@@ -12,6 +12,7 @@ import {
   kundenApi,
   lieferantenApi,
   maengelApi,
+  mandantEinstellungenApi,
   materialApi,
   materialBedarfeApi,
   standorteApi,
@@ -273,8 +274,10 @@ export function VorgangDetailPage() {
   const [editingAdresse, setEditingAdresse] = useState(false);
   const [adresseForm, setAdresseForm] = useState(() => leereAdresse(null));
   const [adresseError, setAdresseError] = useState<string | null>(null);
-  const [showFolgeDialog, setShowFolgeDialog] = useState(false);
-  const [folgeLeistungstyp, setFolgeLeistungstyp] = useState<Leistungstyp | "">("");
+  const [showWartetKundeDialog, setShowWartetKundeDialog] = useState(false);
+  const [wiedervorlageTage, setWiedervorlageTage] = useState("");
+  const [showFolgeAuftragDialog, setShowFolgeAuftragDialog] = useState(false);
+  const [folgeAuftragLeistungstyp, setFolgeAuftragLeistungstyp] = useState<Leistungstyp>("stoerung");
   const [folgeVorgangId, setFolgeVorgangId] = useState<string | null>(null);
 
   const kannDisponieren = hatRecht("vorgaenge", "bearbeiten");
@@ -316,6 +319,16 @@ export function VorgangDetailPage() {
     queryKey: ["vorgang", vorgang?.parent_vorgang_id],
     queryFn: () => vorgaengeApi.get(vorgang!.parent_vorgang_id!),
     enabled: !!vorgang?.parent_vorgang_id,
+  });
+  const { data: folgeAuftraege } = useQuery({
+    queryKey: ["vorgaenge", "folge", id],
+    queryFn: () => vorgaengeApi.list({ parent_vorgang_id: id! }),
+    enabled: !!id,
+  });
+  const { data: mandantEinstellungen } = useQuery({
+    queryKey: ["mandant-einstellungen"],
+    queryFn: mandantEinstellungenApi.get,
+    enabled: showWartetKundeDialog,
   });
   const { data: weitereAnlagen } = useQuery({
     queryKey: ["vorgang-anlagen", id],
@@ -599,15 +612,15 @@ export function VorgangDetailPage() {
   const statusMutation = useMutation({
     mutationFn: async ({
       status,
-      folgeLeistungstyp,
+      wiedervorlageTage,
     }: {
       status: VorgangStatus;
-      folgeLeistungstyp?: Leistungstyp;
+      wiedervorlageTage?: number;
     }) => {
       try {
         return await vorgaengeApi.update(id!, {
           status,
-          ...(folgeLeistungstyp ? { folge_leistungstyp: folgeLeistungstyp } : {}),
+          ...(wiedervorlageTage ? { wiedervorlage_tage: wiedervorlageTage } : {}),
         });
       } catch (err) {
         if (err instanceof ApiError) throw err; // echte Ablehnung, nicht queuen
@@ -615,11 +628,19 @@ export function VorgangDetailPage() {
         return null;
       }
     },
-    onSuccess: (result) => {
-      if (result?.folge_vorgang_id) setFolgeVorgangId(result.folge_vorgang_id);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+    },
+  });
+
+  const folgeAuftragMutation = useMutation({
+    mutationFn: (leistungstyp: Leistungstyp) => vorgaengeApi.folgeAuftrag(id!, leistungstyp),
+    onSuccess: (result) => {
+      setFolgeVorgangId(result.id);
+      queryClient.invalidateQueries({ queryKey: ["vorgaenge", "folge", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
   });
 
@@ -1049,9 +1070,9 @@ export function VorgangDetailPage() {
             value={vorgang.status}
             onChange={(e) => {
               const status = e.target.value as VorgangStatus;
-              if (status === "abgeschlossen" && vorgang.leistungstyp === "beratung") {
-                setFolgeLeistungstyp("");
-                setShowFolgeDialog(true);
+              if (status === "wartet_kunde") {
+                setWiedervorlageTage("");
+                setShowWartetKundeDialog(true);
                 return;
               }
               statusMutation.mutate({ status });
@@ -1067,6 +1088,15 @@ export function VorgangDetailPage() {
           <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
             Priorität {vorgang.prioritaet}
           </span>
+          <button
+            onClick={() => {
+              setFolgeAuftragLeistungstyp("stoerung");
+              setShowFolgeAuftragDialog(true);
+            }}
+            className="btn-touch rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 dark:border-stone-700 dark:text-stone-300"
+          >
+            + Folge-Auftrag
+          </button>
         </div>
 
         {!VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
@@ -1104,18 +1134,58 @@ export function VorgangDetailPage() {
           </div>
         )}
 
-        {showFolgeDialog && (
+        {showWartetKundeDialog && (
           <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
             <p className="text-sm text-slate-600 dark:text-stone-300">
-              Beratung abschließen: Soll daraus ein Folge-Vorgang entstehen? Offene Material-Positionen für ein
-              Angebot werden dann auf den Folge-Vorgang übernommen.
+              Wartet auf Kunde: Nach wie vielen Tagen soll FieldVibe dich erinnern, nachzufragen?
+            </p>
+            <input
+              type="number"
+              min={1}
+              placeholder={
+                mandantEinstellungen
+                  ? mandantEinstellungen.effektive_wiedervorlage_standard_tage.toString()
+                  : "14"
+              }
+              value={wiedervorlageTage}
+              onChange={(e) => setWiedervorlageTage(e.target.value)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  statusMutation.mutate({
+                    status: "wartet_kunde",
+                    wiedervorlageTage: wiedervorlageTage ? Number(wiedervorlageTage) : undefined,
+                  });
+                  setShowWartetKundeDialog(false);
+                }}
+                disabled={statusMutation.isPending}
+                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Übernehmen
+              </button>
+              <button
+                onClick={() => setShowWartetKundeDialog(false)}
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showFolgeAuftragDialog && (
+          <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+            <p className="text-sm text-slate-600 dark:text-stone-300">
+              Folge-Auftrag anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
+              Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
             </p>
             <select
-              value={folgeLeistungstyp}
-              onChange={(e) => setFolgeLeistungstyp(e.target.value as Leistungstyp)}
+              value={folgeAuftragLeistungstyp}
+              onChange={(e) => setFolgeAuftragLeistungstyp(e.target.value as Leistungstyp)}
               className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
-              <option value="">Kein Folge-Vorgang</option>
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
@@ -1125,19 +1195,16 @@ export function VorgangDetailPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  statusMutation.mutate({
-                    status: "abgeschlossen",
-                    folgeLeistungstyp: folgeLeistungstyp || undefined,
-                  });
-                  setShowFolgeDialog(false);
+                  folgeAuftragMutation.mutate(folgeAuftragLeistungstyp);
+                  setShowFolgeAuftragDialog(false);
                 }}
-                disabled={statusMutation.isPending}
+                disabled={folgeAuftragMutation.isPending}
                 className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
-                Abschließen
+                Anlegen
               </button>
               <button
-                onClick={() => setShowFolgeDialog(false)}
+                onClick={() => setShowFolgeAuftragDialog(false)}
                 className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
               >
                 Abbrechen
@@ -1155,6 +1222,21 @@ export function VorgangDetailPage() {
             >
               Jetzt ansehen
             </button>
+          </div>
+        )}
+
+        {folgeAuftraege && folgeAuftraege.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Folge-Aufträge:</span>
+            {folgeAuftraege.map((fa) => (
+              <button
+                key={fa.id}
+                onClick={() => navigate(`/vorgaenge/${fa.id}`)}
+                className="btn-touch block w-full rounded-md border border-slate-200 px-2 py-1.5 text-left text-sm text-slate-600 dark:border-stone-700 dark:text-stone-300"
+              >
+                {fa.vorgangsnummer} · {fa.titel} · {STATUS_LABEL[fa.status]}
+              </button>
+            ))}
           </div>
         )}
       </div>

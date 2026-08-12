@@ -331,11 +331,9 @@ export interface Vorgang {
   abgeschlossen_am: string | null;
   erstellt_von_kundenportal_zugang_id: string | null;
   erstellt_von: string | null;
+  wiedervorlage_am: string | null;
   created_at: string;
   updated_at: string;
-  // Nur gesetzt in der Antwort auf genau die PATCH-Anfrage, die diesen
-  // Folge-Vorgang beim Beratungsabschluss erzeugt hat (siehe close_vorgang).
-  folge_vorgang_id?: string | null;
 }
 
 // --- Auftragsanfragen (Kundenportal) ----------------------------------------
@@ -1123,6 +1121,8 @@ export interface MandantFirmendaten {
 export interface MandantEinstellungen {
   scheduler_stunde_utc: number | null;
   effektive_scheduler_stunde_utc: number;
+  wiedervorlage_standard_tage: number | null;
+  effektive_wiedervorlage_standard_tage: number;
   firmendaten: MandantFirmendaten;
   logo_object_key: string | null;
 }

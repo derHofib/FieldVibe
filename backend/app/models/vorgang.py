@@ -124,3 +124,10 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     zugewiesener_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+    # Erinnerungszeitpunkt bei status="wartet_kunde" -- vom Scheduler
+    # ausgewertet (siehe app/services/scheduler_service.py), der danach
+    # wieder auf NULL setzt (Einmal-Trigger). NULL = keine Wiedervorlage
+    # gesetzt oder bereits gefeuert.
+    wiedervorlage_am: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

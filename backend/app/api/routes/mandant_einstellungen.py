@@ -29,6 +29,12 @@ def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
             if mandant.scheduler_stunde_utc is not None
             else settings.scheduler_default_stunde_utc
         ),
+        wiedervorlage_standard_tage=mandant.wiedervorlage_standard_tage,
+        effektive_wiedervorlage_standard_tage=(
+            mandant.wiedervorlage_standard_tage
+            if mandant.wiedervorlage_standard_tage is not None
+            else settings.wiedervorlage_default_tage
+        ),
         firmendaten=mandant.firmendaten,
         logo_object_key=mandant.logo_object_key,
     )
@@ -57,6 +63,8 @@ async def update_einstellungen(
     updates = body.model_dump(exclude_unset=True)
     if "scheduler_stunde_utc" in updates:
         mandant.scheduler_stunde_utc = updates["scheduler_stunde_utc"]
+    if "wiedervorlage_standard_tage" in updates:
+        mandant.wiedervorlage_standard_tage = updates["wiedervorlage_standard_tage"]
     if updates.get("firmendaten") is not None:
         # Mergen statt Ersetzen: mehrere unabhaengige Formulare (Firmenprofil,
         # Mahnwesen-Auto-Versand, ...) speichern jeweils nur ihren eigenen

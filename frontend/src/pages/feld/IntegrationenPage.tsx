@@ -267,6 +267,52 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   );
 }
 
+function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
+  const queryClient = useQueryClient();
+  const [tage, setTage] = useState(einstellungen.wiedervorlage_standard_tage?.toString() ?? "");
+
+  const speichernMutation = useMutation({
+    mutationFn: () =>
+      mandantEinstellungenApi.update({
+        wiedervorlage_standard_tage: tage === "" ? null : Number(tage),
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
+  });
+
+  return (
+    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <h2 className="mb-1 text-sm font-semibold text-slate-700 dark:text-stone-300">
+        Wiedervorlage-Standardfrist
+      </h2>
+      <p className="mb-2 text-xs text-slate-500 dark:text-stone-400">
+        Vorschlag (in Tagen), wenn ein Vorgang auf "Wartet auf Kunde" gesetzt wird -- pro Vorgang
+        beim Setzen weiterhin änderbar.
+      </p>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={1}
+          placeholder={einstellungen.effektive_wiedervorlage_standard_tage.toString()}
+          value={tage}
+          onChange={(e) => setTage(e.target.value)}
+          className="btn-touch w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        />
+        <span className="text-sm text-slate-500 dark:text-stone-400">Tage</span>
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={speichernMutation.isPending}
+          className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        {speichernMutation.isSuccess && (
+          <span className="text-xs text-green-700 dark:text-green-400">Gespeichert.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
@@ -502,7 +548,7 @@ export function IntegrationenPage() {
   });
 
   const schedulerMutation = useMutation({
-    mutationFn: (stunde: number | null) => mandantEinstellungenApi.update(stunde),
+    mutationFn: (stunde: number | null) => mandantEinstellungenApi.update({ scheduler_stunde_utc: stunde }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });
 
@@ -591,6 +637,8 @@ export function IntegrationenPage() {
           </div>
         </div>
       )}
+
+      {einstellungen && <WiedervorlageSection einstellungen={einstellungen} />}
 
       <p className="text-sm text-slate-500 dark:text-stone-400">
         SMTP wird für den "Passwort vergessen"-Link im Kundenportal genutzt. Ohne

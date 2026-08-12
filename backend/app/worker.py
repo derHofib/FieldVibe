@@ -27,6 +27,7 @@ from app.services.scheduler_service import (
     mandanten_faellig_um,
     run_dauerauftraege_scheduler,
     run_pruefzyklen_scheduler,
+    run_wiedervorlage_scheduler,
 )
 from app.services.worker_lock import worker_lock
 
@@ -81,6 +82,15 @@ async def _run_hourly_tick() -> None:
             )
         except Exception:
             logger.exception("Dauerauftraege-Lauf fehlgeschlagen")
+
+        try:
+            wiedervorlage_ergebnis = await run_wiedervorlage_scheduler(mandant_ids)
+            logger.info(
+                "Wiedervorlage-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
+                jetzt.hour, len(mandant_ids), wiedervorlage_ergebnis,
+            )
+        except Exception:
+            logger.exception("Wiedervorlage-Lauf fehlgeschlagen")
 
         try:
             mahn_ergebnis = await run_mahnwesen_eskalation(mandant_ids)

@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # scheduler_stunde_utc-Konfiguration in ihren mandant_integrationen
     # (siehe app/services/scheduler_service.py, Phase-8-Nacharbeit).
     scheduler_default_stunde_utc: int = 3
+    # Default-Frist (Tage) fuer die Wiedervorlage bei status="wartet_kunde"
+    # (siehe app/api/routes/vorgaenge.py), ueberschreibbar pro Mandant via
+    # Mandant.wiedervorlage_standard_tage.
+    wiedervorlage_default_tage: int = 14
 
     # --- Mandant-Integrationen (Abschnitt 7.4, Phase-1-Slot) -------------
     # Verschluesselt secret_ref app-seitig (Fernet) statt im Klartext zu

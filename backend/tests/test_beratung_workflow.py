@@ -1,9 +1,11 @@
 from decimal import Decimal
 
 import pytest
+from sqlalchemy import select
 
 from app.db.session import system_session
 from app.models.material import Material
+from app.models.vorgang_event import VorgangEvent
 from tests.conftest import auth_headers, login
 
 
@@ -24,7 +26,7 @@ async def _make_material(mandant, **kwargs) -> Material:
 
 
 @pytest.mark.asyncio
-async def test_beratung_abschluss_mit_folge_leistungstyp_legt_folgevorgang_an(
+async def test_folge_auftrag_erstellen_uebernimmt_stammdaten(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     mandant = await make_mandant()
@@ -33,48 +35,88 @@ async def test_beratung_abschluss_mit_folge_leistungstyp_legt_folgevorgang_an(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde, leistungstyp="beratung")
     token = await login(client, admin.email, "pw-123456")
 
-    resp = await client.patch(
-        f"/api/vorgaenge/{vorgang.id}",
+    resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/folge-auftrag",
         headers=auth_headers(token),
-        json={"status": "abgeschlossen", "folge_leistungstyp": "planung"},
+        json={"leistungstyp": "planung"},
     )
-    assert resp.status_code == 200
-    body = resp.json()
-    assert body["status"] == "abgeschlossen"
-    folge_vorgang_id = body["folge_vorgang_id"]
-    assert folge_vorgang_id is not None
-
-    folge_resp = await client.get(
-        f"/api/vorgaenge/{folge_vorgang_id}", headers=auth_headers(token)
-    )
-    assert folge_resp.status_code == 200
-    folge = folge_resp.json()
+    assert resp.status_code == 201
+    folge = resp.json()
     assert folge["leistungstyp"] == "planung"
     assert folge["parent_vorgang_id"] == str(vorgang.id)
     assert folge["kunde_id"] == str(kunde.id)
     assert folge["status"] == "neu"
 
+    # Die Quelle bleibt dabei unberuehrt -- kein Automatismus mehr, der sie
+    # nebenbei mit abschliesst.
+    quelle_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
+    assert quelle_resp.json()["status"] == "neu"
+
 
 @pytest.mark.asyncio
-async def test_folge_leistungstyp_nur_bei_beratung_erlaubt(
+async def test_folge_auftrag_erstellen_funktioniert_mit_beliebigem_leistungstyp(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
+    """Der frühere Automatismus war hart an leistungstyp="beratung" gebunden
+    -- jetzt kann z.B. auch aus einer laufenden Wartung heraus eine
+    Reparatur abgespalten werden, ohne die Wartung selbst anzufassen."""
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde, leistungstyp="wartung")
     token = await login(client, admin.email, "pw-123456")
 
-    resp = await client.patch(
-        f"/api/vorgaenge/{vorgang.id}",
+    resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/folge-auftrag",
         headers=auth_headers(token),
-        json={"status": "abgeschlossen", "folge_leistungstyp": "planung"},
+        json={"leistungstyp": "stoerung"},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 201
+    assert resp.json()["leistungstyp"] == "stoerung"
 
 
 @pytest.mark.asyncio
-async def test_folge_leistungstyp_ohne_gleichzeitigen_abschluss_abgelehnt(
+async def test_folge_auftrag_erstellen_auf_bereits_abgerechnetem_vorgang(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """Kernszenario der Umstellung: auch Wochen nach einer laengst
+    abgerechneten Beratung soll noch ein Folge-Auftrag angelegt werden
+    koennen, sobald der Kunde sich entscheidet -- der Cross-Reference-
+    Kommentar ist reiner Systemquerverweis, kein Nutzer-Content, und darf
+    daher trotz VORGANG_STATUS_GESCHLOSSEN noch angelegt werden."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(
+        mandant=mandant, kunde=kunde, leistungstyp="beratung", status="abgerechnet"
+    )
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/folge-auftrag",
+        headers=auth_headers(token),
+        json={"leistungstyp": "planung"},
+    )
+    assert resp.status_code == 201
+    folge_vorgang_id = resp.json()["id"]
+
+    quelle_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
+    assert quelle_resp.json()["status"] == "abgerechnet"
+
+    async with system_session() as session:
+        events = (
+            await session.execute(
+                select(VorgangEvent).where(VorgangEvent.vorgang_id == vorgang.id)
+            )
+        ).scalars().all()
+        assert any(
+            e.event_type == "system" and str(folge_vorgang_id) in (e.payload or {}).get("folge_vorgang_id", "")
+            for e in events
+        )
+
+
+@pytest.mark.asyncio
+async def test_folge_auftraege_ueber_parent_filter_auffindbar(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     mandant = await make_mandant()
@@ -83,12 +125,19 @@ async def test_folge_leistungstyp_ohne_gleichzeitigen_abschluss_abgelehnt(
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde, leistungstyp="beratung")
     token = await login(client, admin.email, "pw-123456")
 
-    resp = await client.patch(
-        f"/api/vorgaenge/{vorgang.id}",
+    folge_resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/folge-auftrag",
         headers=auth_headers(token),
-        json={"folge_leistungstyp": "planung"},
+        json={"leistungstyp": "planung"},
     )
-    assert resp.status_code == 400
+    folge_id = folge_resp.json()["id"]
+
+    liste = await client.get(
+        "/api/vorgaenge",
+        headers=auth_headers(token),
+        params={"parent_vorgang_id": str(vorgang.id)},
+    )
+    assert [v["id"] for v in liste.json()] == [folge_id]
 
 
 @pytest.mark.asyncio
@@ -114,12 +163,12 @@ async def test_offene_angebots_bedarfe_werden_uebertragen_ohne_informationsverlu
     )
     alter_bedarf_id = bedarf_resp.json()["id"]
 
-    close_resp = await client.patch(
-        f"/api/vorgaenge/{vorgang.id}",
+    folge_resp = await client.post(
+        f"/api/vorgaenge/{vorgang.id}/folge-auftrag",
         headers=auth_headers(token),
-        json={"status": "abgeschlossen", "folge_leistungstyp": "planung"},
+        json={"leistungstyp": "planung"},
     )
-    folge_vorgang_id = close_resp.json()["folge_vorgang_id"]
+    folge_vorgang_id = folge_resp.json()["id"]
 
     alter_bedarf = await client.get(
         "/api/material-bedarfe", headers=auth_headers(token), params={"vorgang_id": str(vorgang.id)}

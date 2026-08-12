@@ -359,6 +359,81 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
     return ergebnis
 
 
+WIEDERVORLAGE_SCHEDULER_AKTION = "wiedervorlage_scheduler_run"
+
+
+async def run_wiedervorlage_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
+    """Taeglicher Lauf: benachrichtigt bei faelliger Wiedervorlage eines
+    Vorgangs im Status "wartet_kunde" (siehe Vorgang.wiedervorlage_am,
+    gesetzt in app/api/routes/vorgaenge.py beim PATCH auf diesen Status).
+    Einmal-Trigger wie bei Pruefzyklus/Dauerauftrag: wiedervorlage_am wird
+    nach dem Feuern wieder auf NULL gesetzt, ein erneutes wartet_kunde mit
+    neuer Frist ist jederzeit per PATCH moeglich."""
+    jetzt = datetime.now(timezone.utc)
+    benachrichtigt = 0
+
+    async with system_session() as session:
+        stmt = select(Vorgang).where(
+            Vorgang.status == "wartet_kunde",
+            Vorgang.wiedervorlage_am.is_not(None),
+            Vorgang.wiedervorlage_am <= jetzt,
+            Vorgang.geloescht_am.is_(None),
+        )
+        if mandant_ids is not None:
+            stmt = stmt.where(Vorgang.mandant_id.in_(mandant_ids))
+        faellige_vorgaenge = (await session.execute(stmt)).scalars().all()
+
+        for vorgang in faellige_vorgaenge:
+            # Zustaendiger Nutzer bekommt die Erinnerung persoenlich -- ist
+            # niemand zugewiesen, fallen wie bei den anderen Frist-Laeufen
+            # Admin/Disponent als Auffangnetz ein.
+            empfaenger_liste = []
+            if vorgang.zugewiesener_user_id is not None:
+                zugewiesener = await session.get(User, vorgang.zugewiesener_user_id)
+                if zugewiesener is not None:
+                    empfaenger_liste.append(zugewiesener)
+            if not empfaenger_liste:
+                empfaenger_liste = list(await _admins_und_disponenten(session, vorgang.mandant_id))
+
+            for empfaenger in empfaenger_liste:
+                session.add(
+                    Notification(
+                        mandant_id=vorgang.mandant_id,
+                        user_id=empfaenger.id,
+                        typ="frist",
+                        titel=f"Wiedervorlage: {vorgang.vorgangsnummer} – {vorgang.titel}",
+                        ref_entity_type="vorgang",
+                        ref_entity_id=vorgang.id,
+                    )
+                )
+                await event_bus.publish(
+                    vorgang.mandant_id,
+                    "notification",
+                    {
+                        "typ": "frist",
+                        "user_id": str(empfaenger.id),
+                        "vorgang_id": str(vorgang.id),
+                        "vorgangsnummer": vorgang.vorgangsnummer,
+                    },
+                )
+            vorgang.wiedervorlage_am = None
+            benachrichtigt += 1
+
+        ergebnis = {"vorgaenge_benachrichtigt": benachrichtigt}
+        session.add(
+            AuditLog(
+                mandant_id=None,
+                actor_user_id=None,
+                aktion=WIEDERVORLAGE_SCHEDULER_AKTION,
+                entity_type="scheduler",
+                payload=ergebnis,
+            )
+        )
+        await session.flush()
+
+    return ergebnis
+
+
 async def get_last_scheduler_run() -> datetime | None:
     async with system_session() as session:
         result = await session.execute(

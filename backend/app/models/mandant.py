@@ -36,6 +36,10 @@ class Mandant(TimestampMixin, Base):
             "scheduler_stunde_utc IS NULL OR (scheduler_stunde_utc >= 0 AND scheduler_stunde_utc <= 23)",
             name="ck_mandanten_scheduler_stunde_utc_valid",
         ),
+        CheckConstraint(
+            "wiedervorlage_standard_tage IS NULL OR wiedervorlage_standard_tage > 0",
+            name="ck_mandanten_wiedervorlage_standard_tage_valid",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -51,6 +55,13 @@ class Mandant(TimestampMixin, Base):
     # Pruefzyklen-/Mahnwesen-Lauf auf eine fuer den eigenen Betrieb passende
     # Uhrzeit zu legen, statt fest fuer alle Mandanten auf 03:00 UTC.
     scheduler_stunde_utc: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # NULL = globaler Default (siehe WIEDERVORLAGE_STANDARD_TAGE in
+    # app/services/scheduler_service.py) fuer die Wiedervorlage-Frist bei
+    # status="wartet_kunde" (Vorgang.wiedervorlage_am) -- analog zu
+    # scheduler_stunde_utc oben.
+    wiedervorlage_standard_tage: Mapped[int | None] = mapped_column(
+        SmallInteger, nullable=True
+    )
     # Opt-out: leer = alles an. Siehe MANDANT_MODULE fuer die gueltigen Werte.
     # Ausnahme "karten": anders als alle anderen Module bewusst opt-IN
     # (Default-Liste enthaelt "karten"), weil eine aktivierte Kartenansicht

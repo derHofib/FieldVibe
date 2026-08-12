@@ -485,12 +485,17 @@ export const vorgaengeApi = {
         | "zugewiesener_user_id"
       >
     > & {
-      // Nur bei status="abgeschlossen" auf einem Vorgang mit
-      // leistungstyp="beratung" gueltig -- legt einen Folge-Vorgang an
-      // (siehe close_vorgang im Backend).
-      folge_leistungstyp?: Leistungstyp;
+      // Nur bei status="wartet_kunde" gueltig -- ueberschreibt die
+      // Wiedervorlage-Frist (Tage ab jetzt), sonst greift der Mandanten-
+      // bzw. globale Default.
+      wiedervorlage_tage?: number;
     }
   ) => apiFetch<Vorgang>(`/api/vorgaenge/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  folgeAuftrag: (id: string, leistungstyp: Leistungstyp) =>
+    apiFetch<Vorgang>(`/api/vorgaenge/${id}/folge-auftrag`, {
+      method: "POST",
+      body: JSON.stringify({ leistungstyp }),
+    }),
   remove: (id: string) => apiFetch<void>(`/api/vorgaenge/${id}`, { method: "DELETE" }),
   uebernehmen: (id: string) =>
     apiFetch<Vorgang>(`/api/vorgaenge/${id}/uebernehmen`, { method: "POST" }),
@@ -1160,10 +1165,10 @@ export const kundenportalAuthApi = {
 
 export const mandantEinstellungenApi = {
   get: () => apiFetch<MandantEinstellungen>("/api/mandant/einstellungen"),
-  update: (schedulerStundeUtc: number | null) =>
+  update: (body: { scheduler_stunde_utc?: number | null; wiedervorlage_standard_tage?: number | null }) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
       method: "PATCH",
-      body: JSON.stringify({ scheduler_stunde_utc: schedulerStundeUtc }),
+      body: JSON.stringify(body),
     }),
   firmendatenSpeichern: (firmendaten: MandantFirmendaten) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {

@@ -50,6 +50,10 @@ class VorgangAnlagenHinzufuegen(BaseModel):
     anlage_ids: list[UUID]
 
 
+class VorgangFolgeAuftragErstellen(BaseModel):
+    leistungstyp: Leistungstyp
+
+
 class VorgangUpdate(BaseModel):
     titel: str | None = None
     beschreibung: str | None = None
@@ -67,11 +71,11 @@ class VorgangUpdate(BaseModel):
     # Selbst-Uebernehmen-Endpoint (siehe app/api/routes/vorgaenge.py:
     # uebernehmen). Explizit auf null setzbar, um die Zuweisung aufzuheben.
     zugewiesener_user_id: UUID | None = None
-    # Nur zusammen mit status="abgeschlossen" auf einem Vorgang mit
-    # leistungstyp="beratung" gueltig: legt einen Folge-Vorgang mit diesem
-    # Leistungstyp an, der Kunde/Anlage(n)/Standort sowie die offenen
-    # Angebots-Materialbedarfe uebernimmt (siehe close_vorgang).
-    folge_leistungstyp: Leistungstyp | None = None
+    # Nur zusammen mit status="wartet_kunde" gueltig: ueberschreibt die
+    # Wiedervorlage-Frist (Tage ab jetzt) fuer diesen einen Vorgang. Fehlt
+    # es, greift der Mandanten- bzw. globale Default (siehe
+    # app/api/routes/vorgaenge.py und Mandant.wiedervorlage_standard_tage).
+    wiedervorlage_tage: int | None = Field(default=None, gt=0)
 
 
 class VorgangRead(BaseModel):
@@ -95,17 +99,13 @@ class VorgangRead(BaseModel):
     adresse: dict | None
     zugewiesener_user_id: UUID | None
     # Nicht persistiert, sondern in get_vorgang/update_vorgang/uebernehmen
-    # transient auf dem ORM-Objekt gesetzt (siehe folge_vorgang_id unten fuer
-    # dasselbe Muster) -- erspart dem Frontend einen zusaetzlichen User-Fetch
-    # nur fuer den Namen.
+    # transient auf dem ORM-Objekt gesetzt -- erspart dem Frontend einen
+    # zusaetzlichen User-Fetch nur fuer den Namen.
     zugewiesener_name: str | None = None
     last_activity_at: datetime
     abgeschlossen_am: datetime | None
     erstellt_von_kundenportal_zugang_id: UUID | None
     erstellt_von: UUID | None
+    wiedervorlage_am: datetime | None
     created_at: datetime
     updated_at: datetime
-    # Nur in der Antwort auf genau die PATCH-Anfrage gesetzt, die diesen
-    # Folge-Vorgang erzeugt hat (siehe close_vorgang) -- keine persistierte
-    # Spalte, sonst ueberall sonst None.
-    folge_vorgang_id: UUID | None = None
