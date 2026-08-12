@@ -17,3 +17,4 @@ fpdf2==2.8.7
 drafthorse==2025.2.0
 cryptography==49.0.0
 psutil==7.2.2
+httpx==0.28.1
