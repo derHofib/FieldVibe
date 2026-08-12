@@ -44,16 +44,21 @@ _EVENT_TYPE_PREVIEW = {
 }
 
 
-def _encode_cursor(last_activity_at, id_: UUID) -> str:
-    raw = f"{last_activity_at.isoformat()}|{id_}"
+def _encode_cursor(last_activity_at, prioritaet: int, id_: UUID) -> str:
+    # Fuehrt immer last_activity_at UND prioritaet mit, unabhaengig vom
+    # aktiven sort-Modus -- so bleibt die Cursor-Form fuer beide
+    # Sortierungen gleich, statt zwei verschiedene Formate pflegen zu
+    # muessen (siehe get_feed: welches Feld davon der Vergleich tatsaechlich
+    # nutzt, haengt nur vom `sort`-Parameter ab).
+    raw = f"{last_activity_at.isoformat()}|{prioritaet}|{id_}"
     return base64.urlsafe_b64encode(raw.encode()).decode()
 
 
-def _decode_cursor(cursor: str) -> tuple[datetime, UUID]:
+def _decode_cursor(cursor: str) -> tuple[datetime, int, UUID]:
     try:
         raw = base64.urlsafe_b64decode(cursor.encode()).decode()
-        last_activity_at, id_ = raw.split("|", 1)
-        return datetime.fromisoformat(last_activity_at), UUID(id_)
+        last_activity_at, prioritaet, id_ = raw.split("|", 2)
+        return datetime.fromisoformat(last_activity_at), int(prioritaet), UUID(id_)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Cursor"
@@ -72,6 +77,7 @@ def _preview_text(event: VorgangEvent | None) -> str | None:
 async def get_feed(
     cursor: str | None = Query(default=None),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=100),
+    sort: str = Query(default="last_activity_at", pattern="^(last_activity_at|prioritaet)$"),
     status_filter: str | None = Query(
         default=None,
         alias="status",
@@ -88,11 +94,13 @@ async def get_feed(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
-    stmt = (
-        select(Vorgang)
-        .where(Vorgang.geloescht_am.is_(None))
-        .order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
-    )
+    stmt = select(Vorgang).where(Vorgang.geloescht_am.is_(None))
+    if sort == "prioritaet":
+        stmt = stmt.order_by(
+            Vorgang.prioritaet.desc(), Vorgang.last_activity_at.desc(), Vorgang.id.desc()
+        )
+    else:
+        stmt = stmt.order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
 
     if status_filter:
         status_liste = [s for s in status_filter.split(",") if s]
@@ -130,10 +138,16 @@ async def get_feed(
             )
         )
     if cursor:
-        last_activity_at, id_ = _decode_cursor(cursor)
-        stmt = stmt.where(
-            tuple_(Vorgang.last_activity_at, Vorgang.id) < tuple_(last_activity_at, id_)
-        )
+        last_activity_at, prioritaet, id_ = _decode_cursor(cursor)
+        if sort == "prioritaet":
+            stmt = stmt.where(
+                tuple_(Vorgang.prioritaet, Vorgang.last_activity_at, Vorgang.id)
+                < tuple_(prioritaet, last_activity_at, id_)
+            )
+        else:
+            stmt = stmt.where(
+                tuple_(Vorgang.last_activity_at, Vorgang.id) < tuple_(last_activity_at, id_)
+            )
 
     stmt = stmt.limit(limit + 1)
     result = await session.execute(stmt)
@@ -145,7 +159,7 @@ async def get_feed(
     next_cursor = None
     if has_more and page:
         last = page[-1]
-        next_cursor = _encode_cursor(last.last_activity_at, last.id)
+        next_cursor = _encode_cursor(last.last_activity_at, last.prioritaet, last.id)
 
     vorgang_ids = [v.id for v in page]
 

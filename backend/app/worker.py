@@ -26,6 +26,7 @@ from app.services.mahnwesen_service import run_mahnwesen_eskalation
 from app.services.scheduler_service import (
     mandanten_faellig_um,
     run_dauerauftraege_scheduler,
+    run_prioritaet_scheduler,
     run_pruefzyklen_scheduler,
     run_wiedervorlage_scheduler,
 )
@@ -82,6 +83,15 @@ async def _run_hourly_tick() -> None:
             )
         except Exception:
             logger.exception("Dauerauftraege-Lauf fehlgeschlagen")
+
+        try:
+            prioritaet_ergebnis = await run_prioritaet_scheduler(mandant_ids)
+            logger.info(
+                "Prioritaets-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
+                jetzt.hour, len(mandant_ids), prioritaet_ergebnis,
+            )
+        except Exception:
+            logger.exception("Prioritaets-Lauf fehlgeschlagen")
 
         try:
             wiedervorlage_ergebnis = await run_wiedervorlage_scheduler(mandant_ids)

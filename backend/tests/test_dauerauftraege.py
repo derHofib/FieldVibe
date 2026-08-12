@@ -305,7 +305,13 @@ async def test_scheduler_erzeugt_vorgang_wenn_faellig(make_mandant, make_kunde):
 
 
 @pytest.mark.asyncio
-async def test_scheduler_setzt_faelligkeit_am_plus_toleranz_spaet(make_mandant, make_kunde):
+async def test_scheduler_setzt_faelligkeit_am_auf_echtes_datum_trotz_toleranz_spaet(
+    make_mandant, make_kunde
+):
+    """faelligkeit_am ist das eingegebene Fälligkeitsdatum selbst -- der
+    frühere Vorschub um toleranz_spaet_tage ("Wunsch-Enddatum") entfaellt,
+    diese Aufgabe uebernimmt jetzt die Prioritaet (siehe
+    prioritaet_service.py)."""
     geplante_faelligkeit = date.today() - timedelta(days=1)
     mandant = await make_mandant()
     auftrag, ziel = await _make_dauerauftrag_mit_ziel(
@@ -320,9 +326,7 @@ async def test_scheduler_setzt_faelligkeit_am_plus_toleranz_spaet(make_mandant, 
     async with system_session() as session:
         ziel_neu = await session.get(DauerauftragZiel, ziel.id)
         vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
-        erwartet = datetime.combine(
-            geplante_faelligkeit + timedelta(days=3), datetime.min.time(), tzinfo=timezone.utc
-        )
+        erwartet = datetime.combine(geplante_faelligkeit, datetime.min.time(), tzinfo=timezone.utc)
         assert vorgang.faelligkeit_am == erwartet
 
 
@@ -343,6 +347,53 @@ async def test_scheduler_setzt_faelligkeit_am_ohne_toleranz(make_mandant, make_k
         vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
         erwartet = datetime.combine(geplante_faelligkeit, datetime.min.time(), tzinfo=timezone.utc)
         assert vorgang.faelligkeit_am == erwartet
+
+
+@pytest.mark.asyncio
+async def test_scheduler_erzeugt_vorgang_bereits_im_vorlauf_fenster(make_mandant, make_kunde):
+    mandant = await make_mandant()
+    auftrag, ziel = await _make_dauerauftrag_mit_ziel(
+        mandant=mandant,
+        kunde=await make_kunde(mandant=mandant),
+        naechste_faelligkeit_am=date.today() + timedelta(days=2),
+        toleranz_frueh_tage=2,
+    )
+
+    ergebnis = await run_dauerauftraege_scheduler([mandant.id])
+    assert ergebnis["vorgaenge_erstellt"] == 1
+
+
+@pytest.mark.asyncio
+async def test_scheduler_wartet_ausserhalb_des_vorlauf_fensters(make_mandant, make_kunde):
+    mandant = await make_mandant()
+    await _make_dauerauftrag_mit_ziel(
+        mandant=mandant,
+        kunde=await make_kunde(mandant=mandant),
+        naechste_faelligkeit_am=date.today() + timedelta(days=3),
+        toleranz_frueh_tage=2,
+    )
+
+    ergebnis = await run_dauerauftraege_scheduler([mandant.id])
+    assert ergebnis["vorgaenge_erstellt"] == 0
+
+
+@pytest.mark.asyncio
+async def test_scheduler_setzt_prioritaet_bei_anlage_nach_formel(make_mandant, make_kunde):
+    mandant = await make_mandant()
+    auftrag, ziel = await _make_dauerauftrag_mit_ziel(
+        mandant=mandant,
+        kunde=await make_kunde(mandant=mandant),
+        naechste_faelligkeit_am=date.today() + timedelta(days=2),
+        toleranz_frueh_tage=2,
+        toleranz_spaet_tage=2,
+    )
+
+    await run_dauerauftraege_scheduler([mandant.id])
+
+    async with system_session() as session:
+        ziel_neu = await session.get(DauerauftragZiel, ziel.id)
+        vorgang = await session.get(Vorgang, ziel_neu.offener_vorgang_id)
+        assert vorgang.prioritaet == 1
 
 
 @pytest.mark.asyncio

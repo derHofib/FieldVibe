@@ -33,6 +33,14 @@ const ABRECHNUNGSARTEN: { value: VorgangAbrechnungsart; label: string }[] = [
   { value: "gewaehrleistung", label: "Gewährleistung" },
 ];
 
+const PRIORITAET_OPTIONEN = [
+  { value: 1, label: "1 – Niedrig" },
+  { value: 2, label: "2" },
+  { value: 3, label: "3 – Normal" },
+  { value: 4, label: "4" },
+  { value: 5, label: "5 – Hoch" },
+];
+
 export function NewVorgangPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -45,6 +53,7 @@ export function NewVorgangPage() {
   const [beschreibung, setBeschreibung] = useState("");
   const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("stoerung");
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("aufwand");
+  const [prioritaet, setPrioritaet] = useState(3);
   const [showScanner, setShowScanner] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [showNewKunde, setShowNewKunde] = useState(false);
@@ -148,6 +157,7 @@ export function NewVorgangPage() {
         beschreibung,
         abrechnungsart,
         leistungstyp,
+        prioritaet,
         adresse:
           adrStrasse || adrPlz || adrOrt
             ? { strasse: adrStrasse || undefined, plz: adrPlz || undefined, ort: adrOrt || undefined }
@@ -518,6 +528,20 @@ export function NewVorgangPage() {
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
                   {a.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Priorität</label>
+            <select
+              value={prioritaet}
+              onChange={(e) => setPrioritaet(Number(e.target.value))}
+              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            >
+              {PRIORITAET_OPTIONEN.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
                 </option>
               ))}
             </select>

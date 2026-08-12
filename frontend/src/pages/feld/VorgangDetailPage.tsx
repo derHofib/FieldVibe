@@ -90,6 +90,8 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 // Sinn mehr (das Backend lehnt es dort ohnehin mit 409 ab).
 const VORGANG_STATUS_GESCHLOSSEN: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
 
+const PRIORITAET_OPTIONEN = [1, 2, 3, 4, 5];
+
 const EVENT_LABEL: Partial<Record<string, string>> = {
   status_change: "Status geändert",
   foto: "Foto hinzugefügt",
@@ -652,6 +654,11 @@ export function VorgangDetailPage() {
     },
   });
 
+  const prioritaetMutation = useMutation({
+    mutationFn: (prioritaet: number) => vorgaengeApi.update(id!, { prioritaet }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
+  });
+
   const commentMutation = useMutation({
     mutationFn: async () => {
       try {
@@ -1085,9 +1092,30 @@ export function VorgangDetailPage() {
               </option>
             ))}
           </select>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-            Priorität {vorgang.prioritaet}
-          </span>
+          {vorgang.dauerauftrag_id ? (
+            <span
+              title="Wird beim Dauerauftrag automatisch anhand der Fälligkeit berechnet"
+              className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            >
+              Priorität {vorgang.prioritaet} (automatisch)
+            </span>
+          ) : (
+            <label className="flex items-center gap-1 text-sm text-slate-500 dark:text-stone-400">
+              Priorität
+              <select
+                value={vorgang.prioritaet}
+                disabled={VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) || prioritaetMutation.isPending}
+                onChange={(e) => prioritaetMutation.mutate(Number(e.target.value))}
+                className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              >
+                {PRIORITAET_OPTIONEN.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <button
             onClick={() => {
               setFolgeAuftragLeistungstyp("stoerung");

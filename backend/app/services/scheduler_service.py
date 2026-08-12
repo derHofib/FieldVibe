@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -21,6 +21,8 @@ from app.models.vorgang_event import VorgangEvent
 from app.services.event_bus import event_bus
 from app.services.fahrzeug_zuweisung_service import technikern_zugewiesen
 from app.services.numbering_service import next_vorgangsnummer
+from app.services.prioritaet_service import berechne_prioritaet
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 
 SCHEDULER_AKTION = "pruefzyklen_scheduler_run"
@@ -260,9 +262,16 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
     zum tatsaechlichen Abschlussdatum fortschreibt). Ein Buendel mit
     mehreren Zielen (z.B. mehreren Anlagen desselben Kunden) laeuft dadurch
     je Ziel unabhaengig -- ein liegen gebliebenes Ziel blockiert nicht die
-    anderen. Anders als bei Pruefzyklen kein Vorlauf-Horizont -- die
-    Erzeugung erfolgt erst, wenn naechste_faelligkeit_am tatsaechlich
-    erreicht ist.
+    anderen.
+
+    Anlage-Zeitpunkt: `toleranz_frueh_tage` vor der Faelligkeit, nicht erst
+    an ihr selbst -- ein Ziel mit Faelligkeit Dienstag und Vorlauf 2 Tage
+    wird bereits Sonntag angelegt (COALESCE auf 0, falls kein Vorlauf-
+    Fenster konfiguriert ist: dann unveraendert wie bisher erst am
+    Faelligkeitstag). `faelligkeit_am` am Vorgang ist ab jetzt das
+    tatsaechliche, eingegebene Faelligkeitsdatum (kein Vorschub mehr um
+    toleranz_spaet_tage -- das war die alte "Wunsch-Enddatum"-Logik, die
+    Aufgabe uebernimmt jetzt die Prioritaet, siehe prioritaet_service.py).
 
     `mandant_ids` grenzt den Lauf wie beim Pruefzyklen-Scheduler auf die
     gerade faelligen Mandanten ein (siehe app/worker.py); None bearbeitet
@@ -276,7 +285,11 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
             .join(Dauerauftrag, DauerauftragZiel.dauerauftrag_id == Dauerauftrag.id)
             .where(
                 Dauerauftrag.aktiv.is_(True),
-                DauerauftragZiel.naechste_faelligkeit_am <= heute,
+                (
+                    DauerauftragZiel.naechste_faelligkeit_am
+                    - func.coalesce(Dauerauftrag.toleranz_frueh_tage, 0)
+                )
+                <= heute,
                 DauerauftragZiel.offener_vorgang_id.is_(None),
             )
         )
@@ -286,15 +299,8 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
 
         for ziel, auftrag in faellige_ziele:
             vorgangsnummer = await next_vorgangsnummer(session, auftrag.mandant_id)
-            # Wunsch-Enddatum = geplante Faelligkeit plus Gleitzeit nach hinten
-            # (toleranz_spaet_tage) -- der Vorgang gilt im Feed erst als
-            # ueberfaellig, wenn die Gleitzeit tatsaechlich ausgeschoepft ist,
-            # analog zur Hinweis-statt-Blockade-Logik beim Abschluss (siehe
-            # vorgang_completion_service.py).
             faelligkeit_am = datetime.combine(
-                ziel.naechste_faelligkeit_am + timedelta(days=auftrag.toleranz_spaet_tage or 0),
-                time.min,
-                tzinfo=timezone.utc,
+                ziel.naechste_faelligkeit_am, time.min, tzinfo=timezone.utc
             )
             vorgang = Vorgang(
                 mandant_id=auftrag.mandant_id,
@@ -307,6 +313,12 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
                 abrechnungsart=auftrag.abrechnungsart,
                 leistungstyp=auftrag.leistungstyp,
                 faelligkeit_am=faelligkeit_am,
+                prioritaet=berechne_prioritaet(
+                    heute=heute,
+                    faelligkeit_am=ziel.naechste_faelligkeit_am,
+                    toleranz_frueh_tage=auftrag.toleranz_frueh_tage,
+                    toleranz_spaet_tage=auftrag.toleranz_spaet_tage,
+                ),
             )
             session.add(vorgang)
             await session.flush()
@@ -350,6 +362,59 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
                 mandant_id=None,
                 actor_user_id=None,
                 aktion=DAUERAUFTRAEGE_SCHEDULER_AKTION,
+                entity_type="scheduler",
+                payload=ergebnis,
+            )
+        )
+        await session.flush()
+
+    return ergebnis
+
+
+PRIORITAET_SCHEDULER_AKTION = "prioritaet_scheduler_run"
+
+
+async def run_prioritaet_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
+    """Taeglicher Lauf: schreibt die Prioritaet aller noch offenen Dauerauftrag-
+    Vorgaenge anhand ihres Abstands zur Faelligkeit fort (siehe
+    prioritaet_service.berechne_prioritaet). Betrifft ausschliesslich
+    Vorgaenge mit gesetztem dauerauftrag_id -- manuell angelegte Vorgaenge
+    behalten die einmal gesetzte Prioritaet unveraendert, daran ruehrt
+    dieser Lauf nicht."""
+    heute = date.today()
+    aktualisiert = 0
+
+    async with system_session() as session:
+        stmt = (
+            select(Vorgang, Dauerauftrag)
+            .join(Dauerauftrag, Vorgang.dauerauftrag_id == Dauerauftrag.id)
+            .where(
+                Vorgang.dauerauftrag_id.is_not(None),
+                Vorgang.status.notin_(VORGANG_STATUS_GESCHLOSSEN),
+                Vorgang.geloescht_am.is_(None),
+            )
+        )
+        if mandant_ids is not None:
+            stmt = stmt.where(Vorgang.mandant_id.in_(mandant_ids))
+        offene_dauerauftrag_vorgaenge = (await session.execute(stmt)).all()
+
+        for vorgang, auftrag in offene_dauerauftrag_vorgaenge:
+            neue_prioritaet = berechne_prioritaet(
+                heute=heute,
+                faelligkeit_am=vorgang.faelligkeit_am.date(),
+                toleranz_frueh_tage=auftrag.toleranz_frueh_tage,
+                toleranz_spaet_tage=auftrag.toleranz_spaet_tage,
+            )
+            if neue_prioritaet != vorgang.prioritaet:
+                vorgang.prioritaet = neue_prioritaet
+                aktualisiert += 1
+
+        ergebnis = {"vorgaenge_aktualisiert": aktualisiert}
+        session.add(
+            AuditLog(
+                mandant_id=None,
+                actor_user_id=None,
+                aktion=PRIORITAET_SCHEDULER_AKTION,
                 entity_type="scheduler",
                 payload=ergebnis,
             )

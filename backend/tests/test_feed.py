@@ -55,6 +55,55 @@ async def test_feed_cursor_pagination_is_chronological_and_exhaustive(
 
 
 @pytest.mark.asyncio
+async def test_feed_sortiert_nach_prioritaet(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    niedrig = await make_vorgang(mandant=mandant, kunde=kunde, titel="Niedrig", prioritaet=1)
+    hoch = await make_vorgang(mandant=mandant, kunde=kunde, titel="Hoch", prioritaet=5)
+    mittel = await make_vorgang(mandant=mandant, kunde=kunde, titel="Mittel", prioritaet=3)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.get(
+        "/api/feed", headers=auth_headers(token), params={"sort": "prioritaet"}
+    )
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["items"]]
+    assert ids == [str(hoch.id), str(mittel.id), str(niedrig.id)]
+
+
+@pytest.mark.asyncio
+async def test_feed_cursor_pagination_nach_prioritaet_ist_exhaustiv(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    for i in range(5):
+        await make_vorgang(mandant=mandant, kunde=kunde, titel=f"Vorgang {i}", prioritaet=(i % 5) + 1)
+    token = await login(client, admin.email, "pw-123456")
+
+    seen_ids = []
+    cursor = None
+    for _ in range(10):  # safety bound
+        params = {"limit": 2, "sort": "prioritaet"}
+        if cursor:
+            params["cursor"] = cursor
+        resp = await client.get("/api/feed", headers=auth_headers(token), params=params)
+        assert resp.status_code == 200
+        body = resp.json()
+        seen_ids += [item["id"] for item in body["items"]]
+        cursor = body["next_cursor"]
+        if cursor is None:
+            break
+
+    assert len(seen_ids) == 5
+    assert len(set(seen_ids)) == 5
+
+
+@pytest.mark.asyncio
 async def test_feed_filters_by_status_and_tag(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):

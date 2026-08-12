@@ -418,6 +418,14 @@ export function FeedPage() {
               placeholder="#Tag"
               className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
+            <select
+              value={filter.sort ?? "last_activity_at"}
+              onChange={(e) => setField("sort", e.target.value)}
+              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            >
+              <option value="last_activity_at">Sortiert nach Aktivität</option>
+              <option value="prioritaet">Sortiert nach Priorität</option>
+            </select>
             </div>
           </div>
         )}
