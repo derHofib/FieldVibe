@@ -10,6 +10,18 @@ body {
   @apply min-h-[48px] min-w-[48px];
 }
 
+/* Fuer die swipebare Bottom-Nav (siehe components/BottomNav.tsx): der
+   Scroll-Balken selbst waere in der schmalen, schwebenden Pille nur
+   visuelles Rauschen -- die Wischbarkeit bleibt ohne ihn vollstaendig
+   erhalten. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 .card-interactive {
   @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-sm;
 }

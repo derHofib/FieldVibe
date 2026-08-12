@@ -1,10 +1,11 @@
 import {
-  BarChart3,
   ClipboardList,
   Clock,
+  LayoutGrid,
   type LucideIcon,
   Plug,
   Tags,
+  TrendingUp,
   UserCog,
   Users,
   Wrench,
@@ -114,13 +115,26 @@ export function SettingsPage() {
         )}
         {istModulAktiv(currentUser, "statistik") && (
           <SettingsLink
-            icon={BarChart3}
+            icon={TrendingUp}
             tone="sky"
-            label="Insights"
+            label="Kennzahlen"
             beschreibung="Auslastung, Kennzahlen, Auswertungen"
             onClick={() => navigate("/insights")}
           />
         )}
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+          Darstellung
+        </h2>
+        <SettingsLink
+          icon={LayoutGrid}
+          tone="cyan"
+          label="Menüleiste anpassen"
+          beschreibung="Welche Seiten unten in der Navigation sichtbar sind"
+          onClick={() => navigate("/einstellungen/menueleiste")}
+        />
       </section>
 
       <section className="space-y-2">

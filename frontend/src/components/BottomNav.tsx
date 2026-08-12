@@ -1,32 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  BarChart3,
-  Bell,
-  Briefcase,
-  CalendarDays,
-  EllipsisVertical,
-  Inbox,
-  type LucideIcon,
-  Plus,
-  Receipt,
-  Rss,
-  Trash2,
-  User,
-} from "lucide-react";
-import { useState } from "react";
+import { Plus, Rss, User, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
+import { sichtbareNavSeiten, STANDARD_BOTTOM_NAV_KEYS } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
 import { IconBadge, type IconTone } from "./IconBadge";
-import { istModulAktiv } from "../utils/module";
 
-function NavItem({ to, label, icon, tone }: { to: string; label: string; icon: LucideIcon; tone: IconTone }) {
+function NavItem({
+  to,
+  label,
+  icon,
+  tone,
+  badge,
+}: {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  tone: IconTone;
+  badge?: number;
+}) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `btn-touch flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium ${
+        `btn-touch relative flex shrink-0 flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] font-medium ${
           isActive ? "text-slate-700 dark:text-stone-200" : "text-slate-400 dark:text-stone-500"
         }`
       }
@@ -35,33 +33,23 @@ function NavItem({ to, label, icon, tone }: { to: string; label: string; icon: L
         <>
           <IconBadge icon={icon} tone={tone} size="sm" active={isActive} />
           {label}
+          {!!badge && badge > 0 && (
+            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+              {badge > 9 ? "9+" : badge}
+            </span>
+          )}
         </>
       )}
     </NavLink>
   );
 }
 
-const dispoItem = { to: "/dispo", label: "Dispo", icon: CalendarDays, tone: "amber" as const };
-const geschaeftItem = { to: "/geschaeft", label: "Geschäft", icon: Briefcase, tone: "emerald" as const };
-const rechnungenItem = { to: "/rechnungen", label: "Rechnungen", icon: Receipt, tone: "cyan" as const };
-const rechnungseingangItem = {
-  to: "/rechnungseingang",
-  label: "Rechnungseingang",
-  icon: Inbox,
-  tone: "cyan" as const,
-};
-const auswertungItem = { to: "/auswertung", label: "Auswertung", icon: BarChart3, tone: "indigo" as const };
-const meldungenItem = { to: "/benachrichtigungen", label: "Meldungen", icon: Bell, tone: "rose" as const };
-const papierkorbItem = { to: "/papierkorb", label: "Papierkorb", icon: Trash2, tone: "slate" as const };
-
 export function BottomNav() {
   const { currentUser, hatRecht } = useAuth();
-  const [mehrOffen, setMehrOffen] = useState(false);
   // loesch_ansicht sieht ausschliesslich den Papierkorb (siehe
-  // app/api/routes/papierkorb.py) -- Feed/Meldungen/etc. wuerden fuer diese
-  // Rolle nur mit 403 scheitern, daher gar nicht erst laden/anzeigen.
+  // app/api/routes/papierkorb.py) -- Meldungen wuerden fuer diese Rolle nur
+  // mit 403 scheitern, daher gar nicht erst laden.
   const nurPapierkorb = currentUser?.role === "loesch_ansicht";
-  const istPapierkorbRolle = nurPapierkorb || currentUser?.role === "loesch_operativ";
   const { data: unread } = useQuery({
     queryKey: ["notifications", "unread"],
     queryFn: () => notificationsApi.list(true),
@@ -69,111 +57,69 @@ export function BottomNav() {
   });
   const unreadCount = unread?.length ?? 0;
 
-  // Dispo-Board ist Disposition, nicht Kommunikation -- bewusst kein
-  // Feed-Ersatz, aber trotzdem ueber die Hauptnavigation erreichbar statt
-  // in einem versteckten Menue, da es fuer Account-Typen mit Dispo-Zugriff
-  // Kernarbeit ist. mandant_admin/loesch_operativ sehen dieselbe Navigation,
-  // da hatRecht() fuer diese Rollen immer true liefert (siehe AuthContext).
-  const canDisponieren = hatRecht("dispo", "sehen");
+  // Individualisierbare Auswahl (siehe config/navSeiten.ts + Einstellungen ->
+  // "Menüleiste anpassen"): bottom_nav_items === null faellt auf die
+  // bisherige "Mehr"-Auswahl zurueck, damit sich fuer bestehende Nutzer ohne
+  // eigene Praeferenz nichts aendert. Ungueltig gewordene oder gerade nicht
+  // berechtigte Keys (Rechte/Modul deaktiviert) werden still uebersprungen,
+  // statt einen kaputten Nav-Eintrag zu zeigen.
+  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
+  const sichtbarByKey = new Map(sichtbar.map((seite) => [seite.key, seite]));
+  const gewaehlteKeys = currentUser?.bottom_nav_items ?? STANDARD_BOTTOM_NAV_KEYS;
+  const items = gewaehlteKeys
+    .map((key) => sichtbarByKey.get(key))
+    .filter((seite): seite is NonNullable<typeof seite> => seite !== undefined);
+  // Zwei unabhaengig wischbare Haelften statt einer durchgehenden Leiste:
+  // der Neu-Button schwebt fix in der Mitte -- eine durchgehende Leiste
+  // wuerde je nach Scroll-Position irgendwann genau darunter einen Eintrag
+  // verstecken, mit dieser Aufteilung liegt ueber ihm garantiert immer nur
+  // die leere Reserve-Luecke zwischen den beiden Haelften.
+  const mitte = Math.ceil(items.length / 2);
+  const linkeHaelfte = items.slice(0, mitte);
+  const rechteHaelfte = items.slice(mitte);
 
-  // Nur die Kernaktionen (Feed, Neu, Profil) bleiben dauerhaft sichtbar --
-  // alles andere ist seltener und wandert ins aufklappbare "Mehr"-Menue,
-  // damit die Leiste auf schmalen Bildschirmen nicht ueberladen wirkt.
-  const mehrItems = [
-    ...(nurPapierkorb ? [] : [{ ...meldungenItem, badge: unreadCount }]),
-    ...(canDisponieren && istModulAktiv(currentUser, "dispo") ? [{ ...dispoItem, badge: 0 }] : []),
-    // "Geschäft" buendelt Kunden/Angebote-Rechnungen/Material-Tabs -- ganz
-    // weg, wenn alle drei Bereiche fuer diesen Mandanten deaktiviert sind
-    // (die Kunde-Basisfunktionen fuers Vorgang-Anlegen bleiben trotzdem
-    // ueber die Inline-Anlage in "+Neu" erreichbar, siehe GeschaeftPage).
-    // Bewusst NICHT laenger an canDisponieren (dispo:sehen) gehaengt -- ein
-    // Account-Typ mit z.B. nur abrechnung:sehen (ein reiner Buchhalter) kam
-    // dadurch vorher gar nicht an "Geschäft" heran, siehe GeschaeftPage.tsx.
-    ...((hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung")) ||
-    (hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung")) ||
-    (hatRecht("material", "sehen") && istModulAktiv(currentUser, "material"))
-      ? [{ ...geschaeftItem, badge: 0 }]
-      : []),
-    ...(hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung")
-      ? [
-          { ...rechnungenItem, badge: 0 },
-          { ...rechnungseingangItem, badge: 0 },
-          { ...auswertungItem, badge: 0 },
-        ]
-      : []),
-    ...(istPapierkorbRolle ? [{ ...papierkorbItem, badge: 0 }] : []),
-  ];
-  const mehrBadge = mehrItems.reduce((sum, item) => sum + item.badge, 0);
+  const renderItem = (item: (typeof items)[number]) => (
+    <NavItem
+      key={item.key}
+      to={item.route}
+      label={item.label}
+      icon={item.icon}
+      tone={item.tone}
+      badge={item.key === "meldungen" ? unreadCount : undefined}
+    />
+  );
 
   return (
     <>
-      {mehrOffen && (
-        <button
-          aria-label="Menü schließen"
-          onClick={() => setMehrOffen(false)}
-          className="fixed inset-0 z-40 cursor-default"
-        />
-      )}
-
-      {mehrOffen && (
-        <div className="fixed bottom-24 right-3 z-50 w-52 overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 dark:bg-stone-900 dark:ring-stone-800">
-          {mehrItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setMehrOffen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-4 py-3 text-sm font-medium ${
-                  isActive
-                    ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300"
-                    : "text-slate-600 dark:text-stone-300"
-                }`
-              }
-            >
-              <IconBadge icon={item.icon} tone={item.tone} size="sm" />
-              {item.label}
-              {item.badge > 0 && (
-                <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
-                  {item.badge > 9 ? "9+" : item.badge}
-                </span>
-              )}
-            </NavLink>
-          ))}
-        </div>
-      )}
-
       <nav
-        className="navbar-soft fixed inset-x-3 bottom-3 z-40 flex items-center justify-around rounded-full bg-white py-1.5 dark:bg-stone-900"
+        className="navbar-soft fixed inset-x-3 bottom-3 z-40 flex items-center overflow-hidden rounded-full bg-white py-1.5 dark:bg-stone-900"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <NavItem to="/feed" label="Feed" icon={Rss} tone="sky" />
 
-        <NavLink
-          to="/neu"
-          className="btn-clay -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-stone-950"
-          aria-label="Neuer Vorgang"
-        >
-          <Plus size={26} strokeWidth={2.5} />
-        </NavLink>
+        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scroll-smooth">
+          {linkeHaelfte.map(renderItem)}
+        </div>
+
+        {/* Reservierte Luecke fuer den schwebenden Neu-Button -- bewusst
+           kein Nav-Item hier, damit er nie einen Eintrag verdeckt. */}
+        <div className="w-14 shrink-0" aria-hidden />
+
+        <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scroll-smooth">
+          {rechteHaelfte.map(renderItem)}
+        </div>
 
         <NavItem to="/profil" label="Profil" icon={User} tone="violet" />
-
-        <button
-          onClick={() => setMehrOffen((v) => !v)}
-          aria-label="Mehr"
-          className={`btn-touch relative flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-[11px] font-medium ${
-            mehrOffen ? "text-slate-700 dark:text-stone-200" : "text-slate-400 dark:text-stone-500"
-          }`}
-        >
-          <IconBadge icon={EllipsisVertical} tone="slate" size="sm" active={mehrOffen} />
-          Mehr
-          {mehrBadge > 0 && (
-            <span className="absolute right-4 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-              {mehrBadge > 9 ? "9+" : mehrBadge}
-            </span>
-          )}
-        </button>
       </nav>
+
+      <NavLink
+        to="/neu"
+        className="btn-clay fixed bottom-3 left-1/2 z-50 flex h-14 w-14 -translate-x-1/2 -translate-y-7 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-stone-950"
+        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+        aria-label="Neuer Vorgang"
+      >
+        <Plus size={26} strokeWidth={2.5} />
+      </NavLink>
     </>
   );
 }

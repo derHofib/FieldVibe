@@ -170,6 +170,11 @@ export const usersApi = {
       body: JSON.stringify(body),
     }),
   remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
+  updateOwnBottomNav: (items: string[] | null) =>
+    apiFetch<{ items: string[] | null }>("/api/users/me/bottom-nav", {
+      method: "PATCH",
+      body: JSON.stringify({ items }),
+    }),
 };
 
 export const accountTypenApi = {

@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
@@ -54,3 +54,6 @@ class User(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(Text)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Geordnete Liste von Seiten-Keys (siehe frontend/src/config/navSeiten.ts)
+    # fuer die individualisierte, swipebare Bottom-Nav. NULL = Standardauswahl.
+    bottom_nav_items: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)

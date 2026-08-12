@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.core.security import hash_password
+from app.db.session import system_session
 from app.models.account_typ import AccountTyp
 from app.models.user import User
-from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.schemas.user import BottomNavUpdate, UserCreate, UserRead, UserUpdate
 from app.services.audit_service import log_action
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -315,3 +316,21 @@ async def delete_user(
         entity_id=user_id,
         payload=audit_payload,
     )
+
+
+@router.patch("/me/bottom-nav", response_model=BottomNavUpdate)
+async def update_own_bottom_nav(
+    body: BottomNavUpdate, auth: AuthContext = Depends(get_current_user)
+) -> BottomNavUpdate:
+    # Rein selbstbezogene Praeferenz -- jede Rolle darf sie fuer sich selbst
+    # setzen, unabhaengig von mitarbeiterverwaltung-Rechten. Ueber
+    # system_session() (analog auth.me), da die Route auch fuer
+    # super_admin (mandant_id NULL, ausserhalb jeder RLS-Session) und
+    # waehrend Impersonation greifen muss.
+    async with system_session() as session:
+        user = await session.get(User, auth.user_id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+        user.bottom_nav_items = body.items
+        await session.flush()
+    return body

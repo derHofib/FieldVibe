@@ -17,6 +17,7 @@ import { AnlagenFelderPage } from "./pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
 import { AuswertungPage } from "./pages/feld/AuswertungPage";
 import { BestellungDetailPage } from "./pages/feld/BestellungDetailPage";
+import { BottomNavSettingsPage } from "./pages/feld/BottomNavSettingsPage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
@@ -133,6 +134,7 @@ export function App() {
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/account-typen" element={<AccountTypenPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
+          <Route path="/einstellungen/menueleiste" element={<BottomNavSettingsPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
           <Route path="/team-zeiten" element={<TeamZeitenPage />} />

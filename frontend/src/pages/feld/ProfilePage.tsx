@@ -1,4 +1,4 @@
-import { BarChart3, Repeat, Wrench } from "lucide-react";
+import { Repeat, Timer, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
@@ -67,8 +67,8 @@ export function ProfilePage() {
           onClick={() => navigate("/statistik")}
           className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
-          <BarChart3 size={16} strokeWidth={2} className="text-sky-500" />{" "}
-          {currentUser?.nur_zugewiesene_kunden ? "Meine Statistik" : "Statistik"}
+          <Timer size={16} strokeWidth={2} className="text-cyan-500" />{" "}
+          {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
         </button>
       )}
 

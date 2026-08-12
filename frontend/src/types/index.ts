@@ -181,6 +181,9 @@ export interface CurrentUser {
   email: string;
   impersonated_by: string | null;
   deaktivierte_module: MandantModul[];
+  // Individualisierte Bottom-Nav-Auswahl (siehe frontend/src/config/
+  // navSeiten.ts) -- null = Standardauswahl verwenden.
+  bottom_nav_items: string[] | null;
   // Bereich -> Liste erlaubter Aktionen fuer diese Session (siehe
   // app/api/routes/auth.py:me) -- role != "custom" bekommt immer alle
   // Bereiche/Aktionen.

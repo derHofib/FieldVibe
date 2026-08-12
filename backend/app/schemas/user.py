@@ -52,6 +52,12 @@ class UserUpdate(BaseModel):
     password: str | None = Field(default=None, min_length=8)
 
 
+class BottomNavUpdate(BaseModel):
+    # Geordnete Liste von Seiten-Keys (siehe frontend/src/config/navSeiten.ts).
+    # None = zur Standardauswahl zurücksetzen.
+    items: list[str] | None = None
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

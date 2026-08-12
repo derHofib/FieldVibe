@@ -137,5 +137,6 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             impersonated_by=auth.impersonated_by,
             mandant_name=mandant_name,
             deaktivierte_module=deaktivierte_module,
+            bottom_nav_items=user.bottom_nav_items,
             rechte=rechte,
         )
