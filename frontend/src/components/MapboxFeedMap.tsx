@@ -1,3 +1,4 @@
+import type { FeatureCollection, Point } from "geojson";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useRef } from "react";
@@ -56,7 +57,7 @@ export interface FeedMapPunkt {
   farbe: string;
 }
 
-function punkteAlsGeojson(punkte: FeedMapPunkt[]): GeoJSON.FeatureCollection<GeoJSON.Point> {
+function punkteAlsGeojson(punkte: FeedMapPunkt[]): FeatureCollection<Point> {
   return {
     type: "FeatureCollection",
     features: punkte.map((p) => ({
