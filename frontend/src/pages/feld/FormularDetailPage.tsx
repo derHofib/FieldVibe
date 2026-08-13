@@ -43,7 +43,7 @@ function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
       <p className="mb-2 px-1 text-xs text-slate-400 dark:text-stone-500">
         Bei welchen Auftragstypen wird dieses Formular Technikern zum Ausfüllen angeboten?
       </p>
-      <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-sm dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         {LEISTUNGSTYPEN.map((typ) => {
           const zuordnung = formular.zuordnungen.find((z) => z.leistungstyp === typ);
           const zugeordnet = !!zuordnung;
@@ -57,7 +57,7 @@ function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
                     if (e.target.checked) createMutation.mutate(typ);
                     else if (zuordnung) deleteMutation.mutate(zuordnung.id);
                   }}
-                  className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+                  className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
                 />
                 {LEISTUNGSTYP_LABEL[typ]}
               </label>
@@ -73,7 +73,7 @@ function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
                   onChange={(e) =>
                     zuordnung && updateMutation.mutate({ zuordnungId: zuordnung.id, pflicht: e.target.checked })
                   }
-                  className="h-3.5 w-3.5 rounded border-slate-300 disabled:opacity-40 dark:border-stone-600"
+                  className="h-3.5 w-3.5 rounded-xs border-slate-300 disabled:opacity-40 dark:border-stone-600"
                 />
                 Pflicht vor Abschluss
               </label>
@@ -115,24 +115,24 @@ export function FormularDetailPage() {
         ← Alle Formulare
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <input
           value={formular.name}
           onChange={(e) => updateFormularMutation.mutate({ name: e.target.value })}
-          className="w-full border-none bg-transparent p-0 text-lg font-bold text-slate-800 focus:outline-none dark:text-stone-100"
+          className="w-full border-none bg-transparent p-0 text-lg font-bold text-slate-800 focus:outline-hidden dark:text-stone-100"
         />
         <input
           value={formular.beschreibung ?? ""}
           onChange={(e) => updateFormularMutation.mutate({ beschreibung: e.target.value })}
           placeholder="Beschreibung hinzufügen…"
-          className="mt-1 w-full border-none bg-transparent p-0 text-sm text-slate-500 focus:outline-none dark:text-stone-400"
+          className="mt-1 w-full border-none bg-transparent p-0 text-sm text-slate-500 focus:outline-hidden dark:text-stone-400"
         />
         <label className="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-stone-300">
           <input
             type="checkbox"
             checked={formular.aktiv}
             onChange={(e) => updateFormularMutation.mutate({ aktiv: e.target.checked })}
-            className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+            className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
           />
           Aktiv (für Techniker sichtbar)
         </label>

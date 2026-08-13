@@ -121,7 +121,7 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{material.bezeichnung}</h1>
         <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
           Gesamtbestand: {material.bestand_gesamt} {material.einheit}
@@ -140,7 +140,7 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten</h2>
         <div>
           <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Bezeichnung</label>
@@ -231,7 +231,7 @@ export function MaterialDetailPage() {
         <button
           disabled={!form.bezeichnung.trim() || speichernMutation.isPending}
           onClick={() => speichernMutation.mutate()}
-          className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -240,7 +240,7 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Tags</h2>
         <div className="flex flex-wrap gap-1.5">
           {zugewieseneTags.length === 0 && (

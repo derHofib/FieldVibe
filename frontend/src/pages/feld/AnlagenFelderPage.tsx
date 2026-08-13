@@ -92,7 +92,7 @@ export function AnlagenFelderPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
       >
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlagentyp</label>
@@ -132,7 +132,7 @@ export function AnlagenFelderPage() {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Feld hinzufügen
         </button>
@@ -145,7 +145,7 @@ export function AnlagenFelderPage() {
           {gruppen.map(([typ, felder]) => (
             <div
               key={typ}
-              className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">{typ}</h2>
               <div className="space-y-1.5">

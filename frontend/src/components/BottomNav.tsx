@@ -177,7 +177,7 @@ export function BottomNav() {
 
       <NavLink
         to="/neu"
-        className="btn-clay -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-stone-950"
+        className="btn-clay -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-stone-950"
         aria-label="Neuer Vorgang"
       >
         <Plus size={26} strokeWidth={2.5} />

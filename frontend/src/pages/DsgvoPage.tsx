@@ -62,7 +62,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
   }
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="font-medium text-slate-800 dark:text-stone-100">{DOKUMENT_LABEL[typ]}</div>

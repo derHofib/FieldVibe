@@ -81,7 +81,7 @@ export function ZeiterfassungManuellForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+      className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
     >
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 sm:col-span-1">
@@ -158,7 +158,7 @@ export function ZeiterfassungManuellForm({
               type="checkbox"
               checked={abrechenbar}
               onChange={(e) => setAbrechenbar(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+              className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
             />
             Abrechenbar
           </label>
@@ -191,7 +191,7 @@ export function ZeiterfassungManuellForm({
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="btn-touch btn-clay rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch btn-clay rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>

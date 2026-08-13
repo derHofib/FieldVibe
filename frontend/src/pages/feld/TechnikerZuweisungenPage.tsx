@@ -63,7 +63,7 @@ export function TechnikerZuweisungenPage() {
           {uebersicht.map((row) => (
             <div
               key={row.techniker.id}
-              className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div className="font-semibold text-slate-800 dark:text-stone-100">{row.techniker.name}</div>
               <div className="text-xs text-slate-400 dark:text-stone-500">{row.techniker.email}</div>

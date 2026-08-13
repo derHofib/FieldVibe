@@ -128,7 +128,7 @@ function EventBubble({
   }
 
   return (
-    <div className="mb-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="mb-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="mb-1 flex items-center justify-between text-xs text-slate-400 dark:text-stone-500">
         <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
         {event.kundensichtbar && (
@@ -792,7 +792,7 @@ export function VorgangDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="text-xs text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{vorgang.titel}</h1>
         {parentVorgang && (
@@ -882,7 +882,7 @@ export function VorgangDetailPage() {
               <button
                 onClick={() => zuordnungMutation.mutate()}
                 disabled={!editKundeId || zuordnungMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Speichern
               </button>
@@ -972,7 +972,7 @@ export function VorgangDetailPage() {
                 <button
                   onClick={() => adresseMutation.mutate()}
                   disabled={adresseMutation.isPending}
-                  className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Speichern
                 </button>
@@ -1049,7 +1049,7 @@ export function VorgangDetailPage() {
                 <button
                   onClick={() => anlageHinzufuegenMutation.mutate(neueAnlageId)}
                   disabled={!neueAnlageId || anlageHinzufuegenMutation.isPending}
-                  className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   OK
                 </button>
@@ -1153,7 +1153,7 @@ export function VorgangDetailPage() {
                   uebernehmenMutation.mutate();
                 }}
                 disabled={uebernehmenMutation.isPending || vorgang.zugewiesener_user_id === currentUser.id}
-                className="btn-touch btn-clay flex items-center gap-1 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-touch btn-clay flex items-center gap-1 rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <UserCheck size={13} strokeWidth={2} />
                 {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Ticket übernehmen"}
@@ -1189,7 +1189,7 @@ export function VorgangDetailPage() {
                   setShowWartetKundeDialog(false);
                 }}
                 disabled={statusMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Übernehmen
               </button>
@@ -1227,7 +1227,7 @@ export function VorgangDetailPage() {
                   setShowFolgeAuftragDialog(false);
                 }}
                 disabled={folgeAuftragMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Anlegen
               </button>
@@ -1269,7 +1269,7 @@ export function VorgangDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Arbeitszeit</h2>
           <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
@@ -1307,7 +1307,7 @@ export function VorgangDetailPage() {
               onClick={() => startTimerMutation.mutate()}
               disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
               title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
-              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Zeit starten
             </button>
@@ -1344,7 +1344,7 @@ export function VorgangDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Termine</h2>
           {kannDisponieren && (
@@ -1418,7 +1418,7 @@ export function VorgangDetailPage() {
             <button
               disabled={!terminTitel || !terminTechnikerId || terminMutation.isPending}
               onClick={() => terminMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -1476,7 +1476,7 @@ export function VorgangDetailPage() {
 
       {vorgang && <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Mängel</h2>
           <div className="flex items-center gap-3">
@@ -1521,7 +1521,7 @@ export function VorgangDetailPage() {
             <button
               disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
               onClick={() => mangelMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Erfassen
             </button>
@@ -1592,7 +1592,7 @@ export function VorgangDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Material</h2>
           <div className="flex gap-3">
@@ -1699,7 +1699,7 @@ export function VorgangDetailPage() {
                 materialBedarfMutation.isPending
               }
               onClick={() => materialBedarfMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Vormerken
             </button>
@@ -1804,7 +1804,7 @@ export function VorgangDetailPage() {
               <button
                 disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
                 onClick={() => materialVerwendenMutation.mutate()}
-                className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Erfassen
               </button>
@@ -1957,7 +1957,7 @@ export function VorgangDetailPage() {
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               Senden
             </button>

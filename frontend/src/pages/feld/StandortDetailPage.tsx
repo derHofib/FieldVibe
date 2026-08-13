@@ -100,7 +100,7 @@ function AdresseBearbeiten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -219,7 +219,7 @@ function AnlagenVerwaltung({
           <button
             type="submit"
             disabled={neuMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -260,7 +260,7 @@ function AnlagenVerwaltung({
         <button
           disabled={!zuordnenId || zuordnenMutation.isPending}
           onClick={() => zuordnenMutation.mutate()}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Zuordnen
         </button>
@@ -326,7 +326,7 @@ export function StandortDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.bezeichnung}</h1>
           {kannVerwalten && (
@@ -355,7 +355,7 @@ export function StandortDetailPage() {
         <AdresseBearbeiten standortId={id!} adresse={profil.adresse} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Auswertung</h2>
         {Object.keys(profil.vorgaenge_nach_status).length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Vorgänge an diesem Standort.</p>
@@ -385,7 +385,7 @@ export function StandortDetailPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/anlagen/${a.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
@@ -420,7 +420,7 @@ export function StandortDetailPage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >

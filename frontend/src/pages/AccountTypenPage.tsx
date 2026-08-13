@@ -167,7 +167,7 @@ export function AccountTypenPage() {
         </p>
       </div>
 
-      <section className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <section className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-stone-100">Neuen Account-Typ anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
@@ -228,7 +228,7 @@ export function AccountTypenPage() {
           typen.map((typ) => (
             <div
               key={typ.id}
-              className="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="overflow-hidden rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <button
                 onClick={() => setExpandedId(expandedId === typ.id ? null : typ.id)}

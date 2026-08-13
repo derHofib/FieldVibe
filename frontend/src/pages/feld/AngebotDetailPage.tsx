@@ -122,7 +122,7 @@ export function AngebotDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-slate-400 dark:text-stone-500">{angebot.angebotsnummer}</div>
@@ -146,7 +146,7 @@ export function AngebotDetailPage() {
         </button>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
           {angebot.status === "entwurf" && (
@@ -216,7 +216,7 @@ export function AngebotDetailPage() {
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -275,7 +275,7 @@ export function AngebotDetailPage() {
         <button
           onClick={() => statusMutation.mutate("versendet")}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           An Kunden senden
         </button>

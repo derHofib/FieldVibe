@@ -129,7 +129,7 @@ function FeldRenderer({
   );
 
   const wrapperClass =
-    "rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800";
+    "rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800";
   const inputClass =
     "btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:disabled:bg-stone-800/50";
 
@@ -228,7 +228,7 @@ function FeldRenderer({
                       e.target.checked ? [...ausgewaehlt, w] : ausgewaehlt.filter((x) => x !== w),
                     )
                   }
-                  className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+                  className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
                 />
                 {w}
               </label>
@@ -543,7 +543,7 @@ export function FormularAusfuellenPage() {
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           <FileText size={16} /> Als PDF öffnen
         </button>
@@ -567,7 +567,7 @@ export function FormularAusfuellenPage() {
           <button
             onClick={handleAbschliessen}
             disabled={abschliessenMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white shadow-md disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white shadow-md disabled:opacity-50"
           >
             Abschließen
           </button>

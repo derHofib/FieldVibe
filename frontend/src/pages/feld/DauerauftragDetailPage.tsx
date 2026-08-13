@@ -92,7 +92,7 @@ export function DauerauftragDetailPage() {
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{dauerauftrag.titel}</h1>
@@ -144,7 +144,7 @@ export function DauerauftragDetailPage() {
                   <button
                     onClick={() => intervallMutation.mutate(Number(editIntervall))}
                     disabled={intervallMutation.isPending}
-                    className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
+                    className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
                   >
                     Speichern
                   </button>
@@ -272,7 +272,7 @@ export function DauerauftragDetailPage() {
                 <button
                   onClick={() => setAnlagenMutation.mutate()}
                   disabled={setAnlagenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Speichern
                 </button>
@@ -323,7 +323,7 @@ export function DauerauftragDetailPage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >

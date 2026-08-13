@@ -86,7 +86,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-lg bg-white p-2 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="rounded-lg bg-white p-2 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           {belegUrl?.url ? (
             <iframe title="Beleg" src={belegUrl.url} className="h-[70vh] w-full rounded-md" />
           ) : (
@@ -94,7 +94,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           )}
         </div>
 
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
             <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Lieferant</label>
             <select value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
@@ -162,7 +162,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             <button
               disabled={!rechnungsnummer || !betragNetto || Number(betragNetto) <= 0 || bestaetigenMutation.isPending}
               onClick={() => bestaetigenMutation.mutate()}
-              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
@@ -283,7 +283,7 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-slate-400 dark:text-stone-500">
@@ -333,7 +333,7 @@ export function EingangsrechnungDetailPage() {
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Beleg</h2>
         {eingangsrechnung.beleg_object_key ? (
           <div className="flex gap-2">
@@ -377,7 +377,7 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
           {eingangsrechnung.status === "offen" && (
@@ -425,7 +425,7 @@ export function EingangsrechnungDetailPage() {
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -456,7 +456,7 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Zahlungen</h2>
           {eingangsrechnung.status === "offen" && (
@@ -490,7 +490,7 @@ export function EingangsrechnungDetailPage() {
             <button
               disabled={!zahlungBetrag || addZahlungMutation.isPending}
               onClick={() => addZahlungMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Zahlung erfassen
             </button>

@@ -48,7 +48,7 @@ export function StatistikPage() {
         <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Meine Arbeitszeit</h1>
         <button
           onClick={() => setFormularOffen(true)}
-          className="btn-touch btn-clay rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+          className="btn-touch btn-clay rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
         >
           + Zeit erfassen
         </button>
@@ -67,19 +67,19 @@ export function StatistikPage() {
 
       {statistik && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <div className="text-xl font-bold text-slate-800 dark:text-stone-100">
               {formatStundenAlsHHMM(Number(statistik.wochenstunden))}
             </div>
             <div className="text-xs text-slate-500 dark:text-stone-400">Std. diese Woche</div>
           </div>
-          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <div className="text-xl font-bold text-slate-800 dark:text-stone-100">
               {formatStundenAlsHHMM(Number(statistik.monatsstunden))}
             </div>
             <div className="text-xs text-slate-500 dark:text-stone-400">Std. dieser Monat</div>
           </div>
-          <div className="rounded-lg bg-white p-3 text-center shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <div className="text-xl font-bold text-slate-800 dark:text-stone-100">
               {formatStundenAlsHHMM(Number(statistik.jahresstunden))}
             </div>
@@ -88,7 +88,7 @@ export function StatistikPage() {
         </div>
       )}
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <button
             onClick={() => {
@@ -127,7 +127,7 @@ export function StatistikPage() {
         <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
           <button
             onClick={exportieren}
-            className="btn-touch flex items-center gap-1.5 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+            className="btn-touch flex items-center gap-1.5 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
           >
             <FileText size={15} strokeWidth={2} /> Als PDF exportieren
           </button>

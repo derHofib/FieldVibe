@@ -103,7 +103,7 @@ export function MandantenPage() {
         {isLoading ? (
           <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
               <tr>
                 <th className="px-4 py-3">Name</th>

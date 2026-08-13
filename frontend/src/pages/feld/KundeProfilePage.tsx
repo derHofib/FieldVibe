@@ -83,7 +83,7 @@ function Stammdaten({
       .filter(Boolean)
       .join(", ");
     return (
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten</h2>
           {kannVerwalten && (
@@ -115,7 +115,7 @@ function Stammdaten({
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten bearbeiten</h2>
       <input
         value={form.strasse}
@@ -156,7 +156,7 @@ function Stammdaten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -244,7 +244,7 @@ function AnsprechpartnerForm({
         <button
           disabled={!form.name.trim() || speichernLaeuft}
           onClick={() => onSpeichern(form)}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -321,7 +321,7 @@ function AnsprechpartnerVerwaltung({
           ) : (
             <div
               key={a.id}
-              className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -468,7 +468,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -587,7 +587,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
               type="button"
               disabled={!neuerStandortName.trim() || neuerStandortMutation.isPending}
               onClick={() => neuerStandortMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -612,7 +612,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -711,7 +711,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -750,7 +750,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
           {standorte.map((s) => (
             <div
               key={s.id}
-              className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+              className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                 s.aktiv ? "" : "opacity-60"
               }`}
             >
@@ -818,7 +818,7 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
 
   return (
     <div
-      className={`flex items-start justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+      className={`flex items-start justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
         zugang.aktiv ? "" : "opacity-60"
       }`}
     >
@@ -873,7 +873,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
   }
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
         Portal-Link für {kunde.name}
       </h2>
@@ -1005,7 +1005,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -1064,7 +1064,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
             <button
               key={d.id}
               onClick={() => navigate(`/dauerauftraege/${d.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div>
                 <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
@@ -1156,7 +1156,7 @@ export function KundeProfilePage() {
         <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
-        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="text-xs text-slate-400 dark:text-stone-500">{kunde.kundennummer}</div>
           <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{kunde.name}</h1>
           {kunde.typ && <span className="text-sm text-slate-500 dark:text-stone-400">{kunde.typ}</span>}
@@ -1175,7 +1175,7 @@ export function KundeProfilePage() {
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-slate-400 dark:text-stone-500">{profil.kundennummer}</div>
@@ -1267,7 +1267,7 @@ export function KundeProfilePage() {
             {profil.anlagen.map((a) => (
               <div
                 key={a.id}
-                className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
@@ -1320,7 +1320,7 @@ export function KundeProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >

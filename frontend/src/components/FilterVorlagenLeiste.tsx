@@ -86,8 +86,8 @@ export function FilterVorlagenLeiste({
                 key={v.id}
                 className={`flex shrink-0 items-center gap-1 rounded-full py-1.5 pl-3 pr-1.5 text-xs font-medium ${
                   aktiv
-                    ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                    : "bg-white text-slate-600 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                    ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                    : "bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
                 }`}
               >
                 <button onClick={() => onApply(v.filter_json)} className="btn-touch whitespace-nowrap">
@@ -149,7 +149,7 @@ export function FilterVorlagenLeiste({
           <button
             disabled={!name.trim() || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
           >
             Speichern
           </button>

@@ -124,7 +124,7 @@ function AdresseBearbeiten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -282,7 +282,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -316,7 +316,7 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
             return (
               <div
                 key={m.id}
-                className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <span className="text-sm font-medium text-slate-800 dark:text-stone-100">{m.bezeichnung}</span>
                 <span
@@ -434,7 +434,7 @@ export function AnlageProfilePage() {
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.bezeichnung}</h1>
           {kannVerwalten && (
@@ -485,7 +485,7 @@ export function AnlageProfilePage() {
         <DetailsBearbeiten profil={profil} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Auswertung</h2>
         <div className="flex flex-wrap gap-2">
           {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
@@ -519,7 +519,7 @@ export function AnlageProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >
@@ -559,7 +559,7 @@ export function AnlageProfilePage() {
         </div>
 
         {showForm && (
-          <div className="mb-2 space-y-2 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="mb-2 space-y-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <input
               value={bezeichnung}
               onChange={(e) => setBezeichnung(e.target.value)}
@@ -596,7 +596,7 @@ export function AnlageProfilePage() {
                     intervall_einheit: intervallEinheit,
                   })
                 }
-                className="btn-touch ml-auto rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch ml-auto rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Anlegen
               </button>
@@ -611,7 +611,7 @@ export function AnlageProfilePage() {
             {pruefzyklen!.map((z) => (
               <div
                 key={z.id}
-                className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{z.bezeichnung}</div>
                 <div className="text-xs text-slate-400 dark:text-stone-500">
@@ -659,7 +659,7 @@ export function AnlageProfilePage() {
           <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Inventur</h2>
           {!inventurzyklus ? (
             kannVerwalten ? (
-              <div className="space-y-2 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+              <div className="space-y-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
                 <p className="text-sm text-slate-400 dark:text-stone-500">
                   Noch kein Inventurzyklus für diesen Lagerort eingerichtet.
                 </p>
@@ -675,7 +675,7 @@ export function AnlageProfilePage() {
                   <button
                     disabled={inventurAnlegenMutation.isPending}
                     onClick={() => inventurAnlegenMutation.mutate()}
-                    className="btn-touch ml-auto rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                    className="btn-touch ml-auto rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                   >
                     Einrichten
                   </button>
@@ -685,7 +685,7 @@ export function AnlageProfilePage() {
               <p className="text-sm text-slate-400 dark:text-stone-500">Kein Inventurzyklus eingerichtet.</p>
             )
           ) : (
-            <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-medium ${faelligkeitsFarbe(inventurzyklus.naechste_inventur_am)}`}>
                   Fällig: {new Date(inventurzyklus.naechste_inventur_am).toLocaleDateString("de-DE")}

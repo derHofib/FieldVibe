@@ -130,7 +130,7 @@ export function RechnungenPage() {
       </div>
 
       {data && (
-        <div className="grid grid-cols-3 gap-2 rounded-lg bg-white p-3 text-center shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="grid grid-cols-3 gap-2 rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
             <div className="text-xs text-slate-400 dark:text-stone-500">Treffer</div>
             <div className="text-sm font-semibold tabular-nums text-slate-800 dark:text-stone-100">
@@ -162,7 +162,7 @@ export function RechnungenPage() {
             <button
               key={r.id}
               onClick={() => navigate(`/rechnungen/${r.id}`)}
-              className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 ${
+              className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ${
                 r.ist_ueberfaellig
                   ? "ring-rose-300 dark:ring-rose-500/40"
                   : "dark:ring-stone-800"

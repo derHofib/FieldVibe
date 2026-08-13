@@ -165,7 +165,7 @@ export function RechnungDetailPage() {
         </div>
       )}
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-slate-400 dark:text-stone-500">{rechnung.rechnungsnummer}</div>
@@ -225,7 +225,7 @@ export function RechnungDetailPage() {
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
           {rechnung.status === "entwurf" && (
@@ -273,7 +273,7 @@ export function RechnungDetailPage() {
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -307,7 +307,7 @@ export function RechnungDetailPage() {
       {(rechnung.status === "versendet" ||
         rechnung.status === "teilweise_bezahlt" ||
         rechnung.status === "bezahlt") && (
-        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Zahlungen</h2>
             {(rechnung.status === "versendet" || rechnung.status === "teilweise_bezahlt") && (
@@ -362,7 +362,7 @@ export function RechnungDetailPage() {
               <button
                 disabled={!zahlungBetrag || addZahlungMutation.isPending}
                 onClick={() => addZahlungMutation.mutate()}
-                className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Zahlung erfassen
               </button>
@@ -430,7 +430,7 @@ export function RechnungDetailPage() {
           <button
             onClick={() => statusMutation.mutate("versendet")}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             An Kunden senden
           </button>

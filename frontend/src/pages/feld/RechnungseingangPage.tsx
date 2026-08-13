@@ -102,7 +102,7 @@ export function RechnungseingangPage() {
         {kannErstellen && (
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+            className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
           >
             {showForm ? "Abbrechen" : "+ Neu"}
           </button>
@@ -110,7 +110,7 @@ export function RechnungseingangPage() {
       </div>
 
       {showForm && (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <select
             value={form.lieferantId}
             onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
@@ -206,7 +206,7 @@ export function RechnungseingangPage() {
               createMutation.isPending
             }
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -237,7 +237,7 @@ export function RechnungseingangPage() {
           <button
             key={e.id}
             onClick={() => navigate(`/rechnungseingang/${e.id}`)}
-            className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+            className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
           >
             <div>
               <div className="text-sm font-semibold text-slate-800 dark:text-stone-100">

@@ -72,7 +72,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
     "rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100";
 
   return (
-    <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div>
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-stone-300">
           <Building2 size={15} strokeWidth={2} className="text-violet-500" /> Firmenprofil
@@ -199,7 +199,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -229,7 +229,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div>
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-stone-300">
           <Mail size={15} strokeWidth={2} className="text-rose-500" /> Mahnwesen
@@ -255,7 +255,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -280,7 +280,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
   });
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <h2 className="mb-1 text-sm font-semibold text-slate-700 dark:text-stone-300">
         Wiedervorlage-Standardfrist
       </h2>
@@ -301,7 +301,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -333,7 +333,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-slate-700 dark:text-stone-300">SMTP (E-Mail-Versand)</span>
         <span
@@ -390,7 +390,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -435,7 +435,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-slate-700 dark:text-stone-300">
           IMAP (Rechnungseingang-Import)
@@ -494,7 +494,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           Speichern
         </button>
@@ -608,7 +608,7 @@ export function IntegrationenPage() {
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 
       {einstellungen && (
-        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <h2 className="mb-1 text-sm font-semibold text-slate-700 dark:text-stone-300">
             Prüfzyklen-/Mahnwesen-Uhrzeit
           </h2>
@@ -649,7 +649,7 @@ export function IntegrationenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}
@@ -686,7 +686,7 @@ export function IntegrationenPage() {
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             SMTP einrichten
           </button>
@@ -694,7 +694,7 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           + SMTP einrichten
         </button>
@@ -709,7 +709,7 @@ export function IntegrationenPage() {
       {imap ? (
         <ImapZeile integration={imap} />
       ) : showImapForm ? (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={imapHost}
@@ -746,7 +746,7 @@ export function IntegrationenPage() {
           <button
             disabled={!imapHost || !imapUser || createImapMutation.isPending}
             onClick={() => createImapMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             IMAP einrichten
           </button>
@@ -754,7 +754,7 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowImapForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           + IMAP einrichten
         </button>

@@ -101,7 +101,7 @@ function MaterialZeile({
   });
 
   return (
-    <div className="card-interactive rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="card-interactive rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(`/material/${material.id}`)}
@@ -164,12 +164,12 @@ function MaterialZeile({
                   step="0.01"
                   value={neueMenge}
                   onChange={(e) => setNeueMenge(e.target.value)}
-                  className="w-16 rounded border border-slate-300 px-1 py-0.5 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  className="w-16 rounded-xs border border-slate-300 px-1 py-0.5 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
                 />
                 <button
                   onClick={() => bestandSetzenMutation.mutate(b.lager_id)}
                   disabled={bestandSetzenMutation.isPending}
-                  className="btn-touch rounded btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-2 py-0.5 text-white"
+                  className="btn-touch rounded-xs btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-2 py-0.5 text-white"
                 >
                   ✓
                 </button>
@@ -237,7 +237,7 @@ function MaterialZeile({
                 !umlagernVon || !umlagernNach || umlagernVon === umlagernNach || !umlagernMenge || umlagernMutation.isPending
               }
               onClick={() => umlagernMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-50"
             >
               Umlagern
             </button>
@@ -270,7 +270,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   });
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Fahrzeuge & Lagerorte</h2>
         <button
@@ -324,7 +324,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
           <button
             disabled={!bezeichnung || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -604,7 +604,7 @@ export function GeschaeftPage() {
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="flex gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         {sichtbareTabs.map((t) => (
           <button
             key={t}
@@ -614,7 +614,7 @@ export function GeschaeftPage() {
             }}
             className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium capitalize ${
               tab === t
-                ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
                 : "text-slate-600 dark:text-stone-400"
             }`}
           >
@@ -626,7 +626,7 @@ export function GeschaeftPage() {
       {tab === "rechnungen" && (
         <button
           onClick={() => navigate("/rechnungen")}
-          className="btn-touch mb-2 flex w-full items-center justify-between rounded-lg bg-white p-3 text-left text-sm font-medium text-cyan-700 shadow-sm dark:bg-stone-900 dark:text-cyan-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch mb-2 flex w-full items-center justify-between rounded-lg bg-white p-3 text-left text-sm font-medium text-cyan-700 shadow-xs dark:bg-stone-900 dark:text-cyan-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <span>Vollständige Übersicht mit Filtern &amp; Suche</span>
           <span aria-hidden="true">→</span>
@@ -651,7 +651,7 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab === "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name *</label>
             <input
@@ -740,7 +740,7 @@ export function GeschaeftPage() {
           <button
             disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
             onClick={() => createKundeMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -748,7 +748,7 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab !== "material" && tab !== "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
             <select
@@ -803,7 +803,7 @@ export function GeschaeftPage() {
               createRechnungMutation.isPending
             }
             onClick={() => (tab === "angebote" ? createAngebotMutation.mutate() : createRechnungMutation.mutate())}
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -811,7 +811,7 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab === "material" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <input
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
@@ -899,7 +899,7 @@ export function GeschaeftPage() {
           <button
             disabled={!materialForm.bezeichnung || createMaterialMutation.isPending}
             onClick={() => createMaterialMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -932,7 +932,7 @@ export function GeschaeftPage() {
                 <button
                   key={k.id}
                   onClick={() => navigate(`/kunden/${k.id}`)}
-                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
                 >
                   <div>
                     <div className="text-xs text-slate-400 dark:text-stone-500">{k.kundennummer}</div>
@@ -961,7 +961,7 @@ export function GeschaeftPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/angebote/${a.id}`)}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <div>
                   <div className="text-xs text-slate-400 dark:text-stone-500">{a.angebotsnummer}</div>
@@ -990,7 +990,7 @@ export function GeschaeftPage() {
               <button
                 key={r.id}
                 onClick={() => navigate(`/rechnungen/${r.id}`)}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <div>
                   <div className="text-xs text-slate-400 dark:text-stone-500">{r.rechnungsnummer}</div>
@@ -1013,7 +1013,7 @@ export function GeschaeftPage() {
           <LagerorteVerwaltung lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")} />
 
           {(material ?? []).length > 0 && (
-            <div className="space-y-2 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <div className="space-y-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
               <input
                 value={matSuche}
                 onChange={(e) => setMatSuche(e.target.value)}
@@ -1080,7 +1080,7 @@ export function GeschaeftPage() {
 
       {tab === "bestellwesen" && (
         <div className="space-y-4">
-          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Lieferanten</h2>
               <button
@@ -1107,7 +1107,7 @@ export function GeschaeftPage() {
                 <button
                   disabled={!lieferantName.trim() || createLieferantMutation.isPending}
                   onClick={() => createLieferantMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Anlegen
                 </button>
@@ -1145,14 +1145,14 @@ export function GeschaeftPage() {
             )}
           </div>
 
-          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Offene Materialbedarfe</h2>
             <div className="mb-2 flex gap-2 rounded-md bg-slate-100 p-1 dark:bg-stone-800">
               <button
                 onClick={() => setBedarfZweck("bestellung")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "bestellung"
-                    ? "bg-white text-slate-800 shadow-sm dark:bg-stone-700 dark:text-stone-100"
+                    ? "bg-white text-slate-800 shadow-xs dark:bg-stone-700 dark:text-stone-100"
                     : "text-slate-500 dark:text-stone-400"
                 }`}
               >
@@ -1162,7 +1162,7 @@ export function GeschaeftPage() {
                 onClick={() => setBedarfZweck("angebot")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "angebot"
-                    ? "bg-white text-slate-800 shadow-sm dark:bg-stone-700 dark:text-stone-100"
+                    ? "bg-white text-slate-800 shadow-xs dark:bg-stone-700 dark:text-stone-100"
                     : "text-slate-500 dark:text-stone-400"
                 }`}
               >
@@ -1213,7 +1213,7 @@ export function GeschaeftPage() {
                 <button
                   disabled={bestellungErstellenMutation.isPending}
                   onClick={() => bestellungErstellenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Bestellung aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>
@@ -1224,7 +1224,7 @@ export function GeschaeftPage() {
                 <button
                   disabled={angebotAusBedarfenMutation.isPending}
                   onClick={() => angebotAusBedarfenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Angebot aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>
@@ -1232,7 +1232,7 @@ export function GeschaeftPage() {
             )}
           </div>
 
-          <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Bestellungen</h2>
             {(bestellungen ?? []).length === 0 ? (
               <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Bestellungen vorhanden.</p>

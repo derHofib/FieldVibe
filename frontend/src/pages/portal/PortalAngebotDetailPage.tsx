@@ -45,7 +45,7 @@ export function PortalAngebotDetailPage() {
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-start justify-between">
           <div className="text-xs text-slate-400 dark:text-stone-500">{angebot.angebotsnummer}</div>
           <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
@@ -66,7 +66,7 @@ export function PortalAngebotDetailPage() {
         </button>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
         {angebot.positionen.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-stone-500">Keine Positionen.</p>

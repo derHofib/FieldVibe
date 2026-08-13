@@ -158,7 +158,7 @@ function EigenschaftenPanel({
 }) {
   if (!feld) {
     return (
-      <div className="rounded-lg bg-white p-3 shadow-sm lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
           Eigenschaften
         </h3>
@@ -171,7 +171,7 @@ function EigenschaftenPanel({
 
   const maxHoehe = nutzbareHoeheMm(feld.seite);
   return (
-    <div className="space-y-3 rounded-lg bg-white p-3 shadow-sm lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="space-y-3 rounded-lg bg-white p-3 shadow-xs lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div>
         <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
           Eigenschaften
@@ -430,7 +430,7 @@ function FeldForm({
             type="checkbox"
             checked={values.pflichtfeld}
             onChange={(e) => set("pflichtfeld", e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+            className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
           />
           Pflichtfeld
         </label>
@@ -447,7 +447,7 @@ function FeldForm({
         <button
           type="submit"
           disabled={isPending}
-          className="btn-touch btn-clay rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch btn-clay rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           {submitLabel}
         </button>
@@ -700,7 +700,7 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
           der Browser rechnet das bei jedem Reflow selbst neu, reagiert also
           auch sofort, wenn z.B. nach dem Laden der Formulardaten ein
           Scrollbalken erscheint (dabei feuert kein "resize"-Event). */}
-      <div className="lg:relative lg:left-1/2 lg:right-1/2 lg:-mx-[50vw] lg:w-screen">
+      <div className="lg:relative lg:left-1/2 lg:right-1/2 lg:mx-[-50vw] lg:w-screen">
       {/* Zweite Ebene: NUR der Canvas wird zentriert (mx-auto ueber die volle
           Breite). Das Panel teilt sich ab lg absichtlich NICHT die Breite mit
           dem Canvas -- sonst zentriert sich die eigentliche Seite nur inner-
@@ -719,7 +719,7 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
           style={{ width: seitenBreitePx * zoomFaktor, height: seitenHoehePx * zoomFaktor }}
         >
         <div
-          className="relative bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="relative bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
           style={{
             width: seitenBreitePx,
             height: seitenHoehePx,

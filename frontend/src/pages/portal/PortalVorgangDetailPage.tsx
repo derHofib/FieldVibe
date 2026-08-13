@@ -25,7 +25,7 @@ function PortalEventBubble({ event }: { event: VorgangEvent }) {
   }
 
   return (
-    <div className="mb-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="mb-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="mb-1 text-xs text-slate-400 dark:text-stone-500">
         {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
@@ -70,7 +70,7 @@ export function PortalVorgangDetailPage() {
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="text-xs text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{vorgang.titel}</h1>
         {vorgang.beschreibung && (

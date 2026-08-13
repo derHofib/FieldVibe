@@ -56,7 +56,7 @@ export function FormularePage() {
       {formularOffen ? (
         <form
           onSubmit={submit}
-          className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Name</label>
@@ -91,7 +91,7 @@ export function FormularePage() {
             <button
               type="submit"
               disabled={createMutation.isPending}
-              className="btn-touch btn-clay rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch btn-clay rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen & bearbeiten
             </button>
@@ -100,7 +100,7 @@ export function FormularePage() {
       ) : (
         <button
           onClick={() => setFormularOffen(true)}
-          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
+          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
         >
           <Plus size={16} strokeWidth={2} /> Neues Formular
         </button>
@@ -116,7 +116,7 @@ export function FormularePage() {
             <button
               key={f.id}
               onClick={() => navigate(`/formulare/${f.id}`)}
-              className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div>
                 <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{f.name}</div>

@@ -17,7 +17,7 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-bold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
             {currentUser?.name?.slice(0, 1)}
@@ -47,7 +47,7 @@ export function ProfilePage() {
       {kannDisponieren && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <Wrench size={16} strokeWidth={2} className="text-emerald-500" /> Techniker-Zuweisungen
         </button>
@@ -56,7 +56,7 @@ export function ProfilePage() {
       {kannDisponieren && istModulAktiv(currentUser, "dauerauftrag") && (
         <button
           onClick={() => navigate("/dauerauftraege")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <Repeat size={16} strokeWidth={2} className="text-amber-500" /> Dauer-Aufträge
         </button>
@@ -65,7 +65,7 @@ export function ProfilePage() {
       {istModulAktiv(currentUser, "statistik") && (
         <button
           onClick={() => navigate("/statistik")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <Timer size={16} strokeWidth={2} className="text-cyan-500" />{" "}
           {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
@@ -74,7 +74,7 @@ export function ProfilePage() {
 
       <button
         onClick={logout}
-        className="card-interactive btn-touch w-full rounded-md bg-white py-2 font-medium text-slate-600 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="card-interactive btn-touch w-full rounded-md bg-white py-2 font-medium text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
       >
         Abmelden
       </button>

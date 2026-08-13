@@ -101,7 +101,7 @@ export function BottomNavSettingsPage() {
           return (
             <div
               key={index}
-              className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               {seite ? (
                 <>
@@ -151,7 +151,7 @@ export function BottomNavSettingsPage() {
                 <button
                   key={seite.key}
                   onClick={() => platzWaehlen(bearbeiteterPlatz.index, seite.key)}
-                  className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                  className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
                 >
                   <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={false} />
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-700 dark:text-stone-200">
@@ -169,7 +169,7 @@ export function BottomNavSettingsPage() {
           Rotunde (wischbar, rechts vom Neu-Button)
         </h2>
         {rotundeKeys.length === 0 && (
-          <p className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow-sm dark:bg-stone-900 dark:text-stone-400 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <p className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow-xs dark:bg-stone-900 dark:text-stone-400 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             Noch keine Schnellzugriffe ausgewählt.
           </p>
         )}
@@ -179,7 +179,7 @@ export function BottomNavSettingsPage() {
           return (
             <div
               key={key}
-              className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
               <span className="min-w-0 flex-1 truncate font-medium text-slate-800 dark:text-stone-100">
@@ -223,7 +223,7 @@ export function BottomNavSettingsPage() {
               <button
                 key={seite.key}
                 onClick={() => rotundeHinzufuegen(seite.key)}
-                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={false} />
                 <span className="min-w-0 flex-1 truncate font-medium text-slate-700 dark:text-stone-200">
@@ -237,7 +237,7 @@ export function BottomNavSettingsPage() {
 
       <button
         onClick={zuruecksetzen}
-        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-600 shadow-sm dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
       >
         <RotateCcw size={16} /> Auf Standard zurücksetzen
       </button>

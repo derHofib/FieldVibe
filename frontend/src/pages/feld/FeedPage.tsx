@@ -100,7 +100,7 @@ function StoryChip({ item }: { item: StoryItem }) {
   return (
     <button
       onClick={() => navigate(path)}
-      className={`card-interactive btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+      className={`card-interactive btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
         item.ampel ? AMPEL_COLOR[item.ampel] : "border-slate-300 dark:border-stone-600"
       }`}
     >
@@ -301,7 +301,7 @@ export function FeedPage() {
       {istModulAktiv(currentUser, "highlights") && (
         <button
           onClick={() => navigate("/highlights")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-sm dark:bg-stone-900 dark:text-amber-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-xs dark:bg-stone-900 dark:text-amber-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
         >
           <Star size={15} strokeWidth={2} /> Highlights ansehen
         </button>
@@ -315,7 +315,7 @@ export function FeedPage() {
         </div>
       )}
 
-      <div className="space-y-3 rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="space-y-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="flex items-center justify-between">
           <button
             onClick={() => setZeigeFilter((v) => !v)}
@@ -360,7 +360,7 @@ export function FeedPage() {
                       onClick={() => toggleStatus(value)}
                       className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
                         aktiv
-                          ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                          ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
                           : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
                       }`}
                     >
@@ -438,7 +438,7 @@ export function FeedPage() {
           onClick={() => setAnsicht("liste")}
           className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             ansicht === "liste"
-              ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
               : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
           }`}
         >
@@ -448,7 +448,7 @@ export function FeedPage() {
           onClick={() => setAnsicht("karte")}
           className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
             ansicht === "karte"
-              ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+              ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
               : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
           }`}
         >
@@ -500,7 +500,7 @@ export function FeedPage() {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-sm disabled:opacity-50 dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-xs disabled:opacity-50 dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
             </button>

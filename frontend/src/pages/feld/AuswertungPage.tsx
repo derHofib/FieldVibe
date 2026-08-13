@@ -51,7 +51,7 @@ export function AuswertungPage() {
       </div>
 
       {offenePosten && (offenePosten.debitoren.length > 0 || offenePosten.kreditoren.length > 0) && (
-        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Offene Posten</h2>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -131,7 +131,7 @@ export function AuswertungPage() {
         </div>
       )}
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs text-slate-500 dark:text-stone-400">
             Von
@@ -155,14 +155,14 @@ export function AuswertungPage() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="btn-touch mt-3 w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch mt-3 w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           USt-VA-Bericht laden
         </button>
       </div>
 
       {bericht && (
-        <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
             Umsatzsteuer (Ausgangsrechnungen)
           </h2>
@@ -216,7 +216,7 @@ export function AuswertungPage() {
         </div>
       )}
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-1 text-sm font-semibold text-slate-500 dark:text-stone-400">DATEV-Export</h2>
         <p className="mb-3 text-xs text-slate-400 dark:text-stone-500">
           Buchungsstapel-CSV auf Basis gängiger SKR03-Konten -- vor dem ersten echten Import bitte mit

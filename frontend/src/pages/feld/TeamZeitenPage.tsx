@@ -68,7 +68,7 @@ export function TeamZeitenPage() {
       </div>
 
       {technikerId && (
-        <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="mb-2 flex items-center justify-between">
             <button
               onClick={() => {
@@ -107,7 +107,7 @@ export function TeamZeitenPage() {
           <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
             <button
               onClick={exportieren}
-              className="btn-touch flex items-center gap-1.5 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+              className="btn-touch flex items-center gap-1.5 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
             >
               <FileText size={15} strokeWidth={2} /> Als PDF exportieren
             </button>

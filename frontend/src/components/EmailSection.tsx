@@ -58,7 +58,7 @@ export function EmailSection({
   });
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">E-Mail</h2>
         {!showForm && (
@@ -115,7 +115,7 @@ export function EmailSection({
                 (betreffPflicht && (!betreff.trim() || !inhalt.trim())) ||
                 sendMutation.isPending
               }
-              className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Senden
             </button>

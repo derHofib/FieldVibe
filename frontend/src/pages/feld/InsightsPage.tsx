@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 
 function Kachel({ label, wert }: { label: string; wert: string }) {
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="text-xs font-medium text-slate-500 dark:text-stone-400">{label}</div>
       <div className="mt-1 text-2xl font-bold text-slate-800 dark:text-stone-100">{wert}</div>
     </div>
@@ -83,7 +83,7 @@ export function InsightsPage() {
         <Kachel label="Angebote angenommen" wert={String(insights.angebote_angenommen)} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Vorgänge nach Status</h2>
         <div className="space-y-1.5">
           {Object.entries(insights.vorgaenge_nach_status).map(([status, count]) => (
@@ -93,7 +93,7 @@ export function InsightsPage() {
               </span>
               <div className="h-4 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-stone-800">
                 <div
-                  className="h-full rounded-full btn-clay bg-gradient-to-r from-cyan-500 to-blue-600"
+                  className="h-full rounded-full btn-clay bg-linear-to-r from-cyan-500 to-blue-600"
                   style={{ width: `${gesamtVorgaenge > 0 ? (count / gesamtVorgaenge) * 100 : 0}%` }}
                 />
               </div>
@@ -105,7 +105,7 @@ export function InsightsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
           Techniker-Auslastung (diese Woche)
         </h2>
@@ -125,7 +125,7 @@ export function InsightsPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Export</h2>
         <div className="space-y-2">
           <button

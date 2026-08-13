@@ -98,7 +98,7 @@ function NeueAnfrage() {
     return (
       <button
         onClick={() => setZeigen(true)}
-        className="btn-touch w-full rounded-lg btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-3 text-sm font-medium text-white"
+        className="btn-touch w-full rounded-lg btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-3 text-sm font-medium text-white"
       >
         + Neue Auftragsanfrage stellen
       </button>
@@ -108,7 +108,7 @@ function NeueAnfrage() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+      className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
     >
       <p className="text-xs text-slate-500 dark:text-stone-400">
         Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
@@ -222,7 +222,7 @@ function NeueAnfrage() {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Anfrage senden
         </button>
@@ -258,7 +258,7 @@ export function PortalAnfragenPage() {
           {anfragen.map((a) => (
             <div
               key={a.id}
-              className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div className="flex items-start justify-between">
                 <div className="font-medium text-slate-800 dark:text-stone-100">{a.titel}</div>

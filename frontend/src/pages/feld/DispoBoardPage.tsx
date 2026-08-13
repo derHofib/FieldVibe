@@ -162,7 +162,7 @@ export function DispoBoardPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
           className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
@@ -208,13 +208,13 @@ export function DispoBoardPage() {
             ende: toLocalInputValue(ende),
           });
         }}
-        className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
+        className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
         + Neuer Termin
       </button>
 
       {showForm && form && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Vorgang</label>
             <select
@@ -294,7 +294,7 @@ export function DispoBoardPage() {
                   ende_at: new Date(form.ende).toISOString(),
                 })
               }
-              className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -302,7 +302,7 @@ export function DispoBoardPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg bg-white shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="overflow-x-auto rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-slate-200 dark:border-stone-800">
@@ -345,7 +345,7 @@ export function DispoBoardPage() {
                           onDragStart={(e) => e.dataTransfer.setData("text/plain", t.id)}
                           onClick={() => navigate(`/vorgaenge/${t.vorgang_id}`)}
                           title={t.titel}
-                          className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-sm ${
+                          className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-xs ${
                             t.status === "abgesagt"
                               ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
                               : "bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300"

@@ -100,13 +100,13 @@ export function PruefmittelPage() {
 
       <button
         onClick={() => setShowForm((v) => !v)}
-        className="btn-touch rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
+        className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
         {showForm ? "Abbrechen" : "+ Neues Prüfmittel"}
       </button>
 
       {showForm && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Bezeichnung
@@ -167,7 +167,7 @@ export function PruefmittelPage() {
                 kalibrierintervall_monate: Number(form.intervallMonate),
               })
             }
-            className="btn-touch w-full rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -181,7 +181,7 @@ export function PruefmittelPage() {
           sortiert.map((mittel) => (
             <div
               key={mittel.id}
-              className="rounded-lg bg-white p-3 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div className="flex items-start justify-between">
                 <div>

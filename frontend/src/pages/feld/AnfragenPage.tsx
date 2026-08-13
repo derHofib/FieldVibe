@@ -59,7 +59,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   });
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-slate-400 dark:text-stone-500">
@@ -99,7 +99,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
             <div className="flex gap-2">
               <button
                 onClick={() => setZeigeAnnehmen(true)}
-                className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
+                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
               >
                 Annehmen
               </button>
@@ -130,7 +130,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 <button
                   onClick={() => annehmenMutation.mutate()}
                   disabled={annehmenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Vorgang anlegen
                 </button>
@@ -192,14 +192,14 @@ export function AnfragenPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Auftragsanfragen</h1>
-      <div className="flex gap-2 rounded-lg bg-white p-1 shadow-sm dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="flex gap-2 rounded-lg bg-white p-1 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         {(["offen", "alle"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setStatusFilter(f)}
             className={`btn-touch flex-1 rounded-md py-2 text-sm font-medium capitalize ${
               statusFilter === f
-                ? "btn-clay bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
                 : "text-slate-600 dark:text-stone-400"
             }`}
           >
