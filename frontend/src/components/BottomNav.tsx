@@ -47,10 +47,23 @@ function FixItem({ seite, badge }: { seite: NavSeite; badge: number }) {
   );
 }
 
-// Ein Rotunde-Platz: das gerade zentrierte Icon (abstand === 0) erscheint
-// gross mit Label, die naechsten zwei Nachbarn je Seite kleiner werdend
-// ohne Label, alles darueber hinaus unsichtbar (aber weiterhin im Layout
-// vorhanden, damit die Scroll-/Zentrier-Mathematik stabil bleibt).
+// klein-mittel-gross-mittel-klein statt eines harten Sprungs von "klein" auf
+// "unsichtbar": jede Distanzstufe ist nur wenig kleiner/blasser als die
+// davor, inklusive einer zusaetzlichen, stark abgeblendeten Ausklingstufe
+// (abstand 3) bevor ein Icon ganz verschwindet -- dadurch entsteht beim
+// Wischen keine ploetzliche Kante am Rand der sichtbaren Nachbarn.
+const ROTUNDE_STUFEN: { massstab: string; deckkraft: string }[] = [
+  { massstab: "scale-100", deckkraft: "opacity-100" }, // 0: gross, zentriert
+  { massstab: "scale-[0.82]", deckkraft: "opacity-100" }, // 1: mittel
+  { massstab: "scale-[0.64]", deckkraft: "opacity-90" }, // 2: klein
+  { massstab: "scale-[0.5]", deckkraft: "opacity-35" }, // 3: ausklingend
+];
+const ROTUNDE_STUFE_UNSICHTBAR = { massstab: "scale-[0.5]", deckkraft: "opacity-0" };
+
+// Ein Rotunde-Platz: das gerade zentrierte Icon (abstand === 0) erscheint in
+// derselben Groesse wie die festen Icons links vom Neu-Button (IconBadge
+// "sm" ohne zusaetzliche Skalierung) und traegt als einziges ein Label --
+// nach aussen hin werden die Nachbarn stufenweise kleiner/blasser.
 function RotundeItem({
   seite,
   abstand,
@@ -61,8 +74,7 @@ function RotundeItem({
   badge: number;
 }) {
   const zentriert = abstand === 0;
-  const massstab = zentriert ? "scale-110" : abstand === 1 ? "scale-90" : "scale-[0.62]";
-  const deckkraft = abstand <= 2 ? "opacity-100" : "opacity-0";
+  const { massstab, deckkraft } = ROTUNDE_STUFEN[abstand] ?? ROTUNDE_STUFE_UNSICHTBAR;
 
   return (
     <NavLink
@@ -76,7 +88,7 @@ function RotundeItem({
     >
       {({ isActive }) => (
         <>
-          <IconBadge icon={seite.icon} tone={seite.tone} size={zentriert ? "md" : "sm"} active={isActive} />
+          <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={isActive} />
           {zentriert && seite.label}
           <Badge anzahl={badge} />
         </>
