@@ -10,11 +10,13 @@ import {
   type LucideIcon,
   Plug,
   Receipt,
+  Rss,
   Star,
   Tags,
   Timer,
   Trash2,
   TrendingUp,
+  User,
   UserCog,
   Users,
   Wrench,
@@ -46,7 +48,29 @@ export interface NavSeite {
   }) => boolean;
 }
 
+// Feed und Profil sind Pflichtbestandteile der Leiste (siehe MANDATORY_KEYS
+// weiter unten) -- sie tauchen deshalb nie in der "Weitere Seiten"-Auswahl
+// der Einstellungen auf (immer schon in gewaehlteKeys enthalten), lassen
+// sich dort aber wie jeder andere Punkt per Pfeiltasten verschieben.
 export const NAV_SEITEN: NavSeite[] = [
+  {
+    key: "feed",
+    label: "Feed",
+    icon: Rss,
+    tone: "sky",
+    route: "/feed",
+    kategorie: "Kommunikation",
+    sichtbar: () => true,
+  },
+  {
+    key: "profil",
+    label: "Profil",
+    icon: User,
+    tone: "violet",
+    route: "/profil",
+    kategorie: "Verwaltung",
+    sichtbar: () => true,
+  },
   {
     key: "dispo",
     label: "Dispo",
@@ -228,10 +252,17 @@ export const NAV_SEITEN: NavSeite[] = [
   },
 ];
 
-// Bisheriges "Mehr"-Menue, 1:1 als Standardauswahl fuer Nutzer ohne eigene
-// Praeferenz (bottom_nav_items === null) -- siehe vormals BottomNav.tsx
-// mehrItems. Reihenfolge bewusst beibehalten.
+// Feed (Start) und Profil (eigener Account) sind nie abwaehlbar -- ohne Feed
+// gaebe es keinen erreichbaren Startpunkt mehr, ohne Profil kein Logout.
+// Beide duerfen aber frei ihre Position wechseln (siehe effektiveNavKeys).
+export const MANDATORY_KEYS = ["feed", "profil"];
+
+// Bisheriges "Mehr"-Menue plus die vormals fest verdrahteten Feed/Profil-
+// Positionen, 1:1 als Standardauswahl fuer Nutzer ohne eigene Praeferenz
+// (bottom_nav_items === null) -- siehe vormals BottomNav.tsx mehrItems.
+// Reihenfolge bewusst beibehalten (Feed zuerst, Profil zuletzt).
 export const STANDARD_BOTTOM_NAV_KEYS = [
+  "feed",
   "meldungen",
   "dispo",
   "geschaeft",
@@ -239,6 +270,7 @@ export const STANDARD_BOTTOM_NAV_KEYS = [
   "rechnungseingang",
   "buchhaltung",
   "papierkorb",
+  "profil",
 ];
 
 export function sichtbareNavSeiten(
@@ -246,4 +278,24 @@ export function sichtbareNavSeiten(
   hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean,
 ): NavSeite[] {
   return NAV_SEITEN.filter((seite) => seite.sichtbar({ currentUser, hatRecht }));
+}
+
+// Gemeinsam von BottomNav.tsx und BottomNavSettingsPage.tsx genutzt, damit
+// beide garantiert dieselbe Reihenfolge/Zusammensetzung berechnen. Filtert
+// auf gerade sichtbare Seiten und stellt sicher, dass Feed/Profil auch dann
+// enthalten sind, wenn eine gespeicherte Auswahl (aeltere Daten, direkter
+// API-Zugriff) sie ausnahmsweise nicht enthaelt.
+export function effektiveNavKeys(
+  gespeichert: string[] | null,
+  sichtbareSeiten: NavSeite[],
+): string[] {
+  const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
+  const basis = gespeichert ?? STANDARD_BOTTOM_NAV_KEYS;
+  const ergebnis = basis.filter((key) => sichtbareKeys.has(key));
+  for (const key of MANDATORY_KEYS) {
+    if (!sichtbareKeys.has(key) || ergebnis.includes(key)) continue;
+    if (key === "feed") ergebnis.unshift(key);
+    else ergebnis.push(key);
+  }
+  return ergebnis;
 }

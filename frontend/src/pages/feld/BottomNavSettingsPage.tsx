@@ -6,8 +6,9 @@ import { usersApi } from "../../api/endpoints";
 import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import {
+  MANDATORY_KEYS,
   type NavKategorie,
-  STANDARD_BOTTOM_NAV_KEYS,
+  effektiveNavKeys,
   sichtbareNavSeiten,
 } from "../../config/navSeiten";
 
@@ -20,9 +21,7 @@ export function BottomNavSettingsPage() {
 
   const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
   const sichtbarByKey = new Map(sichtbar.map((seite) => [seite.key, seite]));
-  const gewaehlteKeys = (currentUser?.bottom_nav_items ?? STANDARD_BOTTOM_NAV_KEYS).filter((key) =>
-    sichtbarByKey.has(key),
-  );
+  const gewaehlteKeys = effektiveNavKeys(currentUser?.bottom_nav_items ?? null, sichtbar);
 
   const speichernMutation = useMutation({
     mutationFn: (items: string[] | null) => usersApi.updateOwnBottomNav(items),
@@ -34,7 +33,12 @@ export function BottomNavSettingsPage() {
   const speichern = (naechsteKeys: string[]) => speichernMutation.mutate(naechsteKeys);
 
   const hinzufuegen = (key: string) => speichern([...gewaehlteKeys, key]);
-  const entfernen = (key: string) => speichern(gewaehlteKeys.filter((k) => k !== key));
+  const entfernen = (key: string) => {
+    // Feed/Profil bleiben Pflicht -- der Entfernen-Button ist fuer sie
+    // ohnehin ausgeblendet, dieser Schutz greift nur bei direktem Aufruf.
+    if (MANDATORY_KEYS.includes(key)) return;
+    speichern(gewaehlteKeys.filter((k) => k !== key));
+  };
   const verschieben = (index: number, richtung: -1 | 1) => {
     const ziel = index + richtung;
     if (ziel < 0 || ziel >= gewaehlteKeys.length) return;
@@ -62,8 +66,9 @@ export function BottomNavSettingsPage() {
           Menüleiste anpassen
         </h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
-          Feed, Profil und der Neu-Button sind immer sichtbar. Wähle darüber hinaus aus, welche
-          Seiten in der unteren Leiste erscheinen, und in welcher Reihenfolge.
+          Feed und Profil sind immer Teil der Leiste, lassen sich aber wie jeder andere Punkt
+          verschieben. Nur der Neu-Button bleibt fix in der Mitte. Wähle darüber hinaus aus,
+          welche weiteren Seiten erscheinen, und in welcher Reihenfolge.
         </p>
       </div>
 
@@ -104,13 +109,15 @@ export function BottomNavSettingsPage() {
               >
                 <ChevronDown size={18} />
               </button>
-              <button
-                onClick={() => entfernen(key)}
-                aria-label={`${seite.label} entfernen`}
-                className="btn-touch flex items-center justify-center text-rose-500"
-              >
-                <X size={18} />
-              </button>
+              {!MANDATORY_KEYS.includes(key) && (
+                <button
+                  onClick={() => entfernen(key)}
+                  aria-label={`${seite.label} entfernen`}
+                  className="btn-touch flex items-center justify-center text-rose-500"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
           );
         })}

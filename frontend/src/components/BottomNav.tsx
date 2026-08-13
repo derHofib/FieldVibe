@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Rss, User, type LucideIcon } from "lucide-react";
+import { Plus, type LucideIcon } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
-import { sichtbareNavSeiten, STANDARD_BOTTOM_NAV_KEYS } from "../config/navSeiten";
+import { effektiveNavKeys, sichtbareNavSeiten } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
 import { IconBadge, type IconTone } from "./IconBadge";
 
@@ -58,15 +58,16 @@ export function BottomNav() {
   const unreadCount = unread?.length ?? 0;
 
   // Individualisierbare Auswahl (siehe config/navSeiten.ts + Einstellungen ->
-  // "Menüleiste anpassen"): bottom_nav_items === null faellt auf die
-  // bisherige "Mehr"-Auswahl zurueck, damit sich fuer bestehende Nutzer ohne
-  // eigene Praeferenz nichts aendert. Ungueltig gewordene oder gerade nicht
-  // berechtigte Keys (Rechte/Modul deaktiviert) werden still uebersprungen,
-  // statt einen kaputten Nav-Eintrag zu zeigen.
+  // "Menüleiste anpassen"): Feed und Profil sind Pflichtbestandteile
+  // (MANDATORY_KEYS), aber genau wie jede andere Seite Teil derselben
+  // wischbaren Liste -- kein optischer Bruch mehr zwischen "fest" und
+  // "wählbar". bottom_nav_items === null fällt auf die bisherige
+  // "Mehr"-Auswahl zurück, damit sich für bestehende Nutzer ohne eigene
+  // Präferenz nichts ändert. Ungültig gewordene oder gerade nicht
+  // berechtigte Keys (Rechte/Modul deaktiviert) werden still übersprungen.
   const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
   const sichtbarByKey = new Map(sichtbar.map((seite) => [seite.key, seite]));
-  const gewaehlteKeys = currentUser?.bottom_nav_items ?? STANDARD_BOTTOM_NAV_KEYS;
-  const items = gewaehlteKeys
+  const items = effektiveNavKeys(currentUser?.bottom_nav_items ?? null, sichtbar)
     .map((key) => sichtbarByKey.get(key))
     .filter((seite): seite is NonNullable<typeof seite> => seite !== undefined);
   // Zwei unabhaengig wischbare Haelften statt einer durchgehenden Leiste:
@@ -95,8 +96,6 @@ export function BottomNav() {
         className="navbar-soft fixed inset-x-3 bottom-3 z-40 flex items-center overflow-hidden rounded-full bg-white py-1.5 dark:bg-stone-900"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <NavItem to="/feed" label="Feed" icon={Rss} tone="sky" />
-
         <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scroll-smooth">
           {linkeHaelfte.map(renderItem)}
         </div>
@@ -108,8 +107,6 @@ export function BottomNav() {
         <div className="scrollbar-none flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scroll-smooth">
           {rechteHaelfte.map(renderItem)}
         </div>
-
-        <NavItem to="/profil" label="Profil" icon={User} tone="violet" />
       </nav>
 
       <NavLink
