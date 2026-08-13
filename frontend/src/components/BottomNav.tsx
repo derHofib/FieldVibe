@@ -103,7 +103,15 @@ function Rotunde({ items, unreadCount }: { items: NavSeite[]; unreadCount: numbe
   return (
     <div
       className="scrollbar-none flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory"
-      style={{ paddingInline: `calc(50% - ${ROTUNDE_SLOT_PX / 2}px)` }}
+      // Anker liegt am linken Rand (direkt neben dem Neu-Button), nicht in
+      // der geometrischen Mitte der Zone: auf einem breiten Geraet ist der
+      // verbleibende Platz rechts vom Neu-Button viel breiter als im
+      // schmalen Test-Viewport -- eine Zentrierung auf "50% der Zone" wuerde
+      // dort eine riesige leere Luecke vor dem ersten Icon erzeugen. Der
+      // rechte Puffer laesst dennoch auch das letzte Icon bis zum selben
+      // Anker zurueckscrollen (unabhaengig von der tatsaechlichen Breite,
+      // da beide Seiten in % der eigenen Containerbreite gerechnet sind).
+      style={{ paddingRight: `calc(100% - ${ROTUNDE_SLOT_PX}px)` }}
       onScroll={onScroll}
     >
       {items.map((seite, index) => (
