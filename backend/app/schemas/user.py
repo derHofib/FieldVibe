@@ -53,9 +53,13 @@ class UserUpdate(BaseModel):
 
 
 class BottomNavUpdate(BaseModel):
-    # Geordnete Liste von Seiten-Keys (siehe frontend/src/config/navSeiten.ts).
-    # None = zur Standardauswahl zurücksetzen.
-    items: list[str] | None = None
+    # Feste, nicht wischbare Zone links vom Neu-Button (siehe frontend/src/
+    # config/navSeiten.ts) -- genau 2 Seiten-Keys. Wischbare "Rotunde" rechts
+    # vom Neu-Button -- beliebig viele Seiten-Keys. Beide None = zur
+    # Standardauswahl zuruecksetzen; dies ist immer eine vollstaendige
+    # Ersetzung beider Listen, kein Teil-Update.
+    links: list[str] | None = None
+    rotunde: list[str] | None = None
 
 
 class UserRead(BaseModel):

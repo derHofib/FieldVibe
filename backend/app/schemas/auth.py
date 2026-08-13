@@ -2,6 +2,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, field_validator
 
+from app.schemas.user import BottomNavUpdate
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -45,9 +47,9 @@ class CurrentUser(BaseModel):
     email: str
     impersonated_by: UUID | None = None
     deaktivierte_module: list[str] = []
-    # Individualisierte Bottom-Nav-Auswahl (siehe app/models/user.py) --
-    # None = Frontend faellt auf die Standardauswahl zurueck.
-    bottom_nav_items: list[str] | None = None
+    # Individualisierte Bottom-Nav (siehe app/models/user.py) -- None =
+    # Frontend faellt auf die Standardauswahl zurueck.
+    bottom_nav_items: BottomNavUpdate | None = None
     # Effektive Rechte-Matrix dieser Session (Bereich -> Liste erlaubter
     # Aktionen). role != "custom" (mandant_admin/super_admin/loesch_*)
     # bekommt IMMER alle Bereiche/Aktionen, da diese Rollen ohnehin an

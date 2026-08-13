@@ -1,5 +1,8 @@
 import pytest
+from sqlalchemy import update
 
+from app.db.session import system_session
+from app.models.user import User
 from tests.conftest import auth_headers, login
 
 
@@ -262,19 +265,26 @@ async def test_user_can_set_and_reset_own_bottom_nav(client, make_mandant, make_
     resp = await client.patch(
         "/api/users/me/bottom-nav",
         headers=auth_headers(token),
-        json={"items": ["dispo", "zeiterfassung", "geschaeft"]},
+        json={"links": ["feed", "profil"], "rotunde": ["dispo", "zeiterfassung", "geschaeft"]},
     )
     assert resp.status_code == 200
-    assert resp.json()["items"] == ["dispo", "zeiterfassung", "geschaeft"]
+    assert resp.json()["links"] == ["feed", "profil"]
+    assert resp.json()["rotunde"] == ["dispo", "zeiterfassung", "geschaeft"]
 
     me_resp = await client.get("/api/auth/me", headers=auth_headers(token))
-    assert me_resp.json()["bottom_nav_items"] == ["dispo", "zeiterfassung", "geschaeft"]
+    assert me_resp.json()["bottom_nav_items"] == {
+        "links": ["feed", "profil"],
+        "rotunde": ["dispo", "zeiterfassung", "geschaeft"],
+    }
 
     reset_resp = await client.patch(
-        "/api/users/me/bottom-nav", headers=auth_headers(token), json={"items": None}
+        "/api/users/me/bottom-nav",
+        headers=auth_headers(token),
+        json={"links": None, "rotunde": None},
     )
     assert reset_resp.status_code == 200
-    assert reset_resp.json()["items"] is None
+    assert reset_resp.json()["links"] is None
+    assert reset_resp.json()["rotunde"] is None
 
     me_resp_2 = await client.get("/api/auth/me", headers=auth_headers(token))
     assert me_resp_2.json()["bottom_nav_items"] is None
@@ -292,10 +302,29 @@ async def test_bottom_nav_is_a_pure_self_service_preference(client, make_mandant
     resp = await client.patch(
         "/api/users/me/bottom-nav",
         headers=auth_headers(token),
-        json={"items": ["feed"]},
+        json={"links": ["feed", "profil"], "rotunde": []},
     )
     assert resp.status_code == 200
 
     other_token = await login(client, other.email, "pw-123456")
     other_me = await client.get("/api/auth/me", headers=auth_headers(other_token))
     assert other_me.json()["bottom_nav_items"] is None
+
+
+@pytest.mark.asyncio
+async def test_me_tolerates_legacy_flat_list_bottom_nav_items(client, make_mandant, make_user):
+    # Vor der Aufteilung in links/rotunde war bottom_nav_items eine flache
+    # Liste (siehe Migration 0059). Ein Nutzer mit einem noch nicht
+    # migrierten Altwert darf sich weiterhin einloggen -- /me faellt dann
+    # nur auf die Standardauswahl zurueck, statt komplett zu scheitern.
+    mandant = await make_mandant()
+    user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    async with system_session() as session:
+        await session.execute(
+            update(User).where(User.id == user.id).values(bottom_nav_items=["dispo", "feed"])
+        )
+
+    token = await login(client, user.email, "pw-123456")
+    resp = await client.get("/api/auth/me", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.json()["bottom_nav_items"] is None

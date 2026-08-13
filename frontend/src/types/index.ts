@@ -166,6 +166,11 @@ export interface AuditLogEntry {
   created_at: string;
 }
 
+export interface BottomNavPraeferenz {
+  links: string[] | null;
+  rotunde: string[] | null;
+}
+
 export interface CurrentUser {
   id: string;
   mandant_id: string | null;
@@ -181,9 +186,10 @@ export interface CurrentUser {
   email: string;
   impersonated_by: string | null;
   deaktivierte_module: MandantModul[];
-  // Individualisierte Bottom-Nav-Auswahl (siehe frontend/src/config/
-  // navSeiten.ts) -- null = Standardauswahl verwenden.
-  bottom_nav_items: string[] | null;
+  // Individualisierte Bottom-Nav (siehe frontend/src/config/navSeiten.ts) --
+  // links: feste Zone (genau 2 Seiten), rotunde: wischbare Zone (beliebig
+  // viele) -- null = jeweils Standardauswahl verwenden.
+  bottom_nav_items: BottomNavPraeferenz | null;
   // Bereich -> Liste erlaubter Aktionen fuer diese Session (siehe
   // app/api/routes/auth.py:me) -- role != "custom" bekommt immer alle
   // Bereiche/Aktionen.

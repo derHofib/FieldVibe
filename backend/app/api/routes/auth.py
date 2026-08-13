@@ -1,5 +1,6 @@
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.api.deps import AuthContext, get_current_user
@@ -15,6 +16,7 @@ from app.models.account_typ import RECHTE_AKTIONEN, RECHTE_BEREICHE, AccountTyp
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, TokenPair
+from app.schemas.user import BottomNavUpdate
 from app.services.auth_service import authenticate
 from app.services.rechte_service import darf_vorgang_selbst_uebernehmen, rechte_matrix_fuer_account_typ
 
@@ -124,6 +126,19 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             # der Rolle unterscheiden muss.
             rechte = {bereich: list(RECHTE_AKTIONEN) for bereich in RECHTE_BEREICHE}
 
+        # Defensiv statt user.bottom_nav_items direkt durchzureichen: falls
+        # dort noch ein Wert aus der frueheren, flachen Listen-Form steckt
+        # (vor der Aufteilung in links/rotunde), wuerde die Validierung sonst
+        # fehlschlagen und /me fuer diesen Nutzer komplett blockieren --
+        # stattdessen faellt das Frontend dann einfach auf die Standardauswahl
+        # zurueck, statt den Login zu verhindern.
+        bottom_nav_items: BottomNavUpdate | None = None
+        if isinstance(user.bottom_nav_items, dict):
+            try:
+                bottom_nav_items = BottomNavUpdate.model_validate(user.bottom_nav_items)
+            except ValidationError:
+                bottom_nav_items = None
+
         return CurrentUser(
             id=user.id,
             mandant_id=auth.mandant_id,
@@ -137,6 +152,6 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             impersonated_by=auth.impersonated_by,
             mandant_name=mandant_name,
             deaktivierte_module=deaktivierte_module,
-            bottom_nav_items=user.bottom_nav_items,
+            bottom_nav_items=bottom_nav_items,
             rechte=rechte,
         )

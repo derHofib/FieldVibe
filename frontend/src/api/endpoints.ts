@@ -16,6 +16,7 @@ import type {
   Ansprechpartner,
   AuditLogEntry,
   Bestellung,
+  BottomNavPraeferenz,
   CurrentKunde,
   CurrentUser,
   Dauerauftrag,
@@ -170,10 +171,10 @@ export const usersApi = {
       body: JSON.stringify(body),
     }),
   remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
-  updateOwnBottomNav: (items: string[] | null) =>
-    apiFetch<{ items: string[] | null }>("/api/users/me/bottom-nav", {
+  updateOwnBottomNav: (praeferenz: BottomNavPraeferenz) =>
+    apiFetch<BottomNavPraeferenz>("/api/users/me/bottom-nav", {
       method: "PATCH",
-      body: JSON.stringify({ items }),
+      body: JSON.stringify(praeferenz),
     }),
 };
 

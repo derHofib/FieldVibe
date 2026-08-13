@@ -331,6 +331,11 @@ async def update_own_bottom_nav(
         user = await session.get(User, auth.user_id)
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
-        user.bottom_nav_items = body.items
+        # Immer vollstaendiger Ersatz beider Listen -- links/rotunde beide
+        # None bedeutet "zur Standardauswahl zuruecksetzen" (siehe
+        # BottomNavUpdate), sonst wird der komplette neue Stand gespeichert.
+        user.bottom_nav_items = (
+            None if body.links is None and body.rotunde is None else body.model_dump()
+        )
         await session.flush()
     return body

@@ -54,6 +54,9 @@ class User(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(Text)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    # Geordnete Liste von Seiten-Keys (siehe frontend/src/config/navSeiten.ts)
-    # fuer die individualisierte, swipebare Bottom-Nav. NULL = Standardauswahl.
-    bottom_nav_items: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)
+    # Individualisierte Bottom-Nav (siehe frontend/src/config/navSeiten.ts):
+    # {"links": [...2 Seiten-Keys...], "rotunde": [...beliebig viele...]}.
+    # NULL = Standardauswahl. Form wird von app.schemas.user.BottomNavUpdate
+    # validiert, hier bewusst als rohes dict gespeichert (kein Schema-Wechsel
+    # noetig, falls sich die Feld-Aufteilung nochmal aendert).
+    bottom_nav_items: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

@@ -48,10 +48,6 @@ export interface NavSeite {
   }) => boolean;
 }
 
-// Feed und Profil sind Pflichtbestandteile der Leiste (siehe MANDATORY_KEYS
-// weiter unten) -- sie tauchen deshalb nie in der "Weitere Seiten"-Auswahl
-// der Einstellungen auf (immer schon in gewaehlteKeys enthalten), lassen
-// sich dort aber wie jeder andere Punkt per Pfeiltasten verschieben.
 export const NAV_SEITEN: NavSeite[] = [
   {
     key: "feed",
@@ -252,17 +248,18 @@ export const NAV_SEITEN: NavSeite[] = [
   },
 ];
 
-// Feed (Start) und Profil (eigener Account) sind nie abwaehlbar -- ohne Feed
-// gaebe es keinen erreichbaren Startpunkt mehr, ohne Profil kein Logout.
-// Beide duerfen aber frei ihre Position wechseln (siehe effektiveNavKeys).
-export const MANDATORY_KEYS = ["feed", "profil"];
+// Bottom-Nav-Layout (siehe components/BottomNav.tsx): links vom Neu-Button
+// eine feste, nicht wischbare Zone mit genau LINKS_SLOT_ANZAHL Seiten,
+// rechts vom Neu-Button eine wischbare "Rotunde" beliebiger Laenge (das
+// zentrierte Icon gross, die Nachbarn kleiner). Beide Zonen sind frei
+// konfigurierbar (siehe pages/feld/BottomNavSettingsPage.tsx).
+export const LINKS_SLOT_ANZAHL = 2;
 
-// Bisheriges "Mehr"-Menue plus die vormals fest verdrahteten Feed/Profil-
-// Positionen, 1:1 als Standardauswahl fuer Nutzer ohne eigene Praeferenz
-// (bottom_nav_items === null) -- siehe vormals BottomNav.tsx mehrItems.
-// Reihenfolge bewusst beibehalten (Feed zuerst, Profil zuletzt).
-export const STANDARD_BOTTOM_NAV_KEYS = [
-  "feed",
+// Standardbelegung fuer Nutzer ohne eigene Praeferenz (bottom_nav_items ===
+// null) -- entspricht dem bisherigen Verhalten: Feed/Profil fest, der Rest
+// wie im vormaligen "Mehr"-Menue.
+export const STANDARD_LINKS = ["feed", "profil"];
+export const STANDARD_ROTUNDE = [
   "meldungen",
   "dispo",
   "geschaeft",
@@ -270,7 +267,6 @@ export const STANDARD_BOTTOM_NAV_KEYS = [
   "rechnungseingang",
   "buchhaltung",
   "papierkorb",
-  "profil",
 ];
 
 export function sichtbareNavSeiten(
@@ -281,21 +277,31 @@ export function sichtbareNavSeiten(
 }
 
 // Gemeinsam von BottomNav.tsx und BottomNavSettingsPage.tsx genutzt, damit
-// beide garantiert dieselbe Reihenfolge/Zusammensetzung berechnen. Filtert
-// auf gerade sichtbare Seiten und stellt sicher, dass Feed/Profil auch dann
-// enthalten sind, wenn eine gespeicherte Auswahl (aeltere Daten, direkter
-// API-Zugriff) sie ausnahmsweise nicht enthaelt.
-export function effektiveNavKeys(
-  gespeichert: string[] | null,
+// beide garantiert dieselbe feste Zone berechnen. Filtert auf gerade
+// sichtbare Seiten, kappt auf LINKS_SLOT_ANZAHL und fuellt bei Bedarf (leere
+// oder zu kurze gespeicherte Auswahl, aeltere Daten) aus STANDARD_LINKS auf,
+// damit die feste Zone nie eine kaputte Luecke zeigt.
+export function effektiveLinks(
+  gespeichert: string[] | null | undefined,
   sichtbareSeiten: NavSeite[],
 ): string[] {
   const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
-  const basis = gespeichert ?? STANDARD_BOTTOM_NAV_KEYS;
-  const ergebnis = basis.filter((key) => sichtbareKeys.has(key));
-  for (const key of MANDATORY_KEYS) {
-    if (!sichtbareKeys.has(key) || ergebnis.includes(key)) continue;
-    if (key === "feed") ergebnis.unshift(key);
-    else ergebnis.push(key);
-  }
-  return ergebnis;
+  const basis = (gespeichert ?? STANDARD_LINKS)
+    .filter((key) => sichtbareKeys.has(key))
+    .slice(0, LINKS_SLOT_ANZAHL);
+  if (basis.length >= LINKS_SLOT_ANZAHL) return basis;
+  const auffuellen = STANDARD_LINKS.filter(
+    (key) => sichtbareKeys.has(key) && !basis.includes(key),
+  );
+  return [...basis, ...auffuellen].slice(0, LINKS_SLOT_ANZAHL);
+}
+
+// Analog fuer die wischbare Rotunde rechts -- keine Mindestlaenge, keine
+// Pflicht-Keys (Feed/Profil leben jetzt ausschliesslich in effektiveLinks).
+export function effektiveRotunde(
+  gespeichert: string[] | null | undefined,
+  sichtbareSeiten: NavSeite[],
+): string[] {
+  const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
+  return (gespeichert ?? STANDARD_ROTUNDE).filter((key) => sichtbareKeys.has(key));
 }
