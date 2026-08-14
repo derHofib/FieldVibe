@@ -22,6 +22,7 @@ from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.lieferant import Lieferant
+from app.models.mail_account import MailAccount
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
@@ -67,6 +68,7 @@ __all__ = [
     "KundeZuweisung",
     "KundenportalZugang",
     "Lieferant",
+    "MailAccount",
     "Mandant",
     "Mangel",
     "Material",
