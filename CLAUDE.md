@@ -21,7 +21,7 @@ Office-Ansicht (Büro/Dispo, Desktop), Kundenportal.
   dieselbe Codebase, Shell wird zur Laufzeit am Hostnamen gewählt);
   `frontend/src/portal/` — Kundenportal
 - Entwicklungshistorie je Baustufe inkl. bewusster Design-Entscheidungen:
-  `docs/phases/PHASE_1.md` … `PHASE_9.md` (jede endet mit "Was offen
+  `docs/phases/PHASE_1.md` … `PHASE_10.md` (jede endet mit "Was offen
   bleibt" — dort nachsehen, ob etwas als Lücke bekannt und bewusst
   zurückgestellt ist, bevor es als neuer Bug gemeldet wird)
 
