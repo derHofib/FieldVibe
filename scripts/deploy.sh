@@ -149,9 +149,11 @@ DEFAULT_DOMAIN_BASE="fieldvibe.de"
 if [[ "$DEPLOY_MODE" == "domain" ]]; then
   CURRENT_DOMAIN_APP="$(get_env DOMAIN_APP)"
   if [[ "$CURRENT_DOMAIN_APP" == "app.example.de" || -z "$CURRENT_DOMAIN_APP" ]]; then
-    log "Domains konfigurieren. Die drei DNS-A-Records müssen schon jetzt auf diesen Server zeigen."
-    read -rp "App-Domain [app.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_APP
+    log "Domains konfigurieren. Die vier DNS-A-Records müssen schon jetzt auf diesen Server zeigen."
+    read -rp "App-Domain (Handy) [app.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_APP
     DOMAIN_APP="${DOMAIN_APP:-app.${DEFAULT_DOMAIN_BASE}}"
+    read -rp "Office-Domain (Desktop) [office.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_OFFICE
+    DOMAIN_OFFICE="${DOMAIN_OFFICE:-office.${DEFAULT_DOMAIN_BASE}}"
     read -rp "API-Domain [api.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_API
     DOMAIN_API="${DOMAIN_API:-api.${DEFAULT_DOMAIN_BASE}}"
     read -rp "Fotos/S3-Domain [s3.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_S3
@@ -160,16 +162,29 @@ if [[ "$DEPLOY_MODE" == "domain" ]]; then
     CADDY_EMAIL="${CADDY_EMAIL:-admin@${DEFAULT_DOMAIN_BASE}}"
 
     set_env DOMAIN_APP "$DOMAIN_APP"
+    set_env DOMAIN_OFFICE "$DOMAIN_OFFICE"
     set_env DOMAIN_API "$DOMAIN_API"
     set_env DOMAIN_S3 "$DOMAIN_S3"
     set_env CADDY_EMAIL "$CADDY_EMAIL"
-    set_env CORS_ORIGINS "[\"https://${DOMAIN_APP}\"]"
+    set_env CORS_ORIGINS "[\"https://${DOMAIN_APP}\",\"https://${DOMAIN_OFFICE}\"]"
     set_env VITE_API_BASE_URL "https://${DOMAIN_API}"
     set_env S3_PUBLIC_URL_BASE "https://${DOMAIN_S3}"
     set_env FRONTEND_BASE_URL "https://${DOMAIN_APP}"
     set_env ENVIRONMENT "production"
+  elif [[ -z "$(get_env DOMAIN_OFFICE)" || "$(get_env DOMAIN_OFFICE)" == "office.example.de" ]]; then
+    # Nachtrag fuer Bestandsinstallationen: die Domains von oben sind laengst
+    # gesetzt, die Office-Domain kam erst spaeter dazu. Ohne diesen Zweig
+    # wuerde sie auf einem Update-Lauf nie gefuellt -- Caddy bekaeme ein leeres
+    # {$DOMAIN_OFFICE} und CORS_ORIGINS bliebe einwertig.
+    log "Office-Domain (Desktop-Oberfläche) ist noch nicht konfiguriert."
+    warn "Der DNS-A-Record dafür muss bereits auf diesen Server zeigen, sonst bekommt Caddy kein Zertifikat."
+    read -rp "Office-Domain [office.${DEFAULT_DOMAIN_BASE}]: " DOMAIN_OFFICE
+    DOMAIN_OFFICE="${DOMAIN_OFFICE:-office.${DEFAULT_DOMAIN_BASE}}"
+    set_env DOMAIN_OFFICE "$DOMAIN_OFFICE"
+    set_env CORS_ORIGINS "[\"https://${CURRENT_DOMAIN_APP}\",\"https://${DOMAIN_OFFICE}\"]"
+    log "Office-Domain gesetzt (${DOMAIN_OFFICE}), CORS_ORIGINS auf beide Frontends erweitert."
   else
-    log "Domains bereits konfiguriert (${CURRENT_DOMAIN_APP}), überspringe Abfrage."
+    log "Domains bereits konfiguriert (${CURRENT_DOMAIN_APP}, $(get_env DOMAIN_OFFICE)), überspringe Abfrage."
   fi
 else
   CURRENT_IP="$(get_env DEPLOY_IP)"
@@ -274,9 +289,10 @@ log "Fertig!"
 if [[ "$DEPLOY_MODE" == "domain" ]]; then
   cat <<SUMMARY
 
-  App:       https://$(get_env DOMAIN_APP)
-  API-Docs:  https://$(get_env DOMAIN_API)/docs
-  Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
+  App (Handy):     https://$(get_env DOMAIN_APP)
+  Office (Desktop): https://$(get_env DOMAIN_OFFICE)
+  API-Docs:        https://$(get_env DOMAIN_API)/docs
+  Backups:         ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
 
   Falls das Zertifikat noch nicht bereit ist:
     ${COMPOSE[*]} logs -f caddy
@@ -293,6 +309,10 @@ else
   ⚠ Unverschlüsselt (kein HTTPS) -- nur für Tests/internes Netz gedacht.
     Für echten Betrieb später auf eine Domain umsteigen: die Zeile
     "DEPLOY_MODE=" aus der .env löschen und dieses Skript erneut ausführen.
+
+  Hinweis: Die Desktop-Oberfläche braucht eine eigene Subdomain und ist im
+    IP-Modus deshalb nicht erreichbar. Auf einem breiten Bildschirm lässt sie
+    sich unter obiger Adresse mit ?office=1 trotzdem ansehen.
 
   Später aktualisieren: dieses Skript einfach erneut ausführen.
 SUMMARY
