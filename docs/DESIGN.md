@@ -24,6 +24,28 @@
   überladen wirkt
 - Suche gehört in den Header, nicht in die Bottom-Nav
 
+## Desktop/Office (office.<domain>)
+- Gleiche Bildsprache wie die Feld-App — dieselben `IconBadge`-Töne,
+  dieselben Statusfarben, dieselben Karten. Es ändert sich die Anordnung,
+  nicht das Aussehen der einzelnen Bausteine
+- Seitenleiste statt Bottom-Nav, aus `config/navSeiten.ts` erzeugt
+  (dieselbe Quelle wie die Bottom-Nav, gruppiert nach `kategorie`)
+- **Karte oder Zeile?** Karte, wenn ein Eintrag für sich steht und
+  angeklickt wird (Vorgänge, Formular-Vorlagen). Zeile/Tabelle, wenn
+  Werte *zwischen* Einträgen verglichen werden — Beträge, Fälligkeiten,
+  Mengen. Deshalb ist die Buchhaltung bewusst eine Tabelle mit
+  `tabular-nums`, obwohl die Feld-App dort Karten zeigt
+- Listen mit Detailansicht als zweispaltiges Panel (Liste links, die
+  **bestehende** Detailseite rechts eingebettet). Die Detailseiten werden
+  nicht für den Desktop nachgebaut — sie bekommen nur eine optionale
+  `id`-Prop, die `useParams` überschreibt
+- Übernommene Feld-App-Seiten laufen in einer begrenzten Lesespalte
+  (`max-w-3xl`), nicht über die volle Monitorbreite gezerrt
+- Kein `.btn-touch`-Mindestmaß nötig, keine PWA, kein Service Worker
+- `--klebe-abstand` steuert, wie weit klebende Leisten über dem unteren
+  Rand bleiben: in der Feld-App 6rem für die schwebende Bottom-Nav, im
+  Office 0.75rem
+
 ## Formulare
 - Lange Auswahllisten (Material etc.) als `SearchableSelect` (tippbare
   Combobox), kein normales `<select>`

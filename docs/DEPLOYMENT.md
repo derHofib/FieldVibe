@@ -12,16 +12,32 @@ terminiert TLS (automatisch, Let's-Encrypt-Zertifikate) und reicht
 Anfragen anhand der Subdomain weiter:
 
 ```
-Internet ──443──▶ Caddy ──▶ DOMAIN_APP  → frontend:4173  (React-App)
-                        ──▶ DOMAIN_API  → backend:8000   (FastAPI)
-                        ──▶ DOMAIN_S3   → minio:9000     (Fotos, presigned URLs)
+Internet ──443──▶ Caddy ──▶ DOMAIN_APP    → frontend:4173  (React-App, mobil)
+                        ──▶ DOMAIN_OFFICE → frontend:4173  (React-App, Desktop)
+                        ──▶ DOMAIN_API    → backend:8000   (FastAPI)
+                        ──▶ DOMAIN_S3     → minio:9000     (Fotos, presigned URLs)
 ```
 
 Postgres, MinIO, Backend und Frontend haben **keine** direkt aus dem
-Internet erreichbaren Ports – nur Caddy auf 80/443. Drei Subdomains statt
+Internet erreichbaren Ports – nur Caddy auf 80/443. Vier Subdomains statt
 einer mit Pfad-Präfixen, weil S3-Presigned-URLs Host *und* Pfad signieren;
 ein nachträglich von Caddy gestripptes Pfad-Präfix würde die Signatur
 brechen (siehe Kommentar in `app/services/storage_service.py`).
+
+`DOMAIN_APP` und `DOMAIN_OFFICE` zeigen bewusst auf **denselben**
+Container: es gibt genau einen Vite-Build. Welche Oberfläche erscheint,
+entscheidet der Browser am Hostnamen (`frontend/src/office/hostname.ts`) –
+`app.` liefert die mobile PWA, `office.` die Desktop-Ansicht mit
+Seitenleiste. Ein zweiter Container wäre derselbe Quellcode ein zweites
+Mal gebaut.
+
+Zwei Folgen daraus, die im Betrieb auffallen:
+- **`CORS_ORIGINS` braucht beide Hosts**, sonst schlägt jeder API-Aufruf
+  von `office.` fehl.
+- **Der Login gilt pro Subdomain.** Das Token liegt im `localStorage`, der
+  an den Origin gebunden ist – wer zwischen `app.` und `office.` wechselt,
+  meldet sich zweimal an. Ein gemeinsames Cookie auf `.<domain>` ist
+  bewusst als späterer Schritt zurückgestellt.
 
 ## Automatisiert: `scripts/deploy.sh`
 
@@ -50,7 +66,8 @@ Drei Wege, wenn (noch) keine Domain vorhanden ist:
 
 1. **Kostenlose IP-Domain** (z. B. [sslip.io](https://sslip.io)): bei
    Server-IP `203.0.113.5` funktionieren `app.203.0.113.5.sslip.io`,
-   `api.203.0.113.5.sslip.io`, `s3.203.0.113.5.sslip.io` als ganz normale
+   `office.203.0.113.5.sslip.io`, `api.203.0.113.5.sslip.io`,
+   `s3.203.0.113.5.sslip.io` als ganz normale
    DNS-Namen, ohne dass DNS-Einträge angelegt werden müssen – Let's
    Encrypt stellt dafür ein echtes Zertifikat aus. In `scripts/deploy.sh`
    (oder manuell unten) einfach diese Namen als Domains eintragen.
@@ -76,6 +93,11 @@ Dabei in der `.env` setzen (Server-IP statt der Domains):
 - `VITE_API_BASE_URL=http://<server-ip>:8000`
 - `S3_PUBLIC_URL_BASE=http://<server-ip>:9000`
 - `FRONTEND_BASE_URL=http://<server-ip>:4173`
+
+Im IP-Modus gibt es keine Subdomains und damit auch **keine
+Desktop-Ansicht** – `http://<server-ip>:4173` liefert immer die mobile
+Oberfläche. Das ist Absicht: die Umschaltung hängt am Hostnamen, und eine
+nackte IP hat keinen. Wer die Desktop-Ansicht braucht, nimmt Weg 1 oder 2.
 
 Firewall dann auf 22, 4173, 8000 und 9000 statt 22/80/443 begrenzen –
 idealerweise zusätzlich auf bestimmte Quell-IPs, statt für das ganze
@@ -124,9 +146,13 @@ cp .env.example .env
 In `.env` mindestens setzen:
 - `POSTGRES_PASSWORD`, `JWT_SECRET`, `MINIO_ROOT_PASSWORD` – je mit
   `openssl rand -base64 48` erzeugen, nicht die Beispielwerte übernehmen.
-- `DOMAIN_APP`, `DOMAIN_API`, `DOMAIN_S3` – die drei Subdomains von oben.
+- `DOMAIN_APP`, `DOMAIN_OFFICE`, `DOMAIN_API`, `DOMAIN_S3` – die vier
+  Subdomains von oben. Für jede muss ein A-Record auf die Server-IP
+  zeigen, **bevor** der Stack startet – sonst bekommt Caddy für die
+  fehlende Domain kein Zertifikat.
 - `CADDY_EMAIL` – für Let's-Encrypt-Benachrichtigungen.
-- `CORS_ORIGINS=["https://<DOMAIN_APP>"]`
+- `CORS_ORIGINS=["https://<DOMAIN_APP>","https://<DOMAIN_OFFICE>"]` – beide
+  Einträge, sonst bleibt die Desktop-Ansicht ohne Daten.
 - `VITE_API_BASE_URL=https://<DOMAIN_API>`
 - `S3_PUBLIC_URL_BASE=https://<DOMAIN_S3>`
 - `DATABASE_URL`/`DATABASE_URL_SYNC` – Passwort aus `POSTGRES_PASSWORD`
