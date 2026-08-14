@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
 import { effektiveLinks, effektiveRotunde, sichtbareNavSeiten, type NavSeite } from "../config/navSeiten";
@@ -98,8 +98,54 @@ function RotundeItem({
 }
 
 function Rotunde({ items, unreadCount }: { items: NavSeite[]; unreadCount: number }) {
-  const [zentrumIndex, setZentrumIndex] = useState(0);
+  const location = useLocation();
+  // Beim ersten Rendern (z.B. frischer Seitenaufruf oder Klick aus einer
+  // Push-Benachrichtigung) direkt die gerade aktive Seite mittig zeigen,
+  // statt immer bei Position 0 zu starten -- ist die aktive Seite nicht Teil
+  // der Rotunde, faellt das auf Position 0 zurueck. Bewusst nur einmalig
+  // beim Mounten (useState-Initializer), nicht bei jeder Navigation
+  // innerhalb der App neu zentrieren.
+  const [startIndex] = useState(() => Math.max(0, items.findIndex((seite) => seite.route === location.pathname)));
+  const [zentrumIndex, setZentrumIndex] = useState(startIndex);
   const frameRef = useRef<number | undefined>(undefined);
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Seitliches Polster in Pixeln statt in %: CSS-Prozentpolster wuerde sich
+  // auf die Breite der Nav-Pille (des Eltern-Elements) beziehen, nicht auf
+  // die tatsaechlich uebrige Breite dieser Rotunde-Zone (die durch die
+  // festen Icons links und den Neu-Button schon geschmaelert ist) -- das
+  // hatte vorher eine falsch grosse Luecke zum Neu-Button erzeugt. Per JS
+  // gemessen, damit auch das erste/letzte Icon exakt bis zur Boxmitte
+  // scrollen kann.
+  const [seitenPolster, setSeitenPolster] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const aktualisieren = () => setSeitenPolster(Math.max(0, (el.clientWidth - ROTUNDE_SLOT_PX) / 2));
+
+    // Erstmessung: Polster direkt am DOM-Element setzen statt nur per
+    // setSeitenPolster -- ein State-Update wirkt sich erst nach einem
+    // zusaetzlichen Render-Durchlauf im DOM aus. Wuerde die Erstpositionierung
+    // (scrollTo unten) vor diesem zweiten Durchlauf laufen, verschiebt sich
+    // das Polster danach unter dem bereits gesetzten scrollLeft weg --
+    // sichtbar als "falsch zentriertes/abgeschnittenes" Icon beim ersten
+    // Rendern. Padding synchron per Style setzen, bevor scrollTo() liest/
+    // schreibt (das erzwingt ohnehin ein Layout), vermeidet dieses Wettrennen.
+    const startPolster = Math.max(0, (el.clientWidth - ROTUNDE_SLOT_PX) / 2);
+    el.style.paddingLeft = `${startPolster}px`;
+    el.style.paddingRight = `${startPolster}px`;
+    setSeitenPolster(startPolster);
+    // scrollLeft = startIndex * Schrittweite zentriert den Startindex exakt
+    // unabhaengig von der Polstergroesse (rechnet sich algebraisch heraus).
+    // behavior: "instant" verhindert ein sichtbares Reinrutschen beim ersten
+    // Rendern, trotz scroll-smooth auf dem Container.
+    el.scrollTo({ left: startIndex * ROTUNDE_SCHRITT_PX, behavior: "instant" });
+
+    const beobachter = new ResizeObserver(aktualisieren);
+    beobachter.observe(el);
+    return () => beobachter.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (items.length === 0) return <div className="min-w-0 flex-1" aria-hidden />;
 
@@ -114,16 +160,9 @@ function Rotunde({ items, unreadCount }: { items: NavSeite[]; unreadCount: numbe
 
   return (
     <div
+      ref={containerRef}
       className="scrollbar-none flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory"
-      // Anker liegt am linken Rand (direkt neben dem Neu-Button), nicht in
-      // der geometrischen Mitte der Zone: auf einem breiten Geraet ist der
-      // verbleibende Platz rechts vom Neu-Button viel breiter als im
-      // schmalen Test-Viewport -- eine Zentrierung auf "50% der Zone" wuerde
-      // dort eine riesige leere Luecke vor dem ersten Icon erzeugen. Der
-      // rechte Puffer laesst dennoch auch das letzte Icon bis zum selben
-      // Anker zurueckscrollen (unabhaengig von der tatsaechlichen Breite,
-      // da beide Seiten in % der eigenen Containerbreite gerechnet sind).
-      style={{ paddingRight: `calc(100% - ${ROTUNDE_SLOT_PX}px)` }}
+      style={{ paddingLeft: seitenPolster, paddingRight: seitenPolster }}
       onScroll={onScroll}
     >
       {items.map((seite, index) => (
