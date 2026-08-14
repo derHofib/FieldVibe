@@ -1,12 +1,10 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
 import { Columns3, Inbox, LayoutGrid, List, Plus, Search } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { feedApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
-import { cacheFeedItems, getCachedFeedItems } from "../../offline/cache";
-import type { FeedCard, FeedResponse } from "../../types";
+import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
+import type { FeedCard } from "../../types";
 import { AnsichtUmschalter, FilterChip, SeitenKopf } from "../OfficeUi";
 import { VorgaengeKanban } from "./VorgaengeKanban";
 import { VorgaengeListe } from "./VorgaengeListe";
@@ -56,52 +54,12 @@ export function OfficeVorgaengePage() {
 
   const filter = SCHNELLFILTER.find((f) => f.key === schnellfilter)?.params ?? {};
 
-  // Dieselbe Abfrage samt Offline-Rueckfall wie der Feed der Handy-App
-  // (pages/feld/FeedPage.tsx) -- gleicher queryKey, damit die
-  // SSE-Invalidierung aus useAppLiveDaten beide Oberflaechen frisch haelt.
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["feed", filter],
-    queryFn: async ({ pageParam }: { pageParam: string | undefined }): Promise<FeedResponse> => {
-      try {
-        const result = await feedApi.get({
-          ...filter,
-          ...(pageParam ? { cursor: pageParam } : {}),
-        });
-        if (!pageParam) await cacheFeedItems(result.items);
-        return result;
-      } catch (err) {
-        if (!navigator.onLine && !pageParam) {
-          const cached = await getCachedFeedItems();
-          if (cached.length > 0) return { items: cached, next_cursor: null };
-        }
-        throw err;
-      }
-    },
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useVorgangsListe(filter);
 
   // Kanban und Raster zeigen alle Treffer nebeneinander -- eine seitenweise
-  // nachgeladene Liste haette dort Luecken in einzelnen Spalten. Per Ref,
-  // damit der Effekt nicht bei jeder nachgeladenen Seite neu startet.
-  const hasNextPageRef = useRef(hasNextPage);
-  hasNextPageRef.current = hasNextPage;
-  const fetchNextPageRef = useRef(fetchNextPage);
-  fetchNextPageRef.current = fetchNextPage;
-  useEffect(() => {
-    if (ansicht === "liste") return;
-    let abgebrochen = false;
-    (async () => {
-      let seiten = 0;
-      while (!abgebrochen && hasNextPageRef.current && seiten < 20) {
-        await fetchNextPageRef.current();
-        seiten++;
-      }
-    })();
-    return () => {
-      abgebrochen = true;
-    };
-  }, [ansicht]);
+  // nachgeladene Liste haette dort Luecken in einzelnen Spalten.
+  useAlleSeitenLaden(ansicht !== "liste", hasNextPage, fetchNextPage);
 
   const alle: FeedCard[] = data?.pages.flatMap((p) => p.items) ?? [];
   const suchbegriff = suche.trim().toLowerCase();
