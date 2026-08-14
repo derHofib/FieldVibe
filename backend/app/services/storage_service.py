@@ -74,6 +74,11 @@ def new_eingangsrechnung_beleg_key(eingangsrechnung_id: uuid.UUID, filename: str
     return f"eingangsrechnungen/{eingangsrechnung_id}/beleg/{uuid.uuid4()}.{suffix}"
 
 
+def new_mail_attachment_key(message_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"mail-nachrichten/{message_id}/{uuid.uuid4()}.{suffix}"
+
+
 def new_dsgvo_dokument_key(typ: str, filename: str) -> str:
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
     return f"dsgvo/{typ}/{uuid.uuid4()}.{suffix}"

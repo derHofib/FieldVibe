@@ -209,7 +209,7 @@ async def _clean_tables():
             text(
                 "TRUNCATE audit_log, notifications, tag_assignments, tags, zeiterfassung, "
                 "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
-                "mail_accounts, "
+                "mail_attachments, mail_messages, mail_folders, mail_accounts, "
                 "rechnung_positionen, rechnungen, highlights, "
                 "bestellung_positionen, material_bedarfe, bestellungen, lieferanten, "
                 "material_verwendungen, material, "
