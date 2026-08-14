@@ -52,6 +52,15 @@ body {
   @apply bg-slate-100 text-slate-900 dark:bg-stone-950 dark:text-stone-100;
 }
 
+/* Abstand, den klebende Elemente (z. B. die Kommentar-Leiste der
+   Vorgangs-Detailseite) zum unteren Rand halten muessen. In der Feld-App
+   schwebt dort die Bottom-Nav-Pille; die Office-Shell hat keine und setzt
+   den Wert in OfficeLayout auf einen schmalen Rest herunter -- sonst
+   klebte die Leiste 6rem ueber dem Rand mitten im Inhalt. */
+:root {
+  --klebe-abstand: 6rem;
+}
+
 .btn-touch {
   @apply min-h-[48px] min-w-[48px];
 }

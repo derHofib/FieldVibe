@@ -35,6 +35,15 @@ import type { CurrentUser, RechteAktion, RechteBereich } from "../types";
 // zentraler Ort dafuer.
 export type NavKategorie = "Arbeit" | "Finanzen" | "Kommunikation" | "Verwaltung";
 
+// Reihenfolge der Gruppen in der Office-Seitenleiste (office/OfficeLayout.tsx):
+// taegliche Arbeit oben, Verwaltung als Selteneres unten.
+export const NAV_KATEGORIE_REIHENFOLGE: NavKategorie[] = [
+  "Arbeit",
+  "Finanzen",
+  "Kommunikation",
+  "Verwaltung",
+];
+
 export interface NavSeite {
   key: string;
   label: string;

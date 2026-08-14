@@ -7,9 +7,25 @@ import { registerSW } from "virtual:pwa-register";
 import { App } from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { pruefeGeraeteWeiche } from "./office/geraeteWeiche";
+import { istOfficeHost } from "./office/hostname";
 import "./index.css";
 
-registerSW({ immediate: true });
+const istOffice = istOfficeHost();
+
+// Vor dem ersten Rendern: passt die Oberflaeche nicht zur Fensterbreite, auf
+// die andere Subdomain umleiten. Danach nichts mehr aufbauen -- der Browser
+// laedt ohnehin gleich neu.
+const wirdUmgeleitet = pruefeGeraeteWeiche(istOffice);
+
+// Nur die Handy-App ist eine PWA. Die Desktop-Oberflaeche soll weder
+// precachen noch installierbar sein -- am Schreibtisch ist eine Verbindung
+// vorausgesetzt, und ein Service Worker wuerde dort nur Update-Verwirrung
+// stiften. Service-Worker-Scopes sind ohnehin origin-gebunden, die beiden
+// Subdomains kaemen sich also nicht in die Quere.
+if (!istOffice && !wirdUmgeleitet) {
+  registerSW({ immediate: true });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,16 +36,18 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </ThemeProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </StrictMode>,
-);
+if (!wirdUmgeleitet) {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ThemeProvider>
+            <AuthProvider>
+              <App istOffice={istOffice} />
+            </AuthProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+}

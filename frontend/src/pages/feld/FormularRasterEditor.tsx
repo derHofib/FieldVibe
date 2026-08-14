@@ -456,7 +456,17 @@ function FeldForm({
   );
 }
 
-export function FormularRasterEditor({ formular }: { formular: Formular }) {
+export function FormularRasterEditor({
+  formular,
+  // Der CSS-Ausbruch weiter unten setzt einen ENGEN Elternrahmen voraus
+  // (max-w-2xl in FeldLayout). In der Office-Shell ist der Bereich ohnehin
+  // schon voll breit -- dort wuerde derselbe Ausbruch ueber den Viewport
+  // hinausragen und die Seite waagerecht wegschieben.
+  vollbreiteAusbruch = true,
+}: {
+  formular: Formular;
+  vollbreiteAusbruch?: boolean;
+}) {
   const queryClient = useQueryClient();
   const [aktiveSeite, setAktiveSeite] = useState(0);
   const [neuesFeldOffen, setNeuesFeldOffen] = useState(false);
@@ -700,7 +710,11 @@ export function FormularRasterEditor({ formular }: { formular: Formular }) {
           der Browser rechnet das bei jedem Reflow selbst neu, reagiert also
           auch sofort, wenn z.B. nach dem Laden der Formulardaten ein
           Scrollbalken erscheint (dabei feuert kein "resize"-Event). */}
-      <div className="lg:relative lg:left-1/2 lg:right-1/2 lg:mx-[-50vw] lg:w-screen">
+      <div
+        className={
+          vollbreiteAusbruch ? "lg:relative lg:left-1/2 lg:right-1/2 lg:mx-[-50vw] lg:w-screen" : ""
+        }
+      >
       {/* Zweite Ebene: NUR der Canvas wird zentriert (mx-auto ueber die volle
           Breite). Das Panel teilt sich ab lg absichtlich NICHT die Breite mit
           dem Canvas -- sonst zentriert sich die eigentliche Seite nur inner-

@@ -234,8 +234,12 @@ function adresseAlsZeile(adresse: Adresse | null | undefined): string {
     .join(", ");
 }
 
-export function VorgangDetailPage() {
-  const { id } = useParams<{ id: string }>();
+// id optional als Prop, damit die Office-Oberflaeche diese Seite in ihrem
+// Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
+// pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
+export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
@@ -1875,7 +1879,7 @@ export function VorgangDetailPage() {
       </div>
 
       {!kundenansicht && (
-        <div className="sticky bottom-24 space-y-2 rounded-lg bg-white p-3 shadow-md dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 rounded-lg bg-white p-3 shadow-md dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="relative">
             <textarea
               value={comment}

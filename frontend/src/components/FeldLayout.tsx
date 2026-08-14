@@ -1,59 +1,18 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Clock, Search, Settings } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import { useEventStream } from "../hooks/useEventStream";
-import { useOutboxSync } from "../offline/useOutboxSync";
+import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { BottomNav } from "./BottomNav";
 import { ImpersonationBanner } from "./ImpersonationBanner";
 import { ThemeToggle } from "./ThemeToggle";
-
-function useOnlineStatus(): boolean {
-  const [online, setOnline] = useState(navigator.onLine);
-  useEffect(() => {
-    const setTrue = () => setOnline(true);
-    const setFalse = () => setOnline(false);
-    window.addEventListener("online", setTrue);
-    window.addEventListener("offline", setFalse);
-    return () => {
-      window.removeEventListener("online", setTrue);
-      window.removeEventListener("offline", setFalse);
-    };
-  }, []);
-  return online;
-}
 
 export function FeldLayout() {
   const { currentUser, logout } = useAuth();
   const kannEinstellungenSehen =
     currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const outboxCount = useOutboxSync();
-  const isOnline = useOnlineStatus();
-
-  useEventStream({
-    feed_update: () => {
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
-      queryClient.invalidateQueries({ queryKey: ["stories"] });
-    },
-    vorgang_event: (data) => {
-      const payload = data as { vorgang_id: string };
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
-      queryClient.invalidateQueries({ queryKey: ["vorgang-events", payload.vorgang_id] });
-    },
-    notification: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    },
-    timer: (data) => {
-      const payload = data as { vorgang_id: string };
-      queryClient.invalidateQueries({ queryKey: ["feed"] });
-      queryClient.invalidateQueries({ queryKey: ["zeiterfassung-laufend"] });
-      queryClient.invalidateQueries({ queryKey: ["zeiterfassung", payload.vorgang_id] });
-    },
-  });
+  const { outboxCount, isOnline } = useAppLiveDaten();
 
   return (
     <div

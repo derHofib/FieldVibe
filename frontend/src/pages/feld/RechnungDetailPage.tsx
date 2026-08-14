@@ -20,8 +20,12 @@ const ZAHLUNGSART_OPTIONEN: { value: RechnungZahlungsart; label: string }[] = [
   { value: "sonstiges", label: "Sonstiges" },
 ];
 
-export function RechnungDetailPage() {
-  const { id } = useParams<{ id: string }>();
+// id optional als Prop, damit die Office-Oberflaeche diese Seite in ihrem
+// Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
+// pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
+export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();

@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AccountTypenPage } from "./pages/AccountTypenPage";
@@ -51,7 +52,21 @@ import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
 import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
 
-export function App() {
+// Nachgeladen statt fest importiert: Handy-Nutzer sollen den Desktop-Code nie
+// herunterladen. Gleiches Muster wie das lazy MapboxFeedMap im Feed.
+const OfficeAppLazy = lazy(() =>
+  import("./office/OfficeApp").then((m) => ({ default: m.OfficeApp })),
+);
+
+function OfficeApp() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-500 dark:text-stone-400">Lädt…</div>}>
+      <OfficeAppLazy />
+    </Suspense>
+  );
+}
+
+export function App({ istOffice = false }: { istOffice?: boolean }) {
   const { currentUser, isAuthenticated, isImpersonating, isLoading } = useAuth();
 
   // Das Kundenportal ist unabhaengig vom Staff-Login erreichbar -- diese Route
@@ -85,6 +100,16 @@ export function App() {
 
       {!isAuthenticated && <Route path="*" element={<Navigate to="/login" replace />} />}
 
+      {/* Desktop-Oberflaeche (office.-Subdomain). Bewusst NACH der
+          Plattform-Admin-Weiche gedacht, aber vor der Feld-App: ein echter
+          super_admin behaelt auch hier sein Plattform-Dashboard (Layout.tsx
+          ist ohnehin schon eine Desktop-Sidebar), waehrend ein
+          impersonierender super_admin wie jeder Mandanten-Nutzer in die
+          Office-Shell faellt. */}
+      {isAuthenticated && !isPlatformAdmin && istOffice && (
+        <Route path="/*" element={<OfficeApp />} />
+      )}
+
       {isAuthenticated && isPlatformAdmin && (
         <Route element={<Layout />}>
           <Route path="/uebersicht" element={<UebersichtPage />} />
@@ -98,7 +123,7 @@ export function App() {
         </Route>
       )}
 
-      {isAuthenticated && !isPlatformAdmin && (
+      {isAuthenticated && !isPlatformAdmin && !istOffice && (
         <Route element={<FeldLayout />}>
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/suche" element={<SearchPage />} />
