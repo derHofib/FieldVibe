@@ -92,7 +92,8 @@ export type MandantModul =
   | "statistik"
   | "fahrzeuge"
   | "highlights"
-  | "karten";
+  | "karten"
+  | "postfach";
 
 export interface Mandant {
   id: string;
@@ -1151,6 +1152,91 @@ export interface MandantIntegration {
   hat_secret: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// --- Postfach (persoenlicher IMAP/SMTP-Mailclient) --------------------------
+
+export type MailVerschluesselung = "ssl" | "starttls" | "keine";
+
+export interface MailAccount {
+  id: string;
+  name: string;
+  email_adresse: string;
+  imap_host: string;
+  imap_port: number;
+  imap_verschluesselung: MailVerschluesselung;
+  imap_benutzername: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_verschluesselung: MailVerschluesselung;
+  smtp_benutzername: string;
+  signatur: string | null;
+  aktiv: boolean;
+  letzter_sync_am: string | null;
+  letzter_sync_fehler: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MailAccountVerbindungTest {
+  imap_host: string;
+  imap_port: number;
+  imap_verschluesselung: MailVerschluesselung;
+  imap_benutzername: string;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_verschluesselung: MailVerschluesselung;
+  smtp_benutzername: string;
+  passwort: string;
+}
+
+export interface MailFolder {
+  id: string;
+  imap_name: string;
+  anzeigename: string;
+  sortierung: number;
+  letzter_sync_am: string | null;
+}
+
+export interface MailAttachment {
+  id: string;
+  dateiname: string;
+  mimetype: string;
+  groesse_bytes: number;
+  eingebettet: boolean;
+}
+
+export interface MailMessageListItem {
+  id: string;
+  folder_id: string;
+  von_name: string | null;
+  von_adresse: string | null;
+  betreff: string;
+  ausschnitt: string;
+  datum: string | null;
+  gelesen: boolean;
+  hat_anhang: boolean;
+}
+
+export interface MailMessageListResponse {
+  items: MailMessageListItem[];
+  next_cursor: string | null;
+}
+
+export interface MailMessageDetail {
+  id: string;
+  folder_id: string;
+  von_name: string | null;
+  von_adresse: string | null;
+  an: string[];
+  cc: string[];
+  betreff: string;
+  body_text: string | null;
+  body_html: string | null;
+  datum: string | null;
+  gelesen: boolean;
+  message_id_header: string | null;
+  anhaenge: MailAttachment[];
 }
 
 // --- E-Mail-Versand ----------------------------------------------------------

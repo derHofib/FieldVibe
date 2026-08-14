@@ -50,6 +50,11 @@ import type {
   KundenportalZugang,
   Leistungstyp,
   Lieferant,
+  MailAccount,
+  MailAccountVerbindungTest,
+  MailFolder,
+  MailMessageDetail,
+  MailMessageListResponse,
   Mandant,
   MandantEinstellungen,
   MandantFirmendaten,
@@ -1207,6 +1212,45 @@ export const integrationenApi = {
       body: JSON.stringify(body),
     }),
   delete: (id: string) => apiFetch<void>(`/api/integrationen/${id}`, { method: "DELETE" }),
+};
+
+export const mailApi = {
+  testVerbindung: (body: MailAccountVerbindungTest) =>
+    apiFetch<void>("/api/mail-accounts/test-verbindung", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  accounts: {
+    list: () => apiFetch<MailAccount[]>("/api/mail-accounts"),
+    create: (body: MailAccountVerbindungTest & { name: string; email_adresse: string; signatur?: string | null }) =>
+      apiFetch<MailAccount>("/api/mail-accounts", { method: "POST", body: JSON.stringify(body) }),
+    update: (
+      id: string,
+      body: Partial<
+        MailAccountVerbindungTest & { name: string; email_adresse: string; signatur: string | null; aktiv: boolean }
+      >,
+    ) => apiFetch<MailAccount>(`/api/mail-accounts/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    delete: (id: string) => apiFetch<void>(`/api/mail-accounts/${id}`, { method: "DELETE" }),
+  },
+  folders: (accountId: string) => apiFetch<MailFolder[]>(`/api/mail-accounts/${accountId}/folders`),
+  messages: (folderId: string, params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<MailMessageListResponse>(`/api/mail-folders/${folderId}/messages${qs ? `?${qs}` : ""}`);
+  },
+  message: (id: string) => apiFetch<MailMessageDetail>(`/api/mail-messages/${id}`),
+  setGelesen: (id: string, gelesen: boolean) =>
+    apiFetch<MailMessageDetail>(`/api/mail-messages/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ gelesen }),
+    }),
+  attachmentUrl: (messageId: string, attachmentId: string) =>
+    apiFetch<{ url: string }>(`/api/mail-messages/${messageId}/attachments/${attachmentId}/url`),
+  senden: (accountId: string, body: { an: string[]; cc?: string[]; bcc?: string[]; betreff: string; text: string }) =>
+    apiFetch<void>(`/api/mail-accounts/${accountId}/senden`, { method: "POST", body: JSON.stringify(body) }),
+  antworten: (messageId: string, body: { an: string[]; cc?: string[]; text: string }) =>
+    apiFetch<void>(`/api/mail-messages/${messageId}/antworten`, { method: "POST", body: JSON.stringify(body) }),
+  weiterleiten: (messageId: string, body: { an: string[]; text?: string }) =>
+    apiFetch<void>(`/api/mail-messages/${messageId}/weiterleiten`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const kundenportalApi = {

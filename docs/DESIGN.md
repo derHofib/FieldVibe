@@ -8,7 +8,8 @@
   vermieden — wirken "verspielt" statt "dezent".
 - Verfügbare Töne, je einem Funktionsbereich fest zugeordnet: sky (Feed),
   violet (Profil), amber (Dispo), emerald (Geschäft), cyan (Rechnungen),
-  indigo (Auswertung), rose (Meldungen), slate (Papierkorb/Mehr/neutral)
+  indigo (Auswertung), rose (Meldungen), slate (Papierkorb/Mehr/neutral),
+  teal (Postfach)
 - `active=false` → neutrales Grau statt Farbe (z. B. inaktive Bottom-Nav-
   Items) — nur das gerade ausgewählte Element zeigt seine Farbe
 
