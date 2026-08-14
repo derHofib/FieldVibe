@@ -37,6 +37,8 @@ import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
+import { PostfachNachrichtPage } from "./pages/feld/PostfachNachrichtPage";
+import { PostfachPage } from "./pages/feld/PostfachPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
@@ -154,6 +156,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
           <Route path="/material/:id" element={<MaterialDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
+          <Route path="/postfach" element={<PostfachPage />} />
+          <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="/accounts" element={<UsersPage />} />
