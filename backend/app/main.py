@@ -32,6 +32,7 @@ from app.api.routes import (
     lieferanten,
     maengel,
     mail_accounts,
+    mail_messages,
     mandant_einstellungen,
     mandanten,
     material,
@@ -144,6 +145,7 @@ app.include_router(inventurzyklen.router)
 app.include_router(papierkorb.router)
 app.include_router(system_resources.router)
 app.include_router(mail_accounts.router)
+app.include_router(mail_messages.router)
 
 
 @app.get("/healthz")
