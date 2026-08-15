@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     # https://<DOMAIN_APP> (siehe docs/DEPLOYMENT.md).
     frontend_base_url: str = "http://localhost:5173"
     kundenportal_reset_token_expire_minutes: int = 30
+    partner_reset_token_expire_minutes: int = 30
 
     # --- Mahnwesen (Nacharbeit): Tage nach Faelligkeit bis zur jeweiligen
     # Mahnstufe. Drei Stufen statt eines konfigurierbaren Katalogs -- fuer

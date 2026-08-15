@@ -25,6 +25,9 @@ from app.api.routes import (
     mandanten,
     material,
     notifications,
+    partner,
+    partner_auth,
+    partner_portal,
     pruefmittel,
     pruefzyklen,
     rechnungen,
@@ -106,6 +109,9 @@ app.include_router(mandant_einstellungen.router)
 app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
+app.include_router(partner.router)
+app.include_router(partner_auth.router)
+app.include_router(partner_portal.router)
 
 
 @app.get("/healthz")

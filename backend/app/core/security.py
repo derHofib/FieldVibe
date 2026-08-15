@@ -22,6 +22,9 @@ class TokenType(StrEnum):
     KUNDENPORTAL_ACCESS = "kundenportal_access"
     KUNDENPORTAL_REFRESH = "kundenportal_refresh"
     KUNDENPORTAL_PASSWORD_RESET = "kundenportal_password_reset"
+    PARTNER_ACCESS = "partner_access"
+    PARTNER_REFRESH = "partner_refresh"
+    PARTNER_PASSWORD_RESET = "partner_password_reset"
 
 
 def hash_password(password: str) -> str:
@@ -172,3 +175,45 @@ def create_kundenportal_refresh_token(
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
         extra_claims={"kunde_id": str(kunde_id)},
     )
+
+
+# Dieselbe Pseudorollen-Ueberlegung wie bei Kundenportal-Tokens: "partner"
+# ist kein Wert, den eine echte User-Rolle je annimmt.
+_PARTNER_PSEUDOROLLE = "partner"
+
+
+def create_partner_access_token(
+    *, subject: UUID, mandant_id: UUID, partner_id: UUID
+) -> str:
+    return _create_token(
+        subject=subject,
+        role=_PARTNER_PSEUDOROLLE,
+        mandant_id=mandant_id,
+        token_type=TokenType.PARTNER_ACCESS,
+        expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
+        extra_claims={"partner_id": str(partner_id)},
+    )
+
+
+def create_partner_refresh_token(
+    *, subject: UUID, mandant_id: UUID, partner_id: UUID
+) -> str:
+    return _create_token(
+        subject=subject,
+        role=_PARTNER_PSEUDOROLLE,
+        mandant_id=mandant_id,
+        token_type=TokenType.PARTNER_REFRESH,
+        expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
+        extra_claims={"partner_id": str(partner_id)},
+    )
+
+
+def create_partner_password_reset_token(*, zugang_id: UUID) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(zugang_id),
+        "type": TokenType.PARTNER_PASSWORD_RESET.value,
+        "iat": now,
+        "exp": now + timedelta(minutes=_settings.partner_reset_token_expire_minutes),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)

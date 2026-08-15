@@ -14,6 +14,9 @@ from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
 from app.models.notification import Notification
+from app.models.partner import Partner
+from app.models.partner_nachweis import PartnerNachweis
+from app.models.partner_zugang import PartnerZugang
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition
@@ -46,6 +49,9 @@ __all__ = [
     "MaterialBewegung",
     "MaterialVerwendung",
     "Notification",
+    "Partner",
+    "PartnerNachweis",
+    "PartnerZugang",
     "Pruefmittel",
     "Pruefzyklus",
     "Rechnung",

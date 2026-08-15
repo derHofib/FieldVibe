@@ -22,6 +22,7 @@ MANDANT_MODULE = (
     "statistik",
     "fahrzeuge",
     "highlights",
+    "nachunternehmer",
 )
 
 
