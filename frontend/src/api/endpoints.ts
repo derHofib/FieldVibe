@@ -31,6 +31,7 @@ import type {
   MaterialBewegung,
   MaterialVerwendung,
   NotificationEntry,
+  PlattformIntegration,
   Pruefmittel,
   Pruefzyklus,
   Rechnung,
@@ -599,6 +600,24 @@ export const integrationenApi = {
       body: JSON.stringify(body),
     }),
   delete: (id: string) => apiFetch<void>(`/api/integrationen/${id}`, { method: "DELETE" }),
+};
+
+export const plattformIntegrationenApi = {
+  list: () => apiFetch<PlattformIntegration[]>("/api/plattform/integrationen"),
+  create: (body: { typ: string; config?: Record<string, unknown>; secret?: string; aktiv?: boolean }) =>
+    apiFetch<PlattformIntegration>("/api/plattform/integrationen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (
+    id: string,
+    body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean },
+  ) =>
+    apiFetch<PlattformIntegration>(`/api/plattform/integrationen/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) => apiFetch<void>(`/api/plattform/integrationen/${id}`, { method: "DELETE" }),
 };
 
 export const kundenportalApi = {

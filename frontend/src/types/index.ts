@@ -609,3 +609,15 @@ export interface MandantIntegration {
   created_at: string;
   updated_at: string;
 }
+
+// --- Plattform-Integrationen (globaler Mailversand-Fallback) ---------------
+
+export interface PlattformIntegration {
+  id: string;
+  typ: string;
+  config: Record<string, unknown>;
+  aktiv: boolean;
+  hat_secret: boolean;
+  created_at: string;
+  updated_at: string;
+}

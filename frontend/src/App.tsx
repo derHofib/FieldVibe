@@ -4,6 +4,7 @@ import { FeldLayout } from "./components/FeldLayout";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
+import { EinstellungenPage } from "./pages/EinstellungenPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantenPage } from "./pages/MandantenPage";
 import { UsersPage } from "./pages/UsersPage";
@@ -63,6 +64,7 @@ export function App() {
           <Route path="/mandanten" element={<MandantenPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/einstellungen" element={<EinstellungenPage />} />
           <Route path="*" element={<Navigate to="/mandanten" replace />} />
         </Route>
       )}

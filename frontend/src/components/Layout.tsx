@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: "/mandanten", label: "Mandanten" },
   { to: "/accounts", label: "Accounts" },
   { to: "/audit-log", label: "Audit-Log" },
+  { to: "/einstellungen", label: "Einstellungen" },
 ];
 
 export function Layout() {

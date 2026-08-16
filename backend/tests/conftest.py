@@ -113,6 +113,7 @@ async def _clean_tables():
                 "rechnung_positionen, rechnungen, highlights, material_verwendungen, material, "
                 "kundenportal_zugaenge, kunde_zuweisungen, "
                 "einladungen, partner_zugaenge, partner_nachweise, partner, "
+                "plattform_integrationen, "
                 "vorgang_events, vorgaenge, vertraege, "
                 "anlagen, kunden, mandant_integrationen, users, mandanten "
                 "RESTART IDENTITY CASCADE"

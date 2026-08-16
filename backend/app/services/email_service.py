@@ -12,6 +12,7 @@ from app.core.config import get_settings
 from app.core.security import decrypt_secret
 from app.models.integration import MandantIntegration
 from app.models.mandant import Mandant
+from app.models.plattform_integration import PlattformIntegration
 
 
 class EmailNichtKonfiguriert(Exception):
@@ -31,12 +32,21 @@ class _SmtpVerbindung:
 
 
 async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbindung:
-    """Eigene smtp-Integration des Mandanten hat immer Vorrang; ist keine
-    (vollstaendige) hinterlegt, greift der globale Plattform-Mailversand
-    als Fallback (GLOBAL_SMTP_* in den Settings) -- damit Einladungen und
-    Passwort-Reset-Mails schon vor der ersten eigenen SMTP-Konfiguration
-    eines Mandanten funktionieren, statt an einem Henne-Ei-Problem beim
-    Onboarding zu scheitern."""
+    """Dreistufiger Fallback, jede Stufe optional:
+
+    1. Eigene smtp-Integration des Mandanten (mandant_integrationen) -- hat
+       immer Vorrang, ein Mandant kann so jederzeit auf eine eigene
+       Absenderadresse umsteigen.
+    2. Plattformweite smtp-Integration (plattform_integrationen), vom
+       super_admin ueber die Super-Admin-Oberflaeche gepflegt -- der
+       normale Weg fuer den globalen Fallback im laufenden Betrieb.
+    3. GLOBAL_SMTP_*-Umgebungsvariablen -- reines Bootstrap fuer die Zeit
+       vor der ersten Konfiguration ueber Stufe 2 (z.B. direkt nach einem
+       frischen Deployment, wenn noch niemand eingeloggt war).
+
+    Ohne jede der drei Stufen kaeme keine Mail raus, bevor irgendjemand
+    SMTP eingerichtet hat -- deshalb der mehrstufige statt ein rein
+    Mandanten-gebundener Fallback."""
     result = await session.execute(
         select(MandantIntegration).where(
             MandantIntegration.mandant_id == mandant_id,
@@ -57,6 +67,26 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbind
                 password=decrypt_secret(integration.secret_ref) if integration.secret_ref else None,
                 from_address=from_address,
                 ist_global=False,
+            )
+
+    plattform_result = await session.execute(
+        select(PlattformIntegration).where(
+            PlattformIntegration.typ == "smtp", PlattformIntegration.aktiv.is_(True)
+        )
+    )
+    plattform = plattform_result.scalar_one_or_none()
+    if plattform is not None:
+        config = plattform.config
+        host = config.get("host")
+        from_address = config.get("from_address") or config.get("user")
+        if host and from_address:
+            return _SmtpVerbindung(
+                host=host,
+                port=int(config.get("port", 587)),
+                user=config.get("user"),
+                password=decrypt_secret(plattform.secret_ref) if plattform.secret_ref else None,
+                from_address=from_address,
+                ist_global=True,
             )
 
     settings = get_settings()

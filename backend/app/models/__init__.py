@@ -18,6 +18,7 @@ from app.models.notification import Notification
 from app.models.partner import Partner
 from app.models.partner_nachweis import PartnerNachweis
 from app.models.partner_zugang import PartnerZugang
+from app.models.plattform_integration import PlattformIntegration
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition
@@ -54,6 +55,7 @@ __all__ = [
     "Partner",
     "PartnerNachweis",
     "PartnerZugang",
+    "PlattformIntegration",
     "Pruefmittel",
     "Pruefzyklus",
     "Rechnung",

@@ -28,6 +28,7 @@ from app.api.routes import (
     partner,
     partner_auth,
     partner_portal,
+    plattform_integrationen,
     pruefmittel,
     pruefzyklen,
     rechnungen,
@@ -112,6 +113,7 @@ app.include_router(inventurzyklen.router)
 app.include_router(partner.router)
 app.include_router(partner_auth.router)
 app.include_router(partner_portal.router)
+app.include_router(plattform_integrationen.router)
 
 
 @app.get("/healthz")
