@@ -26,6 +26,18 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class RegistrierenRequest(BaseModel):
+    """Schliesst eine Einladung ab -- wiederverwendet fuer Mitarbeiter-,
+    Kundenportal- und Partnerportal-Registrierung (siehe
+    app/services/einladung_service.py), da die Form ueberall identisch
+    ist: welcher Account daraus entsteht, entscheidet allein die Art der
+    Einladung hinter dem Token, nicht der Aufrufer."""
+
+    token: str
+    name: str
+    password: str
+
+
 class CurrentUser(BaseModel):
     id: UUID
     mandant_id: UUID | None

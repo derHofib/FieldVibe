@@ -66,6 +66,7 @@ class Settings(BaseSettings):
     frontend_base_url: str = "http://localhost:5173"
     kundenportal_reset_token_expire_minutes: int = 30
     partner_reset_token_expire_minutes: int = 30
+    einladung_token_expire_minutes: int = 60 * 24 * 14
 
     # --- Mahnwesen (Nacharbeit): Tage nach Faelligkeit bis zur jeweiligen
     # Mahnstufe. Drei Stufen statt eines konfigurierbaren Katalogs -- fuer

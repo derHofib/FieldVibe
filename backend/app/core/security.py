@@ -25,6 +25,7 @@ class TokenType(StrEnum):
     PARTNER_ACCESS = "partner_access"
     PARTNER_REFRESH = "partner_refresh"
     PARTNER_PASSWORD_RESET = "partner_password_reset"
+    EINLADUNG = "einladung"
 
 
 def hash_password(password: str) -> str:
@@ -215,5 +216,20 @@ def create_partner_password_reset_token(*, zugang_id: UUID) -> str:
         "type": TokenType.PARTNER_PASSWORD_RESET.value,
         "iat": now,
         "exp": now + timedelta(minutes=_settings.partner_reset_token_expire_minutes),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
+def create_einladung_token(*, einladung_id: UUID) -> str:
+    """Traegt bewusst nur die Einladungs-ID, keine Rolle/kein Mandant --
+    diese Angaben liest der Annahme-Endpunkt live aus der Einladung selbst
+    (siehe app/services/einladung_service.py), damit ein Widerruf sofort
+    greift und nicht erst mit Ablauf des Tokens."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(einladung_id),
+        "type": TokenType.EINLADUNG.value,
+        "iat": now,
+        "exp": now + timedelta(minutes=_settings.einladung_token_expire_minutes),
     }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)

@@ -207,6 +207,95 @@ async def test_partner_zuweisung_aufheben(client, make_mandant, make_user, make_
     assert resp.json()["partner_freigabe_status"] is None
 
 
+# --- Einladung ----------------------------------------------------------------
+
+
+async def _extrahiere_token(link: str) -> str:
+    from urllib.parse import parse_qs, urlparse
+
+    return parse_qs(urlparse(link).query)["token"][0]
+
+
+@pytest.mark.asyncio
+async def test_partner_einladen_und_registrieren(client, make_mandant, make_user, make_partner):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant, name="Elektro Subunternehmer KG")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        f"/api/partner/{partner.id}/einladungen",
+        headers=auth_headers(token),
+        json={"email": "einladung@partner.example.de"},
+    )
+    assert resp.status_code == 201
+    reg_link = resp.json()["registrierungslink"]
+    assert reg_link
+
+    reg_token = await _extrahiere_token(reg_link)
+    reg_resp = await client.post(
+        "/api/partnerportal/auth/registrieren",
+        json={"token": reg_token, "name": "Erika Muster", "password": "sicheres-passwort-123"},
+    )
+    assert reg_resp.status_code == 201
+    me = await client.get(
+        "/api/partnerportal/auth/me", headers=auth_headers(reg_resp.json()["access_token"])
+    )
+    assert me.status_code == 200
+    assert me.json()["partner_name"] == "Elektro Subunternehmer KG"
+
+    # Erneute Registrierung mit demselben Token ist nicht mehr moeglich.
+    replay = await client.post(
+        "/api/partnerportal/auth/registrieren",
+        json={"token": reg_token, "name": "X", "password": "sicheres-passwort-123"},
+    )
+    assert replay.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_partner_einladung_widerrufen_sperrt_registrierung(
+    client, make_mandant, make_user, make_partner
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        f"/api/partner/{partner.id}/einladungen",
+        headers=auth_headers(token),
+        json={"email": "widerruf@partner.example.de"},
+    )
+    einladung_id = resp.json()["id"]
+    reg_token = await _extrahiere_token(resp.json()["registrierungslink"])
+
+    revoke = await client.delete(
+        f"/api/partner/{partner.id}/einladungen/{einladung_id}", headers=auth_headers(token)
+    )
+    assert revoke.status_code == 204
+
+    reg = await client.post(
+        "/api/partnerportal/auth/registrieren",
+        json={"token": reg_token, "name": "X", "password": "sicheres-passwort-123"},
+    )
+    assert reg.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_techniker_darf_partner_nicht_einladen(client, make_mandant, make_user, make_partner):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, techniker.email, "pw-123456")
+
+    resp = await client.post(
+        f"/api/partner/{partner.id}/einladungen",
+        headers=auth_headers(token),
+        json={"email": "verboten@partner.example.de"},
+    )
+    assert resp.status_code == 403
+
+
 # --- Partnerportal: Auth ------------------------------------------------------
 
 

@@ -3,6 +3,7 @@ from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
+from app.models.einladung import Einladung
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.highlight import Highlight
 from app.models.integration import MandantIntegration
@@ -35,6 +36,7 @@ __all__ = [
     "AuditLog",
     "Dauerauftrag",
     "DauerauftragZiel",
+    "Einladung",
     "FahrzeugZuweisung",
     "Highlight",
     "MandantIntegration",

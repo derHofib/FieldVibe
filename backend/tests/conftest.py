@@ -112,7 +112,7 @@ async def _clean_tables():
                 "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
                 "rechnung_positionen, rechnungen, highlights, material_verwendungen, material, "
                 "kundenportal_zugaenge, kunde_zuweisungen, "
-                "partner_zugaenge, partner_nachweise, partner, "
+                "einladungen, partner_zugaenge, partner_nachweise, partner, "
                 "vorgang_events, vorgaenge, vertraege, "
                 "anlagen, kunden, mandant_integrationen, users, mandanten "
                 "RESTART IDENTITY CASCADE"

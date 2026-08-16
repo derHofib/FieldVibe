@@ -8,9 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.core.security import hash_password
+from app.models.einladung import Einladung
 from app.models.partner import Partner
 from app.models.partner_nachweis import PartnerNachweis
 from app.models.partner_zugang import PartnerZugang
+from app.models.user import User
+from app.schemas.einladung import EinladungRead, PartnerEinladungCreate
 from app.schemas.partner import (
     PartnerCreate,
     PartnerNachweisCreate,
@@ -18,10 +21,10 @@ from app.schemas.partner import (
     PartnerNachweisUpdate,
     PartnerRead,
     PartnerUpdate,
-    PartnerZugangCreate,
     PartnerZugangRead,
     PartnerZugangUpdate,
 )
+from app.services.einladung_service import create_einladung, to_read_model, versende_einladung
 
 router = APIRouter(
     prefix="/api/partner",
@@ -213,40 +216,100 @@ async def list_zugaenge(partner_id: UUID, session: AsyncSession = Depends(get_db
     return list(result.scalars().all())
 
 
+@router.get(
+    "/{partner_id}/einladungen",
+    response_model=list[EinladungRead],
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def list_partner_einladungen(
+    partner_id: UUID, session: AsyncSession = Depends(get_db)
+) -> list[EinladungRead]:
+    if await session.get(Partner, partner_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner nicht gefunden")
+    result = await session.execute(
+        select(Einladung)
+        .where(Einladung.art == "partner", Einladung.partner_id == partner_id)
+        .order_by(Einladung.created_at.desc())
+    )
+    return [EinladungRead(**to_read_model(e)) for e in result.scalars().all()]
+
+
 @router.post(
-    "/{partner_id}/zugaenge",
-    response_model=PartnerZugangRead,
+    "/{partner_id}/einladungen",
+    response_model=EinladungRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
 )
-async def create_zugang(
+async def partner_einladen(
     partner_id: UUID,
-    body: PartnerZugangCreate,
+    body: PartnerEinladungCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> PartnerZugang:
-    if await session.get(Partner, partner_id) is None:
+) -> EinladungRead:
+    partner = await session.get(Partner, partner_id)
+    if partner is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner nicht gefunden")
-    if len(body.password) < 10:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
-        )
 
-    zugang = PartnerZugang(
+    einladender = await session.get(User, auth.user_id)
+    einladung = await create_einladung(
+        session,
         mandant_id=auth.mandant_id,
-        partner_id=partner_id,
         email=body.email,
-        password_hash=hash_password(body.password),
-        name=body.name,
+        art="partner",
+        partner_id=partner_id,
+        eingeladen_von=auth.user_id,
     )
-    session.add(zugang)
-    try:
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="E-Mail wird bereits verwendet"
-        ) from exc
-    return zugang
+    link = await versende_einladung(
+        session, einladung, absender_name=einladender.name if einladender else partner.name
+    )
+    return EinladungRead(**to_read_model(einladung, registrierungslink=link))
+
+
+@router.post(
+    "/{partner_id}/einladungen/{einladung_id}/erneut-senden",
+    response_model=EinladungRead,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def partner_einladung_erneut_senden(
+    partner_id: UUID,
+    einladung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EinladungRead:
+    einladung = await session.get(Einladung, einladung_id)
+    if (
+        einladung is None
+        or einladung.art != "partner"
+        or einladung.partner_id != partner_id
+        or einladung.status != "offen"
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
+
+    einladender = await session.get(User, auth.user_id)
+    link = await versende_einladung(
+        session, einladung, absender_name=einladender.name if einladender else ""
+    )
+    return EinladungRead(**to_read_model(einladung, registrierungslink=link))
+
+
+@router.delete(
+    "/{partner_id}/einladungen/{einladung_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+)
+async def partner_einladung_widerrufen(
+    partner_id: UUID, einladung_id: UUID, session: AsyncSession = Depends(get_db)
+) -> None:
+    einladung = await session.get(Einladung, einladung_id)
+    if (
+        einladung is None
+        or einladung.art != "partner"
+        or einladung.partner_id != partner_id
+        or einladung.status != "offen"
+    ):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
+    einladung.status = "widerrufen"
+    await session.flush()
 
 
 @router.patch(

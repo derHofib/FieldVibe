@@ -80,17 +80,6 @@ class PartnerNachweisRead(BaseModel):
     updated_at: datetime
 
 
-class PartnerZugangCreate(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
-
-    @field_validator("email")
-    @classmethod
-    def _normalize_email(cls, v: str) -> str:
-        return v.strip().lower()
-
-
 class PartnerZugangUpdate(BaseModel):
     name: str | None = None
     aktiv: bool | None = None

@@ -17,13 +17,14 @@ from app.core.security import (
 from app.db.session import system_session
 from app.models.partner import Partner
 from app.models.partner_zugang import PartnerZugang
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair
+from app.schemas.auth import LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
 from app.schemas.partner import (
     CurrentPartner,
     PartnerPasswortResetRequest,
     PartnerPasswortVergessenRequest,
 )
 from app.services.email_service import EmailNichtKonfiguriert, send_email
+from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services.partner_auth_service import authenticate_partner
 
 router = APIRouter(prefix="/api/partnerportal/auth", tags=["partnerportal"])
@@ -56,6 +57,38 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Zugang nicht gültig"
             )
+
+        return TokenPair(
+            access_token=create_partner_access_token(
+                subject=zugang.id, mandant_id=zugang.mandant_id, partner_id=zugang.partner_id
+            ),
+            refresh_token=create_partner_refresh_token(
+                subject=zugang.id, mandant_id=zugang.mandant_id, partner_id=zugang.partner_id
+            ),
+        )
+
+
+@router.post("/registrieren", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
+async def registrieren(body: RegistrierenRequest) -> TokenPair:
+    """Schliesst eine Partner-Einladung ab: legt den Partnerportal-Zugang
+    mit dem selbst gewaehlten Passwort an und loggt direkt ein."""
+    if len(body.password) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
+        )
+    async with system_session() as session:
+        einladung = await resolve_offene_einladung(session, body.token, erwartete_art="partner")
+
+        zugang = PartnerZugang(
+            mandant_id=einladung.mandant_id,
+            partner_id=einladung.partner_id,
+            email=einladung.email,
+            password_hash=hash_password(body.password),
+            name=body.name,
+        )
+        session.add(zugang)
+        await session.flush()
+        await als_angenommen_markieren(session, einladung)
 
         return TokenPair(
             access_token=create_partner_access_token(
