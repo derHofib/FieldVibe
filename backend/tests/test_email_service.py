@@ -52,6 +52,35 @@ async def test_send_email_uses_configured_smtp(make_mandant):
 
 
 @pytest.mark.asyncio
+async def test_send_email_with_html_body_sends_multipart_alternative(make_mandant):
+    mandant = await make_mandant()
+    await _make_smtp_integration(mandant)
+
+    smtp_instance = MagicMock()
+    smtp_instance.__enter__.return_value = smtp_instance
+    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance):
+        async with system_session() as session:
+            await send_email(
+                session,
+                mandant.id,
+                to="kunde@example.de",
+                subject="Test",
+                body="Nur-Text-Fallback",
+                html_body="<html><body><p>Hallo</p></body></html>",
+            )
+
+    sent_message = smtp_instance.send_message.call_args[0][0]
+    assert sent_message.is_multipart()
+    parts = list(sent_message.walk())
+    plain_parts = [p for p in parts if p.get_content_type() == "text/plain"]
+    html_parts = [p for p in parts if p.get_content_type() == "text/html"]
+    assert len(plain_parts) == 1
+    assert len(html_parts) == 1
+    assert "Nur-Text-Fallback" in plain_parts[0].get_content()
+    assert "<p>Hallo</p>" in html_parts[0].get_content()
+
+
+@pytest.mark.asyncio
 async def test_send_email_raises_when_no_smtp_configured(make_mandant):
     mandant = await make_mandant()
 

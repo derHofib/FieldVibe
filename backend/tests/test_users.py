@@ -1,5 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 
+from app.db.session import system_session
+from app.models.integration import MandantIntegration
 from tests.conftest import auth_headers, login
 
 
@@ -7,6 +11,52 @@ async def _extrahiere_token(link: str) -> str:
     from urllib.parse import parse_qs, urlparse
 
     return parse_qs(urlparse(link).query)["token"][0]
+
+
+async def _make_smtp_integration(mandant) -> None:
+    async with system_session() as session:
+        session.add(
+            MandantIntegration(
+                mandant_id=mandant.id,
+                typ="smtp",
+                config={"host": "smtp.example.de", "port": 587, "from_address": "bot@example.de"},
+                secret_ref=None,
+                aktiv=True,
+            )
+        )
+        await session.flush()
+
+
+@pytest.mark.asyncio
+async def test_einladungsmail_enthaelt_steckbrief_mit_echten_werten(client, make_mandant, make_user):
+    mandant = await make_mandant(name="Elektro Müller GmbH")
+    admin = await make_user(mandant=mandant, role="mandant_admin", name="Sabine Müller", password="pw-123456")
+    await _make_smtp_integration(mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    smtp_instance = MagicMock()
+    smtp_instance.__enter__.return_value = smtp_instance
+    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance):
+        resp = await client.post(
+            "/api/users/einladungen",
+            headers=auth_headers(token),
+            json={"email": "neu@example.de", "role": "techniker"},
+        )
+    assert resp.status_code == 201
+    # SMTP ist konfiguriert -> die Mail wird tatsaechlich "verschickt" (gemockt),
+    # kein Fallback-Link in der Antwort.
+    assert resp.json()["registrierungslink"] is None
+
+    sent_message = smtp_instance.send_message.call_args[0][0]
+    assert sent_message["Subject"] == "Sabine Müller lädt Sie zu Elektro Müller GmbH ein"
+    html_part = next(p for p in sent_message.walk() if p.get_content_type() == "text/html")
+    html_content = html_part.get_content()
+    assert "Sabine Müller" in html_content
+    assert "Elektro Müller GmbH" in html_content
+    assert "Mandanten-Admin" in html_content
+    assert "Techniker" in html_content
+    text_part = next(p for p in sent_message.walk() if p.get_content_type() == "text/plain")
+    assert "Sabine Müller (Mandanten-Admin)" in text_part.get_content()
 
 
 @pytest.mark.asyncio

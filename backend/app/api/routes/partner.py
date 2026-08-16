@@ -260,7 +260,10 @@ async def partner_einladen(
         eingeladen_von=auth.user_id,
     )
     link = await versende_einladung(
-        session, einladung, absender_name=einladender.name if einladender else partner.name
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else partner.name,
+        absender_rolle=einladender.role if einladender else None,
     )
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 
@@ -287,7 +290,10 @@ async def partner_einladung_erneut_senden(
 
     einladender = await session.get(User, auth.user_id)
     link = await versende_einladung(
-        session, einladung, absender_name=einladender.name if einladender else ""
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else "",
+        absender_rolle=einladender.role if einladender else None,
     )
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 

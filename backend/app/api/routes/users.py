@@ -69,7 +69,10 @@ async def mitarbeiter_einladen(
         eingeladen_von=auth.user_id,
     )
     link = await versende_einladung(
-        session, einladung, absender_name=einladender.name if einladender else mandant.name
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else mandant.name,
+        absender_rolle=einladender.role if einladender else None,
     )
 
     await log_action(
@@ -101,7 +104,10 @@ async def einladung_erneut_senden(
     einladender = await session.get(User, auth.user_id)
     mandant = await session.get(Mandant, einladung.mandant_id)
     link = await versende_einladung(
-        session, einladung, absender_name=einladender.name if einladender else mandant.name
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else mandant.name,
+        absender_rolle=einladender.role if einladender else None,
     )
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 

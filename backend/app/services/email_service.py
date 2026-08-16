@@ -39,14 +39,20 @@ def _send_blocking(*, host: str, port: int, user: str | None, password: str | No
 
 
 async def send_email(
-    session: AsyncSession, mandant_id: UUID, *, to: str, subject: str, body: str
+    session: AsyncSession, mandant_id: UUID, *, to: str, subject: str, body: str, html_body: str | None = None
 ) -> None:
     """Verschickt eine E-Mail ueber die smtp-Integration des Mandanten.
     Wirft EmailNichtKonfiguriert, wenn keine (oder eine unvollstaendige)
     smtp-Integration hinterlegt ist -- der Aufrufer entscheidet, ob das ein
     harter Fehler ist oder (wie beim Kundenportal-Passwort-Reset) still
     geschluckt werden soll, um Rueckschluesse auf Konfigurationszustand zu
-    vermeiden."""
+    vermeiden.
+
+    `body` ist immer Pflicht und bleibt die einzige Version fuer Clients
+    ohne HTML-Darstellung. Wird zusaetzlich `html_body` angegeben, verschickt
+    add_alternative() eine multipart/alternative-Mail -- der Text-Teil zuerst
+    (Fallback), der HTML-Teil danach (von Clients bevorzugt, die beides
+    koennen; siehe app/services/einladung_service.py)."""
     integration = await _get_smtp_integration(session, mandant_id)
     config = integration.config
     host = config.get("host")
@@ -62,6 +68,8 @@ async def send_email(
     message["From"] = from_address
     message["To"] = to
     message.set_content(body)
+    if html_body is not None:
+        message.add_alternative(html_body, subtype="html")
 
     # smtplib ist blockierend -- in einem Thread ausfuehren, damit ein
     # langsamer/haengender SMTP-Server nicht den Event-Loop blockiert.
