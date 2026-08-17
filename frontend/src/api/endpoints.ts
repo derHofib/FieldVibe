@@ -117,6 +117,11 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => apiFetch<CurrentUser>("/api/auth/me"),
+  registrieren: (token: string, name: string, password: string) =>
+    apiFetch<TokenPair>("/api/auth/registrieren", {
+      method: "POST",
+      body: JSON.stringify({ token, name, password }),
+    }),
 };
 
 export const systemApi = {
@@ -1190,6 +1195,11 @@ export const kundenportalAuthApi = {
     kundenApiFetch<void>("/api/kundenportal/auth/passwort-zuruecksetzen", {
       method: "POST",
       body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+  registrieren: (token: string, name: string, password: string) =>
+    kundenApiFetch<TokenPair>("/api/kundenportal/auth/registrieren", {
+      method: "POST",
+      body: JSON.stringify({ token, name, password }),
     }),
 };
 

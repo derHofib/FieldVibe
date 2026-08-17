@@ -8,6 +8,7 @@ import { PortalAngebotePage } from "../pages/portal/PortalAngebotePage";
 import { PortalForgotPasswordPage } from "../pages/portal/PortalForgotPasswordPage";
 import { PortalLoginPage } from "../pages/portal/PortalLoginPage";
 import { PortalRechnungenPage } from "../pages/portal/PortalRechnungenPage";
+import { PortalRegistrierenPage } from "../pages/portal/PortalRegistrierenPage";
 import { PortalResetPasswordPage } from "../pages/portal/PortalResetPasswordPage";
 import { PortalVorgangDetailPage } from "../pages/portal/PortalVorgangDetailPage";
 import { PortalVorgaengePage } from "../pages/portal/PortalVorgaengePage";
@@ -29,6 +30,7 @@ function KundenPortalRoutes() {
       />
       <Route path="passwort-vergessen" element={<PortalForgotPasswordPage />} />
       <Route path="passwort-zuruecksetzen" element={<PortalResetPasswordPage />} />
+      <Route path="registrieren" element={<PortalRegistrierenPage />} />
 
       {!isAuthenticated && <Route path="*" element={<Navigate to="/portal/login" replace />} />}
 

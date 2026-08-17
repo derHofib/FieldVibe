@@ -9,13 +9,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { kundenportalAuthApi } from "../api/endpoints";
 import { kundenAuthStore } from "../api/kundenAuthStore";
-import type { CurrentKunde } from "../types";
+import type { CurrentKunde, TokenPair } from "../types";
 
 interface KundenAuthContextValue {
   currentKunde: CurrentKunde | undefined;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  // Direktes Einloggen mit einem bereits ausgestellten Token-Paar -- fuer
+  // PortalRegistrierenPage.tsx nach Abschluss einer Kunden-Einladung.
+  loginMitToken: (tokens: TokenPair) => Promise<void>;
   logout: () => void;
 }
 
@@ -42,6 +45,14 @@ export function KundenAuthProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
+  const loginMitToken = useCallback(
+    async (tokens: TokenPair) => {
+      kundenAuthStore.setTokens({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+      await queryClient.invalidateQueries({ queryKey: ["kundenportal-me"] });
+    },
+    [queryClient],
+  );
+
   const logout = useCallback(() => {
     kundenAuthStore.clear();
     queryClient.clear();
@@ -52,6 +63,7 @@ export function KundenAuthProvider({ children }: { children: ReactNode }) {
     isLoading: hasToken && meQuery.isLoading,
     isAuthenticated: !!meQuery.data,
     login,
+    loginMitToken,
     logout,
   };
 

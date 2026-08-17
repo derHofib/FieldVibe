@@ -11,6 +11,7 @@ import { EinstellungenPage } from "./pages/EinstellungenPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
+import { RegistrierenPage } from "./pages/RegistrierenPage";
 import { UebersichtPage } from "./pages/UebersichtPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
@@ -100,6 +101,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
+      <Route path="/registrieren" element={<RegistrierenPage />} />
 
       {!isAuthenticated && <Route path="*" element={<Navigate to="/login" replace />} />}
 
