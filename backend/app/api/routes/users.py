@@ -15,7 +15,12 @@ from app.models.user import User
 from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
 from app.schemas.user import BottomNavUpdate, UserCreate, UserRead, UserUpdate
 from app.services.audit_service import log_action
-from app.services.einladung_service import create_einladung, to_read_model, versende_einladung
+from app.services.einladung_service import (
+    create_einladung,
+    registrierungslink_erzeugen,
+    to_read_model,
+    versende_einladung,
+)
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -65,7 +70,14 @@ async def list_einladungen(session: AsyncSession = Depends(get_db)) -> list[Einl
     result = await session.execute(
         select(Einladung).where(Einladung.art == "mitarbeiter").order_by(Einladung.created_at.desc())
     )
-    return [EinladungRead(**to_read_model(e)) for e in result.scalars().all()]
+    return [
+        EinladungRead(
+            **to_read_model(
+                e, registrierungslink=registrierungslink_erzeugen(e) if e.status == "offen" else None
+            )
+        )
+        for e in result.scalars().all()
+    ]
 
 
 @router.post(
@@ -115,12 +127,13 @@ async def mitarbeiter_einladen(
         account_typ_id=body.account_typ_id,
         eingeladen_von=auth.user_id,
     )
-    link = await versende_einladung(
+    await versende_einladung(
         session,
         einladung,
         absender_name=einladender.name if einladender else mandant.name,
         absender_rolle=einladender.role if einladender else None,
     )
+    link = registrierungslink_erzeugen(einladung)
 
     await log_action(
         session,
@@ -150,12 +163,13 @@ async def einladung_erneut_senden(
 
     einladender = await session.get(User, auth.user_id)
     mandant = await session.get(Mandant, einladung.mandant_id)
-    link = await versende_einladung(
+    await versende_einladung(
         session,
         einladung,
         absender_name=einladender.name if einladender else mandant.name,
         absender_rolle=einladender.role if einladender else None,
     )
+    link = registrierungslink_erzeugen(einladung)
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 
 

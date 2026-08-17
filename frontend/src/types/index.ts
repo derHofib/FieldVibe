@@ -122,6 +122,30 @@ export interface User {
   updated_at: string;
 }
 
+// Nur "mandant_admin"/"custom" -- fuer super_admin und die Papierkorb-Rollen
+// gibt es keinen Einladungsweg (siehe app/schemas/einladung.py), die bleiben
+// bei direkter Anlage mit Passwort.
+export type EinladungRolle = "mandant_admin" | "custom";
+export type EinladungStatus = "offen" | "angenommen" | "widerrufen";
+
+export interface Einladung {
+  id: string;
+  email: string;
+  art: "mitarbeiter" | "kunde" | "partner";
+  rolle: EinladungRolle | null;
+  account_typ_id: string | null;
+  kunde_id: string | null;
+  partner_id: string | null;
+  status: EinladungStatus;
+  abgelaufen: boolean;
+  created_at: string;
+  angenommen_am: string | null;
+  // Immer gesetzt bei status "offen" (siehe schemas/einladung.py) --
+  // erlaubt "Link kopieren" unabhaengig davon, ob die Einladungsmail
+  // tatsaechlich verschickt wurde.
+  registrierungslink: string | null;
+}
+
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
 export type PapierkorbEntityTyp =

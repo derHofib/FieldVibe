@@ -97,7 +97,13 @@ async def create_einladung(
     return einladung
 
 
-def _registrierungs_link(einladung: Einladung) -> str:
+def registrierungslink_erzeugen(einladung: Einladung) -> str:
+    """Oeffentlich (kein Unterstrich-Praefix), weil die Routen den Link
+    unabhaengig vom Mailversand fuer einen "Link kopieren"-Button brauchen
+    (siehe versende_einladung) -- jeder Aufruf erzeugt ein frisches Token,
+    mehrere gleichzeitig gueltige Links pro Einladung sind unproblematisch,
+    da resolve_offene_einladung nur ueber die Einladungs-ID + status=="offen"
+    prueft, nicht ueber ein bestimmtes Token."""
     token = create_einladung_token(einladung_id=einladung.id)
     pfad = _REGISTRIERUNGS_PFAD[einladung.art]
     return f"{_settings.frontend_base_url}{pfad}?token={token}"
@@ -260,15 +266,14 @@ def _render_text(
 
 async def versende_einladung(
     session: AsyncSession, einladung: Einladung, *, absender_name: str, absender_rolle: str | None = None
-) -> str | None:
+) -> bool:
     """Verschickt die Einladungsmail (Steckbrief-Design im FieldVibe-Look).
-    Anders als beim Passwort-Reset (dort bewusst stiller Fehlschlag zum
-    Enumeration-Schutz) gibt es hier keinen Grund, einen Versandfehler vor
-    dem einladenden Mitarbeiter zu verstecken -- er kennt die Ziel-Adresse
-    ja bereits selbst. Bei jedem Fehlschlag (kein SMTP konfiguriert, oder
-    ein echter Zustellungsfehler) wird der Link deshalb direkt
-    zurückgegeben, damit er manuell weitergegeben werden kann."""
-    link = _registrierungs_link(einladung)
+    Gibt zurueck, ob der Versand geglueckt ist -- der Registrierungslink
+    selbst kommt unabhaengig davon immer per registrierungslink_erzeugen()
+    zum Aufrufer zurueck (auch bei erfolgreichem Mailversand), damit ein
+    Mitarbeiter den Link zusaetzlich manuell teilen kann, z.B. wenn die
+    Einladungsmail im Spam landet."""
+    link = registrierungslink_erzeugen(einladung)
     mandant = await session.get(Mandant, einladung.mandant_id)
     mandant_name = mandant.name if mandant else ""
     gueltig_tage = _settings.einladung_token_expire_minutes // (60 * 24)
@@ -305,12 +310,12 @@ async def versende_einladung(
             body=text_body,
             html_body=html_body,
         )
-        return None
+        return True
     except EmailNichtKonfiguriert:
-        return link
+        return False
     except Exception:
         _logger.exception("Einladungsmail konnte nicht verschickt werden (Einladung %s)", einladung.id)
-        return link
+        return False
 
 
 def einladung_ist_abgelaufen(einladung: Einladung) -> bool:

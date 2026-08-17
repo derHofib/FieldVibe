@@ -24,7 +24,12 @@ from app.schemas.partner import (
     PartnerZugangRead,
     PartnerZugangUpdate,
 )
-from app.services.einladung_service import create_einladung, to_read_model, versende_einladung
+from app.services.einladung_service import (
+    create_einladung,
+    registrierungslink_erzeugen,
+    to_read_model,
+    versende_einladung,
+)
 
 router = APIRouter(
     prefix="/api/partner",
@@ -231,7 +236,14 @@ async def list_partner_einladungen(
         .where(Einladung.art == "partner", Einladung.partner_id == partner_id)
         .order_by(Einladung.created_at.desc())
     )
-    return [EinladungRead(**to_read_model(e)) for e in result.scalars().all()]
+    return [
+        EinladungRead(
+            **to_read_model(
+                e, registrierungslink=registrierungslink_erzeugen(e) if e.status == "offen" else None
+            )
+        )
+        for e in result.scalars().all()
+    ]
 
 
 @router.post(
@@ -259,12 +271,13 @@ async def partner_einladen(
         partner_id=partner_id,
         eingeladen_von=auth.user_id,
     )
-    link = await versende_einladung(
+    await versende_einladung(
         session,
         einladung,
         absender_name=einladender.name if einladender else partner.name,
         absender_rolle=einladender.role if einladender else None,
     )
+    link = registrierungslink_erzeugen(einladung)
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 
 
@@ -289,12 +302,13 @@ async def partner_einladung_erneut_senden(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
 
     einladender = await session.get(User, auth.user_id)
-    link = await versende_einladung(
+    await versende_einladung(
         session,
         einladung,
         absender_name=einladender.name if einladender else "",
         absender_rolle=einladender.role if einladender else None,
     )
+    link = registrierungslink_erzeugen(einladung)
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 
 

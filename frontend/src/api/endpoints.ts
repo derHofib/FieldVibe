@@ -24,6 +24,7 @@ import type {
   DauerauftragModus,
   DsgvoDokument,
   DsgvoDokumentTyp,
+  Einladung,
   Eingangsrechnung,
   EingangsrechnungBelegUrl,
   EingangsrechnungPosition,
@@ -182,6 +183,23 @@ export const usersApi = {
       method: "PATCH",
       body: JSON.stringify(praeferenz),
     }),
+  listEinladungen: () => apiFetch<Einladung[]>("/api/users/einladungen"),
+  einladen: (body: {
+    email: string;
+    role: "mandant_admin" | "custom";
+    account_typ_id?: string | null;
+    mandant_id?: string | null;
+  }) =>
+    apiFetch<Einladung>("/api/users/einladungen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  einladungErneutSenden: (einladungId: string) =>
+    apiFetch<Einladung>(`/api/users/einladungen/${einladungId}/erneut-senden`, {
+      method: "POST",
+    }),
+  einladungWiderrufen: (einladungId: string) =>
+    apiFetch<void>(`/api/users/einladungen/${einladungId}`, { method: "DELETE" }),
 };
 
 export const accountTypenApi = {

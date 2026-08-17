@@ -45,7 +45,12 @@ from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services import angebot_service, papierkorb_service, rechnung_service, storage_service
-from app.services.einladung_service import create_einladung, to_read_model, versende_einladung
+from app.services.einladung_service import (
+    create_einladung,
+    registrierungslink_erzeugen,
+    to_read_model,
+    versende_einladung,
+)
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
@@ -513,7 +518,14 @@ async def list_kunde_einladungen(
         .where(Einladung.art == "kunde", Einladung.kunde_id == kunde_id)
         .order_by(Einladung.created_at.desc())
     )
-    return [EinladungRead(**to_read_model(e)) for e in result.scalars().all()]
+    return [
+        EinladungRead(
+            **to_read_model(
+                e, registrierungslink=registrierungslink_erzeugen(e) if e.status == "offen" else None
+            )
+        )
+        for e in result.scalars().all()
+    ]
 
 
 @router.post(
@@ -545,12 +557,13 @@ async def kunde_einladen(
         kunde_id=kunde_id,
         eingeladen_von=auth.user_id,
     )
-    link = await versende_einladung(
+    await versende_einladung(
         session,
         einladung,
         absender_name=einladender.name if einladender else kunde.name,
         absender_rolle=einladender.role if einladender else None,
     )
+    link = registrierungslink_erzeugen(einladung)
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 
 
@@ -573,12 +586,13 @@ async def kunde_einladung_erneut_senden(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
 
     einladender = await session.get(User, auth.user_id)
-    link = await versende_einladung(
+    await versende_einladung(
         session,
         einladung,
         absender_name=einladender.name if einladender else "",
         absender_rolle=einladender.role if einladender else None,
     )
+    link = registrierungslink_erzeugen(einladung)
     return EinladungRead(**to_read_model(einladung, registrierungslink=link))
 
 

@@ -50,9 +50,10 @@ async def test_einladungsmail_enthaelt_steckbrief_mit_echten_werten(client, make
             json={"email": "neu@example.de", "role": "custom", "account_typ_id": account_typ_id},
         )
     assert resp.status_code == 201
-    # SMTP ist konfiguriert -> die Mail wird tatsaechlich "verschickt" (gemockt),
-    # kein Fallback-Link in der Antwort.
-    assert resp.json()["registrierungslink"] is None
+    # SMTP ist konfiguriert -> die Mail wird tatsaechlich "verschickt" (gemockt).
+    # Der Link kommt trotzdem zusaetzlich in der Antwort zurueck, damit ein
+    # Mitarbeiter ihn manuell teilen kann (z.B. falls die Mail im Spam landet).
+    assert resp.json()["registrierungslink"]
 
     sent_message = smtp_instance.send_message.call_args[0][0]
     assert sent_message["Subject"] == "Sabine Müller lädt Sie zu Elektro Müller GmbH ein"

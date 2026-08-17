@@ -66,7 +66,9 @@ class EinladungRead(BaseModel):
     abgelaufen: bool
     created_at: datetime
     angenommen_am: datetime | None
-    # Nur gesetzt, wenn kein SMTP konfiguriert ist -- der einladende
-    # Mitarbeiter muss den Link dann manuell weitergeben (siehe
+    # Immer gesetzt fuer offene Einladungen (unabhaengig davon, ob der
+    # Mailversand geklappt hat) -- der einladende Mitarbeiter kann den Link
+    # so zusaetzlich manuell teilen, z.B. falls die Mail im Spam landet.
+    # None nur bei bereits angenommenen/widerrufenen Einladungen (siehe
     # app/services/einladung_service.py).
     registrierungslink: str | None = None
