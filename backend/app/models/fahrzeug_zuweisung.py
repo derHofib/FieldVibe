@@ -4,10 +4,10 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 
-class FahrzeugZuweisung(TimestampMixin, Base):
+class FahrzeugZuweisung(SoftDeleteMixin, TimestampMixin, Base):
     """Weist einem Techniker sein aktuelles Fahrzeug zu (eine Anlage mit
     objekttyp="fahrzeug") -- pro Techniker hoechstens eine gleichzeitig,
     ein Fahrzeug kann aber mehreren Technikern zugewiesen sein (Schicht-
@@ -22,8 +22,12 @@ class FahrzeugZuweisung(TimestampMixin, Base):
     mandant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
+    # Eindeutigkeit gilt nur unter den aktiven Zuweisungen (partial unique
+    # index "uq_fahrzeug_zuweisungen_user_aktiv", siehe Migration 0032) --
+    # eine weich geloeschte Zuweisung darf eine Neuanlage fuer denselben
+    # Techniker nicht blockieren.
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     anlage_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=False

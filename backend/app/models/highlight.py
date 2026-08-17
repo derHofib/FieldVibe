@@ -21,7 +21,7 @@ class Highlight(Base):
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
     vorgang_event_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("vorgang_events.id"), nullable=False
+        BigInteger, ForeignKey("vorgang_events.id", ondelete="CASCADE"), nullable=False
     )
     titel: Mapped[str | None] = mapped_column(Text)
     erstellt_von: Mapped[uuid.UUID] = mapped_column(

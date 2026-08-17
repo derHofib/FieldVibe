@@ -23,6 +23,19 @@ if [[ ! -f "$FILE" ]]; then
   exit 1
 fi
 
+TMP_DECRYPTED=""
+cleanup() {
+  [[ -n "$TMP_DECRYPTED" ]] && rm -f "$TMP_DECRYPTED"
+}
+trap cleanup EXIT
+
+if [[ "$FILE" == *.gpg ]]; then
+  echo "Entschluessele $FILE -- braucht den privaten GPG-Schluessel im Schluesselbund dieses Nutzers."
+  TMP_DECRYPTED="$(mktemp)"
+  gpg --batch --yes --decrypt --output "$TMP_DECRYPTED" "$FILE"
+  FILE="$TMP_DECRYPTED"
+fi
+
 case "$MODE" in
   db)
     echo "Stellt Datenbank '$POSTGRES_DB' aus $FILE wieder her -- überschreibt den aktuellen Inhalt."

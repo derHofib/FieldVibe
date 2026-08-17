@@ -10,7 +10,7 @@ class StoryItem(BaseModel):
     titel: str
     subtitel: str | None = None
     ampel: Ampel | None = None
-    ziel_typ: Literal["vorgang", "anlage", "pruefmittel", "material"]
+    ziel_typ: Literal["vorgang", "anlage", "pruefmittel"]
     ziel_id: UUID
 
 
@@ -18,4 +18,3 @@ class StoriesResponse(BaseModel):
     heute: list[StoryItem]
     fristen: list[StoryItem]
     wartet_kunde: list[StoryItem]
-    material: list[StoryItem]

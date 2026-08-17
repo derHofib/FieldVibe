@@ -1,6 +1,6 @@
 import io
 
-from PIL import Image
+from PIL import Image, ImageOps
 from starlette.concurrency import run_in_threadpool
 
 # "Reduzierte Aufloesung" (Abschnitt 6) is generated server-side once on
@@ -13,6 +13,12 @@ THUMBNAIL_QUALITY = 80
 
 def _make_thumbnail_sync(data: bytes) -> bytes:
     image = Image.open(io.BytesIO(data))
+    # Handyfotos speichern Hochkant-Aufnahmen haeufig als physisch
+    # querformatige Pixel mit einem EXIF-Orientation-Tag statt gedrehter
+    # Pixel -- ohne exif_transpose() uebernimmt Pillow die Pixel 1:1 und das
+    # Tag geht beim Neuspeichern verloren, das Thumbnail landet dauerhaft im
+    # falschen Seitenverhaeltnis.
+    image = ImageOps.exif_transpose(image)
     if image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
     image.thumbnail((THUMBNAIL_MAX_DIMENSION, THUMBNAIL_MAX_DIMENSION))

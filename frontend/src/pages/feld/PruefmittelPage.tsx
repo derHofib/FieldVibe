@@ -18,7 +18,7 @@ function faelligkeitsFarbe(datum: string): string {
   const in7Tagen = new Date();
   in7Tagen.setDate(in7Tagen.getDate() + 7);
   if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600 dark:text-amber-400";
-  return "text-slate-500 dark:text-slate-400";
+  return "text-slate-500 dark:text-stone-400";
 }
 
 function formatDatum(datum: string): string {
@@ -33,7 +33,7 @@ interface NeuesForm {
 }
 
 export function PruefmittelPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -66,7 +66,14 @@ export function PruefmittelPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
   });
 
-  if (currentUser && currentUser.role === "techniker") return <Navigate to="/feed" replace />;
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => pruefmittelApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
+  });
+
+  const kannLoeschen = currentUser?.role === "loesch_operativ";
+
+  if (currentUser && !hatRecht("material", "sehen")) return <Navigate to="/feed" replace />;
 
   const sortiert = [...(pruefmittel ?? [])].sort((a, b) =>
     a.naechste_kalibrierung_am.localeCompare(b.naechste_kalibrierung_am),
@@ -84,51 +91,51 @@ export function PruefmittelPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Prüfmittelverwaltung</h1>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Prüfmittelverwaltung</h1>
         <span />
       </div>
 
       <button
         onClick={() => setShowForm((v) => !v)}
-        className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
+        className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
         {showForm ? "Abbrechen" : "+ Neues Prüfmittel"}
       </button>
 
       {showForm && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Bezeichnung
             </label>
             <input
               value={form.bezeichnung}
               onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               placeholder="z.B. Installationstester Gossen Metrahit"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Seriennummer
             </label>
             <input
               value={form.seriennummer}
               onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Zugewiesen an
             </label>
             <select
               value={form.zugewiesenAn}
               onChange={(e) => setForm({ ...form, zugewiesenAn: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Niemand</option>
               {zuweisbareNutzer.map((t) => (
@@ -139,7 +146,7 @@ export function PruefmittelPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
               Kalibrierintervall (Monate)
             </label>
             <input
@@ -147,7 +154,7 @@ export function PruefmittelPage() {
               min={1}
               value={form.intervallMonate}
               onChange={(e) => setForm({ ...form, intervallMonate: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <button
@@ -160,7 +167,7 @@ export function PruefmittelPage() {
                 kalibrierintervall_monate: Number(form.intervallMonate),
               })
             }
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -169,26 +176,26 @@ export function PruefmittelPage() {
 
       <div className="space-y-2">
         {sortiert.length === 0 ? (
-          <p className="text-center text-sm text-slate-400 dark:text-slate-500">Keine Prüfmittel erfasst.</p>
+          <p className="text-center text-sm text-slate-400 dark:text-stone-500">Keine Prüfmittel erfasst.</p>
         ) : (
           sortiert.map((mittel) => (
             <div
               key={mittel.id}
-              className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
                     {mittel.bezeichnung}
                   </div>
                   {mittel.seriennummer && (
-                    <div className="text-xs text-slate-400 dark:text-slate-500">SN {mittel.seriennummer}</div>
+                    <div className="text-xs text-slate-400 dark:text-stone-500">SN {mittel.seriennummer}</div>
                   )}
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                  <div className="text-xs text-slate-500 dark:text-stone-400">
                     Zugewiesen: {nameFuer(mittel.zugewiesen_an)}
                   </div>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                   {STATUS_LABEL[mittel.status]}
                 </span>
               </div>
@@ -199,11 +206,24 @@ export function PruefmittelPage() {
                 <button
                   onClick={() => markiereKalibriert(mittel)}
                   disabled={updateMutation.isPending}
-                  className="btn-touch rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+                  className="btn-touch rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
                 >
                   Kalibrierung erfolgt (heute)
                 </button>
               </div>
+              {kannLoeschen && (
+                <button
+                  onClick={() => {
+                    if (window.confirm(`Prüfmittel "${mittel.bezeichnung}" wirklich löschen?`)) {
+                      deleteMutation.mutate(mittel.id);
+                    }
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                >
+                  Löschen
+                </button>
+              )}
             </div>
           ))
         )}

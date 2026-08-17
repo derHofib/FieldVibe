@@ -48,6 +48,45 @@ async def test_create_angebot_with_positionen(
 
 
 @pytest.mark.asyncio
+async def test_artikelnummer_bei_anlage_und_nachtraeglichem_hinzufuegen(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/angebote",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "positionen": [
+                {
+                    "artikelnummer": "B-3025-078",
+                    "beschreibung": "Kabel NYM 3x1.5",
+                    "menge": "10",
+                    "einheit": "m",
+                    "einzelpreis": "2.50",
+                },
+            ],
+        },
+    )
+    assert resp.status_code == 201
+    angebot_id = resp.json()["id"]
+    assert resp.json()["positionen"][0]["artikelnummer"] == "B-3025-078"
+
+    ohne_artikelnummer = await client.post(
+        f"/api/angebote/{angebot_id}/positionen",
+        headers=auth_headers(token),
+        json={"beschreibung": "Handwerkerleistung", "einzelpreis": "50.00"},
+    )
+    assert ohne_artikelnummer.status_code == 200
+    positionen = ohne_artikelnummer.json()["positionen"]
+    assert positionen[1]["artikelnummer"] is None
+
+
+@pytest.mark.asyncio
 async def test_techniker_cannot_create_angebot(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")

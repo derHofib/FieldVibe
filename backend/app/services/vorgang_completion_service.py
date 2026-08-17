@@ -7,10 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.mangel import Mangel
+from app.models.material_bedarf import MaterialBedarf
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.vorgang import Vorgang
+from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
-from app.services.date_utils import add_months
+from app.services.date_utils import add_intervall
+from app.services.numbering_service import next_vorgangsnummer
 
 # Ab hier gilt ein Vorgang als final -- weder ueber PATCH /vorgaenge/{id} noch
 # ueber neue Events (Kommentar/Foto/Unterschrift) veraenderbar. "abgerechnet"
@@ -28,7 +31,16 @@ async def close_vorgang(
     markieren). Gemeinsam genutzt von PATCH /vorgaenge/{id} (status=abgeschlossen),
     dem Unterschrift-Upload (schliesst automatisch ab) und dem Partnerportal
     (author_user_id=None -- ein Partner hat keinen User-Account, siehe
-    app/api/routes/partner_portal.py)."""
+    app/api/routes/partner_portal.py).
+
+    Erzeugt bewusst KEINEN Folge-Vorgang mehr -- das war frueher hier
+    ueber einen folge_leistungstyp-Parameter an genau diesen Moment
+    (Abschluss) und genau leistungstyp="beratung" gebunden. Das war zu
+    eng: ein Folge-Auftrag soll aus JEDEM Vorgang in JEDEM Status heraus
+    moeglich sein (z.B. waehrend einer laufenden Wartung, wenn ein Defekt
+    auffaellt, oder Wochen nach einer laengst abgerechneten Beratung, wenn
+    der Kunde sich endlich entscheidet). Siehe create_folge_vorgang()
+    unten und POST /vorgaenge/{id}/folge-auftrag."""
     vorgang.status = "abgeschlossen"
     if vorgang.abgeschlossen_am is None:
         vorgang.abgeschlossen_am = datetime.now(timezone.utc)
@@ -54,9 +66,9 @@ async def close_vorgang(
         )
     ).scalar_one_or_none()
     if zyklus is not None:
-        zyklus.letzte_pruefung_am = vorgang.abgeschlossen_am.date()
-        zyklus.naechste_pruefung_am = add_months(
-            zyklus.letzte_pruefung_am, zyklus.intervall_monate
+        zyklus.letzte_pruefung_am = vorgang.abgeschlossen_am
+        zyklus.naechste_pruefung_am = add_intervall(
+            zyklus.letzte_pruefung_am, zyklus.intervall_einheit, zyklus.intervall_wert
         )
         zyklus.offener_vorgang_id = None
 
@@ -141,3 +153,105 @@ async def close_vorgang(
     for mangel in offene_maengel:
         mangel.status = "behoben"
         mangel.behoben_am = vorgang.abgeschlossen_am
+
+
+async def create_folge_vorgang(
+    session: AsyncSession,
+    quelle: Vorgang,
+    *,
+    leistungstyp: str,
+    author_user_id: UUID,
+) -> Vorgang:
+    """Legt aus `quelle` einen Folge-Vorgang mit beliebigem `leistungstyp`
+    an -- unabhaengig vom aktuellen Status der Quelle (offen, wartet_kunde,
+    abgeschlossen, sogar abgerechnet/storniert sind alle erlaubt, siehe
+    POST /vorgaenge/{id}/folge-auftrag). Uebernimmt Kunde/Anlage(n)/
+    Standort/Vertrag sowie die offenen Angebots-Materialbedarfe (die an
+    der Quelle zur Dokumentation stehen bleiben, aber auf Status
+    "uebertragen" wechseln, damit sie nicht doppelt als offen gelten).
+
+    Die Quelle selbst bleibt inhaltlich unberuehrt -- es wird lediglich
+    auf beiden Seiten ein System-Kommentar mit Querverweis angelegt, damit
+    die Kette in beide Richtungen nachvollziehbar bleibt. Das ist bewusst
+    ein reiner Querverweis und kein Nutzer-Content, deshalb darf er auch
+    auf einer laengst abgerechneten (und damit sonst unveraenderbaren,
+    siehe VORGANG_STATUS_GESCHLOSSEN) Quelle noch angelegt werden."""
+    vorgangsnummer = await next_vorgangsnummer(session, quelle.mandant_id)
+    folge_vorgang = Vorgang(
+        mandant_id=quelle.mandant_id,
+        vorgangsnummer=vorgangsnummer,
+        kunde_id=quelle.kunde_id,
+        anlage_id=quelle.anlage_id,
+        standort_id=quelle.standort_id,
+        vertrag_id=quelle.vertrag_id,
+        parent_vorgang_id=quelle.id,
+        titel=quelle.titel,
+        beschreibung=quelle.beschreibung,
+        abrechnungsart=quelle.abrechnungsart,
+        leistungstyp=leistungstyp,
+        prioritaet=quelle.prioritaet,
+        erstellt_von=author_user_id,
+    )
+    session.add(folge_vorgang)
+    await session.flush()
+
+    weitere_anlagen = (
+        await session.execute(
+            select(VorgangAnlage.anlage_id).where(VorgangAnlage.vorgang_id == quelle.id)
+        )
+    ).scalars().all()
+    for anlage_id in weitere_anlagen:
+        session.add(
+            VorgangAnlage(
+                vorgang_id=folge_vorgang.id, anlage_id=anlage_id, mandant_id=quelle.mandant_id
+            )
+        )
+
+    offene_angebots_bedarfe = (
+        await session.execute(
+            select(MaterialBedarf).where(
+                MaterialBedarf.vorgang_id == quelle.id,
+                MaterialBedarf.zweck == "angebot",
+                MaterialBedarf.status == "offen",
+            )
+        )
+    ).scalars().all()
+    for bedarf in offene_angebots_bedarfe:
+        session.add(
+            MaterialBedarf(
+                mandant_id=quelle.mandant_id,
+                material_id=bedarf.material_id,
+                vorgang_id=folge_vorgang.id,
+                menge=bedarf.menge,
+                notiz=bedarf.notiz,
+                zweck=bedarf.zweck,
+                erstellt_von=author_user_id,
+                uebernommen_von_id=bedarf.id,
+            )
+        )
+        bedarf.status = "uebertragen"
+
+    session.add(
+        VorgangEvent(
+            mandant_id=quelle.mandant_id,
+            vorgang_id=quelle.id,
+            event_type="system",
+            is_system=True,
+            author_user_id=author_user_id,
+            body=f"Folge-Vorgang {vorgangsnummer} ({leistungstyp}) angelegt.",
+            payload={"folge_vorgang_id": str(folge_vorgang.id)},
+        )
+    )
+    session.add(
+        VorgangEvent(
+            mandant_id=quelle.mandant_id,
+            vorgang_id=folge_vorgang.id,
+            event_type="system",
+            is_system=True,
+            author_user_id=author_user_id,
+            body=f"Angelegt als Folge-Vorgang von {quelle.vorgangsnummer}.",
+            payload={"quelle_vorgang_id": str(quelle.id)},
+        )
+    )
+
+    return folge_vorgang

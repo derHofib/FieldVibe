@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
@@ -55,7 +56,7 @@ interface NeuerTerminForm {
 }
 
 export function DispoBoardPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -68,7 +69,12 @@ export function DispoBoardPage() {
   const weekEnd = addDays(weekStart, 7);
 
   const { data: technikerListe } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
-  const technikers = (technikerListe ?? []).filter((u) => u.role === "techniker" && u.aktiv);
+  // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
+  // aktive mandant_admin/custom-Account kann als Techniker fuer einen
+  // Termin eingeplant werden, seit die vier festen Rollen entfallen sind.
+  const technikers = (technikerListe ?? []).filter(
+    (u) => u.aktiv && (u.role === "mandant_admin" || u.role === "custom"),
+  );
 
   const { data: offeneVorgaenge } = useQuery({
     queryKey: ["vorgaenge", "offen"],
@@ -103,7 +109,7 @@ export function DispoBoardPage() {
     },
   });
 
-  if (currentUser && currentUser.role === "techniker") return <Navigate to="/feed" replace />;
+  if (currentUser && !hatRecht("dispo", "sehen")) return <Navigate to="/feed" replace />;
 
   const terminenNachTechnikerUndTag = new Map<string, Map<string, Termin[]>>();
   for (const t of termine ?? []) {
@@ -140,10 +146,10 @@ export function DispoBoardPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">Dispo-Board</h1>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Dispo-Board</h1>
         {istModulAktiv(currentUser, "pruefzyklen") ? (
           <button
             onClick={() => navigate("/pruefmittel")}
@@ -156,19 +162,19 @@ export function DispoBoardPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
         >
           ← Vorherige Woche
         </button>
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
           {formatDayLabel(weekStart)} – {formatDayLabel(addDays(weekStart, 6))}
         </span>
         <button
           onClick={() => setWeekOffset((w) => w + 1)}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-slate-800 dark:text-slate-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
         >
           Nächste Woche →
         </button>
@@ -177,7 +183,9 @@ export function DispoBoardPage() {
       {warnungen.length > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
           {warnungen.map((w, i) => (
-            <p key={i}>⚠️ {w.meldung}</p>
+            <p key={i} className="flex items-center gap-1">
+              <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
+            </p>
           ))}
           <button onClick={() => setWarnungen([])} className="mt-1 text-xs underline">
             Ausblenden
@@ -200,19 +208,19 @@ export function DispoBoardPage() {
             ende: toLocalInputValue(ende),
           });
         }}
-        className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
+        className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
       >
         + Neuer Termin
       </button>
 
       {showForm && form && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Vorgang</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Vorgang</label>
             <select
               value={form.vorgangId}
               onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               <option value="">Bitte wählen…</option>
               {wahlbareVorgaenge.map((v) => (
@@ -223,11 +231,11 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Techniker</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
             <select
               value={form.technikerId}
               onChange={(e) => setForm({ ...form, technikerId: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               {technikers.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -237,31 +245,31 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Titel</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
             <input
               value={form.titel}
               onChange={(e) => setForm({ ...form, titel: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               placeholder="z.B. E-Check Hauptverteilung"
             />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Start</label>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
               <input
                 type="datetime-local"
                 value={form.start}
                 onChange={(e) => setForm({ ...form, start: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Ende</label>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
               <input
                 type="datetime-local"
                 value={form.ende}
                 onChange={(e) => setForm({ ...form, ende: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
           </div>
@@ -271,7 +279,7 @@ export function DispoBoardPage() {
                 setShowForm(false);
                 setForm(null);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-slate-800 dark:text-slate-300"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
             >
               Abbrechen
             </button>
@@ -286,7 +294,7 @@ export function DispoBoardPage() {
                   ende_at: new Date(form.ende).toISOString(),
                 })
               }
-              className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -294,17 +302,17 @@ export function DispoBoardPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg bg-white shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="overflow-x-auto rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-slate-800">
-              <th className="w-40 p-2 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <tr className="border-b border-slate-200 dark:border-stone-800">
+              <th className="w-40 p-2 text-left text-xs font-semibold text-slate-500 dark:text-stone-400">
                 Techniker
               </th>
               {days.map((day, i) => (
                 <th
                   key={i}
-                  className="w-32 p-2 text-left text-xs font-semibold text-slate-500 dark:text-slate-400"
+                  className="w-32 p-2 text-left text-xs font-semibold text-slate-500 dark:text-stone-400"
                 >
                   {WOCHENTAGE[i]} {formatDayLabel(day)}
                 </th>
@@ -313,8 +321,8 @@ export function DispoBoardPage() {
           </thead>
           <tbody>
             {technikers.map((tech) => (
-              <tr key={tech.id} className="border-b border-slate-100 dark:border-slate-800">
-                <td className="p-2 align-top text-sm font-medium text-slate-700 dark:text-slate-300">
+              <tr key={tech.id} className="border-b border-slate-100 dark:border-stone-800">
+                <td className="p-2 align-top text-sm font-medium text-slate-700 dark:text-stone-300">
                   {tech.name}
                 </td>
                 {days.map((day, i) => {
@@ -337,9 +345,9 @@ export function DispoBoardPage() {
                           onDragStart={(e) => e.dataTransfer.setData("text/plain", t.id)}
                           onClick={() => navigate(`/vorgaenge/${t.vorgang_id}`)}
                           title={t.titel}
-                          className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-sm ${
+                          className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-xs ${
                             t.status === "abgesagt"
-                              ? "bg-slate-100 text-slate-400 line-through dark:bg-slate-800 dark:text-slate-500"
+                              ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
                               : "bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300"
                           }`}
                         >

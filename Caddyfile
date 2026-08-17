@@ -8,6 +8,16 @@
 	reverse_proxy frontend:4173
 }
 
+# Desktop-/Buero-Oberflaeche. Bewusst derselbe Container und derselbe Build wie
+# DOMAIN_APP -- welche Shell gerendert wird, entscheidet das Frontend zur
+# Laufzeit am Hostname (siehe frontend/src/office/hostname.ts). Ein zweiter
+# Build-Entry haette eine Host-abhaengige SPA-Fallback-Regel gebraucht, die
+# `serve -s dist` nicht kann (es schreibt jeden unbekannten Pfad auf
+# index.html um, ohne den Host anzusehen).
+{$DOMAIN_OFFICE} {
+	reverse_proxy frontend:4173
+}
+
 # Backend-API. Eigene Subdomain statt Pfad-Praefix, damit CORS_ORIGINS im
 # Backend einfach bleibt (ein Origin pro Domain) und Anfragen 1:1 an
 # uvicorn durchgereicht werden koennen.

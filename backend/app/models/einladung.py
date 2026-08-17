@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, TimestampMixin
 
 EINLADUNG_ARTEN = ("mitarbeiter", "kunde", "partner")
-EINLADUNG_ROLLEN = ("mandant_admin", "disponent", "techniker")
+EINLADUNG_ROLLEN = ("mandant_admin", "custom")
 EINLADUNG_STATUS = ("offen", "angenommen", "widerrufen")
 
 
@@ -38,6 +38,9 @@ class Einladung(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(Text, nullable=False)
     art: Mapped[str] = mapped_column(Text, nullable=False)
     rolle: Mapped[str | None] = mapped_column(Text, nullable=True)
+    account_typ_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("account_typen.id"), nullable=True
+    )
     kunde_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("kunden.id", ondelete="CASCADE"), nullable=True
     )

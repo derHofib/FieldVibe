@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star, UserCheck } from "lucide-react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -9,29 +10,59 @@ import {
   fahrzeugZuweisungenApi,
   highlightsApi,
   kundenApi,
+  lieferantenApi,
   maengelApi,
+  mandantEinstellungenApi,
   materialApi,
+  materialBedarfeApi,
+  standorteApi,
   termineApi,
   usersApi,
   vorgangEventsApi,
   vorgaengeApi,
   zeiterfassungApi,
 } from "../../api/endpoints";
+import { EmailSection } from "../../components/EmailSection";
+import { FormularAbschnitt } from "../../components/FormularAbschnitt";
 import { MentionText } from "../../components/MentionText";
+import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
-import { getOutboxItems, queueFoto, queueKommentar } from "../../offline/outbox";
+import { discardOutboxItem, getOutboxItems, queueFoto, queueKommentar, queueStatusChange } from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
-import type { MangelSchweregrad, MangelStatus, TerminWarnung, VorgangEvent, VorgangStatus } from "../../types";
+import type {
+  Adresse,
+  Leistungstyp,
+  MangelSchweregrad,
+  MangelStatus,
+  MaterialBedarfZweck,
+  TerminWarnung,
+  VorgangEvent,
+  VorgangStatus,
+} from "../../types";
+
+// Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
+// sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
+// (und den PWA-Precache-Limit von 2 MiB sprengen).
+const MapboxMap = lazy(() => import("../../components/MapboxMap").then((m) => ({ default: m.MapboxMap })));
 
 const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
   { value: "niedrig", label: "Niedrig" },
   { value: "mittel", label: "Mittel" },
   { value: "hoch", label: "Hoch" },
   { value: "kritisch", label: "Kritisch" },
+];
+
+const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
+  { value: "stoerung", label: "Störung" },
+  { value: "installation", label: "Installation" },
+  { value: "wartung", label: "Wartung" },
+  { value: "pruefung", label: "Prüfung" },
+  { value: "beratung", label: "Beratung" },
+  { value: "planung", label: "Planung" },
 ];
 
 const STATUS_OPTIONS: VorgangStatus[] = [
@@ -54,6 +85,13 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
   storniert: "Storniert",
 };
 
+// Spiegelt app/services/vorgang_completion_service.py:VORGANG_STATUS_GESCHLOSSEN
+// -- "Ticket übernehmen" ergibt fuer bereits geschlossene Vorgaenge keinen
+// Sinn mehr (das Backend lehnt es dort ohnehin mit 409 ab).
+const VORGANG_STATUS_GESCHLOSSEN: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
+
+const PRIORITAET_OPTIONEN = [1, 2, 3, 4, 5];
+
 const EVENT_LABEL: Partial<Record<string, string>> = {
   status_change: "Status geändert",
   foto: "Foto hinzugefügt",
@@ -67,6 +105,8 @@ const EVENT_LABEL: Partial<Record<string, string>> = {
   rechnung_status: "Rechnungsstatus aktualisiert",
   unterschrift: "Unterschrift erfasst",
 };
+
+const NEU_MATERIAL = "__neu__";
 
 function EventBubble({
   event,
@@ -88,8 +128,8 @@ function EventBubble({
   }
 
   return (
-    <div className="mb-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-      <div className="mb-1 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+    <div className="mb-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="mb-1 flex items-center justify-between text-xs text-slate-400 dark:text-stone-500">
         <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
         {event.kundensichtbar && (
           <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
@@ -108,9 +148,9 @@ function EventBubble({
           </a>
           <button
             onClick={() => onHighlight(event.id)}
-            className="btn-touch mb-2 text-xs font-medium text-amber-600 dark:text-amber-400"
+            className="btn-touch mb-2 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400"
           >
-            ⭐ Als Highlight markieren
+            <Star size={13} strokeWidth={2} /> Als Highlight markieren
           </button>
         </>
       )}
@@ -122,14 +162,14 @@ function EventBubble({
             className="max-h-32 rounded-md border border-slate-200 bg-white"
           />
           {typeof event.payload.unterzeichner_name === "string" && (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
               Unterschrieben von: {event.payload.unterzeichner_name}
             </p>
           )}
         </div>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-slate-100">
+        <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-stone-100">
           <MentionText text={event.body} />
         </p>
       )}
@@ -137,17 +177,43 @@ function EventBubble({
   );
 }
 
-function OutboxBubble({ item }: { item: OutboxItem }) {
+function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clientUuid: string) => void }) {
   return (
-    <div className="mb-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60">
-      <div className="mb-1 flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
-        <span>🕘</span>
-        <span>Nicht synchronisiert</span>
+    <div
+      className={`mb-3 rounded-lg border border-dashed p-3 ${
+        item.failed
+          ? "border-red-300 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
+          : "border-slate-300 bg-slate-50 dark:border-stone-700 dark:bg-stone-800/60"
+      }`}
+    >
+      <div className="mb-1 flex items-center justify-between gap-1 text-xs">
+        {item.failed ? (
+          <span className="flex items-center gap-1 text-red-500 dark:text-red-400">
+            <AlertTriangle size={13} strokeWidth={2} /> Vom Server abgelehnt{item.errorMessage ? `: ${item.errorMessage}` : ""}
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-slate-400 dark:text-stone-500">
+            <Clock size={13} strokeWidth={2} />
+            <span>Nicht synchronisiert</span>
+          </span>
+        )}
+        {item.failed && (
+          <button
+            onClick={() => onDiscard(item.client_uuid)}
+            className="btn-touch text-red-500 underline dark:text-red-400"
+          >
+            Verwerfen
+          </button>
+        )}
       </div>
       {item.kind === "foto" ? (
-        <p className="text-sm text-slate-600 dark:text-slate-300">📷 Foto wartet auf Synchronisierung</p>
+        <p className="flex items-center gap-1 text-sm text-slate-600 dark:text-stone-300">
+          <Camera size={14} strokeWidth={2} /> Foto wartet auf Synchronisierung
+        </p>
+      ) : item.kind === "status" ? (
+        <p className="text-sm text-slate-600 dark:text-stone-300">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
-        <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">{item.body}</p>
+        <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-stone-300">{item.body}</p>
       )}
     </div>
   );
@@ -158,11 +224,25 @@ function toLocalInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function VorgangDetailPage() {
-  const { id } = useParams<{ id: string }>();
+function leereAdresse(adresse: Adresse | null | undefined): { strasse: string; plz: string; ort: string } {
+  return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
+}
+
+function adresseAlsZeile(adresse: Adresse | null | undefined): string {
+  return [adresse?.strasse, [adresse?.plz, adresse?.ort].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+}
+
+// id optional als Prop, damit die Office-Oberflaeche diese Seite in ihrem
+// Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
+// pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
+export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
+  const { id: idParam } = useParams<{ id: string }>();
+  const id = idProp ?? idParam;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [comment, setComment] = useState("");
@@ -184,13 +264,30 @@ export function VorgangDetailPage() {
   const [materialId, setMaterialId] = useState("");
   const [materialMenge, setMaterialMenge] = useState("");
   const [materialLagerId, setMaterialLagerId] = useState("");
+  const [showBedarfForm, setShowBedarfForm] = useState(false);
+  const [bedarfMaterialId, setBedarfMaterialId] = useState("");
+  const [bedarfMenge, setBedarfMenge] = useState("");
+  const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
+  const [bedarfNotiz, setBedarfNotiz] = useState("");
+  const [bedarfNeuBezeichnung, setBedarfNeuBezeichnung] = useState("");
+  const [bedarfNeuEinheit, setBedarfNeuEinheit] = useState("Stk");
+  const [bedarfNeuEinzelpreis, setBedarfNeuEinzelpreis] = useState("");
+  const [bedarfNeuLieferantId, setBedarfNeuLieferantId] = useState("");
   const [editingZuordnung, setEditingZuordnung] = useState(false);
   const [editKundeId, setEditKundeId] = useState("");
   const [editAnlageId, setEditAnlageId] = useState("");
   const [zuordnungError, setZuordnungError] = useState<string | null>(null);
+  const [editingAdresse, setEditingAdresse] = useState(false);
+  const [adresseForm, setAdresseForm] = useState(() => leereAdresse(null));
+  const [adresseError, setAdresseError] = useState<string | null>(null);
+  const [showWartetKundeDialog, setShowWartetKundeDialog] = useState(false);
+  const [wiedervorlageTage, setWiedervorlageTage] = useState("");
+  const [showFolgeAuftragDialog, setShowFolgeAuftragDialog] = useState(false);
+  const [folgeAuftragLeistungstyp, setFolgeAuftragLeistungstyp] = useState<Leistungstyp>("stoerung");
+  const [folgeVorgangId, setFolgeVorgangId] = useState<string | null>(null);
 
-  const kannDisponieren =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "disponent";
+  const kannDisponieren = hatRecht("vorgaenge", "bearbeiten");
+  const kannLoeschen = hatRecht("vorgaenge", "loeschen");
 
   const { data: vorgang } = useQuery({
     queryKey: ["vorgang", id],
@@ -219,6 +316,54 @@ export function VorgangDetailPage() {
     queryFn: () => anlagenApi.get(vorgang!.anlage_id!),
     enabled: !!vorgang?.anlage_id,
   });
+  const { data: standort } = useQuery({
+    queryKey: ["standort", vorgang?.standort_id],
+    queryFn: () => standorteApi.get(vorgang!.standort_id!),
+    enabled: !!vorgang?.standort_id,
+  });
+  const { data: parentVorgang } = useQuery({
+    queryKey: ["vorgang", vorgang?.parent_vorgang_id],
+    queryFn: () => vorgaengeApi.get(vorgang!.parent_vorgang_id!),
+    enabled: !!vorgang?.parent_vorgang_id,
+  });
+  const { data: folgeAuftraege } = useQuery({
+    queryKey: ["vorgaenge", "folge", id],
+    queryFn: () => vorgaengeApi.list({ parent_vorgang_id: id! }),
+    enabled: !!id,
+  });
+  const { data: mandantEinstellungen } = useQuery({
+    queryKey: ["mandant-einstellungen"],
+    queryFn: mandantEinstellungenApi.get,
+    enabled: showWartetKundeDialog,
+  });
+  const { data: weitereAnlagen } = useQuery({
+    queryKey: ["vorgang-anlagen", id],
+    queryFn: () => vorgaengeApi.anlagen(id!),
+    enabled: !!id,
+  });
+  const [showAnlageHinzufuegen, setShowAnlageHinzufuegen] = useState(false);
+  const [neueAnlageId, setNeueAnlageId] = useState("");
+  const { data: anlagenFuerVorgangKunde } = useQuery({
+    queryKey: ["anlagen", vorgang?.kunde_id],
+    queryFn: () => anlagenApi.list(vorgang!.kunde_id, undefined, true),
+    enabled: showAnlageHinzufuegen && !!vorgang?.kunde_id,
+  });
+  const bereitsZugeordneteAnlageIds = new Set([
+    ...(weitereAnlagen ?? []).map((a) => a.id),
+    ...(vorgang?.anlage_id ? [vorgang.anlage_id] : []),
+  ]);
+  const anlageHinzufuegenMutation = useMutation({
+    mutationFn: (anlageId: string) => vorgaengeApi.anlagenHinzufuegen(id!, [anlageId]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] });
+      setShowAnlageHinzufuegen(false);
+      setNeueAnlageId("");
+    },
+  });
+  const anlageEntfernenMutation = useMutation({
+    mutationFn: (anlageId: string) => vorgaengeApi.anlageEntfernen(id!, anlageId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] }),
+  });
   const { data: alleKunden } = useQuery({
     queryKey: ["kunden"],
     queryFn: () => kundenApi.list(),
@@ -240,6 +385,25 @@ export function VorgangDetailPage() {
       setZuordnungError(null);
     },
     onError: (err) => setZuordnungError(err instanceof ApiError ? err.message : "Fehler"),
+  });
+  const adresseMutation = useMutation({
+    mutationFn: () =>
+      vorgaengeApi.update(id!, {
+        adresse:
+          adresseForm.strasse || adresseForm.plz || adresseForm.ort
+            ? {
+                strasse: adresseForm.strasse || undefined,
+                plz: adresseForm.plz || undefined,
+                ort: adresseForm.ort || undefined,
+              }
+            : null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
+      setEditingAdresse(false);
+      setAdresseError(null);
+    },
+    onError: (err) => setAdresseError(err instanceof ApiError ? err.message : "Fehler"),
   });
   const { data: events } = useQuery({
     queryKey: ["vorgang-events", id],
@@ -319,8 +483,25 @@ export function VorgangDetailPage() {
     },
   });
 
+  const deleteMangelMutation = useMutation({
+    mutationFn: (mangelId: string) => maengelApi.remove(mangelId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] }),
+  });
+
+  const deleteTerminMutation = useMutation({
+    mutationFn: (terminId: string) => termineApi.remove(terminId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] }),
+  });
+
+  const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
+
   const angebotAusMaengelnMutation = useMutation({
     mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
+    onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+  });
+
+  const angebotAusVorgangMutation = useMutation({
+    mutationFn: () => angeboteApi.createFromVorgang(id!),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
   });
 
@@ -348,7 +529,7 @@ export function VorgangDetailPage() {
   const { data: meinFahrzeug } = useQuery({
     queryKey: ["fahrzeug-mir"],
     queryFn: fahrzeugZuweisungenApi.mir,
-    enabled: showMaterialForm && currentUser?.role === "techniker",
+    enabled: showMaterialForm && !!currentUser?.nur_zugewiesene_kunden,
   });
 
   const materialVerwendenMutation = useMutation({
@@ -364,12 +545,122 @@ export function VorgangDetailPage() {
     },
   });
 
+  useEffect(() => {
+    if (showBedarfForm && vorgang) {
+      setBedarfZweck(vorgang.leistungstyp === "planung" || vorgang.leistungstyp === "beratung" ? "angebot" : "bestellung");
+    }
+  }, [showBedarfForm, vorgang]);
+
+  const { data: materialBedarfe } = useQuery({
+    queryKey: ["material-bedarfe", "vorgang", id],
+    queryFn: () => materialBedarfeApi.list({ vorgang_id: id! }),
+    enabled: !!id,
+  });
+  const { data: lieferantenFuerNeuesMaterial } = useQuery({
+    queryKey: ["lieferanten"],
+    queryFn: () => lieferantenApi.list(),
+    enabled: showBedarfForm && bedarfMaterialId === NEU_MATERIAL,
+  });
+
+  const materialBedarfMutation = useMutation({
+    mutationFn: async () => {
+      // Wenn das Material noch nicht im Katalog existiert (haeufiger Fall
+      // bei einer Erstbestellung), wird es hier mit Bestand 0 angelegt --
+      // der Bedarf haengt sich danach an den neuen Katalogeintrag, statt
+      // eine eigene Freitext-Ablage zu brauchen.
+      const materialId =
+        bedarfMaterialId === NEU_MATERIAL
+          ? (
+              await materialApi.create({
+                bezeichnung: bedarfNeuBezeichnung,
+                einheit: bedarfNeuEinheit,
+                einzelpreis: bedarfNeuEinzelpreis || undefined,
+                lieferant_id: bedarfNeuLieferantId || undefined,
+              })
+            ).id
+          : bedarfMaterialId;
+      return materialBedarfeApi.create({
+        material_id: materialId,
+        vorgang_id: id!,
+        menge: bedarfMenge,
+        zweck: bedarfZweck,
+        notiz: bedarfNotiz || undefined,
+      });
+    },
+    onSuccess: () => {
+      setShowBedarfForm(false);
+      setBedarfMaterialId("");
+      setBedarfMenge("");
+      setBedarfNotiz("");
+      setBedarfNeuBezeichnung("");
+      setBedarfNeuEinheit("Stk");
+      setBedarfNeuEinzelpreis("");
+      setBedarfNeuLieferantId("");
+      queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["material"] });
+    },
+  });
+
+  const bedarfEntfernenMutation = useMutation({
+    mutationFn: (bedarfId: string) => materialBedarfeApi.remove(bedarfId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
+  });
+
+  const deleteVorgangMutation = useMutation({
+    mutationFn: () => vorgaengeApi.remove(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["feed"] });
+      navigate("/feed");
+    },
+  });
+
   const statusMutation = useMutation({
-    mutationFn: (status: VorgangStatus) => vorgaengeApi.update(id!, { status }),
+    mutationFn: async ({
+      status,
+      wiedervorlageTage,
+    }: {
+      status: VorgangStatus;
+      wiedervorlageTage?: number;
+    }) => {
+      try {
+        return await vorgaengeApi.update(id!, {
+          status,
+          ...(wiedervorlageTage ? { wiedervorlage_tage: wiedervorlageTage } : {}),
+        });
+      } catch (err) {
+        if (err instanceof ApiError) throw err; // echte Ablehnung, nicht queuen
+        await queueStatusChange(id!, status); // Netzwerkfehler -> offline
+        return null;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+    },
+  });
+
+  const folgeAuftragMutation = useMutation({
+    mutationFn: (leistungstyp: Leistungstyp) => vorgaengeApi.folgeAuftrag(id!, leistungstyp),
+    onSuccess: (result) => {
+      setFolgeVorgangId(result.id);
+      queryClient.invalidateQueries({ queryKey: ["vorgaenge", "folge", id] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+  });
+
+  const uebernehmenMutation = useMutation({
+    mutationFn: () => vorgaengeApi.uebernehmen(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+  });
+
+  const prioritaetMutation = useMutation({
+    mutationFn: (prioritaet: number) => vorgaengeApi.update(id!, { prioritaet }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
   });
 
   const commentMutation = useMutation({
@@ -397,11 +688,19 @@ export function VorgangDetailPage() {
 
   const fotoMutation = useMutation({
     mutationFn: async (file: File) => {
+      const clientUuid = crypto.randomUUID();
       try {
-        return await vorgangEventsApi.uploadFoto(id!, file, file.name, kundensichtbar);
+        return await vorgangEventsApi.uploadFoto(
+          id!,
+          file,
+          file.name,
+          kundensichtbar,
+          undefined,
+          clientUuid,
+        );
       } catch (err) {
         if (err instanceof ApiError) throw err;
-        await queueFoto(id!, file, file.name, kundensichtbar);
+        await queueFoto(id!, file, file.name, kundensichtbar, clientUuid);
         return null;
       }
     },
@@ -443,6 +742,22 @@ export function VorgangDetailPage() {
 
   if (!vorgang) return <p className="text-center text-slate-500">Lädt…</p>;
 
+  // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
+  // des zugeordneten Standorts bzw. ersatzweise der Anlage, damit die Karte
+  // auch beim reinen Auswaehlen eines Standorts erscheint.
+  const anzeigeAdresse: Adresse | null = vorgang.adresse ?? standort?.adresse ?? anlage?.adresse ?? null;
+  // Koordinaten nur vertrauen, wenn die angezeigte Adresse tatsaechlich vom
+  // Standort/der Anlage kommt (siehe Kommentar zu anzeigeAdresse) -- ein
+  // manueller Adress-Override am Vorgang selbst hat keine eigenen
+  // geo_lat/geo_lng-Spalten und darf nicht versehentlich die Koordinaten
+  // eines ganz anderen Orts anzeigen.
+  const kartenKoordinaten: { lng: number; lat: number } | null =
+    !vorgang.adresse && standort?.geo_lat != null && standort?.geo_lng != null
+      ? { lng: standort.geo_lng, lat: standort.geo_lat }
+      : !vorgang.adresse && anlage?.geo_lat != null && anlage?.geo_lng != null
+        ? { lng: anlage.geo_lng, lat: anlage.geo_lat }
+        : null;
+
   // Neuestes Ereignis oben, ältestes unten -- der Backend-Endpunkt liefert
   // bereits "ORDER BY id DESC" (siehe app/api/routes/vorgang_events.py),
   // hier also unveraendert uebernehmen statt umzudrehen.
@@ -462,13 +777,36 @@ export function VorgangDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
-        ← Zurück
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+          ← Zurück
+        </button>
+        {kannLoeschen && (
+          <button
+            onClick={() => {
+              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+                deleteVorgangMutation.mutate();
+              }
+            }}
+            disabled={deleteVorgangMutation.isPending}
+            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+          >
+            Vorgang löschen
+          </button>
+        )}
+      </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
-        <div className="text-xs text-slate-400 dark:text-slate-500">{vorgang.vorgangsnummer}</div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">{vorgang.titel}</h1>
+      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="text-xs text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</div>
+        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{vorgang.titel}</h1>
+        {parentVorgang && (
+          <button
+            onClick={() => navigate(`/vorgaenge/${parentVorgang.id}`)}
+            className="mt-0.5 block text-xs text-slate-400 underline-offset-2 hover:underline dark:text-stone-500"
+          >
+            Entstanden aus Vorgang {parentVorgang.vorgangsnummer}
+          </button>
+        )}
 
         <div className="mt-1 flex items-center justify-between">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
@@ -482,7 +820,7 @@ export function VorgangDetailPage() {
             )}
             {anlage && (
               <>
-                <span className="text-slate-300 dark:text-slate-600">·</span>
+                <span className="text-slate-300 dark:text-stone-600">·</span>
                 <button
                   onClick={() => navigate(`/anlagen/${anlage.id}`)}
                   className="text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
@@ -508,16 +846,16 @@ export function VorgangDetailPage() {
         </div>
 
         {editingZuordnung && (
-          <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+          <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Kunde</label>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
               <select
                 value={editKundeId}
                 onChange={(e) => {
                   setEditKundeId(e.target.value);
                   setEditAnlageId("");
                 }}
-                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 {alleKunden?.map((k) => (
                   <option key={k.id} value={k.id}>
@@ -527,13 +865,13 @@ export function VorgangDetailPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
                 Anlage (optional)
               </label>
               <select
                 value={editAnlageId}
                 onChange={(e) => setEditAnlageId(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 <option value="">Keine Anlage</option>
                 {anlagenFuerEditKunde?.map((a) => (
@@ -548,7 +886,7 @@ export function VorgangDetailPage() {
               <button
                 onClick={() => zuordnungMutation.mutate()}
                 disabled={!editKundeId || zuordnungMutation.isPending}
-                className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Speichern
               </button>
@@ -557,7 +895,7 @@ export function VorgangDetailPage() {
                   setEditingZuordnung(false);
                   setZuordnungError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
               >
                 Abbrechen
               </button>
@@ -565,16 +903,192 @@ export function VorgangDetailPage() {
           </div>
         )}
 
+        <div className="mt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Adresse</span>
+            {kannDisponieren && !editingAdresse && (
+              <button
+                onClick={() => {
+                  setAdresseForm(leereAdresse(vorgang.adresse));
+                  setAdresseError(null);
+                  setEditingAdresse(true);
+                }}
+                className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              >
+                Bearbeiten
+              </button>
+            )}
+          </div>
+          {!editingAdresse &&
+            (adresseAlsZeile(anzeigeAdresse) ? (
+              <>
+                <p className="mt-1 text-sm text-slate-700 dark:text-stone-300">
+                  {adresseAlsZeile(anzeigeAdresse)}
+                  {!vorgang.adresse && (standort || anlage) && (
+                    <span className="ml-1 text-xs text-slate-400 dark:text-stone-500">
+                      ({standort ? "Standort" : "Anlage"})
+                    </span>
+                  )}
+                </p>
+                {kartenKoordinaten ? (
+                  <Suspense
+                    fallback={<div className="mt-2 h-40 w-full animate-pulse rounded-lg bg-slate-200 dark:bg-stone-700/60" />}
+                  >
+                    <MapboxMap
+                      lng={kartenKoordinaten.lng}
+                      lat={kartenKoordinaten.lat}
+                      className="mt-2 h-40 w-full rounded-lg"
+                    />
+                  </Suspense>
+                ) : (
+                  <div className="mt-2 flex h-40 w-full items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-400 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-500">
+                    Keine Kartenposition verfügbar
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-1 text-sm text-slate-400 dark:text-stone-500">Keine Adresse hinterlegt.</p>
+            ))}
+          {editingAdresse && (
+            <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+              <input
+                value={adresseForm.strasse}
+                onChange={(e) => setAdresseForm({ ...adresseForm, strasse: e.target.value })}
+                placeholder="Straße + Hausnr."
+                className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  value={adresseForm.plz}
+                  onChange={(e) => setAdresseForm({ ...adresseForm, plz: e.target.value })}
+                  placeholder="PLZ"
+                  className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                />
+                <input
+                  value={adresseForm.ort}
+                  onChange={(e) => setAdresseForm({ ...adresseForm, ort: e.target.value })}
+                  placeholder="Ort"
+                  className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                />
+              </div>
+              {adresseError && <p className="text-xs text-red-700 dark:text-red-400">{adresseError}</p>}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => adresseMutation.mutate()}
+                  disabled={adresseMutation.isPending}
+                  className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  Speichern
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingAdresse(false);
+                    setAdresseError(null);
+                  }}
+                  className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {((weitereAnlagen && weitereAnlagen.length > 0) || kannDisponieren) && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Weitere Anlagen</span>
+              {kannDisponieren && !showAnlageHinzufuegen && (
+                <button
+                  onClick={() => setShowAnlageHinzufuegen(true)}
+                  className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+                >
+                  + Hinzufügen
+                </button>
+              )}
+            </div>
+            {(weitereAnlagen ?? []).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {weitereAnlagen!.map((a) => (
+                  <span
+                    key={a.id}
+                    className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+                  >
+                    <button
+                      onClick={() => navigate(`/anlagen/${a.id}`)}
+                      className="underline-offset-2 hover:underline"
+                    >
+                      {a.bezeichnung}
+                    </button>
+                    {kannDisponieren && (
+                      <button
+                        onClick={() => anlageEntfernenMutation.mutate(a.id)}
+                        disabled={anlageEntfernenMutation.isPending}
+                        className="text-slate-400 hover:text-red-600 dark:text-stone-500 dark:hover:text-red-400"
+                        aria-label={`${a.bezeichnung} entfernen`}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+            {showAnlageHinzufuegen && (
+              <div className="mt-2 flex gap-2">
+                <select
+                  value={neueAnlageId}
+                  onChange={(e) => setNeueAnlageId(e.target.value)}
+                  className="btn-touch flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                >
+                  <option value="">Anlage wählen…</option>
+                  {(anlagenFuerVorgangKunde ?? [])
+                    .filter((a) => !bereitsZugeordneteAnlageIds.has(a.id))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.bezeichnung}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  onClick={() => anlageHinzufuegenMutation.mutate(neueAnlageId)}
+                  disabled={!neueAnlageId || anlageHinzufuegenMutation.isPending}
+                  className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  OK
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAnlageHinzufuegen(false);
+                    setNeueAnlageId("");
+                  }}
+                  className="btn-touch rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {vorgang.beschreibung && (
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{vorgang.beschreibung}</p>
+          <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{vorgang.beschreibung}</p>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="text-sm text-slate-500 dark:text-slate-400">Status:</label>
+          <label className="text-sm text-slate-500 dark:text-stone-400">Status:</label>
           <select
             value={vorgang.status}
-            onChange={(e) => statusMutation.mutate(e.target.value as VorgangStatus)}
-            className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            onChange={(e) => {
+              const status = e.target.value as VorgangStatus;
+              if (status === "wartet_kunde") {
+                setWiedervorlageTage("");
+                setShowWartetKundeDialog(true);
+                return;
+              }
+              statusMutation.mutate({ status });
+            }}
+            className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
@@ -582,22 +1096,193 @@ export function VorgangDetailPage() {
               </option>
             ))}
           </select>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            Priorität {vorgang.prioritaet}
-          </span>
+          {vorgang.dauerauftrag_id ? (
+            <span
+              title="Wird beim Dauerauftrag automatisch anhand der Fälligkeit berechnet"
+              className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            >
+              Priorität {vorgang.prioritaet} (automatisch)
+            </span>
+          ) : (
+            <label className="flex items-center gap-1 text-sm text-slate-500 dark:text-stone-400">
+              Priorität
+              <select
+                value={vorgang.prioritaet}
+                disabled={VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) || prioritaetMutation.isPending}
+                onChange={(e) => prioritaetMutation.mutate(Number(e.target.value))}
+                className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              >
+                {PRIORITAET_OPTIONEN.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <button
+            onClick={() => {
+              setFolgeAuftragLeistungstyp("stoerung");
+              setShowFolgeAuftragDialog(true);
+            }}
+            className="btn-touch rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 dark:border-stone-700 dark:text-stone-300"
+          >
+            + Folge-Auftrag
+          </button>
         </div>
+
+        {!VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-slate-500 dark:text-stone-400">
+              {vorgang.zugewiesener_name ? (
+                <>
+                  Zugewiesen an: <span className="font-medium text-slate-700 dark:text-stone-200">{vorgang.zugewiesener_name}</span>
+                </>
+              ) : (
+                "Nicht zugewiesen"
+              )}
+            </span>
+            {currentUser?.darf_vorgaenge_selbst_uebernehmen && (
+              <button
+                onClick={() => {
+                  if (
+                    vorgang.zugewiesener_user_id &&
+                    vorgang.zugewiesener_user_id !== currentUser.id &&
+                    !window.confirm(
+                      `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`,
+                    )
+                  ) {
+                    return;
+                  }
+                  uebernehmenMutation.mutate();
+                }}
+                disabled={uebernehmenMutation.isPending || vorgang.zugewiesener_user_id === currentUser.id}
+                className="btn-touch btn-clay flex items-center gap-1 rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <UserCheck size={13} strokeWidth={2} />
+                {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Ticket übernehmen"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {showWartetKundeDialog && (
+          <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+            <p className="text-sm text-slate-600 dark:text-stone-300">
+              Wartet auf Kunde: Nach wie vielen Tagen soll FieldVibe dich erinnern, nachzufragen?
+            </p>
+            <input
+              type="number"
+              min={1}
+              placeholder={
+                mandantEinstellungen
+                  ? mandantEinstellungen.effektive_wiedervorlage_standard_tage.toString()
+                  : "14"
+              }
+              value={wiedervorlageTage}
+              onChange={(e) => setWiedervorlageTage(e.target.value)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  statusMutation.mutate({
+                    status: "wartet_kunde",
+                    wiedervorlageTage: wiedervorlageTage ? Number(wiedervorlageTage) : undefined,
+                  });
+                  setShowWartetKundeDialog(false);
+                }}
+                disabled={statusMutation.isPending}
+                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Übernehmen
+              </button>
+              <button
+                onClick={() => setShowWartetKundeDialog(false)}
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showFolgeAuftragDialog && (
+          <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+            <p className="text-sm text-slate-600 dark:text-stone-300">
+              Folge-Auftrag anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
+              Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
+            </p>
+            <select
+              value={folgeAuftragLeistungstyp}
+              onChange={(e) => setFolgeAuftragLeistungstyp(e.target.value as Leistungstyp)}
+              className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            >
+              {LEISTUNGSTYPEN.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  folgeAuftragMutation.mutate(folgeAuftragLeistungstyp);
+                  setShowFolgeAuftragDialog(false);
+                }}
+                disabled={folgeAuftragMutation.isPending}
+                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Anlegen
+              </button>
+              <button
+                onClick={() => setShowFolgeAuftragDialog(false)}
+                className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {folgeVorgangId && (
+          <div className="mt-2 flex items-center justify-between rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <span>Folge-Vorgang wurde angelegt.</span>
+            <button
+              onClick={() => navigate(`/vorgaenge/${folgeVorgangId}`)}
+              className="btn-touch font-medium underline"
+            >
+              Jetzt ansehen
+            </button>
+          </div>
+        )}
+
+        {folgeAuftraege && folgeAuftraege.length > 0 && (
+          <div className="mt-2 space-y-1">
+            <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Folge-Aufträge:</span>
+            {folgeAuftraege.map((fa) => (
+              <button
+                key={fa.id}
+                onClick={() => navigate(`/vorgaenge/${fa.id}`)}
+                className="btn-touch block w-full rounded-md border border-slate-200 px-2 py-1.5 text-left text-sm text-slate-600 dark:border-stone-700 dark:text-stone-300"
+              >
+                {fa.vorgangsnummer} · {fa.titel} · {STATUS_LABEL[fa.status]}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Arbeitszeit</h2>
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Arbeitszeit</h2>
+          <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
             Bisher {gesamtStunden} Std.
           </span>
         </div>
         {timerLaeuftHier ? (
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+            <span className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-stone-300">
               <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
               Zeit läuft seit{" "}
               {new Date(laufenderTimer.start_at).toLocaleTimeString("de-DE", {
@@ -620,13 +1305,13 @@ export function VorgangDetailPage() {
               value={taetigkeit}
               onChange={(e) => setTaetigkeit(e.target.value)}
               placeholder="Tätigkeit (optional)"
-              className="btn-touch flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="btn-touch flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <button
               onClick={() => startTimerMutation.mutate()}
               disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
               title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
-              className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Zeit starten
             </button>
@@ -634,7 +1319,7 @@ export function VorgangDetailPage() {
         )}
 
         {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-slate-800">
+          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-stone-800">
             {[...(zeiterfassungListe ?? [])]
               .filter((e) => e.ende_at)
               .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
@@ -645,7 +1330,7 @@ export function VorgangDetailPage() {
                 return (
                   <div
                     key={e.id}
-                    className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
+                    className="flex items-center justify-between text-xs text-slate-500 dark:text-stone-400"
                   >
                     <span>
                       {techniker?.name ?? "—"}
@@ -653,7 +1338,7 @@ export function VorgangDetailPage() {
                       {" · "}
                       {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                     </span>
-                    <span className="shrink-0 font-medium text-slate-600 dark:text-slate-300">
+                    <span className="shrink-0 font-medium text-slate-600 dark:text-stone-300">
                       {formatSekundenAlsHHMM(dauerSekunden)} Std.
                     </span>
                   </div>
@@ -663,9 +1348,9 @@ export function VorgangDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Termine</h2>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Termine</h2>
           {kannDisponieren && (
             <button
               onClick={() => {
@@ -677,7 +1362,9 @@ export function VorgangDetailPage() {
                   const ende = new Date(start.getTime() + 60 * 60 * 1000);
                   setTerminStart(toLocalInputValue(start));
                   setTerminEnde(toLocalInputValue(ende));
-                  setTerminTechnikerId(users?.find((u) => u.role === "techniker")?.id ?? "");
+                  setTerminTechnikerId(
+                    users?.find((u) => u.role === "mandant_admin" || u.role === "custom")?.id ?? "",
+                  );
                 }
               }}
               className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -690,26 +1377,28 @@ export function VorgangDetailPage() {
         {terminWarnungen.length > 0 && (
           <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
             {terminWarnungen.map((w, i) => (
-              <p key={i}>⚠️ {w.meldung}</p>
+              <p key={i} className="flex items-center gap-1">
+                <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
+              </p>
             ))}
           </div>
         )}
 
         {showTerminForm && (
-          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
             <input
               value={terminTitel}
               onChange={(e) => setTerminTitel(e.target.value)}
               placeholder="Titel"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <select
               value={terminTechnikerId}
               onChange={(e) => setTerminTechnikerId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               {(users ?? [])
-                .filter((u) => u.role === "techniker")
+                .filter((u) => u.role === "mandant_admin" || u.role === "custom")
                 .map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name}
@@ -721,19 +1410,19 @@ export function VorgangDetailPage() {
                 type="datetime-local"
                 value={terminStart}
                 onChange={(e) => setTerminStart(e.target.value)}
-                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
               <input
                 type="datetime-local"
                 value={terminEnde}
                 onChange={(e) => setTerminEnde(e.target.value)}
-                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-1/2 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
             </div>
             <button
               disabled={!terminTitel || !terminTechnikerId || terminMutation.isPending}
               onClick={() => terminMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -741,17 +1430,17 @@ export function VorgangDetailPage() {
         )}
 
         {(termine ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Termine geplant.</p>
+          <p className="text-sm text-slate-400 dark:text-stone-500">Keine Termine geplant.</p>
         ) : (
           <div className="space-y-1.5">
             {termine!.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60"
+                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
               >
                 <div>
-                  <div className="font-medium text-slate-700 dark:text-slate-300">{t.titel}</div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">
+                  <div className="font-medium text-slate-700 dark:text-stone-300">{t.titel}</div>
+                  <div className="text-xs text-slate-400 dark:text-stone-500">
                     {new Date(t.start_at).toLocaleString("de-DE", {
                       timeZone: "Europe/Berlin",
                       dateStyle: "short",
@@ -759,32 +1448,49 @@ export function VorgangDetailPage() {
                     })}
                   </div>
                 </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    t.status === "abgesagt"
-                      ? "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
-                      : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-                  }`}
-                >
-                  {t.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                      t.status === "abgesagt"
+                        ? "bg-slate-200 text-slate-500 dark:bg-stone-700 dark:text-stone-400"
+                        : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                    }`}
+                  >
+                    {t.status}
+                  </span>
+                  {kannPapierkorbLoeschen && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                          deleteTerminMutation.mutate(t.id);
+                        }
+                      }}
+                      disabled={deleteTerminMutation.isPending}
+                      className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
+                    >
+                      Löschen
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      {vorgang && <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
+
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Mängel</h2>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Mängel</h2>
           <div className="flex items-center gap-3">
             {(maengel ?? []).length > 0 && (
               <button
                 onClick={() => maengelProtokollMutation.mutate()}
                 disabled={maengelProtokollMutation.isPending}
-                className="btn-touch text-xs font-medium text-slate-500 dark:text-slate-400"
+                className="btn-touch flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400"
               >
-                📄 Protokoll
+                <FileText size={13} strokeWidth={2} /> Protokoll
               </button>
             )}
             <button
@@ -797,18 +1503,18 @@ export function VorgangDetailPage() {
         </div>
 
         {showMangelForm && (
-          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
             <textarea
               value={mangelBeschreibung}
               onChange={(e) => setMangelBeschreibung(e.target.value)}
               placeholder="Was ist defekt?"
               rows={2}
-              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             <select
               value={mangelSchweregrad}
               onChange={(e) => setMangelSchweregrad(e.target.value as MangelSchweregrad)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             >
               {SCHWEREGRAD_OPTIONEN.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -819,7 +1525,7 @@ export function VorgangDetailPage() {
             <button
               disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
               onClick={() => mangelMutation.mutate()}
-              className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Erfassen
             </button>
@@ -827,35 +1533,50 @@ export function VorgangDetailPage() {
         )}
 
         {(maengel ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">Keine Mängel erfasst.</p>
+          <p className="text-sm text-slate-400 dark:text-stone-500">Keine Mängel erfasst.</p>
         ) : (
           <div className="space-y-1.5">
             {maengel!.map((m) => (
-              <div key={m.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-slate-800/60">
+              <div key={m.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-slate-700 dark:text-slate-300">{m.beschreibung}</p>
-                  <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                  <p className="text-slate-700 dark:text-stone-300">{m.beschreibung}</p>
+                  <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-stone-700 dark:text-stone-300">
                     {m.schweregrad}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between">
-                  <span className="text-xs text-slate-400 dark:text-slate-500">{m.status}</span>
-                  {m.status === "offen" && (
-                    <div className="flex gap-2">
+                  <span className="text-xs text-slate-400 dark:text-stone-500">{m.status}</span>
+                  <div className="flex gap-2">
+                    {m.status === "offen" && (
+                      <>
+                        <button
+                          onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "behoben" })}
+                          className="btn-touch text-xs font-medium text-green-700 dark:text-green-400"
+                        >
+                          Behoben
+                        </button>
+                        <button
+                          onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "abgelehnt" })}
+                          className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
+                        >
+                          Verwerfen
+                        </button>
+                      </>
+                    )}
+                    {kannPapierkorbLoeschen && (
                       <button
-                        onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "behoben" })}
-                        className="btn-touch text-xs font-medium text-green-700 dark:text-green-400"
-                      >
-                        Behoben
-                      </button>
-                      <button
-                        onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "abgelehnt" })}
+                        onClick={() => {
+                          if (window.confirm("Mangel wirklich löschen?")) {
+                            deleteMangelMutation.mutate(m.id);
+                          }
+                        }}
+                        disabled={deleteMangelMutation.isPending}
                         className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
                       >
-                        Verwerfen
+                        Löschen
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -868,50 +1589,194 @@ export function VorgangDetailPage() {
               angebotAusMaengelnMutation.mutate(maengel!.filter((m) => m.status === "offen").map((m) => m.id))
             }
             disabled={angebotAusMaengelnMutation.isPending}
-            className="btn-touch mt-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+            className="btn-touch mt-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
           >
             Angebot aus offenen Mängeln erstellen
           </button>
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400">Material</h2>
-          <button
-            onClick={() => setShowMaterialForm((v) => !v)}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
-          >
-            {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
-          </button>
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Material</h2>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowBedarfForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            >
+              {showBedarfForm ? "Abbrechen" : "+ Material bestellen"}
+            </button>
+            <button
+              onClick={() => setShowMaterialForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            >
+              {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
+            </button>
+          </div>
         </div>
 
+        {showBedarfForm && (
+          <div className="mb-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+            <SearchableSelect
+              value={bedarfMaterialId}
+              onChange={setBedarfMaterialId}
+              placeholder="Material wählen…"
+              options={[
+                ...(materialListe ?? []).map((m) => ({ value: m.id, label: m.bezeichnung })),
+                { value: NEU_MATERIAL, label: "+ Neues Material anlegen…" },
+              ]}
+            />
+
+            {bedarfMaterialId === NEU_MATERIAL && (
+              <div className="space-y-2 rounded-md border border-dashed border-slate-300 p-2 dark:border-stone-700">
+                <input
+                  type="text"
+                  value={bedarfNeuBezeichnung}
+                  onChange={(e) => setBedarfNeuBezeichnung(e.target.value)}
+                  placeholder="Bezeichnung"
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={bedarfNeuEinheit}
+                    onChange={(e) => setBedarfNeuEinheit(e.target.value)}
+                    placeholder="Einheit"
+                    className="w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={bedarfNeuEinzelpreis}
+                    onChange={(e) => setBedarfNeuEinzelpreis(e.target.value)}
+                    placeholder="Preis (optional)"
+                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  />
+                </div>
+                <select
+                  value={bedarfNeuLieferantId}
+                  onChange={(e) => setBedarfNeuLieferantId(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                >
+                  <option value="">Kein Lieferant hinterlegt</option>
+                  {(lieferantenFuerNeuesMaterial ?? []).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={bedarfMenge}
+                onChange={(e) => setBedarfMenge(e.target.value)}
+                placeholder="Menge"
+                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              />
+              <select
+                value={bedarfZweck}
+                onChange={(e) => setBedarfZweck(e.target.value as MaterialBedarfZweck)}
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              >
+                <option value="bestellung">Zur Bestellung</option>
+                <option value="angebot">Für Angebot</option>
+              </select>
+            </div>
+            <input
+              type="text"
+              value={bedarfNotiz}
+              onChange={(e) => setBedarfNotiz(e.target.value)}
+              placeholder="Notiz (optional)"
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
+            <button
+              disabled={
+                !bedarfMaterialId ||
+                !bedarfMenge ||
+                (bedarfMaterialId === NEU_MATERIAL && !bedarfNeuBezeichnung.trim()) ||
+                materialBedarfMutation.isPending
+              }
+              onClick={() => materialBedarfMutation.mutate()}
+              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Vormerken
+            </button>
+            {materialBedarfMutation.isError && (
+              <p className="text-xs text-red-700 dark:text-red-400">
+                {materialBedarfMutation.error instanceof ApiError
+                  ? materialBedarfMutation.error.message
+                  : "Fehler beim Vormerken"}
+              </p>
+            )}
+          </div>
+        )}
+
+        {(materialBedarfe ?? []).length > 0 && (
+          <div className="mb-2 space-y-1">
+            {materialBedarfe!.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+              >
+                <span className="text-slate-700 dark:text-stone-200">
+                  {b.menge}× {b.material_bezeichnung}
+                  <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                    {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
+                  </span>
+                </span>
+                {b.status === "offen" && (
+                  <button
+                    onClick={() => bedarfEntfernenMutation.mutate(b.id)}
+                    className="btn-touch text-xs text-red-700 dark:text-red-400"
+                  >
+                    Entfernen
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {kannDisponieren && (
+          <button
+            onClick={() => angebotAusVorgangMutation.mutate()}
+            disabled={angebotAusVorgangMutation.isPending}
+            className="btn-touch mb-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          >
+            + Angebot aus diesem Vorgang erstellen
+          </button>
+        )}
+
         {showMaterialForm && (
-          <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-slate-800/60">
-            <select
+          <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+            <SearchableSelect
               value={materialId}
-              onChange={(e) => {
-                setMaterialId(e.target.value);
+              onChange={(v) => {
+                setMaterialId(v);
                 // Fuer Techniker das eigene zugewiesene Fahrzeug als
                 // Standard-Lagerort vorschlagen (siehe Techniker-
                 // Zuweisungen-Seite) -- spart bei jedem Materialverbrauch
                 // aus dem eigenen Fahrzeug den manuellen Auswahlschritt.
                 setMaterialLagerId(meinFahrzeug?.id ?? "");
               }}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-            >
-              <option value="">Material wählen…</option>
-              {(materialListe ?? []).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.bezeichnung} ({m.bestand_gesamt} {m.einheit} gesamt verfügbar)
-                </option>
-              ))}
-            </select>
+              placeholder="Material wählen…"
+              options={(materialListe ?? []).map((m) => ({
+                value: m.id,
+                label: m.bezeichnung,
+                sublabel: `(${m.bestand_gesamt} ${m.einheit} gesamt verfügbar)`,
+              }))}
+            />
             {materialId && (
               <select
                 value={materialLagerId}
                 onChange={(e) => setMaterialLagerId(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
                 <option value="">Lagerort wählen…</option>
                 {(materialListe?.find((m) => m.id === materialId)?.bestaende ?? []).map((b) => (
@@ -938,12 +1803,12 @@ export function VorgangDetailPage() {
                 value={materialMenge}
                 onChange={(e) => setMaterialMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               />
               <button
                 disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
                 onClick={() => materialVerwendenMutation.mutate()}
-                className="btn-touch shrink-0 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
               >
                 Erfassen
               </button>
@@ -959,8 +1824,21 @@ export function VorgangDetailPage() {
         )}
       </div>
 
+      <EmailSection
+        queryKey={["vorgang-emails", id]}
+        listEmails={() => vorgaengeApi.emails(id!)}
+        sendEmail={(body) =>
+          vorgaengeApi.sendEmail(id!, {
+            empfaenger: body.empfaenger,
+            betreff: body.betreff ?? "",
+            inhalt: body.inhalt ?? "",
+          })
+        }
+        defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
+      />
+
       <div className="flex items-center justify-end gap-2">
-        <span className="text-sm text-slate-500 dark:text-slate-400">
+        <span className="text-sm text-slate-500 dark:text-stone-400">
           {kundenansicht ? "Kundenansicht" : "Interne Ansicht"}
         </span>
         <button
@@ -968,7 +1846,7 @@ export function VorgangDetailPage() {
           className={`btn-touch rounded-full px-3 py-1 text-xs font-semibold ${
             kundenansicht
               ? "bg-blue-600 text-white"
-              : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              : "bg-slate-200 text-slate-700 dark:bg-stone-800 dark:text-stone-300"
           }`}
         >
           Umschalten
@@ -977,13 +1855,22 @@ export function VorgangDetailPage() {
 
       <div>
         {sichtbareEvents.length === 0 && eigeneOutboxItems.length === 0 ? (
-          <p className="text-center text-sm text-slate-400 dark:text-slate-500">Noch keine Einträge.</p>
+          <p className="text-center text-sm text-slate-400 dark:text-stone-500">Noch keine Einträge.</p>
         ) : (
           <>
             {/* Noch nicht synchronisierte Einträge sind immer die neuesten
                 -- stehen deshalb vor den bereits synchronisierten Events. */}
             {!kundenansicht &&
-              eigeneOutboxItems.map((item) => <OutboxBubble key={item.client_uuid} item={item} />)}
+              eigeneOutboxItems.map((item) => (
+                <OutboxBubble
+                  key={item.client_uuid}
+                  item={item}
+                  onDiscard={async (clientUuid) => {
+                    await discardOutboxItem(clientUuid);
+                    queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+                  }}
+                />
+              ))}
             {sichtbareEvents.map((event) => (
               <EventBubble key={event.id} event={event} onHighlight={(eventId) => highlightMutation.mutate(eventId)} />
             ))}
@@ -992,17 +1879,17 @@ export function VorgangDetailPage() {
       </div>
 
       {!kundenansicht && (
-        <div className="sticky bottom-16 space-y-2 rounded-lg bg-white p-3 shadow-md dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800">
+        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 rounded-lg bg-white p-3 shadow-md dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <div className="relative">
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Kommentar schreiben…"
               rows={2}
-              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full resize-none rounded-md border border-slate-300 p-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
             {showMentionPicker && (
-              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-800">
                 {users?.map((u) => (
                   <button
                     key={u.id}
@@ -1010,7 +1897,7 @@ export function VorgangDetailPage() {
                       setComment((c) => `${c}@[${u.name}](${u.id}) `);
                       setShowMentionPicker(false);
                     }}
-                    className="btn-touch block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-700"
+                    className="btn-touch block w-full px-3 py-2 text-left text-sm hover:bg-slate-50 dark:text-stone-100 dark:hover:bg-stone-700"
                   >
                     {u.name}
                   </button>
@@ -1030,41 +1917,51 @@ export function VorgangDetailPage() {
               e.target.value = "";
             }}
           />
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowMentionPicker((v) => !v)}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                title="Erwähnen"
+                aria-label="Erwähnen"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-base text-slate-600 dark:bg-stone-800 dark:text-stone-300"
               >
-                @ Erwähnen
+                @
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={fotoMutation.isPending}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300"
+                title="Foto anhängen"
+                aria-label="Foto anhängen"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
               >
-                📷 Foto
+                <Camera size={16} strokeWidth={2} />
               </button>
               <button
                 onClick={() => setShowUnterschriftPad((v) => !v)}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                title="Unterschrift erfassen"
+                aria-label="Unterschrift erfassen"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
               >
-                ✍️ Unterschrift
+                <PenLine size={16} strokeWidth={2} />
               </button>
-              <label className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
-                <input
-                  type="checkbox"
-                  checked={kundensichtbar}
-                  onChange={(e) => setKundensichtbar(e.target.checked)}
-                  className="h-4 w-4"
-                />
-                Für Kunde sichtbar
-              </label>
+              <button
+                onClick={() => setKundensichtbar((v) => !v)}
+                title={kundensichtbar ? "Für Kunde sichtbar – antippen zum Verbergen" : "Nur intern – antippen um für Kunde sichtbar zu machen"}
+                aria-label="Für Kunde sichtbar umschalten"
+                aria-pressed={kundensichtbar}
+                className={`btn-touch flex h-9 w-9 items-center justify-center rounded-full ${
+                  kundensichtbar
+                    ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300"
+                    : "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500"
+                }`}
+              >
+                {kundensichtbar ? <Eye size={16} strokeWidth={2} /> : <EyeOff size={16} strokeWidth={2} />}
+              </button>
             </div>
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               Senden
             </button>

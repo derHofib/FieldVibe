@@ -9,7 +9,7 @@ export interface OutboxItem {
   // vorgaenge.py::create_vorgang, das denselben client_uuid als
   // Idempotenz-Schluessel nutzt wie VorgangEvent.client_uuid).
   vorgang_id: string | null;
-  kind: "kommentar" | "foto" | "vorgang";
+  kind: "kommentar" | "foto" | "vorgang" | "status";
   created_at: string;
   // "kommentar": JSON-Body fuer POST .../events
   body?: string;
@@ -24,6 +24,13 @@ export interface OutboxItem {
   vorgangBeschreibung?: string;
   vorgangAbrechnungsart?: string;
   vorgangLeistungstyp?: string;
+  // "status": neuer Status fuer einen bestehenden Vorgang
+  statusValue?: string;
+  // Vom Server abgelehnt (z. B. 409 "bereits abgeschlossen") statt eines
+  // Netzwerkfehlers -- ein erneuter Versuch wuerde denselben Fehler
+  // liefern, darf aber nicht den Rest der Warteschlange blockieren.
+  failed?: boolean;
+  errorMessage?: string;
 }
 
 interface FieldVibeDB extends DBSchema {
@@ -50,4 +57,18 @@ export function getDb(): Promise<IDBPDatabase<FieldVibeDB>> {
     });
   }
   return dbPromise;
+}
+
+/** Wischt alle lokal zwischengespeicherten Daten (Cache + Outbox) --
+ * bei einem geteilten Geraet (Firmenhandy/-tablet) duerfen weder
+ * Kunden-/Vorgangsdaten des vorherigen Nutzers sichtbar bleiben, noch
+ * dessen noch nicht synchronisierte Outbox-Eintraege spaeter unter der
+ * Identitaet des naechsten angemeldeten Nutzers hochgeladen werden. */
+export async function clearAllOfflineData(): Promise<void> {
+  const db = await getDb();
+  await Promise.all(
+    (["feed", "vorgang_events", "kunden", "anlagen", "outbox"] as const).map((store) =>
+      db.clear(store),
+    ),
+  );
 }

@@ -124,6 +124,53 @@ async def test_insights_aggregation_correctness(
 
 
 @pytest.mark.asyncio
+async def test_insights_offene_verbindlichkeiten(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    offen = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-1",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "100.00",
+            "mwst_satz": "19.00",
+        },
+    )
+    # Teilweise bezahlt -- nur der Restbetrag darf in die offene Summe einfliessen.
+    await client.post(
+        f"/api/eingangsrechnungen/{offen.json()['id']}/zahlungen",
+        headers=auth_headers(token),
+        json={"betrag": "19.00"},
+    )
+
+    bezahlt = await client.post(
+        "/api/eingangsrechnungen",
+        headers=auth_headers(token),
+        json={
+            "lieferant_name": "Sonepar",
+            "rechnungsnummer_lieferant": "RE-2",
+            "rechnungsdatum": "2026-08-01",
+            "betrag_netto": "50.00",
+            "mwst_satz": "19.00",
+        },
+    )
+    await client.post(
+        f"/api/eingangsrechnungen/{bezahlt.json()['id']}/zahlungen",
+        headers=auth_headers(token),
+        json={"betrag": "59.50"},
+    )
+
+    resp = await client.get("/api/insights", headers=auth_headers(token))
+    assert resp.status_code == 200
+    # 119.00 - 19.00 = 100.00 offen fuer RE-1, RE-2 ist vollstaendig bezahlt.
+    assert resp.json()["offene_verbindlichkeiten"] == "100.00"
+
+
+@pytest.mark.asyncio
 async def test_insights_annahmequote_null_ohne_versendete_angebote(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")

@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
-import type { Mandant, MandantModul, MandantStatus } from "../types";
+import type { MandantStatus } from "../types";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -13,74 +14,14 @@ const STATUS_LABEL: Record<MandantStatus, string> = {
 };
 
 const STATUS_BADGE: Record<MandantStatus, string> = {
-  aktiv: "bg-green-100 text-green-800",
-  pausiert: "bg-amber-100 text-amber-800",
-  gekuendigt: "bg-red-100 text-red-800",
+  aktiv: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
+  pausiert: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+  gekuendigt: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300",
 };
-
-const MODUL_LABEL: Record<MandantModul, string> = {
-  kundenverwaltung: "Kundenverwaltung (Ansprechpartner, Adresse, Löschen)",
-  dispo: "Dispo/Termine",
-  material: "Materialwirtschaft (Lager/Bestand)",
-  pruefzyklen: "Prüfzyklen & Prüfmittel",
-  abrechnung: "Mängel/Angebote/Rechnungen",
-  kundenportal: "Kundenportal",
-  dauerauftrag: "Dauer-Aufträge",
-  statistik: "Statistik/Insights + Export",
-  fahrzeuge: "Fahrzeug-Zuweisung & Inventur",
-  highlights: "Highlights (Story-Feature)",
-};
-const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];
-
-function ModulListe({ mandant }: { mandant: Mandant }) {
-  const queryClient = useQueryClient();
-  const [offen, setOffen] = useState(false);
-
-  const speichernMutation = useMutation({
-    mutationFn: (deaktivierteModule: MandantModul[]) =>
-      mandantenApi.update(mandant.id, { deaktivierte_module: deaktivierteModule }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandanten"] }),
-  });
-
-  function toggle(modul: MandantModul) {
-    const aktuell = mandant.deaktivierte_module;
-    const naechste = aktuell.includes(modul)
-      ? aktuell.filter((m) => m !== modul)
-      : [...aktuell, modul];
-    speichernMutation.mutate(naechste);
-  }
-
-  return (
-    <div>
-      <button onClick={() => setOffen((v) => !v)} className="btn-touch text-xs font-medium text-blue-700 underline">
-        {offen ? "Module ausblenden" : "Module verwalten"}
-      </button>
-      {offen && (
-        <div className="mt-2 space-y-1.5 rounded-md bg-slate-50 p-3">
-          <p className="text-xs text-slate-400">
-            "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
-            abwählbar.
-          </p>
-          {ALLE_MODULE.map((modul) => (
-            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={!mandant.deaktivierte_module.includes(modul)}
-                disabled={speichernMutation.isPending}
-                onChange={() => toggle(modul)}
-              />
-              {MODUL_LABEL[modul]}
-            </label>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function MandantenPage() {
   const queryClient = useQueryClient();
-  const { startImpersonation, isImpersonating } = useAuth();
+  const { isImpersonating } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -106,12 +47,6 @@ export function MandantenPage() {
     onError: (err) => setFormError(err instanceof ApiError ? err.message : "Fehler"),
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: MandantStatus }) =>
-      mandantenApi.update(id, { status }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandanten"] }),
-  });
-
   function handleCreate(e: FormEvent) {
     e.preventDefault();
     setFormError(null);
@@ -121,19 +56,19 @@ export function MandantenPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800">Neuen Mandanten anlegen</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Neuen Mandanten anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
               Slug (Subdomain)
             </label>
             <input
@@ -141,80 +76,61 @@ export function MandantenPage() {
               pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Branche</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Branche</label>
             <input
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2"
+              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
           >
             Anlegen
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-red-700">{formError}</p>}
+        {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800">Mandanten</h2>
+        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Mandanten</h2>
         {isLoading ? (
-          <p>Lädt…</p>
+          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-sm">
-            <thead className="bg-slate-50 text-sm text-slate-600">
+          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Slug</th>
                 <th className="px-4 py-3">Branche</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Module</th>
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
+            <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
               {mandanten?.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-4 py-3 font-medium">{m.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.slug}</td>
-                  <td className="px-4 py-3 text-slate-500">{m.branche ?? "–"}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-stone-100">{m.name}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-stone-400">{m.slug}</td>
+                  <td className="px-4 py-3 text-slate-500 dark:text-stone-400">{m.branche ?? "–"}</td>
                   <td className="px-4 py-3">
-                    <select
-                      value={m.status}
-                      onChange={(e) =>
-                        statusMutation.mutate({
-                          id: m.id,
-                          status: e.target.value as MandantStatus,
-                        })
-                      }
-                      className={`btn-touch rounded-full border-0 px-3 py-1 text-xs font-semibold ${STATUS_BADGE[m.status]}`}
-                    >
-                      {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_BADGE[m.status]}`}>
+                      {STATUS_LABEL[m.status]}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    <ModulListe mandant={m} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      disabled={isImpersonating || m.status !== "aktiv"}
-                      onClick={() => startImpersonation(m.id)}
-                      className="btn-touch rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-amber-950 hover:bg-amber-400 disabled:opacity-40"
-                      title="Support-Zugriff: Login als Mandant"
+                    <Link
+                      to={`/mandanten/${m.id}`}
+                      className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
                     >
-                      Login als Mandant
-                    </button>
+                      Bearbeiten →
+                    </Link>
                   </td>
                 </tr>
               ))}

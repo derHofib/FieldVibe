@@ -4,7 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-NotificationTyp = Literal["mention", "frist", "zuweisung", "angebot"]
+NotificationTyp = Literal["mention", "frist", "zuweisung", "angebot", "anfrage"]
 
 
 class NotificationRead(BaseModel):

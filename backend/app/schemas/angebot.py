@@ -1,15 +1,20 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
+AngebotPositionstyp = Literal["material", "arbeitszeit"]
+
 
 class AngebotPositionCreate(BaseModel):
+    artikelnummer: str | None = None
     beschreibung: str
     menge: Decimal = Decimal("1")
     einheit: str = "Stk"
     einzelpreis: Decimal = Decimal("0")
+    positionstyp: AngebotPositionstyp = "material"
 
 
 class AngebotPositionRead(BaseModel):
@@ -17,10 +22,12 @@ class AngebotPositionRead(BaseModel):
 
     id: UUID
     position: int
+    artikelnummer: str | None
     beschreibung: str
     menge: Decimal
     einheit: str
     einzelpreis: Decimal
+    positionstyp: AngebotPositionstyp
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -37,6 +44,16 @@ class AngebotCreate(BaseModel):
 
 class AngebotAusMaengelnCreate(BaseModel):
     mangel_ids: list[UUID]
+    gueltig_bis: date | None = None
+
+
+class AngebotAusMaterialBedarfenCreate(BaseModel):
+    material_bedarf_ids: list[UUID]
+    gueltig_bis: date | None = None
+
+
+class AngebotAusVorgangCreate(BaseModel):
+    vorgang_id: UUID
     gueltig_bis: date | None = None
 
 

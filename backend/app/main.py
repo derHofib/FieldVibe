@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -5,13 +6,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes import (
+    account_typen,
     angebote,
     anlagen,
+    anlagen_feld_definitionen,
     audit_log,
+    auswertung,
     auth,
+    bestellungen,
     dauerauftraege,
+    dsgvo,
+    eingangsrechnungen,
     fahrzeug_zuweisungen,
     feed,
+    formulare,
+    gespeicherte_filter,
     highlights,
     impersonation,
     insights,
@@ -20,11 +29,16 @@ from app.api.routes import (
     kunden,
     kundenportal,
     kundenportal_auth,
+    lieferanten,
     maengel,
+    mail_accounts,
+    mail_messages,
     mandant_einstellungen,
     mandanten,
     material,
+    material_bedarfe,
     notifications,
+    papierkorb,
     partner,
     partner_auth,
     partner_portal,
@@ -33,14 +47,19 @@ from app.api.routes import (
     pruefzyklen,
     rechnungen,
     search,
+    standorte,
     stories,
     stream,
+    system_resources,
     tags,
     termine,
     users,
+    version,
     vertraege,
     vorgaenge,
+    vorgang_anfragen,
     vorgang_events,
+    vorgang_formulare,
     zeiterfassung,
     zuweisungen,
 )
@@ -48,6 +67,7 @@ from app.core.config import get_settings
 from app.db.session import engine
 from app.services.scheduler_service import get_last_scheduler_run
 from app.services.storage_service import ensure_bucket
+from app.services.system_resources_service import resource_sampler_loop
 
 settings = get_settings()
 
@@ -55,7 +75,9 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await ensure_bucket()
+    sampler_task = asyncio.create_task(resource_sampler_loop())
     yield
+    sampler_task.cancel()
 
 
 app = FastAPI(
@@ -77,19 +99,28 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(account_typen.router)
 app.include_router(angebote.router)
 app.include_router(mandanten.router)
 app.include_router(users.router)
 app.include_router(impersonation.router)
 app.include_router(audit_log.router)
+app.include_router(version.router)
+app.include_router(dsgvo.router)
 app.include_router(kunden.router)
 app.include_router(anlagen.router)
+app.include_router(anlagen_feld_definitionen.router)
+app.include_router(standorte.router)
 app.include_router(dauerauftraege.router)
 app.include_router(vertraege.router)
 app.include_router(vorgaenge.router)
+app.include_router(vorgang_anfragen.router)
 app.include_router(vorgang_events.router)
+app.include_router(formulare.router)
+app.include_router(vorgang_formulare.router)
 app.include_router(tags.router)
 app.include_router(feed.router)
+app.include_router(gespeicherte_filter.router)
 app.include_router(stories.router)
 app.include_router(search.router)
 app.include_router(notifications.router)
@@ -100,16 +131,25 @@ app.include_router(pruefzyklen.router)
 app.include_router(pruefmittel.router)
 app.include_router(maengel.router)
 app.include_router(rechnungen.router)
+app.include_router(eingangsrechnungen.router)
+app.include_router(auswertung.router)
 app.include_router(kundenportal_auth.router)
 app.include_router(kundenportal.router)
 app.include_router(highlights.router)
 app.include_router(material.router)
+app.include_router(lieferanten.router)
+app.include_router(material_bedarfe.router)
+app.include_router(bestellungen.router)
 app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
 app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
+app.include_router(papierkorb.router)
+app.include_router(system_resources.router)
+app.include_router(mail_accounts.router)
+app.include_router(mail_messages.router)
 app.include_router(partner.router)
 app.include_router(partner_auth.router)
 app.include_router(partner_portal.router)

@@ -20,12 +20,14 @@ router = APIRouter(
 )
 
 # Der Slot in mandant_integrationen existiert seit Phase 1 fuer beliebige
-# zukuenftige Integrationen (Abschnitt 7.4); tatsaechlich angebunden ist
-# bislang nur SMTP (siehe app/services/email_service.py). Eine echte
-# Buchhaltungs-API-Anbindung (lexoffice/sevdesk o. ae.) ohne echte
-# Zugangsdaten/API-Dokumentation zu bauen waere geraten statt fundiert --
-# bleibt bewusst offen, bis eine konkrete Integration ansteht.
-ERLAUBTE_TYPEN = ("smtp",)
+# zukuenftige Integrationen (Abschnitt 7.4). Angebunden: SMTP (Versand,
+# siehe app/services/email_service.py) und IMAP (Rechnungseingang-Import,
+# siehe app/services/email_ingest_service.py -- config erwartet
+# {"host", "port", "user", "mailbox"}, secret ist das Postfach-Passwort).
+# Eine echte Buchhaltungs-API-Anbindung (lexoffice/sevdesk o. ae.) ohne
+# echte Zugangsdaten/API-Dokumentation zu bauen waere geraten statt
+# fundiert -- bleibt bewusst offen, bis eine konkrete Integration ansteht.
+ERLAUBTE_TYPEN = ("smtp", "imap")
 
 
 def _to_read_model(integration: MandantIntegration) -> MandantIntegrationRead:

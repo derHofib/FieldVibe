@@ -1,3 +1,4 @@
+from collections import defaultdict
 from decimal import Decimal
 from uuid import UUID
 
@@ -5,9 +6,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
+from app.models.tag import TagAssignment
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.material import (
@@ -21,14 +30,17 @@ from app.schemas.material import (
     MaterialVerwendungCreate,
     MaterialVerwendungRead,
 )
+from app.services import papierkorb_service
 from app.services.csv_service import csv_response
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 
 router = APIRouter(
     prefix="/api/material",
     tags=["material"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("material")),
+        Depends(require_recht("material", "sehen")),
     ],
 )
 
@@ -79,7 +91,18 @@ async def _get_or_create_bestand(
     return bestand
 
 
-async def _material_read(session: AsyncSession, material: Material) -> MaterialRead:
+async def _tag_ids_fuer(session: AsyncSession, material_id: UUID) -> list[UUID]:
+    result = await session.execute(
+        select(TagAssignment.tag_id).where(
+            TagAssignment.entity_type == "material", TagAssignment.entity_id == material_id
+        )
+    )
+    return list(result.scalars().all())
+
+
+async def _material_read(
+    session: AsyncSession, material: Material, *, tag_ids: list[UUID] | None = None
+) -> MaterialRead:
     result = await session.execute(
         select(MaterialBestand, Anlage.bezeichnung)
         .join(Anlage, Anlage.id == MaterialBestand.lager_id)
@@ -104,10 +127,14 @@ async def _material_read(session: AsyncSession, material: Material) -> MaterialR
         einheit=material.einheit,
         mindestbestand=material.mindestbestand,
         einzelpreis=material.einzelpreis,
+        lieferant_id=material.lieferant_id,
+        artikelnummer=material.artikelnummer,
+        bestell_url=material.bestell_url,
         created_at=material.created_at,
         updated_at=material.updated_at,
         bestand_gesamt=bestand_gesamt,
         bestaende=bestaende,
+        tag_ids=tag_ids if tag_ids is not None else await _tag_ids_fuer(session, material.id),
     )
 
 
@@ -116,7 +143,7 @@ async def list_material(
     lager_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[MaterialRead]:
-    stmt = select(Material).order_by(Material.bezeichnung)
+    stmt = select(Material).where(Material.geloescht_am.is_(None)).order_by(Material.bezeichnung)
     if lager_id is not None:
         # Nur Material, das an diesem Lagerort tatsaechlich vorhanden ist --
         # ein Bestand-Datensatz mit menge=0 ist nur ein Ueberbleibsel einer
@@ -129,12 +156,30 @@ async def list_material(
             )
         )
     result = await session.execute(stmt)
-    return [await _material_read(session, m) for m in result.scalars().all()]
+    materialien = list(result.scalars().all())
+    if not materialien:
+        return []
+
+    # Tag-Zuordnungen fuer alle Materialien der Liste in einer Abfrage holen
+    # statt pro Zeile einzeln -- sonst waere das bei groesseren Katalogen ein
+    # N+1-Problem (dieselbe Regel wie in feed.py/material_bedarfe.py).
+    tag_result = await session.execute(
+        select(TagAssignment.entity_id, TagAssignment.tag_id).where(
+            TagAssignment.entity_type == "material",
+            TagAssignment.entity_id.in_([m.id for m in materialien]),
+        )
+    )
+    tag_ids_je_material: dict[UUID, list[UUID]] = defaultdict(list)
+    for material_id, tag_id in tag_result.all():
+        tag_ids_je_material[material_id].append(tag_id)
+
+    return [
+        await _material_read(session, m, tag_ids=tag_ids_je_material.get(m.id, []))
+        for m in materialien
+    ]
 
 
-@router.get(
-    "/export/csv", dependencies=[Depends(require_roles("mandant_admin", "disponent"))]
-)
+@router.get("/export/csv")
 async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Response:
     result = await session.execute(
         select(Material, MaterialBestand, Anlage.bezeichnung)
@@ -160,11 +205,22 @@ async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Respon
     )
 
 
+@router.get("/{material_id}", response_model=MaterialRead)
+async def get_material(material_id: UUID, session: AsyncSession = Depends(get_db)) -> MaterialRead:
+    material = await session.get(Material, material_id)
+    if material is None or material.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material nicht gefunden")
+    return await _material_read(session, material)
+
+
 @router.post(
     "",
     response_model=MaterialRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_material(
     body: MaterialCreate,
@@ -177,6 +233,9 @@ async def create_material(
         einheit=body.einheit,
         mindestbestand=body.mindestbestand,
         einzelpreis=body.einzelpreis,
+        lieferant_id=body.lieferant_id,
+        artikelnummer=body.artikelnummer,
+        bestell_url=body.bestell_url,
     )
     session.add(material)
     await session.flush()
@@ -210,13 +269,16 @@ async def create_material(
 @router.patch(
     "/{material_id}",
     response_model=MaterialRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_material(
     material_id: UUID, body: MaterialUpdate, session: AsyncSession = Depends(get_db)
 ) -> MaterialRead:
     material = await session.get(Material, material_id)
-    if material is None:
+    if material is None or material.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True)
@@ -228,10 +290,36 @@ async def update_material(
     return await _material_read(session, material)
 
 
+@router.delete(
+    "/{material_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("material", "loeschen")),
+    ],
+)
+async def delete_material(
+    material_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: kaskadiert auf Materialbedarfe dieses
+    # Artikels (siehe app/services/papierkorb_service.py). Bestand/Bewegungen/
+    # Verwendungen bleiben als Buchungshistorie unangetastet stehen.
+    material = await papierkorb_service.soft_delete(
+        session, entity_typ="material", entity_id=material_id, actor_user_id=auth.user_id
+    )
+    if material is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Material nicht gefunden")
+
+
 @router.put(
     "/{material_id}/bestand/{lager_id}",
     response_model=MaterialRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def bestand_setzen(
     material_id: UUID,
@@ -333,7 +421,9 @@ async def bewegungen(
 
 
 @router.post(
-    "/{material_id}/verwendung", response_model=MaterialVerwendungRead, status_code=status.HTTP_201_CREATED
+    "/{material_id}/verwendung",
+    response_model=MaterialVerwendungRead,
+    status_code=status.HTTP_201_CREATED,
 )
 async def verwendung_erfassen(
     material_id: UUID,
@@ -349,6 +439,11 @@ async def verwendung_erfassen(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgeschlossen und kann nicht mehr bebucht werden",
         )
     await _require_lager(session, body.lager_id)
     bestand = await _get_or_create_bestand(session, auth.mandant_id, material_id, body.lager_id)

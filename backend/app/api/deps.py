@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import decode_token
 from app.db.session import system_session, tenant_session
 from app.models.mandant import Mandant
+from app.services.rechte_service import hat_recht
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -20,6 +21,7 @@ class AuthContext:
     mandant_id: UUID | None
     role: str
     impersonated_by: UUID | None = None
+    account_typ_id: UUID | None = None
 
 
 async def get_current_user(
@@ -46,11 +48,15 @@ async def get_current_user(
     impersonated_by = (
         UUID(payload["impersonated_by"]) if payload.get("impersonated_by") else None
     )
+    account_typ_id = (
+        UUID(payload["account_typ_id"]) if payload.get("account_typ_id") else None
+    )
     return AuthContext(
         user_id=UUID(payload["sub"]),
         mandant_id=mandant_id,
         role=payload["role"],
         impersonated_by=impersonated_by,
+        account_typ_id=account_typ_id,
     )
 
 
@@ -72,6 +78,16 @@ async def get_db(
 
 def require_roles(*roles: str):
     async def checker(auth: AuthContext = Depends(get_current_user)) -> AuthContext:
+        # loesch_operativ (Papierkorb, siehe app/api/routes/papierkorb.py) hat
+        # zusaetzlich zum Loeschen/Wiederherstellen/endgueltigen Loeschen
+        # dieselben Rechte wie ein mandant_admin -- ueberall im Code, wo
+        # mandant_admin erlaubt ist, ist loesch_operativ es damit implizit
+        # auch, ohne dass jede einzelne require_roles(...)-Stelle angepasst
+        # werden muesste. Einzige Ausnahme: die super_admin-only vergebbaren
+        # Papierkorb-Rollen selbst duerfen auch von loesch_operativ nicht
+        # vergeben werden (siehe app/api/routes/users.py).
+        if auth.role == "loesch_operativ" and "mandant_admin" in roles:
+            return auth
         if auth.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -101,6 +117,33 @@ def require_module(*modules: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Diese Funktion ist für Ihren Account nicht freigeschaltet",
+            )
+        return auth
+
+    return checker
+
+
+def require_recht(bereich: str, aktion: str = "sehen"):
+    """Zusaetzlich zu require_roles: schraenkt frei vom mandant_admin
+    definierte Account-Typen (role == 'custom', siehe app/models/account_typ.py)
+    gemaess ihrer individuellen Rechte-Matrix ein (siehe
+    app/services/rechte_service.py). super_admin/mandant_admin sind hier immer
+    erlaubt -- deren Zugriff wird ausschliesslich ueber require_roles an der
+    jeweiligen Route gesteuert und bleibt von dieser Matrix unberuehrt."""
+
+    async def checker(
+        auth: AuthContext = Depends(get_current_user),
+        session: AsyncSession = Depends(get_db),
+    ) -> AuthContext:
+        if auth.role != "custom":
+            return auth
+        erlaubt = await hat_recht(
+            session, account_typ_id=auth.account_typ_id, bereich=bereich, aktion=aktion
+        )
+        if not erlaubt:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Keine Berechtigung für diese Aktion",
             )
         return auth
 

@@ -6,8 +6,8 @@ einen Einmal-Link. Deckt alle drei Identitaets-Raeume ab
 partner_zugaenge werden jeweils erst BEI Annahme der Einladung angelegt,
 nicht vorher, brauchen also selbst keine Schema-Aenderung).
 
-Revision ID: 0021
-Revises: 0020
+Revision ID: 0063
+Revises: 0062
 Create Date: 2026-08-16
 """
 from typing import Sequence, Union
@@ -16,8 +16,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0021"
-down_revision: Union[str, None] = "0020"
+revision: str = "0063"
+down_revision: Union[str, None] = "0062"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -30,6 +30,10 @@ def upgrade() -> None:
         sa.Column("email", sa.Text(), nullable=False),
         sa.Column("art", sa.Text(), nullable=False),
         sa.Column("rolle", sa.Text(), nullable=True),
+        # Nur bei rolle == "custom" gesetzt -- zeigt auf den vom mandant_admin
+        # definierten Account-Typ (siehe app/models/account_typ.py), analog zu
+        # users.account_typ_id.
+        sa.Column("account_typ_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("kunde_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("partner_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("status", sa.Text(), nullable=False, server_default="offen"),
@@ -38,13 +42,18 @@ def upgrade() -> None:
         sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.ForeignKeyConstraint(["mandant_id"], ["mandanten.id"], name="fk_einladungen_mandant_id_mandanten"),
+        sa.ForeignKeyConstraint(["account_typ_id"], ["account_typen.id"], name="fk_einladungen_account_typ_id_account_typen"),
         sa.ForeignKeyConstraint(["kunde_id"], ["kunden.id"], name="fk_einladungen_kunde_id_kunden", ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["partner_id"], ["partner.id"], name="fk_einladungen_partner_id_partner", ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["eingeladen_von"], ["users.id"], name="fk_einladungen_eingeladen_von_users"),
         sa.CheckConstraint("art IN ('mitarbeiter','kunde','partner')", name="ck_einladungen_art_valid"),
         sa.CheckConstraint(
-            "rolle IS NULL OR rolle IN ('mandant_admin','disponent','techniker')",
+            "rolle IS NULL OR rolle IN ('mandant_admin','custom')",
             name="ck_einladungen_rolle_valid",
+        ),
+        sa.CheckConstraint(
+            "account_typ_id IS NULL OR rolle = 'custom'",
+            name="ck_einladungen_account_typ_id_nur_bei_custom",
         ),
         sa.CheckConstraint("status IN ('offen','angenommen','widerrufen')", name="ck_einladungen_status_valid"),
         sa.CheckConstraint(

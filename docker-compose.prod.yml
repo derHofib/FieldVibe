@@ -14,6 +14,11 @@ services:
       - "443:443"
     environment:
       DOMAIN_APP: ${DOMAIN_APP}
+      # Desktop-Oberflaeche, zeigt auf denselben frontend-Container wie
+      # DOMAIN_APP (siehe Caddyfile). Muss hier stehen, weil der caddy-Container
+      # kein env_file hat -- {$VAR} im Caddyfile loest nur auf, was hier
+      # durchgereicht wird.
+      DOMAIN_OFFICE: ${DOMAIN_OFFICE}
       DOMAIN_API: ${DOMAIN_API}
       DOMAIN_S3: ${DOMAIN_S3}
       CADDY_EMAIL: ${CADDY_EMAIL}

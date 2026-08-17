@@ -6,22 +6,32 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db, require_module_kunde
 from app.models.angebot import Angebot
+from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung
+from app.models.standort import Standort
+from app.models.user import User
 from app.models.vorgang import Vorgang
+from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.vorgang_event import VorgangEvent
+from app.schemas.anlage import AnlageRead
 from app.schemas.angebot import AngebotRead
-from app.schemas.kundenportal import KundenAngebotAntwort
+from app.schemas.kundenportal import KundenAngebotAntwort, KundenAnlageCreate, KundenStandortCreate
 from app.schemas.rechnung import RechnungRead
+from app.schemas.standort import StandortRead
 from app.schemas.vorgang import VorgangRead
+from app.schemas.vorgang_anfrage import VorgangAnfrageCreate, VorgangAnfrageRead
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.pdf_service import generate_angebot_pdf, generate_rechnung_pdf
 from app.services.rechnung_service import (
     positionen_fuer as rechnung_positionen_fuer,
     to_read_model as rechnung_to_read_model,
 )
+from app.services.storage_service import download_bytes
+from app.services.vorgang_anfrage_service import notify_neue_anfrage
 from app.services.vorgang_event_service import to_read_model as event_to_read_model
 
 router = APIRouter(
@@ -142,8 +152,10 @@ async def eigenes_angebot_pdf(
     kunde = await session.get(Kunde, angebot.kunde_id)
     positionen = await positionen_fuer(session, angebot.id)
     mandant = await session.get(Mandant, auth.mandant_id)
+    bearbeiter = await session.get(User, angebot.erstellt_von)
+    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
 
-    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde)
+    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde, bearbeiter, logo_bytes)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -196,3 +208,170 @@ async def eigene_rechnung_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{rechnung.rechnungsnummer}.pdf"'},
     )
+
+
+# --- Standorte (Selfservice: der Kunde legt eigene Standorte an) -----------
+
+
+@router.get("/standorte", response_model=list[StandortRead])
+async def list_eigene_standorte(
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> list[Standort]:
+    result = await session.execute(
+        select(Standort).where(Standort.kunde_id == auth.kunde_id).order_by(Standort.bezeichnung)
+    )
+    return list(result.scalars().all())
+
+
+@router.post("/standorte", response_model=StandortRead, status_code=status.HTTP_201_CREATED)
+async def create_eigenen_standort(
+    body: KundenStandortCreate,
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> Standort:
+    geo_lat, geo_lng = body.geo_lat, body.geo_lng
+    if geo_lat is None and geo_lng is None:
+        koordinaten = await geocode_falls_modul_aktiv(session, auth.mandant_id, body.adresse)
+        if koordinaten is not None:
+            geo_lat, geo_lng = koordinaten
+
+    standort = Standort(
+        mandant_id=auth.mandant_id,
+        kunde_id=auth.kunde_id,
+        bezeichnung=body.bezeichnung,
+        adresse=body.adresse,
+        geo_lat=geo_lat,
+        geo_lng=geo_lng,
+        erstellt_von_kundenportal_zugang_id=auth.zugang_id,
+    )
+    session.add(standort)
+    await session.flush()
+    return standort
+
+
+# --- Anlagen (Selfservice: der Kunde legt eigene Anlagen an) ---------------
+
+
+@router.get("/anlagen", response_model=list[AnlageRead])
+async def list_eigene_anlagen(
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> list[Anlage]:
+    result = await session.execute(
+        select(Anlage).where(Anlage.kunde_id == auth.kunde_id).order_by(Anlage.bezeichnung)
+    )
+    return list(result.scalars().all())
+
+
+@router.post("/anlagen", response_model=AnlageRead, status_code=status.HTTP_201_CREATED)
+async def create_eigene_anlage(
+    body: KundenAnlageCreate,
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> Anlage:
+    if body.standort_id is not None:
+        standort = await session.get(Standort, body.standort_id)
+        if standort is None or standort.kunde_id != auth.kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Standort nicht gefunden"
+            )
+
+    geo_lat, geo_lng = body.geo_lat, body.geo_lng
+    if geo_lat is None and geo_lng is None:
+        koordinaten = await geocode_falls_modul_aktiv(session, auth.mandant_id, body.adresse)
+        if koordinaten is not None:
+            geo_lat, geo_lng = koordinaten
+
+    anlage = Anlage(
+        mandant_id=auth.mandant_id,
+        kunde_id=auth.kunde_id,
+        standort_id=body.standort_id,
+        objekttyp="kundenanlage",
+        bezeichnung=body.bezeichnung,
+        adresse=body.adresse,
+        anlagentyp=body.anlagentyp,
+        geo_lat=geo_lat,
+        geo_lng=geo_lng,
+        erstellt_von_kundenportal_zugang_id=auth.zugang_id,
+    )
+    session.add(anlage)
+    await session.flush()
+    return anlage
+
+
+# --- Auftragsanfragen (muessen von einem Mitarbeiter bestaetigt werden) ----
+
+
+@router.get("/anfragen", response_model=list[VorgangAnfrageRead])
+async def list_eigene_anfragen(
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> list[VorgangAnfrage]:
+    result = await session.execute(
+        select(VorgangAnfrage)
+        .where(VorgangAnfrage.kunde_id == auth.kunde_id)
+        .order_by(VorgangAnfrage.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.get("/anfragen/{anfrage_id}", response_model=VorgangAnfrageRead)
+async def get_eigene_anfrage(
+    anfrage_id: UUID,
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> VorgangAnfrage:
+    anfrage = await session.get(VorgangAnfrage, anfrage_id)
+    if anfrage is None or anfrage.kunde_id != auth.kunde_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
+    return anfrage
+
+
+@router.post("/anfragen", response_model=VorgangAnfrageRead, status_code=status.HTTP_201_CREATED)
+async def create_eigene_anfrage(
+    body: VorgangAnfrageCreate,
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> VorgangAnfrage:
+    if body.standort_id is not None:
+        standort = await session.get(Standort, body.standort_id)
+        if standort is None or standort.kunde_id != auth.kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Standort nicht gefunden"
+            )
+        if not standort.aktiv:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Standort ist inaktiv"
+            )
+    if body.anlage_id is not None:
+        anlage = await session.get(Anlage, body.anlage_id)
+        if anlage is None or anlage.kunde_id != auth.kunde_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Anlage nicht gefunden"
+            )
+        if not anlage.aktiv:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Anlage ist inaktiv")
+
+    kunde = await session.get(Kunde, auth.kunde_id)
+    anfrage = VorgangAnfrage(
+        mandant_id=auth.mandant_id,
+        kunde_id=auth.kunde_id,
+        kundenportal_zugang_id=auth.zugang_id,
+        standort_id=body.standort_id,
+        anlage_id=body.anlage_id,
+        titel=body.titel,
+        beschreibung=body.beschreibung,
+        leistungstyp=body.leistungstyp,
+    )
+    session.add(anfrage)
+    await session.flush()
+    await session.refresh(anfrage)
+
+    await notify_neue_anfrage(
+        session,
+        mandant_id=auth.mandant_id,
+        anfrage=anfrage,
+        kunde_name=kunde.name if kunde else "",
+    )
+    return anfrage

@@ -56,9 +56,15 @@ async def authenticate(email: str, password: str) -> TokenPair:
 
         return TokenPair(
             access_token=create_access_token(
-                subject=user.id, role=user.role, mandant_id=user.mandant_id
+                subject=user.id,
+                role=user.role,
+                mandant_id=user.mandant_id,
+                account_typ_id=user.account_typ_id,
             ),
             refresh_token=create_refresh_token(
-                subject=user.id, role=user.role, mandant_id=user.mandant_id
+                subject=user.id,
+                role=user.role,
+                mandant_id=user.mandant_id,
+                account_typ_id=user.account_typ_id,
             ),
         )

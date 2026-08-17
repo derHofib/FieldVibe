@@ -5,14 +5,17 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, require_module, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
 from app.models.angebot import Angebot
+from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.rechnung import Rechnung
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.insights import Insights, TechnikerAuslastung
-from app.services.rechnung_service import netto_betrag, positionen_fuer
+from app.services import eingangsrechnung_service
+from app.services.rechnung_service import bezahlter_betrag, brutto_betrag, positionen_fuer, zahlungen_fuer
+from app.services.zuweisung_service import technik_user_ids
 
 router = APIRouter(
     prefix="/api/insights",
@@ -31,7 +34,9 @@ def _montag_dieser_woche(jetzt: datetime) -> datetime:
 
 
 @router.get("", response_model=Insights)
-async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
+async def get_insights(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> Insights:
     status_result = await session.execute(
         select(Vorgang.status, func.count()).group_by(Vorgang.status)
     )
@@ -39,17 +44,29 @@ async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
 
     offene_rechnungen = (
         await session.execute(
-            select(Rechnung).where(Rechnung.status.in_(("entwurf", "versendet")))
+            select(Rechnung).where(Rechnung.status.in_(("entwurf", "versendet", "teilweise_bezahlt")))
         )
     ).scalars().all()
-    # netto_betrag() statt r.betrag_netto direkt: bei Teil-/Sammelrechnungen
-    # mit eigenen Positionen (Nacharbeit) ist deren Summe die Quelle der
-    # Wahrheit, nicht das (dann ungenutzte) Feld auf der Rechnung selbst.
+    # brutto_betrag() minus bereits gebuchter Zahlungen statt des vollen
+    # Bruttobetrags -- sonst zaehlt eine zu 90% bezahlte Rechnung (Status
+    # teilweise_bezahlt) hier weiterhin mit ihrem vollen Betrag mit.
     offene_rechnungssumme = Decimal("0")
     for r in offene_rechnungen:
-        netto = netto_betrag(r, await positionen_fuer(session, r.id))
-        offene_rechnungssumme += netto * (Decimal("1") + r.mwst_satz / Decimal("100"))
+        positionen = await positionen_fuer(session, r.id)
+        zahlungen = await zahlungen_fuer(session, r.id)
+        offene_rechnungssumme += brutto_betrag(r, positionen) - bezahlter_betrag(zahlungen)
     offene_rechnungssumme = offene_rechnungssumme.quantize(Decimal("0.01"))
+
+    offene_eingangsrechnungen = (
+        await session.execute(select(Eingangsrechnung).where(Eingangsrechnung.status == "offen"))
+    ).scalars().all()
+    offene_verbindlichkeiten = Decimal("0")
+    for e in offene_eingangsrechnungen:
+        positionen = await eingangsrechnung_service.positionen_fuer(session, e.id)
+        zahlungen = await eingangsrechnung_service.zahlungen_fuer(session, e.id)
+        brutto = eingangsrechnung_service.brutto_betrag(e, positionen)
+        offene_verbindlichkeiten += brutto - eingangsrechnung_service.bezahlter_betrag(zahlungen)
+    offene_verbindlichkeiten = offene_verbindlichkeiten.quantize(Decimal("0.01"))
 
     angebote_versendet = (
         await session.scalar(select(func.count()).select_from(Angebot).where(Angebot.versendet_am.isnot(None)))
@@ -62,9 +79,10 @@ async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
     )
 
     wochenstart = _montag_dieser_woche(datetime.now(timezone.utc))
+    techniker_ids = await technik_user_ids(session, auth.mandant_id)
     technikers = (
         await session.execute(
-            select(User).where(User.role == "techniker", User.aktiv.is_(True)).order_by(User.name)
+            select(User).where(User.id.in_(techniker_ids), User.aktiv.is_(True)).order_by(User.name)
         )
     ).scalars().all()
 
@@ -88,6 +106,7 @@ async def get_insights(session: AsyncSession = Depends(get_db)) -> Insights:
     return Insights(
         vorgaenge_nach_status=vorgaenge_nach_status,
         offene_rechnungssumme=offene_rechnungssumme,
+        offene_verbindlichkeiten=offene_verbindlichkeiten,
         angebote_versendet=angebote_versendet,
         angebote_angenommen=angebote_angenommen,
         angebote_annahmequote=angebote_annahmequote,

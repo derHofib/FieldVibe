@@ -1,14 +1,13 @@
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.core.config import get_settings
 from app.models.anlage import Anlage
 from app.models.inventurzyklus import InventurZyklus
-from app.models.material import Material, MaterialBestand
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.termin import Termin
@@ -18,7 +17,7 @@ from app.schemas.story import Ampel, StoriesResponse, StoryItem
 router = APIRouter(
     prefix="/api/stories",
     tags=["stories"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[Depends(require_roles("mandant_admin", "custom"))],
 )
 
 WARTET_KUNDE_SCHWELLE_TAGE = 3
@@ -80,11 +79,18 @@ async def get_stories(
         .order_by(Pruefzyklus.naechste_pruefung_am.asc())
     )
     for zyklus, anlage_bezeichnung in pruefzyklen_result.all():
+        # naechste_pruefung_am ist seit der waehlbaren Intervall-Einheit ein
+        # Zeitstempel (siehe app/models/pruefzyklus.py) -- fuer den
+        # Ampel-Vergleich mit dem reinen Tagesdatum heute_datum reicht der
+        # Datumsanteil; bei Einheit "stunde" zeigt die Anzeige zusaetzlich
+        # die Uhrzeit, da der Tag allein dort zu ungenau waere.
+        faellig_am = zyklus.naechste_pruefung_am
+        anzeige_format = "%d.%m.%Y %H:%M" if zyklus.intervall_einheit == "stunde" else "%d.%m.%Y"
         fristen.append(
             StoryItem(
                 titel=f"{zyklus.bezeichnung}: {anlage_bezeichnung}",
-                subtitel=f"Fällig am {zyklus.naechste_pruefung_am:%d.%m.%Y}",
-                ampel=_frist_ampel(zyklus.naechste_pruefung_am, heute_datum),
+                subtitel=f"Fällig am {faellig_am.strftime(anzeige_format)}",
+                ampel=_frist_ampel(faellig_am.date(), heute_datum),
                 ziel_typ="anlage",
                 ziel_id=zyklus.anlage_id,
             )
@@ -143,34 +149,8 @@ async def get_stories(
         for v in result.scalars().all()
     ]
 
-    # "material": Material, dessen Gesamtbestand (ueber alle Lagerorte
-    # summiert) die Mindestmenge erreicht oder unterschritten hat -- rot,
-    # wenn bereits aufgebraucht, sonst gelb.
-    bestand_gesamt_subq = (
-        select(func.coalesce(func.sum(MaterialBestand.menge), 0))
-        .where(MaterialBestand.material_id == Material.id)
-        .correlate(Material)
-        .scalar_subquery()
-    )
-    material_result = await session.execute(
-        select(Material, bestand_gesamt_subq.label("bestand_gesamt"))
-        .where(bestand_gesamt_subq <= Material.mindestbestand)
-        .order_by(Material.bezeichnung)
-    )
-    material = [
-        StoryItem(
-            titel=m.bezeichnung,
-            subtitel=f"Bestand: {bestand_gesamt:g} {m.einheit} (Mindestbestand {m.mindestbestand:g})",
-            ampel="rot" if bestand_gesamt <= 0 else "gelb",
-            ziel_typ="material",
-            ziel_id=m.id,
-        )
-        for m, bestand_gesamt in material_result.all()
-    ]
-
     return StoriesResponse(
         heute=heute,
         fristen=fristen,
         wartet_kunde=wartet_kunde,
-        material=material,
     )

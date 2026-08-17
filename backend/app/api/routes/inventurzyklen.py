@@ -5,16 +5,27 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.inventurzyklus import InventurZyklus
 from app.schemas.inventurzyklus import InventurZyklusCreate, InventurZyklusRead, InventurZyklusUpdate
+from app.services import papierkorb_service
 
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/inventurzyklen",
     tags=["inventurzyklen"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("fahrzeuge")),
     ],
 )
@@ -31,12 +42,20 @@ async def _require_lagerort(session: AsyncSession, lager_id: UUID) -> Anlage:
     return lager
 
 
-@router.get("", response_model=list[InventurZyklusRead])
+@router.get(
+    "",
+    response_model=list[InventurZyklusRead],
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def list_inventurzyklen(
     lager_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[InventurZyklus]:
-    stmt = select(InventurZyklus).order_by(InventurZyklus.naechste_inventur_am.asc())
+    stmt = (
+        select(InventurZyklus)
+        .where(InventurZyklus.geloescht_am.is_(None))
+        .order_by(InventurZyklus.naechste_inventur_am.asc())
+    )
     if lager_id:
         stmt = stmt.where(InventurZyklus.lager_id == lager_id)
     result = await session.execute(stmt)
@@ -47,7 +66,10 @@ async def list_inventurzyklen(
     "",
     response_model=InventurZyklusRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_inventurzyklus(
     body: InventurZyklusCreate,
@@ -58,7 +80,10 @@ async def create_inventurzyklus(
 
     bestehender = (
         await session.execute(
-            select(InventurZyklus).where(InventurZyklus.lager_id == body.lager_id)
+            select(InventurZyklus).where(
+                InventurZyklus.lager_id == body.lager_id,
+                InventurZyklus.geloescht_am.is_(None),
+            )
         )
     ).scalar_one_or_none()
     if bestehender is not None:
@@ -80,22 +105,51 @@ async def create_inventurzyklus(
     return zyklus
 
 
-@router.get("/{inventurzyklus_id}", response_model=InventurZyklusRead)
+@router.get(
+    "/{inventurzyklus_id}",
+    response_model=InventurZyklusRead,
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def get_inventurzyklus(
     inventurzyklus_id: UUID, session: AsyncSession = Depends(get_db)
 ) -> InventurZyklus:
     zyklus = await session.get(InventurZyklus, inventurzyklus_id)
-    if zyklus is None:
+    if zyklus is None or zyklus.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Inventurzyklus nicht gefunden"
         )
     return zyklus
 
 
+@router.delete(
+    "/{inventurzyklus_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("material", "loeschen")),
+    ],
+)
+async def delete_inventurzyklus(
+    inventurzyklus_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    zyklus = await papierkorb_service.soft_delete(
+        session, entity_typ="inventurzyklus", entity_id=inventurzyklus_id, actor_user_id=auth.user_id
+    )
+    if zyklus is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Inventurzyklus nicht gefunden"
+        )
+
+
 @router.patch(
     "/{inventurzyklus_id}",
     response_model=InventurZyklusRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_inventurzyklus(
     inventurzyklus_id: UUID,
@@ -103,7 +157,7 @@ async def update_inventurzyklus(
     session: AsyncSession = Depends(get_db),
 ) -> InventurZyklus:
     zyklus = await session.get(InventurZyklus, inventurzyklus_id)
-    if zyklus is None:
+    if zyklus is None or zyklus.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Inventurzyklus nicht gefunden"
         )

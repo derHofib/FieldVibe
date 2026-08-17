@@ -1,3 +1,6 @@
+from datetime import date, datetime, time, timezone
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,8 +20,20 @@ router = APIRouter(
 async def list_audit_log(
     session: AsyncSession = Depends(get_db),
     limit: int = Query(default=100, le=500, ge=1),
+    mandant_id: UUID | None = None,
+    aktion: str | None = None,
+    von: date | None = None,
+    bis: date | None = None,
 ) -> list[AuditLog]:
-    result = await session.execute(
-        select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit)
-    )
+    stmt = select(AuditLog)
+    if mandant_id is not None:
+        stmt = stmt.where(AuditLog.mandant_id == mandant_id)
+    if aktion:
+        stmt = stmt.where(AuditLog.aktion.ilike(f"%{aktion}%"))
+    if von is not None:
+        stmt = stmt.where(AuditLog.created_at >= datetime.combine(von, time.min, tzinfo=timezone.utc))
+    if bis is not None:
+        stmt = stmt.where(AuditLog.created_at <= datetime.combine(bis, time.max, tzinfo=timezone.utc))
+    stmt = stmt.order_by(AuditLog.created_at.desc()).limit(limit)
+    result = await session.execute(stmt)
     return list(result.scalars().all())

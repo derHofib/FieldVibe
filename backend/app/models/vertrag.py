@@ -5,12 +5,12 @@ from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ABRECHNUNGSARTEN_VERTRAG = ("pauschale", "aufwand", "festpreis", "wartungsvertrag")
 
 
-class Vertrag(TimestampMixin, Base):
+class Vertrag(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "vertraege"
     __table_args__ = (
         CheckConstraint(

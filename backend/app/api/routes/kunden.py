@@ -1,52 +1,84 @@
+import secrets
+from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import delete, select
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.core.security import hash_password
+from app.models.angebot import Angebot
 from app.models.anlage import Anlage
 from app.models.einladung import Einladung
+from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
+from app.models.rechnung import Rechnung
+from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
+from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.models.vorgang_event import VorgangEvent
+from app.schemas.anlage import AnlageRead
+from app.schemas.datenexport import KundeDatenexport, VorgangMitEreignissen
 from app.schemas.einladung import EinladungRead, KundeEinladungCreate
-from app.schemas.kunde import KundeCreate, KundeRead, KundeUpdate
+from app.schemas.email import EmailLogRead, EmailSenden
+from app.schemas.kunde import KundeCreate, KundeLogoUrl, KundeRead, KundeUpdate
 from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
 from app.schemas.kundenportal import KundenportalZugangRead, KundenportalZugangUpdate
 from app.schemas.profile import KundeProfil
+from app.schemas.standort import StandortRead
 from app.schemas.user import UserRead
+from app.schemas.vertrag import VertragRead
+from app.schemas.vorgang import VorgangRead
+from app.schemas.vorgang_event import VorgangEventRead
+from app.services import angebot_service, papierkorb_service, rechnung_service, storage_service
 from app.services.einladung_service import create_einladung, to_read_model, versende_einladung
+from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
+from app.services.zuweisung_service import assigned_kunde_ids, technik_user_ids
 
 # super_admin is deliberately excluded: fachliche Daten sind immer
 # mandantengebunden, und ein nicht-impersonierender super_admin hat kein
 # mandant_id im Token. Zugriff läuft für die Plattform-Rolle ausschließlich
 # über "Login als Mandant" (das Token trägt dann role=mandant_admin).
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/kunden",
     tags=["kunden"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ"))
+    ],
 )
 
 
-@router.get("", response_model=list[KundeRead])
+@router.get("", response_model=list[KundeRead], dependencies=[Depends(require_recht("kunden", "sehen"))])
 async def list_kunden(
     q: str | None = Query(default=None, description="Suche in Name/Kundennummer"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Kunde]:
-    stmt = select(Kunde).order_by(Kunde.name)
+    stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(Kunde.id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -56,7 +88,10 @@ async def list_kunden(
     "",
     response_model=KundeRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "erstellen")),
+    ],
 )
 async def create_kunde(
     body: KundeCreate,
@@ -72,6 +107,11 @@ async def create_kunde(
         ansprechpartner=[a.model_dump(mode="json") for a in body.ansprechpartner],
         adresse=body.adresse,
         notiz=body.notiz,
+        ust_idnr=body.ust_idnr,
+        # Ein Link fuer den gesamten Kunden (nicht pro Ansprechpartner) --
+        # jeder Mitarbeiter des Kunden mit eigenem KundenportalZugang meldet
+        # sich darueber mit seiner eigenen E-Mail/seinem eigenen Passwort an.
+        portal_slug=secrets.token_urlsafe(12),
     )
     session.add(kunde)
     try:
@@ -86,29 +126,87 @@ async def create_kunde(
 async def _require_kunde_zugriff(
     session: AsyncSession, auth: AuthContext, kunde_id: UUID
 ) -> None:
-    if auth.role == "techniker" and kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
+    if beschraenkt and kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
 
 
-@router.get("/{kunde_id}", response_model=KundeRead)
+@router.get(
+    "/{kunde_id}", response_model=KundeRead, dependencies=[Depends(require_recht("kunden", "sehen"))]
+)
 async def get_kunde(
     kunde_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Kunde:
     kunde = await session.get(Kunde, kunde_id)
-    if kunde is None:
+    if kunde is None or kunde.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     await _require_kunde_zugriff(session, auth, kunde_id)
     return kunde
 
 
 @router.get(
+    "/{kunde_id}/emails",
+    response_model=list[EmailLogRead],
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def list_kunde_emails(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[EmailLog]:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+    result = await session.execute(
+        select(EmailLog)
+        .where(EmailLog.entity_type == "kunde", EmailLog.entity_id == kunde_id)
+        .order_by(EmailLog.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post(
+    "/{kunde_id}/emails",
+    response_model=EmailLogRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_recht("kunden", "bearbeiten"))],
+)
+async def send_kunde_email(
+    kunde_id: UUID,
+    body: EmailSenden,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EmailLog:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+
+    log = await send_email_and_log(
+        session,
+        auth.mandant_id,
+        entity_type="kunde",
+        entity_id=kunde_id,
+        to=body.empfaenger,
+        subject=body.betreff,
+        body=body.inhalt,
+        gesendet_von=auth.user_id,
+    )
+    return log
+
+
+@router.get(
     "/{kunde_id}/profil",
     response_model=KundeProfil,
-    dependencies=[Depends(require_module("kundenverwaltung"))],
+    dependencies=[
+        Depends(require_module("kundenverwaltung")),
+        Depends(require_recht("kunden", "sehen")),
+    ],
 )
 async def get_kunde_profil(
     kunde_id: UUID,
@@ -116,16 +214,18 @@ async def get_kunde_profil(
     session: AsyncSession = Depends(get_db),
 ) -> KundeProfil:
     kunde = await session.get(Kunde, kunde_id)
-    if kunde is None:
+    if kunde is None or kunde.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
     await _require_kunde_zugriff(session, auth, kunde_id)
 
     anlagen_result = await session.execute(
-        select(Anlage).where(Anlage.kunde_id == kunde_id).order_by(Anlage.bezeichnung)
+        select(Anlage)
+        .where(Anlage.kunde_id == kunde_id, Anlage.geloescht_am.is_(None))
+        .order_by(Anlage.bezeichnung)
     )
     vorgaenge_result = await session.execute(
         select(Vorgang)
-        .where(Vorgang.kunde_id == kunde_id)
+        .where(Vorgang.kunde_id == kunde_id, Vorgang.geloescht_am.is_(None))
         .order_by(Vorgang.last_activity_at.desc())
         .limit(50)
     )
@@ -151,10 +251,112 @@ async def get_kunde_profil(
 
 
 @router.get(
+    "/{kunde_id}/datenexport",
+    response_model=KundeDatenexport,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def get_kunde_datenexport(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> KundeDatenexport:
+    """Alle personenbezogenen Daten zu diesem Kunden als maschinenlesbare
+    Struktur -- fuer Auskunftsersuchen (Art. 15 DSGVO) und Datenuebertragbarkeit
+    (Art. 20 DSGVO). Siehe app/schemas/datenexport.py fuer den bewussten
+    Ausschluss von Passwort-Hashes/Binaerdaten."""
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None or kunde.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+
+    standorte = (
+        await session.execute(
+            select(Standort).where(Standort.kunde_id == kunde_id, Standort.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    anlagen = (
+        await session.execute(
+            select(Anlage).where(Anlage.kunde_id == kunde_id, Anlage.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    vertraege = (
+        await session.execute(
+            select(Vertrag).where(Vertrag.kunde_id == kunde_id, Vertrag.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    vorgaenge = (
+        await session.execute(
+            select(Vorgang)
+            .where(Vorgang.kunde_id == kunde_id, Vorgang.geloescht_am.is_(None))
+            .order_by(Vorgang.created_at)
+        )
+    ).scalars().all()
+    events_by_vorgang: dict[UUID, list[VorgangEvent]] = {v.id: [] for v in vorgaenge}
+    if vorgaenge:
+        events = (
+            await session.execute(
+                select(VorgangEvent)
+                .where(VorgangEvent.vorgang_id.in_(events_by_vorgang.keys()))
+                .order_by(VorgangEvent.created_at)
+            )
+        ).scalars().all()
+        for event in events:
+            events_by_vorgang[event.vorgang_id].append(event)
+    angebote = (
+        await session.execute(
+            select(Angebot).where(Angebot.kunde_id == kunde_id, Angebot.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    rechnungen = (
+        await session.execute(
+            select(Rechnung).where(Rechnung.kunde_id == kunde_id, Rechnung.geloescht_am.is_(None))
+        )
+    ).scalars().all()
+    emails = (
+        await session.execute(
+            select(EmailLog)
+            .where(EmailLog.entity_type == "kunde", EmailLog.entity_id == kunde_id)
+            .order_by(EmailLog.created_at)
+        )
+    ).scalars().all()
+    portal_zugaenge = (
+        await session.execute(select(KundenportalZugang).where(KundenportalZugang.kunde_id == kunde_id))
+    ).scalars().all()
+    tags = (
+        await session.execute(
+            select(Tag.label)
+            .join(TagAssignment, TagAssignment.tag_id == Tag.id)
+            .where(TagAssignment.entity_type == "kunde", TagAssignment.entity_id == kunde_id)
+        )
+    ).scalars().all()
+
+    return KundeDatenexport(
+        exportiert_am=datetime.now(UTC),
+        kunde=KundeRead.model_validate(kunde),
+        standorte=[StandortRead.model_validate(s) for s in standorte],
+        anlagen=[AnlageRead.model_validate(a) for a in anlagen],
+        vertraege=[VertragRead.model_validate(v) for v in vertraege],
+        vorgaenge=[
+            VorgangMitEreignissen(
+                **VorgangRead.model_validate(v).model_dump(),
+                ereignisse=[VorgangEventRead.model_validate(e) for e in events_by_vorgang[v.id]],
+            )
+            for v in vorgaenge
+        ],
+        angebote=[await angebot_service.to_read_model(session, a) for a in angebote],
+        rechnungen=[await rechnung_service.to_read_model(session, r) for r in rechnungen],
+        emails=[EmailLogRead.model_validate(e) for e in emails],
+        kundenportal_zugaenge=[KundenportalZugangRead.model_validate(z) for z in portal_zugaenge],
+        tags=list(tags),
+    )
+
+
+@router.get(
     "/{kunde_id}/techniker",
     response_model=list[UserRead],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "sehen")),
         Depends(require_module("kundenverwaltung")),
     ],
 )
@@ -176,7 +378,8 @@ async def list_kunde_techniker(
     "/{kunde_id}/techniker",
     response_model=list[UserRead],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenverwaltung")),
     ],
 )
@@ -191,10 +394,7 @@ async def set_kunde_techniker(
 
     user_ids = set(body.user_ids)
     if user_ids:
-        gueltige_result = await session.execute(
-            select(User.id).where(User.id.in_(user_ids), User.role == "techniker")
-        )
-        gueltige_ids = set(gueltige_result.scalars().all())
+        gueltige_ids = await technik_user_ids(session, auth.mandant_id) & user_ids
         if gueltige_ids != user_ids:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -228,8 +428,9 @@ async def set_kunde_techniker(
     "/{kunde_id}",
     response_model=KundeRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
         Depends(require_module("kundenverwaltung")),
+        Depends(require_recht("kunden", "bearbeiten")),
     ],
 )
 async def update_kunde(
@@ -256,40 +457,26 @@ async def update_kunde(
     "/{kunde_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("kunden", "loeschen")),
         Depends(require_module("kundenverwaltung")),
     ],
 )
-async def delete_kunde(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
-    kunde = await session.get(Kunde, kunde_id)
+async def delete_kunde(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    # Papierkorb statt Hard-Delete: verschiebt den Kunden UND alle fachlich
+    # abhaengigen Datensaetze (Standorte, Anlagen, Vertraege, Vorgaenge, ...)
+    # kaskadierend in den Papierkorb (siehe app/services/papierkorb_service.py).
+    # Portal-Zugaenge/Tag-Zuordnungen bleiben unangetastet stehen, da der
+    # Kunden-Datensatz selbst nicht mehr geloescht, sondern nur markiert wird.
+    kunde = await papierkorb_service.soft_delete(
+        session, entity_typ="kunde", entity_id=kunde_id, actor_user_id=auth.user_id
+    )
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
-
-    # Portal-Zugaenge (Login-Credentials) und Tag-Zuordnungen (entity_id ist
-    # polymorph, hat also keine echte FK zu kunden.id) sind reine Anhaengsel
-    # des Kunden, keine eigenstaendigen Geschaeftsvorfaelle -- die raeumen
-    # wir mit auf. kunde_zuweisungen loescht sich per ondelete=CASCADE
-    # bereits selbst. Alles mit echtem fachlichem Gewicht (Anlagen, Vorgaenge,
-    # Vertraege, Angebote, Rechnungen, Dauerauftraege) blockt die eigentliche
-    # Loeschung unten ueber den FK-Constraint.
-    await session.execute(delete(KundenportalZugang).where(KundenportalZugang.kunde_id == kunde_id))
-    await session.execute(
-        delete(TagAssignment).where(
-            TagAssignment.entity_type == "kunde", TagAssignment.entity_id == kunde_id
-        )
-    )
-
-    try:
-        await session.delete(kunde)
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Kunde kann nicht gelöscht werden, da noch Daten verknüpft sind "
-                "(z.B. Anlagen, Vorgänge, Verträge, Angebote, Rechnungen)."
-            ),
-        ) from exc
 
 
 @router.get(
@@ -334,7 +521,8 @@ async def list_kunde_einladungen(
     response_model=EinladungRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
@@ -416,7 +604,8 @@ async def kunde_einladung_widerrufen(
     "/{kunde_id}/portal-zugaenge/{zugang_id}",
     response_model=KundenportalZugangRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
@@ -446,3 +635,88 @@ async def update_portal_zugang(
     if changes:
         await session.refresh(zugang)
     return zugang
+
+
+_LOGO_MAX_BYTES = 3 * 1024 * 1024
+
+
+@router.post(
+    "/{kunde_id}/logo",
+    response_model=KundeRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin")),
+        Depends(require_module("kundenportal")),
+    ],
+)
+async def upload_kunde_logo(
+    kunde_id: UUID,
+    file: UploadFile,
+    session: AsyncSession = Depends(get_db),
+) -> Kunde:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Nur Bilddateien werden unterstützt"
+        )
+
+    data = await file.read()
+    if len(data) > _LOGO_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 3 MB)"
+        )
+
+    alter_key = kunde.logo_object_key
+    key = storage_service.new_kunde_logo_key(kunde_id, file.filename or "logo.png")
+    await storage_service.upload_bytes(key, data, file.content_type)
+    kunde.logo_object_key = key
+    await session.flush()
+    await session.refresh(kunde)
+
+    if alter_key is not None:
+        await storage_service.delete_object(alter_key)
+    return kunde
+
+
+@router.delete(
+    "/{kunde_id}/logo",
+    response_model=KundeRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin")),
+        Depends(require_module("kundenportal")),
+    ],
+)
+async def remove_kunde_logo(kunde_id: UUID, session: AsyncSession = Depends(get_db)) -> Kunde:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+
+    alter_key = kunde.logo_object_key
+    kunde.logo_object_key = None
+    await session.flush()
+    await session.refresh(kunde)
+
+    if alter_key is not None:
+        await storage_service.delete_object(alter_key)
+    return kunde
+
+
+@router.get(
+    "/{kunde_id}/logo-url",
+    response_model=KundeLogoUrl,
+    dependencies=[Depends(require_recht("kunden", "sehen"))],
+)
+async def get_kunde_logo_url(
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> KundeLogoUrl:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id)
+
+    if kunde.logo_object_key is None:
+        return KundeLogoUrl(url=None)
+    return KundeLogoUrl(url=storage_service.presigned_get_url(kunde.logo_object_key))

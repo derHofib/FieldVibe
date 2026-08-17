@@ -13,6 +13,7 @@ class TechnikerAuslastung(BaseModel):
 class Insights(BaseModel):
     vorgaenge_nach_status: dict[str, int]
     offene_rechnungssumme: Decimal
+    offene_verbindlichkeiten: Decimal
     angebote_versendet: int
     angebote_angenommen: int
     angebote_annahmequote: float | None

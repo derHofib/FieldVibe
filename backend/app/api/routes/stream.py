@@ -26,7 +26,7 @@ async def stream(request: Request, token: str = Query(...)) -> EventSourceRespon
 
     if payload.get("type") not in ("access", "impersonation"):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Token")
-    if payload.get("role") not in ("mandant_admin", "disponent", "techniker"):
+    if payload.get("role") not in ("mandant_admin", "custom"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung")
     if not payload.get("mandant_id"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Mandant im Token")

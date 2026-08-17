@@ -1,7 +1,19 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+
+class KundenportalLinkInfo(BaseModel):
+    """Oeffentliche Antwort fuer den personalisierten Login-Link (kein Auth
+    noetig, keine sensiblen Daten): ein Link pro Kunde, den jeder
+    Mitarbeiter dieses Kunden nutzen kann -- zeigt nur Name/Logo des Kunden
+    zur Wiedererkennung, das Passwort bleibt in jedem Fall Pflicht und ist
+    weiterhin an den jeweils eigenen KundenportalZugang gebunden."""
+
+    kunde_name: str
+    mandant_name: str
+    hat_logo: bool
 
 
 class CurrentKunde(BaseModel):
@@ -49,3 +61,19 @@ class KundenportalZugangRead(BaseModel):
     aktiv: bool
     created_at: datetime
     updated_at: datetime
+
+
+class KundenStandortCreate(BaseModel):
+    bezeichnung: str
+    adresse: dict = Field(default_factory=dict)
+    geo_lat: float | None = None
+    geo_lng: float | None = None
+
+
+class KundenAnlageCreate(BaseModel):
+    standort_id: UUID | None = None
+    bezeichnung: str
+    adresse: dict = Field(default_factory=dict)
+    anlagentyp: str | None = None
+    geo_lat: float | None = None
+    geo_lng: float | None = None

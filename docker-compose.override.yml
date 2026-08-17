@@ -25,6 +25,7 @@ services:
       target: dev
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+      VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN:-}
     command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
     volumes:
       - ./frontend/src:/app/src

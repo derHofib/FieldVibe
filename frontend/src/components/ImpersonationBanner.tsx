@@ -1,3 +1,5 @@
+import { AlertTriangle } from "lucide-react";
+
 import { useAuth } from "../context/AuthContext";
 
 export function ImpersonationBanner() {
@@ -6,9 +8,10 @@ export function ImpersonationBanner() {
   if (!isImpersonating) return null;
 
   return (
-    <div className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-amber-500 px-4 py-3 text-sm font-semibold text-amber-950 shadow">
-      <span>
-        ⚠ Support-Zugriff aktiv: Du agierst als Mandant „{currentUser?.mandant_name ?? "…"}“.
+    <div className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-amber-500 px-4 py-3 text-sm font-semibold text-amber-950 shadow-xs">
+      <span className="flex items-center gap-1.5">
+        <AlertTriangle size={16} strokeWidth={2} className="shrink-0" />
+        Support-Zugriff aktiv: Du agierst als Mandant „{currentUser?.mandant_name ?? "…"}“.
         Alle Aktionen werden im Audit-Log protokolliert.
       </span>
       <button

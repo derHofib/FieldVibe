@@ -27,15 +27,23 @@ async def test_export_vorgaenge_csv(client, make_mandant, make_user, make_kunde,
 
 
 @pytest.mark.asyncio
-async def test_export_vorgaenge_csv_techniker_verboten(
+async def test_export_vorgaenge_csv_folgt_vorgaenge_sehen_recht(
     client, make_mandant, make_user
 ):
+    # Seit der Umstellung auf frei konfigurierbare Account-Typen (siehe
+    # app/api/routes/vorgaenge.py:export_vorgaenge_csv) ist der CSV-Export
+    # keine eigene, hart auf disponent/mandant_admin verdrahtete Ausnahme
+    # mehr, sondern folgt derselben vorgaenge.sehen-Freigabe wie das normale
+    # Anzeigen der Liste -- ein techniker-artiger Account-Typ, der Vorgaenge
+    # ohnehin einsehen darf, darf sie also auch als CSV exportieren. Ein
+    # mandant_admin kann diese Freigabe je Account-Typ jederzeit ueber die
+    # Account-Verwaltung entziehen.
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     token = await login(client, techniker.email, "pw-123456")
 
     resp = await client.get("/api/vorgaenge/export/csv", headers=auth_headers(token))
-    assert resp.status_code == 403
+    assert resp.status_code == 200
 
 
 @pytest.mark.asyncio

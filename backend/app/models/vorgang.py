@@ -13,10 +13,10 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ABRECHNUNGSARTEN_VORGANG = (
     "pauschale",
@@ -41,7 +41,7 @@ VORGANG_STATUS = (
 PARTNER_FREIGABE_STATUS = ("vorgeschlagen", "angenommen", "abgelehnt")
 
 
-class Vorgang(TimestampMixin, Base):
+class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "vorgaenge"
     __table_args__ = (
         UniqueConstraint(
@@ -77,6 +77,9 @@ class Vorgang(TimestampMixin, Base):
     anlage_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=True
     )
+    standort_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("standorte.id"), nullable=True
+    )
     vertrag_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("vertraege.id"), nullable=True
     )
@@ -103,6 +106,43 @@ class Vorgang(TimestampMixin, Base):
     # doppeltem Versand versehentlich zwei Vorgaenge zu erzeugen -- exakt
     # dasselbe Muster wie VorgangEvent.client_uuid.
     client_uuid: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+    # Ansprechpartner beim Kunden, falls dieser Vorgang aus einer per
+    # Kundenportal gestellten und angenommenen Auftragsanfrage entstanden ist
+    # (siehe app/models/vorgang_anfrage.py). NULL bei intern erstellten
+    # Vorgaengen.
+    erstellt_von_kundenportal_zugang_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kundenportal_zugaenge.id"), nullable=True
+    )
+    # Mitarbeiter, der den Vorgang angelegt hat -- NULL bei Vorgaengen aus
+    # einer Kundenportal-Anfrage (siehe erstellt_von_kundenportal_zugang_id
+    # oben) oder bei sehr alten, vor Einfuehrung dieses Felds erstellten
+    # Vorgaengen.
+    erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    # Faelligkeitsdatum, ueber das Aufträge im Feed/Filter priorisiert werden
+    # koennen -- optional, da nicht jeder Vorgang eine feste Frist hat.
+    faelligkeit_am: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Adresse direkt am Vorgang, falls kein Standort angelegt werden soll
+    # (z.B. einmaliger Auftrag) -- der Ausfuehrende muss trotzdem wissen,
+    # wo er hin muss.
+    adresse: Mapped[dict | None] = mapped_column(JSONB)
+    # Wer ist gerade fuer diesen Vorgang zustaendig -- per Selbst-Zuweisung
+    # ("Ticket übernehmen", siehe app/api/routes/vorgaenge.py:uebernehmen) oder
+    # manuell per PATCH durch mandant_admin/Dispo gesetzt. NULL = unzugewiesen.
+    zugewiesener_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    # Erinnerungszeitpunkt bei status="wartet_kunde" -- vom Scheduler
+    # ausgewertet (siehe app/services/scheduler_service.py), der danach
+    # wieder auf NULL setzt (Einmal-Trigger). NULL = keine Wiedervorlage
+    # gesetzt oder bereits gefeuert.
+    wiedervorlage_am: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Delegation an einen Nachunternehmer: entweder dieser Vorgang komplett,
     # oder -- ueber einen Kind-Vorgang mit parent_vorgang_id -- nur eine

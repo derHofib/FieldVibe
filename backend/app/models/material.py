@@ -6,12 +6,12 @@ from sqlalchemy import CheckConstraint, ForeignKey, Numeric, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 MATERIAL_BEWEGUNG_TYPEN = ("eingang", "umlagerung", "verwendung", "korrektur")
 
 
-class Material(TimestampMixin, Base):
+class Material(SoftDeleteMixin, TimestampMixin, Base):
     """Der tatsaechliche Bestand liegt nicht mehr hier, sondern verteilt auf
     Lagerorte (siehe MaterialBestand) -- Material selbst beschreibt nur noch
     den Artikel (Bezeichnung, Einheit, Mindestbestand, Preis)."""
@@ -28,6 +28,15 @@ class Material(TimestampMixin, Base):
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     mindestbestand: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0"))
     einzelpreis: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    artikelnummer: Mapped[str | None] = mapped_column(Text)
+    bestell_url: Mapped[str | None] = mapped_column(Text)
+    # Optionaler Standard-Lieferant, ueber den eine Bestellung dieses
+    # Materials typischerweise laeuft -- rein informativ fuer die
+    # automatische Gruppierung offener Materialbedarfe nach Lieferant
+    # (siehe app/models/bestellung.py), keine Pflichtangabe.
+    lieferant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("lieferanten.id"), nullable=True
+    )
 
 
 class MaterialBestand(TimestampMixin, Base):

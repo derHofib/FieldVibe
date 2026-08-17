@@ -25,7 +25,6 @@ async def test_stories_empty_groups_are_typed_arrays(
     body = resp.json()
     assert body["heute"] == []
     assert body["fristen"] == []
-    assert body["material"] == []
     assert body["wartet_kunde"] == []  # zu frisch, noch keine 3 Tage alt
 
 
@@ -111,8 +110,9 @@ async def test_fristen_include_pruefzyklen_and_pruefmittel_with_ampel(
                 mandant_id=mandant.id,
                 anlage_id=anlage.id,
                 bezeichnung="E-Check",
-                intervall_monate=12,
-                naechste_pruefung_am=date.today() - timedelta(days=2),  # ueberfaellig
+                intervall_wert=12,
+                intervall_einheit="monat",
+                naechste_pruefung_am=datetime.now(timezone.utc) - timedelta(days=2),  # ueberfaellig
             )
         )
         session.add(
@@ -151,8 +151,9 @@ async def test_fristen_excludes_pruefzyklus_beyond_horizon(
                 mandant_id=mandant.id,
                 anlage_id=anlage.id,
                 bezeichnung="Fern faellig",
-                intervall_monate=12,
-                naechste_pruefung_am=date.today() + timedelta(days=365),
+                intervall_wert=12,
+                intervall_einheit="monat",
+                naechste_pruefung_am=datetime.now(timezone.utc) + timedelta(days=365),
             )
         )
 

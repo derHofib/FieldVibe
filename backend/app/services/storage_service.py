@@ -51,14 +51,63 @@ def new_object_key(vorgang_id: uuid.UUID, filename: str) -> str:
     return f"vorgaenge/{vorgang_id}/{uuid.uuid4()}.{suffix}"
 
 
+def new_kunde_logo_key(kunde_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"kunden/{kunde_id}/logo/{uuid.uuid4()}.{suffix}"
+
+
+def new_mandant_logo_key(mandant_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"mandanten/{mandant_id}/logo/{uuid.uuid4()}.{suffix}"
+
+
+def new_rechnung_pdf_key(rechnung_id: uuid.UUID) -> str:
+    return f"rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.pdf"
+
+
+def new_rechnung_xml_key(rechnung_id: uuid.UUID) -> str:
+    return f"rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.xml"
+
+
+def new_eingangsrechnung_beleg_key(eingangsrechnung_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"eingangsrechnungen/{eingangsrechnung_id}/beleg/{uuid.uuid4()}.{suffix}"
+
+
+def new_mail_attachment_key(message_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"mail-nachrichten/{message_id}/{uuid.uuid4()}.{suffix}"
+
+
+def new_dsgvo_dokument_key(typ: str, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"dsgvo/{typ}/{uuid.uuid4()}.{suffix}"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
+    # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) -- kein KMS/eigenes
+    # Schluesselmanagement noetig, verschluesselt aber Kundenfotos/
+    # Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der Festplatte.
     await run_in_threadpool(
         _internal_client.put_object,
         Bucket=BUCKET,
         Key=key,
         Body=data,
         ContentType=content_type,
+        ServerSideEncryption="AES256",
     )
+
+
+async def download_bytes(key: str) -> bytes:
+    def _get() -> bytes:
+        obj = _internal_client.get_object(Bucket=BUCKET, Key=key)
+        return obj["Body"].read()
+
+    return await run_in_threadpool(_get)
+
+
+async def delete_object(key: str) -> None:
+    await run_in_threadpool(_internal_client.delete_object, Bucket=BUCKET, Key=key)
 
 
 def presigned_get_url(key: str, expires_seconds: int = 3600) -> str:

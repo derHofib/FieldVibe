@@ -5,28 +5,45 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.pruefmittel import PRUEFMITTEL_STATUS, Pruefmittel
 from app.models.user import User
 from app.schemas.pruefmittel import PruefmittelCreate, PruefmittelRead, PruefmittelUpdate
+from app.services import papierkorb_service
 from app.services.date_utils import add_months
 
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/pruefmittel",
     tags=["pruefmittel"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("pruefzyklen")),
     ],
 )
 
 
-@router.get("", response_model=list[PruefmittelRead])
+@router.get(
+    "", response_model=list[PruefmittelRead], dependencies=[Depends(require_recht("material", "sehen"))]
+)
 async def list_pruefmittel(
     zugewiesen_an: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[Pruefmittel]:
-    stmt = select(Pruefmittel).order_by(Pruefmittel.naechste_kalibrierung_am.asc())
+    stmt = (
+        select(Pruefmittel)
+        .where(Pruefmittel.geloescht_am.is_(None))
+        .order_by(Pruefmittel.naechste_kalibrierung_am.asc())
+    )
     if zugewiesen_an:
         stmt = stmt.where(Pruefmittel.zugewiesen_an == zugewiesen_an)
     result = await session.execute(stmt)
@@ -48,7 +65,10 @@ async def _validate_zugewiesen_an(session: AsyncSession, user_id: UUID | None) -
     "",
     response_model=PruefmittelRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "erstellen")),
+    ],
 )
 async def create_pruefmittel(
     body: PruefmittelCreate,
@@ -73,12 +93,16 @@ async def create_pruefmittel(
     return pruefmittel
 
 
-@router.get("/{pruefmittel_id}", response_model=PruefmittelRead)
+@router.get(
+    "/{pruefmittel_id}",
+    response_model=PruefmittelRead,
+    dependencies=[Depends(require_recht("material", "sehen"))],
+)
 async def get_pruefmittel(
     pruefmittel_id: UUID, session: AsyncSession = Depends(get_db)
 ) -> Pruefmittel:
     pruefmittel = await session.get(Pruefmittel, pruefmittel_id)
-    if pruefmittel is None:
+    if pruefmittel is None or pruefmittel.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Prüfmittel nicht gefunden"
         )
@@ -88,7 +112,10 @@ async def get_pruefmittel(
 @router.patch(
     "/{pruefmittel_id}",
     response_model=PruefmittelRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("material", "bearbeiten")),
+    ],
 )
 async def update_pruefmittel(
     pruefmittel_id: UUID,
@@ -96,7 +123,7 @@ async def update_pruefmittel(
     session: AsyncSession = Depends(get_db),
 ) -> Pruefmittel:
     pruefmittel = await session.get(Pruefmittel, pruefmittel_id)
-    if pruefmittel is None:
+    if pruefmittel is None or pruefmittel.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Prüfmittel nicht gefunden"
         )
@@ -122,3 +149,25 @@ async def update_pruefmittel(
     await session.flush()
     await session.refresh(pruefmittel)
     return pruefmittel
+
+
+@router.delete(
+    "/{pruefmittel_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("material", "loeschen")),
+    ],
+)
+async def delete_pruefmittel(
+    pruefmittel_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    pruefmittel = await papierkorb_service.soft_delete(
+        session, entity_typ="pruefmittel", entity_id=pruefmittel_id, actor_user_id=auth.user_id
+    )
+    if pruefmittel is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Prüfmittel nicht gefunden"
+        )

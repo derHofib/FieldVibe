@@ -47,7 +47,7 @@ async def test_einladung_normalizes_email_case(client, make_mandant, make_user):
     resp = await client.post(
         "/api/users/einladungen",
         headers=auth_headers(token),
-        json={"email": "Neuer.Techniker@Firma.DE", "role": "techniker"},
+        json={"email": "Neuer.Techniker@Firma.DE", "role": "mandant_admin"},
     )
     assert resp.status_code == 201
     assert resp.json()["email"] == "neuer.techniker@firma.de"

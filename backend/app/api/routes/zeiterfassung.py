@@ -7,22 +7,45 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
-from app.schemas.zeiterfassung import ZeiterfassungRead, ZeiterfassungStart, ZeiterfassungStatistik
+from app.schemas.zeiterfassung import (
+    ZEITERFASSUNG_KATEGORIE_LABEL,
+    ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT,
+    ZeiterfassungManuellCreate,
+    ZeiterfassungRead,
+    ZeiterfassungStart,
+    ZeiterfassungStatistik,
+    ZeiterfassungUpdate,
+)
 from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.pdf_service import generate_wochenzettel_pdf
+from app.services.rechte_service import (
+    darf_fremde_mitarbeiterdaten_einsehen,
+    ist_auf_zugewiesene_kunden_beschraenkt,
+)
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/zeiterfassung",
     tags=["zeiterfassung"],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "sehen")),
+    ],
 )
 
 
@@ -34,6 +57,24 @@ def _montag_dieser_woche(jetzt: datetime) -> datetime:
 
 def _tagesbeginn(d: date) -> datetime:
     return datetime.combine(d, time.min, tzinfo=timezone.utc)
+
+
+async def _mit_vorgangsnummern(
+    session: AsyncSession, eintraege: list[Zeiterfassung]
+) -> list[Zeiterfassung]:
+    """Setzt das transiente ZeiterfassungRead.vorgangsnummer-Feld -- ein
+    einzelner Batch-Lookup statt N+1, siehe gleiches Muster bei
+    VorgangRead.zugewiesener_name in app/api/routes/vorgaenge.py."""
+    vorgang_ids = {e.vorgang_id for e in eintraege if e.vorgang_id is not None}
+    vorgaenge_by_id: dict[UUID, Vorgang] = {}
+    for vorgang_id in vorgang_ids:
+        vorgang = await session.get(Vorgang, vorgang_id)
+        if vorgang is not None:
+            vorgaenge_by_id[vorgang_id] = vorgang
+    for eintrag in eintraege:
+        vorgang = vorgaenge_by_id.get(eintrag.vorgang_id) if eintrag.vorgang_id else None
+        eintrag.vorgangsnummer = vorgang.vorgangsnummer if vorgang else None
+    return eintraege
 
 
 @router.get("", response_model=list[ZeiterfassungRead])
@@ -60,12 +101,16 @@ async def list_zeiterfassung(
         # die kunde_id-Einschraenkung unten ist nur fuer den impliziten
         # Fall (kein techniker_id, z.B. Zeiterfassungen zu EINEM Vorgang)
         # gedacht.
-        if auth.role == "techniker" and techniker_id != auth.user_id:
+        if techniker_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
+            session, role=auth.role, account_typ_id=auth.account_typ_id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Zeiterfassungen einsehbar"
             )
         stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
-    elif auth.role == "techniker":
+    elif await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(
             Zeiterfassung.vorgang_id.in_(
                 select(Vorgang.id).where(
@@ -74,15 +119,22 @@ async def list_zeiterfassung(
             )
         )
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await _mit_vorgangsnummern(session, list(result.scalars().all()))
 
 
-@router.get("/export/csv", dependencies=[Depends(require_module("statistik"))])
+@router.get(
+    "/export/csv",
+    dependencies=[
+        Depends(require_module("statistik")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("mitarbeiterverwaltung", "bearbeiten")),
+    ],
+)
 async def export_zeiterfassung_csv(
     techniker_id: UUID | None = Query(default=None),
     von: date | None = Query(default=None),
     bis: date | None = Query(default=None),
-    auth: AuthContext = Depends(require_roles("mandant_admin", "disponent")),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     stmt = select(Zeiterfassung).order_by(Zeiterfassung.start_at.asc())
@@ -101,9 +153,11 @@ async def export_zeiterfassung_csv(
         if e.techniker_id not in technikers_by_id:
             technikers_by_id[e.techniker_id] = await session.get(User, e.techniker_id)
         techniker = technikers_by_id[e.techniker_id]
-        if e.vorgang_id not in vorgaenge_by_id:
-            vorgaenge_by_id[e.vorgang_id] = await session.get(Vorgang, e.vorgang_id)
-        vorgang = vorgaenge_by_id[e.vorgang_id]
+        vorgang = None
+        if e.vorgang_id is not None:
+            if e.vorgang_id not in vorgaenge_by_id:
+                vorgaenge_by_id[e.vorgang_id] = await session.get(Vorgang, e.vorgang_id)
+            vorgang = vorgaenge_by_id[e.vorgang_id]
         dauer_stunden = (
             (e.ende_at - e.start_at).total_seconds() / 3600 if e.ende_at else None
         )
@@ -112,6 +166,7 @@ async def export_zeiterfassung_csv(
                 e.start_at.strftime("%d.%m.%Y"),
                 techniker.name if techniker else "",
                 vorgang.vorgangsnummer if vorgang else "",
+                ZEITERFASSUNG_KATEGORIE_LABEL.get(e.kategorie, "Auftrag"),
                 e.taetigkeit or "",
                 e.start_at.strftime("%H:%M"),
                 e.ende_at.strftime("%H:%M") if e.ende_at else "",
@@ -121,7 +176,17 @@ async def export_zeiterfassung_csv(
         )
 
     return csv_response(
-        ["Datum", "Techniker", "Vorgang", "Tätigkeit", "Von", "Bis", "Dauer (Std.)", "Abrechenbar"],
+        [
+            "Datum",
+            "Techniker",
+            "Vorgang",
+            "Kategorie",
+            "Tätigkeit",
+            "Von",
+            "Bis",
+            "Dauer (Std.)",
+            "Abrechenbar",
+        ],
         rows,
         "Zeiterfassung.csv",
     )
@@ -138,7 +203,9 @@ async def get_statistik(
     session: AsyncSession = Depends(get_db),
 ) -> ZeiterfassungStatistik:
     ziel_id = techniker_id or auth.user_id
-    if auth.role == "techniker" and ziel_id != auth.user_id:
+    if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Statistik einsehbar"
         )
@@ -154,6 +221,9 @@ async def get_statistik(
                 Zeiterfassung.techniker_id == ziel_id,
                 Zeiterfassung.start_at >= start,
                 Zeiterfassung.ende_at.isnot(None),
+                # Pause/Urlaub/Krankheit sind keine geleistete Arbeitszeit --
+                # zaehlen bewusst nicht in die Stunden-Summen mit ein.
+                Zeiterfassung.kategorie.notin_(ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT),
             )
         )
         sekunden = sum(
@@ -176,7 +246,9 @@ async def wochenzettel_pdf(
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     ziel_id = techniker_id or auth.user_id
-    if auth.role == "techniker" and ziel_id != auth.user_id:
+    if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigener Wochenzettel abrufbar"
         )
@@ -199,9 +271,12 @@ async def wochenzettel_pdf(
     eintraege = list(result.scalars().all())
     vorgaenge_by_id: dict[UUID, Vorgang | None] = {}
     for eintrag in eintraege:
-        if eintrag.vorgang_id not in vorgaenge_by_id:
+        if eintrag.vorgang_id is not None and eintrag.vorgang_id not in vorgaenge_by_id:
             vorgaenge_by_id[eintrag.vorgang_id] = await session.get(Vorgang, eintrag.vorgang_id)
-    paare = [(eintrag, vorgaenge_by_id.get(eintrag.vorgang_id)) for eintrag in eintraege]
+    paare = [
+        (eintrag, vorgaenge_by_id.get(eintrag.vorgang_id) if eintrag.vorgang_id else None)
+        for eintrag in eintraege
+    ]
 
     pdf_bytes = generate_wochenzettel_pdf(mandant, techniker, woche_start, woche_ende, paare)
     sicherer_name = "".join(c if c.isalnum() else "_" for c in techniker.name)
@@ -225,10 +300,18 @@ async def get_laufender_timer(
             Zeiterfassung.techniker_id == auth.user_id, Zeiterfassung.ende_at.is_(None)
         )
     )
-    return result.scalar_one_or_none()
+    eintrag = result.scalar_one_or_none()
+    if eintrag is not None:
+        await _mit_vorgangsnummern(session, [eintrag])
+    return eintrag
 
 
-@router.post("/start", response_model=ZeiterfassungRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/start",
+    response_model=ZeiterfassungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_recht("vorgaenge", "bearbeiten"))],
+)
 async def start_timer(
     body: ZeiterfassungStart,
     auth: AuthContext = Depends(get_current_user),
@@ -240,11 +323,16 @@ async def start_timer(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if auth.role == "techniker" and vorgang.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ) and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
+        )
+    if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgeschlossen und kann nicht mehr bebucht werden",
         )
 
     eintrag = Zeiterfassung(
@@ -280,6 +368,7 @@ async def start_timer(
         "timer",
         {"vorgang_id": str(body.vorgang_id), "techniker_id": str(auth.user_id), "laeuft": True},
     )
+    await _mit_vorgangsnummern(session, [eintrag])
     return eintrag
 
 
@@ -322,4 +411,120 @@ async def stop_timer(
         "timer",
         {"vorgang_id": str(eintrag.vorgang_id), "techniker_id": str(auth.user_id), "laeuft": False},
     )
+    await _mit_vorgangsnummern(session, [eintrag])
     return eintrag
+
+
+async def _vorgang_pruefen_fuer_manuellen_eintrag(
+    session: AsyncSession, auth: AuthContext, vorgang_id: UUID
+) -> Vorgang:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ) and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
+        )
+    return vorgang
+
+
+@router.post(
+    "/manuell",
+    response_model=ZeiterfassungRead,
+    status_code=status.HTTP_201_CREATED,
+)
+async def manuellen_eintrag_anlegen(
+    body: ZeiterfassungManuellCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Zeiterfassung:
+    # "auftrag" ohne Vorgangsbezug waere fuer Auswertung/Wochenzettel
+    # bedeutungslos (keine Vorgangsnummer zum Anzeigen) -- alle anderen
+    # Kategorien duerfen bewusst ohne Vorgang stehen.
+    if body.kategorie == "auftrag" and body.vorgang_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kategorie 'auftrag' braucht einen Vorgang",
+        )
+    if body.vorgang_id is not None:
+        await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, body.vorgang_id)
+
+    eintrag = Zeiterfassung(
+        mandant_id=auth.mandant_id,
+        vorgang_id=body.vorgang_id,
+        techniker_id=auth.user_id,
+        start_at=body.start_at,
+        ende_at=body.ende_at,
+        taetigkeit=body.taetigkeit,
+        abrechenbar=body.abrechenbar,
+        kategorie=body.kategorie,
+    )
+    session.add(eintrag)
+    await session.flush()
+    await session.refresh(eintrag)
+    await _mit_vorgangsnummern(session, [eintrag])
+    return eintrag
+
+
+@router.patch("/{zeiterfassung_id}", response_model=ZeiterfassungRead)
+async def zeiterfassung_aktualisieren(
+    zeiterfassung_id: UUID,
+    body: ZeiterfassungUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Zeiterfassung:
+    eintrag = await session.get(Zeiterfassung, zeiterfassung_id)
+    if eintrag is None or eintrag.techniker_id != auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
+        )
+    if eintrag.ende_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ein laufender Timer wird über 'stop' beendet, nicht über diese Route",
+        )
+
+    daten = body.model_dump(exclude_unset=True)
+    neue_kategorie = daten.get("kategorie", eintrag.kategorie)
+    neuer_vorgang_id = daten.get("vorgang_id", eintrag.vorgang_id)
+    if neue_kategorie == "auftrag" and neuer_vorgang_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Kategorie 'auftrag' braucht einen Vorgang",
+        )
+    if "vorgang_id" in daten and daten["vorgang_id"] is not None:
+        await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, daten["vorgang_id"])
+
+    neuer_start = daten.get("start_at", eintrag.start_at)
+    neues_ende = daten.get("ende_at", eintrag.ende_at)
+    if neues_ende is not None and neues_ende <= neuer_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Ende muss nach dem Start liegen"
+        )
+
+    for feld, wert in daten.items():
+        setattr(eintrag, feld, wert)
+    await session.flush()
+    await session.refresh(eintrag)
+    await _mit_vorgangsnummern(session, [eintrag])
+    return eintrag
+
+
+@router.delete("/{zeiterfassung_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def zeiterfassung_loeschen(
+    zeiterfassung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    eintrag = await session.get(Zeiterfassung, zeiterfassung_id)
+    if eintrag is None or eintrag.techniker_id != auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
+        )
+    await session.delete(eintrag)
+    await session.flush()

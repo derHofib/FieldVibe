@@ -9,13 +9,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { authApi, mandantenApi } from "../api/endpoints";
 import { authStore } from "../api/authStore";
-import type { CurrentUser } from "../types";
+import { clearAllOfflineData } from "../offline/db";
+import type { CurrentUser, RechteAktion, RechteBereich } from "../types";
 
 interface AuthContextValue {
   currentUser: CurrentUser | undefined;
   isLoading: boolean;
   isAuthenticated: boolean;
   isImpersonating: boolean;
+  // Spiegelt app/api/deps.py:require_recht -- prueft currentUser.rechte
+  // statt einer festen Rollenliste. Ohne eingeloggten Nutzer (noch ladend)
+  // liefert das bewusst false, nicht true, damit UI-Elemente nicht kurz
+  // aufblitzen, bevor /api/auth/me zurueck ist.
+  hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   startImpersonation: (mandantId: string) => Promise<void>;
@@ -48,6 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     authStore.clear();
     queryClient.clear();
+    // Geraet kann von mehreren Technikern geteilt sein (Firmenhandy) -- ohne
+    // das wuerden Kunden-/Vorgangsdaten des vorherigen Nutzers sichtbar
+    // bleiben und dessen noch nicht synchronisierte Outbox-Eintraege spaeter
+    // unter der Identitaet des naechsten Nutzers hochgeladen.
+    void clearAllOfflineData();
   }, [queryClient]);
 
   const startImpersonation = useCallback(
@@ -92,11 +103,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.invalidateQueries();
   }, [queryClient]);
 
+  const hatRecht = useCallback(
+    (bereich: RechteBereich, aktion: RechteAktion) =>
+      meQuery.data?.rechte[bereich]?.includes(aktion) ?? false,
+    [meQuery.data],
+  );
+
   const value: AuthContextValue = {
     currentUser: meQuery.data,
     isLoading: hasToken && meQuery.isLoading,
     isAuthenticated: !!meQuery.data,
     isImpersonating: authState.impersonation !== null,
+    hatRecht,
     login,
     logout,
     startImpersonation,

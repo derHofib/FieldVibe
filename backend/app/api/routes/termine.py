@@ -5,11 +5,19 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.termin import Termin
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.schemas.termin import TerminCreate, TerminCreateResult, TerminRead, TerminUpdate
+from app.services import papierkorb_service
 from app.services.dispo_service import compute_warnungen
 from app.services.event_bus import event_bus
 
@@ -17,8 +25,9 @@ router = APIRouter(
     prefix="/api/termine",
     tags=["termine"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("dispo")),
+        Depends(require_recht("dispo", "sehen")),
     ],
 )
 
@@ -36,7 +45,7 @@ async def _load_vorgang_and_techniker(
     if (
         techniker is None
         or techniker.mandant_id != vorgang.mandant_id
-        or techniker.role not in ("mandant_admin", "disponent", "techniker")
+        or techniker.role not in ("mandant_admin", "custom")
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -53,7 +62,7 @@ async def list_termine(
     bis: datetime | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[Termin]:
-    stmt = select(Termin).order_by(Termin.start_at.asc())
+    stmt = select(Termin).where(Termin.geloescht_am.is_(None)).order_by(Termin.start_at.asc())
     if techniker_id:
         stmt = stmt.where(Termin.techniker_id == techniker_id)
     if vorgang_id:
@@ -69,7 +78,7 @@ async def list_termine(
 @router.get("/{termin_id}", response_model=TerminRead)
 async def get_termin(termin_id: UUID, session: AsyncSession = Depends(get_db)) -> Termin:
     termin = await session.get(Termin, termin_id)
-    if termin is None:
+    if termin is None or termin.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Termin nicht gefunden")
     return termin
 
@@ -78,7 +87,10 @@ async def get_termin(termin_id: UUID, session: AsyncSession = Depends(get_db)) -
     "",
     response_model=TerminCreateResult,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "erstellen")),
+    ],
 )
 async def create_termin(
     body: TerminCreate,
@@ -120,7 +132,10 @@ async def create_termin(
 @router.patch(
     "/{termin_id}",
     response_model=TerminCreateResult,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "bearbeiten")),
+    ],
 )
 async def update_termin(
     termin_id: UUID,
@@ -176,3 +191,23 @@ async def update_termin(
         {"termin_id": str(termin.id), "techniker_id": str(termin.techniker_id), "reason": "geaendert"},
     )
     return TerminCreateResult(termin=TerminRead.model_validate(termin), warnungen=warnungen)
+
+
+@router.delete(
+    "/{termin_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("dispo", "loeschen")),
+    ],
+)
+async def delete_termin(
+    termin_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    termin = await papierkorb_service.soft_delete(
+        session, entity_typ="termin", entity_id=termin_id, actor_user_id=auth.user_id
+    )
+    if termin is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Termin nicht gefunden")

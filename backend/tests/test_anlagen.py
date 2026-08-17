@@ -25,6 +25,95 @@ async def test_create_anlage_for_own_kunde(client, make_mandant, make_user, make
 
 
 @pytest.mark.asyncio
+async def test_anlage_universelle_beschreibungsfelder(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    create = await client.post(
+        "/api/anlagen",
+        headers=auth_headers(token),
+        json={
+            "kunde_id": str(kunde.id),
+            "bezeichnung": "Ladesäule Hof",
+            "hersteller": "ABB",
+            "modell": "Terra AC",
+            "seriennummer": "SN-99",
+            "anschaffungsdatum": "2025-03-01",
+            "notiz": "Steht hinter dem Lager",
+        },
+    )
+    assert create.status_code == 201
+    body = create.json()
+    assert body["hersteller"] == "ABB"
+    assert body["modell"] == "Terra AC"
+    assert body["seriennummer"] == "SN-99"
+    assert body["anschaffungsdatum"] == "2025-03-01"
+    assert body["notiz"] == "Steht hinter dem Lager"
+
+    update = await client.patch(
+        f"/api/anlagen/{body['id']}", headers=auth_headers(token), json={"hersteller": "Alfen"}
+    )
+    assert update.status_code == 200
+    assert update.json()["hersteller"] == "Alfen"
+
+
+@pytest.mark.asyncio
+async def test_anlagen_feld_definitionen_crud(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    create = await client.post(
+        "/api/anlagen-feld-definitionen",
+        headers=auth_headers(token),
+        json={"anlagentyp": "Fahrzeug", "feld_name": "Kennzeichen", "feld_typ": "text"},
+    )
+    assert create.status_code == 201
+    definition_id = create.json()["id"]
+
+    listed = await client.get(
+        "/api/anlagen-feld-definitionen?anlagentyp=Fahrzeug", headers=auth_headers(token)
+    )
+    assert [f["feld_name"] for f in listed.json()] == ["Kennzeichen"]
+
+    konflikt = await client.post(
+        "/api/anlagen-feld-definitionen",
+        headers=auth_headers(token),
+        json={"anlagentyp": "Fahrzeug", "feld_name": "Kennzeichen", "feld_typ": "text"},
+    )
+    assert konflikt.status_code == 409
+
+    update = await client.patch(
+        f"/api/anlagen-feld-definitionen/{definition_id}",
+        headers=auth_headers(token),
+        json={"feld_typ": "zahl"},
+    )
+    assert update.status_code == 200
+    assert update.json()["feld_typ"] == "zahl"
+
+    delete = await client.delete(
+        f"/api/anlagen-feld-definitionen/{definition_id}", headers=auth_headers(token)
+    )
+    assert delete.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_anlagen_feld_definition_nur_mandant_admin(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    token = await login(client, disponent.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/anlagen-feld-definitionen",
+        headers=auth_headers(token),
+        json={"anlagentyp": "Fahrzeug", "feld_name": "Kennzeichen", "feld_typ": "text"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_create_anlage_ohne_adresse(client, make_mandant, make_user, make_kunde):
     """Minimal-Anlage wie beim Inline-Formular in der Kunden-Profilseite/
     "Neuer Vorgang" -- nur Bezeichnung und optional ein Typ, keine Adresse."""
@@ -58,18 +147,26 @@ async def test_admin_can_delete_unused_anlage(client, make_mandant, make_user, m
 
 
 @pytest.mark.asyncio
-async def test_anlage_delete_blocked_when_vorgang_exists(
+async def test_anlage_delete_kaskadiert_auf_vorgang(
     client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
 ):
+    # Papierkorb (siehe app/services/papierkorb_service.py): eine Anlage mit
+    # abhaengigen Vorgaengen laesst sich loeschen -- die Loeschung kaskadiert
+    # weich auf den Vorgang statt geblockt zu werden.
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     anlage = await make_anlage(mandant=mandant, kunde=kunde)
-    await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage.id)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage.id)
     token = await login(client, admin.email, "pw-123456")
 
     resp = await client.delete(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
-    assert resp.status_code == 409
+    assert resp.status_code == 204
+
+    get_resp = await client.get(f"/api/anlagen/{anlage.id}", headers=auth_headers(token))
+    assert get_resp.status_code == 404
+    vorgang_resp = await client.get(f"/api/vorgaenge/{vorgang.id}", headers=auth_headers(token))
+    assert vorgang_resp.status_code == 404
 
 
 @pytest.mark.asyncio

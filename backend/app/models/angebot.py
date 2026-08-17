@@ -15,12 +15,13 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ANGEBOT_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt")
+ANGEBOT_POSITIONSTYPEN = ("material", "arbeitszeit")
 
 
-class Angebot(TimestampMixin, Base):
+class Angebot(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "angebote"
     __table_args__ = (
         UniqueConstraint("mandant_id", "angebotsnummer", name="uq_angebote_mandant_angebotsnummer"),
@@ -64,7 +65,9 @@ class AngebotPosition(Base):
         UUID(as_uuid=True), ForeignKey("angebote.id", ondelete="CASCADE"), nullable=False
     )
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    artikelnummer: Mapped[str | None] = mapped_column(Text)
     beschreibung: Mapped[str] = mapped_column(Text, nullable=False)
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    positionstyp: Mapped[str] = mapped_column(Text, nullable=False, default="material")

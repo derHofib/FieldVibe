@@ -4,12 +4,12 @@ from sqlalchemy import CheckConstraint, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 KUNDE_TYPEN = ("privat", "gewerbe", "oeffentlich", "hausverwaltung")
 
 
-class Kunde(TimestampMixin, Base):
+class Kunde(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "kunden"
     __table_args__ = (
         UniqueConstraint("mandant_id", "kundennummer", name="uq_kunden_mandant_kundennummer"),
@@ -28,3 +28,18 @@ class Kunde(TimestampMixin, Base):
     ansprechpartner: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     adresse: Mapped[dict | None] = mapped_column(JSONB)
     notiz: Mapped[str | None] = mapped_column(Text)
+    # Umsatzsteuer-Identifikationsnummer -- Pflichtangabe (EN16931 BT-48) in
+    # einer ZUGFeRD-Rechnung an gewerbliche/oeffentliche Kunden, siehe
+    # e_invoice_service.pruefe_en16931_vollstaendigkeit(). Bei privaten
+    # Kunden schlicht nicht vorhanden, daher nullable statt Pflichtfeld.
+    ust_idnr: Mapped[str | None] = mapped_column(Text)
+    # Personalisierter Kundenportal-Login-Link (/portal/l/{portal_slug}): ein
+    # Link pro Kunde, nicht pro Ansprechpartner -- jeder Mitarbeiter des
+    # Kunden mit einem eigenen KundenportalZugang meldet sich darueber mit
+    # seiner eigenen E-Mail/seinem eigenen Passwort an (siehe
+    # app/api/routes/kundenportal_auth.py). Ersetzt nie die Passwort-Eingabe.
+    portal_slug: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    # S3-Objekt-Key eines vom mandant_admin hochgeladenen Firmenlogos, das
+    # auf der (fuer den Kunden personalisierten) Portal-Login-Seite gezeigt
+    # wird. NULL = kein Logo hinterlegt.
+    logo_object_key: Mapped[str | None] = mapped_column(Text)

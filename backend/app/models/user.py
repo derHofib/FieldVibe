@@ -1,12 +1,34 @@
 import uuid
 
 from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin
 
-ROLES = ("super_admin", "mandant_admin", "disponent", "techniker")
+ROLES = (
+    "super_admin",
+    "mandant_admin",
+    # Jeder mandant-eigene Nutzer, der KEINE der fest verdrahteten Rollen hat,
+    # bekommt role='custom' und zeigt via account_typ_id auf einen vom
+    # mandant_admin frei definierten Account-Typ (siehe app/models/account_typ.py)
+    # -- die vormals fest verdrahteten Rollen disponent/techniker/controller/
+    # mitarbeiter sind damit vollstaendig durch diesen Mechanismus abgeloest.
+    "custom",
+    # Papierkorb (siehe app/services/papierkorb_service.py): loesch_ansicht
+    # sieht ausschliesslich den Papierkorb (rein lesend), loesch_operativ hat
+    # zusaetzlich ueberall dieselben Rechte wie mandant_admin (siehe
+    # app/api/deps.py:require_roles()) und darf zudem loeschen/
+    # wiederherstellen/endgueltig loeschen. Beide Rollen sind nur durch
+    # super_admin vergebbar (siehe app/api/routes/users.py), von
+    # loesch_operativ darf es je Mandant hoechstens einen aktiven Account
+    # geben (siehe Migration 0032, partial unique index). Bewusst AUSSERHALB
+    # der mandant_admin-kontrollierten Account-Typen-Verwaltung, damit ein
+    # Mandant-Admin nicht selbst steuern kann, wer seine geloeschten Daten
+    # sieht/wiederherstellt.
+    "loesch_ansicht",
+    "loesch_operativ",
+)
 
 
 class User(TimestampMixin, Base):
@@ -24,6 +46,17 @@ class User(TimestampMixin, Base):
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     role: Mapped[str] = mapped_column(Text, nullable=False)
+    # Nur gesetzt, wenn role == 'custom' -- zeigt auf den vom mandant_admin
+    # definierten Account-Typ, der die tatsaechlichen Rechte traegt.
+    account_typ_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("account_typen.id"), nullable=True
+    )
     name: Mapped[str] = mapped_column(Text, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(Text)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Individualisierte Bottom-Nav (siehe frontend/src/config/navSeiten.ts):
+    # {"links": [...2 Seiten-Keys...], "rotunde": [...beliebig viele...]}.
+    # NULL = Standardauswahl. Form wird von app.schemas.user.BottomNavUpdate
+    # validiert, hier bewusst als rohes dict gespeichert (kein Schema-Wechsel
+    # noetig, falls sich die Feld-Aufteilung nochmal aendert).
+    bottom_nav_items: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

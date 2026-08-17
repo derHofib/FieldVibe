@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.security import create_einladung_token, decode_token
+from app.models.account_typ import AccountTyp
 from app.models.einladung import Einladung
 from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
@@ -27,13 +28,14 @@ _REGISTRIERUNGS_PFAD = {
     "partner": "/partnerportal/registrieren",
 }
 
-# Anzeigename je Rolle -- fuer die "Eingeladen von"/"Rolle"-Zeilen im
-# Steckbrief der Einladungsmail (siehe _steckbrief_zeilen unten).
+# Anzeigename je fest verdrahteter Rolle -- fuer die "Eingeladen von"/
+# "Rolle"-Zeilen im Steckbrief der Einladungsmail (siehe _steckbrief_zeilen
+# unten). "custom" hat keinen festen Namen mehr (siehe Migration 0037) --
+# dessen Label wird stattdessen aus dem Account-Typ-Namen aufgeloest
+# (siehe versende_einladung).
 ROLLEN_LABEL = {
     "super_admin": "Super-Admin",
     "mandant_admin": "Mandanten-Admin",
-    "disponent": "Disponent",
-    "techniker": "Techniker",
 }
 
 # Wortmarke exakt wie auf den Login-Seiten (src/pages/LoginPage.tsx,
@@ -63,6 +65,7 @@ async def create_einladung(
     email: str,
     art: str,
     rolle: str | None = None,
+    account_typ_id: UUID | None = None,
     kunde_id: UUID | None = None,
     partner_id: UUID | None = None,
     eingeladen_von: UUID | None,
@@ -78,6 +81,7 @@ async def create_einladung(
         email=email,
         art=art,
         rolle=rolle,
+        account_typ_id=account_typ_id,
         kunde_id=kunde_id,
         partner_id=partner_id,
         eingeladen_von=eingeladen_von,
@@ -100,7 +104,12 @@ def _registrierungs_link(einladung: Einladung) -> str:
 
 
 def _steckbrief_zeilen(
-    einladung: Einladung, *, absender_name: str, absender_rolle_label: str | None, mandant_name: str
+    einladung: Einladung,
+    *,
+    absender_name: str,
+    absender_rolle_label: str | None,
+    mandant_name: str,
+    eingeladen_rolle_label: str,
 ) -> list[tuple[str, str, str | None]]:
     """(Label, Wert, Zusatz) je Steckbrief-Zeile -- Zusatz erscheint als
     kleinere zweite Zeile unter dem Wert (Rolle des Einladenden, bzw.
@@ -109,7 +118,7 @@ def _steckbrief_zeilen(
         return [
             ("Eingeladen von", absender_name, absender_rolle_label),
             ("Betrieb", mandant_name, None),
-            ("Rolle", ROLLEN_LABEL.get(einladung.rolle or "", einladung.rolle or ""), None),
+            ("Rolle", eingeladen_rolle_label, None),
         ]
     if einladung.art == "kunde":
         return [
@@ -264,11 +273,18 @@ async def versende_einladung(
     mandant_name = mandant.name if mandant else ""
     gueltig_tage = _settings.einladung_token_expire_minutes // (60 * 24)
 
+    eingeladen_rolle_label = ROLLEN_LABEL.get(einladung.rolle or "", einladung.rolle or "")
+    if einladung.rolle == "custom" and einladung.account_typ_id is not None:
+        account_typ = await session.get(AccountTyp, einladung.account_typ_id)
+        if account_typ is not None:
+            eingeladen_rolle_label = account_typ.name
+
     zeilen = _steckbrief_zeilen(
         einladung,
         absender_name=absender_name,
         absender_rolle_label=ROLLEN_LABEL.get(absender_rolle or "", absender_rolle),
         mandant_name=mandant_name,
+        eingeladen_rolle_label=eingeladen_rolle_label,
     )
     inhalte = _inhalte(einladung, absender_name=absender_name, mandant_name=mandant_name)
 
@@ -308,6 +324,7 @@ def to_read_model(einladung: Einladung, *, registrierungslink: str | None = None
         "email": einladung.email,
         "art": einladung.art,
         "rolle": einladung.rolle,
+        "account_typ_id": einladung.account_typ_id,
         "kunde_id": einladung.kunde_id,
         "partner_id": einladung.partner_id,
         "status": einladung.status,

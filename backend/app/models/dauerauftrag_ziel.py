@@ -5,10 +5,10 @@ from sqlalchemy import Date, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 
-class DauerauftragZiel(TimestampMixin, Base):
+class DauerauftragZiel(SoftDeleteMixin, TimestampMixin, Base):
     """Ein einzelnes Ziel innerhalb eines Dauerauftrag-Buendels: entweder eine
     bestimmte Anlage des Kunden (anlage_id gesetzt) oder der Kunde direkt
     ohne Anlagenbezug (anlage_id NULL, hoechstens ein solches Ziel je

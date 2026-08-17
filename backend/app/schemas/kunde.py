@@ -29,6 +29,11 @@ class KundeCreate(BaseModel):
     ansprechpartner: list[AnsprechpartnerEintrag] = Field(default_factory=list)
     adresse: dict | None = None
     notiz: str | None = None
+    ust_idnr: str | None = None
+
+
+class KundeLogoUrl(BaseModel):
+    url: str | None
 
 
 class KundeUpdate(BaseModel):
@@ -37,6 +42,7 @@ class KundeUpdate(BaseModel):
     ansprechpartner: list[AnsprechpartnerEintrag] | None = None
     adresse: dict | None = None
     notiz: str | None = None
+    ust_idnr: str | None = None
 
 
 class KundeRead(BaseModel):
@@ -49,5 +55,8 @@ class KundeRead(BaseModel):
     ansprechpartner: list[AnsprechpartnerEintrag]
     adresse: dict | None
     notiz: str | None
+    ust_idnr: str | None
+    portal_slug: str
+    logo_object_key: str | None
     created_at: datetime
     updated_at: datetime

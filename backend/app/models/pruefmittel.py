@@ -5,12 +5,12 @@ from sqlalchemy import CheckConstraint, Date, ForeignKey, SmallInteger, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base, TimestampMixin
+from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 PRUEFMITTEL_STATUS = ("aktiv", "defekt", "ausser_betrieb")
 
 
-class Pruefmittel(TimestampMixin, Base):
+class Pruefmittel(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "pruefmittel"
     __table_args__ = (
         CheckConstraint(

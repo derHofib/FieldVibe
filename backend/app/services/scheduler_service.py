@@ -1,7 +1,7 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -21,6 +21,9 @@ from app.models.vorgang_event import VorgangEvent
 from app.services.event_bus import event_bus
 from app.services.fahrzeug_zuweisung_service import technikern_zugewiesen
 from app.services.numbering_service import next_vorgangsnummer
+from app.services.prioritaet_service import berechne_prioritaet
+from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
+from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 
 SCHEDULER_AKTION = "pruefzyklen_scheduler_run"
 DAUERAUFTRAEGE_SCHEDULER_AKTION = "dauerauftraege_scheduler_run"
@@ -44,13 +47,10 @@ async def mandanten_faellig_um(session: AsyncSession, stunde_utc: int) -> list[U
 
 
 async def _admins_und_disponenten(session: AsyncSession, mandant_id) -> list[User]:
-    result = await session.execute(
-        select(User).where(
-            User.mandant_id == mandant_id,
-            User.role.in_(("mandant_admin", "disponent")),
-            User.aktiv.is_(True),
-        )
-    )
+    user_ids = await dispo_verantwortliche_user_ids(session, mandant_id)
+    if not user_ids:
+        return []
+    result = await session.execute(select(User).where(User.id.in_(user_ids)))
     return list(result.scalars().all())
 
 
@@ -262,9 +262,16 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
     zum tatsaechlichen Abschlussdatum fortschreibt). Ein Buendel mit
     mehreren Zielen (z.B. mehreren Anlagen desselben Kunden) laeuft dadurch
     je Ziel unabhaengig -- ein liegen gebliebenes Ziel blockiert nicht die
-    anderen. Anders als bei Pruefzyklen kein Vorlauf-Horizont -- die
-    Erzeugung erfolgt erst, wenn naechste_faelligkeit_am tatsaechlich
-    erreicht ist.
+    anderen.
+
+    Anlage-Zeitpunkt: `toleranz_frueh_tage` vor der Faelligkeit, nicht erst
+    an ihr selbst -- ein Ziel mit Faelligkeit Dienstag und Vorlauf 2 Tage
+    wird bereits Sonntag angelegt (COALESCE auf 0, falls kein Vorlauf-
+    Fenster konfiguriert ist: dann unveraendert wie bisher erst am
+    Faelligkeitstag). `faelligkeit_am` am Vorgang ist ab jetzt das
+    tatsaechliche, eingegebene Faelligkeitsdatum (kein Vorschub mehr um
+    toleranz_spaet_tage -- das war die alte "Wunsch-Enddatum"-Logik, die
+    Aufgabe uebernimmt jetzt die Prioritaet, siehe prioritaet_service.py).
 
     `mandant_ids` grenzt den Lauf wie beim Pruefzyklen-Scheduler auf die
     gerade faelligen Mandanten ein (siehe app/worker.py); None bearbeitet
@@ -278,7 +285,11 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
             .join(Dauerauftrag, DauerauftragZiel.dauerauftrag_id == Dauerauftrag.id)
             .where(
                 Dauerauftrag.aktiv.is_(True),
-                DauerauftragZiel.naechste_faelligkeit_am <= heute,
+                (
+                    DauerauftragZiel.naechste_faelligkeit_am
+                    - func.coalesce(Dauerauftrag.toleranz_frueh_tage, 0)
+                )
+                <= heute,
                 DauerauftragZiel.offener_vorgang_id.is_(None),
             )
         )
@@ -288,6 +299,9 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
 
         for ziel, auftrag in faellige_ziele:
             vorgangsnummer = await next_vorgangsnummer(session, auftrag.mandant_id)
+            faelligkeit_am = datetime.combine(
+                ziel.naechste_faelligkeit_am, time.min, tzinfo=timezone.utc
+            )
             vorgang = Vorgang(
                 mandant_id=auftrag.mandant_id,
                 vorgangsnummer=vorgangsnummer,
@@ -298,6 +312,13 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
                 beschreibung=auftrag.beschreibung,
                 abrechnungsart=auftrag.abrechnungsart,
                 leistungstyp=auftrag.leistungstyp,
+                faelligkeit_am=faelligkeit_am,
+                prioritaet=berechne_prioritaet(
+                    heute=heute,
+                    faelligkeit_am=ziel.naechste_faelligkeit_am,
+                    toleranz_frueh_tage=auftrag.toleranz_frueh_tage,
+                    toleranz_spaet_tage=auftrag.toleranz_spaet_tage,
+                ),
             )
             session.add(vorgang)
             await session.flush()
@@ -341,6 +362,134 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
                 mandant_id=None,
                 actor_user_id=None,
                 aktion=DAUERAUFTRAEGE_SCHEDULER_AKTION,
+                entity_type="scheduler",
+                payload=ergebnis,
+            )
+        )
+        await session.flush()
+
+    return ergebnis
+
+
+PRIORITAET_SCHEDULER_AKTION = "prioritaet_scheduler_run"
+
+
+async def run_prioritaet_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
+    """Taeglicher Lauf: schreibt die Prioritaet aller noch offenen Dauerauftrag-
+    Vorgaenge anhand ihres Abstands zur Faelligkeit fort (siehe
+    prioritaet_service.berechne_prioritaet). Betrifft ausschliesslich
+    Vorgaenge mit gesetztem dauerauftrag_id -- manuell angelegte Vorgaenge
+    behalten die einmal gesetzte Prioritaet unveraendert, daran ruehrt
+    dieser Lauf nicht."""
+    heute = date.today()
+    aktualisiert = 0
+
+    async with system_session() as session:
+        stmt = (
+            select(Vorgang, Dauerauftrag)
+            .join(Dauerauftrag, Vorgang.dauerauftrag_id == Dauerauftrag.id)
+            .where(
+                Vorgang.dauerauftrag_id.is_not(None),
+                Vorgang.status.notin_(VORGANG_STATUS_GESCHLOSSEN),
+                Vorgang.geloescht_am.is_(None),
+            )
+        )
+        if mandant_ids is not None:
+            stmt = stmt.where(Vorgang.mandant_id.in_(mandant_ids))
+        offene_dauerauftrag_vorgaenge = (await session.execute(stmt)).all()
+
+        for vorgang, auftrag in offene_dauerauftrag_vorgaenge:
+            neue_prioritaet = berechne_prioritaet(
+                heute=heute,
+                faelligkeit_am=vorgang.faelligkeit_am.date(),
+                toleranz_frueh_tage=auftrag.toleranz_frueh_tage,
+                toleranz_spaet_tage=auftrag.toleranz_spaet_tage,
+            )
+            if neue_prioritaet != vorgang.prioritaet:
+                vorgang.prioritaet = neue_prioritaet
+                aktualisiert += 1
+
+        ergebnis = {"vorgaenge_aktualisiert": aktualisiert}
+        session.add(
+            AuditLog(
+                mandant_id=None,
+                actor_user_id=None,
+                aktion=PRIORITAET_SCHEDULER_AKTION,
+                entity_type="scheduler",
+                payload=ergebnis,
+            )
+        )
+        await session.flush()
+
+    return ergebnis
+
+
+WIEDERVORLAGE_SCHEDULER_AKTION = "wiedervorlage_scheduler_run"
+
+
+async def run_wiedervorlage_scheduler(mandant_ids: list[UUID] | None = None) -> dict:
+    """Taeglicher Lauf: benachrichtigt bei faelliger Wiedervorlage eines
+    Vorgangs im Status "wartet_kunde" (siehe Vorgang.wiedervorlage_am,
+    gesetzt in app/api/routes/vorgaenge.py beim PATCH auf diesen Status).
+    Einmal-Trigger wie bei Pruefzyklus/Dauerauftrag: wiedervorlage_am wird
+    nach dem Feuern wieder auf NULL gesetzt, ein erneutes wartet_kunde mit
+    neuer Frist ist jederzeit per PATCH moeglich."""
+    jetzt = datetime.now(timezone.utc)
+    benachrichtigt = 0
+
+    async with system_session() as session:
+        stmt = select(Vorgang).where(
+            Vorgang.status == "wartet_kunde",
+            Vorgang.wiedervorlage_am.is_not(None),
+            Vorgang.wiedervorlage_am <= jetzt,
+            Vorgang.geloescht_am.is_(None),
+        )
+        if mandant_ids is not None:
+            stmt = stmt.where(Vorgang.mandant_id.in_(mandant_ids))
+        faellige_vorgaenge = (await session.execute(stmt)).scalars().all()
+
+        for vorgang in faellige_vorgaenge:
+            # Zustaendiger Nutzer bekommt die Erinnerung persoenlich -- ist
+            # niemand zugewiesen, fallen wie bei den anderen Frist-Laeufen
+            # Admin/Disponent als Auffangnetz ein.
+            empfaenger_liste = []
+            if vorgang.zugewiesener_user_id is not None:
+                zugewiesener = await session.get(User, vorgang.zugewiesener_user_id)
+                if zugewiesener is not None:
+                    empfaenger_liste.append(zugewiesener)
+            if not empfaenger_liste:
+                empfaenger_liste = list(await _admins_und_disponenten(session, vorgang.mandant_id))
+
+            for empfaenger in empfaenger_liste:
+                session.add(
+                    Notification(
+                        mandant_id=vorgang.mandant_id,
+                        user_id=empfaenger.id,
+                        typ="frist",
+                        titel=f"Wiedervorlage: {vorgang.vorgangsnummer} – {vorgang.titel}",
+                        ref_entity_type="vorgang",
+                        ref_entity_id=vorgang.id,
+                    )
+                )
+                await event_bus.publish(
+                    vorgang.mandant_id,
+                    "notification",
+                    {
+                        "typ": "frist",
+                        "user_id": str(empfaenger.id),
+                        "vorgang_id": str(vorgang.id),
+                        "vorgangsnummer": vorgang.vorgangsnummer,
+                    },
+                )
+            vorgang.wiedervorlage_am = None
+            benachrichtigt += 1
+
+        ergebnis = {"vorgaenge_benachrichtigt": benachrichtigt}
+        session.add(
+            AuditLog(
+                mandant_id=None,
+                actor_user_id=None,
+                aktion=WIEDERVORLAGE_SCHEDULER_AKTION,
                 entity_type="scheduler",
                 payload=ergebnis,
             )

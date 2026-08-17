@@ -308,27 +308,99 @@ async def test_fahrzeug_ist_gueltiger_lagerort_fuer_neues_material(
 
 
 @pytest.mark.asyncio
-async def test_unterbestand_story_ueber_alle_lagerorte_summiert(
-    client, make_mandant, make_user, make_anlage
+async def test_material_artikelnummer_und_bestell_url_roundtrip(
+    client, make_mandant, make_user
 ):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
-    zentrallager = await _zentrallager(mandant)
-    fahrzeug = await make_anlage(mandant=mandant, objekttyp="fahrzeug", bezeichnung="Transporter")
-    material = await _make_material(
-        mandant, lager=zentrallager, bestand=Decimal("1"), mindestbestand=Decimal("5")
-    )
-    async with system_session() as session:
-        session.add(
-            MaterialBestand(
-                mandant_id=mandant.id, material_id=material.id, lager_id=fahrzeug.id, menge=Decimal("1")
-            )
-        )
-        await session.flush()
     token = await login(client, admin.email, "pw-123456")
 
-    resp = await client.get("/api/stories", headers=auth_headers(token))
+    created = await client.post(
+        "/api/material",
+        headers=auth_headers(token),
+        json={
+            "bezeichnung": "Sicherungsautomat B16",
+            "artikelnummer": "5SY4116-7",
+            "bestell_url": "https://www.sonepar.de/artikel/5SY4116-7",
+        },
+    )
+    assert created.status_code == 201
+    body = created.json()
+    assert body["artikelnummer"] == "5SY4116-7"
+    assert body["bestell_url"] == "https://www.sonepar.de/artikel/5SY4116-7"
+    assert body["tag_ids"] == []
+    material_id = body["id"]
+
+    updated = await client.patch(
+        f"/api/material/{material_id}",
+        headers=auth_headers(token),
+        json={"artikelnummer": "5SY4116-8"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["artikelnummer"] == "5SY4116-8"
+    assert updated.json()["bestell_url"] == "https://www.sonepar.de/artikel/5SY4116-7"
+
+
+@pytest.mark.asyncio
+async def test_get_material_by_id(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    material = await _make_material(mandant, bezeichnung="Erdungskabel")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.get(f"/api/material/{material.id}", headers=auth_headers(token))
     assert resp.status_code == 200
-    material_items = [m for m in resp.json()["material"] if m["ziel_id"] == str(material.id)]
-    assert len(material_items) == 1
-    assert "2" in material_items[0]["subtitel"]
+    assert resp.json()["bezeichnung"] == "Erdungskabel"
+
+
+@pytest.mark.asyncio
+async def test_get_material_by_id_gehoert_nicht_zum_eigenen_mandanten(
+    client, make_mandant, make_user
+):
+    mandant1 = await make_mandant(name="Betrieb1")
+    mandant2 = await make_mandant(name="Betrieb2")
+    admin2 = await make_user(mandant=mandant2, role="mandant_admin", password="pw-123456")
+    material1 = await _make_material(mandant1)
+    token2 = await login(client, admin2.email, "pw-123456")
+
+    resp = await client.get(f"/api/material/{material1.id}", headers=auth_headers(token2))
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_material_tag_zuweisung_erscheint_in_liste_und_einzelabruf(
+    client, make_mandant, make_user
+):
+    mandant = await make_mandant()
+    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    material = await _make_material(mandant, bezeichnung="LS-Schalter")
+    token = await login(client, disponent.email, "pw-123456")
+
+    tag_resp = await client.post(
+        "/api/tags", headers=auth_headers(token), json={"label": "nachbestellen"}
+    )
+    tag_id = tag_resp.json()["id"]
+
+    assign_resp = await client.post(
+        f"/api/tags/{tag_id}/assignments",
+        headers=auth_headers(token),
+        json={"entity_type": "material", "entity_id": str(material.id)},
+    )
+    assert assign_resp.status_code == 201
+
+    list_resp = await client.get("/api/material", headers=auth_headers(token))
+    gefundenes = next(m for m in list_resp.json() if m["id"] == str(material.id))
+    assert gefundenes["tag_ids"] == [tag_id]
+
+    get_resp = await client.get(f"/api/material/{material.id}", headers=auth_headers(token))
+    assert get_resp.json()["tag_ids"] == [tag_id]
+
+    unassign_resp = await client.delete(
+        f"/api/tags/{tag_id}/assignments",
+        headers=auth_headers(token),
+        params={"entity_type": "material", "entity_id": str(material.id)},
+    )
+    assert unassign_resp.status_code == 204
+
+    after_resp = await client.get(f"/api/material/{material.id}", headers=auth_headers(token))
+    assert after_resp.json()["tag_ids"] == []

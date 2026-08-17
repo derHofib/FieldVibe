@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.models.anlage import Anlage
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
@@ -18,13 +25,18 @@ from app.schemas.dauerauftrag import (
     DauerauftragZieleUpdate,
     DauerauftragZielRead,
 )
+from app.services import papierkorb_service
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.zuweisung_service import assigned_kunde_ids
 
+# loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
+# app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
+# diesen Router.
 router = APIRouter(
     prefix="/api/dauerauftraege",
     tags=["dauerauftraege"],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent", "techniker")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_module("dauerauftrag")),
     ],
 )
@@ -61,16 +73,24 @@ def _read_mit_zielen(dauerauftrag: Dauerauftrag, ziele: list[DauerauftragZiel]) 
     )
 
 
-@router.get("", response_model=list[DauerauftragRead])
+@router.get(
+    "", response_model=list[DauerauftragRead], dependencies=[Depends(require_recht("dispo", "sehen"))]
+)
 async def list_dauerauftraege(
     kunde_id: UUID | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[DauerauftragRead]:
-    stmt = select(Dauerauftrag).order_by(Dauerauftrag.created_at.asc())
+    stmt = (
+        select(Dauerauftrag)
+        .where(Dauerauftrag.geloescht_am.is_(None))
+        .order_by(Dauerauftrag.created_at.asc())
+    )
     if kunde_id:
         stmt = stmt.where(Dauerauftrag.kunde_id == kunde_id)
-    if auth.role == "techniker":
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    ):
         stmt = stmt.where(Dauerauftrag.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     dauerauftraege = list((await session.execute(stmt)).scalars().all())
 
@@ -100,7 +120,10 @@ async def _validierte_anlage_ids(
     "",
     response_model=DauerauftragRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "erstellen")),
+    ],
 )
 async def create_dauerauftrag(
     body: DauerauftragCreate,
@@ -150,7 +173,10 @@ async def create_dauerauftrag(
 async def _require_dauerauftrag_zugriff(
     session: AsyncSession, auth: AuthContext, dauerauftrag: Dauerauftrag
 ) -> None:
-    if auth.role == "techniker" and dauerauftrag.kunde_id not in await assigned_kunde_ids(
+    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=auth.role, account_typ_id=auth.account_typ_id
+    )
+    if beschraenkt and dauerauftrag.kunde_id not in await assigned_kunde_ids(
         session, auth.user_id
     ):
         raise HTTPException(
@@ -158,14 +184,18 @@ async def _require_dauerauftrag_zugriff(
         )
 
 
-@router.get("/{dauerauftrag_id}", response_model=DauerauftragMitVerlauf)
+@router.get(
+    "/{dauerauftrag_id}",
+    response_model=DauerauftragMitVerlauf,
+    dependencies=[Depends(require_recht("dispo", "sehen"))],
+)
 async def get_dauerauftrag(
     dauerauftrag_id: UUID,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> DauerauftragMitVerlauf:
     dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
-    if dauerauftrag is None:
+    if dauerauftrag is None or dauerauftrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
@@ -186,7 +216,10 @@ async def get_dauerauftrag(
 @router.patch(
     "/{dauerauftrag_id}",
     response_model=DauerauftragRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "bearbeiten")),
+    ],
 )
 async def update_dauerauftrag(
     dauerauftrag_id: UUID,
@@ -194,7 +227,7 @@ async def update_dauerauftrag(
     session: AsyncSession = Depends(get_db),
 ) -> DauerauftragRead:
     dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
-    if dauerauftrag is None:
+    if dauerauftrag is None or dauerauftrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
@@ -212,7 +245,10 @@ async def update_dauerauftrag(
 @router.put(
     "/{dauerauftrag_id}/anlagen",
     response_model=DauerauftragRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("dispo", "bearbeiten")),
+    ],
 )
 async def set_dauerauftrag_anlagen(
     dauerauftrag_id: UUID,
@@ -225,7 +261,7 @@ async def set_dauerauftrag_anlagen(
     Zyklus-Datensatz, ihre ggf. bereits erzeugten Vorgaenge bleiben
     unangetastet (siehe DauerauftragZieleUpdate-Docstring)."""
     dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
-    if dauerauftrag is None:
+    if dauerauftrag is None or dauerauftrag.geloescht_am is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
@@ -258,19 +294,24 @@ async def set_dauerauftrag_anlagen(
 @router.delete(
     "/{dauerauftrag_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("dispo", "loeschen")),
+    ],
 )
 async def delete_dauerauftrag(
-    dauerauftrag_id: UUID, session: AsyncSession = Depends(get_db)
+    dauerauftrag_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> None:
-    # Bereits erzeugte Vorgaenge bleiben unangetastet -- sie verlieren nur
-    # ihre dauerauftrag_id (ON DELETE SET NULL, siehe Migration 0013), sind
-    # aber ganz normale Vorgaenge und werden nicht geloescht. Die Ziele des
-    # Buendels werden per ON DELETE CASCADE (Migration 0014) mitentfernt.
-    dauerauftrag = await session.get(Dauerauftrag, dauerauftrag_id)
+    # Papierkorb statt Hard-Delete: kaskadiert auf die Ziele des Buendels
+    # (siehe app/services/papierkorb_service.py). Bereits erzeugte Vorgaenge
+    # bleiben unangetastet und ganz normale Vorgaenge -- die Kaskade betrifft
+    # nur dauerauftrag_ziele, nicht vorgaenge.dauerauftrag_id.
+    dauerauftrag = await papierkorb_service.soft_delete(
+        session, entity_typ="dauerauftrag", entity_id=dauerauftrag_id, actor_user_id=auth.user_id
+    )
     if dauerauftrag is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )
-    await session.delete(dauerauftrag)
-    await session.flush()

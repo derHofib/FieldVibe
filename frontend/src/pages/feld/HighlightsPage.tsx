@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { highlightsApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
+import { Skeleton } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 
 export function HighlightsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
 
   const { data: highlights, isLoading } = useQuery({
     queryKey: ["highlights"],
@@ -21,26 +24,38 @@ export function HighlightsPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-slate-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-slate-800 dark:text-slate-100">⭐ Highlights</h1>
-      <p className="text-sm text-slate-500 dark:text-slate-400">
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-stone-100">
+        <Star size={19} strokeWidth={2} className="text-amber-500" /> Highlights
+      </h1>
+      <p className="text-sm text-slate-500 dark:text-stone-400">
         Markierte Fotos aus abgeschlossenen und laufenden Vorgängen – eine kleine Werkschau.
       </p>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-slate-400">Lädt…</p>
+        <div className="grid grid-cols-2 gap-2">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="aspect-square rounded-lg" />
+          ))}
+        </div>
       ) : (highlights ?? []).length === 0 ? (
-        <p className="text-center text-sm text-slate-400 dark:text-slate-500">
-          Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit ⭐ markieren.
-        </p>
+        <EmptyState
+          icon={Star}
+          text={
+            <>
+              Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit{" "}
+              <Star size={12} strokeWidth={2} className="inline text-amber-500" /> markieren.
+            </>
+          }
+        />
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {highlights!.map((h) => (
             <div
               key={h.id}
-              className="group relative overflow-hidden rounded-lg bg-white shadow-sm dark:bg-slate-900 dark:shadow-none dark:ring-1 dark:ring-slate-800"
+              className="card-interactive group relative overflow-hidden rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <button
                 onClick={() => navigate(`/vorgaenge/${h.vorgang_id}`)}
@@ -54,14 +69,18 @@ export function HighlightsPage() {
                   />
                 )}
                 <div className="p-2">
-                  <div className="line-clamp-1 text-xs font-medium text-slate-700 dark:text-slate-300">
+                  <div className="line-clamp-1 text-xs font-medium text-slate-700 dark:text-stone-300">
                     {h.titel ?? h.vorgang_titel}
                   </div>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">{h.vorgangsnummer}</div>
+                  <div className="text-xs text-slate-400 dark:text-stone-500">{h.vorgangsnummer}</div>
                 </div>
               </button>
+              {/* Spiegelt app/api/routes/highlights.py:delete_highlight -- nur
+                  mandant_admin (explizit, nicht "jede nicht-custom-Rolle")
+                  oder ein custom-Account mit vorgaenge:loeschen darf fremde
+                  Highlights entfernen, alle anderen nur ihr eigenes. */}
               {(currentUser?.role === "mandant_admin" ||
-                currentUser?.role === "disponent" ||
+                (currentUser?.role === "custom" && hatRecht("vorgaenge", "loeschen")) ||
                 h.erstellt_von === currentUser?.id) && (
                 <button
                   onClick={() => removeMutation.mutate(h.id)}

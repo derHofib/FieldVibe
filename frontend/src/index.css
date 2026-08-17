@@ -1,11 +1,151 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --animate-twinkle: twinkle 4s ease-in-out infinite;
+  --animate-drift: drift 20s ease-in-out infinite;
+
+  @keyframes twinkle {
+    0%,
+    100% {
+      opacity: 0.15;
+      transform: translate(0, 0) scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: translate(var(--dx, 4px), var(--dy, -4px)) scale(1.1);
+    }
+  }
+  @keyframes drift {
+    0% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(-2%, 2%);
+    }
+    100% {
+      transform: translate(0, 0);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 body {
-  @apply bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+  @apply bg-slate-100 text-slate-900 dark:bg-stone-950 dark:text-stone-100;
+}
+
+/* Abstand, den klebende Elemente (z. B. die Kommentar-Leiste der
+   Vorgangs-Detailseite) zum unteren Rand halten muessen. In der Feld-App
+   schwebt dort die Bottom-Nav-Pille; die Office-Shell hat keine und setzt
+   den Wert in OfficeLayout auf einen schmalen Rest herunter -- sonst
+   klebte die Leiste 6rem ueber dem Rand mitten im Inhalt. */
+:root {
+  --klebe-abstand: 6rem;
 }
 
 .btn-touch {
   @apply min-h-[48px] min-w-[48px];
+}
+
+/* Fuer die swipebare Bottom-Nav (siehe components/BottomNav.tsx): der
+   Scroll-Balken selbst waere in der schmalen, schwebenden Pille nur
+   visuelles Rauschen -- die Wischbarkeit bleibt ohne ihn vollstaendig
+   erhalten. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.card-interactive {
+  @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-xs;
+}
+
+/* "Weiche Tiefe": Doppelschatten-Karten mit von links nach rechts
+   ausfadendem Statusfarb-Rahmen (Design-Vorschlag, siehe Artifact). Der
+   Rahmen kommt aus einem Gradient auf dem Aussen-Wrapper (.card-soft), der
+   durch das 2.5px-Padding hinter der eigentlichen Karte (.card-soft-inner)
+   hervorschimmert -- --frame-color wird pro Status per inline style gesetzt. */
+.card-soft {
+  padding: 2.5px;
+  border-radius: 1.125rem;
+  background: linear-gradient(to right, var(--frame-color, var(--color-slate-300)), transparent 78%);
+}
+.dark .card-soft {
+  background: linear-gradient(to right, var(--frame-color, var(--color-stone-600)), transparent 78%);
+}
+
+.card-soft-inner {
+  border-radius: 1rem;
+  box-shadow:
+    -6px -6px 14px rgba(255, 255, 255, 0.9),
+    7px 9px 18px rgba(120, 110, 90, 0.16);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.card-soft-inner:hover {
+  transform: translateY(-2px);
+}
+.card-soft-inner:active {
+  transform: translateY(0);
+}
+.dark .card-soft-inner {
+  box-shadow:
+    -5px -5px 12px rgba(255, 255, 255, 0.035),
+    6px 8px 16px rgba(0, 0, 0, 0.55);
+}
+
+/* Weich geprägter Primaer-Button: gleiche Schattenlogik wie .card-soft,
+   Schatten kehrt sich beim Druecken nach innen um. */
+.btn-clay {
+  box-shadow:
+    -5px -5px 12px rgba(255, 255, 255, 0.5),
+    6px 7px 14px rgba(60, 80, 180, 0.35);
+  transition: box-shadow 100ms ease, transform 100ms ease;
+}
+.btn-clay:active {
+  box-shadow:
+    inset 3px 3px 8px rgba(30, 45, 120, 0.4),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.2);
+}
+.dark .btn-clay {
+  box-shadow:
+    -4px -4px 10px rgba(255, 255, 255, 0.05),
+    5px 6px 12px rgba(0, 0, 0, 0.5);
+}
+.dark .btn-clay:active {
+  box-shadow:
+    inset 3px 3px 8px rgba(0, 0, 0, 0.5),
+    inset -3px -3px 6px rgba(255, 255, 255, 0.04);
+}
+
+/* Schwebende Nav-Leiste + FAB in derselben weichen Tiefe. */
+.navbar-soft {
+  box-shadow:
+    -6px -6px 14px rgba(255, 255, 255, 0.9),
+    7px 9px 18px rgba(120, 110, 90, 0.16);
+}
+.dark .navbar-soft {
+  box-shadow:
+    -5px -5px 12px rgba(255, 255, 255, 0.035),
+    6px 8px 16px rgba(0, 0, 0, 0.55);
 }

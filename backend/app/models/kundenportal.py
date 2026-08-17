@@ -17,7 +17,7 @@ class KundenportalZugang(TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
     kunde_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("kunden.id", ondelete="CASCADE"), nullable=False
     )
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)

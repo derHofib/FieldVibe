@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.security import decrypt_secret
+from app.models.email_log import EmailLog
 from app.models.integration import MandantIntegration
 from app.models.mandant import Mandant
 from app.models.plattform_integration import PlattformIntegration
@@ -112,7 +113,14 @@ def _send_blocking(*, host: str, port: int, user: str | None, password: str | No
 
 
 async def send_email(
-    session: AsyncSession, mandant_id: UUID, *, to: str, subject: str, body: str, html_body: str | None = None
+    session: AsyncSession,
+    mandant_id: UUID,
+    *,
+    to: str,
+    subject: str,
+    body: str,
+    html_body: str | None = None,
+    attachment: tuple[str, bytes, str] | None = None,
 ) -> None:
     """Verschickt eine E-Mail ueber die smtp-Integration des Mandanten,
     oder -- falls keine hinterlegt ist -- ueber den globalen
@@ -126,7 +134,9 @@ async def send_email(
     ohne HTML-Darstellung. Wird zusaetzlich `html_body` angegeben, verschickt
     add_alternative() eine multipart/alternative-Mail -- der Text-Teil zuerst
     (Fallback), der HTML-Teil danach (von Clients bevorzugt, die beides
-    koennen; siehe app/services/einladung_service.py)."""
+    koennen; siehe app/services/einladung_service.py). `attachment` ist
+    optional (Dateiname, Inhalt, Mimetype z.B. "application/pdf") -- fuer
+    den Versand von Angebot/Rechnung/Bestellung als PDF-Anhang."""
     verbindung = await _resolve_smtp(session, mandant_id)
 
     from_address = verbindung.from_address
@@ -147,6 +157,10 @@ async def send_email(
     message.set_content(body)
     if html_body is not None:
         message.add_alternative(html_body, subtype="html")
+    if attachment is not None:
+        dateiname, inhalt, mimetype = attachment
+        maintype, _, subtype = mimetype.partition("/")
+        message.add_attachment(inhalt, maintype=maintype, subtype=subtype or "octet-stream", filename=dateiname)
 
     # smtplib ist blockierend -- in einem Thread ausfuehren, damit ein
     # langsamer/haengender SMTP-Server nicht den Event-Loop blockiert.
@@ -156,3 +170,54 @@ async def send_email(
             password=verbindung.password, message=message,
         )
     )
+
+
+async def send_email_and_log(
+    session: AsyncSession,
+    mandant_id: UUID,
+    *,
+    entity_type: str,
+    entity_id: UUID,
+    to: str,
+    subject: str,
+    body: str,
+    gesendet_von: UUID | None = None,
+    attachment: tuple[str, bytes, str] | None = None,
+) -> EmailLog:
+    """Wie send_email, schreibt aber -- egal ob Versand gelingt oder
+    fehlschlaegt -- einen EmailLog-Eintrag, damit der Nutzer im Verlauf
+    am Kunden/Vorgang/Dokument immer sieht, was passiert ist. Der
+    Aufrufer gibt log unveraendert (inkl. status/fehlermeldung) als
+    normale 201-Antwort zurueck statt bei einem Fehlschlag eine
+    HTTPException zu werfen -- sonst wuerde die umgebende request-
+    Transaktion (siehe app/db/session.py:tenant_session, ein einzelnes
+    `async with session.begin()` je Request) beim Hochreichen der
+    Exception rueckgerollt und dieser Log-Eintrag mit ihr geloescht."""
+    status_wert = "gesendet"
+    fehlermeldung: str | None = None
+    try:
+        await send_email(session, mandant_id, to=to, subject=subject, body=body, attachment=attachment)
+    except EmailNichtKonfiguriert:
+        status_wert = "fehler"
+        fehlermeldung = "Kein SMTP-Postfach für diesen Mandanten hinterlegt (siehe Integrationen)."
+    except Exception as exc:  # smtplib-Fehler: falscher Host/Login/Timeout etc.
+        status_wert = "fehler"
+        fehlermeldung = str(exc)
+
+    log = EmailLog(
+        mandant_id=mandant_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        empfaenger=to,
+        betreff=subject,
+        inhalt=body,
+        anhang_dateiname=attachment[0] if attachment else None,
+        status=status_wert,
+        fehlermeldung=fehlermeldung,
+        gesendet_von=gesendet_von,
+    )
+    session.add(log)
+    await session.flush()
+    await session.refresh(log)
+    return log
+
