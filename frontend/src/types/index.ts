@@ -196,6 +196,10 @@ export interface BottomNavPraeferenz {
   rotunde: string[] | null;
 }
 
+export interface OfficeNavPraeferenz {
+  items: string[] | null;
+}
+
 export interface CurrentUser {
   id: string;
   mandant_id: string | null;
@@ -215,6 +219,9 @@ export interface CurrentUser {
   // links: feste Zone (genau 2 Seiten), rotunde: wischbare Zone (beliebig
   // viele) -- null = jeweils Standardauswahl verwenden.
   bottom_nav_items: BottomNavPraeferenz | null;
+  // Individualisierte Office-Seitenleiste (siehe office/OfficeLayout.tsx) --
+  // null = alle sichtbaren Seiten zeigen (Standardverhalten).
+  office_nav_items: OfficeNavPraeferenz | null;
   // Bereich -> Liste erlaubter Aktionen fuer diese Session (siehe
   // app/api/routes/auth.py:me) -- role != "custom" bekommt immer alle
   // Bereiche/Aktionen.

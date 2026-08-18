@@ -62,6 +62,14 @@ class BottomNavUpdate(BaseModel):
     rotunde: list[str] | None = None
 
 
+class OfficeNavUpdate(BaseModel):
+    # Liste der Seiten-Keys aus frontend/src/config/navSeiten.ts, die in der
+    # Office-Seitenleiste angezeigt werden sollen. None = zur Standardauswahl
+    # (alle sichtbaren Seiten) zuruecksetzen -- immer vollstaendiger Ersatz,
+    # kein Teil-Update.
+    items: list[str] | None = None
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

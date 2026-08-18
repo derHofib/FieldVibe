@@ -1,4 +1,4 @@
-import { Clock, LogOut, Search, Smartphone } from "lucide-react";
+import { Clock, LogOut, Search, Settings, Smartphone } from "lucide-react";
 import type { CSSProperties } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
@@ -22,9 +22,14 @@ export function OfficeLayout() {
   const { outboxCount, isOnline } = useAppLiveDaten();
 
   const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
+  // null = keine Auswahl gespeichert -> unveraendertes Verhalten (alles zeigen)
+  const eigeneAuswahl = currentUser?.office_nav_items?.items;
+  const angezeigt = eigeneAuswahl
+    ? sichtbar.filter((seite) => eigeneAuswahl.includes(seite.key))
+    : sichtbar;
   const gruppen = NAV_KATEGORIE_REIHENFOLGE.map((kategorie) => ({
     kategorie,
-    seiten: sichtbar.filter((seite) => seite.kategorie === kategorie),
+    seiten: angezeigt.filter((seite) => seite.kategorie === kategorie),
   })).filter((gruppe) => gruppe.seiten.length > 0);
 
   const zurMobilenAnsicht = () => {
@@ -88,8 +93,15 @@ export function OfficeLayout() {
           </nav>
 
           <button
-            onClick={zurMobilenAnsicht}
+            onClick={() => navigate("/einstellungen/seitenleiste")}
             className="mt-3 flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60"
+          >
+            <Settings size={14} strokeWidth={2} />
+            Seitenleiste anpassen
+          </button>
+          <button
+            onClick={zurMobilenAnsicht}
+            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60"
           >
             <Smartphone size={14} strokeWidth={2} />
             Zur mobilen Ansicht

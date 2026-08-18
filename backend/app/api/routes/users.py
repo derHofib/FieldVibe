@@ -13,7 +13,7 @@ from app.models.einladung import Einladung
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
-from app.schemas.user import BottomNavUpdate, UserCreate, UserRead, UserUpdate
+from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserCreate, UserRead, UserUpdate
 from app.services.audit_service import log_action
 from app.services.einladung_service import (
     create_einladung,
@@ -473,5 +473,19 @@ async def update_own_bottom_nav(
         user.bottom_nav_items = (
             None if body.links is None and body.rotunde is None else body.model_dump()
         )
+        await session.flush()
+    return body
+
+
+@router.patch("/me/office-nav", response_model=OfficeNavUpdate)
+async def update_own_office_nav(
+    body: OfficeNavUpdate, auth: AuthContext = Depends(get_current_user)
+) -> OfficeNavUpdate:
+    # Rein selbstbezogene Praeferenz, analog zu update_own_bottom_nav.
+    async with system_session() as session:
+        user = await session.get(User, auth.user_id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+        user.office_nav_items = body.items
         await session.flush()
     return body

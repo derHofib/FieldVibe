@@ -60,3 +60,9 @@ class User(TimestampMixin, Base):
     # validiert, hier bewusst als rohes dict gespeichert (kein Schema-Wechsel
     # noetig, falls sich die Feld-Aufteilung nochmal aendert).
     bottom_nav_items: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Individualisierte Office-Seitenleiste (siehe office/OfficeLayout.tsx):
+    # Liste der Seiten-Keys aus navSeiten.ts, die angezeigt werden sollen.
+    # NULL = alle sichtbaren Seiten zeigen (bisheriges Verhalten). Filtert
+    # nur innerhalb dessen, was sichtbareNavSeiten() ohnehin erlaubt --
+    # niemals mehr als die echten Rechte/Modul-Flags zulassen.
+    office_nav_items: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True)

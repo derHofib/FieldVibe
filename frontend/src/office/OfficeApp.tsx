@@ -34,6 +34,7 @@ import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { OfficeLayout } from "./OfficeLayout";
+import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
 import { OfficeFormularDetailPage } from "./formulare/OfficeFormularDetailPage";
@@ -95,6 +96,7 @@ export function OfficeApp() {
         <Route path="/accounts" element={<UsersPage />} />
         <Route path="/account-typen" element={<AccountTypenPage />} />
         <Route path="/einstellungen" element={<SettingsPage />} />
+        <Route path="/einstellungen/seitenleiste" element={<OfficeNavSettingsPage />} />
         <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
         <Route path="/statistik" element={<StatistikPage />} />
         <Route path="/team-zeiten" element={<TeamZeitenPage />} />

@@ -17,7 +17,7 @@ from app.models.account_typ import RECHTE_AKTIONEN, RECHTE_BEREICHE, AccountTyp
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
-from app.schemas.user import BottomNavUpdate
+from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 from app.services.auth_service import authenticate
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services.rechte_service import darf_vorgang_selbst_uebernehmen, rechte_matrix_fuer_account_typ
@@ -174,6 +174,10 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             except ValidationError:
                 bottom_nav_items = None
 
+        office_nav_items: OfficeNavUpdate | None = None
+        if isinstance(user.office_nav_items, list):
+            office_nav_items = OfficeNavUpdate(items=user.office_nav_items)
+
         return CurrentUser(
             id=user.id,
             mandant_id=auth.mandant_id,
@@ -188,5 +192,6 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             mandant_name=mandant_name,
             deaktivierte_module=deaktivierte_module,
             bottom_nav_items=bottom_nav_items,
+            office_nav_items=office_nav_items,
             rechte=rechte,
         )

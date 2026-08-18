@@ -70,6 +70,7 @@ import type {
   MaterialVerwendung,
   NotificationEntry,
   OffenePostenBericht,
+  OfficeNavPraeferenz,
   PapierkorbEintrag,
   PapierkorbEntityTyp,
   PlattformIntegration,
@@ -185,6 +186,11 @@ export const usersApi = {
   remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
   updateOwnBottomNav: (praeferenz: BottomNavPraeferenz) =>
     apiFetch<BottomNavPraeferenz>("/api/users/me/bottom-nav", {
+      method: "PATCH",
+      body: JSON.stringify(praeferenz),
+    }),
+  updateOwnOfficeNav: (praeferenz: OfficeNavPraeferenz) =>
+    apiFetch<OfficeNavPraeferenz>("/api/users/me/office-nav", {
       method: "PATCH",
       body: JSON.stringify(praeferenz),
     }),

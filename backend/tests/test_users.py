@@ -510,6 +510,65 @@ async def test_user_can_set_and_reset_own_bottom_nav(client, make_mandant, make_
 
 
 @pytest.mark.asyncio
+async def test_office_nav_defaults_to_null(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, user.email, "pw-123456")
+
+    resp = await client.get("/api/auth/me", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.json()["office_nav_items"] is None
+
+
+@pytest.mark.asyncio
+async def test_user_can_set_and_reset_own_office_nav(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, user.email, "pw-123456")
+
+    resp = await client.patch(
+        "/api/users/me/office-nav",
+        headers=auth_headers(token),
+        json={"items": ["dispo", "geschaeft", "rechnungen"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["items"] == ["dispo", "geschaeft", "rechnungen"]
+
+    me_resp = await client.get("/api/auth/me", headers=auth_headers(token))
+    assert me_resp.json()["office_nav_items"] == {"items": ["dispo", "geschaeft", "rechnungen"]}
+
+    reset_resp = await client.patch(
+        "/api/users/me/office-nav",
+        headers=auth_headers(token),
+        json={"items": None},
+    )
+    assert reset_resp.status_code == 200
+    assert reset_resp.json()["items"] is None
+
+    me_resp_2 = await client.get("/api/auth/me", headers=auth_headers(token))
+    assert me_resp_2.json()["office_nav_items"] is None
+
+
+@pytest.mark.asyncio
+async def test_office_nav_is_a_pure_self_service_preference(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    other = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, user.email, "pw-123456")
+
+    resp = await client.patch(
+        "/api/users/me/office-nav",
+        headers=auth_headers(token),
+        json={"items": ["dispo"]},
+    )
+    assert resp.status_code == 200
+
+    other_token = await login(client, other.email, "pw-123456")
+    other_me = await client.get("/api/auth/me", headers=auth_headers(other_token))
+    assert other_me.json()["office_nav_items"] is None
+
+
+@pytest.mark.asyncio
 async def test_bottom_nav_is_a_pure_self_service_preference(client, make_mandant, make_user):
     # Kein mitarbeiterverwaltung-Recht noetig -- jede Rolle darf ihre eigene
     # Praeferenz setzen, auch ohne jede Verwaltungsberechtigung.

@@ -2,7 +2,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, field_validator
 
-from app.schemas.user import BottomNavUpdate
+from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 
 
 class LoginRequest(BaseModel):
@@ -62,6 +62,9 @@ class CurrentUser(BaseModel):
     # Individualisierte Bottom-Nav (siehe app/models/user.py) -- None =
     # Frontend faellt auf die Standardauswahl zurueck.
     bottom_nav_items: BottomNavUpdate | None = None
+    # Individualisierte Office-Seitenleiste (siehe app/models/user.py) --
+    # None = Frontend zeigt alle sichtbaren Seiten (bisheriges Verhalten).
+    office_nav_items: OfficeNavUpdate | None = None
     # Effektive Rechte-Matrix dieser Session (Bereich -> Liste erlaubter
     # Aktionen). role != "custom" (mandant_admin/super_admin/loesch_*)
     # bekommt IMMER alle Bereiche/Aktionen, da diese Rollen ohnehin an

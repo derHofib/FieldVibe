@@ -47,16 +47,28 @@ Siehe Ausarbeitung vom 17.08., Artifact „FieldVibe Navigation".
 Ein Nutzer soll in seinem Profil zwischen vordefinierten Ansichten
 (Techniker, Dispo, Büro/Buchhaltung, „Alles") wechseln können, die
 filtern/kuratieren, was in Bottom-Nav bzw. Office-Sidebar prominent
-angezeigt wird — nie mehr, als die echten Rechte erlauben. Noch nicht
-begonnen.
+angezeigt wird — nie mehr, als die echten Rechte erlauben.
 
+- **[Erledigt, 18.08.] Eigene Auswahl in der Office-Seitenleiste** —
+  schlanke Zwischenlösung, kein vollständiger Ersatz für 4.1: jeder Nutzer
+  wählt unter „Seitenleiste anpassen" selbst per Checkbox, welche Bereiche
+  in seiner Office-Sidebar erscheinen (gruppiert nach den bestehenden
+  Kategorien Arbeit/Finanzen/Kommunikation/Verwaltung — 3. bleibt davon
+  unberührt, es sind weiterhin die alten Kategorien). Rein self-service,
+  kein Admin-Eingriff, keine benannten/wiederverwendbaren Profile, keine
+  eigene Startseite. `PATCH /api/users/me/office-nav`,
+  `office_nav_items` auf `User` (Migration 0065), analog zu
+  `bottom_nav_items`.
 - **4.1 Vordefinierte, vom mandant_admin pflegbare Ansichts-Profile** —
   Vorschläge, die er umbenennen/umbauen/löschen kann, kein starres System.
   Skizzierter Umfang: neue Tabelle `ansichts_profile` (mandantengebunden,
   RLS), CRUD-Routen, neue Verwaltungsseite, Sidebar-Filterung mit
-  „Alle Bereiche anzeigen"-Fluchtweg.
+  „Alle Bereiche anzeigen"-Fluchtweg. Noch nicht begonnen — bleibt größer
+  als die jetzt gebaute Einzelauswahl (mehrere Nutzer teilen ein Profil,
+  statt jeder seine eigene Checkliste zu pflegen).
 - **4.2 Eigene Startseite je Nutzer** statt immer Feed/Vorgänge. Neues Feld
-  `startseite` auf `User`, neuer Abschnitt auf der Profil-Seite.
+  `startseite` auf `User`, neuer Abschnitt auf der Profil-Seite. Noch nicht
+  begonnen.
 
 ## 5. Portal-Branding — eigenes Logo im Kundenportal
 
