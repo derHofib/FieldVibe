@@ -773,10 +773,24 @@ export const termineApi = {
     start_at: string;
     ende_at: string;
     notiz?: string;
+    fahrzeit_minuten?: number | null;
+    pause_minuten?: number | null;
   }) => apiFetch<TerminCreateResult>("/api/termine", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<Pick<Termin, "titel" | "techniker_id" | "start_at" | "ende_at" | "status" | "notiz">>,
+    body: Partial<
+      Pick<
+        Termin,
+        | "titel"
+        | "techniker_id"
+        | "start_at"
+        | "ende_at"
+        | "status"
+        | "notiz"
+        | "fahrzeit_minuten"
+        | "pause_minuten"
+      >
+    >,
   ) =>
     apiFetch<TerminCreateResult>(`/api/termine/${id}`, {
       method: "PATCH",

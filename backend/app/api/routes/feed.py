@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, tuple_
+from sqlalchemy import exists, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
@@ -13,6 +13,7 @@ from app.models.kunde import Kunde
 from app.models.kundenportal import KundenportalZugang
 from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
+from app.models.termin import Termin
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
@@ -28,6 +29,13 @@ router = APIRouter(
 )
 
 DEFAULT_PAGE_SIZE = 20
+
+# Sentinel statt NULLS LAST: eine Kartenpaginierung per Keyset-Cursor
+# vergleicht Tupel ("< letzter Wert"), und NULL verhaelt sich dabei nicht
+# wie "unendlich spaet" -- der Vergleich waere schlicht UNKNOWN und wuerfe
+# Vorgaenge ohne Faelligkeit still aus der Seite. Mit COALESCE auf dieses
+# Datum statt echtem NULL bleibt die Tupel-Arithmetik durchgehend gueltig.
+_KEINE_FAELLIGKEIT_SENTINEL = datetime(9999, 12, 30, tzinfo=timezone.utc)
 
 _EVENT_TYPE_PREVIEW = {
     "status_change": "Status geändert",
@@ -77,7 +85,9 @@ def _preview_text(event: VorgangEvent | None) -> str | None:
 async def get_feed(
     cursor: str | None = Query(default=None),
     limit: int = Query(default=DEFAULT_PAGE_SIZE, ge=1, le=100),
-    sort: str = Query(default="last_activity_at", pattern="^(last_activity_at|prioritaet)$"),
+    sort: str = Query(
+        default="last_activity_at", pattern="^(last_activity_at|prioritaet|faelligkeit_am)$"
+    ),
     status_filter: str | None = Query(
         default=None,
         alias="status",
@@ -91,16 +101,37 @@ async def get_feed(
     abrechnungsart: str | None = Query(default=None),
     faellig_von: date | None = Query(default=None),
     faellig_bis: date | None = Query(default=None),
+    unbisponiert: bool = Query(
+        default=False,
+        description="Nur offene Vorgaenge ohne aktiven Termin (Dispo-Rueckstand)",
+    ),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
     stmt = select(Vorgang).where(Vorgang.geloescht_am.is_(None))
+    effektive_faelligkeit = func.coalesce(Vorgang.faelligkeit_am, _KEINE_FAELLIGKEIT_SENTINEL)
     if sort == "prioritaet":
         stmt = stmt.order_by(
             Vorgang.prioritaet.desc(), Vorgang.last_activity_at.desc(), Vorgang.id.desc()
         )
+    elif sort == "faelligkeit_am":
+        stmt = stmt.order_by(effektive_faelligkeit.asc(), Vorgang.id.asc())
     else:
         stmt = stmt.order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
+
+    if unbisponiert:
+        # "Disponiert" ergibt sich rein aus der Existenz eines nicht
+        # abgesagten Termins -- kein eigenes Feld auf Vorgang (siehe
+        # app/models/termin.py). Nur offene Status, sonst landen laengst
+        # abgeschlossene/abgerechnete Vorgaenge ohne Termin im Rueckstand.
+        stmt = stmt.where(
+            Vorgang.status.in_(("neu", "geplant", "in_arbeit", "wartet_kunde")),
+            ~exists().where(
+                Termin.vorgang_id == Vorgang.id,
+                Termin.geloescht_am.is_(None),
+                Termin.status != "abgesagt",
+            ),
+        )
 
     if status_filter:
         status_liste = [s for s in status_filter.split(",") if s]
@@ -144,6 +175,14 @@ async def get_feed(
                 tuple_(Vorgang.prioritaet, Vorgang.last_activity_at, Vorgang.id)
                 < tuple_(prioritaet, last_activity_at, id_)
             )
+        elif sort == "faelligkeit_am":
+            # last_activity_at traegt hier den gecoalescten Faelligkeits-
+            # wert -- gleiches Cursor-Format wie die anderen Modi, nur mit
+            # anderer Bedeutung des Felds (siehe _encode_cursor unten) und
+            # aufsteigendem statt absteigendem Vergleich.
+            stmt = stmt.where(
+                tuple_(effektive_faelligkeit, Vorgang.id) > tuple_(last_activity_at, id_)
+            )
         else:
             stmt = stmt.where(
                 tuple_(Vorgang.last_activity_at, Vorgang.id) < tuple_(last_activity_at, id_)
@@ -159,7 +198,12 @@ async def get_feed(
     next_cursor = None
     if has_more and page:
         last = page[-1]
-        next_cursor = _encode_cursor(last.last_activity_at, last.prioritaet, last.id)
+        sortier_datum = (
+            (last.faelligkeit_am or _KEINE_FAELLIGKEIT_SENTINEL)
+            if sort == "faelligkeit_am"
+            else last.last_activity_at
+        )
+        next_cursor = _encode_cursor(sortier_datum, last.prioritaet, last.id)
 
     vorgang_ids = [v.id for v in page]
 

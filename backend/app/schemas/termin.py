@@ -11,6 +11,8 @@ class TerminCreate(BaseModel):
     start_at: datetime
     ende_at: datetime
     notiz: str | None = None
+    fahrzeit_minuten: int | None = None
+    pause_minuten: int | None = None
 
     @model_validator(mode="after")
     def _check_zeitraum(self) -> "TerminCreate":
@@ -26,6 +28,8 @@ class TerminUpdate(BaseModel):
     ende_at: datetime | None = None
     status: str | None = None
     notiz: str | None = None
+    fahrzeit_minuten: int | None = None
+    pause_minuten: int | None = None
 
 
 class TerminRead(BaseModel):
@@ -40,6 +44,8 @@ class TerminRead(BaseModel):
     ende_at: datetime
     status: str
     notiz: str | None
+    fahrzeit_minuten: int | None
+    pause_minuten: int | None
     created_at: datetime
     updated_at: datetime
 

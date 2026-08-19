@@ -650,6 +650,8 @@ export interface Termin {
   ende_at: string;
   status: TerminStatus;
   notiz: string | null;
+  fahrzeit_minuten: number | null;
+  pause_minuten: number | null;
   created_at: string;
   updated_at: string;
 }
