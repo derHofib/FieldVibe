@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCircle2, Clock, Inbox, List, Map as MapIcon, MessageCircle, Play, Repeat, Search, Star, UserPlus } from "lucide-react";
+import { Bell, CheckCircle2, Clock, Inbox, List, Map as MapIcon, MessageCircle, Play, Repeat, Search, Star, UserPlus, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +12,7 @@ import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
-import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
+import type { FeedCard, Kunde, StoryItem, VorgangStatus } from "../../types";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -335,6 +335,34 @@ function FeedCardView({ card }: { card: FeedCard }) {
   );
 }
 
+// Lesbare Kurzform je aktivem Filter-Schluessel fuer die Chip-Zusammenfassung
+// -- ein unbekannter Schluessel faellt auf "Schluessel: Wert" zurueck statt
+// zu verschwinden, damit ein spaeter ergaenzter Filter nie stillschweigend
+// ohne Chip bleibt.
+function filterChipLabel(key: string, value: string, kunden: Kunde[] | undefined): string {
+  switch (key) {
+    case "status":
+      return `Status: ${value
+        .split(",")
+        .map((s) => STATUS_LABEL[s as VorgangStatus] ?? s)
+        .join(", ")}`;
+    case "kunde_id":
+      return `Kunde: ${kunden?.find((k) => k.id === value)?.name ?? value}`;
+    case "leistungstyp":
+      return `Typ: ${LEISTUNGSTYP_LABEL[value] ?? value}`;
+    case "faellig_von":
+      return `Fällig ab ${new Date(value).toLocaleDateString("de-DE")}`;
+    case "faellig_bis":
+      return `Fällig bis ${new Date(value).toLocaleDateString("de-DE")}`;
+    case "tag":
+      return `#${value}`;
+    case "sort":
+      return `Sortierung: ${value === "prioritaet" ? "Priorität" : "Aktivität"}`;
+    default:
+      return `${key}: ${value}`;
+  }
+}
+
 const LEER_FILTER: Record<string, string> = {};
 
 export function FeedPage() {
@@ -383,6 +411,13 @@ export function FeedPage() {
   // -- soll den Filter-Zaehler des Filter-Panels darunter nicht mitzaehlen.
   const aktiveFilterAnzahl = Object.keys(filter).filter((k) => k !== "nur_meine").length;
   const nurMeine = filter.nur_meine === "true";
+  // Kompakte Chip-Zusammenfassung der aktiven Filter -- ersetzt das immer
+  // sichtbare volle Formular durch eine schmale Leiste, die nur erscheint,
+  // wenn tatsaechlich etwas aktiv ist (siehe Design-Vorschlag "Filterleiste
+  // Varianten", Richtung B).
+  const filterChips = Object.entries(filter)
+    .filter(([key, value]) => key !== "nur_meine" && value)
+    .map(([key, value]) => ({ key, label: filterChipLabel(key, value, kunden) }));
   const punkte: FeedMapPunkt[] = cards
     .filter((c) => c.geo_lat != null && c.geo_lng != null)
     .map((c) => ({ id: c.id, lng: c.geo_lng as number, lat: c.geo_lat as number, farbe: STATUS_HEX[c.status] }));
@@ -430,146 +465,180 @@ export function FeedPage() {
         </div>
       )}
 
-      <div className="space-y-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <div className="flex items-center justify-between">
+      {/* Filterleiste "Richtung B": Filter ist im Ruhezustand nur ein
+          Icon-Button neben Liste/Karte, keine eigene Karte mehr -- die wird
+          erst sichtbar, sobald tatsaechlich etwas aktiv ist oder das
+          Formular explizit geoeffnet wird (siehe Design-Vorschlag
+          "Filterleiste Varianten"). */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setField("faellig_bis", heuteIso())}
+            className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          >
+            Überfällig
+          </button>
+          <button
+            onClick={() => setField("faellig_bis", heuteIso(7))}
+            className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          >
+            Diese Woche fällig
+          </button>
+        </div>
+        <div className="flex shrink-0 gap-1">
           <button
             onClick={() => setZeigeFilter((v) => !v)}
-            className="btn-touch flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-stone-200"
+            title="Filter"
+            aria-label="Filter"
+            className={`btn-touch relative flex h-8 w-8 items-center justify-center rounded-full ${
+              zeigeFilter || aktiveFilterAnzahl > 0
+                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            }`}
           >
-            <Search size={14} strokeWidth={2} /> Filter
+            <Search size={14} strokeWidth={2} />
             {aktiveFilterAnzahl > 0 && (
-              <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-100 dark:ring-stone-950">
                 {aktiveFilterAnzahl}
               </span>
             )}
           </button>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setField("faellig_bis", heuteIso())}
-              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          <button
+            onClick={() => setAnsicht("liste")}
+            className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+              ansicht === "liste"
+                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            }`}
+          >
+            <List size={13} strokeWidth={2} /> Liste
+          </button>
+          <button
+            onClick={() => setAnsicht("karte")}
+            className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+              ansicht === "karte"
+                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            }`}
+          >
+            <MapIcon size={13} strokeWidth={2} /> Karte
+          </button>
+        </div>
+      </div>
+
+      {filterChips.length > 0 && !zeigeFilter && (
+        <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-white p-2.5 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          {filterChips.map((c) => (
+            <span
+              key={c.key}
+              className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pr-1.5 pl-2.5 text-xs font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-200"
             >
-              Überfällig
-            </button>
-            <button
-              onClick={() => setField("faellig_bis", heuteIso(7))}
-              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-            >
-              Diese Woche fällig
-            </button>
+              {c.label}
+              <button
+                onClick={() => setField(c.key, "")}
+                aria-label={`${c.label} entfernen`}
+                className="btn-touch flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-stone-700 dark:text-stone-400"
+              >
+                <X size={9} strokeWidth={3} />
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={() => setZeigeFilter(true)}
+            className="btn-touch ml-auto text-xs font-semibold text-blue-700 dark:text-blue-400"
+          >
+            Bearbeiten
+          </button>
+        </div>
+      )}
+
+      {zeigeFilter && (
+        <div className="space-y-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div>
+            <div className="mb-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+              Status (Mehrfachauswahl möglich)
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(STATUS_LABEL).map(([value, label]) => {
+                const aktiv = aktiveStatus.includes(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => toggleStatus(value)}
+                    className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
+                      aktiv
+                        ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <select
+            value={filter.kunde_id ?? ""}
+            onChange={(e) => setField("kunde_id", e.target.value)}
+            className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          >
+            <option value="">Alle Kunden</option>
+            {(kunden ?? []).map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filter.leistungstyp ?? ""}
+            onChange={(e) => setField("leistungstyp", e.target.value)}
+            className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          >
+            <option value="">Alle Leistungstypen</option>
+            {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
+            <input
+              type="date"
+              value={filter.faellig_von ?? ""}
+              onChange={(e) => setField("faellig_von", e.target.value)}
+              title="Fällig ab"
+              className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
+            <span className="text-xs text-slate-400 dark:text-stone-500">bis</span>
+            <input
+              type="date"
+              value={filter.faellig_bis ?? ""}
+              onChange={(e) => setField("faellig_bis", e.target.value)}
+              title="Fällig bis"
+              className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
+          </div>
+          <input
+            value={filter.tag ?? ""}
+            onChange={(e) => setField("tag", e.target.value)}
+            placeholder="#Tag"
+            className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          />
+          <select
+            value={filter.sort ?? "last_activity_at"}
+            onChange={(e) => setField("sort", e.target.value)}
+            className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          >
+            <option value="last_activity_at">Sortiert nach Aktivität</option>
+            <option value="prioritaet">Sortiert nach Priorität</option>
+          </select>
           </div>
         </div>
+      )}
 
-        {zeigeFilter && (
-          <div className="space-y-2">
-            <div>
-              <div className="mb-1 text-xs font-medium text-slate-500 dark:text-stone-400">
-                Status (Mehrfachauswahl möglich)
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(STATUS_LABEL).map(([value, label]) => {
-                  const aktiv = aktiveStatus.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => toggleStatus(value)}
-                      className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
-                        aktiv
-                          ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <select
-              value={filter.kunde_id ?? ""}
-              onChange={(e) => setField("kunde_id", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            >
-              <option value="">Alle Kunden</option>
-              {(kunden ?? []).map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filter.leistungstyp ?? ""}
-              onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            >
-              <option value="">Alle Leistungstypen</option>
-              {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <div className="col-span-2 flex items-center gap-2 sm:col-span-1">
-              <input
-                type="date"
-                value={filter.faellig_von ?? ""}
-                onChange={(e) => setField("faellig_von", e.target.value)}
-                title="Fällig ab"
-                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-              <span className="text-xs text-slate-400 dark:text-stone-500">bis</span>
-              <input
-                type="date"
-                value={filter.faellig_bis ?? ""}
-                onChange={(e) => setField("faellig_bis", e.target.value)}
-                title="Fällig bis"
-                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-            </div>
-            <input
-              value={filter.tag ?? ""}
-              onChange={(e) => setField("tag", e.target.value)}
-              placeholder="#Tag"
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            />
-            <select
-              value={filter.sort ?? "last_activity_at"}
-              onChange={(e) => setField("sort", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            >
-              <option value="last_activity_at">Sortiert nach Aktivität</option>
-              <option value="prioritaet">Sortiert nach Priorität</option>
-            </select>
-            </div>
-          </div>
-        )}
-
-        <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
-      </div>
-
-      <div className="flex justify-end gap-1">
-        <button
-          onClick={() => setAnsicht("liste")}
-          className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-            ansicht === "liste"
-              ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-          }`}
-        >
-          <List size={13} strokeWidth={2} /> Liste
-        </button>
-        <button
-          onClick={() => setAnsicht("karte")}
-          className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-            ansicht === "karte"
-              ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-          }`}
-        >
-          <MapIcon size={13} strokeWidth={2} /> Karte
-        </button>
-      </div>
+      <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
 
       {ansicht === "karte" ? (
         isLoading ? (
