@@ -354,57 +354,71 @@ async def test_kunde_sieht_nur_eigene_rechnungen(client, make_mandant, make_user
     assert pdf_resp.headers["content-type"] == "application/pdf"
 
 
+async def _extrahiere_token(link: str) -> str:
+    from urllib.parse import parse_qs, urlparse
+
+    return parse_qs(urlparse(link).query)["token"][0]
+
+
 @pytest.mark.asyncio
-async def test_staff_creates_and_manages_portal_zugang(client, make_mandant, make_user, make_kunde):
+async def test_staff_invites_and_kunde_registriert_sich(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
 
-    create_resp = await client.post(
-        f"/api/kunden/{kunde.id}/portal-zugaenge",
+    einladen_resp = await client.post(
+        f"/api/kunden/{kunde.id}/einladungen",
         headers=auth_headers(token),
-        json={"email": "neuer-zugang@example.de", "password": "sicheres-passwort-123", "name": "Max Mustermann"},
+        json={"email": "neuer-zugang@example.de"},
     )
-    assert create_resp.status_code == 201
-    zugang_id = create_resp.json()["id"]
+    assert einladen_resp.status_code == 201
+    reg_link = einladen_resp.json()["registrierungslink"]
+    assert reg_link  # kein SMTP konfiguriert -> Link kommt direkt zurueck
 
     duplicate_resp = await client.post(
-        f"/api/kunden/{kunde.id}/portal-zugaenge",
+        f"/api/kunden/{kunde.id}/einladungen",
         headers=auth_headers(token),
-        json={"email": "neuer-zugang@example.de", "password": "sicheres-passwort-123", "name": "Doppelt"},
+        json={"email": "neuer-zugang@example.de"},
     )
-    assert duplicate_resp.status_code == 409
+    assert duplicate_resp.status_code == 409  # bereits eine offene Einladung fuer diese E-Mail
 
+    reg_token = await _extrahiere_token(reg_link)
     too_short_resp = await client.post(
-        f"/api/kunden/{kunde.id}/portal-zugaenge",
-        headers=auth_headers(token),
-        json={"email": "kurz@example.de", "password": "zu-kurz", "name": "Kurz"},
+        "/api/kundenportal/auth/registrieren",
+        json={"token": reg_token, "name": "Max Mustermann", "password": "zu-kurz"},
     )
     assert too_short_resp.status_code == 400
 
+    register_resp = await client.post(
+        "/api/kundenportal/auth/registrieren",
+        json={"token": reg_token, "name": "Max Mustermann", "password": "sicheres-passwort-123"},
+    )
+    assert register_resp.status_code == 201
+    assert register_resp.json()["access_token"]
+
+    list_resp = await client.get(f"/api/kunden/{kunde.id}/portal-zugaenge", headers=auth_headers(token))
+    assert len(list_resp.json()) == 1
+
     deactivate_resp = await client.patch(
-        f"/api/kunden/{kunde.id}/portal-zugaenge/{zugang_id}",
+        f"/api/kunden/{kunde.id}/portal-zugaenge/{list_resp.json()[0]['id']}",
         headers=auth_headers(token),
         json={"aktiv": False},
     )
     assert deactivate_resp.status_code == 200
     assert deactivate_resp.json()["aktiv"] is False
 
-    list_resp = await client.get(f"/api/kunden/{kunde.id}/portal-zugaenge", headers=auth_headers(token))
-    assert len(list_resp.json()) == 1
-
 
 @pytest.mark.asyncio
-async def test_techniker_cannot_create_portal_zugang(client, make_mandant, make_user, make_kunde):
+async def test_techniker_cannot_invite_kunde(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, techniker.email, "pw-123456")
 
     resp = await client.post(
-        f"/api/kunden/{kunde.id}/portal-zugaenge",
+        f"/api/kunden/{kunde.id}/einladungen",
         headers=auth_headers(token),
-        json={"email": "x@example.de", "password": "sicheres-passwort-123", "name": "X"},
+        json={"email": "x@example.de"},
     )
     assert resp.status_code == 403

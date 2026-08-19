@@ -6,6 +6,7 @@ from app.models.audit_log import AuditLog
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
+from app.models.einladung import Einladung
 from app.models.email_log import EmailLog
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.formular import (
@@ -22,11 +23,19 @@ from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.lieferant import Lieferant
+from app.models.mail_account import MailAccount
+from app.models.mail_attachment import MailAttachment
+from app.models.mail_folder import MailFolder
+from app.models.mail_message import MailMessage
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
 from app.models.material_bedarf import MaterialBedarf
 from app.models.notification import Notification
+from app.models.partner import Partner
+from app.models.partner_nachweis import PartnerNachweis
+from app.models.partner_zugang import PartnerZugang
+from app.models.plattform_integration import PlattformIntegration
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
@@ -53,6 +62,7 @@ __all__ = [
     "BestellungPosition",
     "Dauerauftrag",
     "DauerauftragZiel",
+    "Einladung",
     "EmailLog",
     "FahrzeugZuweisung",
     "Formular",
@@ -67,6 +77,10 @@ __all__ = [
     "KundeZuweisung",
     "KundenportalZugang",
     "Lieferant",
+    "MailAccount",
+    "MailAttachment",
+    "MailFolder",
+    "MailMessage",
     "Mandant",
     "Mangel",
     "Material",
@@ -75,6 +89,10 @@ __all__ = [
     "MaterialBewegung",
     "MaterialVerwendung",
     "Notification",
+    "Partner",
+    "PartnerNachweis",
+    "PartnerZugang",
+    "PlattformIntegration",
     "Pruefmittel",
     "Pruefzyklus",
     "Rechnung",

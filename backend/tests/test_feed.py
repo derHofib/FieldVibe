@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -400,3 +400,124 @@ async def test_feed_is_scoped_to_own_mandant(
 
     resp = await client.get("/api/feed", headers=auth_headers(token))
     assert [i["titel"] for i in resp.json()["items"]] == ["A"]
+
+
+@pytest.mark.asyncio
+async def test_feed_sortiert_nach_faelligkeit_ohne_frist_zuletzt(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    spaeter = await make_vorgang(
+        mandant=mandant, kunde=kunde, titel="Spaeter",
+        faelligkeit_am=datetime(2026, 6, 1, tzinfo=timezone.utc),
+    )
+    ohne_frist = await make_vorgang(mandant=mandant, kunde=kunde, titel="Ohne Frist")
+    bald = await make_vorgang(
+        mandant=mandant, kunde=kunde, titel="Bald",
+        faelligkeit_am=datetime(2026, 1, 5, tzinfo=timezone.utc),
+    )
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.get(
+        "/api/feed", headers=auth_headers(token), params={"sort": "faelligkeit_am"}
+    )
+    assert resp.status_code == 200
+    ids = [item["id"] for item in resp.json()["items"]]
+    assert ids == [str(bald.id), str(spaeter.id), str(ohne_frist.id)]
+
+
+@pytest.mark.asyncio
+async def test_feed_cursor_pagination_nach_faelligkeit_ist_exhaustiv(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    for i in range(5):
+        faellig = datetime(2026, 1, 1 + i, tzinfo=timezone.utc) if i % 2 == 0 else None
+        await make_vorgang(mandant=mandant, kunde=kunde, titel=f"Vorgang {i}", faelligkeit_am=faellig)
+    token = await login(client, admin.email, "pw-123456")
+
+    seen_ids = []
+    cursor = None
+    for _ in range(10):  # safety bound
+        params = {"limit": 2, "sort": "faelligkeit_am"}
+        if cursor:
+            params["cursor"] = cursor
+        resp = await client.get("/api/feed", headers=auth_headers(token), params=params)
+        assert resp.status_code == 200
+        body = resp.json()
+        seen_ids += [item["id"] for item in body["items"]]
+        cursor = body["next_cursor"]
+        if cursor is None:
+            break
+
+    assert len(seen_ids) == 5
+    assert len(set(seen_ids)) == 5
+
+
+@pytest.mark.asyncio
+async def test_feed_unbisponiert_zeigt_nur_offene_vorgaenge_ohne_aktiven_termin(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+
+    ohne_termin = await make_vorgang(mandant=mandant, kunde=kunde, titel="Ohne Termin", status="neu")
+    mit_termin = await make_vorgang(mandant=mandant, kunde=kunde, titel="Mit Termin", status="geplant")
+    abgeschlossen_ohne_termin = await make_vorgang(
+        mandant=mandant, kunde=kunde, titel="Abgeschlossen", status="abgeschlossen"
+    )
+    abgesagter_termin = await make_vorgang(
+        mandant=mandant, kunde=kunde, titel="Nur abgesagter Termin", status="neu"
+    )
+
+    disponent_token = await login(client, disponent.email, "pw-123456")
+    start = datetime.now(timezone.utc) + timedelta(days=1)
+
+    termin_resp = await client.post(
+        "/api/termine",
+        headers=auth_headers(disponent_token),
+        json={
+            "vorgang_id": str(mit_termin.id),
+            "techniker_id": str(techniker.id),
+            "titel": "Termin",
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(hours=1)).isoformat(),
+        },
+    )
+    assert termin_resp.status_code == 201
+
+    abgesagt_resp = await client.post(
+        "/api/termine",
+        headers=auth_headers(disponent_token),
+        json={
+            "vorgang_id": str(abgesagter_termin.id),
+            "techniker_id": str(techniker.id),
+            "titel": "Wird abgesagt",
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(hours=1)).isoformat(),
+        },
+    )
+    abgesagt_termin_id = abgesagt_resp.json()["termin"]["id"]
+    cancel_resp = await client.patch(
+        f"/api/termine/{abgesagt_termin_id}",
+        headers=auth_headers(disponent_token),
+        json={"status": "abgesagt"},
+    )
+    assert cancel_resp.status_code == 200
+
+    admin_token = await login(client, admin.email, "pw-123456")
+    resp = await client.get(
+        "/api/feed", headers=auth_headers(admin_token), params={"unbisponiert": "true"}
+    )
+    assert resp.status_code == 200
+    titel = {item["titel"] for item in resp.json()["items"]}
+    assert titel == {"Ohne Termin", "Nur abgesagter Termin"}
+    assert mit_termin.titel not in titel
+    assert abgeschlossen_ohne_termin.titel not in titel

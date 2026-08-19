@@ -24,7 +24,7 @@ from app.db.session import system_session
 from app.models.kunde import Kunde
 from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair
+from app.schemas.auth import LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
 from app.schemas.kunde import KundeLogoUrl
 from app.schemas.kundenportal import (
     CurrentKunde,
@@ -34,6 +34,7 @@ from app.schemas.kundenportal import (
 )
 from app.services import storage_service
 from app.services.email_service import EmailNichtKonfiguriert, send_email
+from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services.kundenportal_auth_service import authenticate_kunde
 
 router = APIRouter(prefix="/api/kundenportal/auth", tags=["kundenportal"])
@@ -118,6 +119,38 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Zugang nicht gültig"
             )
+
+        return TokenPair(
+            access_token=create_kundenportal_access_token(
+                subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
+            ),
+            refresh_token=create_kundenportal_refresh_token(
+                subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
+            ),
+        )
+
+
+@router.post("/registrieren", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
+async def registrieren(body: RegistrierenRequest) -> TokenPair:
+    """Schliesst eine Kunden-Einladung ab: legt den Kundenportal-Zugang mit
+    dem selbst gewaehlten Passwort an und loggt direkt ein."""
+    if len(body.password) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
+        )
+    async with system_session() as session:
+        einladung = await resolve_offene_einladung(session, body.token, erwartete_art="kunde")
+
+        zugang = KundenportalZugang(
+            mandant_id=einladung.mandant_id,
+            kunde_id=einladung.kunde_id,
+            email=einladung.email,
+            password_hash=hash_password(body.password),
+            name=body.name,
+        )
+        session.add(zugang)
+        await session.flush()
+        await als_angenommen_markieren(session, einladung)
 
         return TokenPair(
             access_token=create_kundenportal_access_token(

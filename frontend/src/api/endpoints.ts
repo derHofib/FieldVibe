@@ -24,6 +24,7 @@ import type {
   DauerauftragModus,
   DsgvoDokument,
   DsgvoDokumentTyp,
+  Einladung,
   Eingangsrechnung,
   EingangsrechnungBelegUrl,
   EingangsrechnungPosition,
@@ -50,6 +51,11 @@ import type {
   KundenportalZugang,
   Leistungstyp,
   Lieferant,
+  MailAccount,
+  MailAccountVerbindungTest,
+  MailFolder,
+  MailMessageDetail,
+  MailMessageListResponse,
   Mandant,
   MandantEinstellungen,
   MandantFirmendaten,
@@ -64,8 +70,10 @@ import type {
   MaterialVerwendung,
   NotificationEntry,
   OffenePostenBericht,
+  OfficeNavPraeferenz,
   PapierkorbEintrag,
   PapierkorbEntityTyp,
+  PlattformIntegration,
   Pruefmittel,
   Pruefzyklus,
   PruefzyklusEinheit,
@@ -110,6 +118,11 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => apiFetch<CurrentUser>("/api/auth/me"),
+  registrieren: (token: string, name: string, password: string) =>
+    apiFetch<TokenPair>("/api/auth/registrieren", {
+      method: "POST",
+      body: JSON.stringify({ token, name, password }),
+    }),
 };
 
 export const systemApi = {
@@ -176,6 +189,28 @@ export const usersApi = {
       method: "PATCH",
       body: JSON.stringify(praeferenz),
     }),
+  updateOwnOfficeNav: (praeferenz: OfficeNavPraeferenz) =>
+    apiFetch<OfficeNavPraeferenz>("/api/users/me/office-nav", {
+      method: "PATCH",
+      body: JSON.stringify(praeferenz),
+    }),
+  listEinladungen: () => apiFetch<Einladung[]>("/api/users/einladungen"),
+  einladen: (body: {
+    email: string;
+    role: "mandant_admin" | "custom";
+    account_typ_id?: string | null;
+    mandant_id?: string | null;
+  }) =>
+    apiFetch<Einladung>("/api/users/einladungen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  einladungErneutSenden: (einladungId: string) =>
+    apiFetch<Einladung>(`/api/users/einladungen/${einladungId}/erneut-senden`, {
+      method: "POST",
+    }),
+  einladungWiderrufen: (einladungId: string) =>
+    apiFetch<void>(`/api/users/einladungen/${einladungId}`, { method: "DELETE" }),
 };
 
 export const accountTypenApi = {
@@ -738,10 +773,24 @@ export const termineApi = {
     start_at: string;
     ende_at: string;
     notiz?: string;
+    fahrzeit_minuten?: number | null;
+    pause_minuten?: number | null;
   }) => apiFetch<TerminCreateResult>("/api/termine", { method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
-    body: Partial<Pick<Termin, "titel" | "techniker_id" | "start_at" | "ende_at" | "status" | "notiz">>,
+    body: Partial<
+      Pick<
+        Termin,
+        | "titel"
+        | "techniker_id"
+        | "start_at"
+        | "ende_at"
+        | "status"
+        | "notiz"
+        | "fahrzeit_minuten"
+        | "pause_minuten"
+      >
+    >,
   ) =>
     apiFetch<TerminCreateResult>(`/api/termine/${id}`, {
       method: "PATCH",
@@ -1167,6 +1216,11 @@ export const kundenportalAuthApi = {
       method: "POST",
       body: JSON.stringify({ token, new_password: newPassword }),
     }),
+  registrieren: (token: string, name: string, password: string) =>
+    kundenApiFetch<TokenPair>("/api/kundenportal/auth/registrieren", {
+      method: "POST",
+      body: JSON.stringify({ token, name, password }),
+    }),
 };
 
 export const mandantEinstellungenApi = {
@@ -1207,6 +1261,63 @@ export const integrationenApi = {
       body: JSON.stringify(body),
     }),
   delete: (id: string) => apiFetch<void>(`/api/integrationen/${id}`, { method: "DELETE" }),
+};
+
+export const plattformIntegrationenApi = {
+  list: () => apiFetch<PlattformIntegration[]>("/api/plattform/integrationen"),
+  create: (body: { typ: string; config?: Record<string, unknown>; secret?: string; aktiv?: boolean }) =>
+    apiFetch<PlattformIntegration>("/api/plattform/integrationen", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (
+    id: string,
+    body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean },
+  ) =>
+    apiFetch<PlattformIntegration>(`/api/plattform/integrationen/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  delete: (id: string) => apiFetch<void>(`/api/plattform/integrationen/${id}`, { method: "DELETE" }),
+};
+
+export const mailApi = {
+  testVerbindung: (body: MailAccountVerbindungTest) =>
+    apiFetch<void>("/api/mail-accounts/test-verbindung", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  accounts: {
+    list: () => apiFetch<MailAccount[]>("/api/mail-accounts"),
+    create: (body: MailAccountVerbindungTest & { name: string; email_adresse: string; signatur?: string | null }) =>
+      apiFetch<MailAccount>("/api/mail-accounts", { method: "POST", body: JSON.stringify(body) }),
+    update: (
+      id: string,
+      body: Partial<
+        MailAccountVerbindungTest & { name: string; email_adresse: string; signatur: string | null; aktiv: boolean }
+      >,
+    ) => apiFetch<MailAccount>(`/api/mail-accounts/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+    delete: (id: string) => apiFetch<void>(`/api/mail-accounts/${id}`, { method: "DELETE" }),
+  },
+  folders: (accountId: string) => apiFetch<MailFolder[]>(`/api/mail-accounts/${accountId}/folders`),
+  messages: (folderId: string, params: Record<string, string> = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch<MailMessageListResponse>(`/api/mail-folders/${folderId}/messages${qs ? `?${qs}` : ""}`);
+  },
+  message: (id: string) => apiFetch<MailMessageDetail>(`/api/mail-messages/${id}`),
+  setGelesen: (id: string, gelesen: boolean) =>
+    apiFetch<MailMessageDetail>(`/api/mail-messages/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ gelesen }),
+    }),
+  attachmentUrl: (messageId: string, attachmentId: string) =>
+    apiFetch<{ url: string }>(`/api/mail-messages/${messageId}/attachments/${attachmentId}/url`),
+  senden: (accountId: string, body: { an: string[]; cc?: string[]; bcc?: string[]; betreff: string; text: string }) =>
+    apiFetch<void>(`/api/mail-accounts/${accountId}/senden`, { method: "POST", body: JSON.stringify(body) }),
+  antworten: (messageId: string, body: { an: string[]; cc?: string[]; text: string }) =>
+    apiFetch<void>(`/api/mail-messages/${messageId}/antworten`, { method: "POST", body: JSON.stringify(body) }),
+  weiterleiten: (messageId: string, body: { an: string[]; text?: string }) =>
+    apiFetch<void>(`/api/mail-messages/${messageId}/weiterleiten`, { method: "POST", body: JSON.stringify(body) }),
 };
 
 export const kundenportalApi = {

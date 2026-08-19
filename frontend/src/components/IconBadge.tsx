@@ -5,7 +5,16 @@ import type { LucideIcon } from "lucide-react";
 // Text zu stehen. Absichtlich nur gedaempfte 100/500-15%-Toene -- kraeftige
 // Farben (400/600 als Flaeche) wuerden wieder "verspielt" statt "dezent"
 // wirken.
-export type IconTone = "sky" | "violet" | "amber" | "rose" | "emerald" | "indigo" | "cyan" | "slate";
+export type IconTone =
+  | "sky"
+  | "violet"
+  | "amber"
+  | "rose"
+  | "emerald"
+  | "indigo"
+  | "cyan"
+  | "slate"
+  | "teal";
 
 const TONE_BADGE: Record<IconTone, string> = {
   sky: "bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-300",
@@ -16,6 +25,7 @@ const TONE_BADGE: Record<IconTone, string> = {
   indigo: "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
   cyan: "bg-cyan-100 text-cyan-600 dark:bg-cyan-500/15 dark:text-cyan-300",
   slate: "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400",
+  teal: "bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300",
 };
 
 export const TONE_ROW_ACTIVE: Record<IconTone, string> = {
@@ -27,6 +37,7 @@ export const TONE_ROW_ACTIVE: Record<IconTone, string> = {
   indigo: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300",
   cyan: "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300",
   slate: "bg-slate-100 text-slate-700 dark:bg-stone-800 dark:text-stone-200",
+  teal: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300",
 };
 
 const SIZE_BOX: Record<"sm" | "md", string> = {

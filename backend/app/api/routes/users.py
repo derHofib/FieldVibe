@@ -9,9 +9,18 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_recht, r
 from app.core.security import hash_password
 from app.db.session import system_session
 from app.models.account_typ import AccountTyp
+from app.models.einladung import Einladung
+from app.models.mandant import Mandant
 from app.models.user import User
-from app.schemas.user import BottomNavUpdate, UserCreate, UserRead, UserUpdate
+from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
+from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserCreate, UserRead, UserUpdate
 from app.services.audit_service import log_action
+from app.services.einladung_service import (
+    create_einladung,
+    registrierungslink_erzeugen,
+    to_read_model,
+    versende_einladung,
+)
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -50,6 +59,133 @@ async def _to_read(session: AsyncSession, user: User) -> UserRead:
         created_at=user.created_at,
         updated_at=user.updated_at,
     )
+
+
+@router.get(
+    "/einladungen",
+    response_model=list[EinladungRead],
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
+async def list_einladungen(session: AsyncSession = Depends(get_db)) -> list[EinladungRead]:
+    result = await session.execute(
+        select(Einladung).where(Einladung.art == "mitarbeiter").order_by(Einladung.created_at.desc())
+    )
+    return [
+        EinladungRead(
+            **to_read_model(
+                e, registrierungslink=registrierungslink_erzeugen(e) if e.status == "offen" else None
+            )
+        )
+        for e in result.scalars().all()
+    ]
+
+
+@router.post(
+    "/einladungen",
+    response_model=EinladungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
+async def mitarbeiter_einladen(
+    body: MitarbeiterEinladungCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EinladungRead:
+    if auth.role == "mandant_admin":
+        if body.mandant_id is not None and body.mandant_id != auth.mandant_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Einladungen können nur in den eigenen Mandanten verschickt werden",
+            )
+        ziel_mandant_id = auth.mandant_id
+    else:
+        if body.mandant_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="mandant_id ist erforderlich"
+            )
+        ziel_mandant_id = body.mandant_id
+
+    mandant = await session.get(Mandant, ziel_mandant_id)
+    if mandant is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mandant nicht gefunden")
+
+    if body.role == "custom":
+        account_typ = await session.get(AccountTyp, body.account_typ_id)
+        if account_typ is None or account_typ.mandant_id != ziel_mandant_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Account-Typ nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+
+    einladender = await session.get(User, auth.user_id)
+    einladung = await create_einladung(
+        session,
+        mandant_id=ziel_mandant_id,
+        email=body.email,
+        art="mitarbeiter",
+        rolle=body.role,
+        account_typ_id=body.account_typ_id,
+        eingeladen_von=auth.user_id,
+    )
+    await versende_einladung(
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else mandant.name,
+        absender_rolle=einladender.role if einladender else None,
+    )
+    link = registrierungslink_erzeugen(einladung)
+
+    await log_action(
+        session,
+        aktion="mitarbeiter_eingeladen",
+        mandant_id=ziel_mandant_id,
+        actor_user_id=auth.user_id,
+        entity_type="einladung",
+        entity_id=einladung.id,
+        payload={"email": einladung.email, "role": einladung.rolle},
+    )
+    return EinladungRead(**to_read_model(einladung, registrierungslink=link))
+
+
+@router.post(
+    "/einladungen/{einladung_id}/erneut-senden",
+    response_model=EinladungRead,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
+async def einladung_erneut_senden(
+    einladung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EinladungRead:
+    einladung = await session.get(Einladung, einladung_id)
+    if einladung is None or einladung.art != "mitarbeiter" or einladung.status != "offen":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
+
+    einladender = await session.get(User, auth.user_id)
+    mandant = await session.get(Mandant, einladung.mandant_id)
+    await versende_einladung(
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else mandant.name,
+        absender_rolle=einladender.role if einladender else None,
+    )
+    link = registrierungslink_erzeugen(einladung)
+    return EinladungRead(**to_read_model(einladung, registrierungslink=link))
+
+
+@router.delete(
+    "/einladungen/{einladung_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
+async def einladung_widerrufen(
+    einladung_id: UUID, session: AsyncSession = Depends(get_db)
+) -> None:
+    einladung = await session.get(Einladung, einladung_id)
+    if einladung is None or einladung.art != "mitarbeiter" or einladung.status != "offen":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
+    einladung.status = "widerrufen"
+    await session.flush()
 
 
 @router.get(
@@ -337,5 +473,19 @@ async def update_own_bottom_nav(
         user.bottom_nav_items = (
             None if body.links is None and body.rotunde is None else body.model_dump()
         )
+        await session.flush()
+    return body
+
+
+@router.patch("/me/office-nav", response_model=OfficeNavUpdate)
+async def update_own_office_nav(
+    body: OfficeNavUpdate, auth: AuthContext = Depends(get_current_user)
+) -> OfficeNavUpdate:
+    # Rein selbstbezogene Praeferenz, analog zu update_own_bottom_nav.
+    async with system_session() as session:
+        user = await session.get(User, auth.user_id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+        user.office_nav_items = body.items
         await session.flush()
     return body

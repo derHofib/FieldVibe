@@ -23,17 +23,15 @@ VORGANG_STATUS_GESCHLOSSEN = frozenset({"abgeschlossen", "abgerechnet", "stornie
 
 
 async def close_vorgang(
-    session: AsyncSession,
-    vorgang: Vorgang,
-    *,
-    alter_status: str,
-    author_user_id: UUID,
+    session: AsyncSession, vorgang: Vorgang, *, alter_status: str, author_user_id: UUID | None
 ) -> None:
     """Schliesst einen Vorgang ab: setzt Status/abgeschlossen_am, protokolliert
     den Statuswechsel und stoesst alle Folgeaktionen an (Pruefzyklus- und
     Dauerauftrag-Faelligkeit fortschreiben, verknuepfte Maengel als behoben
-    markieren). Gemeinsam genutzt von PATCH /vorgaenge/{id} (status=abgeschlossen)
-    und dem Unterschrift-Upload, der einen Vorgang automatisch abschliesst.
+    markieren). Gemeinsam genutzt von PATCH /vorgaenge/{id} (status=abgeschlossen),
+    dem Unterschrift-Upload (schliesst automatisch ab) und dem Partnerportal
+    (author_user_id=None -- ein Partner hat keinen User-Account, siehe
+    app/api/routes/partner_portal.py).
 
     Erzeugt bewusst KEINEN Folge-Vorgang mehr -- das war frueher hier
     ueber einen folge_leistungstyp-Parameter an genau diesen Moment

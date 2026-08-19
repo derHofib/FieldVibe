@@ -116,6 +116,8 @@ async def create_termin(
         start_at=body.start_at,
         ende_at=body.ende_at,
         notiz=body.notiz,
+        fahrzeit_minuten=body.fahrzeit_minuten,
+        pause_minuten=body.pause_minuten,
     )
     session.add(termin)
     await session.flush()

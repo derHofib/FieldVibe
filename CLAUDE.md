@@ -1,8 +1,8 @@
 # SocialCRM ("FieldVibe")
 
-Multi-Tenant-CRM für Handwerksbetriebe mit Social-Feed-UX. Drei Frontends auf
+Multi-Tenant-CRM für Handwerksbetriebe mit Social-Feed-UX. Vier Frontends auf
 einer Codebase: Super-Admin-Dashboard, Feld-App (Techniker, mobil/PWA),
-Kundenportal.
+Office-Ansicht (Büro/Dispo, Desktop), Kundenportal.
 
 ## Tech-Stack
 - Backend: FastAPI, SQLAlchemy (async), Alembic, PostgreSQL mit Row-Level-
@@ -17,9 +17,11 @@ Kundenportal.
   Modelle, `backend/alembic/versions/` — Migrationen, sequenziell
   nummeriert (`00NN_beschreibung.py`)
 - `frontend/src/pages/` — Super-Admin-Seiten; `frontend/src/pages/feld/` —
-  Feld-App; `frontend/src/portal/` — Kundenportal
+  Feld-App; `frontend/src/office/` — Office-Ansicht (office.<domain>,
+  dieselbe Codebase, Shell wird zur Laufzeit am Hostnamen gewählt);
+  `frontend/src/portal/` — Kundenportal
 - Entwicklungshistorie je Baustufe inkl. bewusster Design-Entscheidungen:
-  `docs/phases/PHASE_1.md` … `PHASE_8.md` (jede endet mit "Was offen
+  `docs/phases/PHASE_1.md` … `PHASE_10.md` (jede endet mit "Was offen
   bleibt" — dort nachsehen, ob etwas als Lücke bekannt und bewusst
   zurückgestellt ist, bevor es als neuer Bug gemeldet wird)
 

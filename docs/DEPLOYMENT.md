@@ -39,6 +39,64 @@ Zwei Folgen daraus, die im Betrieb auffallen:
   meldet sich zweimal an. Ein gemeinsames Cookie auf `.<domain>` ist
   bewusst als späterer Schritt zurückgestellt.
 
+---
+
+## ⬛ Nachtrag: Office-Subdomain zu bestehender Installation hinzufügen
+
+> Nur relevant, wenn `app.<domain>` bereits produktiv läuft und jetzt die
+> Desktop-Ansicht unter `office.<domain>` dazukommen soll. Bei einer
+> **Neuinstallation** ist das schon Teil der normalen Schritte 1–4 weiter
+> unten – dieser Abschnitt kann dann übersprungen werden.
+
+1. **DNS-A-Record anlegen**, bevor am Server etwas passiert:
+   ```
+   office.example.de   A   <server-ip>
+   ```
+   Ohne diesen Eintrag bekommt Caddy in Schritt 4 kein
+   Let's-Encrypt-Zertifikat für die neue Domain.
+
+2. **Code aktualisieren:**
+   ```bash
+   cd SocialCRM
+   git pull
+   ```
+
+3. **`.env` ergänzen.** Am einfachsten `scripts/deploy.sh` erneut
+   ausführen – das Skript erkennt, dass `DOMAIN_OFFICE` fehlt, fragt
+   gezielt nur danach und schreibt `CORS_ORIGINS` automatisch auf beide
+   Domains um, ohne den Rest der Konfiguration anzufassen:
+   ```bash
+   sudo ./scripts/deploy.sh
+   ```
+   Manuell geht es genauso, direkt in der `.env`:
+   ```
+   DOMAIN_OFFICE=office.example.de
+   CORS_ORIGINS=["https://app.example.de","https://office.example.de"]
+   ```
+   `chmod 600 .env` gilt weiterhin.
+
+4. **Stack neu bauen und starten** – der `frontend`-Container muss neu
+   gebaut werden (er enthält jetzt den Office-Code mit), Caddy und Backend
+   brauchen den neuen `.env`-Wert:
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+   ```
+   Caddy braucht dabei erneut ein bis zwei Minuten für das Zertifikat der
+   neuen Domain (`docker compose logs -f caddy`). **Keine Migration nötig**
+   – die Office-Ansicht ist reines Frontend, es gibt keine neuen Tabellen.
+
+5. **Prüfen:** `https://office.example.de` im Browser öffnen. Ab ca. 900 px
+   Fensterbreite erscheint die Seitenleiste automatisch; auf einem
+   Smartphone leitet die Geräte-Weiche selbst zurück auf `app.`. Der Login
+   gilt separat vom Handy-Account (siehe "Architektur" oben) – auf
+   `office.` muss man sich einmalig neu anmelden.
+
+**Downtime:** nur der kurze Neustart von `frontend`, `backend` und `caddy`
+während `up -d --build` – Postgres und MinIO sind nicht betroffen, laufende
+Techniker-Sessions auf `app.` bleiben unberührt.
+
+---
+
 ## Automatisiert: `scripts/deploy.sh`
 
 Führt die Schritte 1–5 unten (bis auf DNS/Firewall-Freigabe auf
@@ -117,11 +175,12 @@ Server-IP") und übernimmt genau diese Schritte automatisch.
   curl -fsSL https://get.docker.com | sh
   apt-get install -y docker-compose-plugin
   ```
-- Drei DNS-A-Records, die auf die Server-IP zeigen, z. B.:
+- Vier DNS-A-Records, die auf die Server-IP zeigen, z. B.:
   ```
-  app.example.de   A   <server-ip>
-  api.example.de   A   <server-ip>
-  s3.example.de    A   <server-ip>
+  app.example.de      A   <server-ip>
+  office.example.de   A   <server-ip>
+  api.example.de      A   <server-ip>
+  s3.example.de       A   <server-ip>
   ```
 - Firewall: nur SSH (22), HTTP (80, für die Let's-Encrypt-Challenge) und
   HTTPS (443) von außen erreichbar. Alles andere (5432, 8000, 9000, 9001)

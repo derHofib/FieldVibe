@@ -42,6 +42,7 @@ from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.mandant import Mandant
+from app.models.partner import Partner
 from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
@@ -209,10 +210,13 @@ async def _clean_tables():
             text(
                 "TRUNCATE audit_log, notifications, tag_assignments, tags, zeiterfassung, "
                 "termine, pruefzyklen, pruefmittel, maengel, angebot_positionen, angebote, "
+                "mail_attachments, mail_messages, mail_folders, mail_accounts, "
                 "rechnung_positionen, rechnungen, highlights, "
                 "bestellung_positionen, material_bedarfe, bestellungen, lieferanten, "
                 "material_verwendungen, material, "
                 "kundenportal_zugaenge, kunde_zuweisungen, "
+                "einladungen, partner_zugaenge, partner_nachweise, partner, "
+                "plattform_integrationen, "
                 "vorgang_events, vorgaenge, vertraege, "
                 "anlagen, kunden, mandant_integrationen, users, mandanten "
                 "RESTART IDENTITY CASCADE"
@@ -379,6 +383,19 @@ async def make_vorgang():
             await session.flush()
             await session.refresh(vorgang)
             return vorgang
+
+    return _make
+
+
+@pytest_asyncio.fixture
+async def make_partner():
+    async def _make(*, mandant: Mandant, name: str = "Testpartner GmbH", **kwargs) -> Partner:
+        async with system_session() as session:
+            partner = Partner(mandant_id=mandant.id, name=name, **kwargs)
+            session.add(partner)
+            await session.flush()
+            await session.refresh(partner)
+            return partner
 
     return _make
 

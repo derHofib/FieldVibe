@@ -3,6 +3,12 @@ import pytest
 from tests.conftest import auth_headers, login
 
 
+async def _extrahiere_token(link: str) -> str:
+    from urllib.parse import parse_qs, urlparse
+
+    return parse_qs(urlparse(link).query)["token"][0]
+
+
 @pytest.mark.asyncio
 async def test_disponent_can_create_and_list_kunden(client, make_mandant, make_user):
     mandant = await make_mandant()
@@ -255,10 +261,16 @@ async def test_datenexport_enthaelt_alle_personenbezogenen_daten(
     )
     assert rechnung_resp.status_code == 201
 
-    portal_resp = await client.post(
-        f"/api/kunden/{kunde.id}/portal-zugaenge",
+    einladung_resp = await client.post(
+        f"/api/kunden/{kunde.id}/einladungen",
         headers=auth_headers(token),
-        json={"email": "export-kunde@example.de", "password": "pw-1234567890", "name": "Export Kunde"},
+        json={"email": "export-kunde@example.de"},
+    )
+    assert einladung_resp.status_code == 201
+    reg_token = await _extrahiere_token(einladung_resp.json()["registrierungslink"])
+    portal_resp = await client.post(
+        "/api/kundenportal/auth/registrieren",
+        json={"token": reg_token, "name": "Export Kunde", "password": "pw-1234567890"},
     )
     assert portal_resp.status_code == 201
 

@@ -31,12 +31,18 @@ from app.api.routes import (
     kundenportal_auth,
     lieferanten,
     maengel,
+    mail_accounts,
+    mail_messages,
     mandant_einstellungen,
     mandanten,
     material,
     material_bedarfe,
     notifications,
     papierkorb,
+    partner,
+    partner_auth,
+    partner_portal,
+    plattform_integrationen,
     pruefmittel,
     pruefzyklen,
     rechnungen,
@@ -142,6 +148,12 @@ app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
 app.include_router(papierkorb.router)
 app.include_router(system_resources.router)
+app.include_router(mail_accounts.router)
+app.include_router(mail_messages.router)
+app.include_router(partner.router)
+app.include_router(partner_auth.router)
+app.include_router(partner_portal.router)
+app.include_router(plattform_integrationen.router)
 
 
 @app.get("/healthz")

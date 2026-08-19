@@ -114,9 +114,13 @@ verhindert vor allem, dass Mobil und Office fachlich auseinanderlaufen.
   hätten einzelne Spalten Lücken, die nur nach fehlenden Vorgängen
   aussehen. Dieselbe Query samt Offline-Rückfall wie der Feed, gleicher
   `queryKey`, damit die SSE-Invalidierung beide Oberflächen frisch hält.
-  **Kein Drag & Drop im Kanban:** ein Statuswechsel löst im Backend
-  Folgelogik aus (Prüfzyklus, Dauerauftrag, Mängel-Workflow); eine
-  versehentlich verschobene Karte wäre teurer als ein Klick im Dropdown.
+  **Drag & Drop im Kanban** (nachgerüstet, 19.08. -- widerruft die
+  urspruengliche Entscheidung aus diesem Abschnitt): Karte auf eine andere
+  Spalte ziehen aendert den Status per PATCH. Rein optimistisch -- die
+  Karte springt sofort, ein Fehler vom Server (z. B. 409 bei fehlenden
+  Pflichtformularen fuer "abgeschlossen") laesst sie in die
+  Ausgangsspalte zurueckspringen samt Fehlermeldung, statt den Wechsel
+  stillschweigend zu blockieren oder zu erzwingen.
 - **Rechnungen & Angebote** (`office/rechnungen/`): Liste links, die
   bestehende `RechnungDetailPage`/`AngebotDetailPage` rechts eingebettet,
   Summen brutto/offen im Kopf, überfällige Beträge hervorgehoben.
@@ -182,8 +186,7 @@ und Office nachgewiesen und nach dem Fix erneut gemessen.
   konfliktären *optionalen* Peers (`@rolldown/plugin-babel`,
   `babel-plugin-react-compiler`) stehen nicht im `package-lock.json`,
   `npm ci` sollte daher sauber durchlaufen – bestätigt ist es nicht.
-- **Kein Drag & Drop im Kanban** (Begründung oben) und **keine
-  Sammelaktionen außer Statuswechsel** im Raster.
+- **Keine Sammelaktionen außer Statuswechsel** im Raster.
 - **Office ist keine PWA** und legt bewusst nichts offline neu an – am
   Schreibtisch ist eine Verbindung vorausgesetzt. Die
   Outbox-Synchronisierung läuft trotzdem mit, damit unterwegs Angelegtes

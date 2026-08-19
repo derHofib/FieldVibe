@@ -1,11 +1,13 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
+    Numeric,
     SmallInteger,
     Text,
     UniqueConstraint,
@@ -33,6 +35,10 @@ VORGANG_STATUS = (
     "abgerechnet",
     "storniert",
 )
+# Nachunternehmer muessen eine Delegation aktiv annehmen/ablehnen statt
+# stillschweigend disponiert zu werden -- rechtlich relevant (Indiz gegen
+# Scheinselbststaendigkeit), siehe app/services/partner_service.py.
+PARTNER_FREIGABE_STATUS = ("vorgeschlagen", "angenommen", "abgelehnt")
 
 
 class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
@@ -50,7 +56,12 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
             f"leistungstyp IN {LEISTUNGSTYPEN}", name="ck_vorgaenge_leistungstyp_valid"
         ),
         CheckConstraint(f"status IN {VORGANG_STATUS}", name="ck_vorgaenge_status_valid"),
+        CheckConstraint(
+            f"partner_freigabe_status IS NULL OR partner_freigabe_status IN {PARTNER_FREIGABE_STATUS}",
+            name="ck_vorgaenge_partner_freigabe_status_valid",
+        ),
         Index("idx_vorgaenge_feed", "mandant_id", "last_activity_at", "id"),
+        Index("ix_vorgaenge_partner_id", "partner_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -95,6 +106,7 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     # doppeltem Versand versehentlich zwei Vorgaenge zu erzeugen -- exakt
     # dasselbe Muster wie VorgangEvent.client_uuid.
     client_uuid: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+
     # Ansprechpartner beim Kunden, falls dieser Vorgang aus einer per
     # Kundenportal gestellten und angenommenen Auftragsanfrage entstanden ist
     # (siehe app/models/vorgang_anfrage.py). NULL bei intern erstellten
@@ -131,3 +143,16 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     wiedervorlage_am: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+
+    # Delegation an einen Nachunternehmer: entweder dieser Vorgang komplett,
+    # oder -- ueber einen Kind-Vorgang mit parent_vorgang_id -- nur eine
+    # Teilleistung. partner_honorar_netto ist die mit dem Partner
+    # vereinbarte Verguetung, komplett getrennt vom Angebots-/
+    # Rechnungsbetrag, den der Endkunde zahlt (der Partner sieht diesen nie,
+    # siehe app/api/routes/partner_portal.py).
+    partner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("partner.id"), nullable=True
+    )
+    partner_freigabe_status: Mapped[str | None] = mapped_column(Text, nullable=True)
+    partner_ablehnung_grund: Mapped[str | None] = mapped_column(Text, nullable=True)
+    partner_honorar_netto: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle } from "lucide-react";
+import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle, Settings } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
@@ -12,6 +12,7 @@ const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard; tone
   { to: "/audit-log", label: "Audit-Log", icon: ScrollText, tone: "rose" },
   { to: "/dsgvo", label: "DSGVO", icon: ShieldCheck, tone: "emerald" },
   { to: "/update", label: "Update", icon: ArrowUpCircle, tone: "indigo" },
+  { to: "/einstellungen", label: "Einstellungen", icon: Settings, tone: "teal" },
 ];
 
 function useSeitentitel(): string {

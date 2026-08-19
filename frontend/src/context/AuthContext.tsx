@@ -10,7 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authApi, mandantenApi } from "../api/endpoints";
 import { authStore } from "../api/authStore";
 import { clearAllOfflineData } from "../offline/db";
-import type { CurrentUser, RechteAktion, RechteBereich } from "../types";
+import type { CurrentUser, RechteAktion, RechteBereich, TokenPair } from "../types";
 
 interface AuthContextValue {
   currentUser: CurrentUser | undefined;
@@ -23,6 +23,11 @@ interface AuthContextValue {
   // aufblitzen, bevor /api/auth/me zurueck ist.
   hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean;
   login: (email: string, password: string) => Promise<void>;
+  // Direktes Einloggen mit einem bereits ausgestellten Token-Paar -- fuer
+  // die Registrierungsseite (RegistrierenPage.tsx), die von
+  // POST /api/auth/registrieren bereits fertige Tokens statt einer
+  // E-Mail/Passwort-Kombination zurueckbekommt.
+  loginMitToken: (tokens: TokenPair) => Promise<void>;
   logout: () => void;
   startImpersonation: (mandantId: string) => Promise<void>;
   endImpersonation: () => void;
@@ -45,6 +50,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const tokens = await authApi.login(email, password);
+      authStore.setPrimary({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+    },
+    [queryClient],
+  );
+
+  const loginMitToken = useCallback(
+    async (tokens: TokenPair) => {
       authStore.setPrimary({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
       await queryClient.invalidateQueries({ queryKey: ["me"] });
     },
@@ -116,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isImpersonating: authState.impersonation !== null,
     hatRecht,
     login,
+    loginMitToken,
     logout,
     startImpersonation,
     endImpersonation,

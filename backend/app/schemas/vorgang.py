@@ -1,8 +1,11 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+PartnerFreigabeStatus = Literal["vorgeschlagen", "angenommen", "abgelehnt"]
 
 VorgangAbrechnungsart = Literal[
     "pauschale", "aufwand", "festpreis", "wartungsvertrag", "gewaehrleistung"
@@ -107,5 +110,9 @@ class VorgangRead(BaseModel):
     erstellt_von_kundenportal_zugang_id: UUID | None
     erstellt_von: UUID | None
     wiedervorlage_am: datetime | None
+    partner_id: UUID | None
+    partner_freigabe_status: PartnerFreigabeStatus | None
+    partner_ablehnung_grund: str | None
+    partner_honorar_netto: Decimal | None
     created_at: datetime
     updated_at: datetime

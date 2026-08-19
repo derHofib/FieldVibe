@@ -19,6 +19,7 @@ from app.models.anlage import Anlage
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
+from app.models.partner import Partner
 from app.models.standort import Standort
 from app.models.user import User
 from app.models.vertrag import Vertrag
@@ -27,6 +28,7 @@ from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.anlage import AnlageRead
 from app.schemas.email import EmailLogRead, EmailSenden
+from app.schemas.partner import VorgangPartnerZuweisung, VorgangPartnerZuweisungResponse
 from app.schemas.vorgang import (
     VorgangAnlagenHinzufuegen,
     VorgangCreate,
@@ -41,6 +43,7 @@ from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
 from app.services.formular_service import offene_pflichtformulare
 from app.services.numbering_service import next_vorgangsnummer
+from app.services.partner_service import partner_hat_gueltige_freistellungsbescheinigung
 from app.services.rechte_service import (
     darf_vorgang_selbst_uebernehmen,
     ist_auf_zugewiesene_kunden_beschraenkt,
@@ -820,6 +823,72 @@ async def uebernehmen(
         auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
     )
     return await _mit_zugewiesenem_namen(session, vorgang)
+
+
+@router.patch(
+    "/{vorgang_id}/partner-zuweisung",
+    response_model=VorgangPartnerZuweisungResponse,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("nachunternehmer")),
+    ],
+)
+async def vorgang_partner_zuweisen(
+    vorgang_id: UUID,
+    body: VorgangPartnerZuweisung,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangPartnerZuweisungResponse:
+    """Delegiert diesen Vorgang komplett an einen Nachunternehmer (fuer eine
+    Teilleistung stattdessen einen Kind-Vorgang mit parent_vorgang_id
+    anlegen und diesen hier zuweisen). Der Partner muss die Delegation
+    aktiv annehmen/ablehnen (siehe app/api/routes/partner_portal.py) --
+    partner_id=None hebt eine bestehende Zuweisung wieder auf."""
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+
+    warnung = False
+    if body.partner_id is None:
+        vorgang.partner_id = None
+        vorgang.partner_freigabe_status = None
+        vorgang.partner_ablehnung_grund = None
+        vorgang.partner_honorar_netto = None
+    else:
+        partner = await session.get(Partner, body.partner_id)
+        if partner is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Partner nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        vorgang.partner_id = body.partner_id
+        vorgang.partner_freigabe_status = "vorgeschlagen"
+        vorgang.partner_ablehnung_grund = None
+        vorgang.partner_honorar_netto = body.partner_honorar_netto
+        warnung = not await partner_hat_gueltige_freistellungsbescheinigung(session, partner.id)
+
+        session.add(
+            VorgangEvent(
+                mandant_id=vorgang.mandant_id,
+                vorgang_id=vorgang.id,
+                event_type="system",
+                is_system=True,
+                author_user_id=auth.user_id,
+                body=f"Als Teilleistung/Auftrag an Nachunternehmer '{partner.name}' vorgeschlagen",
+                payload={"partner_id": str(partner.id)},
+            )
+        )
+
+    await session.flush()
+    await event_bus.publish(
+        auth.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
+    )
+    return VorgangPartnerZuweisungResponse(
+        vorgang_id=vorgang.id,
+        partner_id=vorgang.partner_id,
+        partner_freigabe_status=vorgang.partner_freigabe_status,
+        freistellungsbescheinigung_warnung=warnung,
+    )
 
 
 @router.delete(

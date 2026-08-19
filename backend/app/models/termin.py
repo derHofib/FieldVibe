@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Text
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,3 +38,9 @@ class Termin(SoftDeleteMixin, TimestampMixin, Base):
     ende_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="geplant")
     notiz: Mapped[str | None] = mapped_column(Text)
+    # Zusatzangaben fuers Gantt-Dispo: Fahrzeit zur Anlage und Pause direkt
+    # nach dem Termin, jeweils als fester Block in der Zeitachse sichtbar,
+    # damit ein Disponent realistisch plant statt Termine Rand an Rand zu
+    # setzen. Beides optional, NULL = kein Zuschlag (bisheriges Verhalten).
+    fahrzeit_minuten: Mapped[int | None] = mapped_column(Integer)
+    pause_minuten: Mapped[int | None] = mapped_column(Integer)

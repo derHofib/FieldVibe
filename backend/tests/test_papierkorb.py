@@ -9,6 +9,12 @@ from app.models.vorgang_event import VorgangEvent
 from tests.conftest import auth_headers, login
 
 
+async def _extrahiere_token(link: str) -> str:
+    from urllib.parse import parse_qs, urlparse
+
+    return parse_qs(urlparse(link).query)["token"][0]
+
+
 @pytest.mark.asyncio
 async def test_loesch_operativ_hat_schreibrechte_wie_mandant_admin(
     client, make_mandant, make_user, make_kunde, make_vorgang
@@ -365,10 +371,16 @@ async def test_kunde_mit_events_zeiterfassung_highlight_und_portal_zugang_kann_e
     )
     assert zeit_resp.status_code == 201
 
-    portal_resp = await client.post(
-        f"/api/kunden/{kunde.id}/portal-zugaenge",
+    einladung_resp = await client.post(
+        f"/api/kunden/{kunde.id}/einladungen",
         headers=auth_headers(admin_token),
-        json={"email": "kunde-portal@example.de", "password": "pw-1234567890", "name": "Kunde Portal"},
+        json={"email": "kunde-portal@example.de"},
+    )
+    assert einladung_resp.status_code == 201
+    reg_token = await _extrahiere_token(einladung_resp.json()["registrierungslink"])
+    portal_resp = await client.post(
+        "/api/kundenportal/auth/registrieren",
+        json={"token": reg_token, "name": "Kunde Portal", "password": "pw-1234567890"},
     )
     assert portal_resp.status_code == 201
 

@@ -8,6 +8,7 @@ import {
   Gauge,
   Inbox,
   type LucideIcon,
+  Mail,
   Plug,
   Receipt,
   Rss,
@@ -172,6 +173,18 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/benachrichtigungen",
     kategorie: "Kommunikation",
     sichtbar: ({ currentUser }) => currentUser?.role !== "loesch_ansicht",
+  },
+  {
+    key: "postfach",
+    label: "Postfach",
+    icon: Mail,
+    tone: "teal",
+    route: "/postfach",
+    kategorie: "Kommunikation",
+    // Kein Rechte-Check wie bei den Business-Bereichen -- das eigene
+    // Postfach ist persoenlich, nicht rollenabhaengig (nur der
+    // Modul-Schalter des Mandanten kann es fuer alle abschalten).
+    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "postfach"),
   },
   {
     key: "highlights",

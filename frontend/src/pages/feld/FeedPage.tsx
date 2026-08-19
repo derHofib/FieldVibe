@@ -1,18 +1,18 @@
-import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Inbox, List, Map as MapIcon, Play, Repeat, Search, Star, UserPlus } from "lucide-react";
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { feedApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
+import { kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
-import { cacheFeedItems, getCachedFeedItems } from "../../offline/cache";
+import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
-import type { FeedCard, FeedResponse, StoryItem, VorgangStatus } from "../../types";
+import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -333,61 +333,14 @@ export function FeedPage() {
 
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ["feed", filter],
-    queryFn: async ({ pageParam }: { pageParam: string | undefined }): Promise<FeedResponse> => {
-      try {
-        const result = await feedApi.get({
-          ...filter,
-          ...(pageParam ? { cursor: pageParam } : {}),
-        });
-        // Only the first page mirrors into the offline cache -- it's meant
-        // to reflect "the feed as last seen", not accumulate every page a
-        // user has ever scrolled through.
-        if (!pageParam) await cacheFeedItems(result.items);
-        return result;
-      } catch (err) {
-        if (!navigator.onLine && !pageParam) {
-          const cached = await getCachedFeedItems();
-          if (cached.length > 0) return { items: cached, next_cursor: null };
-        }
-        throw err;
-      }
-    },
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useVorgangsListe(filter);
 
   // Die Liste zeigt bewusst nur Seite fuer Seite ("Mehr laden"), aber die
   // Kartenansicht braucht alle zum aktuellen Filter passenden Vorgaenge auf
   // einmal, sonst wuerden Pins fehlen, die einfach noch nicht nachgeladen
-  // wurden. hasNextPage/fetchNextPage per Ref, damit der Effekt nicht bei
-  // jeder neu geladenen Seite neu startet, sondern einmalig pro
-  // Ansicht-Wechsel durchlaeuft.
-  const hasNextPageRef = useRef(hasNextPage);
-  hasNextPageRef.current = hasNextPage;
-  const fetchNextPageRef = useRef(fetchNextPage);
-  fetchNextPageRef.current = fetchNextPage;
-  useEffect(() => {
-    if (ansicht !== "karte") return;
-    let abgebrochen = false;
-    (async () => {
-      let seiten = 0;
-      while (!abgebrochen && hasNextPageRef.current && seiten < 20) {
-        await fetchNextPageRef.current();
-        seiten++;
-      }
-    })();
-    return () => {
-      abgebrochen = true;
-    };
-  }, [ansicht]);
+  // wurden.
+  useAlleSeitenLaden(ansicht === "karte", hasNextPage, fetchNextPage);
 
   const storyGroups = stories
     ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen]

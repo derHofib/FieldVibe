@@ -23,6 +23,7 @@ from app.db.session import system_session
 from app.services.email_ingest_service import run_email_ingest
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
+from app.services.mail_sync_service import run_mail_sync
 from app.services.scheduler_service import (
     mandanten_faellig_um,
     run_dauerauftraege_scheduler,
@@ -30,10 +31,16 @@ from app.services.scheduler_service import (
     run_pruefzyklen_scheduler,
     run_wiedervorlage_scheduler,
 )
-from app.services.worker_lock import worker_lock
+from app.services.worker_lock import mail_sync_lock, worker_lock
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("app.worker")
+
+# Persoenliche Postfaecher (siehe mail_sync_service.py) laufen in einem
+# eigenen, viel kuerzeren Takt als der stuendliche Scheduler-Tick -- eine
+# Stunde Verzoegerung waere fuer einen Outlook-Ersatz spuerbar schlecht,
+# echtes IMAP IDLE (Server-Push) ist fuer V1 bewusst zurueckgestellt.
+MAIL_SYNC_INTERVAL_SECONDS = 120
 
 
 def _seconds_until_next_full_hour(now: datetime | None = None) -> float:
@@ -121,16 +128,44 @@ async def _run_hourly_tick() -> None:
             logger.exception("Kreditorenbuchhaltung-Lauf fehlgeschlagen")
 
 
-async def main() -> None:
-    logger.info("Worker gestartet -- prüft stündlich, welche Mandanten fällig sind")
+async def _run_mail_sync_tick() -> None:
+    async with mail_sync_lock() as acquired:
+        if not acquired:
+            # Ein anderer Worker-Container synchronisiert Postfaecher gerade
+            # bereits -- der naechste Takt (siehe MAIL_SYNC_INTERVAL_SECONDS)
+            # holt das nach.
+            return
+        try:
+            ergebnis = await run_mail_sync()
+            if ergebnis["konten_synchronisiert"] or ergebnis["fehler"]:
+                logger.info("Mail-Sync abgeschlossen: %s", ergebnis)
+        except Exception:
+            logger.exception("Mail-Sync-Tick fehlgeschlagen")
+
+
+async def _hourly_loop() -> None:
     while True:
         wartezeit = _seconds_until_next_full_hour()
-        logger.info("Nächster Tick in %.0f Sekunden", wartezeit)
+        logger.info("Nächster stündlicher Tick in %.0f Sekunden", wartezeit)
         await asyncio.sleep(wartezeit)
         try:
             await _run_hourly_tick()
         except Exception:
             logger.exception("Stündlicher Tick fehlgeschlagen")
+
+
+async def _mail_sync_loop() -> None:
+    while True:
+        await asyncio.sleep(MAIL_SYNC_INTERVAL_SECONDS)
+        await _run_mail_sync_tick()
+
+
+async def main() -> None:
+    logger.info(
+        "Worker gestartet -- stündlicher Scheduler-Tick, Mail-Sync alle %d Sekunden",
+        MAIL_SYNC_INTERVAL_SECONDS,
+    )
+    await asyncio.gather(_hourly_loop(), _mail_sync_loop())
 
 
 if __name__ == "__main__":

@@ -64,11 +64,28 @@ class Settings(BaseSettings):
     # eigenen, von JWT_SECRET verschiedenen Wert setzen.
     integration_secret_key: str | None = None
 
+    # --- Globaler Plattform-Mailversand (Fallback ohne Mandanten-SMTP) ---
+    # Greift, wenn ein Mandant (noch) keine eigene smtp-Integration
+    # hinterlegt hat (siehe app/services/email_service.py) -- sonst kaeme
+    # keine Mail raus, bevor der Mandant erstmal SMTP eingerichtet hat
+    # (Henne-Ei-Problem beim Onboarding). Ein Mandant mit eigener
+    # smtp-Integration ueberschreibt das automatisch, keine Umschaltung
+    # noetig. "account@..." statt z.B. "einladung@...", weil dieselbe
+    # Adresse auch fuer Passwort-Reset-Mails (Kundenportal/Partnerportal)
+    # verwendet wird, nicht nur fuer Einladungen.
+    global_smtp_host: str | None = None
+    global_smtp_port: int = 587
+    global_smtp_user: str | None = None
+    global_smtp_password: str | None = None
+    global_smtp_from_address: str = "account@fieldvibe.de"
+
     # --- Kundenportal Passwort-Reset (Phase-8-Nacharbeit) ----------------
     # Basis-URL des Frontends fuer den Reset-Link in der Mail; produktiv
     # https://<DOMAIN_APP> (siehe docs/DEPLOYMENT.md).
     frontend_base_url: str = "http://localhost:5173"
     kundenportal_reset_token_expire_minutes: int = 30
+    partner_reset_token_expire_minutes: int = 30
+    einladung_token_expire_minutes: int = 60 * 24 * 14
 
     # --- Mahnwesen (Nacharbeit): Tage nach Faelligkeit bis zur jeweiligen
     # Mahnstufe. Drei Stufen statt eines konfigurierbaren Katalogs -- fuer

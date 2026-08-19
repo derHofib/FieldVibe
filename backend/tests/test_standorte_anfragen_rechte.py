@@ -297,13 +297,7 @@ async def test_derselbe_link_funktioniert_fuer_mehrere_mitarbeiter_des_kunden(
     token = await login(client, admin.email, "pw-123456")
 
     for email in ("herr.krause@example.de", "frau.krause@example.de"):
-        create = await client.post(
-            f"/api/kunden/{kunde.id}/portal-zugaenge",
-            headers=auth_headers(token),
-            json={"email": email, "password": "kunden-pw-123456", "name": email},
-        )
-        assert create.status_code == 201
-        assert "login_slug" not in create.json()
+        await _make_zugang(mandant, kunde, email=email, password="kunden-pw-123456", name=email)
 
     kunde_resp = await client.get(f"/api/kunden/{kunde.id}", headers=auth_headers(token))
     slug = kunde_resp.json()["portal_slug"]

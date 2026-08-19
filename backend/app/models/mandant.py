@@ -23,6 +23,8 @@ MANDANT_MODULE = (
     "fahrzeuge",
     "highlights",
     "karten",
+    "nachunternehmer",
+    "postfach",
 )
 
 

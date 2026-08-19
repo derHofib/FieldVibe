@@ -34,10 +34,12 @@ import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { OfficeLayout } from "./OfficeLayout";
+import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
 import { OfficeFormularDetailPage } from "./formulare/OfficeFormularDetailPage";
 import { OfficeFormularePage } from "./formulare/OfficeFormularePage";
+import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 
@@ -61,6 +63,7 @@ export function OfficeApp() {
         <Route path="/formulare" element={<OfficeFormularePage />} />
         <Route path="/formulare/:id" element={<OfficeFormularDetailPage />} />
         <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
+        <Route path="/postfach" element={<OfficePostfachPage />} />
 
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>
@@ -93,6 +96,7 @@ export function OfficeApp() {
         <Route path="/accounts" element={<UsersPage />} />
         <Route path="/account-typen" element={<AccountTypenPage />} />
         <Route path="/einstellungen" element={<SettingsPage />} />
+        <Route path="/einstellungen/seitenleiste" element={<OfficeNavSettingsPage />} />
         <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
         <Route path="/statistik" element={<StatistikPage />} />
         <Route path="/team-zeiten" element={<TeamZeitenPage />} />

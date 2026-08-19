@@ -7,9 +7,11 @@ import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
 import { DsgvoPage } from "./pages/DsgvoPage";
+import { EinstellungenPage } from "./pages/EinstellungenPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
+import { RegistrierenPage } from "./pages/RegistrierenPage";
 import { UebersichtPage } from "./pages/UebersichtPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
@@ -37,6 +39,8 @@ import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
+import { PostfachNachrichtPage } from "./pages/feld/PostfachNachrichtPage";
+import { PostfachPage } from "./pages/feld/PostfachPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
@@ -97,6 +101,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
+      <Route path="/registrieren" element={<RegistrierenPage />} />
 
       {!isAuthenticated && <Route path="*" element={<Navigate to="/login" replace />} />}
 
@@ -119,6 +124,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/dsgvo" element={<DsgvoPage />} />
           <Route path="/update" element={<UpdatePage />} />
+          <Route path="/einstellungen" element={<EinstellungenPage />} />
           <Route path="*" element={<Navigate to="/uebersicht" replace />} />
         </Route>
       )}
@@ -154,6 +160,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
           <Route path="/material/:id" element={<MaterialDetailPage />} />
           <Route path="/highlights" element={<HighlightsPage />} />
+          <Route path="/postfach" element={<PostfachPage />} />
+          <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="/accounts" element={<UsersPage />} />

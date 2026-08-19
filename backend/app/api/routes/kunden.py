@@ -18,10 +18,12 @@ from app.api.deps import (
 from app.core.security import hash_password
 from app.models.angebot import Angebot
 from app.models.anlage import Anlage
+from app.models.einladung import Einladung
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
+from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung
 from app.models.standort import Standort
 from app.models.tag import Tag, TagAssignment
@@ -31,14 +33,11 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.anlage import AnlageRead
 from app.schemas.datenexport import KundeDatenexport, VorgangMitEreignissen
+from app.schemas.einladung import EinladungRead, KundeEinladungCreate
 from app.schemas.email import EmailLogRead, EmailSenden
 from app.schemas.kunde import KundeCreate, KundeLogoUrl, KundeRead, KundeUpdate
 from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
-from app.schemas.kundenportal import (
-    KundenportalZugangCreate,
-    KundenportalZugangRead,
-    KundenportalZugangUpdate,
-)
+from app.schemas.kundenportal import KundenportalZugangRead, KundenportalZugangUpdate
 from app.schemas.profile import KundeProfil
 from app.schemas.standort import StandortRead
 from app.schemas.user import UserRead
@@ -46,6 +45,12 @@ from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services import angebot_service, papierkorb_service, rechnung_service, storage_service
+from app.services.einladung_service import (
+    create_einladung,
+    registrierungslink_erzeugen,
+    to_read_model,
+    versende_einladung,
+)
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
@@ -495,9 +500,37 @@ async def list_portal_zugaenge(
     return list(result.scalars().all())
 
 
+@router.get(
+    "/{kunde_id}/einladungen",
+    response_model=list[EinladungRead],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenportal")),
+    ],
+)
+async def list_kunde_einladungen(
+    kunde_id: UUID, session: AsyncSession = Depends(get_db)
+) -> list[EinladungRead]:
+    if await session.get(Kunde, kunde_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    result = await session.execute(
+        select(Einladung)
+        .where(Einladung.art == "kunde", Einladung.kunde_id == kunde_id)
+        .order_by(Einladung.created_at.desc())
+    )
+    return [
+        EinladungRead(
+            **to_read_model(
+                e, registrierungslink=registrierungslink_erzeugen(e) if e.status == "offen" else None
+            )
+        )
+        for e in result.scalars().all()
+    ]
+
+
 @router.post(
-    "/{kunde_id}/portal-zugaenge",
-    response_model=KundenportalZugangRead,
+    "/{kunde_id}/einladungen",
+    response_model=EinladungRead,
     status_code=status.HTTP_201_CREATED,
     dependencies=[
         Depends(require_roles("mandant_admin", "custom")),
@@ -505,34 +538,80 @@ async def list_portal_zugaenge(
         Depends(require_module("kundenportal")),
     ],
 )
-async def create_portal_zugang(
+async def kunde_einladen(
     kunde_id: UUID,
-    body: KundenportalZugangCreate,
+    body: KundeEinladungCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> KundenportalZugang:
-    if await session.get(Kunde, kunde_id) is None:
+) -> EinladungRead:
+    kunde = await session.get(Kunde, kunde_id)
+    if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
-    if len(body.password) < 10:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
-        )
 
-    zugang = KundenportalZugang(
+    einladender = await session.get(User, auth.user_id)
+    einladung = await create_einladung(
+        session,
         mandant_id=auth.mandant_id,
-        kunde_id=kunde_id,
         email=body.email,
-        password_hash=hash_password(body.password),
-        name=body.name,
+        art="kunde",
+        kunde_id=kunde_id,
+        eingeladen_von=auth.user_id,
     )
-    session.add(zugang)
-    try:
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="E-Mail wird bereits verwendet"
-        ) from exc
-    return zugang
+    await versende_einladung(
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else kunde.name,
+        absender_rolle=einladender.role if einladender else None,
+    )
+    link = registrierungslink_erzeugen(einladung)
+    return EinladungRead(**to_read_model(einladung, registrierungslink=link))
+
+
+@router.post(
+    "/{kunde_id}/einladungen/{einladung_id}/erneut-senden",
+    response_model=EinladungRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenportal")),
+    ],
+)
+async def kunde_einladung_erneut_senden(
+    kunde_id: UUID,
+    einladung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EinladungRead:
+    einladung = await session.get(Einladung, einladung_id)
+    if einladung is None or einladung.art != "kunde" or einladung.kunde_id != kunde_id or einladung.status != "offen":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
+
+    einladender = await session.get(User, auth.user_id)
+    await versende_einladung(
+        session,
+        einladung,
+        absender_name=einladender.name if einladender else "",
+        absender_rolle=einladender.role if einladender else None,
+    )
+    link = registrierungslink_erzeugen(einladung)
+    return EinladungRead(**to_read_model(einladung, registrierungslink=link))
+
+
+@router.delete(
+    "/{kunde_id}/einladungen/{einladung_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_module("kundenportal")),
+    ],
+)
+async def kunde_einladung_widerrufen(
+    kunde_id: UUID, einladung_id: UUID, session: AsyncSession = Depends(get_db)
+) -> None:
+    einladung = await session.get(Einladung, einladung_id)
+    if einladung is None or einladung.art != "kunde" or einladung.kunde_id != kunde_id or einladung.status != "offen":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
+    einladung.status = "widerrufen"
+    await session.flush()
 
 
 @router.patch(

@@ -295,3 +295,72 @@ async def test_mandant_isolation_for_termine(
 
     get_resp = await client.get(f"/api/termine/{termin_id}", headers=auth_headers(token2))
     assert get_resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_termin_kann_fahrzeit_und_pause_speichern(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, disponent.email, "pw-123456")
+
+    start = datetime.now(timezone.utc) + timedelta(days=1)
+    resp = await client.post(
+        "/api/termine",
+        headers=auth_headers(token),
+        json={
+            "vorgang_id": str(vorgang.id),
+            "techniker_id": str(techniker.id),
+            "titel": "Termin mit Fahrzeit",
+            "start_at": _iso(start),
+            "ende_at": _iso(start + timedelta(hours=1)),
+            "fahrzeit_minuten": 25,
+            "pause_minuten": 15,
+        },
+    )
+    assert resp.status_code == 201
+    termin = resp.json()["termin"]
+    assert termin["fahrzeit_minuten"] == 25
+    assert termin["pause_minuten"] == 15
+
+    patch_resp = await client.patch(
+        f"/api/termine/{termin['id']}",
+        headers=auth_headers(token),
+        json={"fahrzeit_minuten": 40},
+    )
+    assert patch_resp.status_code == 200
+    assert patch_resp.json()["termin"]["fahrzeit_minuten"] == 40
+    assert patch_resp.json()["termin"]["pause_minuten"] == 15
+
+
+@pytest.mark.asyncio
+async def test_termin_ohne_fahrzeit_und_pause_bleibt_null(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, disponent.email, "pw-123456")
+
+    start = datetime.now(timezone.utc) + timedelta(days=1)
+    resp = await client.post(
+        "/api/termine",
+        headers=auth_headers(token),
+        json={
+            "vorgang_id": str(vorgang.id),
+            "techniker_id": str(techniker.id),
+            "titel": "Termin ohne Zusatzangaben",
+            "start_at": _iso(start),
+            "ende_at": _iso(start + timedelta(hours=1)),
+        },
+    )
+    assert resp.status_code == 201
+    termin = resp.json()["termin"]
+    assert termin["fahrzeit_minuten"] is None
+    assert termin["pause_minuten"] is None

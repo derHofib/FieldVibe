@@ -14,6 +14,7 @@ const TONE_PILL: Record<IconTone, string> = {
   indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
   cyan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/15 dark:text-cyan-300",
   slate: "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300",
+  teal: "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300",
 };
 
 export function StatusBadge({ label, tone }: { label: string; tone: IconTone }) {
