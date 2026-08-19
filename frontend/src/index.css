@@ -77,6 +77,46 @@ body {
   display: none;
 }
 
+/* Individuelle Scrollbar statt des grellen System-Balkens -- der blieb im
+   Dark Mode hell und stach aus jeder dunklen Flaeche heraus. Firefox liest
+   scrollbar-color/-width, WebKit/Chromium/Edge nur die
+   ::-webkit-scrollbar-Pseudoelemente, deshalb beides parallel. Global auf
+   allen Elementen statt nur ausgewaehlten Containern -- die App hat zu
+   viele scrollbare Stellen (Sidebar, Tabellen, Gantt, Karten-Listen,
+   Modals), um sie einzeln zu pflegen. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+.dark * {
+  scrollbar-color: var(--color-stone-700) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-slate-300);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-slate-400);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background-color: var(--color-stone-700);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-stone-600);
+}
+
 .card-interactive {
   @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-xs;
 }
