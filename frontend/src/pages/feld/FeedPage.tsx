@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
+import { GRUPPEN_LABEL, gruppiereNachFaelligkeit } from "../../config/vorgangDarstellung";
 import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
@@ -121,45 +122,12 @@ function faelligkeitsFarbe(iso: string): string {
   return "text-slate-500 dark:text-stone-400";
 }
 
-type FaelligkeitsGruppe = "ueberfaellig" | "heute" | "diese_woche" | "ohne_frist";
-
-const GRUPPEN_LABEL: Record<FaelligkeitsGruppe, string> = {
-  ueberfaellig: "Überfällig",
-  heute: "Heute fällig",
-  diese_woche: "Diese Woche",
-  ohne_frist: "Ohne Frist",
-};
-
-const GRUPPEN_REIHENFOLGE: FaelligkeitsGruppe[] = ["ueberfaellig", "heute", "diese_woche", "ohne_frist"];
-
-function faelligkeitsGruppe(card: FeedCard): FaelligkeitsGruppe {
-  const iso = card.faelligkeit_am?.slice(0, 10);
-  if (!iso) return "ohne_frist";
-  const heute = heuteIso();
-  if (iso < heute) return "ueberfaellig";
-  if (iso === heute) return "heute";
-  return "diese_woche";
-}
-
 // "3 Tage überfällig" statt reinem Datum -- auf einen Blick erfassbar ohne
 // Kopfrechnen (siehe Design-Vorschlag "Feed neu gedacht").
 function tageUeberfaellig(iso: string): number {
   const heute = new Date(heuteIso());
   const faellig = new Date(iso);
   return Math.round((heute.getTime() - faellig.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-// Karten nach Faelligkeit gruppieren, damit man beim Durchscrollen sofort
-// sieht, was zuerst dran ist, statt jede Karte einzeln nach Datum abzusuchen
-// (siehe Design-Vorschlag "Feed neu gedacht"). Reihenfolge innerhalb einer
-// Gruppe bleibt wie vom Server sortiert (Aktivitaet/Prioritaet).
-function gruppiereNachFaelligkeit(cards: FeedCard[]): { gruppe: FaelligkeitsGruppe; cards: FeedCard[] }[] {
-  const buckets = new Map<FaelligkeitsGruppe, FeedCard[]>();
-  for (const card of cards) {
-    const gruppe = faelligkeitsGruppe(card);
-    (buckets.get(gruppe) ?? buckets.set(gruppe, []).get(gruppe)!).push(card);
-  }
-  return GRUPPEN_REIHENFOLGE.filter((g) => buckets.has(g)).map((gruppe) => ({ gruppe, cards: buckets.get(gruppe)! }));
 }
 
 const OFFENE_STATUS: VorgangStatus[] = ["neu", "geplant"];

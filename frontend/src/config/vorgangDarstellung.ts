@@ -1,4 +1,4 @@
-import type { VorgangStatus } from "../types";
+import type { FeedCard, VorgangStatus } from "../types";
 
 /** Beschriftungen und Farbklassen der Vorgangs-Status, gemeinsam genutzt von
  * Feld-App (pages/feld/FeedPage.tsx) und Desktop-Oberflaeche (office/). Zwei
@@ -51,4 +51,45 @@ export function istUeberfaellig(faelligkeitAm: string | null): boolean {
 export function tageSeit(iso: string): number {
   const diff = Date.now() - new Date(iso).getTime();
   return Math.floor(diff / 86_400_000);
+}
+
+/** Gruppierung nach Faelligkeit -- urspruenglich nur im Feed der Feld-App,
+ * jetzt auch von der Office-Vorgaengeliste/dem Raster genutzt (siehe
+ * Design-Vorschlag "Feed neu gedacht"). */
+export type FaelligkeitsGruppe = "ueberfaellig" | "heute" | "diese_woche" | "ohne_frist";
+
+export const GRUPPEN_LABEL: Record<FaelligkeitsGruppe, string> = {
+  ueberfaellig: "Überfällig",
+  heute: "Heute fällig",
+  diese_woche: "Diese Woche",
+  ohne_frist: "Ohne Frist",
+};
+
+export const GRUPPEN_REIHENFOLGE: FaelligkeitsGruppe[] = ["ueberfaellig", "heute", "diese_woche", "ohne_frist"];
+
+function heuteIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function faelligkeitsGruppe(card: Pick<FeedCard, "faelligkeit_am">): FaelligkeitsGruppe {
+  const iso = card.faelligkeit_am?.slice(0, 10);
+  if (!iso) return "ohne_frist";
+  const heute = heuteIso();
+  if (iso < heute) return "ueberfaellig";
+  if (iso === heute) return "heute";
+  return "diese_woche";
+}
+
+// Karten nach Faelligkeit gruppieren, damit man beim Durchscrollen sofort
+// sieht, was zuerst dran ist, statt jede Karte einzeln nach Datum abzusuchen.
+// Reihenfolge innerhalb einer Gruppe bleibt wie vom Server sortiert.
+export function gruppiereNachFaelligkeit<T extends Pick<FeedCard, "faelligkeit_am">>(
+  cards: T[],
+): { gruppe: FaelligkeitsGruppe; cards: T[] }[] {
+  const buckets = new Map<FaelligkeitsGruppe, T[]>();
+  for (const card of cards) {
+    const gruppe = faelligkeitsGruppe(card);
+    (buckets.get(gruppe) ?? buckets.set(gruppe, []).get(gruppe)!).push(card);
+  }
+  return GRUPPEN_REIHENFOLGE.filter((g) => buckets.has(g)).map((gruppe) => ({ gruppe, cards: buckets.get(gruppe)! }));
 }

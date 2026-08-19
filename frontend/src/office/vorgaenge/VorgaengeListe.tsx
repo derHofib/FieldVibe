@@ -2,7 +2,13 @@ import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { STATUS_BADGE, STATUS_LABEL, istUeberfaellig } from "../../config/vorgangDarstellung";
+import {
+  GRUPPEN_LABEL,
+  STATUS_BADGE,
+  STATUS_LABEL,
+  gruppiereNachFaelligkeit,
+  istUeberfaellig,
+} from "../../config/vorgangDarstellung";
 import { VorgangDetailPage } from "../../pages/feld/VorgangDetailPage";
 import type { FeedCard } from "../../types";
 import { Karte } from "../OfficeUi";
@@ -25,41 +31,50 @@ export function VorgaengeListe({
   const navigate = useNavigate();
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
   const aktiv = gewaehlt && vorgaenge.some((v) => v.id === gewaehlt) ? gewaehlt : vorgaenge[0]?.id;
+  // Gleiche Gruppierung wie im Feed der Feld-App (siehe config/vorgangDarstellung.ts).
+  const gruppen = gruppiereNachFaelligkeit(vorgaenge);
 
   return (
     <div className="grid grid-cols-[minmax(280px,340px)_1fr] gap-4">
       <Karte className="max-h-[calc(100vh-13rem)] overflow-y-auto">
-        {vorgaenge.map((v) => {
-          const ausgewaehlt = v.id === aktiv;
-          return (
-            <button
-              key={v.id}
-              onClick={() => setGewaehlt(v.id)}
-              className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left last:border-b-0 dark:border-stone-800 ${
-                ausgewaehlt
-                  ? "border-l-2 border-l-blue-500 bg-blue-50/60 pl-[10px] dark:bg-blue-500/10"
-                  : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
-              }`}
-            >
-              <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-stone-100">
-                {v.vorgangsnummer} · {v.titel}
-              </p>
-              <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-slate-500 dark:text-stone-400">
-                <span className="truncate">{v.kunde_name}</span>
-                {istUeberfaellig(v.faelligkeit_am) && (
-                  <span className="shrink-0 font-bold text-rose-600 dark:text-rose-300">
-                    · überfällig
+        {gruppen.map(({ gruppe, cards }) => (
+          <div key={gruppe}>
+            <p className="border-b border-slate-100 bg-slate-50/70 px-3 py-1 text-[10.5px] font-bold tracking-wide text-slate-400 uppercase dark:border-stone-800 dark:bg-stone-800/40 dark:text-stone-500">
+              {GRUPPEN_LABEL[gruppe]} <span className="font-medium normal-case">{cards.length}</span>
+            </p>
+            {cards.map((v) => {
+              const ausgewaehlt = v.id === aktiv;
+              return (
+                <button
+                  key={v.id}
+                  onClick={() => setGewaehlt(v.id)}
+                  className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left last:border-b-0 dark:border-stone-800 ${
+                    ausgewaehlt
+                      ? "border-l-2 border-l-blue-500 bg-blue-50/60 pl-[10px] dark:bg-blue-500/10"
+                      : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
+                  }`}
+                >
+                  <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                    {v.vorgangsnummer} · {v.titel}
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-slate-500 dark:text-stone-400">
+                    <span className="truncate">{v.kunde_name}</span>
+                    {istUeberfaellig(v.faelligkeit_am) && (
+                      <span className="shrink-0 font-bold text-rose-600 dark:text-rose-300">
+                        · überfällig
+                      </span>
+                    )}
+                  </p>
+                  <span
+                    className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[v.status]}`}
+                  >
+                    {STATUS_LABEL[v.status]}
                   </span>
-                )}
-              </p>
-              <span
-                className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[v.status]}`}
-              >
-                {STATUS_LABEL[v.status]}
-              </span>
-            </button>
-          );
-        })}
+                </button>
+              );
+            })}
+          </div>
+        ))}
 
         {hasNextPage && (
           <button
