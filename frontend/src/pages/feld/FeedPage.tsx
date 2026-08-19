@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCircle2, Clock, Inbox, List, Map as MapIcon, MessageCircle, Play, Repeat, Search, Star, UserPlus, X } from "lucide-react";
+import { Bell, CheckCircle2, Clock, Filter, Inbox, List, Map as MapIcon, MessageCircle, Play, Repeat, Star, UserPlus, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
@@ -496,7 +496,7 @@ export function FeedPage() {
                 : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
             }`}
           >
-            <Search size={14} strokeWidth={2} />
+            <Filter size={14} strokeWidth={2} />
             {aktiveFilterAnzahl > 0 && (
               <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-slate-100 dark:ring-stone-950">
                 {aktiveFilterAnzahl}
