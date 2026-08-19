@@ -9,11 +9,11 @@ import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
-import { GRUPPEN_LABEL, gruppiereNachFaelligkeit } from "../../config/vorgangDarstellung";
+import { GRUPPEN_LABEL, filterChipLabel, gruppiereNachFaelligkeit } from "../../config/vorgangDarstellung";
 import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
-import type { FeedCard, Kunde, StoryItem, VorgangStatus } from "../../types";
+import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -301,34 +301,6 @@ function FeedCardView({ card }: { card: FeedCard }) {
     </div>
     </div>
   );
-}
-
-// Lesbare Kurzform je aktivem Filter-Schluessel fuer die Chip-Zusammenfassung
-// -- ein unbekannter Schluessel faellt auf "Schluessel: Wert" zurueck statt
-// zu verschwinden, damit ein spaeter ergaenzter Filter nie stillschweigend
-// ohne Chip bleibt.
-function filterChipLabel(key: string, value: string, kunden: Kunde[] | undefined): string {
-  switch (key) {
-    case "status":
-      return `Status: ${value
-        .split(",")
-        .map((s) => STATUS_LABEL[s as VorgangStatus] ?? s)
-        .join(", ")}`;
-    case "kunde_id":
-      return `Kunde: ${kunden?.find((k) => k.id === value)?.name ?? value}`;
-    case "leistungstyp":
-      return `Typ: ${LEISTUNGSTYP_LABEL[value] ?? value}`;
-    case "faellig_von":
-      return `Fällig ab ${new Date(value).toLocaleDateString("de-DE")}`;
-    case "faellig_bis":
-      return `Fällig bis ${new Date(value).toLocaleDateString("de-DE")}`;
-    case "tag":
-      return `#${value}`;
-    case "sort":
-      return `Sortierung: ${value === "prioritaet" ? "Priorität" : "Aktivität"}`;
-    default:
-      return `${key}: ${value}`;
-  }
 }
 
 const LEER_FILTER: Record<string, string> = {};

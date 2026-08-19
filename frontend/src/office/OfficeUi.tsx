@@ -66,29 +66,6 @@ export function AnsichtUmschalter<T extends string>({
   );
 }
 
-export function FilterChip({
-  label,
-  aktiv,
-  onClick,
-}: {
-  label: string;
-  aktiv: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={aktiv}
-      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-        aktiv
-          ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300"
-          : "border-slate-200 bg-slate-100 text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
 
 export function Karte({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (

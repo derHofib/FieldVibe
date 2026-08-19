@@ -1,4 +1,4 @@
-import type { FeedCard, VorgangStatus } from "../types";
+import type { FeedCard, Kunde, VorgangStatus } from "../types";
 
 /** Beschriftungen und Farbklassen der Vorgangs-Status, gemeinsam genutzt von
  * Feld-App (pages/feld/FeedPage.tsx) und Desktop-Oberflaeche (office/). Zwei
@@ -92,4 +92,33 @@ export function gruppiereNachFaelligkeit<T extends Pick<FeedCard, "faelligkeit_a
     (buckets.get(gruppe) ?? buckets.set(gruppe, []).get(gruppe)!).push(card);
   }
   return GRUPPEN_REIHENFOLGE.filter((g) => buckets.has(g)).map((gruppe) => ({ gruppe, cards: buckets.get(gruppe)! }));
+}
+
+// Lesbare Kurzform je aktivem Filter-Schluessel fuer die Chip-Zusammenfassung
+// -- ein unbekannter Schluessel faellt auf "Schluessel: Wert" zurueck statt
+// zu verschwinden, damit ein spaeter ergaenzter Filter nie stillschweigend
+// ohne Chip bleibt. Gemeinsam genutzt vom Feed der Feld-App und der
+// Office-Vorgaengeliste.
+export function filterChipLabel(key: string, value: string, kunden: Kunde[] | undefined): string {
+  switch (key) {
+    case "status":
+      return `Status: ${value
+        .split(",")
+        .map((s) => STATUS_LABEL[s as VorgangStatus] ?? s)
+        .join(", ")}`;
+    case "kunde_id":
+      return `Kunde: ${kunden?.find((k) => k.id === value)?.name ?? value}`;
+    case "leistungstyp":
+      return `Typ: ${LEISTUNGSTYP_LABEL[value] ?? value}`;
+    case "faellig_von":
+      return `Fällig ab ${new Date(value).toLocaleDateString("de-DE")}`;
+    case "faellig_bis":
+      return `Fällig bis ${new Date(value).toLocaleDateString("de-DE")}`;
+    case "tag":
+      return `#${value}`;
+    case "sort":
+      return `Sortierung: ${value === "prioritaet" ? "Priorität" : "Aktivität"}`;
+    default:
+      return `${key}: ${value}`;
+  }
 }
