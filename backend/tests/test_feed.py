@@ -136,6 +136,26 @@ async def test_feed_filters_by_status_and_tag(
 
 
 @pytest.mark.asyncio
+async def test_feed_filtert_nach_nur_meine(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    await make_vorgang(mandant=mandant, kunde=kunde, titel="Mir zugewiesen", zugewiesener_user_id=admin.id)
+    await make_vorgang(mandant=mandant, kunde=kunde, titel="Anderem zugewiesen", zugewiesener_user_id=techniker.id)
+    await make_vorgang(mandant=mandant, kunde=kunde, titel="Niemandem zugewiesen")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.get(
+        "/api/feed", headers=auth_headers(token), params={"nur_meine": "true"}
+    )
+    assert resp.status_code == 200
+    assert [i["titel"] for i in resp.json()["items"]] == ["Mir zugewiesen"]
+
+
+@pytest.mark.asyncio
 async def test_feed_shows_last_event_preview(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):

@@ -18,6 +18,9 @@ interface EmailSectionProps {
    * E-Mails bereits an anderer Stelle anzeigen (Vorgang: gemeinsamer
    * Verlauf mit den Kommentaren statt einer zweiten Liste hier). */
   showHistory?: boolean;
+  /** Formular direkt offen anzeigen -- fuer den Sprung von der
+   * "Nachfragen"-Schnellaktion im Feed (Link mit #email-Hash). */
+  defaultOpen?: boolean;
 }
 
 /** Wiederverwendbarer "E-Mail senden"-Block mit Compose-Formular und
@@ -31,9 +34,10 @@ export function EmailSection({
   betreffPflicht = true,
   hinweis,
   showHistory = true,
+  defaultOpen = false,
 }: EmailSectionProps) {
   const queryClient = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(defaultOpen);
   const [empfaenger, setEmpfaenger] = useState(defaultEmpfaenger ?? "");
   const [betreff, setBetreff] = useState("");
   const [inhalt, setInhalt] = useState("");

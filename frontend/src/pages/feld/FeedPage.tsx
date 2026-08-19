@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Inbox, List, Map as MapIcon, Play, Repeat, Search, Star, UserPlus } from "lucide-react";
+import { Bell, CheckCircle2, Clock, Inbox, List, Map as MapIcon, MessageCircle, Play, Repeat, Search, Star, UserPlus } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
@@ -121,17 +121,16 @@ function faelligkeitsFarbe(iso: string): string {
   return "text-slate-500 dark:text-stone-400";
 }
 
-type FaelligkeitsGruppe = "ueberfaellig" | "heute" | "diese_woche" | "spaeter" | "ohne_frist";
+type FaelligkeitsGruppe = "ueberfaellig" | "heute" | "diese_woche" | "ohne_frist";
 
 const GRUPPEN_LABEL: Record<FaelligkeitsGruppe, string> = {
   ueberfaellig: "Überfällig",
   heute: "Heute fällig",
   diese_woche: "Diese Woche",
-  spaeter: "Später",
   ohne_frist: "Ohne Frist",
 };
 
-const GRUPPEN_REIHENFOLGE: FaelligkeitsGruppe[] = ["ueberfaellig", "heute", "diese_woche", "spaeter", "ohne_frist"];
+const GRUPPEN_REIHENFOLGE: FaelligkeitsGruppe[] = ["ueberfaellig", "heute", "diese_woche", "ohne_frist"];
 
 function faelligkeitsGruppe(card: FeedCard): FaelligkeitsGruppe {
   const iso = card.faelligkeit_am?.slice(0, 10);
@@ -139,8 +138,15 @@ function faelligkeitsGruppe(card: FeedCard): FaelligkeitsGruppe {
   const heute = heuteIso();
   if (iso < heute) return "ueberfaellig";
   if (iso === heute) return "heute";
-  if (iso <= heuteIso(7)) return "diese_woche";
-  return "spaeter";
+  return "diese_woche";
+}
+
+// "3 Tage überfällig" statt reinem Datum -- auf einen Blick erfassbar ohne
+// Kopfrechnen (siehe Design-Vorschlag "Feed neu gedacht").
+function tageUeberfaellig(iso: string): number {
+  const heute = new Date(heuteIso());
+  const faellig = new Date(iso);
+  return Math.round((heute.getTime() - faellig.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 // Karten nach Faelligkeit gruppieren, damit man beim Durchscrollen sofort
@@ -174,11 +180,14 @@ function FeedCardView({ card }: { card: FeedCard }) {
   });
 
   // Genau eine Schnellaktion pro Karte -- der naechste sinnvolle Schritt im
-  // Ablauf Zuweisen -> Starten -> Abschliessen, statt aller theoretisch
-  // moeglichen Optionen auf einmal (siehe Design-Vorschlag).
-  const zeigeMirZuweisen = !card.zugewiesener_name && OFFENE_STATUS.includes(card.status);
+  // Ablauf Uebernehmen -> Starten -> Fertig melden, statt aller theoretisch
+  // moeglichen Optionen auf einmal (siehe Design-Vorschlag). "Starten" nur
+  // bei bereits zugewiesenen Karten -- ein noch niemandem zugewiesener
+  // Vorgang soll erst uebernommen werden, bevor jemand "startet".
+  const zeigeUebernehmen = !card.zugewiesener_name && OFFENE_STATUS.includes(card.status);
   const zeigeStarten = !!card.zugewiesener_name && OFFENE_STATUS.includes(card.status);
-  const zeigeAbschliessen = card.status === "in_arbeit";
+  const zeigeFertigMelden = card.status === "in_arbeit";
+  const zeigeNachfragen = card.status === "wartet_kunde";
   const aktionLaeuft = zuweisenMutation.isPending || statusMutation.isPending;
   const aktionFehler = zuweisenMutation.isError || statusMutation.isError;
 
@@ -229,13 +238,26 @@ function FeedCardView({ card }: { card: FeedCard }) {
           <span className="whitespace-nowrap text-xs text-slate-400 dark:text-stone-500">
             {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
           </span>
-          {faelligkeitIso && (
-            <span className={`whitespace-nowrap text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
-              Fällig: {new Date(faelligkeitIso).toLocaleDateString("de-DE")}
-            </span>
-          )}
         </div>
       </div>
+      {card.status === "wartet_kunde" ? (
+        <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-stone-500">
+          <MessageCircle size={13} strokeWidth={2} /> Wartet auf Rückmeldung
+        </span>
+      ) : (
+        faelligkeitIso && (
+          <span className={`flex items-center gap-1 text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
+            {faelligkeitIso < heuteIso() ? (
+              <>
+                <Clock size={13} strokeWidth={2} /> {tageUeberfaellig(faelligkeitIso)}{" "}
+                {tageUeberfaellig(faelligkeitIso) === 1 ? "Tag" : "Tage"} überfällig
+              </>
+            ) : (
+              <>Fällig: {new Date(faelligkeitIso).toLocaleDateString("de-DE")}</>
+            )}
+          </span>
+        )
+      )}
       {card.letztes_event_vorschau && (
         <p className="line-clamp-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
           {card.letztes_event_vorschau}
@@ -254,12 +276,12 @@ function FeedCardView({ card }: { card: FeedCard }) {
         </div>
       )}
     </button>
-    {(zeigeMirZuweisen || zeigeStarten || zeigeAbschliessen) && (
+    {(zeigeUebernehmen || zeigeStarten || zeigeFertigMelden || zeigeNachfragen) && (
       <div className="flex items-center justify-end gap-1.5 border-t border-slate-100 px-4 py-2 dark:border-stone-800">
         {aktionFehler && (
           <span className="mr-auto text-xs text-red-600 dark:text-red-400">Aktion fehlgeschlagen</span>
         )}
-        {zeigeMirZuweisen && (
+        {zeigeUebernehmen && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -268,7 +290,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
             disabled={aktionLaeuft}
             className="btn-touch flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
           >
-            <UserPlus size={13} strokeWidth={2} /> Mir zuweisen
+            <UserPlus size={13} strokeWidth={2} /> Übernehmen
           </button>
         )}
         {zeigeStarten && (
@@ -283,7 +305,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
             <Play size={13} strokeWidth={2} /> Starten
           </button>
         )}
-        {zeigeAbschliessen && (
+        {zeigeFertigMelden && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -292,7 +314,18 @@ function FeedCardView({ card }: { card: FeedCard }) {
             disabled={aktionLaeuft}
             className="btn-touch flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 disabled:opacity-50 dark:bg-green-500/15 dark:text-green-300"
           >
-            <CheckCircle2 size={13} strokeWidth={2} /> Abschließen
+            <CheckCircle2 size={13} strokeWidth={2} /> Fertig melden
+          </button>
+        )}
+        {zeigeNachfragen && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/vorgaenge/${card.id}#email`);
+            }}
+            className="btn-touch flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          >
+            <Bell size={13} strokeWidth={2} /> Nachfragen
           </button>
         )}
       </div>
@@ -346,7 +379,10 @@ export function FeedPage() {
     ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen]
     : [];
   const cards = data?.pages.flatMap((p) => p.items) ?? [];
-  const aktiveFilterAnzahl = Object.keys(filter).length;
+  // "nur_meine" hat mit den Tabs oben eine eigene, immer sichtbare Steuerung
+  // -- soll den Filter-Zaehler des Filter-Panels darunter nicht mitzaehlen.
+  const aktiveFilterAnzahl = Object.keys(filter).filter((k) => k !== "nur_meine").length;
+  const nurMeine = filter.nur_meine === "true";
   const punkte: FeedMapPunkt[] = cards
     .filter((c) => c.geo_lat != null && c.geo_lng != null)
     .map((c) => ({ id: c.id, lng: c.geo_lng as number, lat: c.geo_lat as number, farbe: STATUS_HEX[c.status] }));
@@ -362,6 +398,29 @@ export function FeedPage() {
           <Star size={15} strokeWidth={2} /> Highlights ansehen
         </button>
       )}
+
+      <div className="flex gap-1 rounded-lg bg-white p-1 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <button
+          onClick={() => setField("nur_meine", "true")}
+          className={`btn-touch flex-1 rounded-md py-2 text-sm font-semibold ${
+            nurMeine
+              ? "bg-slate-100 text-slate-800 dark:bg-stone-800 dark:text-stone-100"
+              : "text-slate-500 dark:text-stone-400"
+          }`}
+        >
+          Meine Vorgänge
+        </button>
+        <button
+          onClick={() => setField("nur_meine", "")}
+          className={`btn-touch flex-1 rounded-md py-2 text-sm font-semibold ${
+            !nurMeine
+              ? "bg-slate-100 text-slate-800 dark:bg-stone-800 dark:text-stone-100"
+              : "text-slate-500 dark:text-stone-400"
+          }`}
+        >
+          Alle
+        </button>
+      </div>
 
       {storyGroups.length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">

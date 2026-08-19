@@ -105,6 +105,10 @@ async def get_feed(
         default=False,
         description="Nur offene Vorgaenge ohne aktiven Termin (Dispo-Rueckstand)",
     ),
+    nur_meine: bool = Query(
+        default=False,
+        description="Nur Vorgaenge, die dem angemeldeten User zugewiesen sind (Feed-Tab 'Meine Vorgaenge')",
+    ),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> FeedResponse:
@@ -133,6 +137,8 @@ async def get_feed(
             ),
         )
 
+    if nur_meine:
+        stmt = stmt.where(Vorgang.zugewiesener_user_id == auth.user_id)
     if status_filter:
         status_liste = [s for s in status_filter.split(",") if s]
         if status_liste:

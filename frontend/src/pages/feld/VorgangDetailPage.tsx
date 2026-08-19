@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, Mail, PenLine, Star, UserCheck } from "lucide-react";
+import { AlertTriangle, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import {
@@ -108,6 +108,15 @@ const EVENT_LABEL: Partial<Record<string, string>> = {
 };
 
 const NEU_MATERIAL = "__neu__";
+
+const ANCHOR_ABSCHNITTE: { ziel: string; label: string }[] = [
+  { ziel: "abschnitt-uebersicht", label: "Übersicht" },
+  { ziel: "abschnitt-zeit", label: "Zeit" },
+  { ziel: "abschnitt-termine", label: "Termine" },
+  { ziel: "abschnitt-maengel", label: "Mängel" },
+  { ziel: "abschnitt-material", label: "Material" },
+  { ziel: "abschnitt-verlauf", label: "Verlauf" },
+];
 
 // Unauffaellige, transparente Pill zur Unterscheidung der Eintragsart im
 // gemeinsamen Verlauf (Kommentar/E-Mail laufen dort jetzt durcheinander) --
@@ -289,6 +298,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -862,7 +872,44 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      {/* Fakten-Leiste: die wichtigsten Eckdaten auf einen Blick, bevor man
+          in die Karte darunter eintaucht (siehe Design-Vorschlag "Feed und
+          Detail neu gedacht"). */}
+      {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
+        <div className="flex flex-wrap gap-1.5">
+          {(anlage?.bezeichnung || standort?.bezeichnung) && (
+            <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+              <Building2 size={13} strokeWidth={2} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
+            </span>
+          )}
+          {vorgang.faelligkeit_am && (
+            <span
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
+                vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+                !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
+                  ? "bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-400"
+                  : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+              }`}
+            >
+              <Clock size={13} strokeWidth={2} />
+              {vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+              !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
+                ? `${Math.round(
+                    (new Date().setHours(0, 0, 0, 0) - new Date(vorgang.faelligkeit_am).setHours(0, 0, 0, 0)) /
+                      (1000 * 60 * 60 * 24),
+                  )} Tage überfällig`
+                : `Fällig: ${new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE")}`}
+            </span>
+          )}
+          {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
+            <span className="flex items-center gap-1.5 rounded-full border border-dashed border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+              <UserPlus size={13} strokeWidth={2} /> Nicht zugewiesen
+            </span>
+          )}
+        </div>
+      )}
+
+      <div id="abschnitt-uebersicht" className="scroll-mt-4 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="text-xs text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{vorgang.titel}</h1>
         {parentVorgang && (
@@ -1339,7 +1386,23 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      {/* Anchor-Nav: springt per Ankerlink zu den Abschnitten weiter unten,
+          statt dass man sich alles herunterscrollen muss (siehe
+          Design-Vorschlag). Reine <a href="#..."> statt scrollIntoView, das
+          bleibt auch ohne JS-Handler funktionsfaehig. */}
+      <nav className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-slate-200 px-3 pb-2 text-sm dark:border-stone-800">
+        {ANCHOR_ABSCHNITTE.map((a) => (
+          <a
+            key={a.ziel}
+            href={`#${a.ziel}`}
+            className="shrink-0 whitespace-nowrap font-medium text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
+          >
+            {a.label}
+          </a>
+        ))}
+      </nav>
+
+      <div id="abschnitt-zeit" className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Arbeitszeit</h2>
           <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
@@ -1414,7 +1477,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div id="abschnitt-termine" className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Termine</h2>
           {kannDisponieren && (
@@ -1546,7 +1609,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
       {vorgang && <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
 
-      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div id="abschnitt-maengel" className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Mängel</h2>
           <div className="flex items-center gap-3">
@@ -1662,7 +1725,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div id="abschnitt-material" className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Material</h2>
           <div className="flex gap-3">
@@ -1902,9 +1965,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         }
         defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
         showHistory={false}
+        defaultOpen={location.hash === "#email"}
       />
 
-      <div className="flex items-center justify-end gap-2">
+      <div id="abschnitt-verlauf" className="scroll-mt-4 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Verlauf</h2>
         <span className="text-sm text-slate-500 dark:text-stone-400">
           {kundenansicht ? "Kundenansicht" : "Interne Ansicht"}
         </span>
