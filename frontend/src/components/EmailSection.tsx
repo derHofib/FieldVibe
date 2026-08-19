@@ -14,6 +14,10 @@ interface EmailSectionProps {
    * Server setzt dann einen Standardtext. */
   betreffPflicht?: boolean;
   hinweis?: string;
+  /** Verlauf unterhalb des Formulars ausblenden -- fuer Seiten, die die
+   * E-Mails bereits an anderer Stelle anzeigen (Vorgang: gemeinsamer
+   * Verlauf mit den Kommentaren statt einer zweiten Liste hier). */
+  showHistory?: boolean;
 }
 
 /** Wiederverwendbarer "E-Mail senden"-Block mit Compose-Formular und
@@ -26,6 +30,7 @@ export function EmailSection({
   defaultEmpfaenger,
   betreffPflicht = true,
   hinweis,
+  showHistory = true,
 }: EmailSectionProps) {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -132,7 +137,7 @@ export function EmailSection({
         </div>
       )}
 
-      {(emails ?? []).length === 0 ? (
+      {showHistory && ((emails ?? []).length === 0 ? (
         <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine E-Mails versendet.</p>
       ) : (
         <div className="space-y-1.5">
@@ -161,7 +166,7 @@ export function EmailSection({
             </div>
           ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }

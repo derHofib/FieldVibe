@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star, UserCheck } from "lucide-react";
+import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, Mail, PenLine, Star, UserCheck } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -35,6 +35,7 @@ import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
 import type {
   Adresse,
+  EmailLog,
   Leistungstyp,
   MangelSchweregrad,
   MangelStatus,
@@ -108,6 +109,18 @@ const EVENT_LABEL: Partial<Record<string, string>> = {
 
 const NEU_MATERIAL = "__neu__";
 
+// Unauffaellige, transparente Pill zur Unterscheidung der Eintragsart im
+// gemeinsamen Verlauf (Kommentar/E-Mail laufen dort jetzt durcheinander) --
+// bewusst zurueckhaltend statt eines vollflaechigen Badges, siehe
+// Design-Vorschlag "Feed und Detail neu gedacht".
+function VerlaufTypTag({ children }: { children: string }) {
+  return (
+    <span className="rounded-full border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 dark:border-stone-700 dark:text-stone-500">
+      {children}
+    </span>
+  );
+}
+
 function EventBubble({
   event,
   onHighlight,
@@ -129,8 +142,11 @@ function EventBubble({
 
   return (
     <div className="mb-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <div className="mb-1 flex items-center justify-between text-xs text-slate-400 dark:text-stone-500">
-        <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-slate-400 dark:text-stone-500">
+        <div className="flex items-center gap-1.5">
+          <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
+          {event.event_type === "kommentar" && <VerlaufTypTag>Kommentar</VerlaufTypTag>}
+        </div>
         {event.kundensichtbar && (
           <span className="rounded-full bg-blue-50 px-2 py-0.5 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
             Kundensichtbar
@@ -172,6 +188,38 @@ function EventBubble({
         <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-stone-100">
           <MentionText text={event.body} />
         </p>
+      )}
+    </div>
+  );
+}
+
+// E-Mails werden nicht mehr in einer separaten Box gefuehrt, sondern im
+// gemeinsamen Verlauf mit den Kommentaren gemischt (siehe Design-Vorschlag
+// "Feed und Detail neu gedacht") -- gleiche Bubble-Optik wie EventBubble,
+// nur mit Betreff/Empfaenger statt Freitext-Body.
+function EmailBubble({ email }: { email: EmailLog }) {
+  return (
+    <div className="mb-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-slate-400 dark:text-stone-500">
+        <div className="flex items-center gap-1.5">
+          <span>{new Date(email.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
+          <VerlaufTypTag>E-Mail</VerlaufTypTag>
+        </div>
+        {email.status === "fehler" && (
+          <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-700 dark:bg-red-500/15 dark:text-red-400">
+            Fehler
+          </span>
+        )}
+      </div>
+      <div className="mb-1 flex items-start gap-1.5 text-sm text-slate-800 dark:text-stone-100">
+        <Mail size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-slate-400 dark:text-stone-500" />
+        <div>
+          <span className="font-medium">{email.betreff || "(ohne Betreff)"}</span>
+          <span className="text-slate-400 dark:text-stone-500"> · an {email.empfaenger}</span>
+        </div>
+      </div>
+      {email.status === "fehler" && email.fehlermeldung && (
+        <p className="text-xs text-red-600 dark:text-red-400">{email.fehlermeldung}</p>
       )}
     </div>
   );
@@ -417,6 +465,14 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         throw err;
       }
     },
+    enabled: !!id,
+  });
+  // Gleicher queryKey wie in der EmailSection weiter unten -- React Query
+  // dedupliziert daher den Request, es wird trotz zwei useQuery-Aufrufen
+  // nur einmal geladen.
+  const { data: emails } = useQuery({
+    queryKey: ["vorgang-emails", id],
+    queryFn: () => vorgaengeApi.emails(id!),
     enabled: !!id,
   });
   const { data: outboxItems } = useQuery({
@@ -765,6 +821,16 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     ? (events ?? []).filter((e) => e.kundensichtbar)
     : events ?? [];
   const eigeneOutboxItems = (outboxItems ?? []).filter((i) => i.vorgang_id === id);
+
+  // E-Mails laufen im gemeinsamen Verlauf mit den Kommentaren statt in einer
+  // eigenen Box (siehe Design-Vorschlag). Nur in der internen Ansicht: das
+  // Kundenportal kennt EmailLog nicht, die "Kundenansicht"-Vorschau soll
+  // deshalb nicht mehr zeigen, als der Kunde dort tatsaechlich sieht.
+  type VerlaufEintrag = { art: "event"; zeit: string; event: VorgangEvent } | { art: "email"; zeit: string; email: EmailLog };
+  const verlaufEintraege: VerlaufEintrag[] = [
+    ...sichtbareEvents.map((event): VerlaufEintrag => ({ art: "event", zeit: event.created_at, event })),
+    ...(kundenansicht ? [] : (emails ?? []).map((email): VerlaufEintrag => ({ art: "email", zeit: email.created_at, email }))),
+  ].sort((a, b) => new Date(b.zeit).getTime() - new Date(a.zeit).getTime());
 
   const gesamtSekunden = (zeiterfassungListe ?? []).reduce((summe, e) => {
     if (!e.ende_at) return summe;
@@ -1835,6 +1901,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           })
         }
         defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
+        showHistory={false}
       />
 
       <div className="flex items-center justify-end gap-2">
@@ -1854,7 +1921,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       <div>
-        {sichtbareEvents.length === 0 && eigeneOutboxItems.length === 0 ? (
+        {verlaufEintraege.length === 0 && eigeneOutboxItems.length === 0 ? (
           <p className="text-center text-sm text-slate-400 dark:text-stone-500">Noch keine Einträge.</p>
         ) : (
           <>
@@ -1871,9 +1938,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   }}
                 />
               ))}
-            {sichtbareEvents.map((event) => (
-              <EventBubble key={event.id} event={event} onHighlight={(eventId) => highlightMutation.mutate(eventId)} />
-            ))}
+            {verlaufEintraege.map((eintrag) =>
+              eintrag.art === "email" ? (
+                <EmailBubble key={`email-${eintrag.email.id}`} email={eintrag.email} />
+              ) : (
+                <EventBubble
+                  key={`event-${eintrag.event.id}`}
+                  event={eintrag.event}
+                  onHighlight={(eventId) => highlightMutation.mutate(eventId)}
+                />
+              ),
+            )}
           </>
         )}
       </div>

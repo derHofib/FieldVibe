@@ -1,10 +1,10 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { Inbox, List, Map as MapIcon, Repeat, Search, Star } from "lucide-react";
+import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Inbox, List, Map as MapIcon, Play, Repeat, Search, Star, UserPlus } from "lucide-react";
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { feedApi, kundenApi, storiesApi } from "../../api/endpoints";
+import { feedApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
@@ -121,17 +121,76 @@ function faelligkeitsFarbe(iso: string): string {
   return "text-slate-500 dark:text-stone-400";
 }
 
+type FaelligkeitsGruppe = "ueberfaellig" | "heute" | "diese_woche" | "spaeter" | "ohne_frist";
+
+const GRUPPEN_LABEL: Record<FaelligkeitsGruppe, string> = {
+  ueberfaellig: "Überfällig",
+  heute: "Heute fällig",
+  diese_woche: "Diese Woche",
+  spaeter: "Später",
+  ohne_frist: "Ohne Frist",
+};
+
+const GRUPPEN_REIHENFOLGE: FaelligkeitsGruppe[] = ["ueberfaellig", "heute", "diese_woche", "spaeter", "ohne_frist"];
+
+function faelligkeitsGruppe(card: FeedCard): FaelligkeitsGruppe {
+  const iso = card.faelligkeit_am?.slice(0, 10);
+  if (!iso) return "ohne_frist";
+  const heute = heuteIso();
+  if (iso < heute) return "ueberfaellig";
+  if (iso === heute) return "heute";
+  if (iso <= heuteIso(7)) return "diese_woche";
+  return "spaeter";
+}
+
+// Karten nach Faelligkeit gruppieren, damit man beim Durchscrollen sofort
+// sieht, was zuerst dran ist, statt jede Karte einzeln nach Datum abzusuchen
+// (siehe Design-Vorschlag "Feed neu gedacht"). Reihenfolge innerhalb einer
+// Gruppe bleibt wie vom Server sortiert (Aktivitaet/Prioritaet).
+function gruppiereNachFaelligkeit(cards: FeedCard[]): { gruppe: FaelligkeitsGruppe; cards: FeedCard[] }[] {
+  const buckets = new Map<FaelligkeitsGruppe, FeedCard[]>();
+  for (const card of cards) {
+    const gruppe = faelligkeitsGruppe(card);
+    (buckets.get(gruppe) ?? buckets.set(gruppe, []).get(gruppe)!).push(card);
+  }
+  return GRUPPEN_REIHENFOLGE.filter((g) => buckets.has(g)).map((gruppe) => ({ gruppe, cards: buckets.get(gruppe)! }));
+}
+
+const OFFENE_STATUS: VorgangStatus[] = ["neu", "geplant"];
+
 function FeedCardView({ card }: { card: FeedCard }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const faelligkeitIso = card.faelligkeit_am?.slice(0, 10);
+
+  const invalidateFeed = () => queryClient.invalidateQueries({ queryKey: ["feed"] });
+  const zuweisenMutation = useMutation({
+    mutationFn: () => vorgaengeApi.uebernehmen(card.id),
+    onSuccess: invalidateFeed,
+  });
+  const statusMutation = useMutation({
+    mutationFn: (status: VorgangStatus) => vorgaengeApi.update(card.id, { status }),
+    onSuccess: invalidateFeed,
+  });
+
+  // Genau eine Schnellaktion pro Karte -- der naechste sinnvolle Schritt im
+  // Ablauf Zuweisen -> Starten -> Abschliessen, statt aller theoretisch
+  // moeglichen Optionen auf einmal (siehe Design-Vorschlag).
+  const zeigeMirZuweisen = !card.zugewiesener_name && OFFENE_STATUS.includes(card.status);
+  const zeigeStarten = !!card.zugewiesener_name && OFFENE_STATUS.includes(card.status);
+  const zeigeAbschliessen = card.status === "in_arbeit";
+  const aktionLaeuft = zuweisenMutation.isPending || statusMutation.isPending;
+  const aktionFehler = zuweisenMutation.isError || statusMutation.isError;
+
   return (
     <div
       className={`card-soft ${card.status === "storniert" ? "opacity-60 grayscale" : ""}`}
       style={{ "--frame-color": STATUS_FRAME[card.status] } as CSSProperties}
     >
+    <div className="card-soft-inner overflow-hidden bg-white dark:bg-stone-900">
     <button
       onClick={() => navigate(`/vorgaenge/${card.id}`)}
-      className="card-soft-inner btn-touch flex w-full flex-col gap-2 bg-white p-4 text-left dark:bg-stone-900"
+      className="btn-touch flex w-full flex-col gap-2 p-4 text-left"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -195,6 +254,50 @@ function FeedCardView({ card }: { card: FeedCard }) {
         </div>
       )}
     </button>
+    {(zeigeMirZuweisen || zeigeStarten || zeigeAbschliessen) && (
+      <div className="flex items-center justify-end gap-1.5 border-t border-slate-100 px-4 py-2 dark:border-stone-800">
+        {aktionFehler && (
+          <span className="mr-auto text-xs text-red-600 dark:text-red-400">Aktion fehlgeschlagen</span>
+        )}
+        {zeigeMirZuweisen && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              zuweisenMutation.mutate();
+            }}
+            disabled={aktionLaeuft}
+            className="btn-touch flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          >
+            <UserPlus size={13} strokeWidth={2} /> Mir zuweisen
+          </button>
+        )}
+        {zeigeStarten && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              statusMutation.mutate("in_arbeit");
+            }}
+            disabled={aktionLaeuft}
+            className="btn-touch flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 disabled:opacity-50 dark:bg-amber-500/15 dark:text-amber-300"
+          >
+            <Play size={13} strokeWidth={2} /> Starten
+          </button>
+        )}
+        {zeigeAbschliessen && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              statusMutation.mutate("abgeschlossen");
+            }}
+            disabled={aktionLaeuft}
+            className="btn-touch flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-800 disabled:opacity-50 dark:bg-green-500/15 dark:text-green-300"
+          >
+            <CheckCircle2 size={13} strokeWidth={2} /> Abschließen
+          </button>
+        )}
+      </div>
+    )}
+    </div>
     </div>
   );
 }
@@ -489,9 +592,29 @@ export function FeedPage() {
           ) : cards.length === 0 ? (
             <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
           ) : (
-            <div className="space-y-3">
-              {cards.map((card) => (
-                <FeedCardView key={card.id} card={card} />
+            <div className="space-y-5">
+              {gruppiereNachFaelligkeit(cards).map(({ gruppe, cards: gruppenCards }) => (
+                <div key={gruppe} className="space-y-3">
+                  <div className="flex items-baseline gap-1.5 px-1">
+                    <h3
+                      className={`text-xs font-semibold tracking-wide uppercase ${
+                        gruppe === "ueberfaellig"
+                          ? "text-red-600 dark:text-red-400"
+                          : gruppe === "heute"
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-slate-400 dark:text-stone-500"
+                      }`}
+                    >
+                      {GRUPPEN_LABEL[gruppe]}
+                    </h3>
+                    <span className="text-xs text-slate-300 dark:text-stone-600">{gruppenCards.length}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {gruppenCards.map((card) => (
+                      <FeedCardView key={card.id} card={card} />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
