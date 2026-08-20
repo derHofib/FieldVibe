@@ -24,6 +24,7 @@ import {
   Share2,
   Shapes,
   Square,
+  Trash2,
   Type as TypeIcon,
   Upload,
   Workflow,
@@ -156,6 +157,14 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, geladen]);
 
+  const loeschen = useMutation({
+    mutationFn: () => boardsApi.remove(boardId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boards"] });
+      navigate("/boards");
+    },
+  });
+
   const onConnect = useCallback<OnConnect>(
     (verbindung: Connection) => setEdges((es) => addEdge({ ...verbindung, type: "smoothstep" }, es)),
     [setEdges],
@@ -285,6 +294,15 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
             className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
           >
             <Save size={13} strokeWidth={2} /> Speichern
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Board "${board.name}" wirklich löschen?`)) loeschen.mutate();
+            }}
+            disabled={loeschen.isPending}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-50 dark:border-stone-700 dark:text-red-400"
+          >
+            <Trash2 size={13} strokeWidth={2} /> Löschen
           </button>
         </div>
       </div>

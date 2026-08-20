@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Compass, LayoutGrid, Plus, StickyNote, Workflow } from "lucide-react";
+import { Compass, LayoutGrid, Plus, StickyNote, Trash2, Workflow } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -60,6 +60,11 @@ export function BoardsUebersichtPage() {
     mutationFn: () => boardsApi.create({ name: name.trim(), board_typ: typ }),
     onSuccess: (board) => navigate(`/boards/${board.id}`),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["boards"] }),
+  });
+
+  const loeschen = useMutation({
+    mutationFn: (id: string) => boardsApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["boards"] }),
   });
 
   const gefiltert = (boards ?? []).filter((b) => filter === "alle" || b.board_typ === filter);
@@ -157,7 +162,18 @@ export function BoardsUebersichtPage() {
                     {TYP_LABEL[b.board_typ]} &middot; {relativeZeit(b.updated_at)}
                   </p>
                 </div>
-                <ChevronRight size={16} className="shrink-0 text-slate-300 dark:text-stone-600" />
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${b.name} löschen`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
+                  }}
+                  className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:text-red-600 dark:text-stone-600 dark:hover:text-red-400"
+                >
+                  <Trash2 size={16} strokeWidth={2} />
+                </span>
               </button>
             );
           })}

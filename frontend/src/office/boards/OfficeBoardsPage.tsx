@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Compass, LayoutGrid, Plus, StickyNote, Workflow } from "lucide-react";
+import { Compass, LayoutGrid, Plus, StickyNote, Trash2, Workflow } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -49,6 +49,11 @@ export function OfficeBoardsPage() {
     mutationFn: () => boardsApi.create({ name: name.trim(), board_typ: typ }),
     onSuccess: (board) => navigate(`/boards/${board.id}`),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["boards"] }),
+  });
+
+  const loeschen = useMutation({
+    mutationFn: (id: string) => boardsApi.remove(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["boards"] }),
   });
 
   return (
@@ -119,11 +124,22 @@ export function OfficeBoardsPage() {
               <button key={b.id} onClick={() => navigate(`/boards/${b.id}`)} className="text-left">
                 <Karte className="overflow-hidden transition-shadow hover:shadow-md">
                   <div
-                    className="flex h-24 items-center justify-center bg-slate-50 dark:bg-stone-800/40"
+                    className="relative flex h-24 items-center justify-center bg-slate-50 dark:bg-stone-800/40"
                     style={{ backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)", backgroundSize: "16px 16px" }}
                   >
                     <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${TYP_TON[b.board_typ]}`}>
                       <Icon size={20} strokeWidth={2} />
+                    </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
+                      }}
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-400 hover:text-red-600 dark:bg-stone-900/80 dark:text-stone-500 dark:hover:text-red-400"
+                    >
+                      <Trash2 size={14} strokeWidth={2} />
                     </span>
                   </div>
                   <div className="p-3.5">

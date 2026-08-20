@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Link2, Plus, StickyNote } from "lucide-react";
+import { ChevronLeft, Link2, Plus, StickyNote, Trash2 } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -124,6 +124,14 @@ export function BoardMobilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, edges, geladen]);
 
+  const boardLoeschen = useMutation({
+    mutationFn: () => boardsApi.remove(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boards"] });
+      navigate("/boards");
+    },
+  });
+
   const notizErstellen = (daten: KlebezettelDaten) => {
     const versatz = nodes.length * 24;
     const neueId = `klebezettel-${Date.now()}`;
@@ -169,12 +177,24 @@ export function BoardMobilePage() {
   return (
     <div className="space-y-3">
       <div>
-        <button
-          onClick={() => navigate("/boards")}
-          className="btn-touch -ml-1 flex items-center gap-0.5 text-sm font-medium text-slate-500 dark:text-stone-400"
-        >
-          <ChevronLeft size={16} strokeWidth={2.25} /> Boards
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate("/boards")}
+            className="btn-touch -ml-1 flex items-center gap-0.5 text-sm font-medium text-slate-500 dark:text-stone-400"
+          >
+            <ChevronLeft size={16} strokeWidth={2.25} /> Boards
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Board "${board.name}" wirklich löschen?`)) boardLoeschen.mutate();
+            }}
+            disabled={boardLoeschen.isPending}
+            aria-label="Board löschen"
+            className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:text-red-600 disabled:opacity-50 dark:text-stone-500 dark:hover:text-red-400"
+          >
+            <Trash2 size={17} strokeWidth={2} />
+          </button>
+        </div>
         <div className="mt-0.5 flex items-baseline gap-2">
           <h1 className="truncate text-lg font-bold text-slate-800 dark:text-stone-100">{board.name}</h1>
           <span className="shrink-0 text-xs text-slate-400 dark:text-stone-500">
