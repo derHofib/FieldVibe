@@ -4,8 +4,8 @@ Tabelle -- der komplette Inhalt (Notizen, Formen, Verbindungen, Positionen)
 liegt als ein JSON-Baum in inhalt_json, analog zu gespeicherte_filter.
 filter_json (0025). Kein Soft-Delete/Papierkorb-Eintrag in v1.
 
-Revision ID: 0060
-Revises: 0059
+Revision ID: 0067
+Revises: 0066
 Create Date: 2026-08-20
 """
 from typing import Sequence, Union
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0060"
-down_revision: Union[str, None] = "0059"
+revision: str = "0067"
+down_revision: Union[str, None] = "0066"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
