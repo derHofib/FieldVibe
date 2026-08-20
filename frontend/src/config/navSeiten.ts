@@ -89,7 +89,6 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/boards",
     kategorie: "Arbeit",
     sichtbar: () => true,
-    nurOffice: true,
   },
   {
     key: "dispo",

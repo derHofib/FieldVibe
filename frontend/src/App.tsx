@@ -20,6 +20,8 @@ import { AnlagenFelderPage } from "./pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
 import { AuswertungPage } from "./pages/feld/AuswertungPage";
 import { BestellungDetailPage } from "./pages/feld/BestellungDetailPage";
+import { BoardMobilePage } from "./pages/feld/boards/BoardMobilePage";
+import { BoardsUebersichtPage } from "./pages/feld/boards/BoardsUebersichtPage";
 import { BottomNavSettingsPage } from "./pages/feld/BottomNavSettingsPage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
@@ -148,6 +150,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
           <Route path="/dispo" element={<DispoBoardPage />} />
+          <Route path="/boards" element={<BoardsUebersichtPage />} />
+          <Route path="/boards/:id" element={<BoardMobilePage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
           <Route path="/geschaeft" element={<GeschaeftPage />} />
           <Route path="/anfragen" element={<AnfragenPage />} />
