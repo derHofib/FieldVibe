@@ -61,6 +61,11 @@ def new_mandant_logo_key(mandant_id: uuid.UUID, filename: str) -> str:
     return f"mandanten/{mandant_id}/logo/{uuid.uuid4()}.{suffix}"
 
 
+def new_board_hintergrund_key(board_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"boards/{board_id}/hintergrund/{uuid.uuid4()}.{suffix}"
+
+
 def new_rechnung_pdf_key(rechnung_id: uuid.UUID) -> str:
     return f"rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.pdf"
 

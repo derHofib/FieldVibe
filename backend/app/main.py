@@ -14,6 +14,7 @@ from app.api.routes import (
     auswertung,
     auth,
     bestellungen,
+    boards,
     dauerauftraege,
     dsgvo,
     eingangsrechnungen,
@@ -121,6 +122,7 @@ app.include_router(vorgang_formulare.router)
 app.include_router(tags.router)
 app.include_router(feed.router)
 app.include_router(gespeicherte_filter.router)
+app.include_router(boards.router)
 app.include_router(stories.router)
 app.include_router(search.router)
 app.include_router(notifications.router)
