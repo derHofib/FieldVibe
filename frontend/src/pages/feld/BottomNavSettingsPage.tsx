@@ -28,7 +28,9 @@ export function BottomNavSettingsPage() {
   const { currentUser, hatRecht } = useAuth();
   const [bearbeiteterPlatz, setBearbeiteterPlatz] = useState<BearbeiteterPlatz>(null);
 
-  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
+  // nurOffice-Seiten (z.B. Boards) sind hier nicht waehlbar -- siehe
+  // config/navSeiten.ts und components/BottomNav.tsx.
+  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht).filter((seite) => !seite.nurOffice);
   const sichtbarByKey = new Map(sichtbar.map((seite) => [seite.key, seite]));
   const linksKeys = effektiveLinks(currentUser?.bottom_nav_items?.links, sichtbar);
   const rotundeKeys = effektiveRotunde(currentUser?.bottom_nav_items?.rotunde, sichtbar);

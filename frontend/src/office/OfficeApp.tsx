@@ -35,6 +35,8 @@ import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
 import { OfficeLayout } from "./OfficeLayout";
 import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
+import { OfficeBoardPage } from "./boards/OfficeBoardPage";
+import { OfficeBoardsPage } from "./boards/OfficeBoardsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
 import { OfficeFormularDetailPage } from "./formulare/OfficeFormularDetailPage";
@@ -64,6 +66,8 @@ export function OfficeApp() {
         <Route path="/formulare/:id" element={<OfficeFormularDetailPage />} />
         <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
         <Route path="/postfach" element={<OfficePostfachPage />} />
+        <Route path="/boards" element={<OfficeBoardsPage />} />
+        <Route path="/boards/:id" element={<OfficeBoardPage />} />
 
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>

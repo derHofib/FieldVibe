@@ -195,7 +195,9 @@ export function BottomNav() {
   // Zone mit genau 2 Seiten, rechts eine wischbare Rotunde beliebiger Laenge.
   // bottom_nav_items === null faellt fuer beide Zonen auf die jeweilige
   // Standardauswahl zurueck.
-  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
+  // nurOffice-Seiten (z.B. Boards) sind hier bewusst nie waehlbar -- weder
+  // als fester Link noch in der Rotunde -- siehe config/navSeiten.ts.
+  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht).filter((seite) => !seite.nurOffice);
   const sichtbarByKey = new Map(sichtbar.map((seite) => [seite.key, seite]));
   const zuSeiten = (keys: string[]) =>
     keys.map((key) => sichtbarByKey.get(key)).filter((seite): seite is NavSeite => seite !== undefined);

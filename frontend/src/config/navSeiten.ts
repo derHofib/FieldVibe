@@ -13,6 +13,7 @@ import {
   Receipt,
   Rss,
   Star,
+  StickyNote,
   Tags,
   Timer,
   Trash2,
@@ -56,6 +57,9 @@ export interface NavSeite {
     currentUser: CurrentUser | undefined;
     hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean;
   }) => boolean;
+  // Nur in der Office-Seitenleiste anwaehlbar, nie in der mobilen Bottom-Nav
+  // (weder als fester Link noch in der Rotunde) -- siehe BottomNav.tsx.
+  nurOffice?: boolean;
 }
 
 export const NAV_SEITEN: NavSeite[] = [
@@ -76,6 +80,16 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/profil",
     kategorie: "Verwaltung",
     sichtbar: () => true,
+  },
+  {
+    key: "boards",
+    label: "Boards",
+    icon: StickyNote,
+    tone: "indigo",
+    route: "/boards",
+    kategorie: "Arbeit",
+    sichtbar: () => true,
+    nurOffice: true,
   },
   {
     key: "dispo",

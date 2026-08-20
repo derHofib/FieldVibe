@@ -16,6 +16,10 @@ import type {
   Ansprechpartner,
   AuditLogEntry,
   Bestellung,
+  Board,
+  BoardHintergrundUrl,
+  BoardListItem,
+  BoardTyp,
   BottomNavPraeferenz,
   CurrentKunde,
   CurrentUser,
@@ -419,6 +423,23 @@ export const standorteApi = {
   update: (id: string, body: Partial<{ bezeichnung: string; adresse: Adresse; aktiv: boolean }>) =>
     apiFetch<Standort>(`/api/standorte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/standorte/${id}`, { method: "DELETE" }),
+};
+
+export const boardsApi = {
+  list: () => apiFetch<BoardListItem[]>("/api/boards"),
+  get: (id: string) => apiFetch<Board>(`/api/boards/${id}`),
+  create: (body: { name: string; board_typ?: BoardTyp; inhalt_json?: Record<string, unknown> }) =>
+    apiFetch<Board>("/api/boards", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: Partial<{ name: string; inhalt_json: Record<string, unknown> }>) =>
+    apiFetch<Board>(`/api/boards/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/boards/${id}`, { method: "DELETE" }),
+  hintergrundUpload: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<Board>(`/api/boards/${id}/hintergrund`, formData);
+  },
+  hintergrundRemove: (id: string) => apiFetch<Board>(`/api/boards/${id}/hintergrund`, { method: "DELETE" }),
+  hintergrundUrl: (id: string) => apiFetch<BoardHintergrundUrl>(`/api/boards/${id}/hintergrund-url`),
 };
 
 export const gespeicherteFilterApi = {

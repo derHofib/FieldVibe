@@ -1458,3 +1458,35 @@ export interface VorgangFormular {
   created_at: string;
   updated_at: string;
 }
+
+// --- Boards (Miro-artiges Whiteboard, Office) -----------------------------
+
+export type BoardTyp = "frei" | "bauplanung" | "prozess";
+
+// inhalt_json ist bewusst lose typisiert (Record statt festem Schema): der
+// tatsaechliche Node-/Edge-Aufbau folgt @xyflow/react's eigenen Node<T>/
+// Edge<T>-Typen aus office/boards/, nicht diesem API-Typ -- hier zaehlt nur,
+// dass es ein JSON-Objekt ist, das unveraendert durchgereicht wird.
+export interface Board {
+  id: string;
+  name: string;
+  board_typ: BoardTyp;
+  inhalt_json: Record<string, unknown>;
+  hintergrund_object_key: string | null;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardListItem {
+  id: string;
+  name: string;
+  board_typ: BoardTyp;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardHintergrundUrl {
+  url: string | null;
+}
