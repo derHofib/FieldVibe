@@ -1,5 +1,6 @@
-import { Clock, LogOut, Search, Settings, Smartphone } from "lucide-react";
+import { Clock, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings, Smartphone } from "lucide-react";
 import type { CSSProperties } from "react";
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
@@ -16,10 +17,23 @@ import { mobileUrl } from "./hostname";
  * kann eine neue Seite nicht in der einen Oberflaeche auftauchen und in der
  * anderen fehlen, und die sichtbar()-Praedikate (Rechte + aktive Module)
  * gelten hier automatisch mit. */
+const SIDEBAR_STORAGE_KEY = "fieldvibe-office-sidebar-eingeklappt";
+
 export function OfficeLayout() {
   const { currentUser, hatRecht, logout } = useAuth();
   const navigate = useNavigate();
   const { outboxCount, isOnline } = useAppLiveDaten();
+  // In localStorage gemerkt (nicht im Backend wie office_nav_items) -- ist
+  // reine Anzeige-Praeferenz des Geraets, keine Nutzer-Stammdaten.
+  const [eingeklappt, setEingeklappt] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1");
+
+  const sidebarUmschalten = () => {
+    setEingeklappt((prev) => {
+      const naechster = !prev;
+      localStorage.setItem(SIDEBAR_STORAGE_KEY, naechster ? "1" : "0");
+      return naechster;
+    });
+  };
 
   const sichtbar = sichtbareNavSeiten(currentUser, hatRecht);
   // null = keine Auswahl gespeichert -> unveraendertes Verhalten (alles zeigen)
@@ -54,26 +68,49 @@ export function OfficeLayout() {
       )}
 
       <div className="flex">
-        <aside className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r border-slate-200 bg-white px-3 py-4 dark:border-stone-800 dark:bg-stone-900">
-          <button
-            onClick={() => navigate("/vorgaenge")}
-            className="mb-5 px-2 text-left text-lg font-bold text-slate-800 dark:text-white"
-          >
-            Field<span className="text-cyan-500 dark:text-cyan-400">Vibe</span>
-          </button>
+        <aside
+          className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white py-4 transition-[width] duration-200 ease-in-out dark:border-stone-800 dark:bg-stone-900 ${
+            eingeklappt ? "w-16 px-2" : "w-56 px-3"
+          }`}
+        >
+          <div className={`mb-5 flex items-center ${eingeklappt ? "justify-center" : "justify-between px-2"}`}>
+            {!eingeklappt && (
+              <button
+                onClick={() => navigate("/vorgaenge")}
+                className="truncate text-left text-lg font-bold text-slate-800 dark:text-white"
+              >
+                Field<span className="text-cyan-500 dark:text-cyan-400">Vibe</span>
+              </button>
+            )}
+            <button
+              onClick={sidebarUmschalten}
+              aria-label={eingeklappt ? "Seitenleiste ausklappen" : "Seitenleiste einklappen"}
+              title={eingeklappt ? "Ausklappen" : "Einklappen"}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+            >
+              {eingeklappt ? <PanelLeftOpen size={16} strokeWidth={2} /> : <PanelLeftClose size={16} strokeWidth={2} />}
+            </button>
+          </div>
 
-          <nav className="flex-1 space-y-4 overflow-y-auto">
+          <nav className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto">
             {gruppen.map((gruppe) => (
               <div key={gruppe.kategorie}>
-                <p className="px-2 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
-                  {gruppe.kategorie}
-                </p>
+                {eingeklappt ? (
+                  <div className="mx-1 mb-1.5 border-t border-slate-100 dark:border-stone-800" />
+                ) : (
+                  <p className="px-2 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
+                    {gruppe.kategorie}
+                  </p>
+                )}
                 {gruppe.seiten.map((seite) => (
                   <NavLink
                     key={seite.key}
                     to={seite.route}
+                    title={eingeklappt ? seite.label : undefined}
                     className={({ isActive }) =>
-                      `mb-0.5 flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[13px] font-medium ${
+                      `mb-0.5 flex items-center rounded-lg py-1.5 text-[13px] font-medium ${
+                        eingeklappt ? "justify-center px-0" : "gap-2.5 px-2"
+                      } ${
                         isActive
                           ? "bg-slate-100 font-semibold text-slate-900 dark:bg-stone-800 dark:text-stone-100"
                           : "text-slate-500 hover:bg-slate-50 dark:text-stone-400 dark:hover:bg-stone-800/60"
@@ -83,7 +120,7 @@ export function OfficeLayout() {
                     {({ isActive }) => (
                       <>
                         <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={isActive} />
-                        {seite.label}
+                        {!eingeklappt && <span className="truncate">{seite.label}</span>}
                       </>
                     )}
                   </NavLink>
@@ -94,17 +131,23 @@ export function OfficeLayout() {
 
           <button
             onClick={() => navigate("/einstellungen/seitenleiste")}
-            className="mt-3 flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60"
+            title={eingeklappt ? "Seitenleiste anpassen" : undefined}
+            className={`mt-3 flex items-center rounded-lg py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60 ${
+              eingeklappt ? "justify-center px-0" : "gap-2 px-2"
+            }`}
           >
-            <Settings size={14} strokeWidth={2} />
-            Seitenleiste anpassen
+            <Settings size={14} strokeWidth={2} className="shrink-0" />
+            {!eingeklappt && "Seitenleiste anpassen"}
           </button>
           <button
             onClick={zurMobilenAnsicht}
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60"
+            title={eingeklappt ? "Zur mobilen Ansicht" : undefined}
+            className={`flex items-center rounded-lg py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60 ${
+              eingeklappt ? "justify-center px-0" : "gap-2 px-2"
+            }`}
           >
-            <Smartphone size={14} strokeWidth={2} />
-            Zur mobilen Ansicht
+            <Smartphone size={14} strokeWidth={2} className="shrink-0" />
+            {!eingeklappt && "Zur mobilen Ansicht"}
           </button>
         </aside>
 
