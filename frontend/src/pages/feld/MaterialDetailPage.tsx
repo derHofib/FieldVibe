@@ -16,7 +16,7 @@ export function MaterialDetailPage() {
     mutationFn: () => materialApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material"] });
-      navigate("/geschaeft");
+      navigate("/material");
     },
   });
 

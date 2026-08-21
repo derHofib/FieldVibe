@@ -422,7 +422,7 @@ export function AnlageProfilePage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: () => anlagenApi.remove(id!),
-    onSuccess: () => navigate(profil?.kunde ? `/kunden/${profil.kunde.id}` : "/geschaeft"),
+    onSuccess: () => navigate(profil?.kunde ? `/kunden/${profil.kunde.id}` : "/material"),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 

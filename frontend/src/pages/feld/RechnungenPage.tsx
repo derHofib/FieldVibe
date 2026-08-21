@@ -45,7 +45,7 @@ export function RechnungenPage() {
     enabled: abrechnungAktiv && kannSehen,
   });
 
-  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/geschaeft" replace />;
+  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
   const toggleStatus = (s: RechnungStatus) => {
     setSeiten(1);

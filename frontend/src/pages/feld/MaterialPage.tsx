@@ -1,36 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Package, Receipt, Users } from "lucide-react";
+import { Package } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import {
-  angeboteApi,
-  anlagenApi,
-  bestellungenApi,
-  kundenApi,
-  lieferantenApi,
-  materialApi,
-  materialBedarfeApi,
-  rechnungenApi,
-  tagsApi,
-} from "../../api/endpoints";
+import { angeboteApi, anlagenApi, bestellungenApi, lieferantenApi, materialApi, materialBedarfeApi, tagsApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
-import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { istModulAktiv } from "../../utils/module";
-import type {
-  Anlage,
-  AnlagenObjekttyp,
-  AngebotStatus,
-  BestellungStatus,
-  Material,
-  MaterialBedarfZweck,
-  Tag,
-} from "../../types";
+import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBedarfZweck, Tag } from "../../types";
 
-type GeschaeftTab = "kunden" | "angebote" | "rechnungen" | "material" | "bestellwesen";
+type MaterialTab = "material" | "bestellwesen";
 
 const BESTELLUNG_STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -43,13 +24,6 @@ const OBJEKTTYP_LABEL: Record<AnlagenObjekttyp, string> = {
   fahrzeug: "Fahrzeug",
   lager: "Lager",
   baustelle: "Baustelle",
-};
-
-const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  angenommen: "Angenommen",
-  abgelehnt: "Abgelehnt",
 };
 
 function istUnterbestand(m: Material): boolean {
@@ -334,48 +308,18 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   );
 }
 
-export function GeschaeftPage() {
-  const { currentUser, hatRecht } = useAuth();
+/** Eigenstaendige Material-/Lagerverwaltung -- vormals die Tabs "material"
+ * und "bestellwesen" in der aufgeteilten GeschaeftPage. Kunden haben ihre
+ * eigene Seite (KundenPage), Rechnungen/Angebote ihre bestehenden. */
+export function MaterialPage() {
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Jeder Tab braucht sowohl das aktive Modul ALS AUCH das passende Recht --
-  // vorher haengte die ganze Seite zusaetzlich an einem harten
-  // hatRecht("dispo","sehen")-Gate weiter unten, wodurch ein Account-Typ mit
-  // abrechnung:sehen aber ohne dispo:sehen (z.B. ein reiner Buchhalter) gar
-  // nicht an Angebote/Rechnungen kam.
-  const sichtbareTabs: GeschaeftTab[] = [
-    ...(istModulAktiv(currentUser, "kundenverwaltung") && hatRecht("kunden", "sehen")
-      ? (["kunden"] as const)
-      : []),
-    ...(istModulAktiv(currentUser, "abrechnung") && hatRecht("abrechnung", "sehen")
-      ? (["angebote", "rechnungen"] as const)
-      : []),
-    ...(istModulAktiv(currentUser, "material") && hatRecht("material", "sehen")
-      ? (["material", "bestellwesen"] as const)
-      : []),
-  ];
-  const [tab, setTab] = useState<GeschaeftTab>(sichtbareTabs[0] ?? "kunden");
-  useEffect(() => {
-    if (sichtbareTabs.length > 0 && !sichtbareTabs.includes(tab)) {
-      setTab(sichtbareTabs[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sichtbareTabs.join(",")]);
+  const materialAktiv = istModulAktiv(currentUser, "material");
+
+  const [tab, setTab] = useState<MaterialTab>("material");
   const [showForm, setShowForm] = useState(false);
-  const [kundeId, setKundeId] = useState("");
-  const [betragNetto, setBetragNetto] = useState("");
-  const [leistungsdatum, setLeistungsdatum] = useState("");
-  const [neuerKunde, setNeuerKunde] = useState({
-    name: "",
-    kundennummer: "",
-    typ: "",
-    strasse: "",
-    plz: "",
-    ort: "",
-    notiz: "",
-    ustIdnr: "",
-  });
   const [materialForm, setMaterialForm] = useState({
     bezeichnung: "",
     einheit: "Stk",
@@ -389,7 +333,6 @@ export function GeschaeftPage() {
   const [matFilterTagId, setMatFilterTagId] = useState("");
   const [matFilterUnterbestand, setMatFilterUnterbestand] = useState(false);
   const [matSuche, setMatSuche] = useState("");
-  const [kundenSuche, setKundenSuche] = useState("");
   const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
   const [ausgewaehlteBedarfe, setAusgewaehlteBedarfe] = useState<Set<string>>(new Set());
   const [bestellLieferantId, setBestellLieferantId] = useState("");
@@ -397,30 +340,8 @@ export function GeschaeftPage() {
   const [lieferantName, setLieferantName] = useState("");
   const [lieferantEmail, setLieferantEmail] = useState("");
 
-  const abrechnungAktiv = istModulAktiv(currentUser, "abrechnung");
-  const materialAktiv = istModulAktiv(currentUser, "material");
   const bestellwesenAktiv = tab === "bestellwesen" && materialAktiv;
 
-  const { data: kunden, isLoading: kundenLoading } = useQuery({
-    queryKey: ["kunden"],
-    queryFn: () => kundenApi.list(),
-  });
-  const kundenGefiltert = (kunden ?? []).filter((k) => {
-    if (!kundenSuche.trim()) return true;
-    const q = kundenSuche.trim().toLowerCase();
-    return k.name.toLowerCase().includes(q) || (k.kundennummer ?? "").toLowerCase().includes(q);
-  });
-  const { data: angebote, isLoading: angeboteLoading } = useQuery({
-    queryKey: ["angebote"],
-    queryFn: () => angeboteApi.list(),
-    enabled: abrechnungAktiv,
-  });
-  const { data: rechnungenListe, isLoading: rechnungenLoading } = useQuery({
-    queryKey: ["rechnungen"],
-    queryFn: () => rechnungenApi.list(),
-    enabled: abrechnungAktiv,
-  });
-  const rechnungen = rechnungenListe?.eintraege;
   const { data: material, isLoading: materialLoading } = useQuery({
     queryKey: ["material"],
     queryFn: () => materialApi.list(),
@@ -515,50 +436,6 @@ export function GeschaeftPage() {
 
   const kannLieferantenLoeschen = currentUser?.role === "loesch_operativ";
 
-  const createAngebotMutation = useMutation({
-    mutationFn: () => angeboteApi.create({ kunde_id: kundeId }),
-    onSuccess: (angebot) => {
-      queryClient.invalidateQueries({ queryKey: ["angebote"] });
-      navigate(`/angebote/${angebot.id}`);
-    },
-  });
-
-  const createRechnungMutation = useMutation({
-    mutationFn: () =>
-      rechnungenApi.create({
-        kunde_id: kundeId,
-        betrag_netto: betragNetto,
-        leistungsdatum: leistungsdatum || undefined,
-      }),
-    onSuccess: (rechnung) => {
-      queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
-      navigate(`/rechnungen/${rechnung.id}`);
-    },
-  });
-
-  const createKundeMutation = useMutation({
-    mutationFn: () => {
-      const adresse =
-        neuerKunde.strasse || neuerKunde.plz || neuerKunde.ort
-          ? { strasse: neuerKunde.strasse || undefined, plz: neuerKunde.plz || undefined, ort: neuerKunde.ort || undefined }
-          : undefined;
-      return kundenApi.create({
-        name: neuerKunde.name,
-        kundennummer: neuerKunde.kundennummer || undefined,
-        typ: neuerKunde.typ || undefined,
-        adresse,
-        notiz: neuerKunde.notiz || undefined,
-        ust_idnr: neuerKunde.ustIdnr || undefined,
-      });
-    },
-    onSuccess: (kunde) => {
-      queryClient.invalidateQueries({ queryKey: ["kunden"] });
-      setShowForm(false);
-      setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "", ustIdnr: "" });
-      navigate(`/kunden/${kunde.id}`);
-    },
-  });
-
   const createMaterialMutation = useMutation({
     mutationFn: () =>
       materialApi.create({
@@ -586,26 +463,14 @@ export function GeschaeftPage() {
     },
   });
 
-  if (sichtbareTabs.length === 0) return <Navigate to="/feed" replace />;
-
-  const nameFuer = (kundeId: string) => kunden?.find((k) => k.id === kundeId)?.name ?? "—";
+  if (!materialAktiv) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Geschäft</h1>
-        {istModulAktiv(currentUser, "kundenportal") && (
-          <button
-            onClick={() => navigate("/anfragen")}
-            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
-          >
-            Auftragsanfragen
-          </button>
-        )}
-      </div>
+      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Material</h1>
 
       <div className="flex gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        {sichtbareTabs.map((t) => (
+        {(["material", "bestellwesen"] as const).map((t) => (
           <button
             key={t}
             onClick={() => {
@@ -623,191 +488,13 @@ export function GeschaeftPage() {
         ))}
       </div>
 
-      {tab === "rechnungen" && (
-        <button
-          onClick={() => navigate("/rechnungen")}
-          className="btn-touch mb-2 flex w-full items-center justify-between rounded-lg bg-white p-3 text-left text-sm font-medium text-cyan-700 shadow-xs dark:bg-stone-900 dark:text-cyan-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-        >
-          <span>Vollständige Übersicht mit Filtern &amp; Suche</span>
-          <span aria-hidden="true">→</span>
-        </button>
-      )}
-
-      {tab !== "bestellwesen" && (
+      {tab === "material" && (
         <button
           onClick={() => setShowForm((v) => !v)}
           className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
         >
-          {showForm
-            ? "Abbrechen"
-            : tab === "kunden"
-              ? "+ Neuer Kunde"
-              : tab === "angebote"
-                ? "+ Neues Angebot"
-                : tab === "rechnungen"
-                  ? "+ Neue Rechnung"
-                  : "+ Neues Material"}
+          {showForm ? "Abbrechen" : "+ Neues Material"}
         </button>
-      )}
-
-      {showForm && tab === "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name *</label>
-            <input
-              autoFocus
-              value={neuerKunde.name}
-              onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
-                Kundennummer (optional)
-              </label>
-              <input
-                value={neuerKunde.kundennummer}
-                onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
-                placeholder="wird sonst vergeben"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Typ</label>
-              <select
-                value={neuerKunde.typ}
-                onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              >
-                <option value="">Bitte wählen…</option>
-                <option value="privat">Privat</option>
-                <option value="gewerbe">Gewerbe</option>
-                <option value="oeffentlich">Öffentlich</option>
-                <option value="hausverwaltung">Hausverwaltung</option>
-              </select>
-            </div>
-          </div>
-          {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (
-            <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">USt-IdNr.</label>
-              <input
-                value={neuerKunde.ustIdnr}
-                onChange={(e) => setNeuerKunde({ ...neuerKunde, ustIdnr: e.target.value })}
-                placeholder="DE123456789"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-            </div>
-          )}
-          <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Straße + Hausnr.</label>
-            <input
-              value={neuerKunde.strasse}
-              onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">PLZ</label>
-              <input
-                value={neuerKunde.plz}
-                onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Ort</label>
-              <input
-                value={neuerKunde.ort}
-                onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Notiz</label>
-            <textarea
-              value={neuerKunde.notiz}
-              onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
-              rows={2}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            />
-          </div>
-          <p className="text-xs text-slate-400 dark:text-stone-500">
-            Ansprechpartner können anschließend auf der Kunden-Detailseite angelegt werden.
-          </p>
-          <button
-            disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
-            onClick={() => createKundeMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Anlegen
-          </button>
-        </div>
-      )}
-
-      {showForm && tab !== "material" && tab !== "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
-            <select
-              value={kundeId}
-              onChange={(e) => setKundeId(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            >
-              <option value="">Bitte wählen…</option>
-              {kunden?.map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.name} ({k.kundennummer})
-                </option>
-              ))}
-            </select>
-          </div>
-          {tab === "rechnungen" && (
-            <>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
-                  Betrag netto (EUR)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={betragNetto}
-                  onChange={(e) => setBetragNetto(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
-                  Leistungsdatum (optional)
-                </label>
-                <input
-                  type="date"
-                  value={leistungsdatum}
-                  onChange={(e) => setLeistungsdatum(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-                />
-                <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
-                  Nur nötig, wenn abweichend vom Rechnungsdatum.
-                </p>
-              </div>
-            </>
-          )}
-          <button
-            disabled={
-              !kundeId ||
-              (tab === "rechnungen" && !betragNetto) ||
-              createAngebotMutation.isPending ||
-              createRechnungMutation.isPending
-            }
-            onClick={() => (tab === "angebote" ? createAngebotMutation.mutate() : createRechnungMutation.mutate())}
-            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Anlegen
-          </button>
-        </div>
       )}
 
       {showForm && tab === "material" && (
@@ -903,108 +590,6 @@ export function GeschaeftPage() {
           >
             Anlegen
           </button>
-        </div>
-      )}
-
-      {tab === "kunden" && (
-        <div className="space-y-2">
-          {(kunden ?? []).length > 0 && (
-            <input
-              value={kundenSuche}
-              onChange={(e) => setKundenSuche(e.target.value)}
-              placeholder="Suche nach Name oder Kundennummer…"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-            />
-          )}
-          {kundenLoading ? (
-            <SkeletonList count={3} />
-          ) : (kunden ?? []).length === 0 ? (
-            <EmptyState icon={Users} text="Keine Kunden vorhanden." />
-          ) : kundenGefiltert.length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-stone-500">
-              Keine Kunden gefunden für „{kundenSuche}“.
-            </p>
-          ) : (
-            // Eigener scrollbarer Bereich statt die ganze Seite runterzuscrollen
-            // -- Suchfeld/Tabs bleiben oben fixiert sichtbar.
-            <div className="max-h-[65vh] space-y-2 overflow-y-auto pr-0.5">
-              {kundenGefiltert.map((k) => (
-                <button
-                  key={k.id}
-                  onClick={() => navigate(`/kunden/${k.id}`)}
-                  className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-                >
-                  <div>
-                    <div className="text-xs text-slate-400 dark:text-stone-500">{k.kundennummer}</div>
-                    <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{k.name}</div>
-                  </div>
-                  {k.typ && (
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-                      {k.typ}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === "angebote" && (
-        <div className="space-y-2">
-          {angeboteLoading ? (
-            <SkeletonList count={3} />
-          ) : (angebote ?? []).length === 0 ? (
-            <EmptyState icon={FileText} text="Keine Angebote vorhanden." />
-          ) : (
-            angebote!.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => navigate(`/angebote/${a.id}`)}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-              >
-                <div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">{a.angebotsnummer}</div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
-                    {nameFuer(a.kunde_id)}
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-stone-400">{a.gesamt_brutto} EUR</div>
-                </div>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-                  {ANGEBOT_STATUS_LABEL[a.status]}
-                </span>
-              </button>
-            ))
-          )}
-        </div>
-      )}
-
-      {tab === "rechnungen" && (
-        <div className="space-y-2">
-          {rechnungenLoading ? (
-            <SkeletonList count={3} />
-          ) : (rechnungen ?? []).length === 0 ? (
-            <EmptyState icon={Receipt} text="Keine Rechnungen vorhanden." />
-          ) : (
-            rechnungen!.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => navigate(`/rechnungen/${r.id}`)}
-                className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-              >
-                <div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">{r.rechnungsnummer}</div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
-                    {nameFuer(r.kunde_id)}
-                  </div>
-                  <div className="text-xs text-slate-500 dark:text-stone-400">{r.betrag_brutto} EUR</div>
-                </div>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-                  {RECHNUNG_STATUS_LABEL[r.status]}
-                </span>
-              </button>
-            ))
-          )}
         </div>
       )}
 

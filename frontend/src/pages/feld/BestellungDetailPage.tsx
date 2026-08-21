@@ -26,7 +26,7 @@ export function BestellungDetailPage() {
     mutationFn: () => bestellungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bestellungen"] });
-      navigate("/geschaeft");
+      navigate("/material");
     },
   });
 

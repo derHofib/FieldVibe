@@ -39,7 +39,7 @@ export function AuswertungPage() {
     onSuccess: (blob) => downloadBlob(blob, `DATEV-Export_${von}_${bis}.csv`),
   });
 
-  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/geschaeft" replace />;
+  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">

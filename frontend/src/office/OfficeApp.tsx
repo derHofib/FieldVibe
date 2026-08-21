@@ -13,12 +13,13 @@ import { DauerauftragNeuPage } from "../pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "../pages/feld/DauerauftraegePage";
 import { EingangsrechnungDetailPage } from "../pages/feld/EingangsrechnungDetailPage";
 import { FormularAusfuellenPage } from "../pages/feld/FormularAusfuellenPage";
-import { GeschaeftPage } from "../pages/feld/GeschaeftPage";
 import { HighlightsPage } from "../pages/feld/HighlightsPage";
 import { InsightsPage } from "../pages/feld/InsightsPage";
 import { IntegrationenPage } from "../pages/feld/IntegrationenPage";
+import { KundenPage } from "../pages/feld/KundenPage";
 import { KundeProfilePage } from "../pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "../pages/feld/MaterialDetailPage";
+import { MaterialPage } from "../pages/feld/MaterialPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { NotificationsPage } from "../pages/feld/NotificationsPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
@@ -86,7 +87,8 @@ export function OfficeApp() {
         <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
         <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
         <Route path="/pruefmittel" element={<PruefmittelPage />} />
-        <Route path="/geschaeft" element={<GeschaeftPage />} />
+        <Route path="/kunden" element={<KundenPage />} />
+        <Route path="/material" element={<MaterialPage />} />
         <Route path="/anfragen" element={<AnfragenPage />} />
         <Route path="/angebote/:id" element={<AngebotDetailPage />} />
         <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />

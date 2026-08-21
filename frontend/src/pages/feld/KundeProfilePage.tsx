@@ -1140,7 +1140,7 @@ export function KundeProfilePage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: () => kundenApi.remove(id!),
-    onSuccess: () => navigate("/geschaeft"),
+    onSuccess: () => navigate("/kunden"),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 

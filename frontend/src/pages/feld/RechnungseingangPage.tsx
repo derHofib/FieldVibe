@@ -93,7 +93,7 @@ export function RechnungseingangPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Anlegen fehlgeschlagen"),
   });
 
-  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/geschaeft" replace />;
+  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">

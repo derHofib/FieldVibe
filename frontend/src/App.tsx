@@ -32,12 +32,13 @@ import { FeedPage } from "./pages/feld/FeedPage";
 import { FormularAusfuellenPage } from "./pages/feld/FormularAusfuellenPage";
 import { FormularDetailPage } from "./pages/feld/FormularDetailPage";
 import { FormularePage } from "./pages/feld/FormularePage";
-import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
 import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
+import { KundenPage } from "./pages/feld/KundenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
+import { MaterialPage } from "./pages/feld/MaterialPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
@@ -153,7 +154,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/boards" element={<BoardsUebersichtPage />} />
           <Route path="/boards/:id" element={<BoardMobilePage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
-          <Route path="/geschaeft" element={<GeschaeftPage />} />
+          <Route path="/kunden" element={<KundenPage />} />
+          <Route path="/material" element={<MaterialPage />} />
           <Route path="/anfragen" element={<AnfragenPage />} />
           <Route path="/angebote/:id" element={<AngebotDetailPage />} />
           <Route path="/rechnungen" element={<RechnungenPage />} />

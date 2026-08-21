@@ -1,7 +1,6 @@
 import {
   BarChart3,
   Bell,
-  Briefcase,
   CalendarDays,
   ClipboardList,
   Clock,
@@ -9,6 +8,7 @@ import {
   Inbox,
   type LucideIcon,
   Mail,
+  Package,
   Plug,
   Receipt,
   Rss,
@@ -101,16 +101,24 @@ export const NAV_SEITEN: NavSeite[] = [
       hatRecht("dispo", "sehen") && istModulAktiv(currentUser, "dispo"),
   },
   {
-    key: "geschaeft",
-    label: "Geschäft",
-    icon: Briefcase,
+    key: "kunden",
+    label: "Kundenverwaltung",
+    icon: Users,
     tone: "emerald",
-    route: "/geschaeft",
+    route: "/kunden",
     kategorie: "Arbeit",
     sichtbar: ({ currentUser, hatRecht }) =>
-      (hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung")) ||
-      (hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung")) ||
-      (hatRecht("material", "sehen") && istModulAktiv(currentUser, "material")),
+      hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung"),
+  },
+  {
+    key: "material",
+    label: "Material",
+    icon: Package,
+    tone: "amber",
+    route: "/material",
+    kategorie: "Arbeit",
+    sichtbar: ({ currentUser, hatRecht }) =>
+      hatRecht("material", "sehen") && istModulAktiv(currentUser, "material"),
   },
   {
     key: "zeiterfassung",
@@ -297,7 +305,8 @@ export const STANDARD_LINKS = ["feed", "profil"];
 export const STANDARD_ROTUNDE = [
   "meldungen",
   "dispo",
-  "geschaeft",
+  "kunden",
+  "material",
   "rechnungen",
   "rechnungseingang",
   "buchhaltung",
