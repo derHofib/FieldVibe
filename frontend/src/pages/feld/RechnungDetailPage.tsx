@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { FileText, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenApi, rechnungenApi } from "../../api/endpoints";
+import type { RechnungPositionVorschlag } from "../../types";
 import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
@@ -11,6 +12,84 @@ import { downloadBlob } from "../../utils/download";
 import { heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import type { RechnungZahlungsart } from "../../types";
+
+/** Vorschlagsbox fuer Rechnungen mit Vorgangsbezug -- fasst bereits am
+ * Vorgang erfasstes Material und abrechenbare Zeiterfassung zusammen, die
+ * der Nutzer gezielt als Positionen uebernimmt statt alles freihand
+ * einzutippen. Reiner Vorschlag ohne Nebenwirkung, bis "Übernehmen"
+ * gedrueckt wird -- legt dann ganz normal ueber addPosition echte
+ * RechnungPosition-Zeilen an. */
+function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; vorgangId: string }) {
+  const queryClient = useQueryClient();
+  const [ausgewaehlt, setAusgewaehlt] = useState<Set<number>>(new Set());
+
+  const { data: vorschlaege } = useQuery({
+    queryKey: ["rechnung-vorschlaege", rechnungId],
+    queryFn: () => rechnungenApi.positionsvorschlaege(rechnungId),
+  });
+
+  const uebernehmenMutation = useMutation({
+    mutationFn: async () => {
+      const gewaehlte = (vorschlaege ?? []).filter((_, i) => ausgewaehlt.has(i));
+      for (const v of gewaehlte) {
+        await rechnungenApi.addPosition(rechnungId, {
+          beschreibung: v.beschreibung,
+          menge: v.menge,
+          einheit: v.einheit,
+          einzelpreis: v.einzelpreis,
+        });
+      }
+    },
+    onSuccess: () => {
+      setAusgewaehlt(new Set());
+      queryClient.invalidateQueries({ queryKey: ["rechnung", rechnungId] });
+    },
+  });
+
+  const toggle = (i: number) =>
+    setAusgewaehlt((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
+  if (!vorgangId || (vorschlaege && vorschlaege.length === 0)) return null;
+
+  return (
+    <div className="mb-3 rounded-lg border border-dashed border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10">
+      <div className="mb-2 flex items-center gap-1.5">
+        <ListChecks size={13} strokeWidth={2} className="text-cyan-700 dark:text-cyan-300" />
+        <p className="text-xs font-bold text-cyan-800 dark:text-cyan-200">Vorschläge aus dem Vorgang</p>
+      </div>
+      <div className="space-y-1.5">
+        {(vorschlaege ?? []).map((v: RechnungPositionVorschlag, i) => (
+          <label key={i} className="flex items-center gap-2 rounded-md bg-white px-2 py-1.5 text-sm dark:bg-stone-900">
+            <input
+              type="checkbox"
+              checked={ausgewaehlt.has(i)}
+              onChange={() => toggle(i)}
+              className="h-3.5 w-3.5"
+            />
+            <span className="flex-1 text-slate-700 dark:text-stone-200">
+              {v.beschreibung}, {v.menge} {v.einheit} × {v.einzelpreis} EUR
+            </span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-stone-800 dark:text-stone-400">
+              {v.quelle === "material" ? "Material" : "Zeiterfassung"}
+            </span>
+          </label>
+        ))}
+      </div>
+      <button
+        disabled={ausgewaehlt.size === 0 || uebernehmenMutation.isPending}
+        onClick={() => uebernehmenMutation.mutate()}
+        className="btn-touch mt-2 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+      >
+        Übernehmen
+      </button>
+    </div>
+  );
+}
 
 const ZAHLUNGSART_OPTIONEN: { value: RechnungZahlungsart; label: string }[] = [
   { value: "ueberweisung", label: "Überweisung" },
@@ -241,6 +320,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             </button>
           )}
         </div>
+
+        {rechnung.status === "entwurf" && rechnung.vorgang_id && (
+          <PositionsVorschlaege rechnungId={id!} vorgangId={rechnung.vorgang_id} />
+        )}
 
         {showForm && (
           <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">

@@ -6,6 +6,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import {
   angeboteApi,
+  rechnungenApi,
   anlagenApi,
   fahrzeugZuweisungenApi,
   highlightsApi,
@@ -569,6 +570,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const angebotAusVorgangMutation = useMutation({
     mutationFn: () => angeboteApi.createFromVorgang(id!),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+  });
+
+  const rechnungAusVorgangMutation = useMutation({
+    mutationFn: () => rechnungenApi.create({ kunde_id: vorgang!.kunde_id, vorgang_id: id }),
+    onSuccess: (rechnung) => navigate(`/rechnungen/${rechnung.id}`),
   });
 
   const maengelProtokollMutation = useMutation({
@@ -1879,6 +1885,16 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             className="btn-touch mb-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
           >
             + Angebot aus diesem Vorgang erstellen
+          </button>
+        )}
+
+        {kannDisponieren && (
+          <button
+            onClick={() => rechnungAusVorgangMutation.mutate()}
+            disabled={rechnungAusVorgangMutation.isPending}
+            className="btn-touch mb-2 w-full rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          >
+            + Rechnung aus diesem Vorgang erstellen
           </button>
         )}
 

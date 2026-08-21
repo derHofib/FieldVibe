@@ -25,6 +25,7 @@ from app.schemas.rechnung import (
     RechnungCreate,
     RechnungListe,
     RechnungPositionCreate,
+    RechnungPositionVorschlag,
     RechnungRead,
     RechnungUpdate,
     RechnungZahlungCreate,
@@ -44,6 +45,7 @@ from app.services.rechnung_service import (
     offen_sql,
     pdf_bytes_fuer,
     positionen_fuer,
+    positionen_vorschlaege_fuer_vorgang,
     status_nach_zahlung,
     to_read_model,
     to_read_model_bulk,
@@ -467,6 +469,19 @@ async def add_position(
     await session.flush()
     await session.refresh(rechnung)
     return await to_read_model(session, rechnung)
+
+
+@router.get("/{rechnung_id}/positionsvorschlaege", response_model=list[RechnungPositionVorschlag])
+async def get_positionsvorschlaege(
+    rechnung_id: UUID,
+    session: AsyncSession = Depends(get_db),
+) -> list[RechnungPositionVorschlag]:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.vorgang_id is None:
+        return []
+    return await positionen_vorschlaege_fuer_vorgang(session, rechnung.vorgang_id)
 
 
 async def _auf_bezahlt_setzen(

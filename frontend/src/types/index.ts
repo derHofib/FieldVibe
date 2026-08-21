@@ -781,6 +781,17 @@ export interface RechnungPosition {
   gesamt: string;
 }
 
+// Vom Backend bei jedem Aufruf frisch aus Material-Verwendungen und
+// Zeiterfassung des verknuepften Vorgangs berechnet -- kein persistiertes
+// Objekt, daher keine id.
+export interface RechnungPositionVorschlag {
+  quelle: "material" | "zeit";
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+}
+
 export interface RechnungZahlung {
   id: string;
   betrag: string;

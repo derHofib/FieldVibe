@@ -28,6 +28,18 @@ class RechnungPositionRead(BaseModel):
         return (self.menge * self.einzelpreis).quantize(Decimal("0.01"))
 
 
+# Vorschlaege fuer POST .../positionen aus dem verknuepften Vorgang (siehe
+# rechnung_service.positions_vorschlaege_fuer_vorgang) -- kein eigenes
+# Objekt in der DB, wird bei jedem Aufruf frisch aus Material-Verwendungen
+# und Zeiterfassung berechnet.
+class RechnungPositionVorschlag(BaseModel):
+    quelle: str  # "material" | "zeit"
+    beschreibung: str
+    menge: Decimal
+    einheit: str
+    einzelpreis: Decimal
+
+
 class RechnungZahlungCreate(BaseModel):
     betrag: Decimal
     datum: date | None = None

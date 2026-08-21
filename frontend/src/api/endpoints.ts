@@ -87,6 +87,7 @@ import type {
   RechnungenFilter,
   RechnungListe,
   RechnungPosition,
+  RechnungPositionVorschlag,
   RechnungZahlungCreate,
   RechteAktion,
   RechteBereich,
@@ -1013,6 +1014,8 @@ export const rechnungenApi = {
     apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen`, { method: "POST", body: JSON.stringify(body) }),
   stornoZahlung: (id: string, zahlungId: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen/${zahlungId}/storno`, { method: "POST" }),
+  positionsvorschlaege: (id: string) =>
+    apiFetch<RechnungPositionVorschlag[]>(`/api/rechnungen/${id}/positionsvorschlaege`),
 };
 
 export const eingangsrechnungenApi = {

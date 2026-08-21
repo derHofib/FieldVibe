@@ -1,10 +1,16 @@
 import asyncio
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
+from sqlalchemy import select
 
 from app.db.session import system_session
+from app.models.anlage import Anlage
+from app.models.material import Material, MaterialBestand, MaterialVerwendung
 from app.models.rechnung import Rechnung
 from app.models.vorgang import Vorgang
+from app.models.zeiterfassung import Zeiterfassung
 from tests.conftest import auth_headers, login
 
 
@@ -412,3 +418,105 @@ async def test_versendet_archiviert_pdf(client, make_mandant, make_user, make_ku
     resp = await client.get(f"/api/rechnungen/{rechnung_id}/pdf", headers=auth_headers(token))
     assert resp.status_code == 200
     assert resp.content.startswith(b"%PDF")
+
+
+@pytest.mark.asyncio
+async def test_positionsvorschlaege_aus_material_und_zeit(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    async with system_session() as session:
+        # Jeder Mandant bekommt bei Anlage automatisch ein Zentrallager (siehe
+        # make_mandant/Mandant-Erstellung) -- hier wiederverwendet statt ein
+        # zweites anzulegen, dessen Legacy-Pflichtfelder (adresse) das Modell
+        # nicht mehr abbildet.
+        lager = (
+            await session.execute(
+                select(Anlage).where(Anlage.mandant_id == mandant.id, Anlage.objekttyp == "lager")
+            )
+        ).scalars().one()
+
+        material = Material(
+            mandant_id=mandant.id,
+            bezeichnung="Wandhalterung",
+            einheit="Stk",
+            mindestbestand=Decimal("0"),
+            einzelpreis=Decimal("34.90"),
+        )
+        session.add(material)
+        await session.flush()
+        session.add(
+            MaterialBestand(mandant_id=mandant.id, material_id=material.id, lager_id=lager.id, menge=Decimal("10"))
+        )
+        session.add(
+            MaterialVerwendung(
+                mandant_id=mandant.id,
+                material_id=material.id,
+                lager_id=lager.id,
+                vorgang_id=vorgang.id,
+                menge=Decimal("2"),
+                verwendet_von=admin.id,
+            )
+        )
+
+        start = datetime.now(timezone.utc)
+        session.add(
+            Zeiterfassung(
+                mandant_id=mandant.id,
+                vorgang_id=vorgang.id,
+                techniker_id=admin.id,
+                start_at=start,
+                ende_at=start + timedelta(hours=3, minutes=30),
+                kategorie="auftrag",
+                abrechenbar=True,
+            )
+        )
+        # Nicht abrechenbare Zeit darf nicht in den Vorschlag einfliessen.
+        session.add(
+            Zeiterfassung(
+                mandant_id=mandant.id,
+                vorgang_id=vorgang.id,
+                techniker_id=admin.id,
+                start_at=start,
+                ende_at=start + timedelta(hours=1),
+                kategorie="auftrag",
+                abrechenbar=False,
+            )
+        )
+        await session.flush()
+
+    created = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "vorgang_id": str(vorgang.id)},
+    )
+    rechnung_id = created.json()["id"]
+
+    resp = await client.get(f"/api/rechnungen/{rechnung_id}/positionsvorschlaege", headers=auth_headers(token))
+    assert resp.status_code == 200
+    vorschlaege = resp.json()
+    assert len(vorschlaege) == 2
+
+    material_vorschlag = next(v for v in vorschlaege if v["quelle"] == "material")
+    assert material_vorschlag["beschreibung"] == "Wandhalterung"
+    assert material_vorschlag["menge"] == "2.00"
+    assert material_vorschlag["einzelpreis"] == "34.90"
+
+    zeit_vorschlag = next(v for v in vorschlaege if v["quelle"] == "zeit")
+    assert zeit_vorschlag["menge"] == "3.50"
+    assert zeit_vorschlag["einheit"] == "Std"
+
+    # Ohne Vorgangsbezug liefert der Endpunkt eine leere Liste statt 404.
+    ohne_vorgang = await client.post(
+        "/api/rechnungen", headers=auth_headers(token), json={"kunde_id": str(kunde.id), "betrag_netto": "10"}
+    )
+    leer = await client.get(
+        f"/api/rechnungen/{ohne_vorgang.json()['id']}/positionsvorschlaege", headers=auth_headers(token)
+    )
+    assert leer.status_code == 200
+    assert leer.json() == []

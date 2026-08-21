@@ -7,12 +7,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
+from app.models.material import Material, MaterialVerwendung
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
-from app.schemas.rechnung import RechnungPositionRead, RechnungRead, RechnungZahlungRead
+from app.models.zeiterfassung import Zeiterfassung
+from app.schemas.rechnung import (
+    RechnungPositionRead,
+    RechnungPositionVorschlag,
+    RechnungRead,
+    RechnungZahlungRead,
+)
 from app.services import e_invoice_service, pdf_service, storage_service
 from app.services.numbering_service import next_rechnungsnummer
 
 _CENT = Decimal("0.01")
+_STUNDE = Decimal("3600")
 
 
 async def positionen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[RechnungPosition]:
@@ -22,6 +30,64 @@ async def positionen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[Rech
         .order_by(RechnungPosition.position)
     )
     return list(result.scalars().all())
+
+
+async def positionen_vorschlaege_fuer_vorgang(
+    session: AsyncSession, vorgang_id: UUID
+) -> list[RechnungPositionVorschlag]:
+    """Fuer die "Vorschlaege aus Vorgang"-Box in RechnungDetailPage: fasst am
+    Vorgang bereits erfasstes Material und abrechenbare Zeiterfassung zu
+    Positionsvorschlaegen zusammen, die der Nutzer gezielt uebernimmt (kein
+    Automatismus -- siehe add_position, der weiterhin die einzige Stelle
+    bleibt, die tatsaechlich eine Position anlegt). Der Stundensatz ist
+    nirgends im Modell hinterlegt, daher bleibt einzelpreis bei der
+    Zeit-Position bewusst 0 -- der Nutzer traegt ihn beim Uebernehmen ein."""
+    material_stmt = (
+        select(
+            Material.bezeichnung,
+            Material.einheit,
+            Material.einzelpreis,
+            func.sum(MaterialVerwendung.menge).label("menge"),
+        )
+        .join(Material, Material.id == MaterialVerwendung.material_id)
+        .where(MaterialVerwendung.vorgang_id == vorgang_id)
+        .group_by(Material.id, Material.bezeichnung, Material.einheit, Material.einzelpreis)
+        .order_by(Material.bezeichnung)
+    )
+    material_result = await session.execute(material_stmt)
+    vorschlaege = [
+        RechnungPositionVorschlag(
+            quelle="material",
+            beschreibung=bezeichnung,
+            menge=menge,
+            einheit=einheit,
+            einzelpreis=einzelpreis or Decimal("0"),
+        )
+        for bezeichnung, einheit, einzelpreis, menge in material_result.all()
+    ]
+
+    zeit_stmt = select(
+        func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at))
+    ).where(
+        Zeiterfassung.vorgang_id == vorgang_id,
+        Zeiterfassung.kategorie == "auftrag",
+        Zeiterfassung.abrechenbar.is_(True),
+        Zeiterfassung.ende_at.is_not(None),
+    )
+    sekunden = (await session.execute(zeit_stmt)).scalar_one_or_none()
+    if sekunden:
+        stunden = (Decimal(str(sekunden)) / _STUNDE).quantize(Decimal("0.01"))
+        vorschlaege.append(
+            RechnungPositionVorschlag(
+                quelle="zeit",
+                beschreibung="Arbeitszeit",
+                menge=stunden,
+                einheit="Std",
+                einzelpreis=Decimal("0"),
+            )
+        )
+
+    return vorschlaege
 
 
 def netto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Decimal:
