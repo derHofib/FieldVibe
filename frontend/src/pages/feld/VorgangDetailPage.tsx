@@ -17,6 +17,7 @@ import {
   mandantEinstellungenApi,
   materialApi,
   materialBedarfeApi,
+  partnerApi,
   standorteApi,
   termineApi,
   usersApi,
@@ -33,6 +34,7 @@ import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
 import { discardOutboxItem, getOutboxItems, queueFoto, queueKommentar, queueStatusChange } from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
+import { istModulAktiv } from "../../utils/module";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
 import type {
@@ -42,6 +44,7 @@ import type {
   MangelSchweregrad,
   MangelStatus,
   MaterialBedarfZweck,
+  PartnerFreigabeStatus,
   TerminWarnung,
   VorgangEvent,
   VorgangStatus,
@@ -94,6 +97,18 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 const VORGANG_STATUS_GESCHLOSSEN: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
 
 const PRIORITAET_OPTIONEN = [1, 2, 3, 4, 5];
+
+const FREIGABE_LABEL: Record<PartnerFreigabeStatus, string> = {
+  vorgeschlagen: "Wartet auf Rückmeldung",
+  angenommen: "Angenommen",
+  abgelehnt: "Abgelehnt",
+};
+
+const FREIGABE_FARBE: Record<PartnerFreigabeStatus, string> = {
+  vorgeschlagen: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
+  angenommen: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+  abgelehnt: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+};
 
 const EVENT_LABEL: Partial<Record<string, string>> = {
   status_change: "Status geändert",
@@ -328,6 +343,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const [showLeistungForm, setShowLeistungForm] = useState(false);
   const [lvPositionId, setLvPositionId] = useState("");
   const [lvMenge, setLvMenge] = useState("");
+  const [showPartnerForm, setShowPartnerForm] = useState(false);
+  const [partnerAuswahl, setPartnerAuswahl] = useState("");
+  const [partnerHonorar, setPartnerHonorar] = useState("");
+  const [partnerWarnung, setPartnerWarnung] = useState(false);
   const [showBedarfForm, setShowBedarfForm] = useState(false);
   const [bedarfMaterialId, setBedarfMaterialId] = useState("");
   const [bedarfMenge, setBedarfMenge] = useState("");
@@ -352,6 +371,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
   const kannDisponieren = hatRecht("vorgaenge", "bearbeiten");
   const kannLoeschen = hatRecht("vorgaenge", "loeschen");
+  // Kein eigener Rechte-Bereich fuer Partner (siehe app/api/routes/
+  // partner.py, require_roles ohne "custom") -- deshalb direkt auf die
+  // Rolle geprueft, analog zum "partner"-Eintrag in config/navSeiten.ts.
+  const kannPartnerVerwalten =
+    istModulAktiv(currentUser, "nachunternehmer") &&
+    (currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ");
 
   const { data: vorgang } = useQuery({
     queryKey: ["vorgang", id],
@@ -636,6 +661,36 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setLvMenge("");
       queryClient.invalidateQueries({ queryKey: ["stories"] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+  });
+
+  const { data: partnerListe } = useQuery({
+    queryKey: ["partner"],
+    queryFn: () => partnerApi.list(),
+    enabled: showPartnerForm && kannPartnerVerwalten,
+  });
+  const { data: zugewiesenerPartner } = useQuery({
+    queryKey: ["partner", vorgang?.partner_id],
+    queryFn: () => partnerApi.get(vorgang!.partner_id!),
+    enabled: kannPartnerVerwalten && !!vorgang?.partner_id,
+  });
+
+  const partnerZuweisenMutation = useMutation({
+    mutationFn: () => vorgaengeApi.partnerZuweisen(id!, partnerAuswahl, partnerHonorar || undefined),
+    onSuccess: (antwort) => {
+      setShowPartnerForm(false);
+      setPartnerAuswahl("");
+      setPartnerHonorar("");
+      setPartnerWarnung(antwort.freistellungsbescheinigung_warnung);
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
+    },
+  });
+
+  const partnerAufhebenMutation = useMutation({
+    mutationFn: () => vorgaengeApi.partnerZuweisen(id!, null),
+    onSuccess: () => {
+      setPartnerWarnung(false);
+      queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
     },
   });
 
@@ -2044,6 +2099,103 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
         )}
       </div>
+
+      {kannPartnerVerwalten && (
+        <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Nachunternehmer</h2>
+            {!vorgang.partner_id && (
+              <button
+                onClick={() => setShowPartnerForm((v) => !v)}
+                className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              >
+                {showPartnerForm ? "Abbrechen" : "+ Zuweisen"}
+              </button>
+            )}
+          </div>
+
+          {partnerWarnung && (
+            <p className="mb-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              Für diesen Partner liegt keine gültige Freistellungsbescheinigung vor -- ohne sie greift bei
+              Zahlungen für Bauleistungen grundsätzlich die 15%-Bauabzugsteuer nach § 48 EStG.
+            </p>
+          )}
+
+          {vorgang.partner_id ? (
+            <div className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 dark:bg-stone-800/60">
+              <div>
+                <button
+                  onClick={() => navigate(`/partner/${vorgang.partner_id}`)}
+                  className="text-sm font-medium text-slate-800 hover:underline dark:text-stone-100"
+                >
+                  {zugewiesenerPartner?.name ?? "…"}
+                </button>
+                {vorgang.partner_honorar_netto && (
+                  <div className="text-xs text-slate-400 dark:text-stone-500">
+                    Honorar: {vorgang.partner_honorar_netto} EUR netto
+                  </div>
+                )}
+                {vorgang.partner_freigabe_status === "abgelehnt" && vorgang.partner_ablehnung_grund && (
+                  <div className="text-xs text-red-600 dark:text-red-400">
+                    Grund: {vorgang.partner_ablehnung_grund}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {vorgang.partner_freigabe_status && (
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-semibold ${FREIGABE_FARBE[vorgang.partner_freigabe_status]}`}
+                  >
+                    {FREIGABE_LABEL[vorgang.partner_freigabe_status]}
+                  </span>
+                )}
+                <button
+                  onClick={() => partnerAufhebenMutation.mutate()}
+                  disabled={partnerAufhebenMutation.isPending}
+                  className="btn-touch text-xs text-red-700 dark:text-red-400"
+                >
+                  Aufheben
+                </button>
+              </div>
+            </div>
+          ) : (
+            !showPartnerForm && (
+              <p className="text-sm text-slate-400 dark:text-stone-500">Kein Nachunternehmer zugewiesen.</p>
+            )
+          )}
+
+          {showPartnerForm && (
+            <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+              <SearchableSelect
+                value={partnerAuswahl}
+                onChange={setPartnerAuswahl}
+                placeholder="Partner wählen…"
+                options={(partnerListe ?? []).map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  sublabel: p.gewerk ?? undefined,
+                }))}
+              />
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={partnerHonorar}
+                onChange={(e) => setPartnerHonorar(e.target.value)}
+                placeholder="Honorar netto (optional)"
+                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              />
+              <button
+                disabled={!partnerAuswahl || partnerZuweisenMutation.isPending}
+                onClick={() => partnerZuweisenMutation.mutate()}
+                className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              >
+                Zuweisen
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <EmailSection
         queryKey={["vorgang-emails", id]}

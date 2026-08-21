@@ -81,6 +81,9 @@ import type {
   OfficeNavPraeferenz,
   PapierkorbEintrag,
   PapierkorbEntityTyp,
+  Partner,
+  PartnerNachweis,
+  PartnerNachweisTyp,
   PlattformIntegration,
   Pruefmittel,
   Pruefzyklus,
@@ -115,6 +118,7 @@ import type {
   VorgangEvent,
   VorgangEventType,
   VorgangFormular,
+  VorgangPartnerZuweisungResponse,
   Zeiterfassung,
   ZeiterfassungKategorie,
   ZeiterfassungStatistik,
@@ -343,6 +347,54 @@ export const kundenApi = {
   // JSON, wird aber wie ein Datei-Download behandelt statt getypt zu werden,
   // da der Inhalt nur zum Speichern gedacht ist.
   datenexport: (id: string) => apiFetchBlob(`/api/kunden/${id}/datenexport`),
+};
+
+export const partnerApi = {
+  list: (q?: string) => apiFetch<Partner[]>(`/api/partner${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  get: (id: string) => apiFetch<Partner>(`/api/partner/${id}`),
+  create: (body: {
+    name: string;
+    gewerk?: string;
+    ansprechpartner?: string;
+    telefon?: string;
+    email?: string;
+    adresse?: Adresse;
+    notiz?: string;
+  }) => apiFetch<Partner>("/api/partner", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: Partial<{
+      name: string;
+      gewerk: string | null;
+      ansprechpartner: string | null;
+      telefon: string | null;
+      email: string | null;
+      adresse: Adresse | null;
+      notiz: string | null;
+      aktiv: boolean;
+    }>,
+  ) => apiFetch<Partner>(`/api/partner/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/partner/${id}`, { method: "DELETE" }),
+  nachweise: (id: string) => apiFetch<PartnerNachweis[]>(`/api/partner/${id}/nachweise`),
+  nachweisAnlegen: (
+    id: string,
+    body: { typ: PartnerNachweisTyp; gueltig_bis?: string; dokument_s3_key?: string; notiz?: string },
+  ) =>
+    apiFetch<PartnerNachweis>(`/api/partner/${id}/nachweise`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  nachweisAktualisieren: (
+    id: string,
+    nachweisId: string,
+    body: Partial<{ gueltig_bis: string | null; dokument_s3_key: string | null; notiz: string | null }>,
+  ) =>
+    apiFetch<PartnerNachweis>(`/api/partner/${id}/nachweise/${nachweisId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  nachweisEntfernen: (id: string, nachweisId: string) =>
+    apiFetch<void>(`/api/partner/${id}/nachweise/${nachweisId}`, { method: "DELETE" }),
 };
 
 export const technikerZuweisungenApi = {
@@ -578,6 +630,11 @@ export const vorgaengeApi = {
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/vorgaenge/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
     apiFetch<EmailLog>(`/api/vorgaenge/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),
+  partnerZuweisen: (id: string, partnerId: string | null, honorarNetto?: string) =>
+    apiFetch<VorgangPartnerZuweisungResponse>(`/api/vorgaenge/${id}/partner-zuweisung`, {
+      method: "POST",
+      body: JSON.stringify({ partner_id: partnerId, partner_honorar_netto: honorarNetto || undefined }),
+    }),
 };
 
 export const vorgangAnfragenApi = {

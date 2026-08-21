@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Clock,
   Gauge,
+  HardHat,
   Inbox,
   type LucideIcon,
   Mail,
@@ -109,6 +110,20 @@ export const NAV_SEITEN: NavSeite[] = [
     kategorie: "Arbeit",
     sichtbar: ({ currentUser, hatRecht }) =>
       hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung"),
+  },
+  {
+    key: "partner",
+    label: "Partner & Nachunternehmer",
+    icon: HardHat,
+    tone: "amber",
+    route: "/partner",
+    kategorie: "Arbeit",
+    // Kein eigener Rechte-Bereich (siehe app/api/routes/partner.py) --
+    // die Backend-Routen pruefen direkt auf die Rolle statt auf hatRecht(),
+    // deshalb hier ebenso direkt statt ueber hatRecht().
+    sichtbar: ({ currentUser }) =>
+      istModulAktiv(currentUser, "nachunternehmer") &&
+      (currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ"),
   },
   {
     key: "material",

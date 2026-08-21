@@ -80,6 +80,7 @@ async def list_vorgaenge(
     abrechnungsart: str | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
     parent_vorgang_id: UUID | None = Query(default=None),
+    partner_id: UUID | None = Query(default=None),
     faellig_von: date | None = Query(default=None),
     faellig_bis: date | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -102,6 +103,8 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.standort_id == standort_id)
     if parent_vorgang_id:
         stmt = stmt.where(Vorgang.parent_vorgang_id == parent_vorgang_id)
+    if partner_id:
+        stmt = stmt.where(Vorgang.partner_id == partner_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:

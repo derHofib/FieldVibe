@@ -34,6 +34,7 @@ const MODUL_LABEL: Record<MandantModul, string> = {
   fahrzeuge: "Fahrzeug-Zuweisung & Inventur",
   highlights: "Highlights (Story-Feature)",
   karten: "Kartenansicht (Mapbox)",
+  nachunternehmer: "Partner-/Nachunternehmer-Verwaltung",
   postfach: "Postfach (persönlicher E-Mail-Client)",
 };
 const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];

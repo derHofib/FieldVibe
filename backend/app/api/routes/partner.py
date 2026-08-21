@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,8 +57,14 @@ def _nachweis_to_read(nachweis: PartnerNachweis) -> PartnerNachweisRead:
     response_model=list[PartnerRead],
     dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
 )
-async def list_partner(session: AsyncSession = Depends(get_db)) -> list[Partner]:
-    result = await session.execute(select(Partner).order_by(Partner.name))
+async def list_partner(
+    q: str | None = Query(default=None, description="Suche in Name/Gewerk"),
+    session: AsyncSession = Depends(get_db),
+) -> list[Partner]:
+    stmt = select(Partner).order_by(Partner.name)
+    if q:
+        stmt = stmt.where(Partner.name.ilike(f"%{q}%") | Partner.gewerk.ilike(f"%{q}%"))
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 

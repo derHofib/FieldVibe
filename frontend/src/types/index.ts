@@ -93,6 +93,7 @@ export type MandantModul =
   | "fahrzeuge"
   | "highlights"
   | "karten"
+  | "nachunternehmer"
   | "postfach";
 
 export interface Mandant {
@@ -373,6 +374,10 @@ export interface Vorgang {
   erstellt_von_kundenportal_zugang_id: string | null;
   erstellt_von: string | null;
   wiedervorlage_am: string | null;
+  partner_id: string | null;
+  partner_freigabe_status: PartnerFreigabeStatus | null;
+  partner_ablehnung_grund: string | null;
+  partner_honorar_netto: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1000,6 +1005,51 @@ export interface LeistungsverzeichnisVerwendung {
   menge: string;
   verwendet_von: string;
   created_at: string;
+}
+
+// --- Partner/Nachunternehmer -----------------------------------------------
+
+export interface Partner {
+  id: string;
+  name: string;
+  gewerk: string | null;
+  ansprechpartner: string | null;
+  telefon: string | null;
+  email: string | null;
+  adresse: Adresse | null;
+  notiz: string | null;
+  aktiv: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PartnerNachweisTyp =
+  | "freistellungsbescheinigung"
+  | "haftpflichtversicherung"
+  | "gewerbeanmeldung"
+  | "handwerksrolle"
+  | "avv_dsgvo"
+  | "sonstiges";
+
+export interface PartnerNachweis {
+  id: string;
+  partner_id: string;
+  typ: PartnerNachweisTyp;
+  gueltig_bis: string | null;
+  dokument_s3_key: string | null;
+  notiz: string | null;
+  abgelaufen: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PartnerFreigabeStatus = "vorgeschlagen" | "angenommen" | "abgelehnt";
+
+export interface VorgangPartnerZuweisungResponse {
+  vorgang_id: string;
+  partner_id: string | null;
+  partner_freigabe_status: PartnerFreigabeStatus | null;
+  freistellungsbescheinigung_warnung: boolean;
 }
 
 export type MaterialBewegungTyp = "eingang" | "umlagerung" | "verwendung" | "korrektur";
