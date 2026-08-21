@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.board import Board
 from app.schemas.board import (
+    BoardAnhangUpload,
+    BoardAnhangUrl,
     BoardCreate,
     BoardHintergrundUrl,
     BoardListItem,
@@ -22,6 +24,19 @@ router = APIRouter(
 )
 
 _HINTERGRUND_MAX_BYTES = 8 * 1024 * 1024
+_ANHANG_MAX_BYTES = 15 * 1024 * 1024
+
+
+def _anhang_praefix(board_id: UUID) -> str:
+    return f"boards/{board_id}/anhang/"
+
+
+def _anhang_key_pruefen(board_id: UUID, key: str) -> None:
+    # Der Key kommt vom Client (steckt im Node-data, nicht in der DB) --
+    # ohne diese Pruefung koennte ein Nutzer ueber die Query-Param beliebige
+    # Objekte eines fremden Boards/Mandanten abfragen oder loeschen.
+    if not key.startswith(_anhang_praefix(board_id)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anhang nicht gefunden")
 
 
 async def _get_board(session: AsyncSession, board_id: UUID) -> Board:
@@ -149,3 +164,44 @@ async def get_board_hintergrund_url(
     if board.hintergrund_object_key is None:
         return BoardHintergrundUrl(url=None)
     return BoardHintergrundUrl(url=storage_service.presigned_get_url(board.hintergrund_object_key))
+
+
+@router.post("/{board_id}/anhang", response_model=BoardAnhangUpload)
+async def upload_board_anhang(
+    board_id: UUID,
+    file: UploadFile,
+    session: AsyncSession = Depends(get_db),
+) -> BoardAnhangUpload:
+    await _get_board(session, board_id)
+    data = await file.read()
+    if len(data) > _ANHANG_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)"
+        )
+
+    dateiname = file.filename or "anhang"
+    key = storage_service.new_board_anhang_key(board_id, dateiname)
+    await storage_service.upload_bytes(key, data, file.content_type or "application/octet-stream")
+    return BoardAnhangUpload(object_key=key, url=storage_service.presigned_get_url(key), dateiname=dateiname)
+
+
+@router.get("/{board_id}/anhang-url", response_model=BoardAnhangUrl)
+async def get_board_anhang_url(
+    board_id: UUID,
+    key: str,
+    session: AsyncSession = Depends(get_db),
+) -> BoardAnhangUrl:
+    await _get_board(session, board_id)
+    _anhang_key_pruefen(board_id, key)
+    return BoardAnhangUrl(url=storage_service.presigned_get_url(key))
+
+
+@router.delete("/{board_id}/anhang", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_board_anhang(
+    board_id: UUID,
+    key: str,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    await _get_board(session, board_id)
+    _anhang_key_pruefen(board_id, key)
+    await storage_service.delete_object(key)

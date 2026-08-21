@@ -47,3 +47,18 @@ class BoardListItem(BaseModel):
 
 class BoardHintergrundUrl(BaseModel):
     url: str | None
+
+
+# Fuer die Datei-Anhang-Karte (office/boards/nodes/DateiAnhangNode.tsx):
+# anders als der Grundriss ist der Object-Key hier nicht in einer eigenen
+# Board-Spalte gepflegt, sondern lebt im Node-data innerhalb inhalt_json --
+# jedes Attachment gehoert zu genau einem Node, ein Board kann beliebig viele
+# haben.
+class BoardAnhangUpload(BaseModel):
+    object_key: str
+    url: str
+    dateiname: str
+
+
+class BoardAnhangUrl(BaseModel):
+    url: str

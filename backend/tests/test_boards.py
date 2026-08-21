@@ -117,3 +117,65 @@ async def test_board_hintergrund_upload_und_url(client, make_mandant, make_user)
     entfernt = await client.delete(f"/api/boards/{board_id}/hintergrund", headers=auth_headers(token))
     assert entfernt.status_code == 200
     assert entfernt.json()["hintergrund_object_key"] is None
+
+
+@pytest.mark.asyncio
+async def test_board_anhang_upload_url_und_delete(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    create = await client.post(
+        "/api/boards",
+        headers=auth_headers(token),
+        json={"name": "Anhang-Board", "board_typ": "frei"},
+    )
+    board_id = create.json()["id"]
+
+    upload = await client.post(
+        f"/api/boards/{board_id}/anhang",
+        headers=auth_headers(token),
+        files={"file": ("wartungsplan.pdf", b"%PDF-1.4 fake", "application/pdf")},
+    )
+    assert upload.status_code == 200
+    body = upload.json()
+    assert body["dateiname"] == "wartungsplan.pdf"
+    key = body["object_key"]
+    assert key.startswith(f"boards/{board_id}/anhang/")
+
+    url = await client.get(f"/api/boards/{board_id}/anhang-url", headers=auth_headers(token), params={"key": key})
+    assert url.status_code == 200
+    assert url.json()["url"]
+
+    zu_gross = await client.post(
+        f"/api/boards/{board_id}/anhang",
+        headers=auth_headers(token),
+        files={"file": ("riesig.bin", b"x" * (15 * 1024 * 1024 + 1), "application/octet-stream")},
+    )
+    assert zu_gross.status_code == 400
+
+    geloescht = await client.delete(
+        f"/api/boards/{board_id}/anhang", headers=auth_headers(token), params={"key": key}
+    )
+    assert geloescht.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_board_anhang_url_fremder_key_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    create = await client.post(
+        "/api/boards",
+        headers=auth_headers(token),
+        json={"name": "Anhang-Board B", "board_typ": "frei"},
+    )
+    board_id = create.json()["id"]
+
+    fremd = await client.get(
+        f"/api/boards/{board_id}/anhang-url",
+        headers=auth_headers(token),
+        params={"key": "boards/anderes-board/anhang/datei.pdf"},
+    )
+    assert fremd.status_code == 404
