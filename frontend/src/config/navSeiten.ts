@@ -149,7 +149,7 @@ export const NAV_SEITEN: NavSeite[] = [
   },
   {
     key: "rechnungen",
-    label: "Rechnungen",
+    label: "Rechnungen & Angebote",
     icon: Receipt,
     tone: "cyan",
     route: "/rechnungen",

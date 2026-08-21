@@ -1,9 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, FileCheck2, Receipt } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ExternalLink, FileCheck2, Plus, Receipt } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { angeboteApi, rechnungenApi } from "../../api/endpoints";
+import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
+import { NeueRechnungForm } from "../../components/NeueRechnungForm";
+import { SearchableSelect } from "../../components/SearchableSelect";
 import { EmptyState } from "../../components/EmptyState";
 import { AngebotDetailPage } from "../../pages/feld/AngebotDetailPage";
 import { RechnungDetailPage } from "../../pages/feld/RechnungDetailPage";
@@ -47,6 +49,42 @@ const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
   abgelehnt: "Abgelehnt",
 };
 
+function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; onErfolg: (id: string) => void }) {
+  const [kundeId, setKundeId] = useState("");
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+
+  const erstellen = useMutation({
+    mutationFn: () => angeboteApi.create({ kunde_id: kundeId }),
+    onSuccess: (angebot) => onErfolg(angebot.id),
+  });
+
+  return (
+    <Karte className="mb-4 space-y-3 p-4">
+      <div>
+        <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
+        <SearchableSelect
+          value={kundeId}
+          onChange={setKundeId}
+          placeholder="Kunde wählen…"
+          options={(kunden ?? []).map((k) => ({ value: k.id, label: `${k.name} (${k.kundennummer})` }))}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          disabled={!kundeId || erstellen.isPending}
+          onClick={() => erstellen.mutate()}
+          className="btn-clay flex-1 rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Angebot anlegen
+        </button>
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-slate-500 dark:text-stone-400">
+          Abbrechen
+        </button>
+      </div>
+    </Karte>
+  );
+}
+
 function euro(betrag: string): string {
   const zahl = Number(betrag);
   if (Number.isNaN(zahl)) return betrag;
@@ -58,8 +96,10 @@ function euro(betrag: string): string {
  * gepflegt werden muessen. */
 export function OfficeRechnungenPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [bereich, setBereich] = useState<Bereich>("rechnungen");
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
+  const [zeigeNeu, setZeigeNeu] = useState(false);
 
   const rechnungen = useQuery({
     queryKey: ["rechnungen", {}],
@@ -75,6 +115,13 @@ export function OfficeRechnungenPage() {
   const wechsle = (neu: Bereich) => {
     setBereich(neu);
     setGewaehlt(null);
+    setZeigeNeu(false);
+  };
+
+  const neuAngelegt = (id: string) => {
+    setZeigeNeu(false);
+    setGewaehlt(id);
+    queryClient.invalidateQueries({ queryKey: [bereich === "rechnungen" ? "rechnungen" : "angebote"] });
   };
 
   const eintraege =
@@ -109,7 +156,23 @@ export function OfficeRechnungenPage() {
     <div>
       <SeitenKopf titel={bereich === "rechnungen" ? "Rechnungen" : "Angebote"} anzahl={eintraege.length}>
         <AnsichtUmschalter wert={bereich} optionen={UMSCHALTER} onWechsel={wechsle} />
+        <button
+          onClick={() => setZeigeNeu((v) => !v)}
+          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:border-stone-700 dark:text-stone-300 dark:hover:text-stone-100"
+        >
+          <Plus size={13} strokeWidth={2.5} />
+          {bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}
+        </button>
       </SeitenKopf>
+
+      {zeigeNeu &&
+        (bereich === "rechnungen" ? (
+          <div className="mb-4">
+            <NeueRechnungForm onAbbrechen={() => setZeigeNeu(false)} onErfolg={neuAngelegt} />
+          </div>
+        ) : (
+          <NeuesAngebotForm onAbbrechen={() => setZeigeNeu(false)} onErfolg={neuAngelegt} />
+        ))}
 
       {rechnungen.data && bereich === "rechnungen" && (
         <div className="mb-4 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-stone-400">
