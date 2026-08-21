@@ -57,6 +57,65 @@ async def test_mandant_admin_kann_partner_anlegen_und_lesen(client, make_mandant
 
 
 @pytest.mark.asyncio
+async def test_partner_create_mit_mehreren_ansprechpartnern(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/partner",
+        headers=auth_headers(token),
+        json={
+            "name": "Elektro Muster GmbH",
+            "gewerk": "Elektroinstallation",
+            "ansprechpartner": [
+                {
+                    "name": "Erika Musterfrau",
+                    "position": "Geschäftsführerin",
+                    "operativ": False,
+                    "eskalationsstufe": 3,
+                },
+                {"name": "Max Meier", "position": "Bauleiter", "operativ": True},
+            ],
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert len(body["ansprechpartner"]) == 2
+    assert body["ansprechpartner"][0]["name"] == "Erika Musterfrau"
+    assert body["ansprechpartner"][0]["eskalationsstufe"] == 3
+    assert body["ansprechpartner"][1]["operativ"] is True
+    assert "id" in body["ansprechpartner"][0]
+
+
+@pytest.mark.asyncio
+async def test_partner_update_ansprechpartner_liste_persistiert(
+    client, make_mandant, make_user, make_partner
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.patch(
+        f"/api/partner/{partner.id}",
+        headers=auth_headers(token),
+        json={
+            "ansprechpartner": [
+                {"name": "Hans Meier", "position": "Polier", "operativ": True, "eskalationsstufe": 1}
+            ]
+        },
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()["ansprechpartner"]) == 1
+    assert resp.json()["ansprechpartner"][0]["operativ"] is True
+
+    erneut = await client.get(f"/api/partner/{partner.id}", headers=auth_headers(token))
+    assert len(erneut.json()["ansprechpartner"]) == 1
+    assert erneut.json()["ansprechpartner"][0]["name"] == "Hans Meier"
+
+
+@pytest.mark.asyncio
 async def test_techniker_darf_partner_nicht_anlegen(client, make_mandant, make_user):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")

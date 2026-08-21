@@ -79,7 +79,11 @@ async def create_partner(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Partner:
-    partner = Partner(mandant_id=auth.mandant_id, **body.model_dump())
+    # mode="json" statt des Standard-model_dump(): ansprechpartner enthaelt
+    # verschachtelte AnsprechpartnerEintrag-Objekte, deren id ein UUID-Objekt
+    # ist -- die JSONB-Spalte braucht dafuer JSON-taugliche Werte, siehe
+    # create_kunde in app/api/routes/kunden.py fuer dasselbe Muster.
+    partner = Partner(mandant_id=auth.mandant_id, **body.model_dump(mode="json"))
     session.add(partner)
     await session.flush()
     return partner
@@ -109,7 +113,8 @@ async def update_partner(
     if partner is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner nicht gefunden")
 
-    changes = body.model_dump(exclude_unset=True)
+    # mode="json" -- siehe create_partner oben.
+    changes = body.model_dump(exclude_unset=True, mode="json")
     for field, value in changes.items():
         setattr(partner, field, value)
     await session.flush()

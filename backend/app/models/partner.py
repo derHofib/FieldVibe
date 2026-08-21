@@ -26,7 +26,11 @@ class Partner(TimestampMixin, Base):
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
     gewerk: Mapped[str | None] = mapped_column(Text)
-    ansprechpartner: Mapped[str | None] = mapped_column(Text)
+    # Liste von AnsprechpartnerEintrag (siehe app/schemas/kontakt.py) --
+    # exakt dasselbe Muster wie Kunde.ansprechpartner, mehrere Kontakte mit
+    # Kategorisierung (operativ/Eskalationsstufe) statt eines einzelnen
+    # Namens.
+    ansprechpartner: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     telefon: Mapped[str | None] = mapped_column(Text)
     email: Mapped[str | None] = mapped_column(Text)
     adresse: Mapped[dict | None] = mapped_column(JSONB)

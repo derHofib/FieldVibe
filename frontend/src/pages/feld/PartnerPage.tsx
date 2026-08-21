@@ -31,7 +31,6 @@ export function PartnerPage() {
   const [neuerPartner, setNeuerPartner] = useState({
     name: "",
     gewerk: "",
-    ansprechpartner: "",
     telefon: "",
     email: "",
     strasse: "",
@@ -64,7 +63,6 @@ export function PartnerPage() {
       return partnerApi.create({
         name: neuerPartner.name,
         gewerk: neuerPartner.gewerk || undefined,
-        ansprechpartner: neuerPartner.ansprechpartner || undefined,
         telefon: neuerPartner.telefon || undefined,
         email: neuerPartner.email || undefined,
         adresse,
@@ -77,7 +75,6 @@ export function PartnerPage() {
       setNeuerPartner({
         name: "",
         gewerk: "",
-        ansprechpartner: "",
         telefon: "",
         email: "",
         strasse: "",
@@ -126,23 +123,13 @@ export function PartnerPage() {
               className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Ansprechpartner</label>
-              <input
-                value={neuerPartner.ansprechpartner}
-                onChange={(e) => setNeuerPartner({ ...neuerPartner, ansprechpartner: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Telefon</label>
-              <input
-                value={neuerPartner.telefon}
-                onChange={(e) => setNeuerPartner({ ...neuerPartner, telefon: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-            </div>
+          <div>
+            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Telefon</label>
+            <input
+              value={neuerPartner.telefon}
+              onChange={(e) => setNeuerPartner({ ...neuerPartner, telefon: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">E-Mail</label>
@@ -189,8 +176,8 @@ export function PartnerPage() {
             />
           </div>
           <p className="text-xs text-slate-400 dark:text-stone-500">
-            Nachweise (Freistellungsbescheinigung, Haftpflicht, ...) können anschließend auf der
-            Partner-Detailseite hinterlegt werden.
+            Ansprechpartner und Nachweise (Freistellungsbescheinigung, Haftpflicht, ...) können
+            anschließend auf der Partner-Detailseite hinterlegt werden.
           </p>
           <button
             disabled={!neuerPartner.name.trim() || createMutation.isPending}

@@ -3,7 +3,9 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.schemas.kontakt import AnsprechpartnerEintrag
 
 PartnerNachweisTyp = Literal[
     "freistellungsbescheinigung",
@@ -19,7 +21,7 @@ PartnerFreigabeStatus = Literal["vorgeschlagen", "angenommen", "abgelehnt"]
 class PartnerCreate(BaseModel):
     name: str
     gewerk: str | None = None
-    ansprechpartner: str | None = None
+    ansprechpartner: list[AnsprechpartnerEintrag] = Field(default_factory=list)
     telefon: str | None = None
     email: str | None = None
     adresse: dict | None = None
@@ -29,7 +31,7 @@ class PartnerCreate(BaseModel):
 class PartnerUpdate(BaseModel):
     name: str | None = None
     gewerk: str | None = None
-    ansprechpartner: str | None = None
+    ansprechpartner: list[AnsprechpartnerEintrag] | None = None
     telefon: str | None = None
     email: str | None = None
     adresse: dict | None = None
@@ -43,7 +45,7 @@ class PartnerRead(BaseModel):
     id: UUID
     name: str
     gewerk: str | None
-    ansprechpartner: str | None
+    ansprechpartner: list[AnsprechpartnerEintrag]
     telefon: str | None
     email: str | None
     adresse: dict | None

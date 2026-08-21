@@ -355,7 +355,6 @@ export const partnerApi = {
   create: (body: {
     name: string;
     gewerk?: string;
-    ansprechpartner?: string;
     telefon?: string;
     email?: string;
     adresse?: Adresse;
@@ -366,7 +365,7 @@ export const partnerApi = {
     body: Partial<{
       name: string;
       gewerk: string | null;
-      ansprechpartner: string | null;
+      ansprechpartner: Ansprechpartner[];
       telefon: string | null;
       email: string | null;
       adresse: Adresse | null;

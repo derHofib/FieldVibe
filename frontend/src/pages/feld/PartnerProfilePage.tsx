@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { partnerApi, vorgaengeApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import type { Adresse, PartnerFreigabeStatus, PartnerNachweisTyp } from "../../types";
@@ -43,7 +44,6 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
   const [bearbeiten, setBearbeiten] = useState(false);
   const [form, setForm] = useState({
     gewerk: "",
-    ansprechpartner: "",
     telefon: "",
     email: "",
     strasse: "",
@@ -56,7 +56,6 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
     mutationFn: () =>
       partnerApi.update(partnerId, {
         gewerk: form.gewerk || null,
-        ansprechpartner: form.ansprechpartner || null,
         telefon: form.telefon || null,
         email: form.email || null,
         adresse:
@@ -90,7 +89,6 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
             onClick={() => {
               setForm({
                 gewerk: partner.gewerk ?? "",
-                ansprechpartner: partner.ansprechpartner ?? "",
                 telefon: partner.telefon ?? "",
                 email: partner.email ?? "",
                 ...leereAdresse(partner.adresse),
@@ -109,10 +107,6 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
             <dd className="text-right text-slate-700 dark:text-stone-300">
               {partner.gewerk || <span className="text-slate-400 dark:text-stone-500">nicht hinterlegt</span>}
             </dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-slate-500 dark:text-stone-400">Ansprechpartner</dt>
-            <dd className="text-right text-slate-700 dark:text-stone-300">{partner.ansprechpartner || "—"}</dd>
           </div>
           <div className="flex justify-between gap-2">
             <dt className="text-slate-500 dark:text-stone-400">Telefon</dt>
@@ -145,20 +139,12 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
         placeholder="Gewerk / was die Firma macht"
         className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          value={form.ansprechpartner}
-          onChange={(e) => setForm({ ...form, ansprechpartner: e.target.value })}
-          placeholder="Ansprechpartner"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-        />
-        <input
-          value={form.telefon}
-          onChange={(e) => setForm({ ...form, telefon: e.target.value })}
-          placeholder="Telefon"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-        />
-      </div>
+      <input
+        value={form.telefon}
+        onChange={(e) => setForm({ ...form, telefon: e.target.value })}
+        placeholder="Telefon"
+        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+      />
       <input
         type="email"
         value={form.email}
@@ -400,6 +386,7 @@ function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
 export function PartnerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -408,6 +395,11 @@ export function PartnerProfilePage() {
     queryFn: () => partnerApi.get(id!),
     enabled: !!id,
   });
+  // Kein eigener Rechte-Bereich fuer Partner (siehe app/api/routes/
+  // partner.py, require_roles ohne "custom") -- analog zu
+  // config/navSeiten.ts direkt auf die Rolle geprueft.
+  const kannVerwalten =
+    currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
 
   const deleteMutation = useMutation({
     mutationFn: () => partnerApi.remove(id!),
@@ -448,6 +440,14 @@ export function PartnerProfilePage() {
       </div>
 
       <Stammdaten partnerId={id!} />
+      <AnsprechpartnerVerwaltung
+        liste={partner.ansprechpartner}
+        kannVerwalten={kannVerwalten}
+        onSpeichern={async (naechsteListe) => {
+          await partnerApi.update(id!, { ansprechpartner: naechsteListe });
+          queryClient.invalidateQueries({ queryKey: ["partner", id] });
+        }}
+      />
       <NachweiseVerwaltung partnerId={id!} />
       <ZugewieseneVorgaenge partnerId={id!} />
     </div>

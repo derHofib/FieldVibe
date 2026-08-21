@@ -1013,7 +1013,7 @@ export interface Partner {
   id: string;
   name: string;
   gewerk: string | null;
-  ansprechpartner: string | null;
+  ansprechpartner: Ansprechpartner[];
   telefon: string | null;
   email: string | null;
   adresse: Adresse | null;
