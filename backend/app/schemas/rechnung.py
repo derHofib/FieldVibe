@@ -33,7 +33,7 @@ class RechnungPositionRead(BaseModel):
 # Objekt in der DB, wird bei jedem Aufruf frisch aus Material-Verwendungen
 # und Zeiterfassung berechnet.
 class RechnungPositionVorschlag(BaseModel):
-    quelle: str  # "material" | "zeit"
+    quelle: str  # "material" | "zeit" | "leistung"
     beschreibung: str
     menge: Decimal
     einheit: str

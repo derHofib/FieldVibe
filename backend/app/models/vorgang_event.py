@@ -23,6 +23,7 @@ EVENT_TYPEN = (
     "unterschrift",
     "eingangsrechnung_status",
     "formular",
+    "leistung",
 )
 
 

@@ -30,6 +30,7 @@ from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
+from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition
 from app.models.lieferant import Lieferant
 from app.models.mangel import Mangel
 from app.models.material import Material
@@ -68,6 +69,7 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
             ("anlage", "kunde_id"),
             ("vorgang_anfrage", "kunde_id"),
             ("vorgang", "kunde_id"),
+            ("leistungsverzeichnis_position", "kunde_id"),
         ),
     ),
     "standort": EntityKind(
@@ -113,6 +115,10 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
         Lieferant, "name", (("bestellung", "lieferant_id"), ("eingangsrechnung", "lieferant_id"))
     ),
     "material": EntityKind(Material, "bezeichnung", (("material_bedarf", "material_id"),)),
+    # Verwendungen (Buchungshistorie an Vorgaengen) kaskadieren bewusst
+    # nicht mit -- gleiche Regel wie bei material_verwendungen, siehe
+    # delete_material in app/api/routes/material.py.
+    "leistungsverzeichnis_position": EntityKind(LeistungsverzeichnisPosition, "bezeichnung"),
     "material_bedarf": EntityKind(MaterialBedarf, None),
     "bestellung": EntityKind(Bestellung, "bestellnummer"),
     "dauerauftrag": EntityKind(

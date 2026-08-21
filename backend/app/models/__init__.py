@@ -23,6 +23,10 @@ from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
+from app.models.leistungsverzeichnis import (
+    LeistungsverzeichnisPosition,
+    LeistungsverzeichnisVerwendung,
+)
 from app.models.lieferant import Lieferant
 from app.models.mail_account import MailAccount
 from app.models.mail_attachment import MailAttachment
@@ -78,6 +82,8 @@ __all__ = [
     "Kunde",
     "KundeZuweisung",
     "KundenportalZugang",
+    "LeistungsverzeichnisPosition",
+    "LeistungsverzeichnisVerwendung",
     "Lieferant",
     "MailAccount",
     "MailAttachment",

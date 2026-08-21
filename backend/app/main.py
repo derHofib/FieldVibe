@@ -30,6 +30,7 @@ from app.api.routes import (
     kunden,
     kundenportal,
     kundenportal_auth,
+    leistungsverzeichnis,
     lieferanten,
     maengel,
     mail_accounts,
@@ -137,6 +138,7 @@ app.include_router(eingangsrechnungen.router)
 app.include_router(auswertung.router)
 app.include_router(kundenportal_auth.router)
 app.include_router(kundenportal.router)
+app.include_router(leistungsverzeichnis.router)
 app.include_router(highlights.router)
 app.include_router(material.router)
 app.include_router(lieferanten.router)

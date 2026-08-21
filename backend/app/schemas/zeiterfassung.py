@@ -49,6 +49,10 @@ class ZeiterfassungManuellCreate(BaseModel):
     vorgang_id: UUID | None = None
     taetigkeit: str | None = None
     abrechenbar: bool = False
+    # Stundenverrechnungssatz aus dem Leistungsverzeichnis des Kunden --
+    # nur sinnvoll bei kategorie="auftrag" (Praefung erfolgt in der Route,
+    # nicht hier, analog zur vorgang_id-Pflichtpruefung).
+    lv_position_id: UUID | None = None
 
     @model_validator(mode="after")
     def _ende_nach_start(self) -> "ZeiterfassungManuellCreate":
@@ -64,6 +68,7 @@ class ZeiterfassungUpdate(BaseModel):
     vorgang_id: UUID | None = None
     taetigkeit: str | None = None
     abrechenbar: bool | None = None
+    lv_position_id: UUID | None = None
 
 
 class ZeiterfassungRead(BaseModel):
@@ -81,5 +86,6 @@ class ZeiterfassungRead(BaseModel):
     taetigkeit: str | None
     abrechenbar: bool
     kategorie: ZeiterfassungKategorie
+    lv_position_id: UUID | None
     created_at: datetime
     updated_at: datetime

@@ -51,3 +51,12 @@ class Zeiterfassung(TimestampMixin, Base):
     taetigkeit: Mapped[str | None] = mapped_column(Text)
     abrechenbar: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     kategorie: Mapped[str] = mapped_column(Text, nullable=False, default="auftrag")
+    # Optionaler Stundenverrechnungssatz aus dem Leistungsverzeichnis des
+    # Kunden -- koppelt diese Zeiterfassung an einen Preis, ohne den
+    # Automatismus zu erzwingen (Start/Stop-Timer setzt ihn nie, nur die
+    # manuelle Erfassung/nachtraegliches PATCH).
+    lv_position_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("leistungsverzeichnis_positionen.id"),
+        nullable=True,
+    )

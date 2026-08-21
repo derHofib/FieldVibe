@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
@@ -6,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kunde import Kunde
+from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition, LeistungsverzeichnisVerwendung
 from app.models.mandant import Mandant
 from app.models.material import Material, MaterialVerwendung
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
@@ -36,12 +38,17 @@ async def positionen_vorschlaege_fuer_vorgang(
     session: AsyncSession, vorgang_id: UUID
 ) -> list[RechnungPositionVorschlag]:
     """Fuer die "Vorschlaege aus Vorgang"-Box in RechnungDetailPage: fasst am
-    Vorgang bereits erfasstes Material und abrechenbare Zeiterfassung zu
-    Positionsvorschlaegen zusammen, die der Nutzer gezielt uebernimmt (kein
-    Automatismus -- siehe add_position, der weiterhin die einzige Stelle
-    bleibt, die tatsaechlich eine Position anlegt). Der Stundensatz ist
-    nirgends im Modell hinterlegt, daher bleibt einzelpreis bei der
-    Zeit-Position bewusst 0 -- der Nutzer traegt ihn beim Uebernehmen ein."""
+    Vorgang bereits erfasstes Material, abrechenbare Zeiterfassung UND
+    Leistungsverzeichnis(LV)-Nutzung zu Positionsvorschlaegen zusammen, die
+    der Nutzer gezielt uebernimmt (kein Automatismus -- siehe add_position,
+    der weiterhin die einzige Stelle bleibt, die tatsaechlich eine Position
+    anlegt). Zeiterfassung ohne lv_position_id hat nirgends einen
+    hinterlegten Stundensatz, daher bleibt einzelpreis dort bewusst 0 -- der
+    Nutzer traegt ihn beim Uebernehmen ein. Zeiterfassung MIT
+    lv_position_id ist per SVS-Kopplung bereits bepreist (siehe
+    ZeiterfassungManuellForm) und wird zusammen mit direkten
+    LeistungsverzeichnisVerwendungen als eine "leistung"-Position je
+    LV-Eintrag ausgegeben."""
     material_stmt = (
         select(
             Material.bezeichnung,
@@ -66,15 +73,18 @@ async def positionen_vorschlaege_fuer_vorgang(
         for bezeichnung, einheit, einzelpreis, menge in material_result.all()
     ]
 
-    zeit_stmt = select(
+    # Zeit OHNE SVS-Kopplung: eine einzelne unbepreiste Sammelposition, wie
+    # bisher -- der Nutzer traegt den Stundensatz manuell ein.
+    zeit_ohne_lv_stmt = select(
         func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at))
     ).where(
         Zeiterfassung.vorgang_id == vorgang_id,
         Zeiterfassung.kategorie == "auftrag",
         Zeiterfassung.abrechenbar.is_(True),
         Zeiterfassung.ende_at.is_not(None),
+        Zeiterfassung.lv_position_id.is_(None),
     )
-    sekunden = (await session.execute(zeit_stmt)).scalar_one_or_none()
+    sekunden = (await session.execute(zeit_ohne_lv_stmt)).scalar_one_or_none()
     if sekunden:
         stunden = (Decimal(str(sekunden)) / _STUNDE).quantize(Decimal("0.01"))
         vorschlaege.append(
@@ -86,6 +96,54 @@ async def positionen_vorschlaege_fuer_vorgang(
                 einzelpreis=Decimal("0"),
             )
         )
+
+    # Leistungsverzeichnis: Zeit MIT SVS-Kopplung (nach lv_position_id
+    # gruppiert und in Stunden umgerechnet) plus direkte
+    # LeistungsverzeichnisVerwendungen -- beide Quellen sind bereits ueber
+    # die LV-Position bepreist, daher je Position zu EINEM Vorschlag
+    # zusammengefasst.
+    zeit_je_lv_stmt = (
+        select(
+            Zeiterfassung.lv_position_id,
+            func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)),
+        )
+        .where(
+            Zeiterfassung.vorgang_id == vorgang_id,
+            Zeiterfassung.kategorie == "auftrag",
+            Zeiterfassung.abrechenbar.is_(True),
+            Zeiterfassung.ende_at.is_not(None),
+            Zeiterfassung.lv_position_id.is_not(None),
+        )
+        .group_by(Zeiterfassung.lv_position_id)
+    )
+    leistung_mengen: dict[UUID, Decimal] = defaultdict(Decimal)
+    for lv_position_id, lv_sekunden in (await session.execute(zeit_je_lv_stmt)).all():
+        leistung_mengen[lv_position_id] += (Decimal(str(lv_sekunden)) / _STUNDE).quantize(Decimal("0.01"))
+
+    verwendung_stmt = (
+        select(LeistungsverzeichnisVerwendung.lv_position_id, func.sum(LeistungsverzeichnisVerwendung.menge))
+        .where(LeistungsverzeichnisVerwendung.vorgang_id == vorgang_id)
+        .group_by(LeistungsverzeichnisVerwendung.lv_position_id)
+    )
+    for lv_position_id, menge in (await session.execute(verwendung_stmt)).all():
+        leistung_mengen[lv_position_id] += menge
+
+    if leistung_mengen:
+        lv_positionen_result = await session.execute(
+            select(LeistungsverzeichnisPosition).where(
+                LeistungsverzeichnisPosition.id.in_(leistung_mengen.keys())
+            )
+        )
+        for lv_position in sorted(lv_positionen_result.scalars().all(), key=lambda p: p.bezeichnung):
+            vorschlaege.append(
+                RechnungPositionVorschlag(
+                    quelle="leistung",
+                    beschreibung=lv_position.bezeichnung,
+                    menge=leistung_mengen[lv_position.id].quantize(Decimal("0.01")),
+                    einheit=lv_position.einheit,
+                    einzelpreis=lv_position.einzelpreis,
+                )
+            )
 
     return vorschlaege
 

@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.db.session import system_session
 from app.models.anlage import Anlage
+from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition, LeistungsverzeichnisVerwendung
 from app.models.material import Material, MaterialBestand, MaterialVerwendung
 from app.models.rechnung import Rechnung
 from app.models.vorgang import Vorgang
@@ -520,3 +521,98 @@ async def test_positionsvorschlaege_aus_material_und_zeit(
     )
     assert leer.status_code == 200
     assert leer.json() == []
+
+
+@pytest.mark.asyncio
+async def test_positionsvorschlaege_aus_leistungsverzeichnis(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """Zeit MIT SVS-Kopplung und eine direkte LV-Verwendung fliessen als EINE
+    bereits bepreiste "leistung"-Position je LV-Eintrag ein -- unbepreiste
+    Zeit ohne SVS bleibt getrennt in der bisherigen "zeit"-Sammelposition."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    async with system_session() as session:
+        svs = LeistungsverzeichnisPosition(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            bezeichnung="Stundensatz Monteur",
+            einheit="Std",
+            einzelpreis=Decimal("65.00"),
+            ist_stundensatz=True,
+        )
+        pauschale = LeistungsverzeichnisPosition(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            bezeichnung="Anfahrtspauschale",
+            einheit="Stk",
+            einzelpreis=Decimal("29.00"),
+            ist_stundensatz=False,
+        )
+        session.add_all([svs, pauschale])
+        await session.flush()
+
+        start = datetime.now(timezone.utc)
+        session.add(
+            Zeiterfassung(
+                mandant_id=mandant.id,
+                vorgang_id=vorgang.id,
+                techniker_id=admin.id,
+                start_at=start,
+                ende_at=start + timedelta(hours=2),
+                kategorie="auftrag",
+                abrechenbar=True,
+                lv_position_id=svs.id,
+            )
+        )
+        # Unbepreiste Zeit ohne SVS bleibt separat.
+        session.add(
+            Zeiterfassung(
+                mandant_id=mandant.id,
+                vorgang_id=vorgang.id,
+                techniker_id=admin.id,
+                start_at=start,
+                ende_at=start + timedelta(hours=1),
+                kategorie="auftrag",
+                abrechenbar=True,
+            )
+        )
+        session.add(
+            LeistungsverzeichnisVerwendung(
+                mandant_id=mandant.id,
+                lv_position_id=pauschale.id,
+                vorgang_id=vorgang.id,
+                menge=Decimal("1"),
+                verwendet_von=admin.id,
+            )
+        )
+        await session.commit()
+
+    created = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "vorgang_id": str(vorgang.id)},
+    )
+    rechnung_id = created.json()["id"]
+
+    resp = await client.get(f"/api/rechnungen/{rechnung_id}/positionsvorschlaege", headers=auth_headers(token))
+    assert resp.status_code == 200
+    vorschlaege = resp.json()
+
+    leistungs_vorschlaege = [v for v in vorschlaege if v["quelle"] == "leistung"]
+    assert len(leistungs_vorschlaege) == 2
+
+    svs_vorschlag = next(v for v in leistungs_vorschlaege if v["beschreibung"] == "Stundensatz Monteur")
+    assert svs_vorschlag["menge"] == "2.00"
+    assert svs_vorschlag["einzelpreis"] == "65.00"
+
+    pauschale_vorschlag = next(v for v in leistungs_vorschlaege if v["beschreibung"] == "Anfahrtspauschale")
+    assert pauschale_vorschlag["menge"] == "1.00"
+    assert pauschale_vorschlag["einzelpreis"] == "29.00"
+
+    zeit_vorschlag = next(v for v in vorschlaege if v["quelle"] == "zeit")
+    assert zeit_vorschlag["menge"] == "1.00"

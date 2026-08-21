@@ -15,6 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -415,6 +416,26 @@ async def stop_timer(
     return eintrag
 
 
+async def _lv_position_pruefen(
+    session: AsyncSession, lv_position_id: UUID, vorgang: Vorgang | None
+) -> None:
+    """SVS-Kopplung: der gewaehlte Stundenverrechnungssatz muss ein
+    ist_stundensatz-Eintrag sein und zum Kunden des Vorgangs gehoeren --
+    sonst koennte man versehentlich den Satz eines fremden Kunden
+    hinterlegen. RLS scopt session.get() bereits auf den eigenen Mandanten."""
+    lv_position = await session.get(LeistungsverzeichnisPosition, lv_position_id)
+    if lv_position is None or lv_position.geloescht_am is not None or not lv_position.ist_stundensatz:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stundenverrechnungssatz nicht gefunden",
+        )
+    if vorgang is not None and lv_position.kunde_id != vorgang.kunde_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stundenverrechnungssatz gehört nicht zum Kunden dieses Vorgangs",
+        )
+
+
 async def _vorgang_pruefen_fuer_manuellen_eintrag(
     session: AsyncSession, auth: AuthContext, vorgang_id: UUID
 ) -> Vorgang:
@@ -451,8 +472,11 @@ async def manuellen_eintrag_anlegen(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kategorie 'auftrag' braucht einen Vorgang",
         )
+    vorgang = None
     if body.vorgang_id is not None:
-        await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, body.vorgang_id)
+        vorgang = await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, body.vorgang_id)
+    if body.lv_position_id is not None:
+        await _lv_position_pruefen(session, body.lv_position_id, vorgang)
 
     eintrag = Zeiterfassung(
         mandant_id=auth.mandant_id,
@@ -463,6 +487,7 @@ async def manuellen_eintrag_anlegen(
         taetigkeit=body.taetigkeit,
         abrechenbar=body.abrechenbar,
         kategorie=body.kategorie,
+        lv_position_id=body.lv_position_id,
     )
     session.add(eintrag)
     await session.flush()
@@ -497,8 +522,13 @@ async def zeiterfassung_aktualisieren(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kategorie 'auftrag' braucht einen Vorgang",
         )
+    neuer_vorgang = None
     if "vorgang_id" in daten and daten["vorgang_id"] is not None:
-        await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, daten["vorgang_id"])
+        neuer_vorgang = await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, daten["vorgang_id"])
+    if "lv_position_id" in daten and daten["lv_position_id"] is not None:
+        if neuer_vorgang is None and eintrag.vorgang_id is not None:
+            neuer_vorgang = await session.get(Vorgang, eintrag.vorgang_id)
+        await _lv_position_pruefen(session, daten["lv_position_id"], neuer_vorgang)
 
     neuer_start = daten.get("start_at", eintrag.start_at)
     neues_ende = daten.get("ende_at", eintrag.ende_at)
