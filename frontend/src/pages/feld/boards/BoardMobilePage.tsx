@@ -147,6 +147,19 @@ export function BoardMobilePage() {
     setOffeneNotizId(null);
   };
 
+  const notizDuplizieren = (nodeId: string) => {
+    const original = nodes.find((n) => n.id === nodeId);
+    if (!original) return;
+    const kopie: BoardNode = {
+      ...original,
+      id: `${original.type}-${Date.now()}`,
+      position: { x: original.position.x + 24, y: original.position.y + 24 },
+      data: JSON.parse(JSON.stringify(original.data)),
+    };
+    setNodes((ns) => [...ns, kopie]);
+    setOffeneNotizId(null);
+  };
+
   const notizLoeschen = (nodeId: string) => {
     setNodes((ns) => ns.filter((n) => n.id !== nodeId));
     setEdges((es) => es.filter((e) => e.source !== nodeId && e.target !== nodeId));
@@ -283,6 +296,7 @@ export function BoardMobilePage() {
           onSpeichern={(daten) => notizAktualisieren(offenerNode.id, daten)}
           onLoeschen={() => notizLoeschen(offenerNode.id)}
           onVorgangErstellt={(vorgangId) => notizUebernommen(offenerNode.id, vorgangId)}
+          onDuplizieren={() => notizDuplizieren(offenerNode.id)}
         />
       )}
     </div>

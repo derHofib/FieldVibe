@@ -15,14 +15,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpRight,
   Compass,
+  Copy,
   Frame,
   Image as ImageIcon,
   Link2,
+  ListChecks,
   MapPin,
   MousePointer2,
+  Paperclip,
   Save,
   Share2,
   Shapes,
+  Smile,
   Square,
   Trash2,
   Type as TypeIcon,
@@ -74,7 +78,27 @@ function neueNode(typ: BoardNodeTyp, position: { x: number; y: number }): BoardN
       return { ...basis, data: { label: "" } };
     case "grundriss":
       return { ...basis, data: { url: "" }, draggable: false, selectable: false, zIndex: -2 };
+    case "checkliste":
+      return { ...basis, data: { titel: "", punkte: [] } };
+    case "datei_anhang":
+      return { ...basis, data: { dateiname: "", object_key: null } };
+    case "sticker":
+      return { ...basis, data: { icon: "" } };
   }
+}
+
+// Tiefe Kopie statt Referenz -- sonst teilen sich Original und Duplikat
+// dasselbe data-Objekt und ein updateNodeData() am einen Node veraendert
+// unbemerkt auch den anderen.
+function kloneNode(node: BoardNode): BoardNode {
+  const id = `${node.type}-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+  return {
+    ...node,
+    id,
+    position: { x: node.position.x + 32, y: node.position.y + 32 },
+    selected: false,
+    data: JSON.parse(JSON.stringify(node.data)),
+  };
 }
 
 const HINZUFUEGEN_WERKZEUGE: { typ: BoardNodeTyp; label: string; icon: typeof MousePointer2 }[] = [
@@ -84,6 +108,9 @@ const HINZUFUEGEN_WERKZEUGE: { typ: BoardNodeTyp; label: string; icon: typeof Mo
   { typ: "rahmen", label: "Rahmen", icon: Frame },
   { typ: "bild", label: "Bild", icon: ImageIcon },
   { typ: "vorgang_karte", label: "Vorgang verknüpfen", icon: Link2 },
+  { typ: "checkliste", label: "Checkliste", icon: ListChecks },
+  { typ: "datei_anhang", label: "Datei anhängen", icon: Paperclip },
+  { typ: "sticker", label: "Sticker", icon: Smile },
 ];
 
 function OfficeBoardCanvas({ boardId }: { boardId: string }) {
@@ -104,6 +131,8 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<BoardEdge>([]);
   const [geladen, setGeladen] = useState(false);
   const [zeigeExport, setZeigeExport] = useState(false);
+  const [kontextMenu, setKontextMenu] = useState<{ x: number; y: number; node: BoardNode } | null>(null);
+  const zwischenablage = useRef<BoardNode[]>([]);
 
   // Board-Inhalt einmalig beim Laden in den React-Flow-Zustand uebernehmen.
   useEffect(() => {
@@ -186,6 +215,40 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
     },
     [nodes, screenToFlowPosition, setNodes],
   );
+
+  // Duplizieren per Strg/Cmd+D sowie Kopieren/Einfuegen per Strg/Cmd+C/V --
+  // in eine interne Ref statt die System-Zwischenablage, damit kein
+  // Berechtigungsdialog noetig ist und es unabhaengig vom Browser
+  // funktioniert. Eingaben in Text-/Input-Feldern (z.B. beim Tippen einer
+  // Notiz) werden bewusst ignoriert, sonst wuerde normales Text-Kopieren im
+  // Feld ein Board-Element duplizieren.
+  useEffect(() => {
+    function tastenAktion(e: KeyboardEvent) {
+      const ziel = e.target as HTMLElement;
+      const tippt = ziel.tagName === "INPUT" || ziel.tagName === "TEXTAREA" || ziel.isContentEditable;
+      if (tippt || (!e.ctrlKey && !e.metaKey)) return;
+
+      const taste = e.key.toLowerCase();
+      if (taste === "d") {
+        const ausgewaehlt = nodes.filter((n) => n.selected && n.type !== "grundriss");
+        if (ausgewaehlt.length === 0) return;
+        e.preventDefault();
+        const kopien = ausgewaehlt.map(kloneNode);
+        setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), ...kopien]);
+      } else if (taste === "c") {
+        const ausgewaehlt = nodes.filter((n) => n.selected && n.type !== "grundriss");
+        if (ausgewaehlt.length > 0) zwischenablage.current = ausgewaehlt;
+      } else if (taste === "v") {
+        if (zwischenablage.current.length === 0) return;
+        e.preventDefault();
+        const kopien = zwischenablage.current.map(kloneNode);
+        zwischenablage.current = kopien; // wiederholtes Einfuegen versetzt jedes Mal weiter
+        setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), ...kopien]);
+      }
+    }
+    window.addEventListener("keydown", tastenAktion);
+    return () => window.removeEventListener("keydown", tastenAktion);
+  }, [nodes, setNodes]);
 
   const grundrissHochladen = async (file: File) => {
     await boardsApi.hintergrundUpload(boardId, file);
@@ -317,10 +380,37 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
           nodeTypes={BOARD_NODE_TYPES}
           minZoom={0.2}
           maxZoom={2}
+          onNodeContextMenu={(event, node) => {
+            if (node.type === "grundriss") return;
+            event.preventDefault();
+            setKontextMenu({ x: event.clientX, y: event.clientY, node });
+          }}
+          onPaneClick={() => setKontextMenu(null)}
+          onNodeClick={() => setKontextMenu(null)}
+          onMoveStart={() => setKontextMenu(null)}
         >
           <Background gap={26} color="#cbd5e1" />
           <Controls showInteractive={false} />
         </ReactFlow>
+
+        {kontextMenu && (
+          <div
+            className="fixed z-30 w-44 rounded-lg border border-slate-100 bg-white py-1 text-sm shadow-xl dark:border-stone-800 dark:bg-stone-900"
+            style={{ left: kontextMenu.x, top: kontextMenu.y }}
+            onMouseLeave={() => setKontextMenu(null)}
+          >
+            <button
+              onClick={() => {
+                const kopie = kloneNode(kontextMenu.node);
+                setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), kopie]);
+                setKontextMenu(null);
+              }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-slate-600 hover:bg-slate-50 dark:text-stone-300 dark:hover:bg-stone-800"
+            >
+              <Copy size={13} strokeWidth={2} /> Duplizieren
+            </button>
+          </div>
+        )}
 
         <div className="pointer-events-none absolute inset-y-0 left-5 z-10 flex items-center">
           <div className="pointer-events-auto flex flex-col gap-1 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl dark:border-stone-800 dark:bg-stone-900">
@@ -364,6 +454,12 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
             <div className="my-1 h-px bg-slate-100 dark:bg-stone-800" />
             <span title="Verbinden: von einem Punkt am Rand einer Karte zur naechsten ziehen" className="flex h-9 w-9 items-center justify-center text-slate-300 dark:text-stone-600">
               <ArrowUpRight size={17} strokeWidth={2} />
+            </span>
+            <span
+              title="Duplizieren: Strg/Cmd+D oder Rechtsklick auf eine Karte · Kopieren/Einfügen: Strg/Cmd+C dann Strg/Cmd+V"
+              className="flex h-9 w-9 items-center justify-center text-slate-300 dark:text-stone-600"
+            >
+              <Copy size={15} strokeWidth={2} />
             </span>
           </div>
         </div>

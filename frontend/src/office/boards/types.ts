@@ -51,6 +51,27 @@ export interface GrundrissDaten extends Record<string, unknown> {
   url: string;
 }
 
+export interface ChecklistePunkt {
+  text: string;
+  erledigt: boolean;
+}
+
+export interface ChecklisteDaten extends Record<string, unknown> {
+  titel: string;
+  punkte: ChecklistePunkt[];
+}
+
+export interface DateiAnhangDaten extends Record<string, unknown> {
+  dateiname: string;
+  object_key: string | null;
+}
+
+// Kuratierte Auswahl statt freier Icon-Eingabe -- siehe STICKER_ICONS in
+// nodes/StickerNode.tsx fuer die Zuordnung Name -> lucide-Komponente.
+export interface StickerDaten extends Record<string, unknown> {
+  icon: string;
+}
+
 export type BoardNodeTyp =
   | "klebezettel"
   | "form"
@@ -61,7 +82,10 @@ export type BoardNodeTyp =
   | "anlagen_pin"
   | "prozess_schritt"
   | "prozess_entscheidung"
-  | "grundriss";
+  | "grundriss"
+  | "checkliste"
+  | "datei_anhang"
+  | "sticker";
 
 export type BoardNode = Node<Record<string, unknown>, BoardNodeTyp>;
 export type BoardEdge = Edge;

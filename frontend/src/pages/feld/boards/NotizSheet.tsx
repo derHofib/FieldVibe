@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Link2, Pencil, Trash2, X } from "lucide-react";
+import { AlertTriangle, Copy, Link2, Pencil, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
 import { kundenApi, maengelApi, vorgaengeApi } from "../../../api/endpoints";
@@ -115,12 +115,14 @@ export function NotizAktionSheet({
   onSpeichern,
   onLoeschen,
   onVorgangErstellt,
+  onDuplizieren,
 }: {
   daten: KlebezettelDaten;
   onAbbrechen: () => void;
   onSpeichern: (daten: KlebezettelDaten) => void;
   onLoeschen: () => void;
   onVorgangErstellt: (vorgangId: string) => void;
+  onDuplizieren?: () => void;
 }) {
   const [modus, setModus] = useState<"ansicht" | "bearbeiten" | "vorgang" | "mangel">("ansicht");
   const [text, setText] = useState(daten.text);
@@ -186,13 +188,25 @@ export function NotizAktionSheet({
         <div className={`flex-1 rounded-lg p-3 text-sm font-medium ${FARB_SWATCH[daten.farbe]} bg-opacity-60`}>
           {daten.text || <span className="opacity-60">(leer)</span>}
         </div>
-        <button
-          onClick={onAbbrechen}
-          aria-label="Schließen"
-          className="btn-touch flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
-        >
-          <X size={13} strokeWidth={2.5} />
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {onDuplizieren && (
+            <button
+              onClick={onDuplizieren}
+              aria-label="Duplizieren"
+              title="Duplizieren"
+              className="btn-touch flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+            >
+              <Copy size={13} strokeWidth={2.25} />
+            </button>
+          )}
+          <button
+            onClick={onAbbrechen}
+            aria-label="Schließen"
+            className="btn-touch flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+          >
+            <X size={13} strokeWidth={2.5} />
+          </button>
+        </div>
       </div>
 
       <p className="mt-4 mb-1.5 text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">

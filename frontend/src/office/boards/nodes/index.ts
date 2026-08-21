@@ -2,12 +2,15 @@ import type { NodeTypes } from "@xyflow/react";
 
 import { AnlagenPinNode } from "./AnlagenPinNode";
 import { BildNode } from "./BildNode";
+import { ChecklisteNode } from "./ChecklisteNode";
+import { DateiAnhangNode } from "./DateiAnhangNode";
 import { FormNode } from "./FormNode";
 import { GrundrissNode } from "./GrundrissNode";
 import { KlebezettelNode } from "./KlebezettelNode";
 import { ProzessEntscheidungNode } from "./ProzessEntscheidungNode";
 import { ProzessSchrittNode } from "./ProzessSchrittNode";
 import { RahmenNode } from "./RahmenNode";
+import { StickerNode } from "./StickerNode";
 import { TextNode } from "./TextNode";
 import { VorgangKarteNode } from "./VorgangKarteNode";
 
@@ -22,4 +25,7 @@ export const BOARD_NODE_TYPES: NodeTypes = {
   prozess_schritt: ProzessSchrittNode,
   prozess_entscheidung: ProzessEntscheidungNode,
   grundriss: GrundrissNode,
+  checkliste: ChecklisteNode,
+  datei_anhang: DateiAnhangNode,
+  sticker: StickerNode,
 };

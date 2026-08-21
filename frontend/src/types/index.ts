@@ -1490,3 +1490,13 @@ export interface BoardListItem {
 export interface BoardHintergrundUrl {
   url: string | null;
 }
+
+export interface BoardAnhangUpload {
+  object_key: string;
+  url: string;
+  dateiname: string;
+}
+
+export interface BoardAnhangUrl {
+  url: string;
+}

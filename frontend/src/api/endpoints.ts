@@ -17,6 +17,8 @@ import type {
   AuditLogEntry,
   Bestellung,
   Board,
+  BoardAnhangUpload,
+  BoardAnhangUrl,
   BoardHintergrundUrl,
   BoardListItem,
   BoardTyp,
@@ -440,6 +442,15 @@ export const boardsApi = {
   },
   hintergrundRemove: (id: string) => apiFetch<Board>(`/api/boards/${id}/hintergrund`, { method: "DELETE" }),
   hintergrundUrl: (id: string) => apiFetch<BoardHintergrundUrl>(`/api/boards/${id}/hintergrund-url`),
+  anhangUpload: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<BoardAnhangUpload>(`/api/boards/${id}/anhang`, formData);
+  },
+  anhangUrl: (id: string, key: string) =>
+    apiFetch<BoardAnhangUrl>(`/api/boards/${id}/anhang-url?key=${encodeURIComponent(key)}`),
+  anhangRemove: (id: string, key: string) =>
+    apiFetch<void>(`/api/boards/${id}/anhang?key=${encodeURIComponent(key)}`, { method: "DELETE" }),
 };
 
 export const gespeicherteFilterApi = {

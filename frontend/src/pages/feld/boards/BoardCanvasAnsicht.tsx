@@ -1,21 +1,25 @@
 import { Background, Controls, ReactFlow, ReactFlowProvider, type NodeTypes, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useQuery } from "@tanstack/react-query";
-import { Link2 } from "lucide-react";
+import { Link2, Paperclip } from "lucide-react";
 
 import { kundenApi, vorgaengeApi } from "../../../api/endpoints";
 import { STATUS_BADGE, STATUS_LABEL } from "../../../config/vorgangDarstellung";
+import { STICKER_ICONS } from "../../../office/boards/nodes/StickerNode";
 import type {
   AnlagenPinDaten,
   BildDaten,
   BoardEdge,
   BoardNode,
+  ChecklisteDaten,
+  DateiAnhangDaten,
   FormDaten,
   KlebezettelDaten,
   KlebezettelFarbe,
   ProzessEntscheidungDaten,
   ProzessSchrittDaten,
   RahmenDaten,
+  StickerDaten,
   TextDaten,
   VorgangKarteDaten,
 } from "../../../office/boards/types";
@@ -163,6 +167,38 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       if (!url) return null;
       return <img src={url} alt="Grundriss" className="block max-w-none select-none" draggable={false} />;
     }
+    case "checkliste": {
+      const { titel, punkte } = data as ChecklisteDaten;
+      const erledigt = punkte.filter((p) => p.erledigt).length;
+      return (
+        <div className="w-[170px] rounded-xl bg-white p-2.5 shadow-md dark:bg-stone-900">
+          <p className="truncate text-[11px] font-bold text-slate-700 dark:text-stone-200">{titel || "Checkliste"}</p>
+          <p className="mt-0.5 text-[10px] text-slate-400 dark:text-stone-500">
+            {erledigt}/{punkte.length} erledigt
+          </p>
+        </div>
+      );
+    }
+    case "datei_anhang": {
+      const { dateiname } = data as DateiAnhangDaten;
+      return (
+        <div className="flex w-[150px] items-center gap-1.5 rounded-xl bg-white p-2.5 shadow-md dark:bg-stone-900">
+          <Paperclip size={13} strokeWidth={2} className="shrink-0 text-cyan-600 dark:text-cyan-400" />
+          <span className="truncate text-[11px] font-medium text-slate-600 dark:text-stone-300">
+            {dateiname || "Kein Anhang"}
+          </span>
+        </div>
+      );
+    }
+    case "sticker": {
+      const { icon } = data as StickerDaten;
+      const Icon = STICKER_ICONS[icon];
+      return (
+        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-white bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-lg dark:border-stone-900">
+          {Icon && <Icon size={16} strokeWidth={2} />}
+        </div>
+      );
+    }
     default:
       return null;
   }
@@ -179,6 +215,9 @@ const MOBILE_NODE_TYPES: NodeTypes = {
   prozess_schritt: MobileNodeAnsicht,
   prozess_entscheidung: MobileNodeAnsicht,
   grundriss: MobileNodeAnsicht,
+  checkliste: MobileNodeAnsicht,
+  datei_anhang: MobileNodeAnsicht,
+  sticker: MobileNodeAnsicht,
 };
 
 /** Nur Ansehen -- kein Dragging/Verbinden per Touch, das braeuchte eine
