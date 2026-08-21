@@ -3,8 +3,9 @@ import { FileText } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { angeboteApi, kundenApi } from "../../api/endpoints";
+import { angeboteApi, kundenApi, leistungsverzeichnisApi } from "../../api/endpoints";
 import { EmailSection } from "../../components/EmailSection";
+import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotPositionstyp, AngebotStatus } from "../../types";
@@ -49,6 +50,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     einzelpreis: "0",
     positionstyp: "material",
   });
+  const [lvAuswahl, setLvAuswahl] = useState("");
 
   const deleteMutation = useMutation({
     mutationFn: () => angeboteApi.remove(id!),
@@ -67,6 +69,11 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     queryKey: ["kunde", angebot?.kunde_id],
     queryFn: () => kundenApi.get(angebot!.kunde_id),
     enabled: !!angebot,
+  });
+  const { data: leistungsverzeichnis } = useQuery({
+    queryKey: ["leistungsverzeichnis", angebot?.kunde_id],
+    queryFn: () => leistungsverzeichnisApi.list(angebot!.kunde_id),
+    enabled: showForm && !!angebot,
   });
 
   const addPositionMutation = useMutation({
@@ -89,6 +96,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         einzelpreis: "0",
         positionstyp: "material",
       });
+      setLvAuswahl("");
       queryClient.invalidateQueries({ queryKey: ["angebot", id] });
     },
   });
@@ -165,6 +173,36 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
 
         {showForm && (
           <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">
+            {(leistungsverzeichnis ?? []).length > 0 && (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+                  Aus Leistungsverzeichnis wählen (optional)
+                </label>
+                <SearchableSelect
+                  value={lvAuswahl}
+                  onChange={(v) => {
+                    setLvAuswahl(v);
+                    const position = (leistungsverzeichnis ?? []).find((p) => p.id === v);
+                    if (position) {
+                      setForm({
+                        ...form,
+                        beschreibung: position.bezeichnung,
+                        menge: "1",
+                        einheit: position.einheit,
+                        einzelpreis: position.einzelpreis,
+                        positionstyp: position.ist_stundensatz ? "arbeitszeit" : "material",
+                      });
+                    }
+                  }}
+                  placeholder="Position wählen…"
+                  options={(leistungsverzeichnis ?? []).map((p) => ({
+                    value: p.id,
+                    label: p.bezeichnung,
+                    sublabel: `${p.einzelpreis} €/${p.einheit}`,
+                  }))}
+                />
+              </div>
+            )}
             <div className="flex gap-1.5">
               {(["material", "arbeitszeit"] as AngebotPositionstyp[]).map((typ) => (
                 <button

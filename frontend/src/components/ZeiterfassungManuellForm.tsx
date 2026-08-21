@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
 import { ApiError } from "../api/client";
-import { vorgaengeApi, zeiterfassungApi } from "../api/endpoints";
+import { leistungsverzeichnisApi, vorgaengeApi, zeiterfassungApi } from "../api/endpoints";
 import type { ZeiterfassungKategorie } from "../types";
 import { SearchableSelect } from "./SearchableSelect";
 
@@ -42,12 +42,24 @@ export function ZeiterfassungManuellForm({
   const [vorgangId, setVorgangId] = useState("");
   const [taetigkeit, setTaetigkeit] = useState("");
   const [abrechenbar, setAbrechenbar] = useState(false);
+  const [lvPositionId, setLvPositionId] = useState("");
   const [fehler, setFehler] = useState<string | null>(null);
 
   const { data: vorgaenge } = useQuery({
     queryKey: ["vorgaenge-fuer-zeiterfassung"],
     queryFn: () => vorgaengeApi.list(),
     enabled: kategorie === "auftrag",
+  });
+
+  const ausgewaehlterVorgang = (vorgaenge ?? []).find((v) => v.id === vorgangId);
+
+  // SVS-Kopplung: der Stundenverrechnungssatz kommt aus dem Leistungs-
+  // verzeichnis des Kunden des gewaehlten Vorgangs -- nur relevant, wenn
+  // diese Zeit ueberhaupt abrechenbar ist.
+  const { data: stundensaetze } = useQuery({
+    queryKey: ["leistungsverzeichnis", ausgewaehlterVorgang?.kunde_id, "stundensaetze"],
+    queryFn: () => leistungsverzeichnisApi.list(ausgewaehlterVorgang!.kunde_id, true),
+    enabled: kategorie === "auftrag" && abrechenbar && !!ausgewaehlterVorgang,
   });
 
   const mutation = useMutation({
@@ -59,6 +71,7 @@ export function ZeiterfassungManuellForm({
         vorgang_id: kategorie === "auftrag" ? vorgangId || undefined : undefined,
         taetigkeit: taetigkeit || undefined,
         abrechenbar: kategorie === "auftrag" ? abrechenbar : false,
+        lv_position_id: kategorie === "auftrag" && abrechenbar ? lvPositionId || undefined : undefined,
       }),
     onSuccess: onGespeichert,
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Speichern fehlgeschlagen"),
@@ -162,6 +175,22 @@ export function ZeiterfassungManuellForm({
             />
             Abrechenbar
           </label>
+          {abrechenbar && (stundensaetze ?? []).length > 0 && (
+            <div className="mt-2">
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+                Stundenverrechnungssatz (optional)
+              </label>
+              <SearchableSelect
+                options={(stundensaetze ?? []).map((s) => ({
+                  value: s.id,
+                  label: `${s.bezeichnung} – ${s.einzelpreis} €/${s.einheit}`,
+                }))}
+                value={lvPositionId}
+                onChange={setLvPositionId}
+                placeholder="Kein Stundensatz"
+              />
+            </div>
+          )}
         </div>
       )}
 

@@ -55,6 +55,8 @@ import type {
   KundeProfil,
   KundenportalLinkInfo,
   KundenportalZugang,
+  LeistungsverzeichnisPosition,
+  LeistungsverzeichnisVerwendung,
   Leistungstyp,
   Lieferant,
   MailAccount,
@@ -775,6 +777,7 @@ export const zeiterfassungApi = {
     vorgang_id?: string;
     taetigkeit?: string;
     abrechenbar?: boolean;
+    lv_position_id?: string;
   }) =>
     apiFetch<Zeiterfassung>("/api/zeiterfassung/manuell", {
       method: "POST",
@@ -789,6 +792,7 @@ export const zeiterfassungApi = {
       vorgang_id: string | null;
       taetigkeit: string;
       abrechenbar: boolean;
+      lv_position_id: string | null;
     }>
   ) => apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   loeschen: (id: string) => apiFetch<void>(`/api/zeiterfassung/${id}`, { method: "DELETE" }),
@@ -1150,6 +1154,38 @@ export const materialApi = {
       body: JSON.stringify({ vorgang_id: vorgangId, lager_id: lagerId, menge }),
     }),
   remove: (id: string) => apiFetch<void>(`/api/material/${id}`, { method: "DELETE" }),
+};
+
+export const leistungsverzeichnisApi = {
+  list: (kundeId: string, nurStundensaetze = false) =>
+    apiFetch<LeistungsverzeichnisPosition[]>(
+      `/api/leistungsverzeichnis?kunde_id=${kundeId}${nurStundensaetze ? "&nur_stundensaetze=true" : ""}`
+    ),
+  create: (body: {
+    kunde_id: string;
+    bezeichnung: string;
+    einheit?: string;
+    einzelpreis?: string;
+    ist_stundensatz?: boolean;
+    notiz?: string;
+  }) => apiFetch<LeistungsverzeichnisPosition>("/api/leistungsverzeichnis", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }),
+  update: (
+    id: string,
+    body: Partial<Pick<LeistungsverzeichnisPosition, "bezeichnung" | "einheit" | "einzelpreis" | "ist_stundensatz" | "notiz">>,
+  ) =>
+    apiFetch<LeistungsverzeichnisPosition>(`/api/leistungsverzeichnis/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/leistungsverzeichnis/${id}`, { method: "DELETE" }),
+  verwenden: (lvPositionId: string, vorgangId: string, menge: string) =>
+    apiFetch<LeistungsverzeichnisVerwendung>(`/api/leistungsverzeichnis/${lvPositionId}/verwendung`, {
+      method: "POST",
+      body: JSON.stringify({ vorgang_id: vorgangId, menge }),
+    }),
 };
 
 export const lieferantenApi = {

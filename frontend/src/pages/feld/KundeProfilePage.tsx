@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Boxes, Inbox, MapPin, Repeat } from "lucide-react";
+import { Boxes, ClipboardList, Inbox, MapPin, Repeat } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -8,6 +8,7 @@ import {
   dauerauftraegeApi,
   kundenApi,
   kundenportalZugaengeApi,
+  leistungsverzeichnisApi,
   standorteApi,
   usersApi,
 } from "../../api/endpoints";
@@ -24,6 +25,7 @@ import type {
   Eskalationsstufe,
   Kunde,
   KundenportalZugang,
+  LeistungsverzeichnisPosition,
   Standort,
   User,
 } from "../../types";
@@ -790,6 +792,187 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
   );
 }
 
+function NeueLvPosition({ kundeId }: { kundeId: string }) {
+  const queryClient = useQueryClient();
+  const [zeigen, setZeigen] = useState(false);
+  const [bezeichnung, setBezeichnung] = useState("");
+  const [einheit, setEinheit] = useState("Stk");
+  const [einzelpreis, setEinzelpreis] = useState("");
+  const [istStundensatz, setIstStundensatz] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      leistungsverzeichnisApi.create({
+        kunde_id: kundeId,
+        bezeichnung,
+        einheit,
+        einzelpreis: einzelpreis || undefined,
+        ist_stundensatz: istStundensatz,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis", kundeId] });
+      setZeigen(false);
+      setBezeichnung("");
+      setEinheit("Stk");
+      setEinzelpreis("");
+      setIstStundensatz(false);
+      setError(null);
+    },
+    onError: (err) => setError(err instanceof ApiError ? err.message : "Position konnte nicht angelegt werden"),
+  });
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!bezeichnung.trim()) {
+      setError("Bitte eine Bezeichnung eingeben");
+      return;
+    }
+    createMutation.mutate();
+  }
+
+  if (!zeigen) {
+    return (
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+        + Neue Position anlegen
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
+        <input
+          autoFocus
+          value={bezeichnung}
+          onChange={(e) => setBezeichnung(e.target.value)}
+          placeholder="z.B. Stundensatz Monteur, Anfahrtspauschale"
+          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Einheit</label>
+          <input
+            value={einheit}
+            onChange={(e) => setEinheit(e.target.value)}
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            Einzelpreis (€)
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={einzelpreis}
+            onChange={(e) => setEinzelpreis(e.target.value)}
+            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          />
+        </div>
+      </div>
+      <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
+        <input
+          type="checkbox"
+          checked={istStundensatz}
+          onChange={(e) => setIstStundensatz(e.target.checked)}
+          className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+        />
+        Als Stundenverrechnungssatz in der Zeiterfassung wählbar
+      </label>
+      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={createMutation.isPending}
+          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          Anlegen
+        </button>
+        <button
+          type="button"
+          onClick={() => setZeigen(false)}
+          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+        >
+          Abbrechen
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function LvPositionZeile({ position, kundeId }: { position: LeistungsverzeichnisPosition; kundeId: string }) {
+  const queryClient = useQueryClient();
+  const removeMutation = useMutation({
+    mutationFn: () => leistungsverzeichnisApi.remove(position.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis", kundeId] }),
+  });
+
+  return (
+    <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div>
+        <div className="text-sm font-medium text-slate-800 dark:text-stone-100">
+          {position.bezeichnung}
+          {position.ist_stundensatz && (
+            <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
+              SVS
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-slate-400 dark:text-stone-500">
+          {position.einzelpreis} € / {position.einheit}
+        </div>
+      </div>
+      <button
+        onClick={() => {
+          if (window.confirm(`"${position.bezeichnung}" wirklich löschen?`)) removeMutation.mutate();
+        }}
+        disabled={removeMutation.isPending}
+        className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+      >
+        Löschen
+      </button>
+    </div>
+  );
+}
+
+function LeistungsverzeichnisVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kannVerwalten: boolean }) {
+  const { data: positionen } = useQuery({
+    queryKey: ["leistungsverzeichnis", kundeId],
+    queryFn: () => leistungsverzeichnisApi.list(kundeId),
+  });
+
+  return (
+    <div>
+      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
+        Leistungsverzeichnis
+        <span className="ml-2 font-normal text-slate-400 dark:text-stone-500">(optional)</span>
+      </h2>
+      {!positionen || positionen.length === 0 ? (
+        <EmptyState
+          icon={ClipboardList}
+          text="Kein Leistungsverzeichnis angelegt."
+          className="py-4"
+        />
+      ) : (
+        <div className="space-y-2">
+          {positionen.map((p) => (
+            <LvPositionZeile key={p.id} position={p} kundeId={kundeId} />
+          ))}
+        </div>
+      )}
+      {kannVerwalten && (
+        <div className="mt-2">
+          <NeueLvPosition kundeId={kundeId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AnlageAktivToggle({ anlage, kundeId }: { anlage: Anlage; kundeId: string }) {
   const queryClient = useQueryClient();
   const toggleMutation = useMutation({
@@ -1250,6 +1433,8 @@ export function KundeProfilePage() {
       {kannVerwalten && <TechnikerZuweisung kundeId={id!} zugewiesen={profil.techniker} />}
 
       <StandorteVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
+
+      <LeistungsverzeichnisVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
 
       {kannVerwalten && istModulAktiv(currentUser, "kundenportal") && (
         <>

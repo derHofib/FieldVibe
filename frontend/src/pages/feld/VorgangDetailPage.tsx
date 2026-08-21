@@ -11,6 +11,7 @@ import {
   fahrzeugZuweisungenApi,
   highlightsApi,
   kundenApi,
+  leistungsverzeichnisApi,
   lieferantenApi,
   maengelApi,
   mandantEinstellungenApi,
@@ -106,6 +107,7 @@ const EVENT_LABEL: Partial<Record<string, string>> = {
   termin: "Termin",
   rechnung_status: "Rechnungsstatus aktualisiert",
   unterschrift: "Unterschrift erfasst",
+  leistung: "Leistung erfasst",
 };
 
 const NEU_MATERIAL = "__neu__";
@@ -115,7 +117,7 @@ const ANCHOR_ABSCHNITTE: { ziel: string; label: string }[] = [
   { ziel: "abschnitt-zeit", label: "Zeit" },
   { ziel: "abschnitt-termine", label: "Termine" },
   { ziel: "abschnitt-maengel", label: "Mängel" },
-  { ziel: "abschnitt-material", label: "Material" },
+  { ziel: "abschnitt-material", label: "Positionen" },
   { ziel: "abschnitt-verlauf", label: "Verlauf" },
 ];
 
@@ -323,6 +325,9 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const [materialId, setMaterialId] = useState("");
   const [materialMenge, setMaterialMenge] = useState("");
   const [materialLagerId, setMaterialLagerId] = useState("");
+  const [showLeistungForm, setShowLeistungForm] = useState(false);
+  const [lvPositionId, setLvPositionId] = useState("");
+  const [lvMenge, setLvMenge] = useState("");
   const [showBedarfForm, setShowBedarfForm] = useState(false);
   const [bedarfMaterialId, setBedarfMaterialId] = useState("");
   const [bedarfMenge, setBedarfMenge] = useState("");
@@ -612,6 +617,23 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setMaterialMenge("");
       setMaterialLagerId("");
       queryClient.invalidateQueries({ queryKey: ["material"] });
+      queryClient.invalidateQueries({ queryKey: ["stories"] });
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+    },
+  });
+
+  const { data: leistungsverzeichnis } = useQuery({
+    queryKey: ["leistungsverzeichnis", kunde?.id],
+    queryFn: () => leistungsverzeichnisApi.list(kunde!.id),
+    enabled: showLeistungForm && !!kunde,
+  });
+
+  const leistungVerwendenMutation = useMutation({
+    mutationFn: () => leistungsverzeichnisApi.verwenden(lvPositionId, id!, lvMenge),
+    onSuccess: () => {
+      setShowLeistungForm(false);
+      setLvPositionId("");
+      setLvMenge("");
       queryClient.invalidateQueries({ queryKey: ["stories"] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
@@ -1732,9 +1754,9 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       <div id="abschnitt-material" className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Material</h2>
-          <div className="flex gap-3">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setShowBedarfForm((v) => !v)}
               className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -1746,6 +1768,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
             >
               {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
+            </button>
+            <button
+              onClick={() => setShowLeistungForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            >
+              {showLeistungForm ? "Abbrechen" : "+ Leistung verwenden"}
             </button>
           </div>
         </div>
@@ -1964,6 +1992,54 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   ? materialVerwendenMutation.error.message
                   : "Fehler beim Erfassen"}
               </p>
+            )}
+          </div>
+        )}
+
+        {showLeistungForm && (
+          <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+            {(leistungsverzeichnis ?? []).length === 0 ? (
+              <p className="text-xs text-slate-500 dark:text-stone-400">
+                Für diesen Kunden ist kein Leistungsverzeichnis hinterlegt.
+              </p>
+            ) : (
+              <>
+                <SearchableSelect
+                  value={lvPositionId}
+                  onChange={setLvPositionId}
+                  placeholder="Position wählen…"
+                  options={(leistungsverzeichnis ?? []).map((p) => ({
+                    value: p.id,
+                    label: p.bezeichnung,
+                    sublabel: `${p.einzelpreis} €/${p.einheit}`,
+                  }))}
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={lvMenge}
+                    onChange={(e) => setLvMenge(e.target.value)}
+                    placeholder="Menge"
+                    className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  />
+                  <button
+                    disabled={!lvPositionId || !lvMenge || leistungVerwendenMutation.isPending}
+                    onClick={() => leistungVerwendenMutation.mutate()}
+                    className="btn-touch shrink-0 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  >
+                    Erfassen
+                  </button>
+                </div>
+                {leistungVerwendenMutation.isError && (
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    {leistungVerwendenMutation.error instanceof ApiError
+                      ? leistungVerwendenMutation.error.message
+                      : "Fehler beim Erfassen"}
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}

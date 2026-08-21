@@ -412,7 +412,8 @@ export type VorgangEventType =
   | "termin"
   | "rechnung_status"
   | "system"
-  | "unterschrift";
+  | "unterschrift"
+  | "leistung";
 
 export interface VorgangEvent {
   id: number;
@@ -626,6 +627,7 @@ export interface Zeiterfassung {
   taetigkeit: string | null;
   abrechenbar: boolean;
   kategorie: ZeiterfassungKategorie;
+  lv_position_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -785,7 +787,7 @@ export interface RechnungPosition {
 // Zeiterfassung des verknuepften Vorgangs berechnet -- kein persistiertes
 // Objekt, daher keine id.
 export interface RechnungPositionVorschlag {
-  quelle: "material" | "zeit";
+  quelle: "material" | "zeit" | "leistung";
   beschreibung: string;
   menge: string;
   einheit: string;
@@ -971,6 +973,29 @@ export interface MaterialVerwendung {
   id: string;
   material_id: string;
   lager_id: string;
+  vorgang_id: string;
+  menge: string;
+  verwendet_von: string;
+  created_at: string;
+}
+
+// --- Leistungsverzeichnis (LV) ---------------------------------------------
+
+export interface LeistungsverzeichnisPosition {
+  id: string;
+  kunde_id: string;
+  bezeichnung: string;
+  einheit: string;
+  einzelpreis: string;
+  ist_stundensatz: boolean;
+  notiz: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeistungsverzeichnisVerwendung {
+  id: string;
+  lv_position_id: string;
   vorgang_id: string;
   menge: string;
   verwendet_von: string;
