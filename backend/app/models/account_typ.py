@@ -21,6 +21,7 @@ RECHTE_BEREICHE = (
     "statistik",
     "mitarbeiterverwaltung",
     "formulare",
+    "partner",
 )
 RECHTE_AKTIONEN = ("sehen", "erstellen", "bearbeiten", "loeschen")
 

@@ -1182,7 +1182,8 @@ export type RechteBereich =
   | "abrechnung"
   | "statistik"
   | "mitarbeiterverwaltung"
-  | "formulare";
+  | "formulare"
+  | "partner";
 export type RechteAktion = "sehen" | "erstellen" | "bearbeiten" | "loeschen";
 
 export interface RechteMatrixEintrag {

@@ -58,13 +58,11 @@ class PartnerRead(BaseModel):
 class PartnerNachweisCreate(BaseModel):
     typ: PartnerNachweisTyp
     gueltig_bis: date | None = None
-    dokument_s3_key: str | None = None
     notiz: str | None = None
 
 
 class PartnerNachweisUpdate(BaseModel):
     gueltig_bis: date | None = None
-    dokument_s3_key: str | None = None
     notiz: str | None = None
 
 
@@ -80,6 +78,14 @@ class PartnerNachweisRead(BaseModel):
     abgelaufen: bool
     created_at: datetime
     updated_at: datetime
+
+
+class PartnerNachweisUploadResponse(BaseModel):
+    dokument_s3_key: str
+
+
+class PartnerNachweisUrl(BaseModel):
+    url: str
 
 
 class PartnerZugangUpdate(BaseModel):

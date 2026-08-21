@@ -286,7 +286,7 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
   );
 }
 
-function NachweiseVerwaltung({ partnerId }: { partnerId: string }) {
+function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; kannVerwalten: boolean }) {
   const queryClient = useQueryClient();
   const { data: nachweise } = useQuery({
     queryKey: ["partner-nachweise", partnerId],
@@ -297,6 +297,17 @@ function NachweiseVerwaltung({ partnerId }: { partnerId: string }) {
     mutationFn: (nachweisId: string) => partnerApi.nachweisEntfernen(partnerId, nachweisId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partner-nachweise", partnerId] }),
   });
+
+  const uploadMutation = useMutation({
+    mutationFn: ({ nachweisId, file }: { nachweisId: string; file: File }) =>
+      partnerApi.nachweisHochladen(partnerId, nachweisId, file),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partner-nachweise", partnerId] }),
+  });
+
+  async function herunterladen(nachweisId: string) {
+    const { url } = await partnerApi.nachweisUrl(partnerId, nachweisId);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   const abgelaufeneAnzahl = (nachweise ?? []).filter((n) => n.abgelaufen).length;
 
@@ -317,9 +328,9 @@ function NachweiseVerwaltung({ partnerId }: { partnerId: string }) {
           {nachweise!.map((n) => (
             <div
               key={n.id}
-              className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-stone-800/60"
+              className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-stone-800/60"
             >
-              <div>
+              <div className="min-w-0">
                 <div className="font-medium text-slate-700 dark:text-stone-200">{NACHWEIS_TYP_LABEL[n.typ]}</div>
                 <div className="text-xs text-slate-400 dark:text-stone-500">
                   {n.gueltig_bis
@@ -330,18 +341,45 @@ function NachweiseVerwaltung({ partnerId }: { partnerId: string }) {
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => removeMutation.mutate(n.id)}
-                disabled={removeMutation.isPending}
-                className="btn-touch text-xs text-red-700 dark:text-red-400"
-              >
-                Entfernen
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {n.dokument_s3_key && (
+                  <button
+                    onClick={() => herunterladen(n.id)}
+                    className="btn-touch text-xs text-cyan-700 dark:text-cyan-400"
+                  >
+                    Herunterladen
+                  </button>
+                )}
+                {kannVerwalten && (
+                  <label className="btn-touch cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200">
+                    {n.dokument_s3_key ? "Ersetzen" : "Hochladen"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      disabled={uploadMutation.isPending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadMutation.mutate({ nachweisId: n.id, file });
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+                {kannVerwalten && (
+                  <button
+                    onClick={() => removeMutation.mutate(n.id)}
+                    disabled={removeMutation.isPending}
+                    className="btn-touch text-xs text-red-700 dark:text-red-400"
+                  >
+                    Entfernen
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
-      <NeuerNachweis partnerId={partnerId} />
+      {kannVerwalten && <NeuerNachweis partnerId={partnerId} />}
     </div>
   );
 }
@@ -387,7 +425,7 @@ export function PartnerProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data: partner, isLoading } = useQuery({
@@ -395,11 +433,7 @@ export function PartnerProfilePage() {
     queryFn: () => partnerApi.get(id!),
     enabled: !!id,
   });
-  // Kein eigener Rechte-Bereich fuer Partner (siehe app/api/routes/
-  // partner.py, require_roles ohne "custom") -- analog zu
-  // config/navSeiten.ts direkt auf die Rolle geprueft.
-  const kannVerwalten =
-    currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
+  const kannVerwalten = hatRecht("partner", "bearbeiten");
 
   const deleteMutation = useMutation({
     mutationFn: () => partnerApi.remove(id!),
@@ -448,7 +482,7 @@ export function PartnerProfilePage() {
           queryClient.invalidateQueries({ queryKey: ["partner", id] });
         }}
       />
-      <NachweiseVerwaltung partnerId={id!} />
+      <NachweiseVerwaltung partnerId={id!} kannVerwalten={kannVerwalten} />
       <ZugewieseneVorgaenge partnerId={id!} />
     </div>
   );

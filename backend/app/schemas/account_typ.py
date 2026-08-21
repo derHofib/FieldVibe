@@ -12,6 +12,7 @@ RechteBereich = Literal[
     "statistik",
     "mitarbeiterverwaltung",
     "formulare",
+    "partner",
 ]
 RechteAktion = Literal["sehen", "erstellen", "bearbeiten", "loeschen"]
 

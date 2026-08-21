@@ -375,10 +375,7 @@ export const partnerApi = {
   ) => apiFetch<Partner>(`/api/partner/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/partner/${id}`, { method: "DELETE" }),
   nachweise: (id: string) => apiFetch<PartnerNachweis[]>(`/api/partner/${id}/nachweise`),
-  nachweisAnlegen: (
-    id: string,
-    body: { typ: PartnerNachweisTyp; gueltig_bis?: string; dokument_s3_key?: string; notiz?: string },
-  ) =>
+  nachweisAnlegen: (id: string, body: { typ: PartnerNachweisTyp; gueltig_bis?: string; notiz?: string }) =>
     apiFetch<PartnerNachweis>(`/api/partner/${id}/nachweise`, {
       method: "POST",
       body: JSON.stringify(body),
@@ -386,7 +383,7 @@ export const partnerApi = {
   nachweisAktualisieren: (
     id: string,
     nachweisId: string,
-    body: Partial<{ gueltig_bis: string | null; dokument_s3_key: string | null; notiz: string | null }>,
+    body: Partial<{ gueltig_bis: string | null; notiz: string | null }>,
   ) =>
     apiFetch<PartnerNachweis>(`/api/partner/${id}/nachweise/${nachweisId}`, {
       method: "PATCH",
@@ -394,6 +391,16 @@ export const partnerApi = {
     }),
   nachweisEntfernen: (id: string, nachweisId: string) =>
     apiFetch<void>(`/api/partner/${id}/nachweise/${nachweisId}`, { method: "DELETE" }),
+  nachweisHochladen: (id: string, nachweisId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    return apiFetchForm<{ dokument_s3_key: string }>(
+      `/api/partner/${id}/nachweise/${nachweisId}/upload`,
+      formData,
+    );
+  },
+  nachweisUrl: (id: string, nachweisId: string) =>
+    apiFetch<{ url: string }>(`/api/partner/${id}/nachweise/${nachweisId}/url`),
 };
 
 export const technikerZuweisungenApi = {

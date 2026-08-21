@@ -371,12 +371,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
   const kannDisponieren = hatRecht("vorgaenge", "bearbeiten");
   const kannLoeschen = hatRecht("vorgaenge", "loeschen");
-  // Kein eigener Rechte-Bereich fuer Partner (siehe app/api/routes/
-  // partner.py, require_roles ohne "custom") -- deshalb direkt auf die
-  // Rolle geprueft, analog zum "partner"-Eintrag in config/navSeiten.ts.
   const kannPartnerVerwalten =
-    istModulAktiv(currentUser, "nachunternehmer") &&
-    (currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ");
+    istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "bearbeiten");
 
   const { data: vorgang } = useQuery({
     queryKey: ["vorgang", id],

@@ -1,13 +1,52 @@
+import uuid
 from datetime import date, timedelta
 
 import pytest
 
 from app.core.security import hash_password
 from app.db.session import system_session
+from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.mandant import Mandant
 from app.models.partner_nachweis import PartnerNachweis
 from app.models.partner_zugang import PartnerZugang
+from app.models.user import User
 from tests.conftest import auth_headers, login
+
+
+async def _make_custom_mit_partner_recht(mandant, *, aktionen: set[str]) -> AccountTyp:
+    """Legt einen Account-Typ mit expliziten "partner"-Rechten an -- die
+    Legacy-Rollen-Fixtures (siehe conftest._LEGACY_RECHTE) kennen den Bereich
+    "partner" nicht, daher hier direkt, analog zu
+    test_formulare.py:_make_custom_mit_formulare_recht."""
+    async with system_session() as session:
+        account_typ = AccountTyp(mandant_id=mandant.id, name=f"Partner-Rolle-{uuid.uuid4().hex[:6]}")
+        session.add(account_typ)
+        await session.flush()
+        for aktion in aktionen:
+            session.add(
+                AccountTypRecht(
+                    account_typ_id=account_typ.id, bereich="partner", aktion=aktion, erlaubt=True
+                )
+            )
+        await session.flush()
+        await session.refresh(account_typ)
+        return account_typ
+
+
+async def _make_custom_user(mandant, account_typ, *, password="hunter2!!"):
+    async with system_session() as session:
+        user = User(
+            mandant_id=mandant.id,
+            email=f"{uuid.uuid4().hex[:10]}@example.de",
+            password_hash=hash_password(password),
+            role="custom",
+            account_typ_id=account_typ.id,
+            name="Partner-Tester",
+        )
+        session.add(user)
+        await session.flush()
+        await session.refresh(user)
+        return user
 
 
 async def _make_zugang(mandant, partner, *, email=None, password="partner-pw-123", aktiv=True, name="Partner-Nutzer"):
@@ -128,6 +167,32 @@ async def test_techniker_darf_partner_nicht_anlegen(client, make_mandant, make_u
 
 
 @pytest.mark.asyncio
+async def test_custom_rolle_mit_partner_recht_darf_anlegen(client, make_mandant):
+    mandant = await make_mandant()
+    account_typ = await _make_custom_mit_partner_recht(mandant, aktionen={"sehen", "erstellen"})
+    user = await _make_custom_user(mandant, account_typ)
+    token = await login(client, user.email, "hunter2!!")
+
+    resp = await client.post(
+        "/api/partner", headers=auth_headers(token), json={"name": "Jetzt erlaubt"}
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_custom_rolle_ohne_partner_recht_darf_nicht_anlegen(client, make_mandant):
+    mandant = await make_mandant()
+    account_typ = await _make_custom_mit_partner_recht(mandant, aktionen={"sehen"})
+    user = await _make_custom_user(mandant, account_typ)
+    token = await login(client, user.email, "hunter2!!")
+
+    resp = await client.post(
+        "/api/partner", headers=auth_headers(token), json={"name": "Sollte nicht gehen"}
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_partner_ist_mandantengetrennt(client, make_mandant, make_user, make_partner):
     mandant_a = await make_mandant(name="Mandant A")
     mandant_b = await make_mandant(name="Mandant B")
@@ -184,6 +249,64 @@ async def test_freistellungsbescheinigung_nachweis_crud_und_ablauf_flag(
     )
     assert gueltig.status_code == 201
     assert gueltig.json()["abgelaufen"] is False
+
+
+@pytest.mark.asyncio
+async def test_nachweis_dokument_s3_key_nicht_direkt_settable(client, make_mandant, make_user, make_partner):
+    """dokument_s3_key darf nur ueber den Upload-Endpoint gesetzt werden --
+    Create/Update ignorieren ein mitgeschicktes dokument_s3_key stillschweigend
+    (Pydantic verwirft unbekannte Felder), siehe Sicherheitsbefund NIEDR-2."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        f"/api/partner/{partner.id}/nachweise",
+        headers=auth_headers(token),
+        json={"typ": "sonstiges", "dokument_s3_key": "partner-nachweise/anderer-mandant/geheim.pdf"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["dokument_s3_key"] is None
+
+
+@pytest.mark.asyncio
+async def test_nachweis_upload_und_url(client, make_mandant, make_user, make_partner):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    partner = await make_partner(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    nachweis = (
+        await client.post(
+            f"/api/partner/{partner.id}/nachweise",
+            headers=auth_headers(token),
+            json={"typ": "sonstiges"},
+        )
+    ).json()
+    nachweis_id = nachweis["id"]
+
+    upload = await client.post(
+        f"/api/partner/{partner.id}/nachweise/{nachweis_id}/upload",
+        headers=auth_headers(token),
+        files={"file": ("nachweis.pdf", b"%PDF-1.4 fake", "application/pdf")},
+    )
+    assert upload.status_code == 200
+    key = upload.json()["dokument_s3_key"]
+    assert key.startswith(f"partner-nachweise/{partner.id}/")
+
+    url = await client.get(
+        f"/api/partner/{partner.id}/nachweise/{nachweis_id}/url", headers=auth_headers(token)
+    )
+    assert url.status_code == 200
+    assert url.json()["url"]
+
+    zu_gross = await client.post(
+        f"/api/partner/{partner.id}/nachweise/{nachweis_id}/upload",
+        headers=auth_headers(token),
+        files={"file": ("riesig.bin", b"x" * (15 * 1024 * 1024 + 1), "application/octet-stream")},
+    )
+    assert zu_gross.status_code == 400
 
 
 # --- Vorgang-Zuweisung -------------------------------------------------------

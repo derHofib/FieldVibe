@@ -12,19 +12,13 @@ import { istModulAktiv } from "../../utils/module";
 /** Partner-/Nachunternehmer-Verwaltung -- Firmen, denen einzelne Vorgaenge
  * (komplett oder als Teilleistung) delegiert werden koennen, siehe
  * VorgangDetailPage.tsx "Nachunternehmer"-Karte. Bewusst analog zur
- * Kundenverwaltung (KundenPage.tsx) aufgebaut. Die Backend-Routen erlauben
- * aktuell nur mandant_admin/loesch_operativ (siehe app/api/routes/
- * partner.py, require_roles ohne "custom") -- deshalb hier direkt auf die
- * Rolle statt auf hatRecht() geprueft, es gibt (noch) keinen eigenen
- * Rechte-Bereich fuer Partner. */
+ * Kundenverwaltung (KundenPage.tsx) aufgebaut. */
 export function PartnerPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const kannSehen =
-    istModulAktiv(currentUser, "nachunternehmer") &&
-    (currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ");
+  const kannSehen = istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "sehen");
 
   const [showForm, setShowForm] = useState(false);
   const [suche, setSuche] = useState("");

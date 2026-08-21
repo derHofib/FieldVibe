@@ -118,12 +118,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "amber",
     route: "/partner",
     kategorie: "Arbeit",
-    // Kein eigener Rechte-Bereich (siehe app/api/routes/partner.py) --
-    // die Backend-Routen pruefen direkt auf die Rolle statt auf hatRecht(),
-    // deshalb hier ebenso direkt statt ueber hatRecht().
-    sichtbar: ({ currentUser }) =>
-      istModulAktiv(currentUser, "nachunternehmer") &&
-      (currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ"),
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "sehen"),
   },
   {
     key: "material",
