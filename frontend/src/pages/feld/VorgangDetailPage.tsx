@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
+import { AlertTriangle, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
+import { IconBadge } from "../../components/IconBadge";
 import {
   angeboteApi,
   rechnungenApi,
@@ -660,6 +661,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] });
     },
+  });
+
+  const lvVerwendungEntfernenMutation = useMutation({
+    mutationFn: (verwendungId: string) => leistungsverzeichnisApi.verwendungEntfernen(verwendungId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] }),
   });
 
   const { data: partnerListe } = useQuery({
@@ -1975,12 +1982,15 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             {(materialVerwendungen ?? []).map((v) => (
               <div
                 key={`material-${v.id}`}
-                className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+                className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
               >
-                <span className="text-slate-700 dark:text-stone-200">
-                  {v.menge}× {v.material_bezeichnung}
-                  <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
-                    {v.material_einheit}
+                <span className="flex min-w-0 items-center gap-2 text-slate-700 dark:text-stone-200">
+                  <IconBadge icon={Package} tone="amber" size="sm" />
+                  <span className="truncate">
+                    {v.menge}× {v.material_bezeichnung}
+                    <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                      {v.material_einheit}
+                    </span>
                   </span>
                 </span>
               </div>
@@ -1988,14 +1998,24 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             {(lvVerwendungen ?? []).map((v) => (
               <div
                 key={`lv-${v.id}`}
-                className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+                className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
               >
-                <span className="text-slate-700 dark:text-stone-200">
-                  {v.menge}× {v.lv_bezeichnung}
-                  <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
-                    {v.lv_einheit}
+                <span className="flex min-w-0 items-center gap-2 text-slate-700 dark:text-stone-200">
+                  <IconBadge icon={Clock} tone="cyan" size="sm" />
+                  <span className="truncate">
+                    {v.menge}× {v.lv_bezeichnung}
+                    <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                      {v.lv_einheit}
+                    </span>
                   </span>
                 </span>
+                <button
+                  onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
+                  disabled={lvVerwendungEntfernenMutation.isPending}
+                  className="btn-touch shrink-0 text-xs text-red-700 disabled:opacity-50 dark:text-red-400"
+                >
+                  Entfernen
+                </button>
               </div>
             ))}
           </div>

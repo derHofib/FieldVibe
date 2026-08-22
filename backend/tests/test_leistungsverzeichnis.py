@@ -143,6 +143,32 @@ async def test_lv_verwendung_erstellt_verwendung_und_event(
     assert liste[0]["lv_bezeichnung"] == "Anfahrtspauschale"
     assert liste[0]["menge"] == "1.00"
 
+    verwendung_id = liste[0]["id"]
+    delete_resp = await client.delete(
+        f"/api/leistungsverzeichnis/verwendungen/{verwendung_id}", headers=auth_headers(token)
+    )
+    assert delete_resp.status_code == 204
+
+    liste_nach_delete = await client.get(
+        f"/api/leistungsverzeichnis/verwendungen?vorgang_id={vorgang.id}", headers=auth_headers(token)
+    )
+    assert liste_nach_delete.json() == []
+
+
+@pytest.mark.asyncio
+async def test_lv_verwendung_entfernen_unbekannte_id_404(
+    client, make_mandant, make_user
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.delete(
+        "/api/leistungsverzeichnis/verwendungen/00000000-0000-0000-0000-000000000000",
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 404
+
 
 @pytest.mark.asyncio
 async def test_lv_verwendung_lehnt_fremden_kunden_ab(

@@ -107,6 +107,24 @@ async def list_lv_verwendungen(
     ]
 
 
+@router.delete("/verwendungen/{verwendung_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_lv_verwendung(
+    verwendung_id: UUID,
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    verwendung = await session.get(LeistungsverzeichnisVerwendung, verwendung_id)
+    if verwendung is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Verwendung nicht gefunden")
+    vorgang = await session.get(Vorgang, verwendung.vorgang_id)
+    if vorgang is not None and vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgeschlossen und kann nicht mehr bebucht werden",
+        )
+    await session.delete(verwendung)
+    await session.flush()
+
+
 @router.post(
     "",
     response_model=LeistungsverzeichnisPositionRead,

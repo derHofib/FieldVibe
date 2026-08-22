@@ -1257,6 +1257,8 @@ export const leistungsverzeichnisApi = {
       method: "POST",
       body: JSON.stringify({ vorgang_id: vorgangId, menge }),
     }),
+  verwendungEntfernen: (verwendungId: string) =>
+    apiFetch<void>(`/api/leistungsverzeichnis/verwendungen/${verwendungId}`, { method: "DELETE" }),
 };
 
 export const lieferantenApi = {
