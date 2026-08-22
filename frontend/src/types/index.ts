@@ -418,6 +418,8 @@ export type VorgangEventType =
   | "rechnung_status"
   | "system"
   | "unterschrift"
+  | "eingangsrechnung_status"
+  | "formular"
   | "leistung";
 
 export interface VorgangEvent {

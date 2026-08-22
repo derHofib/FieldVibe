@@ -18,7 +18,9 @@ EventType = Literal[
     "rechnung_status",
     "system",
     "unterschrift",
+    "eingangsrechnung_status",
     "formular",
+    "leistung",
 ]
 
 
