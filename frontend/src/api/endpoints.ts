@@ -57,6 +57,7 @@ import type {
   KundenportalZugang,
   LeistungsverzeichnisPosition,
   LeistungsverzeichnisVerwendung,
+  LeistungsverzeichnisVerwendungMitDetails,
   Leistungstyp,
   Lieferant,
   MailAccount,
@@ -76,6 +77,7 @@ import type {
   MaterialBedarfZweck,
   MaterialBewegung,
   MaterialVerwendung,
+  MaterialVerwendungMitDetails,
   NotificationEntry,
   OffenePostenBericht,
   OfficeNavPraeferenz,
@@ -1211,6 +1213,8 @@ export const materialApi = {
     }),
   bewegungen: (materialId: string) =>
     apiFetch<MaterialBewegung[]>(`/api/material/${materialId}/bewegungen`),
+  verwendungen: (vorgangId: string) =>
+    apiFetch<MaterialVerwendungMitDetails[]>(`/api/material/verwendungen?vorgang_id=${vorgangId}`),
   verwenden: (materialId: string, vorgangId: string, lagerId: string, menge: string) =>
     apiFetch<MaterialVerwendung>(`/api/material/${materialId}/verwendung`, {
       method: "POST",
@@ -1244,6 +1248,10 @@ export const leistungsverzeichnisApi = {
       body: JSON.stringify(body),
     }),
   remove: (id: string) => apiFetch<void>(`/api/leistungsverzeichnis/${id}`, { method: "DELETE" }),
+  verwendungen: (vorgangId: string) =>
+    apiFetch<LeistungsverzeichnisVerwendungMitDetails[]>(
+      `/api/leistungsverzeichnis/verwendungen?vorgang_id=${vorgangId}`
+    ),
   verwenden: (lvPositionId: string, vorgangId: string, menge: string) =>
     apiFetch<LeistungsverzeichnisVerwendung>(`/api/leistungsverzeichnis/${lvPositionId}/verwendung`, {
       method: "POST",

@@ -50,3 +50,9 @@ class LeistungsverzeichnisVerwendungRead(BaseModel):
     menge: Decimal
     verwendet_von: UUID
     created_at: datetime
+
+
+class LeistungsverzeichnisVerwendungMitDetails(LeistungsverzeichnisVerwendungRead):
+    lv_bezeichnung: str
+    lv_einheit: str
+    lv_einzelpreis: Decimal

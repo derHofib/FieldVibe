@@ -23,6 +23,7 @@ from app.schemas.leistungsverzeichnis import (
     LeistungsverzeichnisPositionRead,
     LeistungsverzeichnisPositionUpdate,
     LeistungsverzeichnisVerwendungCreate,
+    LeistungsverzeichnisVerwendungMitDetails,
     LeistungsverzeichnisVerwendungRead,
 )
 from app.services import papierkorb_service
@@ -76,6 +77,34 @@ async def list_positionen(
         stmt = stmt.where(LeistungsverzeichnisPosition.ist_stundensatz.is_(True))
     result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+@router.get("/verwendungen", response_model=list[LeistungsverzeichnisVerwendungMitDetails])
+async def list_lv_verwendungen(
+    vorgang_id: UUID = Query(...),
+    session: AsyncSession = Depends(get_db),
+) -> list[LeistungsverzeichnisVerwendungMitDetails]:
+    stmt = (
+        select(
+            LeistungsverzeichnisVerwendung,
+            LeistungsverzeichnisPosition.bezeichnung,
+            LeistungsverzeichnisPosition.einheit,
+            LeistungsverzeichnisPosition.einzelpreis,
+        )
+        .join(LeistungsverzeichnisPosition, LeistungsverzeichnisPosition.id == LeistungsverzeichnisVerwendung.lv_position_id)
+        .where(LeistungsverzeichnisVerwendung.vorgang_id == vorgang_id)
+        .order_by(LeistungsverzeichnisVerwendung.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    return [
+        LeistungsverzeichnisVerwendungMitDetails(
+            **LeistungsverzeichnisVerwendungRead.model_validate(verwendung).model_dump(),
+            lv_bezeichnung=bezeichnung,
+            lv_einheit=einheit,
+            lv_einzelpreis=einzelpreis,
+        )
+        for verwendung, bezeichnung, einheit, einzelpreis in result.all()
+    ]
 
 
 @router.post(

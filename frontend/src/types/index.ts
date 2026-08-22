@@ -986,6 +986,11 @@ export interface MaterialVerwendung {
   created_at: string;
 }
 
+export interface MaterialVerwendungMitDetails extends MaterialVerwendung {
+  material_bezeichnung: string;
+  material_einheit: string;
+}
+
 // --- Leistungsverzeichnis (LV) ---------------------------------------------
 
 export interface LeistungsverzeichnisPosition {
@@ -1007,6 +1012,12 @@ export interface LeistungsverzeichnisVerwendung {
   menge: string;
   verwendet_von: string;
   created_at: string;
+}
+
+export interface LeistungsverzeichnisVerwendungMitDetails extends LeistungsverzeichnisVerwendung {
+  lv_bezeichnung: string;
+  lv_einheit: string;
+  lv_einzelpreis: string;
 }
 
 // --- Partner/Nachunternehmer -----------------------------------------------

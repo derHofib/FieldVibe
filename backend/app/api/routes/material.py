@@ -28,6 +28,7 @@ from app.schemas.material import (
     MaterialUmlagernRequest,
     MaterialUpdate,
     MaterialVerwendungCreate,
+    MaterialVerwendungMitDetails,
     MaterialVerwendungRead,
 )
 from app.services import papierkorb_service
@@ -203,6 +204,28 @@ async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Respon
         rows,
         "Material-Bestand.csv",
     )
+
+
+@router.get("/verwendungen", response_model=list[MaterialVerwendungMitDetails])
+async def list_material_verwendungen(
+    vorgang_id: UUID = Query(...),
+    session: AsyncSession = Depends(get_db),
+) -> list[MaterialVerwendungMitDetails]:
+    stmt = (
+        select(MaterialVerwendung, Material.bezeichnung, Material.einheit)
+        .join(Material, Material.id == MaterialVerwendung.material_id)
+        .where(MaterialVerwendung.vorgang_id == vorgang_id)
+        .order_by(MaterialVerwendung.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    return [
+        MaterialVerwendungMitDetails(
+            **MaterialVerwendungRead.model_validate(verwendung).model_dump(),
+            material_bezeichnung=bezeichnung,
+            material_einheit=einheit,
+        )
+        for verwendung, bezeichnung, einheit in result.all()
+    ]
 
 
 @router.get("/{material_id}", response_model=MaterialRead)

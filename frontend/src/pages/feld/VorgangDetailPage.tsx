@@ -640,6 +640,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["material"] });
       queryClient.invalidateQueries({ queryKey: ["stories"] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["material-verwendungen", "vorgang", id] });
     },
   });
 
@@ -657,6 +658,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setLvMenge("");
       queryClient.invalidateQueries({ queryKey: ["stories"] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] });
     },
   });
 
@@ -699,6 +701,16 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const { data: materialBedarfe } = useQuery({
     queryKey: ["material-bedarfe", "vorgang", id],
     queryFn: () => materialBedarfeApi.list({ vorgang_id: id! }),
+    enabled: !!id,
+  });
+  const { data: materialVerwendungen } = useQuery({
+    queryKey: ["material-verwendungen", "vorgang", id],
+    queryFn: () => materialApi.verwendungen(id!),
+    enabled: !!id,
+  });
+  const { data: lvVerwendungen } = useQuery({
+    queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id],
+    queryFn: () => leistungsverzeichnisApi.verwendungen(id!),
     enabled: !!id,
   });
   const { data: lieferantenFuerNeuesMaterial } = useQuery({
@@ -1956,6 +1968,38 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             ))}
           </div>
         )}
+
+        {(materialVerwendungen ?? []).length > 0 || (lvVerwendungen ?? []).length > 0 ? (
+          <div className="mb-2 space-y-1">
+            <h3 className="px-1 text-xs font-medium text-slate-400 dark:text-stone-500">Verwendet</h3>
+            {(materialVerwendungen ?? []).map((v) => (
+              <div
+                key={`material-${v.id}`}
+                className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+              >
+                <span className="text-slate-700 dark:text-stone-200">
+                  {v.menge}× {v.material_bezeichnung}
+                  <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                    {v.material_einheit}
+                  </span>
+                </span>
+              </div>
+            ))}
+            {(lvVerwendungen ?? []).map((v) => (
+              <div
+                key={`lv-${v.id}`}
+                className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+              >
+                <span className="text-slate-700 dark:text-stone-200">
+                  {v.menge}× {v.lv_bezeichnung}
+                  <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                    {v.lv_einheit}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         {kannDisponieren && (
           <button

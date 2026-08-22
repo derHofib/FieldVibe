@@ -155,6 +155,16 @@ async def test_techniker_can_record_verwendung_and_stock_decrements(
     event_types = [e["event_type"] for e in events_resp.json()]
     assert "material" in event_types
 
+    liste_resp = await client.get(
+        f"/api/material/verwendungen?vorgang_id={vorgang.id}", headers=auth_headers(token)
+    )
+    assert liste_resp.status_code == 200
+    liste = liste_resp.json()
+    assert len(liste) == 1
+    assert liste[0]["material_bezeichnung"] == material.bezeichnung
+    assert liste[0]["material_einheit"] == material.einheit
+    assert liste[0]["menge"] == "3.00"
+
 
 @pytest.mark.asyncio
 async def test_verwendung_rejected_when_bestand_insufficient(

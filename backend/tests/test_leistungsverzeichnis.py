@@ -134,6 +134,15 @@ async def test_lv_verwendung_erstellt_verwendung_und_event(
         assert len(leistungs_events) == 1
         assert "Anfahrtspauschale" in leistungs_events[0].body
 
+    liste_resp = await client.get(
+        f"/api/leistungsverzeichnis/verwendungen?vorgang_id={vorgang.id}", headers=auth_headers(token)
+    )
+    assert liste_resp.status_code == 200
+    liste = liste_resp.json()
+    assert len(liste) == 1
+    assert liste[0]["lv_bezeichnung"] == "Anfahrtspauschale"
+    assert liste[0]["menge"] == "1.00"
+
 
 @pytest.mark.asyncio
 async def test_lv_verwendung_lehnt_fremden_kunden_ab(

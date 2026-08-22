@@ -84,6 +84,11 @@ class MaterialVerwendungRead(BaseModel):
     created_at: datetime
 
 
+class MaterialVerwendungMitDetails(MaterialVerwendungRead):
+    material_bezeichnung: str
+    material_einheit: str
+
+
 class MaterialBewegungRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
