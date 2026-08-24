@@ -140,6 +140,10 @@ set_env DATABASE_URL_SYNC "postgresql+psycopg2://${PG_USER}:${PG_PW}@postgres:54
 is_placeholder JWT_SECRET && set_env JWT_SECRET "$(gen_secret)"
 is_placeholder INTEGRATION_SECRET_KEY && set_env INTEGRATION_SECRET_KEY "$(gen_secret)"
 is_placeholder MINIO_ROOT_PASSWORD && set_env MINIO_ROOT_PASSWORD "$(gen_secret)"
+# Eigener Key statt gen_secret(): MinIO braucht echtes, unverstuemmeltes
+# Base64 eines 32-Byte-Schluessels (gen_secret() entfernt bewusst
+# =/+ fuer Passwoerter, die z.B. in einer DATABASE_URL landen).
+is_placeholder MINIO_KMS_SECRET_KEY && set_env MINIO_KMS_SECRET_KEY "fieldvibe-minio:$(openssl rand -base64 32)"
 
 # --- 6. Domains bzw. Server-IP ----------------------------------------------
 # Fester Standard fuer dieses Deployment -- Enter druecken uebernimmt ihn,

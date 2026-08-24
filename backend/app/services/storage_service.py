@@ -100,9 +100,11 @@ def new_partner_nachweis_key(partner_id: uuid.UUID, filename: str) -> str:
 
 
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
-    # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) -- kein KMS/eigenes
-    # Schluesselmanagement noetig, verschluesselt aber Kundenfotos/
-    # Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der Festplatte.
+    # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) verschluesselt
+    # Kundenfotos/Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der
+    # Festplatte. Braucht trotzdem einen statischen Master-Key auf MinIO-
+    # Seite (MINIO_KMS_SECRET_KEY, siehe .env.example/docker-compose.yml) --
+    # ohne den lehnt MinIO JEDEN Upload mit "KMS is not configured" ab.
     await run_in_threadpool(
         _internal_client.put_object,
         Bucket=BUCKET,

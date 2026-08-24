@@ -205,6 +205,12 @@ cp .env.example .env
 In `.env` mindestens setzen:
 - `POSTGRES_PASSWORD`, `JWT_SECRET`, `MINIO_ROOT_PASSWORD` – je mit
   `openssl rand -base64 48` erzeugen, nicht die Beispielwerte übernehmen.
+- `MINIO_KMS_SECRET_KEY` – ohne diesen Key lehnt MinIO **jeden** Upload
+  (Fotos, Unterschriften, Rechnungs-PDFs, DSGVO-Belege) mit "KMS is not
+  configured" ab, siehe Kommentar in `.env.example`. Format:
+  `<name>:<32-Byte-Base64>`, erzeugen mit
+  `printf "fieldvibe-minio:%s" "$(openssl rand -base64 32)"`.
+  `scripts/deploy.sh` setzt das bei einem Neu-Deployment automatisch.
 - `DOMAIN_APP`, `DOMAIN_OFFICE`, `DOMAIN_API`, `DOMAIN_S3` – die vier
   Subdomains von oben. Für jede muss ein A-Record auf die Server-IP
   zeigen, **bevor** der Stack startet – sonst bekommt Caddy für die
