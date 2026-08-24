@@ -91,7 +91,12 @@ async def _wareneingang_buchen(
 
 
 async def apply_status_transition(
-    session: AsyncSession, bestellung: Bestellung, neuer_status: str, *, erstellt_von: UUID
+    session: AsyncSession,
+    bestellung: Bestellung,
+    neuer_status: str,
+    *,
+    erstellt_von: UUID,
+    positionen_preise: dict[UUID, Decimal] | None = None,
 ) -> None:
     if neuer_status not in GUELTIGE_UEBERGAENGE.get(bestellung.status, set()):
         raise HTTPException(
@@ -101,6 +106,20 @@ async def apply_status_transition(
 
     if neuer_status == "eingegangen":
         positionen = await positionen_fuer(session, bestellung.id)
+        if positionen_preise:
+            bekannte_ids = {p.id for p in positionen}
+            unbekannt = set(positionen_preise) - bekannte_ids
+            if unbekannt:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Unbekannte Position(en) in positionen_preise: {unbekannt}",
+                )
+            # Der bisherige Preis war nur die Planung zum Bestellzeitpunkt --
+            # beim Wareneingang wird er auf den tatsaechlich bezahlten Preis
+            # korrigiert, damit PDF/CSV-Export danach den echten Preis zeigen.
+            for position in positionen:
+                if position.id in positionen_preise:
+                    position.einzelpreis = positionen_preise[position.id]
         await _wareneingang_buchen(session, bestellung, positionen, erstellt_von)
 
     bestellung.status = neuer_status

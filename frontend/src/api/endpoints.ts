@@ -1304,8 +1304,15 @@ export const bestellungenApi = {
       method: "POST",
       body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, lieferant_id: lieferantId, notiz }),
     }),
-  update: (id: string, body: { status?: string; lieferant_id?: string | null; notiz?: string }) =>
-    apiFetch<Bestellung>(`/api/bestellungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: {
+      status?: string;
+      lieferant_id?: string | null;
+      notiz?: string;
+      positionen_preise?: Record<string, string>;
+    },
+  ) => apiFetch<Bestellung>(`/api/bestellungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/bestellungen/${id}`, { method: "DELETE" }),
   csv: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/csv`),
   pdf: (id: string) => apiFetchBlob(`/api/bestellungen/${id}/pdf`),

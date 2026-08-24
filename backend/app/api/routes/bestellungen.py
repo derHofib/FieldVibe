@@ -213,8 +213,19 @@ async def update_bestellung(
         bestellung.lieferant_id = body.lieferant_id
     if body.notiz is not None:
         bestellung.notiz = body.notiz
+    if body.positionen_preise and body.status != "eingegangen":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="positionen_preise ist nur beim Wareneingang (status='eingegangen') gültig",
+        )
     if body.status is not None:
-        await apply_status_transition(session, bestellung, body.status, erstellt_von=auth.user_id)
+        await apply_status_transition(
+            session,
+            bestellung,
+            body.status,
+            erstellt_von=auth.user_id,
+            positionen_preise=body.positionen_preise,
+        )
 
     await session.flush()
     await session.refresh(bestellung)

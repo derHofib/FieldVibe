@@ -18,6 +18,11 @@ class BestellungUpdate(BaseModel):
     status: BestellungStatus | None = None
     lieferant_id: UUID | None = None
     notiz: str | None = None
+    # Beim Wareneingang (status="eingegangen") koennen einzelne Positionen auf
+    # den tatsaechlich bezahlten Preis korrigiert werden -- der bisherige Wert
+    # war nur eine Planung zum Bestellzeitpunkt (siehe BestellungPosition).
+    # Key = BestellungPosition.id.
+    positionen_preise: dict[UUID, Decimal] | None = None
 
 
 class BestellungPositionRead(BaseModel):
