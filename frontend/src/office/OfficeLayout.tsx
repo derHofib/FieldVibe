@@ -123,7 +123,7 @@ export function OfficeLayout() {
 
           <nav className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto">
             {gruppen.map((gruppe) => {
-              const kollabiert = !eingeklappt && !!eingeklappteKategorien[gruppe.name];
+              const kollabiert = !!eingeklappteKategorien[gruppe.name];
               return (
               <div key={gruppe.name}>
                 {eingeklappt ? (
