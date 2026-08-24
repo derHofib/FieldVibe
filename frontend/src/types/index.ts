@@ -201,6 +201,21 @@ export interface OfficeNavPraeferenz {
   items: string[] | null;
 }
 
+// Frei konfigurierbare Menue-Kategorien fuer die Office-Seitenleiste (siehe
+// config/navSeiten.ts: NAV_KATEGORIE_REIHENFOLGE ist der Fallback, wenn
+// kategorien hier leer ist -- der Mandant hat dann noch nie etwas
+// angepasst).
+export interface NavKategorieEintrag {
+  name: string;
+  reihenfolge: number;
+}
+
+export interface NavKategorienRead {
+  kategorien: NavKategorieEintrag[];
+  // nav_key -> Kategorie-Name
+  zuordnungen: Record<string, string>;
+}
+
 export interface CurrentUser {
   id: string;
   mandant_id: string | null;

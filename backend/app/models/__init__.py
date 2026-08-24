@@ -36,6 +36,7 @@ from app.models.mandant import Mandant
 from app.models.mangel import Mangel
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
 from app.models.material_bedarf import MaterialBedarf
+from app.models.nav_kategorie import NavKategorie, NavZuordnung
 from app.models.notification import Notification
 from app.models.partner import Partner
 from app.models.partner_nachweis import PartnerNachweis
@@ -96,6 +97,8 @@ __all__ = [
     "MaterialBestand",
     "MaterialBewegung",
     "MaterialVerwendung",
+    "NavKategorie",
+    "NavZuordnung",
     "Notification",
     "Partner",
     "PartnerNachweis",

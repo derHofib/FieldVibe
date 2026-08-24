@@ -39,6 +39,7 @@ from app.api.routes import (
     mandanten,
     material,
     material_bedarfe,
+    nav_kategorien,
     notifications,
     papierkorb,
     partner,
@@ -158,6 +159,7 @@ app.include_router(partner.router)
 app.include_router(partner_auth.router)
 app.include_router(partner_portal.router)
 app.include_router(plattform_integrationen.router)
+app.include_router(nav_kategorien.router)
 
 
 @app.get("/healthz")

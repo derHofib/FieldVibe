@@ -27,7 +27,7 @@ import {
 
 import type { IconTone } from "../components/IconBadge";
 import { istModulAktiv } from "../utils/module";
-import type { CurrentUser, RechteAktion, RechteBereich } from "../types";
+import type { CurrentUser, NavKategorienRead, RechteAktion, RechteBereich } from "../types";
 
 // Einzige Quelle der Wahrheit fuer jede Seite, die ein Nutzer sich in die
 // individualisierbare Bottom-Nav legen kann (siehe components/BottomNav.tsx
@@ -359,4 +359,46 @@ export function effektiveRotunde(
 ): string[] {
   const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
   return (gespeichert ?? STANDARD_ROTUNDE).filter((key) => sichtbareKeys.has(key));
+}
+
+export interface NavGruppe {
+  name: string;
+  seiten: NavSeite[];
+}
+
+// Gruppierung fuer die Office-Seitenleiste (siehe office/OfficeLayout.tsx).
+// custom === undefined oder custom.kategorien leer -> der Mandant hat die
+// Menue-Kategorien noch nie angepasst, dann gelten unveraendert die vier
+// hart codierten Standardkategorien. Sobald custom.kategorien etwas
+// enthaelt, ersetzt das komplett: Reihenfolge/Namen kommen aus custom,
+// jede sichtbare Seite ohne (noch) passende Zuordnung -- z.B. ein erst
+// nach dem letzten Speichern neu hinzugekommener Menuepunkt -- landet
+// gesammelt in einer angehaengten "Weitere"-Gruppe, statt zu verschwinden.
+export function effektiveNavGruppen(
+  angezeigt: NavSeite[],
+  custom: NavKategorienRead | undefined,
+): NavGruppe[] {
+  if (!custom || custom.kategorien.length === 0) {
+    return NAV_KATEGORIE_REIHENFOLGE.map((kategorie) => ({
+      name: kategorie as string,
+      seiten: angezeigt.filter((seite) => seite.kategorie === kategorie),
+    })).filter((gruppe) => gruppe.seiten.length > 0);
+  }
+
+  const gruppen: NavGruppe[] = [...custom.kategorien]
+    .sort((a, b) => a.reihenfolge - b.reihenfolge)
+    .map((k) => ({ name: k.name, seiten: [] }));
+  const gruppeNachName = new Map(gruppen.map((g) => [g.name, g]));
+  const weitere: NavSeite[] = [];
+
+  for (const seite of angezeigt) {
+    const kategorieName = custom.zuordnungen[seite.key];
+    const ziel = kategorieName ? gruppeNachName.get(kategorieName) : undefined;
+    if (ziel) ziel.seiten.push(seite);
+    else weitere.push(seite);
+  }
+
+  const ergebnis = gruppen.filter((g) => g.seiten.length > 0);
+  if (weitere.length > 0) ergebnis.push({ name: "Weitere", seiten: weitere });
+  return ergebnis;
 }

@@ -78,6 +78,7 @@ import type {
   MaterialBewegung,
   MaterialVerwendung,
   MaterialVerwendungMitDetails,
+  NavKategorienRead,
   NotificationEntry,
   OffenePostenBericht,
   OfficeNavPraeferenz,
@@ -1387,6 +1388,12 @@ export const mandantEinstellungenApi = {
   logoRemove: () =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen/logo", { method: "DELETE" }),
   logoUrl: () => apiFetch<MandantLogoUrl>("/api/mandant/einstellungen/logo-url"),
+};
+
+export const navKategorienApi = {
+  get: () => apiFetch<NavKategorienRead>("/api/nav-kategorien"),
+  set: (body: NavKategorienRead) =>
+    apiFetch<NavKategorienRead>("/api/nav-kategorien", { method: "PUT", body: JSON.stringify(body) }),
 };
 
 export const integrationenApi = {

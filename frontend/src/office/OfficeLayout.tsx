@@ -1,12 +1,14 @@
-import { Clock, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings, Smartphone } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Clock, FolderCog, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings, Smartphone } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
+import { navKategorienApi } from "../api/endpoints";
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { IconBadge } from "../components/IconBadge";
-import { NAV_KATEGORIE_REIHENFOLGE, sichtbareNavSeiten, type NavKategorie } from "../config/navSeiten";
+import { effektiveNavGruppen, sichtbareNavSeiten } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { weicheAus } from "./geraeteWeiche";
@@ -41,10 +43,15 @@ export function OfficeLayout() {
   const angezeigt = eigeneAuswahl
     ? sichtbar.filter((seite) => eigeneAuswahl.includes(seite.key))
     : sichtbar;
-  const gruppen = NAV_KATEGORIE_REIHENFOLGE.map((kategorie) => ({
-    kategorie,
-    seiten: angezeigt.filter((seite) => seite.kategorie === kategorie),
-  })).filter((gruppe) => gruppe.seiten.length > 0);
+  // Eigene Menue-Kategorien des Mandanten (siehe pages/NavKategorienPage.tsx)
+  // -- leer/undefined faellt in effektiveNavGruppen auf die vier
+  // Standardkategorien zurueck, komplett ohne Sonderfall hier.
+  const { data: customKategorien } = useQuery({
+    queryKey: ["nav-kategorien"],
+    queryFn: () => navKategorienApi.get(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const gruppen = effektiveNavGruppen(angezeigt, customKategorien);
 
   const zurMobilenAnsicht = () => {
     const ziel = mobileUrl();
@@ -94,12 +101,12 @@ export function OfficeLayout() {
 
           <nav className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto">
             {gruppen.map((gruppe) => (
-              <div key={gruppe.kategorie}>
+              <div key={gruppe.name}>
                 {eingeklappt ? (
                   <div className="mx-1 mb-1.5 border-t border-slate-100 dark:border-stone-800" />
                 ) : (
                   <p className="px-2 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
-                    {gruppe.kategorie}
+                    {gruppe.name}
                   </p>
                 )}
                 {gruppe.seiten.map((seite) => (
@@ -139,6 +146,18 @@ export function OfficeLayout() {
             <Settings size={14} strokeWidth={2} className="shrink-0" />
             {!eingeklappt && "Seitenleiste anpassen"}
           </button>
+          {currentUser?.role === "mandant_admin" && (
+            <button
+              onClick={() => navigate("/einstellungen/kategorien")}
+              title={eingeklappt ? "Menü-Kategorien" : undefined}
+              className={`flex items-center rounded-lg py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60 ${
+                eingeklappt ? "justify-center px-0" : "gap-2 px-2"
+              }`}
+            >
+              <FolderCog size={14} strokeWidth={2} className="shrink-0" />
+              {!eingeklappt && "Menü-Kategorien"}
+            </button>
+          )}
           <button
             onClick={zurMobilenAnsicht}
             title={eingeklappt ? "Zur mobilen Ansicht" : undefined}
@@ -189,5 +208,3 @@ export function OfficeLayout() {
     </div>
   );
 }
-
-export type { NavKategorie };
