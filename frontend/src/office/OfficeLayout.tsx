@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Clock, FolderCog, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings, Smartphone } from "lucide-react";
+import { ChevronDown, Clock, FolderCog, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings, Smartphone } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -20,6 +20,15 @@ import { mobileUrl } from "./hostname";
  * anderen fehlen, und die sichtbar()-Praedikate (Rechte + aktive Module)
  * gelten hier automatisch mit. */
 const SIDEBAR_STORAGE_KEY = "fieldvibe-office-sidebar-eingeklappt";
+const KATEGORIEN_STORAGE_KEY = "fieldvibe-office-sidebar-kategorien-eingeklappt";
+
+function geladeneEingeklappteKategorien(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(KATEGORIEN_STORAGE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
 
 export function OfficeLayout() {
   const { currentUser, hatRecht, logout } = useAuth();
@@ -28,11 +37,24 @@ export function OfficeLayout() {
   // In localStorage gemerkt (nicht im Backend wie office_nav_items) -- ist
   // reine Anzeige-Praeferenz des Geraets, keine Nutzer-Stammdaten.
   const [eingeklappt, setEingeklappt] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1");
+  // Pro Kategorie merken, ob sie eingeklappt ist -- ebenfalls reine
+  // Geraete-Anzeige-Praeferenz, kein Backend-Feld (analog SIDEBAR_STORAGE_KEY).
+  const [eingeklappteKategorien, setEingeklappteKategorien] = useState<Record<string, boolean>>(
+    geladeneEingeklappteKategorien,
+  );
 
   const sidebarUmschalten = () => {
     setEingeklappt((prev) => {
       const naechster = !prev;
       localStorage.setItem(SIDEBAR_STORAGE_KEY, naechster ? "1" : "0");
+      return naechster;
+    });
+  };
+
+  const kategorieUmschalten = (name: string) => {
+    setEingeklappteKategorien((prev) => {
+      const naechster = { ...prev, [name]: !prev[name] };
+      localStorage.setItem(KATEGORIEN_STORAGE_KEY, JSON.stringify(naechster));
       return naechster;
     });
   };
@@ -100,16 +122,27 @@ export function OfficeLayout() {
           </div>
 
           <nav className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto">
-            {gruppen.map((gruppe) => (
+            {gruppen.map((gruppe) => {
+              const kollabiert = !eingeklappt && !!eingeklappteKategorien[gruppe.name];
+              return (
               <div key={gruppe.name}>
                 {eingeklappt ? (
                   <div className="mx-1 mb-1.5 border-t border-slate-100 dark:border-stone-800" />
                 ) : (
-                  <p className="px-2 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
-                    {gruppe.name}
-                  </p>
+                  <button
+                    onClick={() => kategorieUmschalten(gruppe.name)}
+                    aria-expanded={!kollabiert}
+                    className="flex w-full items-center justify-between rounded-md px-2 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase hover:text-slate-600 dark:text-stone-500 dark:hover:text-stone-300"
+                  >
+                    <span>{gruppe.name}</span>
+                    <ChevronDown
+                      size={12}
+                      strokeWidth={2.5}
+                      className={`transition-transform duration-150 ${kollabiert ? "-rotate-90" : ""}`}
+                    />
+                  </button>
                 )}
-                {gruppe.seiten.map((seite) => (
+                {!kollabiert && gruppe.seiten.map((seite) => (
                   <NavLink
                     key={seite.key}
                     to={seite.route}
@@ -133,7 +166,8 @@ export function OfficeLayout() {
                   </NavLink>
                 ))}
               </div>
-            ))}
+              );
+            })}
           </nav>
 
           <button
