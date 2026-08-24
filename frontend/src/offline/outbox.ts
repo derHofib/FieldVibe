@@ -55,6 +55,27 @@ export async function queueFoto(
   return clientUuid;
 }
 
+export async function queueDokument(
+  vorgangId: string,
+  file: Blob,
+  dokumentName: string,
+  kundensichtbar: boolean,
+  clientUuid: string = crypto.randomUUID(),
+): Promise<string> {
+  const db = await getDb();
+  await db.put("outbox", {
+    client_uuid: clientUuid,
+    vorgang_id: vorgangId,
+    kind: "dokument",
+    dokumentBlob: file,
+    dokumentName,
+    kundensichtbar,
+    created_at: new Date().toISOString(),
+  });
+  notify();
+  return clientUuid;
+}
+
 export async function queueStatusChange(vorgangId: string, status: string): Promise<string> {
   const clientUuid = crypto.randomUUID();
   const db = await getDb();
@@ -184,6 +205,14 @@ async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang>
         client_uuid: item.client_uuid,
       }),
     });
+  }
+
+  if (item.kind === "dokument") {
+    const formData = new FormData();
+    formData.append("file", item.dokumentBlob!, item.dokumentName ?? "dokument");
+    formData.append("kundensichtbar", String(item.kundensichtbar ?? false));
+    formData.append("client_uuid", item.client_uuid);
+    return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${item.vorgang_id}/events/dokument`, formData);
   }
 
   const formData = new FormData();

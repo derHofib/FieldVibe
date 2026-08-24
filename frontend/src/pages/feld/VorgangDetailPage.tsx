@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
+import { AlertTriangle, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, Paperclip, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -33,7 +33,14 @@ import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
-import { discardOutboxItem, getOutboxItems, queueFoto, queueKommentar, queueStatusChange } from "../../offline/outbox";
+import {
+  discardOutboxItem,
+  getOutboxItems,
+  queueDokument,
+  queueFoto,
+  queueKommentar,
+  queueStatusChange,
+} from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import { openPdfBlob } from "../../utils/pdf";
@@ -212,6 +219,17 @@ function EventBubble({
           )}
         </div>
       )}
+      {event.event_type === "dokument" && event.dokument_url && (
+        <a
+          href={event.dokument_url}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-touch mb-2 flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-200"
+        >
+          <Paperclip size={15} strokeWidth={2} />
+          {event.dokument_dateiname ?? "Dokument"}
+        </a>
+      )}
       {event.body && (
         <p className="whitespace-pre-wrap text-sm text-slate-800 dark:text-stone-100">
           <MentionText text={event.body} />
@@ -286,6 +304,10 @@ function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clien
         <p className="flex items-center gap-1 text-sm text-slate-600 dark:text-stone-300">
           <Camera size={14} strokeWidth={2} /> Foto wartet auf Synchronisierung
         </p>
+      ) : item.kind === "dokument" ? (
+        <p className="flex items-center gap-1 text-sm text-slate-600 dark:text-stone-300">
+          <FileText size={14} strokeWidth={2} /> {item.dokumentName ?? "Dokument"} wartet auf Synchronisierung
+        </p>
       ) : item.kind === "status" ? (
         <p className="text-sm text-slate-600 dark:text-stone-300">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
@@ -321,6 +343,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dokumentInputRef = useRef<HTMLInputElement>(null);
 
   const [comment, setComment] = useState("");
   const [kundensichtbar, setKundensichtbar] = useState(false);
@@ -865,6 +888,30 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       } catch (err) {
         if (err instanceof ApiError) throw err;
         await queueFoto(id!, file, file.name, kundensichtbar, clientUuid);
+        return null;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
+      queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+    },
+  });
+
+  const dokumentMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const clientUuid = crypto.randomUUID();
+      try {
+        return await vorgangEventsApi.uploadDokument(
+          id!,
+          file,
+          file.name,
+          kundensichtbar,
+          undefined,
+          clientUuid,
+        );
+      } catch (err) {
+        if (err instanceof ApiError) throw err;
+        await queueDokument(id!, file, file.name, kundensichtbar, clientUuid);
         return null;
       }
     },
@@ -2361,6 +2408,16 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               e.target.value = "";
             }}
           />
+          <input
+            ref={dokumentInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) dokumentMutation.mutate(file);
+              e.target.value = "";
+            }}
+          />
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <button
@@ -2379,6 +2436,15 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
               >
                 <Camera size={16} strokeWidth={2} />
+              </button>
+              <button
+                onClick={() => dokumentInputRef.current?.click()}
+                disabled={dokumentMutation.isPending}
+                title="Dokument anhängen"
+                aria-label="Dokument anhängen"
+                className="btn-touch flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+              >
+                <Paperclip size={16} strokeWidth={2} />
               </button>
               <button
                 onClick={() => setShowUnterschriftPad((v) => !v)}

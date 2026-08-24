@@ -453,6 +453,8 @@ export interface VorgangEvent {
   foto_url: string | null;
   foto_thumbnail_url: string | null;
   unterschrift_url: string | null;
+  dokument_url: string | null;
+  dokument_dateiname: string | null;
 }
 
 export interface Tag {

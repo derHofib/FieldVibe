@@ -16,4 +16,9 @@ def to_read_model(event: VorgangEvent) -> VorgangEventRead:
         key = event.payload.get("key")
         if key:
             data.unterschrift_url = storage_service.presigned_get_url(key)
+    elif event.event_type == "dokument" and event.payload:
+        key = event.payload.get("key")
+        if key:
+            data.dokument_url = storage_service.presigned_get_url(key)
+        data.dokument_dateiname = event.payload.get("dateiname")
     return data

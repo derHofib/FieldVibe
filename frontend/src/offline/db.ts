@@ -9,7 +9,7 @@ export interface OutboxItem {
   // vorgaenge.py::create_vorgang, das denselben client_uuid als
   // Idempotenz-Schluessel nutzt wie VorgangEvent.client_uuid).
   vorgang_id: string | null;
-  kind: "kommentar" | "foto" | "vorgang" | "status";
+  kind: "kommentar" | "foto" | "dokument" | "vorgang" | "status";
   created_at: string;
   // "kommentar": JSON-Body fuer POST .../events
   body?: string;
@@ -17,6 +17,9 @@ export interface OutboxItem {
   // "foto": Blob wird lokal gehalten, bis online gesendet werden kann
   fotoBlob?: Blob;
   fotoName?: string;
+  // "dokument": analog zu "foto", aber beliebiger Dateityp
+  dokumentBlob?: Blob;
+  dokumentName?: string;
   // "vorgang": Felder fuer die komplette Neuanlage eines Vorgangs offline
   vorgangKundeId?: string;
   vorgangAnlageId?: string | null;

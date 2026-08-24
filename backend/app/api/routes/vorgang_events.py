@@ -217,6 +217,73 @@ async def upload_foto(
     return _to_read_model(event)
 
 
+@router.post("/dokument", response_model=VorgangEventRead, status_code=status.HTTP_201_CREATED)
+async def upload_dokument(
+    vorgang_id: UUID,
+    file: UploadFile,
+    response: Response,
+    kundensichtbar: bool = Form(default=False),
+    body: str | None = Form(default=None),
+    client_uuid: UUID | None = Form(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangEventRead:
+    """Beliebige Dateien (PDF, Word, Excel, ...) am Vorgang -- Gegenstueck zu
+    upload_foto, aber ohne Bild-Einschraenkung und ohne Thumbnail."""
+    vorgang = await _require_own_vorgang(session, auth, vorgang_id)
+    _require_offen(vorgang)
+
+    if client_uuid is not None:
+        existing = await session.execute(
+            select(VorgangEvent).where(VorgangEvent.client_uuid == client_uuid)
+        )
+        existing_event = existing.scalar_one_or_none()
+        if existing_event is not None:
+            response.status_code = status.HTTP_200_OK
+            return _to_read_model(existing_event)
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)"
+        )
+
+    dateiname = file.filename or "dokument"
+    key = storage_service.new_object_key(vorgang_id, dateiname)
+    await storage_service.upload_bytes(key, data, file.content_type or "application/octet-stream")
+
+    event = VorgangEvent(
+        mandant_id=auth.mandant_id,
+        vorgang_id=vorgang_id,
+        event_type="dokument",
+        author_user_id=auth.user_id,
+        body=body,
+        payload={
+            "key": key,
+            "dateiname": dateiname,
+            "content_type": file.content_type,
+            "size": len(data),
+        },
+        kundensichtbar=kundensichtbar,
+        client_uuid=client_uuid,
+    )
+    session.add(event)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Event-Konflikt"
+        ) from exc
+
+    await event_bus.publish(
+        auth.mandant_id,
+        "vorgang_event",
+        {"vorgang_id": str(vorgang_id), "event_id": event.id, "event_type": "dokument"},
+    )
+
+    return _to_read_model(event)
+
+
 @router.post(
     "/unterschrift", response_model=VorgangEventRead, status_code=status.HTTP_201_CREATED
 )
