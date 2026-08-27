@@ -16,6 +16,7 @@ const BEREICHE: RechteBereich[] = [
   "mitarbeiterverwaltung",
   "formulare",
   "partner",
+  "projekte",
 ];
 const BEREICH_LABEL: Record<RechteBereich, string> = {
   vorgaenge: "Aufträge",
@@ -27,6 +28,7 @@ const BEREICH_LABEL: Record<RechteBereich, string> = {
   mitarbeiterverwaltung: "Mitarbeiterliste",
   formulare: "Formular-Baukasten",
   partner: "Partner & Nachunternehmer",
+  projekte: "Projekte",
 };
 const AKTIONEN: RechteAktion[] = ["sehen", "erstellen", "bearbeiten", "loeschen"];
 const AKTION_LABEL: Record<RechteAktion, string> = {

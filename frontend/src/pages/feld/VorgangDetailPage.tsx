@@ -19,6 +19,7 @@ import {
   materialApi,
   materialBedarfeApi,
   partnerApi,
+  projektAufgabenApi,
   standorteApi,
   termineApi,
   usersApi,
@@ -578,6 +579,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     queryKey: ["maengel", "vorgang", id],
     queryFn: () => maengelApi.list({ vorgang_id: id! }),
     enabled: !!id,
+  });
+
+  const kannProjekteSehen = hatRecht("projekte", "sehen");
+  const { data: verknuepfteAufgaben } = useQuery({
+    queryKey: ["projekt-aufgaben", "vorgang", id],
+    queryFn: () => projektAufgabenApi.list({ vorgang_id: id! }),
+    enabled: !!id && kannProjekteSehen,
   });
 
   const mangelMutation = useMutation({
@@ -1869,6 +1877,34 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           </button>
         )}
       </div>
+
+      {kannProjekteSehen && (verknuepfteAufgaben ?? []).length > 0 && (
+        <div className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Verknüpfte Aufgaben</h2>
+          {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der
+              Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
+          <div className="space-y-1.5">
+            {verknuepfteAufgaben!.map((a) => (
+              <div key={a.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-slate-700 dark:text-stone-300">{a.titel}</p>
+                  <span className="shrink-0 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                    {a.prioritaet}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs text-slate-400 dark:text-stone-500">
+                  <span>
+                    {a.checkliste.length > 0
+                      ? `${a.checkliste.filter((p) => p.erledigt).length}/${a.checkliste.length} erledigt`
+                      : a.zugewiesener_name || "Nicht zugewiesen"}
+                  </span>
+                  {a.faelligkeit_am && <span>fällig {a.faelligkeit_am}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div id="abschnitt-material" className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

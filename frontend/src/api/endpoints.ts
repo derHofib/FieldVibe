@@ -23,6 +23,7 @@ import type {
   BoardListItem,
   BoardTyp,
   BottomNavPraeferenz,
+  ChecklistenPunkt,
   CurrentKunde,
   CurrentUser,
   Dauerauftrag,
@@ -88,6 +89,9 @@ import type {
   PartnerNachweis,
   PartnerNachweisTyp,
   PlattformIntegration,
+  Projekt,
+  ProjektAufgabe,
+  ProjektSpalte,
   Pruefmittel,
   Pruefzyklus,
   PruefzyklusEinheit,
@@ -1416,6 +1420,67 @@ export const navKategorienApi = {
   get: () => apiFetch<NavKategorienRead>("/api/nav-kategorien"),
   set: (body: NavKategorienRead) =>
     apiFetch<NavKategorienRead>("/api/nav-kategorien", { method: "PUT", body: JSON.stringify(body) }),
+};
+
+export const projekteApi = {
+  list: () => apiFetch<Projekt[]>("/api/projekte"),
+  get: (id: string) => apiFetch<Projekt>(`/api/projekte/${id}`),
+  create: (body: { name: string; beschreibung?: string }) =>
+    apiFetch<Projekt>("/api/projekte", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: { name?: string; beschreibung?: string; archiviert?: boolean }) =>
+    apiFetch<Projekt>(`/api/projekte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/projekte/${id}`, { method: "DELETE" }),
+  spalten: (projektId: string) =>
+    apiFetch<ProjektSpalte[]>(`/api/projekte/${projektId}/spalten`),
+  createSpalte: (projektId: string, name: string) =>
+    apiFetch<ProjektSpalte>(`/api/projekte/${projektId}/spalten`, {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+  updateSpalte: (projektId: string, spalteId: string, body: { name?: string; reihenfolge?: number }) =>
+    apiFetch<ProjektSpalte>(`/api/projekte/${projektId}/spalten/${spalteId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeSpalte: (projektId: string, spalteId: string) =>
+    apiFetch<void>(`/api/projekte/${projektId}/spalten/${spalteId}`, { method: "DELETE" }),
+};
+
+export const projektAufgabenApi = {
+  list: (filter: { projekt_id?: string; vorgang_id?: string }) => {
+    const params = new URLSearchParams();
+    if (filter.projekt_id) params.set("projekt_id", filter.projekt_id);
+    if (filter.vorgang_id) params.set("vorgang_id", filter.vorgang_id);
+    return apiFetch<ProjektAufgabe[]>(`/api/projekt-aufgaben?${params}`);
+  },
+  get: (id: string) => apiFetch<ProjektAufgabe>(`/api/projekt-aufgaben/${id}`),
+  create: (body: {
+    projekt_id: string;
+    spalte_id: string;
+    titel: string;
+    beschreibung?: string;
+    faelligkeit_am?: string | null;
+    prioritaet?: string;
+    zugewiesen_an?: string | null;
+    vorgang_id?: string | null;
+    checkliste?: ChecklistenPunkt[];
+    zusatzfelder?: Record<string, string>;
+  }) => apiFetch<ProjektAufgabe>("/api/projekt-aufgaben", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: {
+      spalte_id?: string;
+      titel?: string;
+      beschreibung?: string;
+      faelligkeit_am?: string | null;
+      prioritaet?: string;
+      zugewiesen_an?: string | null;
+      vorgang_id?: string | null;
+      checkliste?: ChecklistenPunkt[];
+      zusatzfelder?: Record<string, string>;
+    },
+  ) => apiFetch<ProjektAufgabe>(`/api/projekt-aufgaben/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/projekt-aufgaben/${id}`, { method: "DELETE" }),
 };
 
 export const integrationenApi = {

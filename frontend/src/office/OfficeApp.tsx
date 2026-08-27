@@ -46,6 +46,7 @@ import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
 import { OfficeFormularDetailPage } from "./formulare/OfficeFormularDetailPage";
 import { OfficeFormularePage } from "./formulare/OfficeFormularePage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
+import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 
@@ -72,6 +73,7 @@ export function OfficeApp() {
         <Route path="/postfach" element={<OfficePostfachPage />} />
         <Route path="/boards" element={<OfficeBoardsPage />} />
         <Route path="/boards/:id" element={<OfficeBoardPage />} />
+        <Route path="/projekte" element={<OfficeProjektePage />} />
 
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>

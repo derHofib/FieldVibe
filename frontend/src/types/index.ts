@@ -1213,7 +1213,8 @@ export type RechteBereich =
   | "statistik"
   | "mitarbeiterverwaltung"
   | "formulare"
-  | "partner";
+  | "partner"
+  | "projekte";
 export type RechteAktion = "sehen" | "erstellen" | "bearbeiten" | "loeschen";
 
 export interface RechteMatrixEintrag {
@@ -1616,4 +1617,52 @@ export interface BoardAnhangUpload {
 
 export interface BoardAnhangUrl {
   url: string;
+}
+
+// --- Projekte (Asana-artiges Kanban, Office-only) ---------------------------
+
+export type ProjektAufgabePrioritaet = "niedrig" | "mittel" | "hoch";
+
+export interface ChecklistenPunkt {
+  text: string;
+  erledigt: boolean;
+}
+
+export interface Projekt {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  archiviert: boolean;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjektSpalte {
+  id: string;
+  projekt_id: string;
+  name: string;
+  reihenfolge: number;
+}
+
+export interface ProjektAufgabe {
+  id: string;
+  projekt_id: string;
+  spalte_id: string;
+  titel: string;
+  beschreibung: string | null;
+  faelligkeit_am: string | null;
+  prioritaet: ProjektAufgabePrioritaet;
+  zugewiesen_an: string | null;
+  vorgang_id: string | null;
+  checkliste: ChecklistenPunkt[];
+  zusatzfelder: Record<string, string>;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+  // Nur in der angereicherten Listenansicht befuellt (siehe
+  // ProjektAufgabeMitDetails im Backend).
+  zugewiesener_name?: string | null;
+  vorgang_vorgangsnummer?: string | null;
+  vorgang_kunde_name?: string | null;
 }

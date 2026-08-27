@@ -7,6 +7,7 @@ import {
   Gauge,
   HardHat,
   Inbox,
+  KanbanSquare,
   type LucideIcon,
   Mail,
   Package,
@@ -100,6 +101,18 @@ export const NAV_SEITEN: NavSeite[] = [
     kategorie: "Arbeit",
     sichtbar: ({ currentUser, hatRecht }) =>
       hatRecht("dispo", "sehen") && istModulAktiv(currentUser, "dispo"),
+  },
+  {
+    key: "projekte",
+    label: "Projekte",
+    icon: KanbanSquare,
+    tone: "amber",
+    route: "/projekte",
+    kategorie: "Arbeit",
+    // Kanban mit Drag&Drop ist am Desktop gebaut, nicht fuer die schmale
+    // Feld-App-Spalte -- siehe office/OfficeProjektePage.tsx.
+    nurOffice: true,
+    sichtbar: ({ hatRecht }) => hatRecht("projekte", "sehen"),
   },
   {
     key: "kunden",
