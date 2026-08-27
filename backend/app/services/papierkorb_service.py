@@ -35,6 +35,7 @@ from app.models.lieferant import Lieferant
 from app.models.mangel import Mangel
 from app.models.material import Material
 from app.models.material_bedarf import MaterialBedarf
+from app.models.projekt import Projekt, ProjektAufgabe
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung
@@ -111,6 +112,8 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     "termin": EntityKind(Termin, "titel"),
     "pruefzyklus": EntityKind(Pruefzyklus, "bezeichnung"),
     "pruefmittel": EntityKind(Pruefmittel, "bezeichnung"),
+    "projekt": EntityKind(Projekt, "name", (("projekt_aufgabe", "projekt_id"),)),
+    "projekt_aufgabe": EntityKind(ProjektAufgabe, "titel"),
     "lieferant": EntityKind(
         Lieferant, "name", (("bestellung", "lieferant_id"), ("eingangsrechnung", "lieferant_id"))
     ),
