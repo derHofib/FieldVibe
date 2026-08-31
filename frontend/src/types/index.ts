@@ -1647,14 +1647,23 @@ export interface ProjektSpalte {
 
 export interface ProjektAufgabe {
   id: string;
-  projekt_id: string;
-  spalte_id: string;
+  // NULL = private Aufgabe (kein Kanban-Board, nur fuer
+  // zugewiesen_an/erstellt_von sichtbar) -- siehe app/models/projekt.py.
+  projekt_id: string | null;
+  spalte_id: string | null;
+  // Gesetzt = Unteraufgabe; erscheint nicht als eigene Karte auf dem Board,
+  // nur eine Ebene tief (keine Unteraufgaben von Unteraufgaben).
+  eltern_aufgabe_id: string | null;
   titel: string;
   beschreibung: string | null;
   faelligkeit_am: string | null;
   prioritaet: ProjektAufgabePrioritaet;
   zugewiesen_an: string | null;
+  erledigt_am: string | null;
   vorgang_id: string | null;
+  anlage_id: string | null;
+  kunde_id: string | null;
+  standort_id: string | null;
   checkliste: ChecklistenPunkt[];
   zusatzfelder: Record<string, string>;
   erstellt_von: string;
@@ -1665,4 +1674,9 @@ export interface ProjektAufgabe {
   zugewiesener_name?: string | null;
   vorgang_vorgangsnummer?: string | null;
   vorgang_kunde_name?: string | null;
+  anlage_name?: string | null;
+  kunde_name?: string | null;
+  standort_name?: string | null;
+  unteraufgaben_gesamt?: number;
+  unteraufgaben_erledigt?: number;
 }

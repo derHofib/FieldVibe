@@ -1447,22 +1447,34 @@ export const projekteApi = {
 };
 
 export const projektAufgabenApi = {
-  list: (filter: { projekt_id?: string; vorgang_id?: string }) => {
+  list: (filter: {
+    projekt_id?: string;
+    vorgang_id?: string;
+    eltern_aufgabe_id?: string;
+    mir_zugewiesen?: boolean;
+  }) => {
     const params = new URLSearchParams();
     if (filter.projekt_id) params.set("projekt_id", filter.projekt_id);
     if (filter.vorgang_id) params.set("vorgang_id", filter.vorgang_id);
+    if (filter.eltern_aufgabe_id) params.set("eltern_aufgabe_id", filter.eltern_aufgabe_id);
+    if (filter.mir_zugewiesen) params.set("mir_zugewiesen", "true");
     return apiFetch<ProjektAufgabe[]>(`/api/projekt-aufgaben?${params}`);
   },
   get: (id: string) => apiFetch<ProjektAufgabe>(`/api/projekt-aufgaben/${id}`),
   create: (body: {
-    projekt_id: string;
-    spalte_id: string;
+    // projekt_id fehlt/undefined -> private Aufgabe (kein Kanban-Board).
+    projekt_id?: string;
+    spalte_id?: string;
+    eltern_aufgabe_id?: string;
     titel: string;
     beschreibung?: string;
     faelligkeit_am?: string | null;
     prioritaet?: string;
     zugewiesen_an?: string | null;
     vorgang_id?: string | null;
+    anlage_id?: string | null;
+    kunde_id?: string | null;
+    standort_id?: string | null;
     checkliste?: ChecklistenPunkt[];
     zusatzfelder?: Record<string, string>;
   }) => apiFetch<ProjektAufgabe>("/api/projekt-aufgaben", { method: "POST", body: JSON.stringify(body) }),
@@ -1470,12 +1482,17 @@ export const projektAufgabenApi = {
     id: string,
     body: {
       spalte_id?: string;
+      eltern_aufgabe_id?: string;
       titel?: string;
       beschreibung?: string;
       faelligkeit_am?: string | null;
       prioritaet?: string;
       zugewiesen_an?: string | null;
+      erledigt?: boolean;
       vorgang_id?: string | null;
+      anlage_id?: string | null;
+      kunde_id?: string | null;
+      standort_id?: string | null;
       checkliste?: ChecklistenPunkt[];
       zusatzfelder?: Record<string, string>;
     },

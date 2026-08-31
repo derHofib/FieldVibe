@@ -8,6 +8,7 @@ import {
   HardHat,
   Inbox,
   KanbanSquare,
+  ListChecks,
   type LucideIcon,
   Mail,
   Package,
@@ -113,6 +114,19 @@ export const NAV_SEITEN: NavSeite[] = [
     // Feld-App-Spalte -- siehe office/OfficeProjektePage.tsx.
     nurOffice: true,
     sichtbar: ({ hatRecht }) => hatRecht("projekte", "sehen"),
+  },
+  {
+    key: "meine-aufgaben",
+    label: "Meine Aufgaben",
+    icon: ListChecks,
+    tone: "violet",
+    route: "/meine-aufgaben",
+    kategorie: "Arbeit",
+    // Bewusst KEIN Rechte-Gate: private Aufgaben (Projekt-Aufgaben ohne
+    // Projekt) sind fuer jeden Nutzer nutzbar, unabhaengig vom Rechte-
+    // Bereich "projekte" (der nur das Kanban-Board schuetzt). Reine Liste,
+    // kein Drag&Drop -- deshalb anders als "projekte" auch in der Feld-App.
+    sichtbar: () => true,
   },
   {
     key: "kunden",

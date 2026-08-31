@@ -581,11 +581,14 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     enabled: !!id,
   });
 
-  const kannProjekteSehen = hatRecht("projekte", "sehen");
+  // Kein Rechte-Gate hier: das Backend liefert bei vorgang_id-Filter
+  // ohnehin nur Kanban-Aufgaben mit "projekte"-Recht plus die eigenen
+  // privaten Aufgaben (siehe app/api/routes/projekte.py) -- Techniker ohne
+  // Projekte-Recht sollen ihre privat verknuepften Aufgaben trotzdem sehen.
   const { data: verknuepfteAufgaben } = useQuery({
     queryKey: ["projekt-aufgaben", "vorgang", id],
     queryFn: () => projektAufgabenApi.list({ vorgang_id: id! }),
-    enabled: !!id && kannProjekteSehen,
+    enabled: !!id,
   });
 
   const mangelMutation = useMutation({
@@ -1878,7 +1881,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      {kannProjekteSehen && (verknuepfteAufgaben ?? []).length > 0 && (
+      {(verknuepfteAufgaben ?? []).length > 0 && (
         <div className="scroll-mt-4 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Verknüpfte Aufgaben</h2>
           {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der

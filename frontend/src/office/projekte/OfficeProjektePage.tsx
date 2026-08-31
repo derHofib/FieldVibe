@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckSquare, KanbanSquare, Link2, Plus, X } from "lucide-react";
+import { AlertTriangle, CheckSquare, KanbanSquare, Link2, ListTree, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ApiError } from "../../api/client";
@@ -85,7 +85,11 @@ export function OfficeProjektePage() {
 
   const nachSpalte = useMemo(() => {
     const gruppen = new Map<string, ProjektAufgabe[]>();
+    // spalte_id ist im Typ nullable (private Aufgaben/Unteraufgaben), aber
+    // diese Liste ist immer mit projekt_id gefiltert -- das Backend liefert
+    // dort ausschliesslich eigenstaendige Kanban-Karten mit gesetzter Spalte.
     for (const a of aufgaben ?? []) {
+      if (!a.spalte_id) continue;
       const liste = gruppen.get(a.spalte_id) ?? [];
       liste.push(a);
       gruppen.set(a.spalte_id, liste);
@@ -232,6 +236,12 @@ export function OfficeProjektePage() {
                             <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-stone-500">
                               <CheckSquare size={11} strokeWidth={2} />
                               {checklisteErledigt}/{checklisteGesamt}
+                            </span>
+                          )}
+                          {!!a.unteraufgaben_gesamt && (
+                            <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-stone-500">
+                              <ListTree size={11} strokeWidth={2} />
+                              {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
                             </span>
                           )}
                         </div>

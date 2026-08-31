@@ -39,6 +39,7 @@ import { KundenPage } from "./pages/feld/KundenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
 import { MaterialPage } from "./pages/feld/MaterialPage";
+import { MeineAufgabenPage } from "./pages/feld/MeineAufgabenPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
@@ -154,6 +155,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
           <Route path="/dispo" element={<DispoBoardPage />} />
+          <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
           <Route path="/boards" element={<BoardsUebersichtPage />} />
           <Route path="/boards/:id" element={<BoardMobilePage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />

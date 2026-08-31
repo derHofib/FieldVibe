@@ -20,6 +20,7 @@ import { KundenPage } from "../pages/feld/KundenPage";
 import { KundeProfilePage } from "../pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "../pages/feld/MaterialDetailPage";
 import { MaterialPage } from "../pages/feld/MaterialPage";
+import { MeineAufgabenPage } from "../pages/feld/MeineAufgabenPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { NotificationsPage } from "../pages/feld/NotificationsPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
@@ -96,6 +97,7 @@ export function OfficeApp() {
         <Route path="/kunden" element={<KundenPage />} />
         <Route path="/partner" element={<PartnerPage />} />
         <Route path="/material" element={<MaterialPage />} />
+        <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
         <Route path="/anfragen" element={<AnfragenPage />} />
         <Route path="/angebote/:id" element={<AngebotDetailPage />} />
         <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
