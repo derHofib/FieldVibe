@@ -113,7 +113,7 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     "pruefzyklus": EntityKind(Pruefzyklus, "bezeichnung"),
     "pruefmittel": EntityKind(Pruefmittel, "bezeichnung"),
     "projekt": EntityKind(Projekt, "name", (("projekt_aufgabe", "projekt_id"),)),
-    "projekt_aufgabe": EntityKind(ProjektAufgabe, "titel"),
+    "projekt_aufgabe": EntityKind(ProjektAufgabe, "titel", (("projekt_aufgabe", "eltern_aufgabe_id"),)),
     "lieferant": EntityKind(
         Lieferant, "name", (("bestellung", "lieferant_id"), ("eingangsrechnung", "lieferant_id"))
     ),

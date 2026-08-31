@@ -5,6 +5,7 @@ import pytest
 from app.db.session import system_session
 from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.projekt import Projekt, ProjektAufgabe
+from app.models.standort import Standort
 from app.models.user import User
 from app.core.security import hash_password
 from tests.conftest import auth_headers, login
@@ -335,3 +336,229 @@ async def test_checkliste_wird_beim_patch_komplett_ersetzt(client, make_mandant,
     )
     assert resp.status_code == 200
     assert resp.json()["checkliste"] == [{"text": "Eins", "erledigt": True}]
+
+
+@pytest.mark.asyncio
+async def test_private_aufgabe_ohne_projekte_recht_erlaubt(client, make_mandant):
+    """Private Aufgaben (projekt_id=None) sind fuer jeden Nutzer nutzbar,
+    unabhaengig vom Rechte-Bereich "projekte" -- der schuetzt ausschliesslich
+    die Kanban-Funktion."""
+    mandant = await make_mandant()
+    account_typ = await _make_custom_mit_projekte_recht(mandant, aktionen=set())
+    user = await _make_custom_user(mandant, account_typ)
+    token = await login(client, user.email, "hunter2!!")
+
+    assert (await client.get("/api/projekte", headers=auth_headers(token))).status_code == 403
+
+    created = await client.post(
+        "/api/projekt-aufgaben",
+        headers=auth_headers(token),
+        json={"titel": "Werkzeug abholen", "prioritaet": "niedrig"},
+    )
+    assert created.status_code == 201
+    aufgabe = created.json()
+    assert aufgabe["projekt_id"] is None
+    assert aufgabe["spalte_id"] is None
+
+    erledigt = await client.patch(
+        f"/api/projekt-aufgaben/{aufgabe['id']}", headers=auth_headers(token), json={"erledigt": True}
+    )
+    assert erledigt.status_code == 200
+    assert erledigt.json()["erledigt_am"] is not None
+
+    loesch_resp = await client.delete(f"/api/projekt-aufgaben/{aufgabe['id']}", headers=auth_headers(token))
+    assert loesch_resp.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_spalte_bei_privater_aufgabe_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/projekt-aufgaben",
+        headers=auth_headers(token),
+        json={"titel": "Kaputt", "spalte_id": str(uuid.uuid4())},
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_private_aufgabe_nur_fuer_eigentuemer_sichtbar(client, make_mandant):
+    mandant = await make_mandant()
+    account_typ = await _make_custom_mit_projekte_recht(mandant, aktionen=set())
+    user_a = await _make_custom_user(mandant, account_typ)
+    user_b = await _make_custom_user(mandant, account_typ)
+    token_a = await login(client, user_a.email, "hunter2!!")
+    token_b = await login(client, user_b.email, "hunter2!!")
+
+    aufgabe = (
+        await client.post(
+            "/api/projekt-aufgaben", headers=auth_headers(token_a), json={"titel": "Nur meins"}
+        )
+    ).json()
+
+    # User B sieht die Aufgabe von A weder einzeln noch in der "Meine
+    # Aufgaben"-Aggregation.
+    get_resp = await client.get(f"/api/projekt-aufgaben/{aufgabe['id']}", headers=auth_headers(token_b))
+    assert get_resp.status_code == 403
+
+    liste_b = await client.get(
+        "/api/projekt-aufgaben", headers=auth_headers(token_b), params={"mir_zugewiesen": "true"}
+    )
+    assert liste_b.json() == []
+
+    patch_resp = await client.patch(
+        f"/api/projekt-aufgaben/{aufgabe['id']}", headers=auth_headers(token_b), json={"titel": "Uebernommen"}
+    )
+    assert patch_resp.status_code == 403
+
+    liste_a = await client.get(
+        "/api/projekt-aufgaben", headers=auth_headers(token_a), params={"mir_zugewiesen": "true"}
+    )
+    assert [a["id"] for a in liste_a.json()] == [aufgabe["id"]]
+
+
+@pytest.mark.asyncio
+async def test_unteraufgabe_anlegen_zaehlt_am_elternteil_und_erscheint_nicht_auf_dem_board(
+    client, make_mandant, make_user
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    projekt = (
+        await client.post("/api/projekte", headers=auth_headers(token), json={"name": "Mit Unteraufgaben"})
+    ).json()
+    spalten = (
+        await client.get(f"/api/projekte/{projekt['id']}/spalten", headers=auth_headers(token))
+    ).json()
+
+    eltern = (
+        await client.post(
+            "/api/projekt-aufgaben",
+            headers=auth_headers(token),
+            json={"projekt_id": projekt["id"], "spalte_id": spalten[0]["id"], "titel": "Hauptaufgabe"},
+        )
+    ).json()
+    kind1 = (
+        await client.post(
+            "/api/projekt-aufgaben",
+            headers=auth_headers(token),
+            json={
+                "projekt_id": projekt["id"],
+                "eltern_aufgabe_id": eltern["id"],
+                "titel": "Teilschritt 1",
+            },
+        )
+    ).json()
+    assert kind1["spalte_id"] is None
+    kind2 = (
+        await client.post(
+            "/api/projekt-aufgaben",
+            headers=auth_headers(token),
+            json={
+                "projekt_id": projekt["id"],
+                "eltern_aufgabe_id": eltern["id"],
+                "titel": "Teilschritt 2",
+            },
+        )
+    ).json()
+    await client.patch(
+        f"/api/projekt-aufgaben/{kind1['id']}", headers=auth_headers(token), json={"erledigt": True}
+    )
+
+    board = await client.get(
+        "/api/projekt-aufgaben", headers=auth_headers(token), params={"projekt_id": projekt["id"]}
+    )
+    assert [a["id"] for a in board.json()] == [eltern["id"]]
+    [eltern_mit_details] = [a for a in board.json() if a["id"] == eltern["id"]]
+    assert eltern_mit_details["unteraufgaben_gesamt"] == 2
+    assert eltern_mit_details["unteraufgaben_erledigt"] == 1
+
+    kinder = await client.get(
+        "/api/projekt-aufgaben", headers=auth_headers(token), params={"eltern_aufgabe_id": eltern["id"]}
+    )
+    assert {a["id"] for a in kinder.json()} == {kind1["id"], kind2["id"]}
+
+    verschachtelt = await client.post(
+        "/api/projekt-aufgaben",
+        headers=auth_headers(token),
+        json={
+            "projekt_id": projekt["id"],
+            "eltern_aufgabe_id": kind1["id"],
+            "titel": "Zu tief verschachtelt",
+        },
+    )
+    assert verschachtelt.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_unteraufgabe_an_fremder_privater_aufgabe_wird_abgelehnt(client, make_mandant):
+    mandant = await make_mandant()
+    account_typ = await _make_custom_mit_projekte_recht(mandant, aktionen=set())
+    user_a = await _make_custom_user(mandant, account_typ)
+    user_b = await _make_custom_user(mandant, account_typ)
+    token_a = await login(client, user_a.email, "hunter2!!")
+    token_b = await login(client, user_b.email, "hunter2!!")
+
+    eltern = (
+        await client.post(
+            "/api/projekt-aufgaben", headers=auth_headers(token_a), json={"titel": "Privat von A"}
+        )
+    ).json()
+
+    resp = await client.post(
+        "/api/projekt-aufgaben",
+        headers=auth_headers(token_b),
+        json={"eltern_aufgabe_id": eltern["id"], "titel": "Untergeschoben"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_aufgabe_mit_anlage_kunde_standort_verknuepfen(
+    client, make_mandant, make_user, make_kunde, make_anlage
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant, name="Tischlerei Nord")
+    anlage = await make_anlage(mandant=mandant, kunde=kunde, bezeichnung="Kreissäge Halle 2")
+    async with system_session() as session:
+        standort = Standort(
+            mandant_id=mandant.id, kunde_id=kunde.id, bezeichnung="Werkstatt Nord", adresse={}
+        )
+        session.add(standort)
+        await session.flush()
+        await session.refresh(standort)
+    token = await login(client, admin.email, "pw-123456")
+
+    created = await client.post(
+        "/api/projekt-aufgaben",
+        headers=auth_headers(token),
+        json={
+            "titel": "Wartung vorbereiten",
+            "kunde_id": str(kunde.id),
+            "anlage_id": str(anlage.id),
+            "standort_id": str(standort.id),
+        },
+    )
+    assert created.status_code == 201
+    aufgabe = created.json()
+    assert aufgabe["kunde_id"] == str(kunde.id)
+
+    liste = await client.get(
+        "/api/projekt-aufgaben", headers=auth_headers(token), params={"mir_zugewiesen": "true"}
+    )
+    [angereichert] = [a for a in liste.json() if a["id"] == aufgabe["id"]]
+    assert angereichert["kunde_name"] == "Tischlerei Nord"
+    assert angereichert["anlage_name"] == "Kreissäge Halle 2"
+    assert angereichert["standort_name"] == "Werkstatt Nord"
+
+    unbekannt = await client.post(
+        "/api/projekt-aufgaben",
+        headers=auth_headers(token),
+        json={"titel": "Y", "kunde_id": str(uuid.uuid4())},
+    )
+    assert unbekannt.status_code == 400
