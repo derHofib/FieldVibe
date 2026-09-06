@@ -51,6 +51,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     positionstyp: "material",
   });
   const [lvAuswahl, setLvAuswahl] = useState("");
+  const [lvSplitMenge, setLvSplitMenge] = useState("1");
 
   const deleteMutation = useMutation({
     mutationFn: () => angeboteApi.remove(id!),
@@ -97,6 +98,44 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         positionstyp: "material",
       });
       setLvAuswahl("");
+      queryClient.invalidateQueries({ queryKey: ["angebot", id] });
+    },
+  });
+
+  const lvPosition = (leistungsverzeichnis ?? []).find((p) => p.id === lvAuswahl);
+  // Eine LV-Position mit Kalkulation (Modus "berechnet" oder mit
+  // Unterpunkten) hat lohn_gesamt/material_gesamt > 0 -- dann wird sie als
+  // zwei Angebotspositionen (Lohn/Material) uebernommen statt als eine
+  // manuell ausgefuellte, siehe Ausarbeitung "Leistungsverzeichnis als
+  // Kalkulator".
+  const lvHatSplit =
+    !!lvPosition && (Number(lvPosition.lohn_gesamt) > 0 || Number(lvPosition.material_gesamt) > 0);
+
+  const addSplitPositionenMutation = useMutation({
+    mutationFn: async () => {
+      if (Number(lvPosition!.lohn_gesamt) > 0) {
+        await angeboteApi.addPosition(id!, {
+          beschreibung: `${lvPosition!.bezeichnung} – Lohn`,
+          menge: lvSplitMenge,
+          einheit: lvPosition!.einheit,
+          einzelpreis: lvPosition!.lohn_gesamt,
+          positionstyp: "arbeitszeit",
+        });
+      }
+      if (Number(lvPosition!.material_gesamt) > 0) {
+        await angeboteApi.addPosition(id!, {
+          beschreibung: `${lvPosition!.bezeichnung} – Material`,
+          menge: lvSplitMenge,
+          einheit: lvPosition!.einheit,
+          einzelpreis: lvPosition!.material_gesamt,
+          positionstyp: "material",
+        });
+      }
+    },
+    onSuccess: () => {
+      setShowForm(false);
+      setLvAuswahl("");
+      setLvSplitMenge("1");
       queryClient.invalidateQueries({ queryKey: ["angebot", id] });
     },
   });
@@ -182,8 +221,11 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                   value={lvAuswahl}
                   onChange={(v) => {
                     setLvAuswahl(v);
+                    setLvSplitMenge("1");
                     const position = (leistungsverzeichnis ?? []).find((p) => p.id === v);
-                    if (position) {
+                    const hatSplit =
+                      position && (Number(position.lohn_gesamt) > 0 || Number(position.material_gesamt) > 0);
+                    if (position && !hatSplit) {
                       setForm({
                         ...form,
                         beschreibung: position.bezeichnung,
@@ -203,6 +245,47 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 />
               </div>
             )}
+
+            {lvHatSplit ? (
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500 dark:text-stone-400">
+                  Wird als zwei Positionen übernommen:{" "}
+                  {Number(lvPosition!.lohn_gesamt) > 0 && (
+                    <>
+                      Lohn <strong className="text-slate-700 dark:text-stone-200">{lvPosition!.lohn_gesamt} €</strong>
+                    </>
+                  )}
+                  {Number(lvPosition!.lohn_gesamt) > 0 && Number(lvPosition!.material_gesamt) > 0 && ", "}
+                  {Number(lvPosition!.material_gesamt) > 0 && (
+                    <>
+                      Material{" "}
+                      <strong className="text-slate-700 dark:text-stone-200">{lvPosition!.material_gesamt} €</strong>
+                    </>
+                  )}{" "}
+                  (je {lvPosition!.einheit}).
+                </p>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+                    Menge ({lvPosition!.einheit})
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={lvSplitMenge}
+                    onChange={(e) => setLvSplitMenge(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  />
+                </div>
+                <button
+                  disabled={!lvSplitMenge || addSplitPositionenMutation.isPending}
+                  onClick={() => addSplitPositionenMutation.mutate()}
+                  className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  Hinzufügen
+                </button>
+              </div>
+            ) : (
+              <>
             <div className="flex gap-1.5">
               {(["material", "arbeitszeit"] as AngebotPositionstyp[]).map((typ) => (
                 <button
@@ -262,6 +345,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
             >
               Hinzufügen
             </button>
+              </>
+            )}
           </div>
         )}
 

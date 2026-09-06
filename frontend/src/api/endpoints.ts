@@ -60,6 +60,8 @@ import type {
   LeistungsverzeichnisVerwendung,
   LeistungsverzeichnisVerwendungMitDetails,
   Leistungstyp,
+  LvKalkulationsmodus,
+  LvMaterialPosten,
   Lieferant,
   MailAccount,
   MailAccountVerbindungTest,
@@ -1243,26 +1245,41 @@ export const materialApi = {
   remove: (id: string) => apiFetch<void>(`/api/material/${id}`, { method: "DELETE" }),
 };
 
+interface LvPositionSchreibbarePfelder {
+  kunde_id?: string;
+  eltern_position_id?: string;
+  bezeichnung: string;
+  einheit?: string;
+  einzelpreis?: string;
+  ist_stundensatz?: boolean;
+  notiz?: string;
+  kalkulationsmodus?: LvKalkulationsmodus;
+  lohn_minuten?: number | null;
+  lohn_stundensatz?: string | null;
+  material_posten?: (Omit<LvMaterialPosten, "material_id"> & { material_id?: string | null })[];
+  material_aufschlag_prozent?: string;
+}
+
 export const leistungsverzeichnisApi = {
-  list: (kundeId: string, nurStundensaetze = false) =>
+  // Ohne kundeId: nur der mandantenweite Katalog (Hauptpunkte/eigenstaendige
+  // Eintraege). Mit kundeId: zusaetzlich die kundenspezifischen Eintraege
+  // dieses Kunden -- siehe app/api/routes/leistungsverzeichnis.py.
+  list: (kundeId?: string, nurStundensaetze = false) => {
+    const params = new URLSearchParams();
+    if (kundeId) params.set("kunde_id", kundeId);
+    if (nurStundensaetze) params.set("nur_stundensaetze", "true");
+    return apiFetch<LeistungsverzeichnisPosition[]>(`/api/leistungsverzeichnis?${params}`);
+  },
+  unterpunkte: (elternPositionId: string) =>
     apiFetch<LeistungsverzeichnisPosition[]>(
-      `/api/leistungsverzeichnis?kunde_id=${kundeId}${nurStundensaetze ? "&nur_stundensaetze=true" : ""}`
+      `/api/leistungsverzeichnis?eltern_position_id=${elternPositionId}`,
     ),
-  create: (body: {
-    kunde_id: string;
-    bezeichnung: string;
-    einheit?: string;
-    einzelpreis?: string;
-    ist_stundensatz?: boolean;
-    notiz?: string;
-  }) => apiFetch<LeistungsverzeichnisPosition>("/api/leistungsverzeichnis", {
-    method: "POST",
-    body: JSON.stringify(body),
-  }),
-  update: (
-    id: string,
-    body: Partial<Pick<LeistungsverzeichnisPosition, "bezeichnung" | "einheit" | "einzelpreis" | "ist_stundensatz" | "notiz">>,
-  ) =>
+  create: (body: LvPositionSchreibbarePfelder) =>
+    apiFetch<LeistungsverzeichnisPosition>("/api/leistungsverzeichnis", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: Partial<Omit<LvPositionSchreibbarePfelder, "eltern_position_id">>) =>
     apiFetch<LeistungsverzeichnisPosition>(`/api/leistungsverzeichnis/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),

@@ -196,6 +196,17 @@ export const NAV_SEITEN: NavSeite[] = [
       hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung"),
   },
   {
+    key: "leistungsverzeichnis",
+    label: "Leistungsverzeichnis",
+    icon: ClipboardList,
+    tone: "cyan",
+    route: "/leistungsverzeichnis",
+    kategorie: "Finanzen",
+    // Gleiches Recht wie der Endpunkt selbst (haengt fachlich am Kunden,
+    // siehe app/api/routes/leistungsverzeichnis.py).
+    sichtbar: ({ hatRecht }) => hatRecht("kunden", "sehen"),
+  },
+  {
     key: "rechnungseingang",
     label: "Rechnungseingang",
     icon: Inbox,

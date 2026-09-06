@@ -1010,14 +1010,35 @@ export interface MaterialVerwendungMitDetails extends MaterialVerwendung {
 
 // --- Leistungsverzeichnis (LV) ---------------------------------------------
 
+export type LvKalkulationsmodus = "festpreis" | "berechnet";
+
+export interface LvMaterialPosten {
+  bezeichnung: string;
+  menge: string;
+  einzelpreis: string;
+  material_id: string | null;
+}
+
 export interface LeistungsverzeichnisPosition {
   id: string;
-  kunde_id: string;
+  // NULL = gilt fuer alle Kunden (mandantenweiter Katalog).
+  kunde_id: string | null;
+  // Gesetzt = Unterpunkt eines Hauptpunkts, eine Ebene tief.
+  eltern_position_id: string | null;
   bezeichnung: string;
   einheit: string;
+  // Im Modus "berechnet" oder mit Unterpunkten serverseitig ermittelt statt
+  // frei editierbar -- siehe app/api/routes/leistungsverzeichnis.py.
   einzelpreis: string;
   ist_stundensatz: boolean;
   notiz: string | null;
+  kalkulationsmodus: LvKalkulationsmodus;
+  lohn_minuten: number | null;
+  lohn_stundensatz: string | null;
+  material_posten: LvMaterialPosten[];
+  material_aufschlag_prozent: string;
+  lohn_gesamt: string;
+  material_gesamt: string;
   created_at: string;
   updated_at: string;
 }

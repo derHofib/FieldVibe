@@ -35,6 +35,7 @@ import { FormularePage } from "./pages/feld/FormularePage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
 import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
+import { LeistungsverzeichnisPage } from "./pages/feld/LeistungsverzeichnisPage";
 import { KundenPage } from "./pages/feld/KundenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
@@ -176,6 +177,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
+          <Route path="/leistungsverzeichnis" element={<LeistungsverzeichnisPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/account-typen" element={<AccountTypenPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />

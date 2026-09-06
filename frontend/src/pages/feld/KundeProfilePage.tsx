@@ -723,16 +723,21 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
 }
 
 function LeistungsverzeichnisVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kannVerwalten: boolean }) {
-  const { data: positionen } = useQuery({
+  const { data: alle } = useQuery({
     queryKey: ["leistungsverzeichnis", kundeId],
     queryFn: () => leistungsverzeichnisApi.list(kundeId),
   });
+  // list(kundeId) liefert bewusst zusaetzlich den mandantenweiten Katalog
+  // mit (siehe leistungsverzeichnisApi.list) -- hier zaehlt aber nur, was
+  // fuer DIESEN Kunden als Sonderkondition angelegt wurde; der allgemeine
+  // Katalog wird zentral unter "Leistungsverzeichnis" gepflegt.
+  const positionen = alle?.filter((p) => p.kunde_id === kundeId);
 
   return (
     <div>
       <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
         Leistungsverzeichnis
-        <span className="ml-2 font-normal text-slate-400 dark:text-stone-500">(optional)</span>
+        <span className="ml-2 font-normal text-slate-400 dark:text-stone-500">(optional, kundenspezifisch)</span>
       </h2>
       {!positionen || positionen.length === 0 ? (
         <EmptyState
