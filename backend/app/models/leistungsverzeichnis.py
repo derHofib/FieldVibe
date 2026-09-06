@@ -2,24 +2,43 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Numeric, Text, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Numeric, Text, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
+LV_KALKULATIONSMODI = ("festpreis", "berechnet")
+
 
 class LeistungsverzeichnisPosition(SoftDeleteMixin, TimestampMixin, Base):
-    """Kunden-eigener, optionaler Katalog wiederverwendbarer Positionen
-    (Pauschalen, Stundenverrechnungssaetze, ...) -- ein Kunde kann ganz ohne
-    Leistungsverzeichnis (LV) arbeiten, siehe kunde_id NOT NULL aber keine
-    Pflicht, ueberhaupt Eintraege anzulegen. ist_stundensatz markiert
+    """Katalog wiederverwendbarer Positionen -- optional kundengebunden
+    (kunde_id NULL = gilt fuer alle Kunden, ein gesetzter Wert bleibt fuer
+    kundenspezifische Sonderkonditionen moeglich). ist_stundensatz markiert
     Eintraege, die in der Zeiterfassung als Verrechnungssatz waehlbar sind
     (siehe Zeiterfassung.lv_position_id) -- das koppelt einen SVS mit der
     Zeiterfassung, ohne die bestehende kategorie/abrechenbar-Trennung
-    (billable Feldzeit vs. rein statistische Buerozeit) anzutasten."""
+    (billable Feldzeit vs. rein statistische Buerozeit) anzutasten.
+
+    eltern_position_id macht eine Zeile zum Unterpunkt eines Hauptpunkts --
+    bewusst nur eine Ebene tief. Ein Hauptpunkt (hat aktive Kinder) bekommt
+    seinen Preis rein rechnerisch als Summe seiner Unterpunkte; eigene
+    Kalkulationsfelder werden dann ignoriert (siehe app/api/routes/
+    leistungsverzeichnis.py:_neu_berechnen).
+
+    kalkulationsmodus "festpreis" (Default, bisheriges Verhalten): einzelpreis
+    ist frei editierbar. "berechnet": einzelpreis/lohn_gesamt/material_gesamt
+    werden serverseitig aus lohn_minuten x lohn_stundensatz sowie
+    material_posten x material_aufschlag_prozent ermittelt -- Grundlage fuer
+    den automatischen Lohn/Material-Split beim Uebernehmen in ein Angebot."""
 
     __tablename__ = "leistungsverzeichnis_positionen"
+    __table_args__ = (
+        CheckConstraint(
+            f"kalkulationsmodus IN {LV_KALKULATIONSMODI}",
+            name="ck_leistungsverzeichnis_positionen_kalkulationsmodus_valid",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -27,14 +46,32 @@ class LeistungsverzeichnisPosition(SoftDeleteMixin, TimestampMixin, Base):
     mandant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
-    kunde_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=False
+    kunde_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True
+    )
+    eltern_position_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leistungsverzeichnis_positionen.id", ondelete="CASCADE"), nullable=True
     )
     bezeichnung: Mapped[str] = mapped_column(Text, nullable=False)
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
+    # Frei editierbar im Modus "festpreis" -- im Modus "berechnet" oder mit
+    # Kindern serverseitig gepflegt, siehe Klassen-Docstring.
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0"))
     ist_stundensatz: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notiz: Mapped[str | None] = mapped_column(Text)
+
+    kalkulationsmodus: Mapped[str] = mapped_column(Text, nullable=False, default="festpreis")
+    lohn_minuten: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lohn_stundensatz: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    # Liste von {bezeichnung, menge, einzelpreis, material_id} -- gleiches
+    # Prinzip wie ProjektAufgabe.checkliste, komplett ersetzt statt einzeln
+    # bearbeitet.
+    material_posten: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    material_aufschlag_prozent: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0")
+    )
+    lohn_gesamt: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0"))
+    material_gesamt: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("0"))
 
 
 class LeistungsverzeichnisVerwendung(Base):

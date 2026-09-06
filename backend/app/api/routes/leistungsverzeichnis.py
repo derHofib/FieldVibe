@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,6 +17,7 @@ from app.models.leistungsverzeichnis import (
     LeistungsverzeichnisPosition,
     LeistungsverzeichnisVerwendung,
 )
+from app.models.material import Material
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.leistungsverzeichnis import (
@@ -25,6 +27,7 @@ from app.schemas.leistungsverzeichnis import (
     LeistungsverzeichnisVerwendungCreate,
     LeistungsverzeichnisVerwendungMitDetails,
     LeistungsverzeichnisVerwendungRead,
+    MaterialPosten,
 )
 from app.services import papierkorb_service
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
@@ -59,22 +62,117 @@ async def _require_position(session: AsyncSession, lv_position_id: UUID) -> Leis
     return position
 
 
+async def _pruefe_material_posten(session: AsyncSession, posten: list[MaterialPosten]) -> None:
+    for p in posten:
+        if p.material_id is not None and await session.get(Material, p.material_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Material nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+
+
+def _material_posten_zu_json(posten: list[MaterialPosten]) -> list[dict]:
+    # Decimal ist nicht JSON-serialisierbar -- als str speichern, damit
+    # Pydantic beim Lesen wieder verlustfrei einen Decimal daraus macht.
+    return [
+        {
+            "bezeichnung": p.bezeichnung,
+            "menge": str(p.menge),
+            "einzelpreis": str(p.einzelpreis),
+            "material_id": str(p.material_id) if p.material_id else None,
+        }
+        for p in posten
+    ]
+
+
+def _berechne_eigenen_preis(position: LeistungsverzeichnisPosition) -> tuple[Decimal, Decimal]:
+    """(lohn_gesamt, material_gesamt) einer Position OHNE Kinder, gemaess
+    ihres eigenen kalkulationsmodus. Fuer "festpreis" gibt es keinen
+    Lohn/Material-Split -- einzelpreis ist dann der einzige Wert."""
+    if position.kalkulationsmodus != "berechnet":
+        return Decimal("0"), Decimal("0")
+    lohn = Decimal("0")
+    if position.lohn_minuten and position.lohn_stundensatz:
+        lohn = (Decimal(position.lohn_minuten) / Decimal(60)) * position.lohn_stundensatz
+    material_basis = sum(
+        (Decimal(str(p["menge"])) * Decimal(str(p["einzelpreis"])) for p in position.material_posten),
+        Decimal("0"),
+    )
+    aufschlag = position.material_aufschlag_prozent or Decimal("0")
+    material = material_basis * (Decimal("1") + aufschlag / Decimal("100"))
+    return lohn, material
+
+
+async def _neu_berechnen(session: AsyncSession, position: LeistungsverzeichnisPosition) -> None:
+    """Aktualisiert lohn_gesamt/material_gesamt/einzelpreis dieser Position
+    und kaskadiert -- eine Ebene tief -- zu ihrem Hauptpunkt, falls sie ein
+    Unterpunkt ist. Hat die Position selbst aktive Kinder, ist sie ein
+    Hauptpunkt: ihr Preis ist dann immer die Summe der Kinder, unabhaengig
+    vom eigenen kalkulationsmodus (der wird dann ignoriert)."""
+    kinder = (
+        await session.execute(
+            select(LeistungsverzeichnisPosition).where(
+                LeistungsverzeichnisPosition.eltern_position_id == position.id,
+                LeistungsverzeichnisPosition.geloescht_am.is_(None),
+            )
+        )
+    ).scalars().all()
+
+    if kinder:
+        lohn = sum((k.lohn_gesamt for k in kinder), Decimal("0"))
+        material = sum((k.material_gesamt for k in kinder), Decimal("0"))
+        position.lohn_gesamt = lohn
+        position.material_gesamt = material
+        position.einzelpreis = lohn + material
+    elif position.kalkulationsmodus == "berechnet":
+        lohn, material = _berechne_eigenen_preis(position)
+        position.lohn_gesamt = lohn
+        position.material_gesamt = material
+        position.einzelpreis = lohn + material
+    else:
+        position.lohn_gesamt = Decimal("0")
+        position.material_gesamt = Decimal("0")
+        # einzelpreis bleibt der frei eingetragene Wert.
+
+    await session.flush()
+
+    if position.eltern_position_id is not None:
+        eltern = await session.get(LeistungsverzeichnisPosition, position.eltern_position_id)
+        if eltern is not None and eltern.geloescht_am is None:
+            await _neu_berechnen(session, eltern)
+
+
 @router.get("", response_model=list[LeistungsverzeichnisPositionRead])
 async def list_positionen(
-    kunde_id: UUID = Query(...),
+    kunde_id: UUID | None = Query(default=None),
+    eltern_position_id: UUID | None = Query(default=None),
     nur_stundensaetze: bool = Query(default=False),
     session: AsyncSession = Depends(get_db),
 ) -> list[LeistungsverzeichnisPosition]:
-    stmt = (
-        select(LeistungsverzeichnisPosition)
-        .where(
-            LeistungsverzeichnisPosition.kunde_id == kunde_id,
+    if eltern_position_id is not None:
+        stmt = select(LeistungsverzeichnisPosition).where(
+            LeistungsverzeichnisPosition.eltern_position_id == eltern_position_id,
             LeistungsverzeichnisPosition.geloescht_am.is_(None),
         )
-        .order_by(LeistungsverzeichnisPosition.bezeichnung)
-    )
+    else:
+        # Nur eigenstaendige Positionen (Hauptpunkte/einfache Eintraege) --
+        # Unterpunkte tauchen nicht in dieser Liste auf, nur ueber den
+        # eltern_position_id-Filter. Ohne kunde_id nur der mandantenweite
+        # Katalog, mit kunde_id zusaetzlich die kundenspezifischen Eintraege.
+        stmt = select(LeistungsverzeichnisPosition).where(
+            LeistungsverzeichnisPosition.eltern_position_id.is_(None),
+            LeistungsverzeichnisPosition.geloescht_am.is_(None),
+        )
+        if kunde_id is not None:
+            stmt = stmt.where(
+                (LeistungsverzeichnisPosition.kunde_id.is_(None))
+                | (LeistungsverzeichnisPosition.kunde_id == kunde_id)
+            )
+        else:
+            stmt = stmt.where(LeistungsverzeichnisPosition.kunde_id.is_(None))
     if nur_stundensaetze:
         stmt = stmt.where(LeistungsverzeichnisPosition.ist_stundensatz.is_(True))
+    stmt = stmt.order_by(LeistungsverzeichnisPosition.bezeichnung)
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -139,18 +237,41 @@ async def create_position(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> LeistungsverzeichnisPosition:
-    await _require_kunde(session, body.kunde_id)
+    kunde_id = body.kunde_id
+    eltern: LeistungsverzeichnisPosition | None = None
+    if body.eltern_position_id is not None:
+        eltern = await _require_position(session, body.eltern_position_id)
+        if eltern.eltern_position_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Unterpunkte können nicht verschachtelt werden"
+            )
+        # Ein Unterpunkt gehört immer zum selben Kunden-Kontext wie sein
+        # Hauptpunkt -- ein mitgeschicktes kunde_id wird bewusst ignoriert.
+        kunde_id = eltern.kunde_id
+    elif kunde_id is not None:
+        await _require_kunde(session, kunde_id)
+
+    await _pruefe_material_posten(session, body.material_posten)
+
     position = LeistungsverzeichnisPosition(
         mandant_id=auth.mandant_id,
-        kunde_id=body.kunde_id,
+        kunde_id=kunde_id,
+        eltern_position_id=body.eltern_position_id,
         bezeichnung=body.bezeichnung,
         einheit=body.einheit,
         einzelpreis=body.einzelpreis,
         ist_stundensatz=body.ist_stundensatz,
         notiz=body.notiz,
+        kalkulationsmodus=body.kalkulationsmodus,
+        lohn_minuten=body.lohn_minuten,
+        lohn_stundensatz=body.lohn_stundensatz,
+        material_posten=_material_posten_zu_json(body.material_posten),
+        material_aufschlag_prozent=body.material_aufschlag_prozent,
     )
     session.add(position)
     await session.flush()
+    await _neu_berechnen(session, position)
+    await session.refresh(position)
     return position
 
 
@@ -169,9 +290,18 @@ async def update_position(
 ) -> LeistungsverzeichnisPosition:
     position = await _require_position(session, lv_position_id)
     changes = body.model_dump(exclude_unset=True)
+
+    if changes.get("kunde_id") is not None:
+        await _require_kunde(session, changes["kunde_id"])
+    if "material_posten" in changes and changes["material_posten"] is not None:
+        await _pruefe_material_posten(session, body.material_posten)
+        changes["material_posten"] = _material_posten_zu_json(body.material_posten)
+
     for feld, wert in changes.items():
         setattr(position, feld, wert)
     await session.flush()
+    await _neu_berechnen(session, position)
+    await session.refresh(position)
     return position
 
 
@@ -188,11 +318,17 @@ async def delete_position(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    position = await papierkorb_service.soft_delete(
+    position = await _require_position(session, lv_position_id)
+    eltern_id = position.eltern_position_id
+    geloescht = await papierkorb_service.soft_delete(
         session, entity_typ="leistungsverzeichnis_position", entity_id=lv_position_id, actor_user_id=auth.user_id
     )
-    if position is None:
+    if geloescht is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
+    if eltern_id is not None:
+        eltern = await session.get(LeistungsverzeichnisPosition, eltern_id)
+        if eltern is not None and eltern.geloescht_am is None:
+            await _neu_berechnen(session, eltern)
 
 
 @router.post(
@@ -213,7 +349,7 @@ async def verwendung_erfassen(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if vorgang.kunde_id != position.kunde_id:
+    if position.kunde_id is not None and vorgang.kunde_id != position.kunde_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Position gehört nicht zum Kunden dieses Vorgangs",

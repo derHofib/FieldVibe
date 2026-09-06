@@ -121,7 +121,9 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     # Verwendungen (Buchungshistorie an Vorgaengen) kaskadieren bewusst
     # nicht mit -- gleiche Regel wie bei material_verwendungen, siehe
     # delete_material in app/api/routes/material.py.
-    "leistungsverzeichnis_position": EntityKind(LeistungsverzeichnisPosition, "bezeichnung"),
+    "leistungsverzeichnis_position": EntityKind(
+        LeistungsverzeichnisPosition, "bezeichnung", (("leistungsverzeichnis_position", "eltern_position_id"),)
+    ),
     "material_bedarf": EntityKind(MaterialBedarf, None),
     "bestellung": EntityKind(Bestellung, "bestellnummer"),
     "dauerauftrag": EntityKind(

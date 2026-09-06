@@ -242,3 +242,211 @@ async def test_zeiterfassung_lehnt_svs_fremden_kunden_ab(
         },
     )
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_lv_position_mandantenweit_ohne_kunde(client, make_mandant, make_user, make_kunde):
+    """kunde_id=None -- gilt fuer alle Kunden. Beim Listen mit kunde_id
+    erscheinen mandantenweite UND kundenspezifische Eintraege gemeinsam,
+    ohne kunde_id nur die mandantenweiten."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    allgemein = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={"bezeichnung": "Installation Wallbox"},
+    )
+    assert allgemein.status_code == 201
+    assert allgemein.json()["kunde_id"] is None
+
+    await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "bezeichnung": "Sonderkondition Kunde"},
+    )
+
+    ohne_kunde = await client.get("/api/leistungsverzeichnis", headers=auth_headers(token))
+    assert [p["bezeichnung"] for p in ohne_kunde.json()] == ["Installation Wallbox"]
+
+    mit_kunde = await client.get(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"kunde_id": str(kunde.id)}
+    )
+    assert {p["bezeichnung"] for p in mit_kunde.json()} == {"Installation Wallbox", "Sonderkondition Kunde"}
+
+
+@pytest.mark.asyncio
+async def test_lv_kalkulation_unterpunkt_lohn_und_material(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    hauptpunkt = (
+        await client.post(
+            "/api/leistungsverzeichnis",
+            headers=auth_headers(token),
+            json={"bezeichnung": "Installation Wallbox"},
+        )
+    ).json()
+
+    unterpunkt = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "eltern_position_id": hauptpunkt["id"],
+            "bezeichnung": "Liefern und Montieren",
+            "kalkulationsmodus": "berechnet",
+            "lohn_minuten": 90,
+            "lohn_stundensatz": "65.00",
+            "material_posten": [{"bezeichnung": "Wallbox", "menge": "1", "einzelpreis": "450.00"}],
+            "material_aufschlag_prozent": "10",
+        },
+    )
+    assert unterpunkt.status_code == 201
+    up = unterpunkt.json()
+    assert up["kunde_id"] is None  # vom Hauptpunkt geerbt
+    assert up["lohn_gesamt"] == "97.50"
+    assert up["material_gesamt"] == "495.00"
+    assert up["einzelpreis"] == "592.50"
+
+    async with system_session() as session:
+        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt["id"])
+        assert haupt_db.lohn_gesamt == Decimal("97.50")
+        assert haupt_db.material_gesamt == Decimal("495.00")
+        assert haupt_db.einzelpreis == Decimal("592.50")
+
+
+@pytest.mark.asyncio
+async def test_hauptpunkt_preis_ist_summe_der_unterpunkte(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    hauptpunkt = (
+        await client.post(
+            "/api/leistungsverzeichnis",
+            headers=auth_headers(token),
+            json={"bezeichnung": "Installation Wallbox"},
+        )
+    ).json()
+
+    await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "eltern_position_id": hauptpunkt["id"],
+            "bezeichnung": "Liefern und Montieren",
+            "kalkulationsmodus": "berechnet",
+            "lohn_minuten": 60,
+            "lohn_stundensatz": "60.00",
+            "material_posten": [{"bezeichnung": "Wallbox", "menge": "1", "einzelpreis": "400.00"}],
+        },
+    )
+    zweiter = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "eltern_position_id": hauptpunkt["id"],
+            "bezeichnung": "Prüfung",
+            "kalkulationsmodus": "berechnet",
+            "lohn_minuten": 30,
+            "lohn_stundensatz": "60.00",
+        },
+    )
+    assert zweiter.status_code == 201
+
+    async with system_session() as session:
+        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt["id"])
+        assert haupt_db.lohn_gesamt == Decimal("90.00")
+        assert haupt_db.material_gesamt == Decimal("400.00")
+        assert haupt_db.einzelpreis == Decimal("490.00")
+
+    kinder = await client.get(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"eltern_position_id": hauptpunkt["id"]}
+    )
+    assert len(kinder.json()) == 2
+
+    # Loeschen eines Unterpunkts berechnet den Hauptpunkt neu.
+    await client.delete(f"/api/leistungsverzeichnis/{zweiter.json()['id']}", headers=auth_headers(token))
+    async with system_session() as session:
+        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt["id"])
+        assert haupt_db.lohn_gesamt == Decimal("60.00")
+        assert haupt_db.einzelpreis == Decimal("460.00")
+
+
+@pytest.mark.asyncio
+async def test_unterpunkt_kann_nicht_verschachtelt_werden(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    hauptpunkt = (
+        await client.post(
+            "/api/leistungsverzeichnis", headers=auth_headers(token), json={"bezeichnung": "Hauptpunkt"}
+        )
+    ).json()
+    unterpunkt = (
+        await client.post(
+            "/api/leistungsverzeichnis",
+            headers=auth_headers(token),
+            json={"eltern_position_id": hauptpunkt["id"], "bezeichnung": "Unterpunkt"},
+        )
+    ).json()
+
+    resp = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={"eltern_position_id": unterpunkt["id"], "bezeichnung": "Zu tief"},
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_lv_material_posten_mit_unbekanntem_material_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "bezeichnung": "Mit Fantasie-Material",
+            "kalkulationsmodus": "berechnet",
+            "material_posten": [
+                {
+                    "bezeichnung": "X",
+                    "menge": "1",
+                    "einzelpreis": "1",
+                    "material_id": "00000000-0000-0000-0000-000000000000",
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_lv_festpreis_bleibt_frei_editierbar(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    position = (
+        await client.post(
+            "/api/leistungsverzeichnis",
+            headers=auth_headers(token),
+            json={"bezeichnung": "Anfahrtspauschale", "einzelpreis": "35.00"},
+        )
+    ).json()
+    assert position["kalkulationsmodus"] == "festpreis"
+    assert position["einzelpreis"] == "35.00"
+
+    geaendert = await client.patch(
+        f"/api/leistungsverzeichnis/{position['id']}",
+        headers=auth_headers(token),
+        json={"einzelpreis": "40.00"},
+    )
+    assert geaendert.json()["einzelpreis"] == "40.00"
