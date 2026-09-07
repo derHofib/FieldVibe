@@ -40,22 +40,22 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
   }
 
   return (
-    <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Formulare</h2>
+    <div className="border border-ind-line bg-ind-bg p-3">
+      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Formulare</h2>
 
       {(ausfuellungen ?? []).length > 0 && (
         <div className="mb-2 space-y-1.5">
           {ausfuellungen!.map((vf) => (
             <div
               key={vf.id}
-              className="flex items-center justify-between gap-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60"
+              className="flex items-center justify-between gap-2 border border-ind-line-2 p-2"
             >
               <button
                 onClick={() => navigate(`/vorgang-formulare/${vf.id}`)}
                 className="btn-touch flex min-w-0 flex-1 items-center gap-2 text-left"
               >
-                <ClipboardList size={16} className="shrink-0 text-slate-400 dark:text-stone-500" />
-                <span className="truncate text-sm text-slate-700 dark:text-stone-200">
+                <ClipboardList size={16} className="shrink-0 text-ind-ink-3" />
+                <span className="truncate text-sm text-ind-ink">
                   {vf.formular_snapshot.name}
                 </span>
               </button>

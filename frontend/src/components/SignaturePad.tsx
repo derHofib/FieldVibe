@@ -70,12 +70,12 @@ export function SignaturePad({ onSave, onCancel, isSaving = false }: SignaturePa
   }
 
   return (
-    <div className="space-y-2 rounded-md bg-slate-50 p-2">
+    <div className="space-y-2 border border-ind-line-2 p-2">
       <input
         value={unterzeichnerName}
         onChange={(e) => setUnterzeichnerName(e.target.value)}
         placeholder="Name des Unterzeichners"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <canvas
         ref={(node) => {
@@ -98,23 +98,20 @@ export function SignaturePad({ onSave, onCancel, isSaving = false }: SignaturePa
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        className="h-40 w-full touch-none rounded-md border border-slate-300 bg-white"
+        className="h-40 w-full touch-none border border-ind-line bg-white"
       />
       <div className="flex gap-2">
-        <button
-          onClick={leeren}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm text-slate-600"
-        >
+        <button onClick={leeren} className="btn-touch btn-industry btn-industry-secondary flex-1 py-1.5 text-sm">
           Löschen
         </button>
         <button
           onClick={speichern}
           disabled={!hatUnterschrift || !unterzeichnerName.trim() || isSaving}
-          className="btn-touch flex-1 rounded-md bg-slate-900 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch btn-industry btn-industry-primary flex-1 py-1.5 text-sm disabled:opacity-50"
         >
           Speichern
         </button>
-        <button onClick={onCancel} className="btn-touch flex-1 rounded-md text-sm text-slate-500">
+        <button onClick={onCancel} className="btn-touch flex-1 text-sm text-ind-ink-3 hover:text-ind-ink">
           Abbrechen
         </button>
       </div>

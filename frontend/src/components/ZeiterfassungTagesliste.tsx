@@ -59,7 +59,7 @@ export function ZeiterfassungTagesliste({
               onClick={() => toggle(tag)}
               className="btn-touch flex w-full items-center justify-between px-2 py-2 text-left text-sm"
             >
-              <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-stone-200">
+              <span className="flex items-center gap-1.5 font-medium text-ind-ink">
                 {offen ? (
                   <ChevronDown size={15} strokeWidth={2} />
                 ) : (
@@ -71,7 +71,7 @@ export function ZeiterfassungTagesliste({
                   month: "2-digit",
                 })}
               </span>
-              <span className="font-medium text-slate-700 dark:text-stone-200">
+              <span className="font-medium text-ind-ink">
                 {formatStundenAlsHHMM(tagessumme)} Std.
               </span>
             </button>
@@ -87,7 +87,7 @@ export function ZeiterfassungTagesliste({
                       disabled={!e.vorgang_id}
                       className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-white px-2 py-1.5 text-left text-sm disabled:cursor-default dark:bg-stone-900"
                     >
-                      <span className="min-w-0 truncate text-slate-600 dark:text-stone-300">
+                      <span className="min-w-0 truncate text-ind-ink-2">
                         {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
                         {" · "}
                         <span className="font-medium">
@@ -95,7 +95,7 @@ export function ZeiterfassungTagesliste({
                         </span>
                         {e.taetigkeit && ` · ${e.taetigkeit}`}
                       </span>
-                      <span className="ml-2 shrink-0 font-medium text-slate-700 dark:text-stone-300">
+                      <span className="ml-2 shrink-0 font-medium text-ind-ink-2">
                         {formatStundenAlsHHMM(formatDauer(e.start_at, e.ende_at))} Std.
                       </span>
                     </button>

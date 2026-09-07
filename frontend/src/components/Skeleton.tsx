@@ -5,7 +5,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 export function SkeletonCard({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${className}`}
+      className={`border border-ind-line bg-ind-bg p-3 ${className}`}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">

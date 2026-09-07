@@ -27,33 +27,33 @@ function AnsprechpartnerForm({
   const [form, setForm] = useState(eintrag);
 
   return (
-    <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+    <div className="space-y-2 border border-ind-line-2 p-3">
       <input
         autoFocus
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         placeholder="Name *"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <input
         value={form.position ?? ""}
         onChange={(e) => setForm({ ...form, position: e.target.value })}
         placeholder="Position (z.B. Geschäftsführer, Hausmeister)"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.telefon ?? ""}
           onChange={(e) => setForm({ ...form, telefon: e.target.value })}
           placeholder="Telefon"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         />
         <input
           type="email"
           value={form.email ?? ""}
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           placeholder="E-Mail"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         />
       </div>
       <select
@@ -61,7 +61,7 @@ function AnsprechpartnerForm({
         onChange={(e) =>
           setForm({ ...form, eskalationsstufe: e.target.value ? (Number(e.target.value) as Eskalationsstufe) : null })
         }
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       >
         <option value="">Keine Eskalationsstufe</option>
         {([1, 2, 3] as Eskalationsstufe[]).map((stufe) => (
@@ -70,7 +70,7 @@ function AnsprechpartnerForm({
           </option>
         ))}
       </select>
-      <label className="btn-touch flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
+      <label className="btn-touch flex items-center gap-2 text-sm text-ind-ink-2">
         <input
           type="checkbox"
           checked={form.operativ}
@@ -82,7 +82,7 @@ function AnsprechpartnerForm({
         <button
           disabled={!form.name.trim() || speichernLaeuft}
           onClick={() => onSpeichern(form)}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -139,7 +139,7 @@ export function AnsprechpartnerVerwaltung({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Ansprechpartner</h2>
+        <h2 className="text-sm font-semibold text-ind-ink-3">Ansprechpartner</h2>
         {kannVerwalten && !neuAnlegen && (
           <button onClick={() => setNeuAnlegen(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
             + Neu
@@ -148,7 +148,7 @@ export function AnsprechpartnerVerwaltung({
       </div>
 
       {liste.length === 0 && !neuAnlegen && (
-        <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Ansprechpartner hinterlegt.</p>
+        <p className="text-sm text-ind-ink-3">Noch keine Ansprechpartner hinterlegt.</p>
       )}
 
       <div className="space-y-2">
@@ -164,12 +164,12 @@ export function AnsprechpartnerVerwaltung({
           ) : (
             <div
               key={a.id}
-              className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="border border-ind-line bg-ind-bg p-3"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{a.name}</div>
-                  {a.position && <div className="text-xs text-slate-400 dark:text-stone-500">{a.position}</div>}
+                  <div className="text-sm font-medium text-ind-ink">{a.name}</div>
+                  {a.position && <div className="text-xs text-ind-ink-3">{a.position}</div>}
                 </div>
                 <div className="flex gap-1">
                   {a.operativ && (
@@ -185,11 +185,11 @@ export function AnsprechpartnerVerwaltung({
                 </div>
               </div>
               {(a.telefon || a.email) && (
-                <div className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+                <div className="mt-1 text-xs text-ind-ink-3">
                   {[a.telefon, a.email].filter(Boolean).join(" · ")}
                 </div>
               )}
-              {a.notiz && <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">{a.notiz}</p>}
+              {a.notiz && <p className="mt-1 text-xs text-ind-ink-3">{a.notiz}</p>}
               {kannVerwalten && (
                 <div className="mt-2 flex gap-3">
                   <button

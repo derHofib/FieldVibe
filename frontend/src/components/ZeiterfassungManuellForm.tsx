@@ -94,11 +94,11 @@ export function ZeiterfassungManuellForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+      className="space-y-3 border border-ind-line bg-ind-bg p-4"
     >
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 sm:col-span-1">
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">
             Datum
           </label>
           <input
@@ -106,11 +106,11 @@ export function ZeiterfassungManuellForm({
             value={datum}
             onChange={(e) => setDatum(e.target.value)}
             required
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">
             Von
           </label>
           <input
@@ -118,11 +118,11 @@ export function ZeiterfassungManuellForm({
             value={startZeit}
             onChange={(e) => setStartZeit(e.target.value)}
             required
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">
             Bis
           </label>
           <input
@@ -130,19 +130,19 @@ export function ZeiterfassungManuellForm({
             value={endeZeit}
             onChange={(e) => setEndeZeit(e.target.value)}
             required
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+        <label className="mb-1 block text-xs font-medium text-ind-ink-2">
           Kategorie
         </label>
         <select
           value={kategorie}
           onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         >
           {KATEGORIE_OPTIONEN.map((o) => (
             <option key={o.value} value={o.value}>
@@ -154,7 +154,7 @@ export function ZeiterfassungManuellForm({
 
       {kategorie === "auftrag" && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">
             Vorgang
           </label>
           <SearchableSelect
@@ -166,7 +166,7 @@ export function ZeiterfassungManuellForm({
             onChange={setVorgangId}
             placeholder="Vorgang suchen…"
           />
-          <label className="mt-2 flex items-center gap-1.5 text-sm text-slate-600 dark:text-stone-300">
+          <label className="mt-2 flex items-center gap-1.5 text-sm text-ind-ink-2">
             <input
               type="checkbox"
               checked={abrechenbar}
@@ -177,7 +177,7 @@ export function ZeiterfassungManuellForm({
           </label>
           {abrechenbar && (stundensaetze ?? []).length > 0 && (
             <div className="mt-2">
-              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+              <label className="mb-1 block text-xs font-medium text-ind-ink-2">
                 Stundenverrechnungssatz (optional)
               </label>
               <SearchableSelect
@@ -195,7 +195,7 @@ export function ZeiterfassungManuellForm({
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+        <label className="mb-1 block text-xs font-medium text-ind-ink-2">
           Notiz (optional)
         </label>
         <input
@@ -203,7 +203,7 @@ export function ZeiterfassungManuellForm({
           value={taetigkeit}
           onChange={(e) => setTaetigkeit(e.target.value)}
           placeholder="z.B. Materialbestellung, Ersatzteile abholen…"
-          className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         />
       </div>
 

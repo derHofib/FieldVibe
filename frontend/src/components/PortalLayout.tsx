@@ -19,7 +19,7 @@ export function PortalLayout() {
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/70">
         <button
           onClick={() => navigate("/portal/vorgaenge")}
-          className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-white"
+          className="flex items-center gap-1.5 text-lg font-bold text-ind-ink"
         >
           Kunden<span className="text-cyan-500 dark:text-cyan-400">portal</span>
         </button>
@@ -48,7 +48,7 @@ export function PortalLayout() {
               `btn-touch flex-1 py-3 text-center text-sm font-medium ${
                 isActive
                   ? "text-cyan-600 dark:text-cyan-400"
-                  : "text-slate-400 dark:text-stone-500"
+                  : "text-ind-ink-3"
               }`
             }
           >
