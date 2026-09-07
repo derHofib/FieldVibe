@@ -120,7 +120,7 @@ function MmFeld({
 
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-slate-500 dark:text-stone-400">{label}</span>
+      <span className="text-xs font-medium text-ind-ink-3">{label}</span>
       <input
         type="number"
         inputMode="decimal"
@@ -135,7 +135,7 @@ function MmFeld({
             e.currentTarget.blur();
           }
         }}
-        className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm tabular-nums text-ind-ink"
       />
     </label>
   );
@@ -159,10 +159,10 @@ function EigenschaftenPanel({
   if (!feld) {
     return (
       <div className="rounded-lg bg-white p-3 shadow-xs lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Eigenschaften
         </h3>
-        <p className="mt-2 text-xs text-slate-400 dark:text-stone-500">
+        <p className="mt-2 text-xs text-ind-ink-3">
           Feld im Layout antippen, um Größe und Position exakt einzugeben.
         </p>
       </div>
@@ -173,10 +173,10 @@ function EigenschaftenPanel({
   return (
     <div className="space-y-3 rounded-lg bg-white p-3 shadow-xs lg:w-56 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Eigenschaften
         </h3>
-        <p className="mt-1 truncate text-sm font-medium text-slate-800 dark:text-stone-100">{feld.label}</p>
+        <p className="mt-1 truncate text-sm font-medium text-ind-ink">{feld.label}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -210,11 +210,11 @@ function EigenschaftenPanel({
 
       {anzahlSeiten > 1 && (
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500 dark:text-stone-400">Seite</span>
+          <span className="text-xs font-medium text-ind-ink-3">Seite</span>
           <select
             value={feld.seite}
             onChange={(e) => onGeometrie({ seite: Number(e.target.value) })}
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           >
             {Array.from({ length: anzahlSeiten }, (_, i) => (
               <option key={i} value={i}>
@@ -323,11 +323,11 @@ function FeldForm({
       className="space-y-3 rounded-lg bg-cyan-50/60 p-3 dark:bg-cyan-500/5 dark:ring-1 dark:ring-cyan-500/20"
     >
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Feldtyp</label>
+        <label className="mb-1 block text-xs font-medium text-ind-ink-2">Feldtyp</label>
         <select
           value={values.feld_typ}
           onChange={(e) => set("feld_typ", e.target.value as FormularfeldTyp)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         >
           {FELD_TYP_OPTIONEN.map(([value, label]) => (
             <option key={value} value={value}>
@@ -337,7 +337,7 @@ function FeldForm({
         </select>
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+        <label className="mb-1 block text-xs font-medium text-ind-ink-2">
           {values.feld_typ === "abschnitt" ? "Überschrift" : "Frage / Label"}
         </label>
         <input
@@ -345,27 +345,27 @@ function FeldForm({
           onChange={(e) => set("label", e.target.value)}
           autoFocus
           placeholder={values.feld_typ === "abschnitt" ? "z.B. Sicherheitscheck" : "z.B. Anlagenbezeichnung"}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
         />
       </div>
 
       {values.feld_typ !== "abschnitt" && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">
             Hilfetext (optional)
           </label>
           <input
             value={values.hilfetext}
             onChange={(e) => set("hilfetext", e.target.value)}
             placeholder="Erklärung, die der Techniker beim Ausfüllen sieht"
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
           />
         </div>
       )}
 
       {(values.feld_typ === "dropdown" || values.feld_typ === "mehrfachauswahl") && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">
             Auswahlmöglichkeiten (eine je Zeile)
           </label>
           <textarea
@@ -373,7 +373,7 @@ function FeldForm({
             onChange={(e) => set("werte", e.target.value)}
             rows={3}
             placeholder={"z.B.\nIn Ordnung\nMangel festgestellt\nNicht prüfbar"}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
           />
         </div>
       )}
@@ -381,21 +381,21 @@ function FeldForm({
       {values.feld_typ === "bewertung" && (
         <div className="flex gap-2">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Skala von</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-2">Skala von</label>
             <input
               type="number"
               value={values.min}
               onChange={(e) => set("min", e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">bis</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-2">bis</label>
             <input
               type="number"
               value={values.max}
               onChange={(e) => set("max", e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
             />
           </div>
         </div>
@@ -403,13 +403,13 @@ function FeldForm({
 
       {datenquelleErlaubt && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">
             Automatisch befüllen aus (optional)
           </label>
           <select
             value={values.datenquelle}
             onChange={(e) => set("datenquelle", e.target.value as FormularfeldDatenquelle | "")}
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           >
             <option value="">Kein Auto-Fill -- manuell ausfüllen</option>
             {Object.entries(DATENQUELLE_LABEL).map(([value, label]) => (
@@ -418,14 +418,14 @@ function FeldForm({
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
+          <p className="mt-1 text-xs text-ind-ink-3">
             Wird beim Starten der Ausfüllung vorbefüllt, bleibt aber für den Techniker änderbar.
           </p>
         </div>
       )}
 
       {values.feld_typ !== "abschnitt" && (
-        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-stone-300">
+        <label className="flex items-center gap-2 text-sm text-ind-ink-2">
           <input
             type="checkbox"
             checked={values.pflichtfeld}
@@ -629,12 +629,12 @@ export function FormularRasterEditor({
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Formular-Layout
         </h2>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-400 dark:text-stone-500">Ansicht:</span>
+            <span className="text-xs text-ind-ink-3">Ansicht:</span>
             {ZOOM_PRESETS.map((preset) => (
               <button
                 key={preset.label}
@@ -650,7 +650,7 @@ export function FormularRasterEditor({
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-400 dark:text-stone-500">Einrasthilfe:</span>
+            <span className="text-xs text-ind-ink-3">Einrasthilfe:</span>
             {SNAP_PRESETS.map((preset) => (
               <button
                 key={preset.label}
@@ -795,13 +795,13 @@ export function FormularRasterEditor({
                       ? "border-cyan-500 ring-2 ring-cyan-500 dark:border-cyan-400 dark:ring-cyan-400"
                       : hatUeberlappung
                       ? "border-amber-400 ring-1 ring-amber-400 dark:border-amber-500 dark:ring-amber-500"
-                      : "border-slate-200 dark:border-stone-700"
+                      : "border-ind-line"
                   }`}
                 >
                   <div className="flex items-start gap-1.5">
                     <IconBadge icon={Icon} tone="cyan" size="sm" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-medium text-slate-800 dark:text-stone-100">
+                      <div className="truncate text-xs font-medium text-ind-ink">
                         {feld.label}
                         {feld.pflichtfeld && <span className="ml-1 text-rose-500">*</span>}
                       </div>
@@ -839,7 +839,7 @@ export function FormularRasterEditor({
 
           {felderAufSeite.length === 0 && (
             <p
-              className="absolute inset-x-0 text-center text-sm text-slate-400 dark:text-stone-500"
+              className="absolute inset-x-0 text-center text-sm text-ind-ink-3"
               style={{ top: randObenPx + 24 }}
             >
               Noch keine Felder auf dieser Seite -- füge das erste Feld hinzu.

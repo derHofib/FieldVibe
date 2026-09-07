@@ -42,7 +42,7 @@ export function NotificationsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Benachrichtigungen</h1>
+        <h1 className="text-lg font-bold text-ind-ink">Benachrichtigungen</h1>
         {notifications && notifications.some((n) => !n.gelesen_am) && (
           <button
             onClick={() => markAllReadMutation.mutate()}
@@ -68,8 +68,8 @@ export function NotificationsPage() {
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{n.titel}</div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">
+                <div className="text-sm font-medium text-ind-ink">{n.titel}</div>
+                <div className="text-xs text-ind-ink-3">
                   {new Date(n.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </div>
               </div>

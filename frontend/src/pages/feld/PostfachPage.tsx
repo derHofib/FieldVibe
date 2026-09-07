@@ -82,7 +82,7 @@ export function PostfachPage() {
   if (!accounts || accounts.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Postfach</h1>
+        <h1 className="text-lg font-bold text-ind-ink">Postfach</h1>
         <MailKontoFormular onFertig={() => window.location.reload()} />
       </div>
     );
@@ -91,7 +91,7 @@ export function PostfachPage() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h1 className="text-lg font-bold text-ind-ink">
           {posteingang?.anzeigename ?? "Postfach"}
         </h1>
         <button
@@ -116,20 +116,20 @@ export function PostfachPage() {
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p
-                  className={`truncate text-sm ${n.gelesen ? "font-medium text-slate-600 dark:text-stone-300" : "font-bold text-slate-900 dark:text-white"}`}
+                  className={`truncate text-sm ${n.gelesen ? "font-medium text-ind-ink-2" : "font-bold text-slate-900 dark:text-white"}`}
                 >
                   {n.von_name || n.von_adresse || "Unbekannt"}
                 </p>
-                <span className="shrink-0 text-[11px] text-slate-400 dark:text-stone-500">
+                <span className="shrink-0 text-[11px] text-ind-ink-3">
                   {relativesDatum(n.datum)}
                 </span>
               </div>
               <p
-                className={`truncate text-[13px] ${n.gelesen ? "text-slate-500 dark:text-stone-400" : "font-semibold text-slate-800 dark:text-stone-100"}`}
+                className={`truncate text-[13px] ${n.gelesen ? "text-ind-ink-3" : "font-semibold text-ind-ink"}`}
               >
                 {n.betreff || "(kein Betreff)"}
               </p>
-              <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-400 dark:text-stone-500">
+              <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-ind-ink-3">
                 {n.hat_anhang && <Paperclip size={11} strokeWidth={2} />}
                 {n.ausschnitt}
               </p>
@@ -139,7 +139,7 @@ export function PostfachPage() {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="btn-touch w-full py-2 text-center text-xs font-medium text-slate-500 dark:text-stone-400"
+              className="btn-touch w-full py-2 text-center text-xs font-medium text-ind-ink-3"
             >
               {isFetchingNextPage ? "Lädt…" : "Weitere laden"}
             </button>

@@ -82,9 +82,9 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
       .filter(Boolean)
       .join(", ");
     return (
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten</h2>
+          <h2 className="text-sm font-semibold text-ind-ink-3">Stammdaten</h2>
           <button
             onClick={() => {
               setForm({
@@ -103,22 +103,22 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
         </div>
         <dl className="space-y-1 text-sm">
           <div className="flex justify-between gap-2">
-            <dt className="text-slate-500 dark:text-stone-400">Gewerk</dt>
-            <dd className="text-right text-slate-700 dark:text-stone-300">
-              {partner.gewerk || <span className="text-slate-400 dark:text-stone-500">nicht hinterlegt</span>}
+            <dt className="text-ind-ink-3">Gewerk</dt>
+            <dd className="text-right text-ind-ink-2">
+              {partner.gewerk || <span className="text-ind-ink-3">nicht hinterlegt</span>}
             </dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-slate-500 dark:text-stone-400">Telefon</dt>
-            <dd className="text-right text-slate-700 dark:text-stone-300">{partner.telefon || "—"}</dd>
+            <dt className="text-ind-ink-3">Telefon</dt>
+            <dd className="text-right text-ind-ink-2">{partner.telefon || "—"}</dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-slate-500 dark:text-stone-400">E-Mail</dt>
-            <dd className="text-right text-slate-700 dark:text-stone-300">{partner.email || "—"}</dd>
+            <dt className="text-ind-ink-3">E-Mail</dt>
+            <dd className="text-right text-ind-ink-2">{partner.email || "—"}</dd>
           </div>
         </dl>
-        {adressZeile && <p className="mt-2 text-sm text-slate-700 dark:text-stone-300">{adressZeile}</p>}
-        {partner.notiz && <p className="mt-2 text-sm text-slate-500 dark:text-stone-400">{partner.notiz}</p>}
+        {adressZeile && <p className="mt-2 text-sm text-ind-ink-2">{adressZeile}</p>}
+        {partner.notiz && <p className="mt-2 text-sm text-ind-ink-3">{partner.notiz}</p>}
         <button
           onClick={() => aktivMutation.mutate()}
           disabled={aktivMutation.isPending}
@@ -131,45 +131,45 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Stammdaten bearbeiten</h2>
+    <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+      <h2 className="text-sm font-semibold text-ind-ink-3">Stammdaten bearbeiten</h2>
       <input
         value={form.gewerk}
         onChange={(e) => setForm({ ...form, gewerk: e.target.value })}
         placeholder="Gewerk / was die Firma macht"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <input
         value={form.telefon}
         onChange={(e) => setForm({ ...form, telefon: e.target.value })}
         placeholder="Telefon"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <input
         type="email"
         value={form.email}
         onChange={(e) => setForm({ ...form, email: e.target.value })}
         placeholder="E-Mail"
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         />
       </div>
       <textarea
@@ -177,13 +177,13 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
         placeholder="Notiz"
         rows={2}
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -238,11 +238,11 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+    <form onSubmit={handleSubmit} className="space-y-2 border border-ind-line-2 p-3">
       <select
         value={typ}
         onChange={(e) => setTyp(e.target.value as PartnerNachweisTyp)}
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
       >
         {Object.entries(NACHWEIS_TYP_LABEL).map(([wert, label]) => (
           <option key={wert} value={wert}>
@@ -251,26 +251,26 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
         ))}
       </select>
       <div>
-        <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Gültig bis (optional)</label>
+        <label className="mb-1 block text-xs text-ind-ink-3">Gültig bis (optional)</label>
         <input
           type="date"
           value={gueltigBis}
           onChange={(e) => setGueltigBis(e.target.value)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
         />
       </div>
       <input
         value={notiz}
         onChange={(e) => setNotiz(e.target.value)}
         placeholder="Notiz (optional)"
-        className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
       />
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -312,9 +312,9 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
   const abgelaufeneAnzahl = (nachweise ?? []).filter((n) => n.abgelaufen).length;
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="border border-ind-line bg-ind-bg p-4">
       <div className="mb-2 flex items-center gap-2">
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Nachweise</h2>
+        <h2 className="text-sm font-semibold text-ind-ink-3">Nachweise</h2>
         {abgelaufeneAnzahl > 0 && (
           <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-500/10 dark:text-red-400">
             <ShieldAlert size={12} strokeWidth={2} /> {abgelaufeneAnzahl} abgelaufen
@@ -322,7 +322,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
         )}
       </div>
       {(nachweise ?? []).length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-stone-500">Keine Nachweise hinterlegt.</p>
+        <p className="text-sm text-ind-ink-3">Keine Nachweise hinterlegt.</p>
       ) : (
         <div className="mb-2 space-y-2">
           {nachweise!.map((n) => (
@@ -331,8 +331,8 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
               className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-stone-800/60"
             >
               <div className="min-w-0">
-                <div className="font-medium text-slate-700 dark:text-stone-200">{NACHWEIS_TYP_LABEL[n.typ]}</div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">
+                <div className="font-medium text-ind-ink">{NACHWEIS_TYP_LABEL[n.typ]}</div>
+                <div className="text-xs text-ind-ink-3">
                   {n.gueltig_bis
                     ? `Gültig bis ${new Date(n.gueltig_bis).toLocaleDateString("de-DE")}`
                     : "Ohne Ablaufdatum"}
@@ -351,7 +351,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
                   </button>
                 )}
                 {kannVerwalten && (
-                  <label className="btn-touch cursor-pointer text-xs text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200">
+                  <label className="btn-touch cursor-pointer text-xs text-slate-500 hover:text-ind-ink-2 dark:hover:text-stone-200">
                     {n.dokument_s3_key ? "Ersetzen" : "Hochladen"}
                     <input
                       type="file"
@@ -394,8 +394,8 @@ function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
   if (!vorgaenge || vorgaenge.length === 0) return null;
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Zugewiesene Vorgänge</h2>
+    <div className="border border-ind-line bg-ind-bg p-4">
+      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Zugewiesene Vorgänge</h2>
       <div className="space-y-2">
         {vorgaenge.map((v) => (
           <button
@@ -404,8 +404,8 @@ function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
             className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-slate-50 p-3 text-left dark:bg-stone-800/60"
           >
             <div>
-              <div className="text-xs text-slate-400 dark:text-stone-500">{v.vorgangsnummer}</div>
-              <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
+              <div className="text-xs text-ind-ink-3">{v.vorgangsnummer}</div>
+              <div className="text-sm font-medium text-ind-ink">{v.titel}</div>
             </div>
             {v.partner_freigabe_status && (
               <span
@@ -442,22 +442,22 @@ export function PartnerProfilePage() {
   });
 
   if (!istModulAktiv(currentUser, "nachunternehmer")) return null;
-  if (isLoading || !partner) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading || !partner) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <Briefcase size={18} strokeWidth={2} className="text-slate-400 dark:text-stone-500" />
+            <Briefcase size={18} strokeWidth={2} className="text-ind-ink-3" />
             <div>
-              <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{partner.name}</h1>
+              <h1 className="text-lg font-bold text-ind-ink">{partner.name}</h1>
               {partner.gewerk && (
-                <p className="text-sm text-slate-500 dark:text-stone-400">{partner.gewerk}</p>
+                <p className="text-sm text-ind-ink-3">{partner.gewerk}</p>
               )}
             </div>
           </div>

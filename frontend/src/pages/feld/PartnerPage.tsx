@@ -84,7 +84,7 @@ export function PartnerPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Partner &amp; Nachunternehmer</h1>
+      <h1 className="text-lg font-bold text-ind-ink">Partner &amp; Nachunternehmer</h1>
 
       <button
         onClick={() => setShowForm((v) => !v)}
@@ -94,89 +94,89 @@ export function PartnerPage() {
       </button>
 
       {showForm && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
               Firmenname *
             </label>
             <input
               autoFocus
               value={neuerPartner.name}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, name: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+            <label className="mb-1 block text-xs text-ind-ink-3">
               Gewerk / was die Firma macht
             </label>
             <input
               value={neuerPartner.gewerk}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, gewerk: e.target.value })}
               placeholder="z.B. Elektroinstallation, Trockenbau, Gerüstbau"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Telefon</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Telefon</label>
             <input
               value={neuerPartner.telefon}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, telefon: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">E-Mail</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">E-Mail</label>
             <input
               type="email"
               value={neuerPartner.email}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, email: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Straße + Hausnr.</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Straße + Hausnr.</label>
             <input
               value={neuerPartner.strasse}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, strasse: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">PLZ</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">PLZ</label>
               <input
                 value={neuerPartner.plz}
                 onChange={(e) => setNeuerPartner({ ...neuerPartner, plz: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Ort</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">Ort</label>
               <input
                 value={neuerPartner.ort}
                 onChange={(e) => setNeuerPartner({ ...neuerPartner, ort: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Notiz</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Notiz</label>
             <textarea
               value={neuerPartner.notiz}
               onChange={(e) => setNeuerPartner({ ...neuerPartner, notiz: e.target.value })}
               rows={2}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
-          <p className="text-xs text-slate-400 dark:text-stone-500">
+          <p className="text-xs text-ind-ink-3">
             Ansprechpartner und Nachweise (Freistellungsbescheinigung, Haftpflicht, ...) können
             anschließend auf der Partner-Detailseite hinterlegt werden.
           </p>
           <button
             disabled={!neuerPartner.name.trim() || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -189,7 +189,7 @@ export function PartnerPage() {
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suche nach Name oder Gewerk…"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
         )}
         {isLoading ? (
@@ -197,7 +197,7 @@ export function PartnerPage() {
         ) : (partner ?? []).length === 0 ? (
           <EmptyState icon={HardHat} text="Noch keine Partner/Nachunternehmer angelegt." />
         ) : partnerGefiltert.length === 0 ? (
-          <p className="text-center text-sm text-slate-400 dark:text-stone-500">
+          <p className="text-center text-sm text-ind-ink-3">
             Keine Partner gefunden für „{suche}".
           </p>
         ) : (
@@ -210,9 +210,9 @@ export function PartnerPage() {
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{p.name}</div>
+                <div className="text-sm font-medium text-ind-ink">{p.name}</div>
                 {p.gewerk && (
-                  <div className="text-xs text-slate-400 dark:text-stone-500">{p.gewerk}</div>
+                  <div className="text-xs text-ind-ink-3">{p.gewerk}</div>
                 )}
               </div>
               {!p.aktiv && (

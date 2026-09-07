@@ -37,10 +37,10 @@ function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
 
   return (
     <div>
-      <h2 className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+      <h2 className="mb-1 px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
         Auftragstypen
       </h2>
-      <p className="mb-2 px-1 text-xs text-slate-400 dark:text-stone-500">
+      <p className="mb-2 px-1 text-xs text-ind-ink-3">
         Bei welchen Auftragstypen wird dieses Formular Technikern zum Ausfüllen angeboten?
       </p>
       <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
@@ -49,7 +49,7 @@ function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
           const zugeordnet = !!zuordnung;
           return (
             <div key={typ} className="flex items-center gap-3 p-3">
-              <label className="flex flex-1 items-center gap-2 text-sm text-slate-700 dark:text-stone-200">
+              <label className="flex flex-1 items-center gap-2 text-sm text-ind-ink">
                 <input
                   type="checkbox"
                   checked={zugeordnet}
@@ -63,7 +63,7 @@ function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
               </label>
               <label
                 className={`flex items-center gap-1.5 text-xs ${
-                  zugeordnet ? "text-slate-500 dark:text-stone-400" : "text-slate-300 dark:text-stone-600"
+                  zugeordnet ? "text-ind-ink-3" : "text-ind-ink-3"
                 }`}
               >
                 <input
@@ -103,7 +103,7 @@ export function FormularDetailPage() {
   });
 
   if (isLoading) {
-    return <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
+    return <p className="text-center text-sm text-ind-ink-3">Lädt…</p>;
   }
   if (!formular) {
     return <EmptyState icon={Pencil} text="Formular nicht gefunden." />;
@@ -111,11 +111,11 @@ export function FormularDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate("/formulare")} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate("/formulare")} className="text-sm text-ind-ink-3">
         ← Alle Formulare
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <input
           value={formular.name}
           onChange={(e) => updateFormularMutation.mutate({ name: e.target.value })}
@@ -127,7 +127,7 @@ export function FormularDetailPage() {
           placeholder="Beschreibung hinzufügen…"
           className="mt-1 w-full border-none bg-transparent p-0 text-sm text-slate-500 focus:outline-hidden dark:text-stone-400"
         />
-        <label className="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-stone-300">
+        <label className="mt-3 flex items-center gap-2 text-sm text-ind-ink-2">
           <input
             type="checkbox"
             checked={formular.aktiv}

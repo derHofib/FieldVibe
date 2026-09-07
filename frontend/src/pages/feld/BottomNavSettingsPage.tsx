@@ -81,21 +81,21 @@ export function BottomNavSettingsPage() {
       <div>
         <button
           onClick={() => navigate("/einstellungen")}
-          className="text-sm text-slate-500 dark:text-stone-400"
+          className="text-sm text-ind-ink-3"
         >
           ‹ Einstellungen
         </button>
-        <h1 className="mt-1 text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h1 className="mt-1 text-lg font-bold text-ind-ink">
           Menüleiste anpassen
         </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <p className="mt-1 text-sm text-ind-ink-3">
           Links vom Neu-Button stehen 2 feste Icons, rechts davon eine wischbare Rotunde mit
           deinen Schnellzugriffen.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Feste Icons (links vom Neu-Button)
         </h2>
         {Array.from({ length: LINKS_SLOT_ANZAHL }).map((_, index) => {
@@ -103,24 +103,24 @@ export function BottomNavSettingsPage() {
           return (
             <div
               key={index}
-              className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="flex items-center gap-3 border border-ind-line bg-ind-bg p-3"
             >
               {seite ? (
                 <>
                   <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
-                  <span className="min-w-0 flex-1 truncate font-medium text-slate-800 dark:text-stone-100">
+                  <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">
                     {seite.label}
                   </span>
                 </>
               ) : (
-                <span className="min-w-0 flex-1 text-slate-400 dark:text-stone-500">
+                <span className="min-w-0 flex-1 text-ind-ink-3">
                   Seite wählen…
                 </span>
               )}
               <button
                 onClick={() => setBearbeiteterPlatz({ index })}
                 aria-label={seite ? `${seite.label} ändern` : `Platz ${index + 1} belegen`}
-                className="btn-touch flex items-center justify-center text-slate-400 dark:text-stone-500"
+                className="btn-touch flex items-center justify-center text-ind-ink-3"
               >
                 <Pencil size={18} />
               </button>
@@ -132,12 +132,12 @@ export function BottomNavSettingsPage() {
       {bearbeiteterPlatz && (
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
               Platz {bearbeiteterPlatz.index + 1} belegen mit …
             </h2>
             <button
               onClick={() => setBearbeiteterPlatz(null)}
-              className="text-xs font-medium text-slate-400 dark:text-stone-500"
+              className="text-xs font-medium text-ind-ink-3"
             >
               Abbrechen
             </button>
@@ -146,7 +146,7 @@ export function BottomNavSettingsPage() {
             new Set([...belegteKeys].filter((key) => key !== linksKeys[bearbeiteterPlatz.index])),
           ).map(({ kategorie, seiten }) => (
             <div key={kategorie} className="space-y-2">
-              <h3 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+              <h3 className="px-1 text-[11px] font-semibold uppercase tracking-wide text-ind-ink-3">
                 {kategorie}
               </h3>
               {seiten.map((seite) => (
@@ -156,7 +156,7 @@ export function BottomNavSettingsPage() {
                   className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
                 >
                   <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={false} />
-                  <span className="min-w-0 flex-1 truncate font-medium text-slate-700 dark:text-stone-200">
+                  <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">
                     {seite.label}
                   </span>
                 </button>
@@ -167,7 +167,7 @@ export function BottomNavSettingsPage() {
       )}
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Rotunde (wischbar, rechts vom Neu-Button)
         </h2>
         {rotundeKeys.length === 0 && (
@@ -181,10 +181,10 @@ export function BottomNavSettingsPage() {
           return (
             <div
               key={key}
-              className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="flex items-center gap-3 border border-ind-line bg-ind-bg p-3"
             >
               <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
-              <span className="min-w-0 flex-1 truncate font-medium text-slate-800 dark:text-stone-100">
+              <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">
                 {seite.label}
               </span>
               <button
@@ -218,7 +218,7 @@ export function BottomNavSettingsPage() {
       {!bearbeiteterPlatz &&
         verfuegbareSeiten(belegteKeys).map(({ kategorie, seiten }) => (
           <section key={kategorie} className="space-y-2">
-            <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+            <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
               {kategorie}
             </h2>
             {seiten.map((seite) => (
@@ -228,10 +228,10 @@ export function BottomNavSettingsPage() {
                 className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
               >
                 <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={false} />
-                <span className="min-w-0 flex-1 truncate font-medium text-slate-700 dark:text-stone-200">
+                <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">
                   {seite.label}
                 </span>
-                <Plus size={18} className="shrink-0 text-slate-300 dark:text-stone-600" />
+                <Plus size={18} className="shrink-0 text-ind-ink-3" />
               </button>
             ))}
           </section>

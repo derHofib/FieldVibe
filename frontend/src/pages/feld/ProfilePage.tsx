@@ -17,14 +17,14 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-bold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
             {currentUser?.name?.slice(0, 1)}
           </div>
           <div>
-            <div className="font-semibold text-slate-800 dark:text-stone-100">{currentUser?.name}</div>
-            <div className="text-sm text-slate-500 dark:text-stone-400">
+            <div className="font-semibold text-ind-ink">{currentUser?.name}</div>
+            <div className="text-sm text-ind-ink-3">
               {currentUser &&
                 (currentUser.role === "custom"
                   ? (currentUser.account_typ_name ?? "Account")
@@ -34,12 +34,12 @@ export function ProfilePage() {
         </div>
         <dl className="mt-4 space-y-1 text-sm">
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">E-Mail</dt>
-            <dd className="text-slate-800 dark:text-stone-100">{currentUser?.email}</dd>
+            <dt className="text-ind-ink-3">E-Mail</dt>
+            <dd className="text-ind-ink">{currentUser?.email}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">Mandant</dt>
-            <dd className="text-slate-800 dark:text-stone-100">{currentUser?.mandant_name}</dd>
+            <dt className="text-ind-ink-3">Mandant</dt>
+            <dd className="text-ind-ink">{currentUser?.mandant_name}</dd>
           </div>
         </dl>
       </div>

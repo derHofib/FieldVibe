@@ -94,13 +94,13 @@ export function PapierkorbPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Papierkorb</h1>
+        <h1 className="text-lg font-bold text-ind-ink">Papierkorb</h1>
       </div>
 
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <p className="text-sm text-ind-ink-3">
         {istOperativ
           ? "Gelöschte Datensätze können hier wiederhergestellt oder endgültig entfernt werden."
           : "Nur-Ansicht: Wiederherstellen und endgültiges Löschen sind der Rolle „Papierkorb (operativ)“ vorbehalten."}
@@ -109,13 +109,13 @@ export function PapierkorbPage() {
       {fehler && <p className="text-sm text-red-700 dark:text-red-400">{fehler}</p>}
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+        <label className="mb-1 block text-sm font-medium text-ind-ink-2">
           Nach Typ filtern
         </label>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as PapierkorbEntityTyp | "")}
-          className="btn-touch rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+          className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-slate-800 text-ind-ink"
         >
           <option value="">Alle Typen</option>
           {Object.entries(ENTITY_TYP_LABEL).map(([value, label]) => (
@@ -127,7 +127,7 @@ export function PapierkorbPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+        <p className="text-ind-ink-3">Lädt…</p>
       ) : !eintraege || eintraege.length === 0 ? (
         <p className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow-xs dark:bg-stone-900 dark:text-stone-400">
           Der Papierkorb ist leer.
@@ -141,14 +141,14 @@ export function PapierkorbPage() {
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+                  <span className="border border-ind-line px-2 py-0.5 text-xs font-semibold text-ind-ink-2">
                     {ENTITY_TYP_LABEL[eintrag.entity_typ]}
                   </span>
-                  <span className="truncate font-medium text-slate-800 dark:text-stone-100">
+                  <span className="truncate font-medium text-ind-ink">
                     {anzeigeName(eintrag)}
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-stone-400">
+                <p className="mt-0.5 text-xs text-ind-ink-3">
                   Gelöscht am {formatDatum(eintrag.geloescht_am)}
                   {eintrag.geloescht_von_name ? ` von ${eintrag.geloescht_von_name}` : ""}
                 </p>

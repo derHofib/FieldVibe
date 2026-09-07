@@ -54,7 +54,7 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
   }
 
   return (
-    <div className="space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+    <div className="space-y-2 border border-ind-line-2 p-2">
       <canvas
         ref={(node) => {
           canvasRef.current = node;
@@ -79,7 +79,7 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
         <button
           type="button"
           onClick={onCancel}
-          className="btn-touch flex-1 rounded-md text-sm text-slate-500 dark:text-stone-400"
+          className="btn-touch flex-1 rounded-md text-sm text-ind-ink-3"
         >
           Abbrechen
         </button>
@@ -117,21 +117,21 @@ function FeldRenderer({
 
   if (feld.feld_typ === "abschnitt") {
     return (
-      <h3 className="pt-2 text-base font-semibold text-slate-700 dark:text-stone-200">{feld.label}</h3>
+      <h3 className="pt-2 text-base font-semibold text-ind-ink">{feld.label}</h3>
     );
   }
 
   const label = (
-    <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-200">
+    <label className="mb-1 block text-sm font-medium text-ind-ink">
       {feld.label}
       {feld.pflichtfeld && <span className="ml-1 text-rose-500">*</span>}
     </label>
   );
 
   const wrapperClass =
-    "rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800";
+    "border border-ind-line bg-ind-bg p-3";
   const inputClass =
-    "btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100 dark:disabled:bg-stone-800/50";
+    "btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500 text-ind-ink dark:disabled:bg-stone-800/50";
 
   switch (feld.feld_typ) {
     case "text":
@@ -144,7 +144,7 @@ function FeldRenderer({
             disabled={readOnly}
             className={inputClass}
           />
-          {feld.hilfetext && <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">{feld.hilfetext}</p>}
+          {feld.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{feld.hilfetext}</p>}
         </div>
       );
 
@@ -159,7 +159,7 @@ function FeldRenderer({
             rows={3}
             className={`${inputClass} resize-none`}
           />
-          {feld.hilfetext && <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">{feld.hilfetext}</p>}
+          {feld.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{feld.hilfetext}</p>}
         </div>
       );
 
@@ -218,7 +218,7 @@ function FeldRenderer({
           {label}
           <div className="space-y-1.5">
             {werte.map((w) => (
-              <label key={w} className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-200">
+              <label key={w} className="flex items-center gap-2 text-sm text-ind-ink">
                 <input
                   type="checkbox"
                   disabled={readOnly}
@@ -299,11 +299,11 @@ function FeldRenderer({
         <div className={wrapperClass}>
           {label}
           {gps ? (
-            <p className="text-sm text-slate-600 dark:text-stone-300">
+            <p className="text-sm text-ind-ink-2">
               {gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}
             </p>
           ) : (
-            <p className="text-sm text-slate-400 dark:text-stone-500">Noch kein Standort erfasst.</p>
+            <p className="text-sm text-ind-ink-3">Noch kein Standort erfasst.</p>
           )}
           {!readOnly && (
             <button
@@ -486,7 +486,7 @@ export function FormularAusfuellenPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Vorschau konnte nicht erzeugt werden"),
   });
 
-  if (isLoading) return <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-sm text-ind-ink-3">Lädt…</p>;
   if (!vf) return <EmptyState icon={FileText} text="Formular nicht gefunden." />;
 
   const readOnly = vf.status === "abgeschlossen";
@@ -506,12 +506,12 @@ export function FormularAusfuellenPage() {
 
   return (
     <div className="space-y-3 pb-24">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
         ← Zurück
       </button>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{vf.formular_snapshot.name}</h1>
+        <h1 className="text-lg font-bold text-ind-ink">{vf.formular_snapshot.name}</h1>
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
             readOnly
@@ -543,7 +543,7 @@ export function FormularAusfuellenPage() {
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           <FileText size={16} /> Als PDF öffnen
         </button>
@@ -567,7 +567,7 @@ export function FormularAusfuellenPage() {
           <button
             onClick={handleAbschliessen}
             disabled={abschliessenMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white shadow-md disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium shadow-md disabled:opacity-50"
           >
             Abschließen
           </button>

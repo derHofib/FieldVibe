@@ -56,22 +56,22 @@ export function PostfachNachrichtPage() {
   }
 
   if (!detail) {
-    return <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>;
   }
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate("/postfach")} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate("/postfach")} className="text-sm text-ind-ink-3">
         ← Zurück
       </button>
 
       <div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h1 className="text-lg font-bold text-ind-ink">
           {detail.betreff || "(kein Betreff)"}
         </h1>
-        <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+        <p className="mt-1 text-xs text-ind-ink-3">
           Von{" "}
-          <span className="font-medium text-slate-700 dark:text-stone-200">
+          <span className="font-medium text-ind-ink">
             {detail.von_name || detail.von_adresse}
           </span>
         </p>
@@ -94,7 +94,7 @@ export function PostfachNachrichtPage() {
         </div>
       )}
 
-      <p className="text-sm whitespace-pre-wrap text-slate-700 dark:text-stone-200">{detail.body_text}</p>
+      <p className="text-sm whitespace-pre-wrap text-ind-ink">{detail.body_text}</p>
 
       {antwortenOffen ? (
         <div className="-mx-4 border-t border-slate-100 pt-3 dark:border-stone-800">

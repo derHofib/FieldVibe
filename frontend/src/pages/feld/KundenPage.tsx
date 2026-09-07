@@ -72,7 +72,7 @@ export function KundenPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Kundenverwaltung</h1>
+        <h1 className="text-lg font-bold text-ind-ink">Kundenverwaltung</h1>
         {istModulAktiv(currentUser, "kundenportal") && (
           <button
             onClick={() => navigate("/anfragen")}
@@ -91,34 +91,34 @@ export function KundenPage() {
       </button>
 
       {showForm && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name *</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Name *</label>
             <input
               autoFocus
               value={neuerKunde.name}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">
+              <label className="mb-1 block text-xs text-ind-ink-3">
                 Kundennummer (optional)
               </label>
               <input
                 value={neuerKunde.kundennummer}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
                 placeholder="wird sonst vergeben"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Typ</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">Typ</label>
               <select
                 value={neuerKunde.typ}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               >
                 <option value="">Bitte wählen…</option>
                 <option value="privat">Privat</option>
@@ -130,57 +130,57 @@ export function KundenPage() {
           </div>
           {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">USt-IdNr.</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">USt-IdNr.</label>
               <input
                 value={neuerKunde.ustIdnr}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ustIdnr: e.target.value })}
                 placeholder="DE123456789"
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Straße + Hausnr.</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Straße + Hausnr.</label>
             <input
               value={neuerKunde.strasse}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">PLZ</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">PLZ</label>
               <input
                 value={neuerKunde.plz}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Ort</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">Ort</label>
               <input
                 value={neuerKunde.ort}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Notiz</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Notiz</label>
             <textarea
               value={neuerKunde.notiz}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
               rows={2}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
-          <p className="text-xs text-slate-400 dark:text-stone-500">
+          <p className="text-xs text-ind-ink-3">
             Ansprechpartner können anschließend auf der Kunden-Detailseite angelegt werden.
           </p>
           <button
             disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
             onClick={() => createKundeMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -193,7 +193,7 @@ export function KundenPage() {
             value={kundenSuche}
             onChange={(e) => setKundenSuche(e.target.value)}
             placeholder="Suche nach Name oder Kundennummer…"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
         )}
         {kundenLoading ? (
@@ -201,7 +201,7 @@ export function KundenPage() {
         ) : (kunden ?? []).length === 0 ? (
           <EmptyState icon={Users} text="Keine Kunden vorhanden." />
         ) : kundenGefiltert.length === 0 ? (
-          <p className="text-center text-sm text-slate-400 dark:text-stone-500">
+          <p className="text-center text-sm text-ind-ink-3">
             Keine Kunden gefunden für „{kundenSuche}".
           </p>
         ) : (
@@ -212,11 +212,11 @@ export function KundenPage() {
               className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">{k.kundennummer}</div>
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{k.name}</div>
+                <div className="text-xs text-ind-ink-3">{k.kundennummer}</div>
+                <div className="text-sm font-medium text-ind-ink">{k.name}</div>
               </div>
               {k.typ && (
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+                <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
                   {k.typ}
                 </span>
               )}

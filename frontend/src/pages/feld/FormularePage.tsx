@@ -41,13 +41,13 @@ export function FormularePage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
         ← Zurück
       </button>
 
       <div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Formulare</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <h1 className="text-lg font-bold text-ind-ink">Formulare</h1>
+        <p className="mt-1 text-sm text-ind-ink-3">
           Eigene Checklisten und Protokolle, die Technikern beim passenden Auftragstyp zum Ausfüllen
           angeboten werden.
         </p>
@@ -56,27 +56,27 @@ export function FormularePage() {
       {formularOffen ? (
         <form
           onSubmit={submit}
-          className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="space-y-3 border border-ind-line bg-ind-bg p-4"
         >
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">Name</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-2">Name</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="z.B. Wartungsprotokoll Heizung"
               autoFocus
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+            <label className="mb-1 block text-xs font-medium text-ind-ink-2">
               Beschreibung (optional)
             </label>
             <input
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               placeholder="Kurze Erklärung, wofür dieses Formular gedacht ist"
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
             />
           </div>
           {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
@@ -100,14 +100,14 @@ export function FormularePage() {
       ) : (
         <button
           onClick={() => setFormularOffen(true)}
-          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
+          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium"
         >
           <Plus size={16} strokeWidth={2} /> Neues Formular
         </button>
       )}
 
       {isLoading ? (
-        <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>
+        <p className="text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : !formulare || formulare.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Formulare angelegt." />
       ) : (
@@ -119,8 +119,8 @@ export function FormularePage() {
               className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div>
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{f.name}</div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">
+                <div className="text-sm font-medium text-ind-ink">{f.name}</div>
+                <div className="text-xs text-ind-ink-3">
                   {f.felder.length} {f.felder.length === 1 ? "Feld" : "Felder"}
                   {f.zuordnungen.length > 0 &&
                     ` · ${f.zuordnungen.length} ${f.zuordnungen.length === 1 ? "Auftragstyp" : "Auftragstypen"}`}

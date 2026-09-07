@@ -36,10 +36,10 @@ function SettingsLink({
     >
       <IconBadge icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">
-        <span className="block font-medium text-slate-800 dark:text-stone-100">{label}</span>
-        <span className="block text-xs text-slate-500 dark:text-stone-400">{beschreibung}</span>
+        <span className="block font-medium text-ind-ink">{label}</span>
+        <span className="block text-xs text-ind-ink-3">{beschreibung}</span>
       </span>
-      <span className="text-slate-300 dark:text-stone-600">›</span>
+      <span className="text-ind-ink-3">›</span>
     </button>
   );
 }
@@ -51,14 +51,14 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Einstellungen</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <h1 className="text-lg font-bold text-ind-ink">Einstellungen</h1>
+        <p className="mt-1 text-sm text-ind-ink-3">
           Verwaltung für {currentUser?.mandant_name ?? "diesen Mandanten"}.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Team
         </h2>
         <SettingsLink
@@ -94,7 +94,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Betrieb
         </h2>
         <SettingsLink
@@ -125,7 +125,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Darstellung
         </h2>
         <SettingsLink
@@ -138,7 +138,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
           Unternehmen
         </h2>
         <SettingsLink
