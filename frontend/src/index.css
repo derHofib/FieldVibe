@@ -3,8 +3,48 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+  /* "Industry"-Design (Blaupausen-Optik, siehe docs/DESIGN.md): eigene
+     Schriften + Farbtoken, praefixiert mit "ind-" statt die bestehenden
+     slate/stone-Namen zu ueberschreiben -- so laesst sich seitenweise
+     migrieren, ohne noch nicht umgestellte Seiten zu verfaerben. Werte sind
+     die hellen (Standard); .dark ueberschreibt dieselben Custom Properties
+     weiter unten -- Tailwind v4 loest @theme-Werte als normale CSS-Variablen
+     auf, ein Re-Scope unter .dark greift also genauso wie bei jeder anderen
+     Variable. */
+  --font-heading: 'Barlow Condensed', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+
+  --color-ind-bg: #f2f2f3;
+  --color-ind-ink: #1d1f20;
+  --color-ind-ink-2: rgba(29, 31, 32, 0.8);
+  --color-ind-ink-3: rgba(29, 31, 32, 0.64);
+  --color-ind-line: rgba(29, 31, 32, 0.16);
+  --color-ind-line-2: rgba(29, 31, 32, 0.34);
+  --color-ind-acc: #5980a6;
+  --color-ind-acc-txt: #416180;
+  --color-ind-acc-soft: rgba(89, 128, 166, 0.1);
+  --color-ind-hover: rgba(89, 128, 166, 0.07);
+  --color-ind-field: #1d2d3d;
+  --color-ind-field-ink: #eef6ff;
+  --color-ind-btn-bg: #5980a6;
+  --color-ind-btn-bg-h: #416180;
+  --color-ind-btn-ink: #ffffff;
+  --color-ind-warn: #8a6a2c;
+  --color-ind-bad: #8a3b32;
+
+  --animate-livepulse: livepulse 2.4s ease-in-out infinite;
   --animate-twinkle: twinkle 4s ease-in-out infinite;
   --animate-drift: drift 20s ease-in-out infinite;
+
+  @keyframes livepulse {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
 
   @keyframes twinkle {
     0%,
@@ -50,6 +90,29 @@
 
 body {
   @apply bg-slate-100 text-slate-900 dark:bg-stone-950 dark:text-stone-100;
+}
+
+/* Dunkle Werte der "Industry"-Farbtoken -- Standard im Betrieb (siehe
+   docs/DESIGN.md), ueberschreibt dieselben Custom Properties aus dem
+   @theme-Block oben. */
+.dark {
+  --color-ind-bg: #0b1219;
+  --color-ind-ink: #eef6ff;
+  --color-ind-ink-2: rgba(238, 246, 255, 0.82);
+  --color-ind-ink-3: rgba(238, 246, 255, 0.66);
+  --color-ind-line: rgba(148, 188, 227, 0.2);
+  --color-ind-line-2: rgba(148, 188, 227, 0.4);
+  --color-ind-acc: #94bce3;
+  --color-ind-acc-txt: #b5d9fd;
+  --color-ind-acc-soft: rgba(148, 188, 227, 0.13);
+  --color-ind-hover: rgba(148, 188, 227, 0.07);
+  --color-ind-field: #1d2d3d;
+  --color-ind-field-ink: #eef6ff;
+  --color-ind-btn-bg: #749dc4;
+  --color-ind-btn-bg-h: #94bce3;
+  --color-ind-btn-ink: #0b1219;
+  --color-ind-warn: #d7ae5f;
+  --color-ind-bad: #e0847a;
 }
 
 /* Abstand, den klebende Elemente (z. B. die Kommentar-Leiste der
@@ -119,6 +182,57 @@ body {
 
 .card-interactive {
   @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-xs;
+}
+
+/* "Industry"-Design (siehe docs/DESIGN.md): Blaupausen-Karte mit
+   Passermarken (Registrierungskreuze) an den vier Ecken statt Schatten/
+   Rundung -- Umsetzung via Blueprint.tsx-Wrapper, der die vier
+   .corner-Spans rendert. Eckposition/-groesse 1:1 aus dem Design-Handoff
+   (industry-styles.css), Farben auf --color-ind-* umgestellt. */
+.blueprint {
+  position: relative;
+  border: 1px solid var(--color-ind-line);
+  border-radius: 0;
+}
+.blueprint > .corner {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  color: var(--color-ind-line-2);
+}
+.blueprint > .corner::before,
+.blueprint > .corner::after {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+.blueprint > .corner::before {
+  left: 5px;
+  top: 0;
+  width: 1px;
+  height: 100%;
+}
+.blueprint > .corner::after {
+  top: 5px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+.blueprint > .corner.tl {
+  top: -6px;
+  left: -6px;
+}
+.blueprint > .corner.tr {
+  top: -6px;
+  right: -6px;
+}
+.blueprint > .corner.bl {
+  bottom: -6px;
+  left: -6px;
+}
+.blueprint > .corner.br {
+  bottom: -6px;
+  right: -6px;
 }
 
 /* "Weiche Tiefe": Doppelschatten-Karten mit von links nach rechts
