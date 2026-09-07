@@ -162,9 +162,38 @@ async def _fresh_engine_pool_per_test():
     yield
 
 
+def _ensure_db_role_is_not_superuser() -> None:
+    """Postgres-Superuser umgehen Row-Level-Security immer, unabhaengig von
+    FORCE ROW LEVEL SECURITY und den Policies selbst -- das ist eingebautes
+    Postgres-Verhalten, keine Anwendungslogik. Das offizielle postgres-Image
+    macht POSTGRES_USER beim allerersten Start standardmaessig zu einem
+    Superuser; scripts/deploy.sh entzieht dem Produktions-Rollennamen dieses
+    Recht deshalb explizit per ALTER ROLE (siehe dortiger Kommentar). Lokale
+    und Test-Datenbanken durchlaufen deploy.sh nie -- ohne diesen Check
+    wuerden alle RLS-Isolations-Tests grau/gruen bleiben, obwohl sie faktisch
+    nichts mehr pruefen, weil die Rolle jede Policy ignoriert.
+    """
+    sync_url = sqlalchemy.engine.make_url(_settings.database_url_sync)
+    check_engine = create_engine(sync_url)
+    with check_engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
+        ).one()
+    check_engine.dispose()
+    if row.rolsuper or row.rolbypassrls:
+        raise RuntimeError(
+            f"Die DB-Rolle '{sync_url.username}' ist Superuser oder hat BYPASSRLS -- "
+            "Row-Level-Security-Policies werden fuer diese Rolle komplett ignoriert, "
+            "RLS-Isolations-Tests wuerden also grundlos gruen sein. Fix: "
+            f"ALTER ROLE \"{sync_url.username}\" NOSUPERUSER NOBYPASSRLS; "
+            "(siehe scripts/deploy.sh, Abschnitt 'Datenbank-Rolle absichern')."
+        )
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _migrated_database():
     _ensure_test_database_exists()
+    _ensure_db_role_is_not_superuser()
     cfg = Config(os.path.join(_BACKEND_DIR, "alembic.ini"))
     cfg.set_main_option("script_location", os.path.join(_BACKEND_DIR, "alembic"))
     command.upgrade(cfg, "head")
