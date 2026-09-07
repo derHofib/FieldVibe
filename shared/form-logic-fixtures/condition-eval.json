@@ -1,0 +1,97 @@
+[
+  {
+    "name": "einfache Gleichheit",
+    "condition": { "==": [{ "var": "leistungstyp" }, "wartung"] },
+    "context": { "leistungstyp": "wartung" },
+    "expected": true
+  },
+  {
+    "name": "Ungleichheit",
+    "condition": { "!=": [{ "var": "status" }, "offen"] },
+    "context": { "status": "abgeschlossen" },
+    "expected": true
+  },
+  {
+    "name": "numerischer Vergleich groesser",
+    "condition": { ">": [{ "var": "wert" }, 10] },
+    "context": { "wert": 15 },
+    "expected": true
+  },
+  {
+    "name": "numerischer Vergleich kleiner-gleich, falsch",
+    "condition": { "<=": [{ "var": "wert" }, 10] },
+    "context": { "wert": 15 },
+    "expected": false
+  },
+  {
+    "name": "and mit zwei wahren Bedingungen",
+    "condition": { "and": [{ "==": [{ "var": "a" }, 1] }, { "==": [{ "var": "b" }, 2] }] },
+    "context": { "a": 1, "b": 2 },
+    "expected": true
+  },
+  {
+    "name": "and mit einer falschen Bedingung",
+    "condition": { "and": [{ "==": [{ "var": "a" }, 1] }, { "==": [{ "var": "b" }, 99] }] },
+    "context": { "a": 1, "b": 2 },
+    "expected": false
+  },
+  {
+    "name": "or mit einer wahren Bedingung",
+    "condition": { "or": [{ "==": [{ "var": "a" }, 99] }, { "==": [{ "var": "b" }, 2] }] },
+    "context": { "a": 1, "b": 2 },
+    "expected": true
+  },
+  {
+    "name": "Negation",
+    "condition": { "!": [{ "==": [{ "var": "a" }, 1] }] },
+    "context": { "a": 1 },
+    "expected": false
+  },
+  {
+    "name": "in-Operator auf Liste, enthalten",
+    "condition": { "in": [{ "var": "status" }, ["offen", "in_bearbeitung"]] },
+    "context": { "status": "offen" },
+    "expected": true
+  },
+  {
+    "name": "in-Operator auf Liste, nicht enthalten",
+    "condition": { "in": [{ "var": "status" }, ["offen", "in_bearbeitung"]] },
+    "context": { "status": "abgeschlossen" },
+    "expected": false
+  },
+  {
+    "name": "in-Operator auf String (Substring)",
+    "condition": { "in": [{ "var": "teil" }, "Hauptverteilung"] },
+    "context": { "teil": "verteil" },
+    "expected": true
+  },
+  {
+    "name": "verschachtelte Bedingung",
+    "condition": {
+      "and": [
+        { "in": [{ "var": "leistungstyp" }, ["wartung", "pruefung"]] },
+        { "or": [{ ">": [{ "var": "zaehler" }, 5] }, { "==": [{ "var": "kritisch" }, true] }] }
+      ]
+    },
+    "context": { "leistungstyp": "wartung", "zaehler": 2, "kritisch": true },
+    "expected": true
+  },
+  {
+    "name": "fehlendes Feld ist falsy",
+    "condition": { "!": [{ "var": "nicht_vorhanden" }] },
+    "context": {},
+    "expected": true
+  },
+  {
+    "name": "Literal-Bedingung true",
+    "condition": true,
+    "context": {},
+    "expected": true
+  },
+  {
+    "name": "Literal-Bedingung false",
+    "condition": false,
+    "context": {},
+    "expected": false
+  }
+]

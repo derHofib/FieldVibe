@@ -1,0 +1,50 @@
+[
+  {
+    "name": "keine Abhaengigkeit zwischen zwei unabhaengigen set_value-Regeln",
+    "rules": [
+      { "target_key": "a", "effect": "set_value", "condition": { "==": [{ "var": "trigger" }, 1] }, "value": "A" },
+      { "target_key": "b", "effect": "set_value", "condition": { "==": [{ "var": "trigger" }, 2] }, "value": "B" }
+    ],
+    "expect_cycle": false
+  },
+  {
+    "name": "direkter Zyklus zwischen zwei set_value-Regeln",
+    "rules": [
+      { "target_key": "x", "effect": "set_value", "condition": { "==": [{ "var": "y" }, 1] }, "value": "X" },
+      { "target_key": "y", "effect": "set_value", "condition": { "==": [{ "var": "x" }, 1] }, "value": "Y" }
+    ],
+    "expect_cycle": true
+  },
+  {
+    "name": "Selbstbezug (Feld liest eigenen alten Wert) ist bewusst KEIN Zyklus",
+    "rules": [
+      { "target_key": "zaehler", "effect": "set_value", "condition": { ">": [{ "var": "zaehler" }, 0] }, "value": "weiter" }
+    ],
+    "expect_cycle": false
+  },
+  {
+    "name": "Zyklus ueber drei Regeln (A->B->C->A)",
+    "rules": [
+      { "target_key": "a", "effect": "set_value", "condition": { "==": [{ "var": "c" }, 1] }, "value": "A" },
+      { "target_key": "b", "effect": "set_value", "condition": { "==": [{ "var": "a" }, 1] }, "value": "B" },
+      { "target_key": "c", "effect": "set_value", "condition": { "==": [{ "var": "b" }, 1] }, "value": "C" }
+    ],
+    "expect_cycle": true
+  },
+  {
+    "name": "Zyklus ueber value-Ausdruck statt condition",
+    "rules": [
+      { "target_key": "x", "effect": "set_value", "condition": true, "value": { "var": "y" } },
+      { "target_key": "y", "effect": "set_value", "condition": true, "value": { "var": "x" } }
+    ],
+    "expect_cycle": true
+  },
+  {
+    "name": "show/hide-Regeln beeinflussen keinen Zyklus (lesen nur, setzen nichts)",
+    "rules": [
+      { "target_key": "a", "effect": "show", "condition": { "==": [{ "var": "b" }, 1] } },
+      { "target_key": "b", "effect": "set_value", "condition": { "==": [{ "var": "trigger" }, 1] }, "value": 1 }
+    ],
+    "expect_cycle": false
+  }
+]

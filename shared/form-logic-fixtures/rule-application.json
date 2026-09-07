@@ -1,0 +1,176 @@
+[
+  {
+    "name": "einfache show-Regel auf Root-Feld",
+    "fields": [{ "key": "kommentar", "group_key": null }],
+    "groups": [],
+    "rules": [
+      { "target_key": "kommentar", "effect": "show", "condition": { "==": [{ "var": "leistungstyp" }, "wartung"] } }
+    ],
+    "values": { "leistungstyp": "wartung" },
+    "view_id": null,
+    "expected_states": { "kommentar": { "visible": true, "required": false, "readonly": false } },
+    "expected_values": { "leistungstyp": "wartung" }
+  },
+  {
+    "name": "require-Regel auf Root-Feld",
+    "fields": [{ "key": "foto", "group_key": null }],
+    "groups": [],
+    "rules": [
+      { "target_key": "foto", "effect": "require", "condition": { "==": [{ "var": "zustand" }, "schlecht"] } }
+    ],
+    "values": { "zustand": "schlecht" },
+    "view_id": null,
+    "expected_states": { "foto": { "visible": true, "required": true, "readonly": false } },
+    "expected_values": { "zustand": "schlecht" }
+  },
+  {
+    "name": "set_value kaskadiert in eine spaetere Regel, wenn Bedingung wahr ist",
+    "fields": [
+      { "key": "berechnet", "group_key": null },
+      { "key": "warnung", "group_key": null }
+    ],
+    "groups": [],
+    "rules": [
+      {
+        "target_key": "berechnet",
+        "effect": "set_value",
+        "condition": { ">": [{ "var": "eingabe" }, 100] },
+        "value": "ueberschritten",
+        "reihenfolge": 0
+      },
+      {
+        "target_key": "warnung",
+        "effect": "show",
+        "condition": { "==": [{ "var": "berechnet" }, "ueberschritten"] },
+        "reihenfolge": 1
+      }
+    ],
+    "values": { "eingabe": 150 },
+    "view_id": null,
+    "expected_states": { "warnung": { "visible": true, "required": false, "readonly": false } },
+    "expected_values": { "eingabe": 150, "berechnet": "ueberschritten" }
+  },
+  {
+    "name": "set_value kaskadiert NICHT, wenn Bedingung falsch ist -- berechnet bleibt ungesetzt",
+    "fields": [
+      { "key": "berechnet", "group_key": null },
+      { "key": "warnung", "group_key": null }
+    ],
+    "groups": [],
+    "rules": [
+      {
+        "target_key": "berechnet",
+        "effect": "set_value",
+        "condition": { ">": [{ "var": "eingabe" }, 100] },
+        "value": "ueberschritten",
+        "reihenfolge": 0
+      },
+      {
+        "target_key": "warnung",
+        "effect": "show",
+        "condition": { "==": [{ "var": "berechnet" }, "ueberschritten"] },
+        "reihenfolge": 1
+      }
+    ],
+    "values": { "eingabe": 50 },
+    "view_id": null,
+    "expected_states": { "warnung": { "visible": false, "required": false, "readonly": false } },
+    "expected_values": { "eingabe": 50 }
+  },
+  {
+    "name": "hide-Regel, Bedingung wahr -> nicht sichtbar",
+    "fields": [{ "key": "hinweis", "group_key": null }],
+    "groups": [],
+    "rules": [{ "target_key": "hinweis", "effect": "hide", "condition": { "==": [{ "var": "stumm" }, true] } }],
+    "values": { "stumm": true },
+    "view_id": null,
+    "expected_states": { "hinweis": { "visible": false, "required": false, "readonly": false } },
+    "expected_values": { "stumm": true }
+  },
+  {
+    "name": "hide-Regel, Bedingung falsch -> sichtbar",
+    "fields": [{ "key": "hinweis", "group_key": null }],
+    "groups": [],
+    "rules": [{ "target_key": "hinweis", "effect": "hide", "condition": { "==": [{ "var": "stumm" }, true] } }],
+    "values": { "stumm": false },
+    "view_id": null,
+    "expected_states": { "hinweis": { "visible": true, "required": false, "readonly": false } },
+    "expected_values": { "stumm": false }
+  },
+  {
+    "name": "Wiederholgruppe: Regel wird pro Zeile ausgewertet, Kontext ist Zeile ueberlagert ueber Root",
+    "fields": [{ "key": "kosten", "group_key": "maengel" }],
+    "groups": [{ "key": "maengel" }],
+    "rules": [
+      {
+        "target_key": "kosten",
+        "effect": "require",
+        "condition": {
+          "and": [{ "==": [{ "var": "schweregrad" }, "hoch"] }, { "==": [{ "var": "leistungstyp" }, "wartung"] }]
+        }
+      }
+    ],
+    "values": {
+      "leistungstyp": "wartung",
+      "maengel": [{ "schweregrad": "hoch" }, { "schweregrad": "niedrig" }]
+    },
+    "view_id": null,
+    "expected_states": {
+      "maengel[0].kosten": { "visible": true, "required": true, "readonly": false },
+      "maengel[1].kosten": { "visible": true, "required": false, "readonly": false }
+    },
+    "expected_values": {
+      "leistungstyp": "wartung",
+      "maengel": [{ "schweregrad": "hoch" }, { "schweregrad": "niedrig" }]
+    }
+  },
+  {
+    "name": "Regel auf eine ganze Gruppe (target_key = FormGroup.key)",
+    "fields": [],
+    "groups": [{ "key": "zusatzfragen" }],
+    "rules": [
+      { "target_key": "zusatzfragen", "effect": "hide", "condition": { "==": [{ "var": "vereinfacht" }, true] } }
+    ],
+    "values": { "vereinfacht": true, "zusatzfragen": [{ "antwort": "x" }] },
+    "view_id": null,
+    "expected_states": { "zusatzfragen": { "visible": false, "required": false, "readonly": false } },
+    "expected_values": { "vereinfacht": true, "zusatzfragen": [{ "antwort": "x" }] }
+  },
+  {
+    "name": "View-Scoping: view-spezifische Regel greift NICHT, wenn eine andere/keine View ausgewertet wird",
+    "fields": [{ "key": "internekennzahl", "group_key": null }],
+    "groups": [],
+    "rules": [
+      { "target_key": "internekennzahl", "effect": "show", "condition": true, "view_id": "print-intern" }
+    ],
+    "values": {},
+    "view_id": null,
+    "expected_states": {},
+    "expected_values": {}
+  },
+  {
+    "name": "View-Scoping: view-spezifische Regel greift, wenn exakt diese View ausgewertet wird",
+    "fields": [{ "key": "internekennzahl", "group_key": null }],
+    "groups": [],
+    "rules": [
+      { "target_key": "internekennzahl", "effect": "show", "condition": true, "view_id": "print-intern" }
+    ],
+    "values": {},
+    "view_id": "print-intern",
+    "expected_states": { "internekennzahl": { "visible": true, "required": false, "readonly": false } },
+    "expected_values": {}
+  },
+  {
+    "name": "reihenfolge bestimmt die Anwendungsreihenfolge, nicht die Position im Array",
+    "fields": [{ "key": "feld", "group_key": null }],
+    "groups": [],
+    "rules": [
+      { "target_key": "feld", "effect": "show", "condition": false, "reihenfolge": 5 },
+      { "target_key": "feld", "effect": "show", "condition": true, "reihenfolge": 1 }
+    ],
+    "values": {},
+    "view_id": null,
+    "expected_states": { "feld": { "visible": false, "required": false, "readonly": false } },
+    "expected_values": {}
+  }
+]
