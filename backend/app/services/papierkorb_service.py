@@ -70,7 +70,12 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
             ("anlage", "kunde_id"),
             ("vorgang_anfrage", "kunde_id"),
             ("vorgang", "kunde_id"),
-            ("leistungsverzeichnis_position", "kunde_id"),
+            # KEIN Cascade-Eintrag fuer leistungsverzeichnis_position mehr:
+            # eine LV-Position kann mehreren Kunden zugewiesen sein (siehe
+            # leistungsverzeichnis_position_kunden), das Loeschen eines
+            # Kunden darf eine ggf. geteilte Position nicht mitreissen --
+            # nur die Zuordnung wird ueber die echte FK-CASCADE beim
+            # physischen Loeschen entfernt (siehe Migration 0075).
         ),
     ),
     "standort": EntityKind(

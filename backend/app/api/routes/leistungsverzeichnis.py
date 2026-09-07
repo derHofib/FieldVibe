@@ -15,6 +15,7 @@ from app.api.deps import (
 from app.models.kunde import Kunde
 from app.models.leistungsverzeichnis import (
     LeistungsverzeichnisPosition,
+    LeistungsverzeichnisPositionKunde,
     LeistungsverzeichnisVerwendung,
 )
 from app.models.material import Material
@@ -45,14 +46,6 @@ router = APIRouter(
 )
 
 
-async def _require_kunde(session: AsyncSession, kunde_id: UUID) -> Kunde:
-    # RLS scopt session.get() bereits auf den eigenen Mandanten.
-    kunde = await session.get(Kunde, kunde_id)
-    if kunde is None or kunde.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Kunde nicht gefunden")
-    return kunde
-
-
 async def _require_position(session: AsyncSession, lv_position_id: UUID) -> LeistungsverzeichnisPosition:
     position = await session.get(LeistungsverzeichnisPosition, lv_position_id)
     if position is None or position.geloescht_am is not None:
@@ -60,6 +53,60 @@ async def _require_position(session: AsyncSession, lv_position_id: UUID) -> Leis
             status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht im Leistungsverzeichnis gefunden"
         )
     return position
+
+
+async def _kunden_ids_lesen(session: AsyncSession, position_ids: list[UUID]) -> dict[UUID, list[UUID]]:
+    if not position_ids:
+        return {}
+    result = await session.execute(
+        select(LeistungsverzeichnisPositionKunde.lv_position_id, LeistungsverzeichnisPositionKunde.kunde_id).where(
+            LeistungsverzeichnisPositionKunde.lv_position_id.in_(position_ids)
+        )
+    )
+    zuordnung: dict[UUID, list[UUID]] = {}
+    for pos_id, kunde_id in result.all():
+        zuordnung.setdefault(pos_id, []).append(kunde_id)
+    return zuordnung
+
+
+async def _annotiere_kunden_ids(session: AsyncSession, positionen: list[LeistungsverzeichnisPosition]) -> None:
+    """Haengt kunden_ids als transientes (nicht in der DB gespeichertes)
+    Attribut an -- LeistungsverzeichnisPositionRead.model_validate() liest
+    es per from_attributes wie jedes andere Feld."""
+    zuordnung = await _kunden_ids_lesen(session, [p.id for p in positionen])
+    for p in positionen:
+        p.kunden_ids = zuordnung.get(p.id, [])  # type: ignore[attr-defined]
+
+
+async def _kunden_setzen(
+    session: AsyncSession, auth: AuthContext, position_id: UUID, kunden_ids: list[UUID]
+) -> None:
+    neue = set(kunden_ids)
+    for kunde_id in neue:
+        kunde = await session.get(Kunde, kunde_id)
+        if kunde is None or kunde.geloescht_am is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+
+    bestehende_result = await session.execute(
+        select(LeistungsverzeichnisPositionKunde).where(
+            LeistungsverzeichnisPositionKunde.lv_position_id == position_id
+        )
+    )
+    bestehende = {z.kunde_id: z for z in bestehende_result.scalars().all()}
+
+    for kunde_id, zuweisung in bestehende.items():
+        if kunde_id not in neue:
+            await session.delete(zuweisung)
+    for kunde_id in neue - bestehende.keys():
+        session.add(
+            LeistungsverzeichnisPositionKunde(
+                mandant_id=auth.mandant_id, lv_position_id=position_id, kunde_id=kunde_id
+            )
+        )
+    await session.flush()
 
 
 async def _pruefe_material_posten(session: AsyncSession, posten: list[MaterialPosten]) -> None:
@@ -157,24 +204,33 @@ async def list_positionen(
     else:
         # Nur eigenstaendige Positionen (Hauptpunkte/einfache Eintraege) --
         # Unterpunkte tauchen nicht in dieser Liste auf, nur ueber den
-        # eltern_position_id-Filter. Ohne kunde_id nur der mandantenweite
-        # Katalog, mit kunde_id zusaetzlich die kundenspezifischen Eintraege.
+        # eltern_position_id-Filter.
         stmt = select(LeistungsverzeichnisPosition).where(
             LeistungsverzeichnisPosition.eltern_position_id.is_(None),
             LeistungsverzeichnisPosition.geloescht_am.is_(None),
         )
         if kunde_id is not None:
-            stmt = stmt.where(
-                (LeistungsverzeichnisPosition.kunde_id.is_(None))
-                | (LeistungsverzeichnisPosition.kunde_id == kunde_id)
+            # Kundengefilterter Blick (Angebot/Vorgang/Zeiterfassung-Picker):
+            # allgemeine Positionen (keine Kunden-Zuordnung) PLUS die diesem
+            # Kunden konkret zugewiesenen.
+            zugeordnete_ids = select(LeistungsverzeichnisPositionKunde.lv_position_id).where(
+                LeistungsverzeichnisPositionKunde.kunde_id == kunde_id
             )
-        else:
-            stmt = stmt.where(LeistungsverzeichnisPosition.kunde_id.is_(None))
+            irgendwo_zugeordnete_ids = select(LeistungsverzeichnisPositionKunde.lv_position_id)
+            stmt = stmt.where(
+                LeistungsverzeichnisPosition.id.in_(zugeordnete_ids)
+                | LeistungsverzeichnisPosition.id.not_in(irgendwo_zugeordnete_ids)
+            )
+        # Ohne kunde_id (die Leistungsverzeichnis-Uebersichtsseite): alle
+        # eigenstaendigen Positionen des Mandanten, allgemeine UND
+        # kundenspezifische zusammen -- keine weitere Einschraenkung.
     if nur_stundensaetze:
         stmt = stmt.where(LeistungsverzeichnisPosition.ist_stundensatz.is_(True))
     stmt = stmt.order_by(LeistungsverzeichnisPosition.bezeichnung)
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    positionen = list(result.scalars().all())
+    await _annotiere_kunden_ids(session, positionen)
+    return positionen
 
 
 @router.get("/verwendungen", response_model=list[LeistungsverzeichnisVerwendungMitDetails])
@@ -237,25 +293,17 @@ async def create_position(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> LeistungsverzeichnisPosition:
-    kunde_id = body.kunde_id
-    eltern: LeistungsverzeichnisPosition | None = None
     if body.eltern_position_id is not None:
         eltern = await _require_position(session, body.eltern_position_id)
         if eltern.eltern_position_id is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Unterpunkte können nicht verschachtelt werden"
             )
-        # Ein Unterpunkt gehört immer zum selben Kunden-Kontext wie sein
-        # Hauptpunkt -- ein mitgeschicktes kunde_id wird bewusst ignoriert.
-        kunde_id = eltern.kunde_id
-    elif kunde_id is not None:
-        await _require_kunde(session, kunde_id)
 
     await _pruefe_material_posten(session, body.material_posten)
 
     position = LeistungsverzeichnisPosition(
         mandant_id=auth.mandant_id,
-        kunde_id=kunde_id,
         eltern_position_id=body.eltern_position_id,
         bezeichnung=body.bezeichnung,
         einheit=body.einheit,
@@ -271,7 +319,12 @@ async def create_position(
     session.add(position)
     await session.flush()
     await _neu_berechnen(session, position)
+    # Unterpunkte bekommen bewusst keine eigene Kunden-Zuweisung -- sie
+    # erscheinen nie eigenstaendig in einer kundengefilterten Liste.
+    if body.eltern_position_id is None and body.kunden_ids:
+        await _kunden_setzen(session, auth, position.id, body.kunden_ids)
     await session.refresh(position)
+    await _annotiere_kunden_ids(session, [position])
     return position
 
 
@@ -286,13 +339,13 @@ async def create_position(
 async def update_position(
     lv_position_id: UUID,
     body: LeistungsverzeichnisPositionUpdate,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> LeistungsverzeichnisPosition:
     position = await _require_position(session, lv_position_id)
     changes = body.model_dump(exclude_unset=True)
 
-    if changes.get("kunde_id") is not None:
-        await _require_kunde(session, changes["kunde_id"])
+    kunden_ids = changes.pop("kunden_ids", None)
     if "material_posten" in changes and changes["material_posten"] is not None:
         await _pruefe_material_posten(session, body.material_posten)
         changes["material_posten"] = _material_posten_zu_json(body.material_posten)
@@ -301,7 +354,12 @@ async def update_position(
         setattr(position, feld, wert)
     await session.flush()
     await _neu_berechnen(session, position)
+
+    if kunden_ids is not None and position.eltern_position_id is None:
+        await _kunden_setzen(session, auth, position.id, kunden_ids)
+
     await session.refresh(position)
+    await _annotiere_kunden_ids(session, [position])
     return position
 
 
@@ -349,10 +407,17 @@ async def verwendung_erfassen(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if position.kunde_id is not None and vorgang.kunde_id != position.kunde_id:
+    zugeordnete_kunden = (
+        await session.execute(
+            select(LeistungsverzeichnisPositionKunde.kunde_id).where(
+                LeistungsverzeichnisPositionKunde.lv_position_id == lv_position_id
+            )
+        )
+    ).scalars().all()
+    if zugeordnete_kunden and vorgang.kunde_id not in zugeordnete_kunden:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Position gehört nicht zum Kunden dieses Vorgangs",
+            detail="Position ist keinem der Kunden dieses Vorgangs zugeordnet",
         )
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(

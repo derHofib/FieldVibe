@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Numeric, Text, func
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Numeric, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,19 +12,21 @@ LV_KALKULATIONSMODI = ("festpreis", "berechnet")
 
 
 class LeistungsverzeichnisPosition(SoftDeleteMixin, TimestampMixin, Base):
-    """Katalog wiederverwendbarer Positionen -- optional kundengebunden
-    (kunde_id NULL = gilt fuer alle Kunden, ein gesetzter Wert bleibt fuer
-    kundenspezifische Sonderkonditionen moeglich). ist_stundensatz markiert
-    Eintraege, die in der Zeiterfassung als Verrechnungssatz waehlbar sind
-    (siehe Zeiterfassung.lv_position_id) -- das koppelt einen SVS mit der
-    Zeiterfassung, ohne die bestehende kategorie/abrechenbar-Trennung
-    (billable Feldzeit vs. rein statistische Buerozeit) anzutasten.
+    """Katalog wiederverwendbarer Positionen -- optional mehreren Kunden
+    zugewiesen (siehe LeistungsverzeichnisPositionKunde; keine Zuweisung =
+    gilt fuer alle Kunden). ist_stundensatz markiert Eintraege, die in der
+    Zeiterfassung als Verrechnungssatz waehlbar sind (siehe Zeiterfassung.
+    lv_position_id) -- das koppelt einen SVS mit der Zeiterfassung, ohne die
+    bestehende kategorie/abrechenbar-Trennung (billable Feldzeit vs. rein
+    statistische Buerozeit) anzutasten.
 
     eltern_position_id macht eine Zeile zum Unterpunkt eines Hauptpunkts --
     bewusst nur eine Ebene tief. Ein Hauptpunkt (hat aktive Kinder) bekommt
     seinen Preis rein rechnerisch als Summe seiner Unterpunkte; eigene
     Kalkulationsfelder werden dann ignoriert (siehe app/api/routes/
-    leistungsverzeichnis.py:_neu_berechnen).
+    leistungsverzeichnis.py:_neu_berechnen). Unterpunkte bekommen keine
+    eigene Kunden-Zuweisung -- sie erscheinen nie eigenstaendig in einer
+    kundengefilterten Liste, nur ihr Hauptpunkt tut das.
 
     kalkulationsmodus "festpreis" (Default, bisheriges Verhalten): einzelpreis
     ist frei editierbar. "berechnet": einzelpreis/lohn_gesamt/material_gesamt
@@ -45,9 +47,6 @@ class LeistungsverzeichnisPosition(SoftDeleteMixin, TimestampMixin, Base):
     )
     mandant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
-    )
-    kunde_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("kunden.id"), nullable=True
     )
     eltern_position_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("leistungsverzeichnis_positionen.id", ondelete="CASCADE"), nullable=True
@@ -103,3 +102,31 @@ class LeistungsverzeichnisVerwendung(Base):
     created_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), nullable=False
     )
+
+
+class LeistungsverzeichnisPositionKunde(Base):
+    """Many-to-many (gleiches Muster wie KundeZuweisung): eine LV-Position
+    kann keinem, einem oder mehreren Kunden zugewiesen sein -- kein Eintrag
+    fuer eine Position heisst "gilt fuer alle Kunden". Nur fuer
+    eigenstaendige Positionen relevant, nicht fuer Unterpunkte."""
+
+    __tablename__ = "leistungsverzeichnis_position_kunden"
+    __table_args__ = (
+        UniqueConstraint(
+            "lv_position_id", "kunde_id", name="uq_leistungsverzeichnis_position_kunden_position_kunde"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    mandant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
+    )
+    lv_position_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leistungsverzeichnis_positionen.id", ondelete="CASCADE"), nullable=False
+    )
+    kunde_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("kunden.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)

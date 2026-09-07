@@ -16,11 +16,11 @@ class MaterialPosten(BaseModel):
 
 
 class LeistungsverzeichnisPositionCreate(BaseModel):
-    # kunde_id=None -> gilt fuer alle Kunden (mandantenweiter Katalog).
-    kunde_id: UUID | None = None
-    # eltern_position_id gesetzt -> Unterpunkt; kunde_id wird dann serverseitig
-    # vom Hauptpunkt uebernommen (siehe Route), ein hier mitgeschicktes
-    # kunde_id wird ignoriert.
+    # Leer -> gilt fuer alle Kunden (mandantenweiter Katalog); sonst einem
+    # oder mehreren Kunden zugewiesen. Nur fuer eigenstaendige Positionen
+    # relevant -- bei einem gesetzten eltern_position_id (Unterpunkt) wird
+    # kunden_ids ignoriert, siehe app/api/routes/leistungsverzeichnis.py.
+    kunden_ids: list[UUID] = []
     eltern_position_id: UUID | None = None
     bezeichnung: str
     einheit: str = "Stk"
@@ -38,7 +38,7 @@ class LeistungsverzeichnisPositionUpdate(BaseModel):
     # eltern_position_id ist absichtlich nicht aenderbar -- ein Unterpunkt
     # wechselt nach dem Anlegen nicht den Hauptpunkt, das vermeidet
     # Sonderfaelle bei der Neuberechnung.
-    kunde_id: UUID | None = None
+    kunden_ids: list[UUID] | None = None
     bezeichnung: str | None = None
     einheit: str | None = None
     einzelpreis: Decimal | None = None
@@ -55,7 +55,7 @@ class LeistungsverzeichnisPositionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    kunde_id: UUID | None
+    kunden_ids: list[UUID] = []
     eltern_position_id: UUID | None
     bezeichnung: str
     einheit: str

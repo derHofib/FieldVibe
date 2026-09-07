@@ -15,7 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
-from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition
+from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition, LeistungsverzeichnisPositionKunde
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -420,20 +420,30 @@ async def _lv_position_pruefen(
     session: AsyncSession, lv_position_id: UUID, vorgang: Vorgang | None
 ) -> None:
     """SVS-Kopplung: der gewaehlte Stundenverrechnungssatz muss ein
-    ist_stundensatz-Eintrag sein und zum Kunden des Vorgangs gehoeren --
-    sonst koennte man versehentlich den Satz eines fremden Kunden
-    hinterlegen. RLS scopt session.get() bereits auf den eigenen Mandanten."""
+    ist_stundensatz-Eintrag sein und -- falls er ueberhaupt Kunden zugewiesen
+    ist -- zum Kunden des Vorgangs gehoeren, sonst koennte man versehentlich
+    den Satz eines fremden Kunden hinterlegen. Keine Zuweisung heisst "gilt
+    fuer alle Kunden", siehe LeistungsverzeichnisPositionKunde. RLS scopt
+    session.get() bereits auf den eigenen Mandanten."""
     lv_position = await session.get(LeistungsverzeichnisPosition, lv_position_id)
     if lv_position is None or lv_position.geloescht_am is not None or not lv_position.ist_stundensatz:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Stundenverrechnungssatz nicht gefunden",
         )
-    if vorgang is not None and lv_position.kunde_id != vorgang.kunde_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Stundenverrechnungssatz gehört nicht zum Kunden dieses Vorgangs",
-        )
+    if vorgang is not None:
+        zugeordnete_kunden = (
+            await session.execute(
+                select(LeistungsverzeichnisPositionKunde.kunde_id).where(
+                    LeistungsverzeichnisPositionKunde.lv_position_id == lv_position_id
+                )
+            )
+        ).scalars().all()
+        if zugeordnete_kunden and vorgang.kunde_id not in zugeordnete_kunden:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Stundenverrechnungssatz gehört nicht zum Kunden dieses Vorgangs",
+            )
 
 
 async def _vorgang_pruefen_fuer_manuellen_eintrag(
