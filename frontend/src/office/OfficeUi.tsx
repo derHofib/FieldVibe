@@ -17,13 +17,9 @@ export function SeitenKopf({
 }) {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">
+      <h1 className="font-heading text-2xl font-semibold tracking-tight text-ind-ink">
         {titel}
-        {anzahl !== undefined && (
-          <span className="ml-2 text-sm font-medium text-slate-400 dark:text-stone-500">
-            {anzahl}
-          </span>
-        )}
+        {anzahl !== undefined && <span className="ml-2 text-sm font-medium text-ind-ink-3">{anzahl}</span>}
       </h1>
       <div className="flex items-center gap-2">{children}</div>
     </div>
@@ -42,8 +38,8 @@ export function AnsichtUmschalter<T extends string>({
   onWechsel: (wert: T) => void;
 }) {
   return (
-    <div className="flex gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-stone-700 dark:bg-stone-800">
-      {optionen.map((option) => {
+    <div className="flex border border-ind-line">
+      {optionen.map((option, index) => {
         const Icon = option.icon;
         const aktiv = option.wert === wert;
         return (
@@ -51,13 +47,11 @@ export function AnsichtUmschalter<T extends string>({
             key={option.wert}
             onClick={() => onWechsel(option.wert)}
             aria-pressed={aktiv}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold ${
-              aktiv
-                ? "bg-white text-slate-800 shadow-xs dark:bg-stone-900 dark:text-stone-100"
-                : "text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold ${index > 0 ? "border-l border-ind-line" : ""} ${
+              aktiv ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
             }`}
           >
-            <Icon size={13} strokeWidth={2} />
+            <Icon size={13} strokeWidth={1.5} />
             {option.label}
           </button>
         );
@@ -68,13 +62,7 @@ export function AnsichtUmschalter<T extends string>({
 
 
 export function Karte({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-xl border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900 ${className}`}
-    >
-      {children}
-    </div>
-  );
+  return <div className={`border border-ind-line bg-ind-bg ${className}`}>{children}</div>;
 }
 
 /** Kennzahl-Kachel (Buchhaltung). `ton` faerbt nur den Zusatztext, nicht die
@@ -98,15 +86,15 @@ export function KennzahlKarte({
       ? "text-rose-600 font-semibold dark:text-rose-300"
       : ton === "gut"
         ? "text-emerald-600 font-semibold dark:text-emerald-300"
-        : "text-slate-400 dark:text-stone-500";
+        : "text-ind-ink-3";
 
   return (
     <Karte className="p-4">
-      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-stone-400">
-        {Icon && <Icon size={13} strokeWidth={2} />}
+      <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ind-ink-3">
+        {Icon && <Icon size={13} strokeWidth={1.5} />}
         {label}
       </p>
-      <p className="text-xl font-bold tabular-nums text-slate-800 dark:text-stone-100">{wert}</p>
+      <p className="font-heading text-2xl font-semibold tabular-nums text-ind-ink">{wert}</p>
       {zusatz && <p className={`mt-1 text-xs ${zusatzKlasse}`}>{zusatz}</p>}
     </Karte>
   );

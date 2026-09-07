@@ -1,5 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Clock, FolderCog, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings, Smartphone } from "lucide-react";
+import {
+  ChevronDown,
+  Clock,
+  FolderCog,
+  Hexagon,
+  LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  Settings,
+  Smartphone,
+} from "lucide-react";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -7,7 +18,6 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { navKategorienApi } from "../api/endpoints";
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { ThemeToggle } from "../components/ThemeToggle";
-import { IconBadge } from "../components/IconBadge";
 import { effektiveNavGruppen, sichtbareNavSeiten } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
@@ -85,39 +95,45 @@ export function OfficeLayout() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-slate-100 dark:bg-stone-950"
-      style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}
-    >
+    <div className="min-h-screen bg-ind-bg text-ind-ink" style={{ "--klebe-abstand": "0.75rem" } as CSSProperties}>
       <ImpersonationBanner />
       {!isOnline && (
-        <div className="bg-slate-800 px-4 py-1.5 text-center text-xs font-medium text-white">
+        <div className="bg-ind-field px-4 py-1.5 text-center text-xs font-medium text-ind-field-ink">
           Offline – Änderungen werden gespeichert und später synchronisiert
         </div>
       )}
 
       <div className="flex">
         <aside
-          className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white py-4 transition-[width] duration-200 ease-in-out dark:border-stone-800 dark:bg-stone-900 ${
+          className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-r border-ind-line bg-ind-bg py-4 transition-[width] duration-200 ease-in-out ${
             eingeklappt ? "w-16 px-2" : "w-56 px-3"
           }`}
         >
-          <div className={`mb-5 flex items-center ${eingeklappt ? "justify-center" : "justify-between px-2"}`}>
-            {!eingeklappt && (
-              <button
-                onClick={() => navigate("/vorgaenge")}
-                className="truncate text-left text-lg font-bold text-slate-800 dark:text-white"
-              >
-                Field<span className="text-cyan-500 dark:text-cyan-400">Vibe</span>
-              </button>
-            )}
+          <div className={`mb-4 flex items-center ${eingeklappt ? "flex-col gap-2" : "justify-between px-1.5"}`}>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center border border-ind-line-2 text-ind-acc">
+                <Hexagon size={15} strokeWidth={1.5} />
+              </div>
+              {!eingeklappt && (
+                <button
+                  onClick={() => navigate("/vorgaenge")}
+                  className="truncate text-left font-heading text-lg font-semibold uppercase tracking-wide text-ind-ink"
+                >
+                  Field<span className="text-ind-acc-txt">vibe</span>
+                </button>
+              )}
+            </div>
             <button
               onClick={sidebarUmschalten}
               aria-label={eingeklappt ? "Seitenleiste ausklappen" : "Seitenleiste einklappen"}
               title={eingeklappt ? "Ausklappen" : "Einklappen"}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+              className="flex h-7 w-7 shrink-0 items-center justify-center text-ind-ink-3 hover:bg-ind-hover hover:text-ind-ink"
             >
-              {eingeklappt ? <PanelLeftOpen size={16} strokeWidth={2} /> : <PanelLeftClose size={16} strokeWidth={2} />}
+              {eingeklappt ? (
+                <PanelLeftOpen size={16} strokeWidth={1.5} />
+              ) : (
+                <PanelLeftClose size={16} strokeWidth={1.5} />
+              )}
             </button>
           </div>
 
@@ -127,17 +143,17 @@ export function OfficeLayout() {
               return (
               <div key={gruppe.name}>
                 {eingeklappt ? (
-                  <div className="mx-1 mb-1.5 border-t border-slate-100 dark:border-stone-800" />
+                  <div className="mx-1 mb-1.5 border-t border-ind-line" />
                 ) : (
                   <button
                     onClick={() => kategorieUmschalten(gruppe.name)}
                     aria-expanded={!kollabiert}
-                    className="flex w-full items-center justify-between rounded-md px-2 pb-1.5 text-[10px] font-bold tracking-wider text-slate-400 uppercase hover:text-slate-600 dark:text-stone-500 dark:hover:text-stone-300"
+                    className="flex w-full items-center justify-between px-2 pb-1.5 text-[10px] font-semibold tracking-[0.14em] text-ind-ink-3 uppercase hover:text-ind-ink"
                   >
                     <span>{gruppe.name}</span>
                     <ChevronDown
                       size={12}
-                      strokeWidth={2.5}
+                      strokeWidth={2}
                       className={`transition-transform duration-150 ${kollabiert ? "-rotate-90" : ""}`}
                     />
                   </button>
@@ -148,18 +164,18 @@ export function OfficeLayout() {
                     to={seite.route}
                     title={eingeklappt ? seite.label : undefined}
                     className={({ isActive }) =>
-                      `mb-0.5 flex items-center rounded-lg py-1.5 text-[13px] font-medium ${
-                        eingeklappt ? "justify-center px-0" : "gap-2.5 px-2"
-                      } ${
-                        isActive
-                          ? "bg-slate-100 font-semibold text-slate-900 dark:bg-stone-800 dark:text-stone-100"
-                          : "text-slate-500 hover:bg-slate-50 dark:text-stone-400 dark:hover:bg-stone-800/60"
-                      }`
+                      `relative mb-0.5 flex items-center py-2 text-[13px] font-medium ${
+                        eingeklappt ? "justify-center px-0" : "gap-2.5 px-2.5"
+                      } ${isActive ? "text-ind-ink" : "text-ind-ink-2 hover:bg-ind-hover hover:text-ind-ink"}`
                     }
                   >
                     {({ isActive }) => (
                       <>
-                        <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={isActive} />
+                        <span
+                          className="absolute top-1.5 bottom-1.5 left-0 w-0.5 bg-ind-acc"
+                          style={{ opacity: isActive ? 1 : 0 }}
+                        />
+                        <seite.icon size={16} strokeWidth={1.5} className="shrink-0" />
                         {!eingeklappt && <span className="truncate">{seite.label}</span>}
                       </>
                     )}
@@ -173,64 +189,64 @@ export function OfficeLayout() {
           <button
             onClick={() => navigate("/einstellungen/seitenleiste")}
             title={eingeklappt ? "Seitenleiste anpassen" : undefined}
-            className={`mt-3 flex items-center rounded-lg py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60 ${
+            className={`mt-3 flex items-center py-1.5 text-xs font-medium text-ind-ink-3 hover:bg-ind-hover hover:text-ind-ink ${
               eingeklappt ? "justify-center px-0" : "gap-2 px-2"
             }`}
           >
-            <Settings size={14} strokeWidth={2} className="shrink-0" />
+            <Settings size={14} strokeWidth={1.5} className="shrink-0" />
             {!eingeklappt && "Seitenleiste anpassen"}
           </button>
           {currentUser?.role === "mandant_admin" && (
             <button
               onClick={() => navigate("/einstellungen/kategorien")}
               title={eingeklappt ? "Menü-Kategorien" : undefined}
-              className={`flex items-center rounded-lg py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60 ${
+              className={`flex items-center py-1.5 text-xs font-medium text-ind-ink-3 hover:bg-ind-hover hover:text-ind-ink ${
                 eingeklappt ? "justify-center px-0" : "gap-2 px-2"
               }`}
             >
-              <FolderCog size={14} strokeWidth={2} className="shrink-0" />
+              <FolderCog size={14} strokeWidth={1.5} className="shrink-0" />
               {!eingeklappt && "Menü-Kategorien"}
             </button>
           )}
           <button
             onClick={zurMobilenAnsicht}
             title={eingeklappt ? "Zur mobilen Ansicht" : undefined}
-            className={`flex items-center rounded-lg py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60 ${
+            className={`flex items-center py-1.5 text-xs font-medium text-ind-ink-3 hover:bg-ind-hover hover:text-ind-ink ${
               eingeklappt ? "justify-center px-0" : "gap-2 px-2"
             }`}
           >
-            <Smartphone size={14} strokeWidth={2} className="shrink-0" />
+            <Smartphone size={14} strokeWidth={1.5} className="shrink-0" />
             {!eingeklappt && "Zur mobilen Ansicht"}
           </button>
         </aside>
 
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 flex items-center justify-end gap-2 border-b border-slate-200 bg-white/80 px-5 py-2.5 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/70">
+          <header className="sticky top-0 z-30 flex items-center justify-end gap-2 border-b border-ind-line bg-ind-bg px-5 py-2.5">
             {outboxCount > 0 && (
               <span
                 title={`${outboxCount} noch nicht synchronisiert`}
-                className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+                className="flex items-center gap-1 border border-ind-warn px-2 py-1 text-xs font-medium text-ind-warn"
               >
-                <Clock size={13} strokeWidth={2.25} /> {outboxCount}
+                <Clock size={13} strokeWidth={1.5} /> {outboxCount}
               </span>
             )}
-            <span className="text-sm text-slate-600 dark:text-stone-300">{currentUser?.name}</span>
+            <span className="text-sm text-ind-ink-2">{currentUser?.name}</span>
             <button
               onClick={() => navigate("/suche")}
               aria-label="Suche"
               title="Suche"
-              className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              className="btn-industry btn-industry-secondary btn-industry-icon"
             >
-              <Search size={18} strokeWidth={2} />
+              <Search size={18} strokeWidth={1.5} />
             </button>
             <ThemeToggle />
             <button
               onClick={logout}
               aria-label="Abmelden"
               title="Abmelden"
-              className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              className="btn-industry btn-industry-secondary btn-industry-icon"
             >
-              <LogOut size={18} strokeWidth={2} />
+              <LogOut size={18} strokeWidth={1.5} />
             </button>
           </header>
 
