@@ -235,6 +235,127 @@ body {
   right: -6px;
 }
 
+/* "Industry"-Design: Button/Input/Tag/Seg-Rezepte als eigener Klassen-Satz
+   (praefixiert mit "-industry", analog zum "ind-"-Farbtoken-Ansatz oben) --
+   bestehende .btn-clay/.card-soft/Tailwind-Chip-Muster bleiben unveraendert
+   bestehen, bis eine Seite gezielt umgestellt wird. Quadratisch (kein
+   Radius), Haarlinien-Rahmen statt Schatten, wie im Design-Handoff. */
+.btn-industry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-radius: 0;
+  border: 1px solid transparent;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  color: var(--color-ind-ink);
+  transition: background-color 100ms ease, border-color 100ms ease;
+}
+.btn-industry svg {
+  display: block;
+}
+.btn-industry:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-industry-primary {
+  background: var(--color-ind-btn-bg);
+  border-color: var(--color-ind-btn-bg);
+  color: var(--color-ind-btn-ink);
+}
+.btn-industry-primary:hover:not(:disabled) {
+  background: var(--color-ind-btn-bg-h);
+  border-color: var(--color-ind-btn-bg-h);
+}
+.btn-industry-secondary {
+  border-color: var(--color-ind-line);
+}
+.btn-industry-secondary:hover:not(:disabled) {
+  background: var(--color-ind-hover);
+}
+.btn-industry-ghost {
+  border-color: transparent;
+  color: var(--color-ind-acc-txt);
+}
+.btn-industry-ghost:hover:not(:disabled) {
+  background: var(--color-ind-acc-soft);
+}
+.btn-industry-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+.input-industry {
+  width: 100%;
+  min-height: 36px;
+  padding: 0.4rem 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--color-ind-ink);
+  background: transparent;
+  border: 1px solid var(--color-ind-line);
+  border-radius: 0;
+}
+.input-industry::placeholder {
+  color: var(--color-ind-ink-3);
+}
+.input-industry:hover {
+  border-color: var(--color-ind-line-2);
+}
+.input-industry:focus-visible {
+  outline: 2px solid var(--color-ind-acc);
+  outline-offset: 0;
+  border-color: var(--color-ind-acc);
+}
+textarea.input-industry {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.tag-industry {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 0;
+}
+.tag-industry-accent {
+  background: var(--color-ind-acc-soft);
+  color: var(--color-ind-acc-txt);
+}
+.tag-industry-neutral {
+  background: var(--color-ind-hover);
+  color: var(--color-ind-ink-2);
+}
+.tag-industry-outline {
+  border: 1px solid var(--color-ind-acc);
+  color: var(--color-ind-acc-txt);
+}
+
+/* Segmented-Toggle-Gruppe, Office-Pendant zu OfficeUi.tsx' bisherigem
+   Segmented-Muster (siehe fieldvibe-design-Skill §6). */
+.seg-industry {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-ind-line);
+  border-radius: 0;
+}
+.seg-industry > * {
+  border-left: 1px solid var(--color-ind-line);
+}
+.seg-industry > *:first-child {
+  border-left: none;
+}
+
 /* "Weiche Tiefe": Doppelschatten-Karten mit von links nach rechts
    ausfadendem Statusfarb-Rahmen (Design-Vorschlag, siehe Artifact). Der
    Rahmen kommt aus einem Gradient auf dem Aussen-Wrapper (.card-soft), der
