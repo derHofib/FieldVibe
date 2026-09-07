@@ -16,41 +16,39 @@ export function FeldLayout() {
 
   return (
     <div
-      className="min-h-screen bg-slate-100 dark:bg-stone-950"
+      className="min-h-screen bg-ind-bg text-ind-ink"
       style={{ paddingBottom: "calc(7.5rem + env(safe-area-inset-bottom))" }}
     >
       <ImpersonationBanner />
       {!isOnline && (
-        <div className="bg-slate-800 px-4 py-1.5 text-center text-xs font-medium text-white">
+        <div className="bg-ind-field px-4 py-1.5 text-center text-xs font-medium text-ind-field-ink">
           Offline – Änderungen werden gespeichert und später synchronisiert
         </div>
       )}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/80 px-4 py-3 backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/70">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ind-line bg-ind-bg px-4 py-3">
         <button
           onClick={() => navigate("/feed")}
-          className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-white"
+          className="flex items-center gap-1.5 font-heading text-lg font-semibold uppercase tracking-wide text-ind-ink"
         >
-          Field<span className="text-cyan-500 dark:text-cyan-400">Vibe</span>
+          Field<span className="text-ind-acc-txt">Vibe</span>
         </button>
         <div className="flex items-center gap-2">
           {outboxCount > 0 && (
             <span
               title={`${outboxCount} noch nicht synchronisiert`}
-              className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+              className="flex items-center gap-1 border border-ind-warn px-2 py-1 text-xs font-medium text-ind-warn"
             >
-              <Clock size={13} strokeWidth={2.25} /> {outboxCount}
+              <Clock size={13} strokeWidth={1.5} /> {outboxCount}
             </span>
           )}
-          <span className="hidden text-sm text-slate-600 sm:inline dark:text-stone-300">
-            {currentUser?.name}
-          </span>
+          <span className="hidden text-sm text-ind-ink-2 sm:inline">{currentUser?.name}</span>
           <button
             onClick={() => navigate("/suche")}
             aria-label="Suche"
             title="Suche"
-            className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            className="btn-touch btn-industry btn-industry-secondary btn-industry-icon"
           >
-            <Search size={18} strokeWidth={2} />
+            <Search size={18} strokeWidth={1.5} />
           </button>
           <ThemeToggle />
           {kannEinstellungenSehen && (
@@ -58,15 +56,12 @@ export function FeldLayout() {
               onClick={() => navigate("/einstellungen")}
               aria-label="Einstellungen"
               title="Einstellungen"
-              className="btn-touch flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              className="btn-touch btn-industry btn-industry-secondary btn-industry-icon"
             >
-              <Settings size={18} strokeWidth={2} />
+              <Settings size={18} strokeWidth={1.5} />
             </button>
           )}
-          <button
-            onClick={logout}
-            className="btn-touch rounded-md px-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
-          >
+          <button onClick={logout} className="btn-touch btn-industry btn-industry-ghost">
             Abmelden
           </button>
         </div>

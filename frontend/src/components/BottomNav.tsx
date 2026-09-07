@@ -20,7 +20,7 @@ const ROTUNDE_SCHRITT_PX = ROTUNDE_SLOT_PX + ROTUNDE_GAP_PX;
 function Badge({ anzahl }: { anzahl: number }) {
   if (anzahl <= 0) return null;
   return (
-    <span className="absolute right-0 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+    <span className="absolute right-0 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-ind-bad px-1 text-[10px] font-bold text-white">
       {anzahl > 9 ? "9+" : anzahl}
     </span>
   );
@@ -32,7 +32,7 @@ function FixItem({ seite, badge }: { seite: NavSeite; badge: number }) {
       to={seite.route}
       className={({ isActive }) =>
         `btn-touch relative flex shrink-0 flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] font-medium ${
-          isActive ? "text-slate-700 dark:text-stone-200" : "text-slate-400 dark:text-stone-500"
+          isActive ? "text-ind-ink" : "text-ind-ink-3"
         }`
       }
     >
@@ -82,7 +82,7 @@ function RotundeItem({
       style={{ width: ROTUNDE_SLOT_PX }}
       className={({ isActive }) =>
         `btn-touch relative flex shrink-0 snap-center flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 ${massstab} ${deckkraft} ${
-          isActive ? "text-slate-700 dark:text-stone-200" : "text-slate-400 dark:text-stone-500"
+          isActive ? "text-ind-ink" : "text-ind-ink-3"
         }`
       }
     >
@@ -207,7 +207,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="navbar-soft fixed inset-x-3 bottom-3 z-40 flex items-center gap-1 rounded-full bg-white py-1.5 dark:bg-stone-900"
+      className="fixed inset-x-3 bottom-3 z-40 flex items-center gap-1 rounded-full border border-ind-line bg-ind-bg py-1.5"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="flex shrink-0 items-center gap-1">
@@ -218,10 +218,10 @@ export function BottomNav() {
 
       <NavLink
         to="/neu"
-        className="btn-clay -mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-linear-to-r from-cyan-500 to-blue-600 text-white ring-4 ring-slate-100 dark:ring-stone-950"
+        className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ind-btn-bg text-ind-btn-ink ring-4 ring-ind-bg transition-colors hover:bg-ind-btn-bg-h"
         aria-label="Neuer Vorgang"
       >
-        <Plus size={26} strokeWidth={2.5} />
+        <Plus size={26} strokeWidth={1.5} />
       </NavLink>
 
       <Rotunde items={rotundeItems} unreadCount={unreadCount} />
