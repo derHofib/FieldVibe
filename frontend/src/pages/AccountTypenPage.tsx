@@ -62,7 +62,7 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
     return rechte?.find((e) => e.bereich === bereich && e.aktion === aktion)?.erlaubt ?? false;
   }
 
-  if (isLoading) return <p className="p-4 text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading) return <p className="p-4 text-sm text-ind-ink-3">Lädt…</p>;
 
   return (
     <div className="overflow-x-auto border-t border-slate-100 dark:border-stone-800">
@@ -80,7 +80,7 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
         <tbody className="divide-y divide-slate-100 dark:divide-stone-800">
           {BEREICHE.map((bereich) => (
             <tr key={bereich}>
-              <td className="px-4 py-2 font-medium text-slate-700 dark:text-stone-300">
+              <td className="px-4 py-2 font-medium text-ind-ink-2">
                 {BEREICH_LABEL[bereich]}
               </td>
               {AKTIONEN.map((aktion) => (
@@ -164,39 +164,39 @@ export function AccountTypenPage() {
         <Link to="/einstellungen" className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">
           ← Zurück zu Einstellungen
         </Link>
-        <h1 className="mt-2 text-lg font-bold text-slate-800 dark:text-stone-100">Account-Typen & Rechte</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <h1 className="mt-2 text-lg font-bold text-ind-ink">Account-Typen & Rechte</h1>
+        <p className="mt-1 text-sm text-ind-ink-3">
           Definiere beliebig viele eigene Account-Typen (z.B. "Techniker", "Bürokraft") und lege je Typ
           fest, was er in jedem Funktionsbereich sehen, erstellen, bearbeiten und löschen darf.
           mandant_admin ist von dieser Matrix nicht betroffen und hat immer vollen Zugriff.
         </p>
       </div>
 
-      <section className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-3 text-sm font-bold text-slate-800 dark:text-stone-100">Neuen Account-Typ anlegen</h2>
+      <section className="border border-ind-line bg-ind-bg p-4">
+        <h2 className="mb-3 text-sm font-bold text-ind-ink">Neuen Account-Typ anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
             <input
               required
               placeholder="z.B. Techniker"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
               Icon (optional)
             </label>
             <input
               placeholder="🔧"
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
-              className="btn-touch w-20 rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-20 border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             />
           </div>
-          <label className="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-stone-300">
+          <label className="flex items-center gap-2 pb-2 text-sm text-ind-ink-2">
             <input
               type="checkbox"
               className="h-4 w-4 accent-cyan-600"
@@ -205,7 +205,7 @@ export function AccountTypenPage() {
             />
             Sieht nur zugewiesene Kunden
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-stone-300">
+          <label className="flex items-center gap-2 pb-2 text-sm text-ind-ink-2">
             <input
               type="checkbox"
               className="h-4 w-4 accent-cyan-600"
@@ -228,7 +228,7 @@ export function AccountTypenPage() {
       <section className="space-y-3">
         {deleteError && <p className="text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+          <p className="text-ind-ink-3">Lädt…</p>
         ) : typen && typen.length > 0 ? (
           typen.map((typ) => (
             <div
@@ -241,8 +241,8 @@ export function AccountTypenPage() {
               >
                 <span className="text-xl">{typ.icon || "🧩"}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-slate-800 dark:text-stone-100">{typ.name}</span>
-                  <span className="block text-xs text-slate-500 dark:text-stone-400">
+                  <span className="block font-semibold text-ind-ink">{typ.name}</span>
+                  <span className="block text-xs text-ind-ink-3">
                     {typ.anzahl_nutzer} {typ.anzahl_nutzer === 1 ? "Nutzer" : "Nutzer"}
                     {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
                     {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Aufträge selbst übernehmen"}
@@ -270,7 +270,7 @@ export function AccountTypenPage() {
                 >
                   Löschen
                 </button>
-                <span className="text-slate-300 dark:text-stone-600">
+                <span className="text-ind-ink-3">
                   {expandedId === typ.id ? "▲" : "▼"}
                 </span>
               </button>
@@ -296,7 +296,7 @@ export function AccountTypenPage() {
             </div>
           ))
         ) : (
-          <p className="text-sm text-slate-500 dark:text-stone-400">
+          <p className="text-sm text-ind-ink-3">
             Noch keine Account-Typen angelegt.
           </p>
         )}

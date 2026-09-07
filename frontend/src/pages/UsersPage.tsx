@@ -172,50 +172,50 @@ export function UsersPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h2 className="mb-4 text-lg font-bold text-ind-ink">
           {kannEingeladenWerden ? "Kollegen einladen" : "Neuen Account anlegen"}
         </h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">E-Mail</label>
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">E-Mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             />
           </div>
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Passwort</label>
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Passwort</label>
               <input
                 type="password"
                 required
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Rolle</label>
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Rolle</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             >
               {(isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).map((value) => (
                 <option key={value} value={value}>
@@ -226,7 +226,7 @@ export function UsersPage() {
           </div>
           {role === "custom" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">
                 Account-Typ
               </label>
               {accountTypen && accountTypen.length > 0 ? (
@@ -234,7 +234,7 @@ export function UsersPage() {
                   required
                   value={accountTypId}
                   onChange={(e) => setAccountTypId(e.target.value)}
-                  className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
                 >
                   <option value="" disabled>
                     Bitte wählen…
@@ -258,12 +258,12 @@ export function UsersPage() {
           )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Mandant</label>
               <select
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
               >
                 <option value="" disabled>
                   Bitte wählen…
@@ -299,7 +299,7 @@ export function UsersPage() {
 
       {einladungen && einladungen.length > 0 && (
         <section>
-          <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Offene Einladungen</h2>
+          <h2 className="mb-4 text-lg font-bold text-ind-ink">Offene Einladungen</h2>
           <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
               <tr>
@@ -314,8 +314,8 @@ export function UsersPage() {
                 .filter((e) => e.status === "offen")
                 .map((e) => (
                   <tr key={e.id}>
-                    <td className="px-4 py-3 text-slate-800 dark:text-stone-100">{e.email}</td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-stone-300">{einladungRolleLabel(e)}</td>
+                    <td className="px-4 py-3 text-ind-ink">{e.email}</td>
+                    <td className="px-4 py-3 text-ind-ink-2">{einladungRolleLabel(e)}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -356,10 +356,10 @@ export function UsersPage() {
       )}
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Accounts</h2>
+        <h2 className="mb-4 text-lg font-bold text-ind-ink">Accounts</h2>
         {deleteError && <p className="mb-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+          <p className="text-ind-ink-3">Lädt…</p>
         ) : (
           <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
@@ -375,13 +375,13 @@ export function UsersPage() {
             <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
               {users?.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-stone-100">{u.name}</td>
-                  <td className="px-4 py-3 text-slate-500 dark:text-stone-400">{u.email}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-stone-300">
+                  <td className="px-4 py-3 font-medium text-ind-ink">{u.name}</td>
+                  <td className="px-4 py-3 text-ind-ink-3">{u.email}</td>
+                  <td className="px-4 py-3 text-ind-ink-2">
                     {u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role]}
                   </td>
                   {isSuperAdmin && (
-                    <td className="px-4 py-3 text-slate-500 dark:text-stone-400">
+                    <td className="px-4 py-3 text-ind-ink-3">
                       {u.mandant_id ? mandantNameById.get(u.mandant_id) ?? "–" : "–"}
                     </td>
                   )}

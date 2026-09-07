@@ -70,7 +70,7 @@ function ResourceRow({
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <span className="text-sm font-medium text-slate-700 dark:text-stone-200">{label}</span>
+        <span className="text-sm font-medium text-ind-ink">{label}</span>
         <span className={`text-sm font-bold ${farbe.text}`}>{Math.round(percent)}%</span>
       </div>
       <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-stone-800">
@@ -80,7 +80,7 @@ function ResourceRow({
         />
       </div>
       <div className="mt-1.5 flex items-center justify-between gap-3">
-        <span className="text-xs text-slate-500 dark:text-stone-400">{detail}</span>
+        <span className="text-xs text-ind-ink-3">{detail}</span>
         <Sparkline values={verlauf} color={farbe.spark} />
       </div>
     </div>
@@ -108,7 +108,7 @@ function ServerAuslastung() {
 
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold text-slate-800 dark:text-stone-100">Server-Auslastung</h2>
+      <h2 className="mb-3 text-lg font-bold text-ind-ink">Server-Auslastung</h2>
       <div className="grid grid-cols-1 gap-5 rounded-lg bg-white p-4 shadow-xs sm:grid-cols-3 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <ResourceRow label="CPU" percent={aktuell.cpu_percent} detail="aktuelle Auslastung" verlauf={reihe("cpu_percent")} />
         <ResourceRow
@@ -130,12 +130,12 @@ function ServerAuslastung() {
 
 function StatKachel({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-stone-400">
+    <div className="border border-ind-line bg-ind-bg p-4">
+      <div className="text-xs font-medium uppercase tracking-wide text-ind-ink-3">
         {label}
       </div>
-      <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-stone-100">{value}</div>
-      {sub && <div className="mt-0.5 text-xs text-slate-500 dark:text-stone-400">{sub}</div>}
+      <div className="mt-1 text-2xl font-bold text-ind-ink">{value}</div>
+      {sub && <div className="mt-0.5 text-xs text-ind-ink-3">{sub}</div>}
     </div>
   );
 }
@@ -185,7 +185,7 @@ export function UebersichtPage() {
 
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-stone-100">Letzte Aktivität</h2>
+          <h2 className="text-lg font-bold text-ind-ink">Letzte Aktivität</h2>
           <Link
             to="/audit-log"
             className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400"
@@ -197,15 +197,15 @@ export function UebersichtPage() {
           <ul className="divide-y divide-slate-100 rounded-lg bg-white text-sm shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
-                <span className="font-medium text-slate-800 dark:text-stone-100">{e.aktion}</span>
-                <span className="text-slate-500 dark:text-stone-400">
+                <span className="font-medium text-ind-ink">{e.aktion}</span>
+                <span className="text-ind-ink-3">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-500 dark:text-stone-400">Noch keine Einträge.</p>
+          <p className="text-sm text-ind-ink-3">Noch keine Einträge.</p>
         )}
       </section>
     </div>

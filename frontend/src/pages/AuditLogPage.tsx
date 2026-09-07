@@ -36,15 +36,15 @@ export function AuditLogPage() {
 
   return (
     <div>
-      <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Audit-Log</h2>
+      <h2 className="mb-4 text-lg font-bold text-ind-ink">Audit-Log</h2>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Mandant</label>
           <select
             value={mandantId}
             onChange={(e) => setMandantId(e.target.value)}
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
           >
             <option value="">Alle</option>
             {mandanten?.map((m) => (
@@ -55,30 +55,30 @@ export function AuditLogPage() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Aktion</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Aktion</label>
           <input
             value={aktion}
             onChange={(e) => setAktion(e.target.value)}
             placeholder="z.B. login_als_mandant"
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Von</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Von</label>
           <input
             type="date"
             value={von}
             onChange={(e) => setVon(e.target.value)}
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bis</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Bis</label>
           <input
             type="date"
             value={bis}
             onChange={(e) => setBis(e.target.value)}
-            className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
           />
         </div>
         {(mandantId || aktion || von || bis) && (
@@ -97,7 +97,7 @@ export function AuditLogPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+        <p className="text-ind-ink-3">Lädt…</p>
       ) : (
         <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
@@ -112,17 +112,17 @@ export function AuditLogPage() {
           <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
             {entries?.map((e) => (
               <tr key={e.id}>
-                <td className="whitespace-nowrap px-4 py-3 text-slate-500 dark:text-stone-400">
+                <td className="whitespace-nowrap px-4 py-3 text-ind-ink-3">
                   {new Date(e.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </td>
-                <td className="px-4 py-3 text-slate-500 dark:text-stone-400">
+                <td className="px-4 py-3 text-ind-ink-3">
                   {e.mandant_id ? mandantNameById.get(e.mandant_id) ?? "–" : "–"}
                 </td>
-                <td className="px-4 py-3 font-medium text-slate-800 dark:text-stone-100">{e.aktion}</td>
-                <td className="px-4 py-3 text-slate-500 dark:text-stone-400">
+                <td className="px-4 py-3 font-medium text-ind-ink">{e.aktion}</td>
+                <td className="px-4 py-3 text-ind-ink-3">
                   {e.entity_type ? `${e.entity_type} · ${e.entity_id?.slice(0, 8)}` : "–"}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-500 dark:text-stone-400">
+                <td className="px-4 py-3 font-mono text-xs text-ind-ink-3">
                   {JSON.stringify(e.payload)}
                 </td>
               </tr>

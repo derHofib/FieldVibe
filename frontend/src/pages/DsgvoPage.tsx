@@ -62,17 +62,17 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
   }
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="border border-ind-line bg-ind-bg p-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="font-medium text-slate-800 dark:text-stone-100">{DOKUMENT_LABEL[typ]}</div>
+          <div className="font-medium text-ind-ink">{DOKUMENT_LABEL[typ]}</div>
           {dokument ? (
-            <div className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+            <div className="mt-1 text-xs text-ind-ink-3">
               {dokument.dateiname} · {formatGroesse(dokument.groesse_bytes)} · hochgeladen am{" "}
               {new Date(dokument.updated_at).toLocaleDateString("de-DE")}
             </div>
           ) : (
-            <div className="mt-1 text-xs text-slate-400 dark:text-stone-500">Noch kein Dokument hochgeladen</div>
+            <div className="mt-1 text-xs text-ind-ink-3">Noch kein Dokument hochgeladen</div>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -126,7 +126,7 @@ export function DsgvoPage() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <p className="text-sm text-ind-ink-3">
         Zentrale Ablage der DSGVO-Pflichtdokumente (AVV-Vorlage, Datenschutzerklärung, Impressum,
         Löschkonzept, TOM-Dokument, Meldeprozess, Verarbeitungsverzeichnis). Erlaubt sind PDF, Word
         (.doc/.docx) oder Bilddateien (max. 10 MB).

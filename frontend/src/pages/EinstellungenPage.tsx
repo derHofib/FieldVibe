@@ -24,12 +24,14 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   });
 
   return (
-    <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm">
+    <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">SMTP (globaler Mailversand)</span>
+        <span className="text-sm font-semibold text-ind-ink-2">SMTP (globaler Mailversand)</span>
         <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            integration.aktiv ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-500"
+          className={`border px-2 py-0.5 text-xs font-semibold ${
+            integration.aktiv
+              ? "border-green-400 text-green-700 dark:border-green-600 dark:text-green-300"
+              : "border-ind-line text-ind-ink-3"
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -41,25 +43,25 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="input-industry"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="input-industry"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Benutzername"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="input-industry"
         />
         <input
           value={fromAddress}
           onChange={(e) => setFromAddress(e.target.value)}
           placeholder="Absender-Adresse (z.B. account@fieldvibe.de)"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+          className="input-industry"
         />
       </div>
       <input
@@ -67,7 +69,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+        className="input-industry"
       />
 
       <div className="flex gap-2">
@@ -79,14 +81,14 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch btn-industry btn-industry-primary flex-1 py-1.5 text-sm disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50"
+          className="btn-touch btn-industry btn-industry-secondary py-1.5 text-sm disabled:opacity-50"
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -95,7 +97,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
             if (window.confirm("Globale SMTP-Konfiguration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50"
+          className="btn-touch border border-red-400 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
         >
           Löschen
         </button>
@@ -136,22 +138,22 @@ export function EinstellungenPage() {
     },
   });
 
-  if (isLoading) return <p className="text-center text-slate-500">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800">⚙️ Plattform-Einstellungen</h1>
+      <h1 className="font-heading text-2xl font-semibold text-ind-ink">Plattform-Einstellungen</h1>
 
       <div className="space-y-2">
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-ind-ink-3">
           Greift, sobald ein Mandant selbst keine eigene SMTP-Integration eingerichtet hat (Seite
           „Integrationen" im jeweiligen Mandanten-Bereich) — für Einladungen und Passwort-Reset-Mails.
           Ein Mandant mit eigener SMTP-Konfiguration überschreibt das automatisch, hier muss nichts
           umgeschaltet werden.
         </p>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-ind-ink-3">
           Absenderadresse braucht eine Domain, für die SPF/DKIM tatsächlich eingerichtet ist — sonst
           landen die Mails eher im Spam-Ordner der Empfänger.
         </p>
@@ -160,31 +162,31 @@ export function EinstellungenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-sm">
+        <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="Host"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="input-industry"
             />
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
               placeholder="Port"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="input-industry"
             />
             <input
               value={user}
               onChange={(e) => setUser(e.target.value)}
               placeholder="Benutzername"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="input-industry"
             />
             <input
               value={fromAddress}
               onChange={(e) => setFromAddress(e.target.value)}
               placeholder="Absender-Adresse"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="input-industry"
             />
           </div>
           <input
@@ -192,12 +194,12 @@ export function EinstellungenPage() {
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="input-industry"
           />
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch btn-industry btn-industry-primary w-full py-1.5 text-sm disabled:opacity-50"
           >
             SMTP einrichten
           </button>
@@ -205,7 +207,7 @@ export function EinstellungenPage() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm"
+          className="btn-touch btn-industry btn-industry-secondary w-full py-2.5 text-sm"
         >
           + Globales SMTP einrichten
         </button>
