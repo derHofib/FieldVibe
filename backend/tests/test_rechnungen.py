@@ -539,7 +539,6 @@ async def test_positionsvorschlaege_aus_leistungsverzeichnis(
     async with system_session() as session:
         svs = LeistungsverzeichnisPosition(
             mandant_id=mandant.id,
-            kunde_id=kunde.id,
             bezeichnung="Stundensatz Monteur",
             einheit="Std",
             einzelpreis=Decimal("65.00"),
@@ -547,7 +546,6 @@ async def test_positionsvorschlaege_aus_leistungsverzeichnis(
         )
         pauschale = LeistungsverzeichnisPosition(
             mandant_id=mandant.id,
-            kunde_id=kunde.id,
             bezeichnung="Anfahrtspauschale",
             einheit="Stk",
             einzelpreis=Decimal("29.00"),
