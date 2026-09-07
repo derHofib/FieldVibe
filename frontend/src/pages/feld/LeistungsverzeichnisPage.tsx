@@ -29,9 +29,9 @@ function MaterialPostenZeile({
   const { data: material } = useQuery({ queryKey: ["material-alle"], queryFn: () => materialApi.list() });
 
   return (
-    <div className="flex flex-wrap items-end gap-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+    <div className="flex flex-wrap items-end gap-2 border border-ind-line-2 p-2">
       <div className="min-w-[160px] flex-1">
-        <label className="mb-1 block text-[10.5px] font-medium text-slate-400 dark:text-stone-500">
+        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
           Bezeichnung
         </label>
         <SearchableSelect
@@ -54,22 +54,22 @@ function MaterialPostenZeile({
           <input
             value={posten.bezeichnung}
             onChange={(e) => onChange({ ...posten, bezeichnung: e.target.value, material_id: null })}
-            className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
           />
         )}
       </div>
       <div className="w-20">
-        <label className="mb-1 block text-[10.5px] font-medium text-slate-400 dark:text-stone-500">Menge</label>
+        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">Menge</label>
         <input
           type="number"
           step="0.01"
           value={posten.menge}
           onChange={(e) => onChange({ ...posten, menge: e.target.value })}
-          className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
         />
       </div>
       <div className="w-24">
-        <label className="mb-1 block text-[10.5px] font-medium text-slate-400 dark:text-stone-500">
+        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
           Einzelpreis
         </label>
         <input
@@ -77,7 +77,7 @@ function MaterialPostenZeile({
           step="0.01"
           value={posten.einzelpreis}
           onChange={(e) => onChange({ ...posten, einzelpreis: e.target.value })}
-          className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
         />
       </div>
       <button
@@ -103,7 +103,7 @@ function KundenZuweisung({ kundenIds, onChange }: { kundenIds: string[]; onChang
       <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
         Kunden-Zuweisung
       </label>
-      <p className="mb-1.5 text-xs text-slate-400 dark:text-stone-500">Leer = gilt für alle Kunden</p>
+      <p className="mb-1.5 text-xs text-ind-ink-3">Leer = gilt für alle Kunden</p>
       {kundenIds.length > 0 && (
         <div className="mb-1.5 flex flex-wrap gap-1.5">
           {kundenIds.map((id) => (
@@ -226,7 +226,7 @@ function LvPositionFormular({
         className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900"
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-stone-800">
-          <h2 className="text-base font-bold text-slate-800 dark:text-stone-100">
+          <h2 className="text-base font-bold text-ind-ink">
             {istNeu ? (istUnterpunkt ? "Neuer Unterpunkt" : "Neue Position") : "Position bearbeiten"}
           </h2>
           <button
@@ -248,7 +248,7 @@ function LvPositionFormular({
                 value={bezeichnung}
                 onChange={(e) => setBezeichnung(e.target.value)}
                 placeholder={istUnterpunkt ? "z. B. Liefern und Montieren" : "z. B. Installation Wallbox"}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <div>
@@ -258,13 +258,13 @@ function LvPositionFormular({
               <input
                 value={einheit}
                 onChange={(e) => setEinheit(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
           </div>
 
           {!istUnterpunkt && (
-            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
+            <label className="flex items-center gap-2 text-sm text-ind-ink-2">
               <input
                 type="checkbox"
                 checked={istStundensatz}
@@ -280,7 +280,7 @@ function LvPositionFormular({
           {gesperrt ? (
             <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-500 dark:bg-stone-800/60 dark:text-stone-400">
               Diese Position hat Unterpunkte -- ihr Preis ergibt sich automatisch aus deren Summe (aktuell{" "}
-              <strong className="text-slate-700 dark:text-stone-200">{euro(position!.einzelpreis)}</strong>). Um die
+              <strong className="text-ind-ink">{euro(position!.einzelpreis)}</strong>). Um die
               Kalkulation zu ändern, bitte die Unterpunkte bearbeiten.
             </div>
           ) : (
@@ -297,7 +297,7 @@ function LvPositionFormular({
                       className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold ${
                         kalkulationsmodus === modus
                           ? "bg-white text-slate-800 shadow-xs dark:bg-stone-900 dark:text-stone-100"
-                          : "text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
+                          : "text-slate-500 hover:text-ind-ink-2 dark:hover:text-stone-200"
                       }`}
                     >
                       {modus === "festpreis" ? "Festpreis" : "Berechnet (Lohn + Material)"}
@@ -316,27 +316,27 @@ function LvPositionFormular({
                     step="0.01"
                     value={einzelpreis}
                     onChange={(e) => setEinzelpreis(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                    className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                   />
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="rounded-lg border border-slate-200 p-3 dark:border-stone-800">
-                    <p className="mb-2 text-xs font-bold text-slate-600 dark:text-stone-300">Lohn</p>
+                    <p className="mb-2 text-xs font-bold text-ind-ink-2">Lohn</p>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="mb-1 block text-[10.5px] font-medium text-slate-400 dark:text-stone-500">
+                        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
                           Zeit (Minuten)
                         </label>
                         <input
                           type="number"
                           value={lohnMinuten}
                           onChange={(e) => setLohnMinuten(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-[10.5px] font-medium text-slate-400 dark:text-stone-500">
+                        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
                           Stundensatz (€)
                         </label>
                         <input
@@ -344,7 +344,7 @@ function LvPositionFormular({
                           step="0.01"
                           value={lohnStundensatz}
                           onChange={(e) => setLohnStundensatz(e.target.value)}
-                          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                         />
                       </div>
                     </div>
@@ -364,13 +364,13 @@ function LvPositionFormular({
                         />
                       </div>
                     )}
-                    <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-stone-400">
+                    <p className="mt-2 text-xs font-semibold text-ind-ink-3">
                       = {euro(lohnGesamt.toFixed(2))}
                     </p>
                   </div>
 
                   <div className="rounded-lg border border-slate-200 p-3 dark:border-stone-800">
-                    <p className="mb-2 text-xs font-bold text-slate-600 dark:text-stone-300">Material</p>
+                    <p className="mb-2 text-xs font-bold text-ind-ink-2">Material</p>
                     <div className="space-y-1.5">
                       {materialPosten.map((p, i) => (
                         <MaterialPostenZeile
@@ -395,7 +395,7 @@ function LvPositionFormular({
                       </button>
                     </div>
                     <div className="mt-2">
-                      <label className="mb-1 block text-[10.5px] font-medium text-slate-400 dark:text-stone-500">
+                      <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
                         Materialaufschlag (%)
                       </label>
                       <input
@@ -403,10 +403,10 @@ function LvPositionFormular({
                         step="0.1"
                         value={materialAufschlag}
                         onChange={(e) => setMaterialAufschlag(e.target.value)}
-                        className="w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                        className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                       />
                     </div>
-                    <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-stone-400">
+                    <p className="mt-2 text-xs font-semibold text-ind-ink-3">
                       = {euro(materialGesamt.toFixed(2))}
                     </p>
                   </div>
@@ -427,7 +427,7 @@ function LvPositionFormular({
               value={notiz}
               onChange={(e) => setNotiz(e.target.value)}
               rows={2}
-              className="w-full resize-none rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full resize-none border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
 
@@ -476,14 +476,14 @@ function LvUnterpunktZeile({ position, onEdit }: { position: Leistungsverzeichni
       className="card-interactive flex w-full items-center justify-between gap-2 rounded-lg bg-slate-50 p-2.5 text-left dark:bg-stone-800/60"
     >
       <div className="min-w-0">
-        <p className="truncate text-[13px] font-medium text-slate-700 dark:text-stone-200">{position.bezeichnung}</p>
+        <p className="truncate text-[13px] font-medium text-ind-ink">{position.bezeichnung}</p>
         {position.kalkulationsmodus === "berechnet" && (
-          <p className="text-[11px] text-slate-400 dark:text-stone-500">
+          <p className="text-[11px] text-ind-ink-3">
             Lohn {euro(position.lohn_gesamt)} · Material {euro(position.material_gesamt)}
           </p>
         )}
       </div>
-      <span className="shrink-0 text-sm font-semibold text-slate-700 dark:text-stone-200">
+      <span className="shrink-0 text-sm font-semibold text-ind-ink">
         {euro(position.einzelpreis)}
       </span>
     </button>
@@ -523,7 +523,7 @@ function LvHauptpunktZeile({ position }: { position: LeistungsverzeichnisPositio
           {offen ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
         </button>
         <button onClick={() => setPanel({ modus: "bearbeiten", position })} className="min-w-0 flex-1 text-left">
-          <p className="truncate text-sm font-semibold text-slate-800 dark:text-stone-100">
+          <p className="truncate text-sm font-semibold text-ind-ink">
             {position.bezeichnung}
             {position.ist_stundensatz && (
               <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
@@ -537,12 +537,12 @@ function LvHauptpunktZeile({ position }: { position: LeistungsverzeichnisPositio
             )}
           </p>
           {position.kalkulationsmodus === "berechnet" && (
-            <p className="text-[11.5px] text-slate-400 dark:text-stone-500">
+            <p className="text-[11.5px] text-ind-ink-3">
               Lohn {euro(position.lohn_gesamt)} · Material {euro(position.material_gesamt)}
             </p>
           )}
         </button>
-        <span className="shrink-0 text-sm font-bold text-slate-800 dark:text-stone-100">
+        <span className="shrink-0 text-sm font-bold text-ind-ink">
           {euro(position.einzelpreis)} / {position.einheit}
         </span>
       </div>
@@ -597,11 +597,11 @@ export function LeistungsverzeichnisPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Leistungsverzeichnis</h1>
+        <h1 className="text-lg font-bold text-ind-ink">Leistungsverzeichnis</h1>
         {kannVerwalten && (
           <button
             onClick={() => setNeuePosition(true)}
-            className="btn-touch flex items-center gap-1.5 rounded-lg btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white"
+            className="btn-touch flex items-center gap-1.5 rounded-lg btn-industry btn-industry-primary px-3 py-2 text-xs font-semibold"
           >
             <Plus size={14} strokeWidth={2.5} />
             Neue Position
@@ -610,7 +610,7 @@ export function LeistungsverzeichnisPage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : !positionen || positionen.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Positionen im Leistungsverzeichnis." />
       ) : (

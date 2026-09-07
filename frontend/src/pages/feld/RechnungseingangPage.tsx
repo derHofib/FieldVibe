@@ -98,11 +98,11 @@ export function RechnungseingangPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Rechnungseingang</h1>
+        <h1 className="text-lg font-bold text-ind-ink">Rechnungseingang</h1>
         {kannErstellen && (
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+            className="btn-touch rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium"
           >
             {showForm ? "Abbrechen" : "+ Neu"}
           </button>
@@ -110,11 +110,11 @@ export function RechnungseingangPage() {
       </div>
 
       {showForm && (
-        <div className="space-y-2 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
           <select
             value={form.lieferantId}
             onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           >
             <option value="">Lieferant manuell eintragen…</option>
             {(lieferanten ?? []).map((l) => (
@@ -128,32 +128,32 @@ export function RechnungseingangPage() {
               value={form.lieferantName}
               onChange={(e) => setForm({ ...form, lieferantName: e.target.value })}
               placeholder="Name des Ausstellers"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           )}
           <input
             value={form.rechnungsnummerLieferant}
             onChange={(e) => setForm({ ...form, rechnungsnummerLieferant: e.target.value })}
             placeholder="Rechnungsnummer (vom Aussteller)"
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-xs text-slate-500 dark:text-stone-400">
+            <label className="text-xs text-ind-ink-3">
               Rechnungsdatum
               <input
                 type="date"
                 value={form.rechnungsdatum}
                 onChange={(e) => setForm({ ...form, rechnungsdatum: e.target.value })}
-                className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="mt-1 w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </label>
-            <label className="text-xs text-slate-500 dark:text-stone-400">
+            <label className="text-xs text-ind-ink-3">
               Fällig am
               <input
                 type="date"
                 value={form.faelligAm}
                 onChange={(e) => setForm({ ...form, faelligAm: e.target.value })}
-                className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="mt-1 w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </label>
           </div>
@@ -164,12 +164,12 @@ export function RechnungseingangPage() {
               value={form.betragNetto}
               onChange={(e) => setForm({ ...form, betragNetto: e.target.value })}
               placeholder="Betrag netto"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
             <select
               value={form.kategorie}
               onChange={(e) => setForm({ ...form, kategorie: e.target.value })}
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             >
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
@@ -186,7 +186,7 @@ export function RechnungseingangPage() {
               value={form.skontoProzent}
               onChange={(e) => setForm({ ...form, skontoProzent: e.target.value })}
               placeholder="Skonto %"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
             <input
               type="number"
@@ -194,7 +194,7 @@ export function RechnungseingangPage() {
               value={form.skontoTage}
               onChange={(e) => setForm({ ...form, skontoTage: e.target.value })}
               placeholder="Skonto-Frist (Tage)"
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
@@ -206,7 +206,7 @@ export function RechnungseingangPage() {
               createMutation.isPending
             }
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -231,7 +231,7 @@ export function RechnungseingangPage() {
 
       <div className="space-y-2">
         {(eingangsrechnungen ?? []).length === 0 && (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Keine Eingangsrechnungen.</p>
+          <p className="text-sm text-ind-ink-3">Keine Eingangsrechnungen.</p>
         )}
         {(eingangsrechnungen ?? []).map((e) => (
           <button
@@ -240,19 +240,19 @@ export function RechnungseingangPage() {
             className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
           >
             <div>
-              <div className="text-sm font-semibold text-slate-800 dark:text-stone-100">
+              <div className="text-sm font-semibold text-ind-ink">
                 {e.lieferant_name}
               </div>
-              <div className="text-xs text-slate-400 dark:text-stone-500">
+              <div className="text-xs text-ind-ink-3">
                 {e.rechnungsnummer_lieferant} · {new Date(e.rechnungsdatum).toLocaleDateString("de-DE")}
                 {e.kategorie && ` · ${KATEGORIE_LABEL[e.kategorie]}`}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-sm font-medium text-slate-700 dark:text-stone-300">
+              <div className="text-sm font-medium text-ind-ink-2">
                 {e.betrag_brutto} EUR
               </div>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+              <span className="border border-ind-line px-2 py-0.5 text-xs font-semibold text-ind-ink-2">
                 {STATUS_LABEL[e.status]}
               </span>
             </div>

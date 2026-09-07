@@ -53,9 +53,9 @@ function AngeboteListe() {
       </button>
 
       {showForm && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Kunde</label>
             <SearchableSelect
               value={kundeId}
               onChange={setKundeId}
@@ -66,7 +66,7 @@ function AngeboteListe() {
           <button
             disabled={!kundeId || erstellen.isPending}
             onClick={() => erstellen.mutate()}
-            className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Angebot anlegen
           </button>
@@ -86,11 +86,11 @@ function AngeboteListe() {
               className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
             >
               <div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">{a.angebotsnummer}</div>
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{nameFuer(a.kunde_id)}</div>
-                <div className="text-xs text-slate-500 dark:text-stone-400">{formatEuro(a.gesamt_brutto)}</div>
+                <div className="text-xs text-ind-ink-3">{a.angebotsnummer}</div>
+                <div className="text-sm font-medium text-ind-ink">{nameFuer(a.kunde_id)}</div>
+                <div className="text-xs text-ind-ink-3">{formatEuro(a.gesamt_brutto)}</div>
               </div>
-              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+              <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
                 {ANGEBOT_STATUS_LABEL[a.status]}
               </span>
             </button>
@@ -154,7 +154,7 @@ export function RechnungenPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h1 className="text-lg font-bold text-ind-ink">
           {bereich === "rechnungen" ? "Rechnungen" : "Angebote"}
         </h1>
         {bereich === "rechnungen" && (
@@ -167,7 +167,7 @@ export function RechnungenPage() {
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto rounded-lg bg-white p-1 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="flex gap-2 overflow-x-auto border border-ind-line bg-ind-bg p-1">
         {([
           { wert: "rechnungen" as const, label: "Rechnungen" },
           { wert: "angebote" as const, label: "Angebote" },
@@ -180,8 +180,8 @@ export function RechnungenPage() {
             }}
             className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ${
               bereich === o.wert
-                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                : "text-slate-600 dark:text-stone-400"
+                ? "btn-industry btn-industry-primary text-white"
+                : "text-ind-ink-2"
             }`}
           >
             {o.label}
@@ -214,7 +214,7 @@ export function RechnungenPage() {
               setSeiten(1);
             }}
             placeholder="Rechnungsnummer oder Kunde suchen…"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
           />
 
           <div className="flex flex-wrap gap-2 text-xs">
@@ -262,19 +262,19 @@ export function RechnungenPage() {
           {data && (
             <div className="grid grid-cols-3 gap-2 rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
               <div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">Treffer</div>
-                <div className="text-sm font-semibold tabular-nums text-slate-800 dark:text-stone-100">
+                <div className="text-xs text-ind-ink-3">Treffer</div>
+                <div className="text-sm font-semibold tabular-nums text-ind-ink">
                   {data.gesamt_anzahl}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">Brutto gesamt</div>
-                <div className="text-sm font-semibold tabular-nums text-slate-800 dark:text-stone-100">
+                <div className="text-xs text-ind-ink-3">Brutto gesamt</div>
+                <div className="text-sm font-semibold tabular-nums text-ind-ink">
                   {formatEuro(data.summe_brutto)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">Offen</div>
+                <div className="text-xs text-ind-ink-3">Offen</div>
                 <div className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">
                   {formatEuro(data.summe_offen)}
                 </div>
@@ -299,8 +299,8 @@ export function RechnungenPage() {
                   }`}
                 >
                   <div className="min-w-0">
-                    <div className="text-xs text-slate-400 dark:text-stone-500">{r.rechnungsnummer}</div>
-                    <div className="truncate text-sm font-medium text-slate-800 dark:text-stone-100">
+                    <div className="text-xs text-ind-ink-3">{r.rechnungsnummer}</div>
+                    <div className="truncate text-sm font-medium text-ind-ink">
                       Fällig: {formatDatum(r.faellig_am)}
                       {r.ist_ueberfaellig && (
                         <span className="ml-1 text-rose-600 dark:text-rose-400">
@@ -315,7 +315,7 @@ export function RechnungenPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="tabular-nums text-sm font-medium text-slate-700 dark:text-stone-300">
+                    <span className="tabular-nums text-sm font-medium text-ind-ink-2">
                       {formatEuro(r.betrag_brutto)}
                     </span>
                     <StatusBadge label={RECHNUNG_STATUS_LABEL[r.status]} tone={RECHNUNG_STATUS_TONE[r.status]} />

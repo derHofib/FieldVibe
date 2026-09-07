@@ -150,12 +150,12 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     onSuccess: openPdfBlob,
   });
 
-  if (!angebot) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!angebot) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -173,18 +173,18 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-slate-400 dark:text-stone-500">{angebot.angebotsnummer}</div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{kunde?.name ?? "…"}</h1>
+            <div className="text-xs text-ind-ink-3">{angebot.angebotsnummer}</div>
+            <h1 className="text-lg font-bold text-ind-ink">{kunde?.name ?? "…"}</h1>
           </div>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
             {STATUS_LABEL[angebot.status]}
           </span>
         </div>
         {angebot.gueltig_bis && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+          <p className="mt-1 text-xs text-ind-ink-3">
             Gültig bis {new Date(angebot.gueltig_bis).toLocaleDateString("de-DE")}
           </p>
         )}
@@ -197,9 +197,9 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
+          <h2 className="text-sm font-semibold text-ind-ink-3">Positionen</h2>
           {angebot.status === "entwurf" && (
             <button
               onClick={() => setShowForm((v) => !v)}
@@ -211,10 +211,10 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
 
         {showForm && (
-          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="mb-3 space-y-2 border border-ind-line-2 p-3">
             {(leistungsverzeichnis ?? []).length > 0 && (
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+                <label className="mb-1 block text-xs font-medium text-ind-ink-2">
                   Aus Leistungsverzeichnis wählen (optional)
                 </label>
                 <SearchableSelect
@@ -248,24 +248,24 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
 
             {lvHatSplit ? (
               <div className="space-y-2">
-                <p className="text-xs text-slate-500 dark:text-stone-400">
+                <p className="text-xs text-ind-ink-3">
                   Wird als zwei Positionen übernommen:{" "}
                   {Number(lvPosition!.lohn_gesamt) > 0 && (
                     <>
-                      Lohn <strong className="text-slate-700 dark:text-stone-200">{lvPosition!.lohn_gesamt} €</strong>
+                      Lohn <strong className="text-ind-ink">{lvPosition!.lohn_gesamt} €</strong>
                     </>
                   )}
                   {Number(lvPosition!.lohn_gesamt) > 0 && Number(lvPosition!.material_gesamt) > 0 && ", "}
                   {Number(lvPosition!.material_gesamt) > 0 && (
                     <>
                       Material{" "}
-                      <strong className="text-slate-700 dark:text-stone-200">{lvPosition!.material_gesamt} €</strong>
+                      <strong className="text-ind-ink">{lvPosition!.material_gesamt} €</strong>
                     </>
                   )}{" "}
                   (je {lvPosition!.einheit}).
                 </p>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+                  <label className="mb-1 block text-xs font-medium text-ind-ink-2">
                     Menge ({lvPosition!.einheit})
                   </label>
                   <input
@@ -273,13 +273,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                     step="0.01"
                     value={lvSplitMenge}
                     onChange={(e) => setLvSplitMenge(e.target.value)}
-                    className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                    className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                   />
                 </div>
                 <button
                   disabled={!lvSplitMenge || addSplitPositionenMutation.isPending}
                   onClick={() => addSplitPositionenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                 >
                   Hinzufügen
                 </button>
@@ -306,13 +306,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="Art-Nr. (optional)"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
             <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -321,13 +321,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
               <input
                 type="number"
@@ -335,13 +335,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -351,7 +351,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {angebot.positionen.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Positionen.</p>
+          <p className="text-sm text-ind-ink-3">Noch keine Positionen.</p>
         ) : (
           <div className="space-y-1.5">
             {angebot.positionen.map((p) => (
@@ -360,30 +360,30 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
               >
                 <div>
-                  <div className="text-slate-700 dark:text-stone-300">
+                  <div className="text-ind-ink-2">
                     {p.positionstyp === "arbeitszeit" && (
                       <span className="mr-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                         {POSITIONSTYP_LABEL.arbeitszeit}
                       </span>
                     )}
                     {p.artikelnummer && (
-                      <span className="mr-1.5 text-xs text-slate-400 dark:text-stone-500">{p.artikelnummer}</span>
+                      <span className="mr-1.5 text-xs text-ind-ink-3">{p.artikelnummer}</span>
                     )}
                     {p.beschreibung}
                   </div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">
+                  <div className="text-xs text-ind-ink-3">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
-                <div className="font-medium text-slate-700 dark:text-stone-300">{p.gesamt} EUR</div>
+                <div className="font-medium text-ind-ink-2">{p.gesamt} EUR</div>
               </div>
             ))}
           </div>
         )}
 
         <div className="mt-3 border-t border-slate-100 pt-2 text-right text-sm dark:border-stone-800">
-          <div className="text-slate-500 dark:text-stone-400">Netto: {angebot.gesamt_netto} EUR</div>
-          <div className="font-semibold text-slate-800 dark:text-stone-100">
+          <div className="text-ind-ink-3">Netto: {angebot.gesamt_netto} EUR</div>
+          <div className="font-semibold text-ind-ink">
             Brutto: {angebot.gesamt_brutto} EUR
           </div>
         </div>
@@ -402,7 +402,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         <button
           onClick={() => statusMutation.mutate("versendet")}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           An Kunden senden
         </button>

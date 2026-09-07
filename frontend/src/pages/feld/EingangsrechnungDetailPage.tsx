@@ -70,11 +70,11 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
   });
 
   const inputClass =
-    "w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100";
+    "w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink";
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
         ← Zurück
       </button>
 
@@ -86,17 +86,17 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-lg bg-white p-2 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="border border-ind-line bg-ind-bg p-2">
           {belegUrl?.url ? (
             <iframe title="Beleg" src={belegUrl.url} className="h-[70vh] w-full rounded-md" />
           ) : (
-            <p className="p-4 text-sm text-slate-400 dark:text-stone-500">Kein Beleg vorhanden.</p>
+            <p className="p-4 text-sm text-ind-ink-3">Kein Beleg vorhanden.</p>
           )}
         </div>
 
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Lieferant</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Lieferant</label>
             <select value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
               <option value="">Name manuell eintragen…</option>
               {(lieferanten ?? []).map((l) => (
@@ -115,7 +115,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             />
           )}
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Rechnungsnummer</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Rechnungsnummer</label>
             <input
               value={rechnungsnummer}
               onChange={(e) => setRechnungsnummer(e.target.value)}
@@ -125,7 +125,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Rechnungsdatum</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">Rechnungsdatum</label>
               <input
                 type="date"
                 value={rechnungsdatum}
@@ -134,7 +134,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Betrag netto</label>
+              <label className="mb-1 block text-xs text-ind-ink-3">Betrag netto</label>
               <input
                 type="number"
                 step="0.01"
@@ -145,7 +145,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-slate-500 dark:text-stone-400">Kategorie</label>
+            <label className="mb-1 block text-xs text-ind-ink-3">Kategorie</label>
             <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
@@ -162,7 +162,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             <button
               disabled={!rechnungsnummer || !betragNetto || Number(betragNetto) <= 0 || bestaetigenMutation.isPending}
               onClick={() => bestaetigenMutation.mutate()}
-              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md btn-industry btn-industry-primary px-3 py-2 text-sm font-medium disabled:opacity-50"
             >
               <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
@@ -256,7 +256,7 @@ export function EingangsrechnungDetailPage() {
     },
   });
 
-  if (!eingangsrechnung) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!eingangsrechnung) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   if (eingangsrechnung.status === "entwurf") {
     return <EntwurfBestaetigenView eingangsrechnung={eingangsrechnung} />;
@@ -265,7 +265,7 @@ export function EingangsrechnungDetailPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
           ← Zurück
         </button>
         {kannLoeschen && eingangsrechnung.status === "offen" && (
@@ -283,35 +283,35 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-slate-400 dark:text-stone-500">
+            <div className="text-xs text-ind-ink-3">
               {eingangsrechnung.rechnungsnummer_lieferant}
             </div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">
+            <h1 className="text-lg font-bold text-ind-ink">
               {eingangsrechnung.lieferant_name}
             </h1>
           </div>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
             {STATUS_LABEL[eingangsrechnung.status]}
           </span>
         </div>
-        <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+        <p className="mt-1 text-xs text-ind-ink-3">
           Rechnungsdatum {new Date(eingangsrechnung.rechnungsdatum).toLocaleDateString("de-DE")}
         </p>
         {eingangsrechnung.faellig_am && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+          <p className="mt-1 text-xs text-ind-ink-3">
             Fällig am {new Date(eingangsrechnung.faellig_am).toLocaleDateString("de-DE")}
           </p>
         )}
         {eingangsrechnung.kategorie && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+          <p className="mt-1 text-xs text-ind-ink-3">
             Kategorie: {KATEGORIE_LABEL[eingangsrechnung.kategorie]}
           </p>
         )}
         {eingangsrechnung.notiz && (
-          <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{eingangsrechnung.notiz}</p>
+          <p className="mt-2 text-sm text-ind-ink-2">{eingangsrechnung.notiz}</p>
         )}
         {eingangsrechnung.skonto_prozent && eingangsrechnung.skonto_frist && (
           <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-400">
@@ -321,20 +321,20 @@ export function EingangsrechnungDetailPage() {
         )}
 
         <div className="mt-3 text-right text-sm">
-          <div className="text-slate-500 dark:text-stone-400">Netto: {eingangsrechnung.betrag_netto} EUR</div>
-          <div className="font-semibold text-slate-800 dark:text-stone-100">
+          <div className="text-ind-ink-3">Netto: {eingangsrechnung.betrag_netto} EUR</div>
+          <div className="font-semibold text-ind-ink">
             Brutto: {eingangsrechnung.betrag_brutto} EUR
           </div>
           {Number(eingangsrechnung.bezahlter_betrag) > 0 && (
-            <div className="text-xs text-slate-500 dark:text-stone-400">
+            <div className="text-xs text-ind-ink-3">
               Bezahlt: {eingangsrechnung.bezahlter_betrag} EUR · Offen: {eingangsrechnung.offener_betrag} EUR
             </div>
           )}
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Beleg</h2>
+      <div className="border border-ind-line bg-ind-bg p-4">
+        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Beleg</h2>
         {eingangsrechnung.beleg_object_key ? (
           <div className="flex gap-2">
             <button
@@ -377,9 +377,9 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
+          <h2 className="text-sm font-semibold text-ind-ink-3">Positionen</h2>
           {eingangsrechnung.status === "offen" && (
             <button
               onClick={() => setShowForm((v) => !v)}
@@ -391,12 +391,12 @@ export function EingangsrechnungDetailPage() {
         </div>
 
         {showForm && (
-          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="mb-3 space-y-2 border border-ind-line-2 p-3">
             <input
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -405,13 +405,13 @@ export function EingangsrechnungDetailPage() {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
               <input
                 type="number"
@@ -419,13 +419,13 @@ export function EingangsrechnungDetailPage() {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -433,7 +433,7 @@ export function EingangsrechnungDetailPage() {
         )}
 
         {eingangsrechnung.positionen.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">
+          <p className="text-sm text-ind-ink-3">
             Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
           </p>
         ) : (
@@ -444,21 +444,21 @@ export function EingangsrechnungDetailPage() {
                 className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
               >
                 <div>
-                  <div className="text-slate-700 dark:text-stone-300">{p.beschreibung}</div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">
+                  <div className="text-ind-ink-2">{p.beschreibung}</div>
+                  <div className="text-xs text-ind-ink-3">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
-                <div className="font-medium text-slate-700 dark:text-stone-300">{p.gesamt} EUR</div>
+                <div className="font-medium text-ind-ink-2">{p.gesamt} EUR</div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Zahlungen</h2>
+          <h2 className="text-sm font-semibold text-ind-ink-3">Zahlungen</h2>
           {eingangsrechnung.status === "offen" && (
             <button
               onClick={() => {
@@ -473,14 +473,14 @@ export function EingangsrechnungDetailPage() {
         </div>
 
         {showZahlungForm && (
-          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="mb-3 space-y-2 border border-ind-line-2 p-3">
             <input
               type="number"
               step="0.01"
               value={zahlungBetrag}
               onChange={(e) => setZahlungBetrag(e.target.value)}
               placeholder="Betrag"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
             {addZahlungMutation.isError && (
               <p className="text-xs text-red-600 dark:text-red-400">
@@ -490,7 +490,7 @@ export function EingangsrechnungDetailPage() {
             <button
               disabled={!zahlungBetrag || addZahlungMutation.isPending}
               onClick={() => addZahlungMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Zahlung erfassen
             </button>
@@ -498,7 +498,7 @@ export function EingangsrechnungDetailPage() {
         )}
 
         {eingangsrechnung.zahlungen.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Zahlung erfasst.</p>
+          <p className="text-sm text-ind-ink-3">Noch keine Zahlung erfasst.</p>
         ) : (
           <div className="space-y-1.5">
             {eingangsrechnung.zahlungen.map((z) => (
@@ -506,10 +506,10 @@ export function EingangsrechnungDetailPage() {
                 key={z.id}
                 className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
               >
-                <span className="text-slate-500 dark:text-stone-400">
+                <span className="text-ind-ink-3">
                   {new Date(z.datum).toLocaleDateString("de-DE")}
                 </span>
-                <span className="font-medium text-slate-700 dark:text-stone-300">{z.betrag} EUR</span>
+                <span className="font-medium text-ind-ink-2">{z.betrag} EUR</span>
               </div>
             ))}
           </div>

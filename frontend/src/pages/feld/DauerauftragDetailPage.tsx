@@ -84,18 +84,18 @@ export function DauerauftragDetailPage() {
     setAnlagenBearbeiten(true);
   }
 
-  if (isLoading || !dauerauftrag) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading || !dauerauftrag) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{dauerauftrag.titel}</h1>
+            <h1 className="text-lg font-bold text-ind-ink">{dauerauftrag.titel}</h1>
             {kunde && (
               <button
                 onClick={() => navigate(`/kunden/${kunde.id}`)}
@@ -112,13 +112,13 @@ export function DauerauftragDetailPage() {
           )}
         </div>
         {dauerauftrag.beschreibung && (
-          <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{dauerauftrag.beschreibung}</p>
+          <p className="mt-2 text-sm text-ind-ink-2">{dauerauftrag.beschreibung}</p>
         )}
 
         <dl className="mt-3 space-y-1 text-sm">
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">Intervall</dt>
-            <dd className="text-slate-800 dark:text-stone-100">
+            <dt className="text-ind-ink-3">Intervall</dt>
+            <dd className="text-ind-ink">
               {editIntervall === null ? (
                 <span className="flex items-center gap-2">
                   alle {dauerauftrag.intervall_tage} Tage
@@ -138,13 +138,13 @@ export function DauerauftragDetailPage() {
                     min={1}
                     value={editIntervall}
                     onChange={(e) => setEditIntervall(e.target.value)}
-                    className="w-16 rounded-md border border-slate-300 px-2 py-1 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                    className="w-16 border border-ind-line bg-transparent px-2 py-1 text-ind-ink"
                   />
                   Tage
                   <button
                     onClick={() => intervallMutation.mutate(Number(editIntervall))}
                     disabled={intervallMutation.isPending}
-                    className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-2 py-1 text-xs text-white disabled:opacity-50"
+                    className="btn-touch rounded-md btn-industry btn-industry-primary px-2 py-1 text-xs disabled:opacity-50"
                   >
                     Speichern
                   </button>
@@ -160,13 +160,13 @@ export function DauerauftragDetailPage() {
           </div>
           {dauerauftrag.anzahl_ziele <= 1 && (
             <div className="flex justify-between">
-              <dt className="text-slate-500 dark:text-stone-400">Nächste Fälligkeit</dt>
-              <dd className="text-slate-800 dark:text-stone-100">{dauerauftrag.naechste_faelligkeit_am ?? "–"}</dd>
+              <dt className="text-ind-ink-3">Nächste Fälligkeit</dt>
+              <dd className="text-ind-ink">{dauerauftrag.naechste_faelligkeit_am ?? "–"}</dd>
             </div>
           )}
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">Modus</dt>
-            <dd className="text-slate-800 dark:text-stone-100">
+            <dt className="text-ind-ink-3">Modus</dt>
+            <dd className="text-ind-ink">
               {dauerauftrag.modus === "rollierend"
                 ? "Rollierend ab Abschluss"
                 : "Fest ab geplantem Termin"}
@@ -174,8 +174,8 @@ export function DauerauftragDetailPage() {
           </div>
           {(dauerauftrag.toleranz_frueh_tage !== null || dauerauftrag.toleranz_spaet_tage !== null) && (
             <div className="flex justify-between">
-              <dt className="text-slate-500 dark:text-stone-400">Toleranz</dt>
-              <dd className="text-slate-800 dark:text-stone-100">
+              <dt className="text-ind-ink-3">Toleranz</dt>
+              <dd className="text-ind-ink">
                 {dauerauftrag.toleranz_frueh_tage !== null && `-${dauerauftrag.toleranz_frueh_tage} Tage`}
                 {dauerauftrag.toleranz_frueh_tage !== null && dauerauftrag.toleranz_spaet_tage !== null && " / "}
                 {dauerauftrag.toleranz_spaet_tage !== null && `+${dauerauftrag.toleranz_spaet_tage} Tage`}
@@ -183,18 +183,18 @@ export function DauerauftragDetailPage() {
             </div>
           )}
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">Leistungstyp</dt>
-            <dd className="text-slate-800 dark:text-stone-100">{dauerauftrag.leistungstyp}</dd>
+            <dt className="text-ind-ink-3">Leistungstyp</dt>
+            <dd className="text-ind-ink">{dauerauftrag.leistungstyp}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-slate-500 dark:text-stone-400">Abrechnungsart</dt>
-            <dd className="text-slate-800 dark:text-stone-100">{dauerauftrag.abrechnungsart}</dd>
+            <dt className="text-ind-ink-3">Abrechnungsart</dt>
+            <dd className="text-ind-ink">{dauerauftrag.abrechnungsart}</dd>
           </div>
         </dl>
 
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">
+            <h2 className="text-sm font-semibold text-ind-ink-3">
               Anlagen im Buendel ({dauerauftrag.anzahl_ziele})
             </h2>
             {kannVerwalten && !anlagenBearbeiten && (
@@ -214,10 +214,10 @@ export function DauerauftragDetailPage() {
                   key={z.id}
                   className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
                 >
-                  <span className="text-slate-700 dark:text-stone-300">
+                  <span className="text-ind-ink-2">
                     {z.anlage_id ? anlageNameById.get(z.anlage_id) ?? "Anlage" : "Ohne Anlagenbezug"}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-stone-400">
+                  <span className="text-xs text-ind-ink-3">
                     {z.offener_vorgang_id ? (
                       <button
                         onClick={() => navigate(`/vorgaenge/${z.offener_vorgang_id}`)}
@@ -235,13 +235,13 @@ export function DauerauftragDetailPage() {
           ) : (
             <div className="space-y-2 rounded-md border border-slate-200 p-2 dark:border-stone-800">
               {!anlagenListe || anlagenListe.length === 0 ? (
-                <p className="text-sm text-slate-400 dark:text-stone-500">Keine Anlagen für diesen Kunden vorhanden.</p>
+                <p className="text-sm text-ind-ink-3">Keine Anlagen für diesen Kunden vorhanden.</p>
               ) : (
                 <div className="max-h-48 space-y-1 overflow-y-auto">
                   {anlagenListe.map((a) => (
                     <label
                       key={a.id}
-                      className="flex items-center gap-2 py-1 text-sm text-slate-700 dark:text-stone-300"
+                      className="flex items-center gap-2 py-1 text-sm text-ind-ink-2"
                     >
                       <input
                         type="checkbox"
@@ -258,21 +258,21 @@ export function DauerauftragDetailPage() {
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-700 dark:text-stone-300">
+                <label className="mb-1 block text-xs font-medium text-ind-ink-2">
                   Fälligkeit für neu hinzugefügte Anlagen
                 </label>
                 <input
                   type="date"
                   value={neueFaelligkeit}
                   onChange={(e) => setNeueFaelligkeit(e.target.value)}
-                  className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setAnlagenMutation.mutate()}
                   disabled={setAnlagenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
                 >
                   Speichern
                 </button>
@@ -312,11 +312,11 @@ export function DauerauftragDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">
+        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">
           Verlauf ({dauerauftrag.vorgaenge.length} Vorgänge)
         </h2>
         {dauerauftrag.vorgaenge.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Noch kein Vorgang erzeugt.</p>
+          <p className="text-sm text-ind-ink-3">Noch kein Vorgang erzeugt.</p>
         ) : (
           <div className="space-y-2">
             {dauerauftrag.vorgaenge.map((v) => (
@@ -328,8 +328,8 @@ export function DauerauftragDetailPage() {
                 }`}
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">{v.vorgangsnummer}</div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
+                  <div className="text-xs text-ind-ink-3">{v.vorgangsnummer}</div>
+                  <div className="text-sm font-medium text-ind-ink">{v.titel}</div>
                 </div>
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
                   {v.status}

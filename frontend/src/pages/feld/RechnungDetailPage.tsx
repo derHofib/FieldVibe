@@ -72,7 +72,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
               onChange={() => toggle(i)}
               className="h-3.5 w-3.5"
             />
-            <span className="flex-1 text-slate-700 dark:text-stone-200">
+            <span className="flex-1 text-ind-ink">
               {v.beschreibung}, {v.menge} {v.einheit} × {v.einzelpreis} EUR
             </span>
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-stone-800 dark:text-stone-400">
@@ -84,7 +84,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
       <button
         disabled={ausgewaehlt.size === 0 || uebernehmenMutation.isPending}
         onClick={() => uebernehmenMutation.mutate()}
-        className="btn-touch mt-2 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+        className="btn-touch mt-2 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
       >
         Übernehmen
       </button>
@@ -210,12 +210,12 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     },
   });
 
-  if (!rechnung) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!rechnung) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -256,23 +256,23 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-slate-400 dark:text-stone-500">{rechnung.rechnungsnummer}</div>
-            <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{kunde?.name ?? "…"}</h1>
+            <div className="text-xs text-ind-ink-3">{rechnung.rechnungsnummer}</div>
+            <h1 className="text-lg font-bold text-ind-ink">{kunde?.name ?? "…"}</h1>
           </div>
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
             {RECHNUNG_STATUS_LABEL[rechnung.status]}
           </span>
         </div>
         {rechnung.leistungsdatum && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+          <p className="mt-1 text-xs text-ind-ink-3">
             Leistungsdatum {new Date(rechnung.leistungsdatum).toLocaleDateString("de-DE")}
           </p>
         )}
         {rechnung.faellig_am && (
-          <p className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+          <p className="mt-1 text-xs text-ind-ink-3">
             Fällig am {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
           </p>
         )}
@@ -285,12 +285,12 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         <div className="mt-3 text-right text-sm">
-          <div className="text-slate-500 dark:text-stone-400">Netto: {rechnung.betrag_netto} EUR</div>
-          <div className="font-semibold text-slate-800 dark:text-stone-100">
+          <div className="text-ind-ink-3">Netto: {rechnung.betrag_netto} EUR</div>
+          <div className="font-semibold text-ind-ink">
             Brutto: {rechnung.betrag_brutto} EUR
           </div>
           {rechnung.status !== "entwurf" && rechnung.status !== "storniert" && (
-            <div className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+            <div className="mt-1 text-xs text-ind-ink-3">
               Bezahlt: {rechnung.bezahlter_betrag} EUR · Offen: {rechnung.offener_betrag} EUR
             </div>
           )}
@@ -316,9 +316,9 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Positionen</h2>
+          <h2 className="text-sm font-semibold text-ind-ink-3">Positionen</h2>
           {rechnung.status === "entwurf" && (
             <button
               onClick={() => setShowForm((v) => !v)}
@@ -334,10 +334,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showForm && (
-          <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="mb-3 space-y-2 border border-ind-line-2 p-3">
             {(leistungsverzeichnis ?? []).length > 0 && (
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+                <label className="mb-1 block text-xs font-medium text-ind-ink-2">
                   Aus Leistungsverzeichnis wählen (optional)
                 </label>
                 <SearchableSelect
@@ -367,7 +367,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               value={form.beschreibung}
               onChange={(e) => setForm({ ...form, beschreibung: e.target.value })}
               placeholder="Beschreibung"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
             <div className="grid grid-cols-3 gap-2">
               <input
@@ -376,13 +376,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.menge}
                 onChange={(e) => setForm({ ...form, menge: e.target.value })}
                 placeholder="Menge"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
               <input
                 value={form.einheit}
                 onChange={(e) => setForm({ ...form, einheit: e.target.value })}
                 placeholder="Einheit"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
               <input
                 type="number"
@@ -390,13 +390,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={form.einzelpreis}
                 onChange={(e) => setForm({ ...form, einzelpreis: e.target.value })}
                 placeholder="Preis"
-                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <button
               disabled={!form.beschreibung || addPositionMutation.isPending}
               onClick={() => addPositionMutation.mutate()}
-              className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Hinzufügen
             </button>
@@ -404,7 +404,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {rechnung.positionen.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">
+          <p className="text-sm text-ind-ink-3">
             Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
           </p>
         ) : (
@@ -415,12 +415,12 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
               >
                 <div>
-                  <div className="text-slate-700 dark:text-stone-300">{p.beschreibung}</div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">
+                  <div className="text-ind-ink-2">{p.beschreibung}</div>
+                  <div className="text-xs text-ind-ink-3">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
-                <div className="font-medium text-slate-700 dark:text-stone-300">{p.gesamt} EUR</div>
+                <div className="font-medium text-ind-ink-2">{p.gesamt} EUR</div>
               </div>
             ))}
           </div>
@@ -430,9 +430,9 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       {(rechnung.status === "versendet" ||
         rechnung.status === "teilweise_bezahlt" ||
         rechnung.status === "bezahlt") && (
-        <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="border border-ind-line bg-ind-bg p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Zahlungen</h2>
+            <h2 className="text-sm font-semibold text-ind-ink-3">Zahlungen</h2>
             {(rechnung.status === "versendet" || rechnung.status === "teilweise_bezahlt") && (
               <button
                 onClick={() => {
@@ -447,7 +447,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
 
           {showZahlungForm && (
-            <div className="mb-3 space-y-2 rounded-md bg-slate-50 p-3 dark:bg-stone-800/60">
+            <div className="mb-3 space-y-2 border border-ind-line-2 p-3">
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="number"
@@ -455,20 +455,20 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   value={zahlungBetrag}
                   onChange={(e) => setZahlungBetrag(e.target.value)}
                   placeholder="Betrag"
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                 />
                 <input
                   type="date"
                   value={zahlungDatum}
                   onChange={(e) => setZahlungDatum(e.target.value)}
                   max={heuteIso()}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                 />
               </div>
               <select
                 value={zahlungsart}
                 onChange={(e) => setZahlungsart(e.target.value as RechnungZahlungsart | "")}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               >
                 <option value="">Zahlungsart (optional)</option>
                 {ZAHLUNGSART_OPTIONEN.map((opt) => (
@@ -485,7 +485,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               <button
                 disabled={!zahlungBetrag || addZahlungMutation.isPending}
                 onClick={() => addZahlungMutation.mutate()}
-                className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
               >
                 Zahlung erfassen
               </button>
@@ -493,7 +493,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           )}
 
           {rechnung.zahlungen.length === 0 ? (
-            <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Zahlung erfasst.</p>
+            <p className="text-sm text-ind-ink-3">Noch keine Zahlung erfasst.</p>
           ) : (
             <div className="space-y-1.5">
               {(() => {
@@ -505,7 +505,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                     key={z.id}
                     className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
                   >
-                    <span className="text-slate-500 dark:text-stone-400">
+                    <span className="text-ind-ink-3">
                       {new Date(z.datum).toLocaleDateString("de-DE")}
                       {z.zahlungsart && ` · ${z.zahlungsart}`}
                     </span>
@@ -514,7 +514,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                         className={`font-medium ${
                           Number(z.betrag) < 0
                             ? "text-red-600 dark:text-red-400"
-                            : "text-slate-700 dark:text-stone-300"
+                            : "text-ind-ink-2"
                         }`}
                       >
                         {z.betrag} EUR
@@ -553,7 +553,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => statusMutation.mutate("versendet")}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             An Kunden senden
           </button>
