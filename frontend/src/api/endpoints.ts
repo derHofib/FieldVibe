@@ -38,6 +38,23 @@ import type {
   EmailLog,
   FahrzeugZuweisungUebersicht,
   FeedResponse,
+  FormAuftragstypZuordnungV2,
+  FormField,
+  FormFeldTyp,
+  FormGroup,
+  FormLogicEffekt,
+  FormLogicRule,
+  FormPraesentationsTyp,
+  FormPresentationElement,
+  FormSchema,
+  FormSchemaDetail,
+  FormSchemaStatus,
+  FormSchemaVerfuegbar,
+  FormSubmission,
+  FormView,
+  FormViewFieldLayout,
+  FormViewResolved,
+  FormViewTyp,
   Formular,
   FormularAuftragstypZuordnung,
   Formularfeld,
@@ -825,6 +842,151 @@ export const vorgangFormulareApi = {
     formData.append("file", file, filename);
     return apiFetchForm<{ feld_id: string; key: string; content_type: string; size: number; url: string }>(
       `/api/vorgang-formulare/${id}/dateien?feld_id=${encodeURIComponent(feldId)}`,
+      formData,
+    );
+  },
+};
+
+export const formModulApi = {
+  listSchemas: (status?: FormSchemaStatus) =>
+    apiFetch<FormSchema[]>(`/api/form-schemas${status ? `?status=${status}` : ""}`),
+  getSchema: (id: string) => apiFetch<FormSchemaDetail>(`/api/form-schemas/${id}`),
+  createSchema: (body: { name: string; beschreibung?: string }) =>
+    apiFetch<FormSchema>("/api/form-schemas", { method: "POST", body: JSON.stringify(body) }),
+  updateSchema: (id: string, body: Partial<{ name: string; beschreibung: string; status: FormSchemaStatus }>) =>
+    apiFetch<FormSchemaDetail>(`/api/form-schemas/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+
+  createGroup: (
+    schemaId: string,
+    body: { key: string; label?: Record<string, string>; repeatable?: boolean; min_items?: number | null; max_items?: number | null; reihenfolge?: number },
+  ) => apiFetch<FormGroup>(`/api/form-schemas/${schemaId}/groups`, { method: "POST", body: JSON.stringify(body) }),
+  updateGroup: (schemaId: string, groupId: string, body: Partial<FormGroup>) =>
+    apiFetch<FormGroup>(`/api/form-schemas/${schemaId}/groups/${groupId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteGroup: (schemaId: string, groupId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/groups/${groupId}`, { method: "DELETE" }),
+
+  createField: (
+    schemaId: string,
+    body: {
+      key: string;
+      feld_typ: FormFeldTyp;
+      label?: Record<string, string>;
+      hilfetext?: string;
+      pflichtfeld?: boolean;
+      validation?: Record<string, unknown>;
+      default_value?: unknown;
+      optionen?: Record<string, unknown>;
+      group_key?: string | null;
+      datenquelle?: FormularfeldDatenquelle | null;
+      reihenfolge?: number;
+    },
+  ) => apiFetch<FormField>(`/api/form-schemas/${schemaId}/fields`, { method: "POST", body: JSON.stringify(body) }),
+  updateField: (schemaId: string, fieldId: string, body: Partial<FormField>) =>
+    apiFetch<FormField>(`/api/form-schemas/${schemaId}/fields/${fieldId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteField: (schemaId: string, fieldId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/fields/${fieldId}`, { method: "DELETE" }),
+
+  listViews: (schemaId: string) => apiFetch<FormView[]>(`/api/form-schemas/${schemaId}/views`),
+  createView: (schemaId: string, body: { type: FormViewTyp; name: string; konfiguration?: Record<string, unknown> }) =>
+    apiFetch<FormView>(`/api/form-schemas/${schemaId}/views`, { method: "POST", body: JSON.stringify(body) }),
+  getView: (schemaId: string, viewId: string, submissionId?: string) =>
+    apiFetch<FormViewResolved>(
+      `/api/form-schemas/${schemaId}/views/${viewId}${submissionId ? `?submission_id=${submissionId}` : ""}`,
+    ),
+  updateView: (schemaId: string, viewId: string, body: Partial<{ name: string; konfiguration: Record<string, unknown> }>) =>
+    apiFetch<FormView>(`/api/form-schemas/${schemaId}/views/${viewId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteView: (schemaId: string, viewId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/views/${viewId}`, { method: "DELETE" }),
+  replaceLayouts: (schemaId: string, viewId: string, layouts: FormViewFieldLayout[] | Omit<FormViewFieldLayout, "id">[]) =>
+    apiFetch<FormViewFieldLayout[]>(`/api/form-schemas/${schemaId}/views/${viewId}/layouts`, {
+      method: "PUT",
+      body: JSON.stringify(layouts),
+    }),
+
+  createElement: (
+    schemaId: string,
+    viewId: string,
+    body: {
+      type: FormPraesentationsTyp;
+      inhalt?: Record<string, unknown>;
+      reihenfolge?: number;
+      seite?: number;
+      x_mm?: number | null;
+      y_mm?: number | null;
+      breite_mm?: number | null;
+      hoehe_mm?: number | null;
+    },
+  ) =>
+    apiFetch<FormPresentationElement>(`/api/form-schemas/${schemaId}/views/${viewId}/elements`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateElement: (schemaId: string, viewId: string, elementId: string, body: Partial<FormPresentationElement>) =>
+    apiFetch<FormPresentationElement>(`/api/form-schemas/${schemaId}/views/${viewId}/elements/${elementId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteElement: (schemaId: string, viewId: string, elementId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/views/${viewId}/elements/${elementId}`, { method: "DELETE" }),
+
+  listRules: (schemaId: string) => apiFetch<FormLogicRule[]>(`/api/form-schemas/${schemaId}/rules`),
+  createRule: (
+    schemaId: string,
+    body: { view_id?: string | null; target_key: string; effect: FormLogicEffekt; condition: unknown; value?: unknown; reihenfolge?: number },
+  ) => apiFetch<FormLogicRule>(`/api/form-schemas/${schemaId}/rules`, { method: "POST", body: JSON.stringify(body) }),
+  updateRule: (schemaId: string, ruleId: string, body: Partial<FormLogicRule>) =>
+    apiFetch<FormLogicRule>(`/api/form-schemas/${schemaId}/rules/${ruleId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteRule: (schemaId: string, ruleId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/rules/${ruleId}`, { method: "DELETE" }),
+
+  createZuordnung: (schemaId: string, body: { leistungstyp: Leistungstyp; pflicht_vor_abschluss?: boolean }) =>
+    apiFetch<FormAuftragstypZuordnungV2>(`/api/form-schemas/${schemaId}/zuordnungen`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateZuordnung: (schemaId: string, zuordnungId: string, pflichtVorAbschluss: boolean) =>
+    apiFetch<FormAuftragstypZuordnungV2>(`/api/form-schemas/${schemaId}/zuordnungen/${zuordnungId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ pflicht_vor_abschluss: pflichtVorAbschluss }),
+    }),
+  deleteZuordnung: (schemaId: string, zuordnungId: string) =>
+    apiFetch<void>(`/api/form-schemas/${schemaId}/zuordnungen/${zuordnungId}`, { method: "DELETE" }),
+};
+
+export const formSubmissionsApi = {
+  verfuegbar: (vorgangId: string) =>
+    apiFetch<FormSchemaVerfuegbar[]>(`/api/form-submissions/verfuegbar?vorgang_id=${vorgangId}`),
+  list: (vorgangId: string) => apiFetch<FormSubmission[]>(`/api/form-submissions?vorgang_id=${vorgangId}`),
+  start: (vorgangId: string, schemaId: string) =>
+    apiFetch<FormSubmission>(`/api/form-submissions?vorgang_id=${vorgangId}`, {
+      method: "POST",
+      body: JSON.stringify({ schema_id: schemaId }),
+    }),
+  get: (id: string) => apiFetch<FormSubmission>(`/api/form-submissions/${id}`),
+  updateValues: (id: string, values: Record<string, unknown>) =>
+    apiFetch<FormSubmission>(`/api/form-submissions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ values }),
+    }),
+  abschliessen: (id: string) => apiFetch<FormSubmission>(`/api/form-submissions/${id}/abschliessen`, { method: "POST" }),
+  remove: (id: string) => apiFetch<void>(`/api/form-submissions/${id}`, { method: "DELETE" }),
+  uploadDatei: (id: string, fieldKey: string, file: Blob, filename: string) => {
+    const formData = new FormData();
+    formData.append("file", file, filename);
+    return apiFetchForm<{ field_key: string; key: string; content_type: string; size: number; url: string }>(
+      `/api/form-submissions/${id}/dateien?field_key=${encodeURIComponent(fieldKey)}`,
       formData,
     );
   },

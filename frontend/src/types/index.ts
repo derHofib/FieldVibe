@@ -1600,6 +1600,165 @@ export interface VorgangFormular {
   updated_at: string;
 }
 
+// --- Formular-Modul v2 (Trennung Erfassung/Visualisierung) ----------------
+// Siehe backend/app/schemas/form_modul.py -- key-basierte Referenzen statt
+// UUIDs (form_fields.key/form_groups.key), damit Regeln/Layouts stabil
+// bleiben. Existiert parallel zu Formular/Formularfeld oben, bis das alte
+// Modul (Migrationsplan Schritt 10) entfernt wird.
+
+export type FormFeldTyp =
+  | "text"
+  | "textarea"
+  | "zahl"
+  | "datum"
+  | "dropdown"
+  | "mehrfachauswahl"
+  | "ja_nein"
+  | "bewertung"
+  | "foto"
+  | "unterschrift"
+  | "gps"
+  | "qr_scan";
+
+export type FormSchemaStatus = "draft" | "published" | "archived";
+export type FormViewTyp = "capture" | "print" | "summary" | "table" | "public";
+export type FormPraesentationsTyp =
+  | "heading"
+  | "richtext"
+  | "divider"
+  | "spacer"
+  | "callout"
+  | "image"
+  | "computed_text";
+export type FormLogicEffekt = "show" | "hide" | "require" | "readonly" | "set_value";
+export type FormSubmissionStatus = "offen" | "abgeschlossen";
+
+export interface FormGroup {
+  id: string;
+  key: string;
+  label: Record<string, string>;
+  repeatable: boolean;
+  min_items: number | null;
+  max_items: number | null;
+  reihenfolge: number;
+}
+
+export interface FormField {
+  id: string;
+  key: string;
+  feld_typ: FormFeldTyp;
+  label: Record<string, string>;
+  hilfetext: string | null;
+  pflichtfeld: boolean;
+  validation: Record<string, unknown>;
+  default_value: unknown;
+  optionen: Record<string, unknown>;
+  group_key: string | null;
+  datenquelle: FormularfeldDatenquelle | null;
+  reihenfolge: number;
+}
+
+export interface FormAuftragstypZuordnungV2 {
+  id: string;
+  leistungstyp: Leistungstyp;
+  pflicht_vor_abschluss: boolean;
+}
+
+export interface FormSchema {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  version: number;
+  status: FormSchemaStatus;
+  vorgaenger_id: string | null;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormSchemaDetail extends FormSchema {
+  groups: FormGroup[];
+  fields: FormField[];
+  zuordnungen: FormAuftragstypZuordnungV2[];
+}
+
+export interface FormView {
+  id: string;
+  schema_id: string;
+  type: FormViewTyp;
+  name: string;
+  konfiguration: Record<string, unknown>;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormViewFieldLayout {
+  id: string;
+  field_key: string;
+  seite: number;
+  x_mm: number;
+  y_mm: number;
+  breite_mm: number;
+  hoehe_mm: number;
+}
+
+export interface FormPresentationElement {
+  id: string;
+  type: FormPraesentationsTyp;
+  inhalt: Record<string, unknown>;
+  reihenfolge: number;
+  seite: number;
+  x_mm: number | null;
+  y_mm: number | null;
+  breite_mm: number | null;
+  hoehe_mm: number | null;
+}
+
+export interface FormLogicRule {
+  id: string;
+  view_id: string | null;
+  target_key: string;
+  effect: FormLogicEffekt;
+  condition: unknown;
+  value: unknown;
+  reihenfolge: number;
+}
+
+export interface FormFieldState {
+  visible: boolean;
+  required: boolean;
+  readonly: boolean;
+}
+
+export interface FormViewResolved {
+  view: FormView;
+  layouts: FormViewFieldLayout[];
+  elements: FormPresentationElement[];
+  states: Record<string, FormFieldState>;
+}
+
+export interface FormSchemaVerfuegbar {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  pflicht_vor_abschluss: boolean;
+}
+
+export interface FormSubmission {
+  id: string;
+  vorgang_id: string;
+  schema_id: string;
+  schema_version: number;
+  values: Record<string, unknown>;
+  status: FormSubmissionStatus;
+  ausgefuellt_von: string | null;
+  kundensichtbar: boolean;
+  abgeschlossen_am: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // --- Boards (Miro-artiges Whiteboard, Office) -----------------------------
 
 export type BoardTyp = "frei" | "bauplanung" | "prozess";

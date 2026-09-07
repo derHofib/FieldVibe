@@ -13,7 +13,7 @@ Zwei Router:
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,11 +67,14 @@ from app.schemas.form_modul import (
     FormViewResolvedRead,
     FormViewUpdate,
 )
-from app.services import form_modul_service
+from app.services import form_modul_service, storage_service
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import assigned_kunde_ids
+
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+FELDTYPEN_MIT_DATEI = ("foto", "unterschrift")
 
 router = APIRouter(
     prefix="/api/form-schemas",
@@ -772,6 +775,43 @@ async def update_submission_values(
     await session.flush()
     await session.refresh(submission)
     return submission
+
+
+@submissions_router.post("/{submission_id}/dateien")
+async def datei_hochladen(
+    submission_id: UUID,
+    field_key: str,
+    file: UploadFile,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Laedt eine Datei fuer ein Foto-/Unterschrift-Feld hoch, Pendant zu
+    POST /api/vorgang-formulare/{id}/dateien im alten Modell. Gibt den
+    Storage-Key zurueck, den das Frontend per PATCH als Wert fuer
+    field_key ablegt (siehe update_submission_values)."""
+    submission = await _get_own_submission(session, auth, submission_id)
+    if submission.status != "offen":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ausfüllung ist bereits abgeschlossen")
+    fields = await form_modul_service.fields_fuer(session, submission.schema_id)
+    field = next((f for f in fields if f.key == field_key), None)
+    if field is None or field.feld_typ not in FELDTYPEN_MIT_DATEI:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiges Feld")
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nur Bilddateien werden unterstützt")
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)")
+
+    key = storage_service.new_object_key(submission.vorgang_id, file.filename or "datei.jpg")
+    await storage_service.upload_bytes(key, data, file.content_type)
+    return {
+        "field_key": field_key,
+        "key": key,
+        "content_type": file.content_type,
+        "size": len(data),
+        "url": storage_service.presigned_get_url(key),
+    }
 
 
 def _feld_label(field: FormField) -> str:

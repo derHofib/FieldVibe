@@ -30,6 +30,7 @@ import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { EingangsrechnungDetailPage } from "./pages/feld/EingangsrechnungDetailPage";
 import { FeedPage } from "./pages/feld/FeedPage";
 import { FormularAusfuellenPage } from "./pages/feld/FormularAusfuellenPage";
+import { FormSubmissionAusfuellenPage } from "./pages/feld/FormSubmissionAusfuellenPage";
 import { FormularDetailPage } from "./pages/feld/FormularDetailPage";
 import { FormularePage } from "./pages/feld/FormularePage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
@@ -152,6 +153,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/formulare" element={<FormularePage />} />
           <Route path="/formulare/:id" element={<FormularDetailPage />} />
           <Route path="/vorgang-formulare/:id" element={<FormularAusfuellenPage />} />
+          <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
