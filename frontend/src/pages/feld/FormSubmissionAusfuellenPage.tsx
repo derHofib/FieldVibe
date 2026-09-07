@@ -14,6 +14,7 @@ import { formModulApi, formSubmissionsApi } from "../../api/endpoints";
 import { CaptureRenderer } from "../../components/formModul/CaptureRenderer";
 import { SummaryRenderer } from "../../components/formModul/SummaryRenderer";
 import { EmptyState } from "../../components/EmptyState";
+import { openPdfBlob } from "../../utils/pdf";
 
 export function FormSubmissionAusfuellenPage() {
   const { id } = useParams<{ id: string }>();
@@ -90,6 +91,15 @@ export function FormSubmissionAusfuellenPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Upload fehlgeschlagen"),
   });
 
+  const pdfMutation = useMutation({
+    mutationFn: async () => {
+      if (submission?.status !== "abgeschlossen") await formSubmissionsApi.updateValues(id!, values);
+      return formSubmissionsApi.pdf(id!);
+    },
+    onSuccess: openPdfBlob,
+    onError: (err) => setFehler(err instanceof ApiError ? err.message : "PDF konnte nicht erzeugt werden"),
+  });
+
   if (submissionLoading || schemaLoading) return <p className="text-center text-sm text-ind-ink-3">Lädt…</p>;
   if (!submission || !schema) return <EmptyState icon={FileText} text="Formular nicht gefunden." />;
 
@@ -137,6 +147,14 @@ export function FormSubmissionAusfuellenPage() {
       )}
 
       {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+
+      <button
+        onClick={() => pdfMutation.mutate()}
+        disabled={pdfMutation.isPending}
+        className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+      >
+        <FileText size={16} /> {readOnly ? "Als PDF öffnen" : "PDF-Vorschau ansehen"}
+      </button>
 
       {!readOnly && (
         <div className="fixed inset-x-0 bottom-16 z-10 flex gap-2 px-4">

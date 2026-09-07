@@ -9,6 +9,7 @@ from fpdf.util import builtin_srgb2014_bytes
 
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.bestellung import Bestellung, BestellungPosition
+from app.models.form_modul import FormField, FormGroup, FormPresentationElement, FormSubmission, FormViewFieldLayout
 from app.models.formular import GRID_SPALTEN, VorgangFormular
 from app.models.kunde import Kunde
 from app.models.lieferant import Lieferant
@@ -955,5 +956,156 @@ def _generate_formular_pdf_freeform(
 
     if not snapshot.get("felder"):
         pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    return bytes(pdf.output())
+
+
+def _form_antwort_text(field: FormField, wert: object) -> str:
+    if wert is None or wert == "":
+        return "-"
+    if field.feld_typ == "ja_nein":
+        return "Ja" if wert else "Nein"
+    if field.feld_typ == "mehrfachauswahl" and isinstance(wert, list):
+        return _pdf_safe_text(", ".join(str(v) for v in wert) or "-")
+    return _pdf_safe_text(wert)
+
+
+def _render_form_feld_zelle(
+    pdf: FPDF, field: FormField, wert: object, bild: bytes | None, x: float, y: float, breite: float, hoehe: float
+) -> None:
+    label = field.label.get("de", field.key)
+    label_hoehe = min(4.0, hoehe / 2)
+    pdf.set_xy(x, y)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.set_text_color(110, 110, 110)
+    pdf.cell(breite, label_hoehe, _pdf_safe_text(label))
+    pdf.set_text_color(0, 0, 0)
+
+    wert_y = y + label_hoehe
+    wert_hoehe = max(hoehe - label_hoehe, 3.0)
+    if field.feld_typ in ("foto", "unterschrift"):
+        if bild:
+            try:
+                pdf.image(BytesIO(bild), x=x, y=wert_y, w=breite, h=wert_hoehe)
+            except RuntimeError:
+                pdf.set_xy(x, wert_y)
+                pdf.set_font("Helvetica", "", 9)
+                pdf.cell(breite, wert_hoehe, "[Bild konnte nicht eingebettet werden]")
+        else:
+            pdf.set_xy(x, wert_y)
+            pdf.set_font("Helvetica", "", 9)
+            pdf.cell(breite, wert_hoehe, "-")
+        return
+
+    pdf.set_xy(x, wert_y)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.multi_cell(breite, min(wert_hoehe, 5.0), _form_antwort_text(field, wert))
+
+
+def generate_form_submission_pdf(
+    mandant: Mandant,
+    vorgang: Vorgang,
+    submission: FormSubmission,
+    schema_name: str,
+    fields: list[FormField],
+    groups: list[FormGroup],
+    layouts: list[FormViewFieldLayout],
+    elements: list[FormPresentationElement],
+    bilder: dict[str, bytes],
+    ist_vorschau: bool = False,
+) -> bytes:
+    """PDF fuer eine form_submission ueber eine print-View (Formular-Modul
+    v2) -- Pendant zu _generate_formular_pdf_freeform, aber key-basiert
+    (fields[].key statt einer UUID) und mit den Layout-/Element-Zeilen der
+    jeweiligen View statt einem eingefrorenen formular_snapshot: die
+    aktuelle Schema-Definition entscheidet, dieselbe Herangehensweise wie
+    beim Rest von Formular-Modul v2 (siehe Docstring Migration 0076 --
+    "alte Versionen bleiben stehen statt dupliziert zu werden").
+
+    Wiederholgruppen lassen sich nicht sinnvoll frei positionieren (eine
+    unbekannte Anzahl Zeilen passt nicht auf feste x_mm/y_mm-Koordinaten)
+    -- sie werden nach den frei positionierten Seiten als einfache
+    fliessende Liste angehaengt, eine Seite pro Gruppe mit Eintraegen."""
+    values = submission.values
+    layouts_je_seite: dict[int, list[FormViewFieldLayout]] = {}
+    for layout in layouts:
+        layouts_je_seite.setdefault(layout.seite, []).append(layout)
+    headings_je_seite: dict[int, list[FormPresentationElement]] = {}
+    for element in elements:
+        if element.type == "heading" and element.x_mm is not None and element.y_mm is not None:
+            headings_je_seite.setdefault(element.seite, []).append(element)
+    fields_by_key = {f.key: f for f in fields}
+    anzahl_seiten = max([*layouts_je_seite.keys(), *headings_je_seite.keys(), 0]) + 1
+
+    pdf = _FormularPDF(mandant, schema_name, vorgang.vorgangsnummer)
+
+    for seite_idx in range(anzahl_seiten):
+        pdf.add_page()
+        if seite_idx == 0:
+            pdf.set_font("Helvetica", "B", 18)
+            pdf.cell(0, 10, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.set_font("Helvetica", "", 10)
+            pdf.cell(
+                0,
+                6,
+                _pdf_safe_text(f"{schema_name}: {vorgang.vorgangsnummer} - {vorgang.titel}"),
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
+            pdf.cell(
+                0,
+                6,
+                f"Ausgefuellt am {_fmt_datum(submission.abgeschlossen_am or submission.created_at)}",
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
+            pdf.ln(4)
+            if ist_vorschau:
+                _formular_vorschau_banner(pdf)
+            seiten_top_mm = pdf.get_y()
+        else:
+            seiten_top_mm = _FORMULAR_RAND_OBEN_FOLGESEITE
+
+        for element in sorted(headings_je_seite.get(seite_idx, []), key=lambda e: (e.y_mm or 0, e.x_mm or 0)):
+            x = pdf.l_margin + (element.x_mm or 0)
+            y = seiten_top_mm + (element.y_mm or 0)
+            inhalt = element.inhalt.get("text", {})
+            text = inhalt.get("de", "") if isinstance(inhalt, dict) else ""
+            pdf.set_xy(x, y + (element.hoehe_mm or 8) / 2 - 3)
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.cell(element.breite_mm or 85, 6, _pdf_safe_text(text))
+
+        for layout in sorted(layouts_je_seite.get(seite_idx, []), key=lambda l: (l.y_mm, l.x_mm)):
+            field = fields_by_key.get(layout.field_key)
+            if field is None or field.group_key is not None:
+                continue
+            x = pdf.l_margin + layout.x_mm
+            y = seiten_top_mm + layout.y_mm
+            wert = values.get(field.key)
+            bild = bilder.get(field.key) if field.feld_typ in ("foto", "unterschrift") else None
+            _render_form_feld_zelle(pdf, field, wert, bild, x, y, layout.breite_mm, layout.hoehe_mm)
+
+    if not layouts and not headings_je_seite:
+        pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    for group in groups:
+        zeilen = values.get(group.key)
+        if not isinstance(zeilen, list) or not zeilen:
+            continue
+        gruppen_felder = [f for f in fields if f.group_key == group.key]
+        pdf.add_page()
+        pdf.set_xy(pdf.l_margin, _FORMULAR_RAND_OBEN_FOLGESEITE)
+        pdf.set_font("Helvetica", "B", 12)
+        pdf.cell(0, 8, _pdf_safe_text(group.label.get("de", group.key)), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(2)
+        for idx, zeile in enumerate(zeilen):
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.cell(0, 6, f"Eintrag {idx + 1}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.set_font("Helvetica", "", 9)
+            for field in gruppen_felder:
+                label = field.label.get("de", field.key)
+                text = _form_antwort_text(field, zeile.get(field.key) if isinstance(zeile, dict) else None)
+                pdf.multi_cell(0, 5, f"{label}: {text}")
+            pdf.ln(2)
 
     return bytes(pdf.output())

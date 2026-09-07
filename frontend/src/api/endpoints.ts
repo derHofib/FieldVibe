@@ -982,6 +982,8 @@ export const formSubmissionsApi = {
     }),
   abschliessen: (id: string) => apiFetch<FormSubmission>(`/api/form-submissions/${id}/abschliessen`, { method: "POST" }),
   remove: (id: string) => apiFetch<void>(`/api/form-submissions/${id}`, { method: "DELETE" }),
+  pdf: (id: string, viewId?: string) =>
+    apiFetchBlob(`/api/form-submissions/${id}/pdf${viewId ? `?view_id=${viewId}` : ""}`),
   uploadDatei: (id: string, fieldKey: string, file: Blob, filename: string) => {
     const formData = new FormData();
     formData.append("file", file, filename);

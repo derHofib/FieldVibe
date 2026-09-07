@@ -13,12 +13,13 @@ Zwei Router:
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.models.anlage import Anlage
+from app.models.mandant import Mandant
 from app.models.form_modul import (
     FormAuftragstypZuordnung,
     FormField,
@@ -69,6 +70,7 @@ from app.schemas.form_modul import (
 )
 from app.services import form_modul_service, storage_service
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
+from app.services.pdf_service import generate_form_submission_pdf
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import assigned_kunde_ids
@@ -738,6 +740,59 @@ async def get_submission(
     submission_id: UUID, auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
 ) -> FormSubmission:
     return await _get_own_submission(session, auth, submission_id)
+
+
+@submissions_router.get("/{submission_id}/pdf")
+async def submission_pdf(
+    submission_id: UUID,
+    view_id: UUID | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Response:
+    """Rendert die Ausfuellung live ueber eine print-View -- ohne view_id
+    wird die erste print-View des Schemas verwendet. Wie beim alten Modul
+    (vorgang_formular_pdf) ist eine noch offene Ausfuellung nur eine
+    Vorschau mit Hinweisbanner."""
+    submission = await _get_own_submission(session, auth, submission_id)
+    schema = await session.get(FormSchema, submission.schema_id)
+    if schema is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Formular-Schema nicht gefunden")
+
+    if view_id is not None:
+        view = await _get_view_or_404(session, submission.schema_id, view_id)
+    else:
+        result = await session.execute(
+            select(FormView).where(FormView.schema_id == submission.schema_id, FormView.type == "print").limit(1)
+        )
+        view = result.scalars().first()
+        if view is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keine Druckansicht fuer dieses Schema angelegt")
+
+    vorgang = await session.get(Vorgang, submission.vorgang_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    fields = await form_modul_service.fields_fuer(session, submission.schema_id)
+    groups = await form_modul_service.groups_fuer(session, submission.schema_id)
+    layouts = await form_modul_service.layouts_fuer(session, view.id)
+    elements = await form_modul_service.elements_fuer(session, view.id)
+
+    bilder: dict[str, bytes] = {}
+    for field in fields:
+        if field.feld_typ not in ("foto", "unterschrift"):
+            continue
+        wert = submission.values.get(field.key)
+        if isinstance(wert, dict) and wert.get("key"):
+            bilder[field.key] = await storage_service.download_bytes(wert["key"])
+
+    ist_vorschau = submission.status != "abgeschlossen"
+    pdf_bytes = generate_form_submission_pdf(
+        mandant, vorgang, submission, schema.name, fields, groups, layouts, elements, bilder, ist_vorschau=ist_vorschau
+    )
+    praefix = "Vorschau-" if ist_vorschau else ""
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{praefix}{schema.name}-{vorgang.vorgangsnummer}.pdf"'},
+    )
 
 
 @submissions_router.patch("/{submission_id}", response_model=FormSubmissionRead)

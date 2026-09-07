@@ -286,6 +286,54 @@ async def test_pflichtfeld_wird_durch_hide_regel_ausser_kraft_gesetzt(
 
 
 @pytest.mark.asyncio
+async def test_submission_pdf_ueber_print_view(client, make_mandant, make_user, make_kunde, make_vorgang):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    schema = await _make_published_schema(client, token, name="Protokoll")
+    await client.post(
+        f"/api/form-schemas/{schema['id']}/fields",
+        headers=auth_headers(token),
+        json={"key": "kommentar", "feld_typ": "text", "label": {"de": "Kommentar"}},
+    )
+    print_view = (
+        await client.post(
+            f"/api/form-schemas/{schema['id']}/views",
+            headers=auth_headers(token),
+            json={"type": "print", "name": "Ausdruck"},
+        )
+    ).json()
+    await client.put(
+        f"/api/form-schemas/{schema['id']}/views/{print_view['id']}/layouts",
+        headers=auth_headers(token),
+        json=[{"field_key": "kommentar", "x_mm": 0, "y_mm": 0}],
+    )
+
+    submission = (
+        await client.post(
+            "/api/form-submissions",
+            headers=auth_headers(token),
+            params={"vorgang_id": str(vorgang.id)},
+            json={"schema_id": schema["id"]},
+        )
+    ).json()
+    await client.patch(
+        f"/api/form-submissions/{submission['id']}",
+        headers=auth_headers(token),
+        json={"values": {"kommentar": "Alles in Ordnung"}},
+    )
+
+    resp = await client.get(f"/api/form-submissions/{submission['id']}/pdf", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content.startswith(b"%PDF")
+    assert "Vorschau-" in resp.headers["content-disposition"]
+
+
+@pytest.mark.asyncio
 async def test_rls_isolation_form_schemas_und_submissions(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
