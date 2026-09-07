@@ -146,10 +146,10 @@ export function DispoBoardPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Dispo-Board</h1>
+        <h1 className="text-lg font-bold text-ind-ink">Dispo-Board</h1>
         {istModulAktiv(currentUser, "pruefzyklen") ? (
           <button
             onClick={() => navigate("/pruefmittel")}
@@ -162,14 +162,14 @@ export function DispoBoardPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="flex items-center justify-between border border-ind-line bg-ind-bg p-3">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
           className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
         >
           ← Vorherige Woche
         </button>
-        <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
+        <span className="text-sm font-medium text-ind-ink-2">
           {formatDayLabel(weekStart)} – {formatDayLabel(addDays(weekStart, 6))}
         </span>
         <button
@@ -208,19 +208,19 @@ export function DispoBoardPage() {
             ende: toLocalInputValue(ende),
           });
         }}
-        className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
+        className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium"
       >
         + Neuer Termin
       </button>
 
       {showForm && form && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Vorgang</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Vorgang</label>
             <select
               value={form.vorgangId}
               onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             >
               <option value="">Bitte wählen…</option>
               {wahlbareVorgaenge.map((v) => (
@@ -231,11 +231,11 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Techniker</label>
             <select
               value={form.technikerId}
               onChange={(e) => setForm({ ...form, technikerId: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             >
               {technikers.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -245,31 +245,31 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Titel</label>
             <input
               value={form.titel}
               onChange={(e) => setForm({ ...form, titel: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               placeholder="z.B. E-Check Hauptverteilung"
             />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
+              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Start</label>
               <input
                 type="datetime-local"
                 value={form.start}
                 onChange={(e) => setForm({ ...form, start: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
+              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Ende</label>
               <input
                 type="datetime-local"
                 value={form.ende}
                 onChange={(e) => setForm({ ...form, ende: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
           </div>
@@ -294,7 +294,7 @@ export function DispoBoardPage() {
                   ende_at: new Date(form.ende).toISOString(),
                 })
               }
-              className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -305,14 +305,14 @@ export function DispoBoardPage() {
       <div className="overflow-x-auto rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-stone-800">
-              <th className="w-40 p-2 text-left text-xs font-semibold text-slate-500 dark:text-stone-400">
+            <tr className="border-b border-ind-line">
+              <th className="w-40 p-2 text-left text-xs font-semibold text-ind-ink-3">
                 Techniker
               </th>
               {days.map((day, i) => (
                 <th
                   key={i}
-                  className="w-32 p-2 text-left text-xs font-semibold text-slate-500 dark:text-stone-400"
+                  className="w-32 p-2 text-left text-xs font-semibold text-ind-ink-3"
                 >
                   {WOCHENTAGE[i]} {formatDayLabel(day)}
                 </th>
@@ -322,7 +322,7 @@ export function DispoBoardPage() {
           <tbody>
             {technikers.map((tech) => (
               <tr key={tech.id} className="border-b border-slate-100 dark:border-stone-800">
-                <td className="p-2 align-top text-sm font-medium text-slate-700 dark:text-stone-300">
+                <td className="p-2 align-top text-sm font-medium text-ind-ink-2">
                   {tech.name}
                 </td>
                 {days.map((day, i) => {

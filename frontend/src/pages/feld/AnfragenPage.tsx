@@ -59,16 +59,16 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   });
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="border border-ind-line bg-ind-bg p-4">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-slate-400 dark:text-stone-500">
+          <div className="text-xs text-ind-ink-3">
             {kunde?.name ?? "…"}
             {standort && ` · ${standort.bezeichnung}`}
             {anlage && ` · ${anlage.bezeichnung}`}
           </div>
-          <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{anfrage.titel}</div>
-          <span className="mt-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <div className="text-sm font-medium text-ind-ink">{anfrage.titel}</div>
+          <span className="mt-1 inline-block border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
             {LEISTUNGSTYP_LABEL[anfrage.leistungstyp]}
           </span>
         </div>
@@ -85,10 +85,10 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
         )}
       </div>
       {anfrage.beschreibung && (
-        <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{anfrage.beschreibung}</p>
+        <p className="mt-2 text-sm text-ind-ink-2">{anfrage.beschreibung}</p>
       )}
       {anfrage.ablehnungsgrund && (
-        <p className="mt-2 text-xs text-slate-400 dark:text-stone-500">Grund: {anfrage.ablehnungsgrund}</p>
+        <p className="mt-2 text-xs text-ind-ink-3">Grund: {anfrage.ablehnungsgrund}</p>
       )}
 
       {anfrage.status === "offen" && (
@@ -99,7 +99,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
             <div className="flex gap-2">
               <button
                 onClick={() => setZeigeAnnehmen(true)}
-                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white"
+                className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium"
               >
                 Annehmen
               </button>
@@ -113,12 +113,12 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAnnehmen && (
-            <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
-              <label className="block text-xs font-medium text-slate-500 dark:text-stone-400">Abrechnungsart</label>
+            <div className="space-y-2 border border-ind-line-2 p-3">
+              <label className="block text-xs font-medium text-ind-ink-3">Abrechnungsart</label>
               <select
                 value={abrechnungsart}
                 onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
               >
                 {ABRECHNUNGSARTEN.map((a) => (
                   <option key={a.value} value={a.value}>
@@ -130,7 +130,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 <button
                   onClick={() => annehmenMutation.mutate()}
                   disabled={annehmenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
                 >
                   Vorgang anlegen
                 </button>
@@ -145,13 +145,13 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           )}
 
           {zeigeAblehnen && (
-            <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+            <div className="space-y-2 border border-ind-line-2 p-3">
               <textarea
                 value={ablehnungsgrund}
                 onChange={(e) => setAblehnungsgrund(e.target.value)}
                 placeholder="Grund (optional, für interne Notiz)"
                 rows={2}
-                className="w-full rounded-md border border-slate-300 p-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent p-2 text-sm text-ind-ink"
               />
               <div className="flex gap-2">
                 <button
@@ -191,16 +191,16 @@ export function AnfragenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Auftragsanfragen</h1>
-      <div className="flex gap-2 rounded-lg bg-white p-1 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <h1 className="text-lg font-bold text-ind-ink">Auftragsanfragen</h1>
+      <div className="flex gap-2 border border-ind-line bg-ind-bg p-1">
         {(["offen", "alle"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setStatusFilter(f)}
             className={`btn-touch flex-1 rounded-md py-2 text-sm font-medium capitalize ${
               statusFilter === f
-                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                : "text-slate-600 dark:text-stone-400"
+                ? "btn-industry btn-industry-primary text-white"
+                : "text-ind-ink-2"
             }`}
           >
             {f === "offen" ? "Offen" : "Alle"}
@@ -209,9 +209,9 @@ export function AnfragenPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>
+        <p className="text-center text-ind-ink-3">Lädt…</p>
       ) : !anfragen || anfragen.length === 0 ? (
-        <p className="text-center text-sm text-slate-400 dark:text-stone-500">Keine Anfragen vorhanden.</p>
+        <p className="text-center text-sm text-ind-ink-3">Keine Anfragen vorhanden.</p>
       ) : (
         <div className="space-y-2">
           {anfragen.map((a) => (

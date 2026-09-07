@@ -207,7 +207,7 @@ export function NewVorgangPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Neuer Vorgang</h1>
+      <h1 className="text-lg font-bold text-ind-ink">Neuer Vorgang</h1>
 
       <button
         onClick={() => setShowScanner(true)}
@@ -242,7 +242,7 @@ export function NewVorgangPage() {
         <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
       )}
 
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <p className="text-sm text-ind-ink-3">
         Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
         Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
         sich automatisch, sobald wieder eine Verbindung besteht.
@@ -250,10 +250,10 @@ export function NewVorgangPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="space-y-3 border border-ind-line bg-ind-bg p-4"
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Kunde</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Kunde</label>
           <select
             value={kundeId}
             onChange={(e) => {
@@ -261,7 +261,7 @@ export function NewVorgangPage() {
               setAnlage(null);
               setStandortId("");
             }}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -282,22 +282,22 @@ export function NewVorgangPage() {
         </div>
 
         {showNewKunde && (
-          <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="space-y-2 border border-ind-line-2 p-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
               <input
                 autoFocus
                 value={newKundeName}
                 onChange={(e) => setNewKundeName(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Typ (optional)</label>
               <select
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
               >
                 <option value="">Keine Angabe</option>
                 {KUNDE_TYPEN.map((t) => (
@@ -313,7 +313,7 @@ export function NewVorgangPage() {
                 type="button"
                 onClick={handleCreateKunde}
                 disabled={createKundeMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
               >
                 Kunde anlegen
               </button>
@@ -333,13 +333,13 @@ export function NewVorgangPage() {
 
         {kundeId && standorteListe && standorteListe.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
               Standort (optional)
             </label>
             <select
               value={standortId}
               onChange={(e) => setStandortId(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             >
               <option value="">Kein Standort</option>
               {standorteListe.map((s) => (
@@ -353,12 +353,12 @@ export function NewVorgangPage() {
 
         {standortId && standortAnlagen && standortAnlagen.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
               Anlagen an diesem Standort
             </label>
             <div className="space-y-1 rounded-md border border-slate-200 p-2 dark:border-stone-700">
               {standortAnlagen.map((a) => (
-                <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-stone-300">
+                <label key={a.id} className="flex items-center gap-2 text-sm text-ind-ink-2">
                   <input
                     type="checkbox"
                     checked={weitereAnlagenIds.has(a.id)}
@@ -375,7 +375,7 @@ export function NewVorgangPage() {
                 </label>
               ))}
             </div>
-            <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
+            <p className="mt-1 text-xs text-ind-ink-3">
               Alle angehakten Anlagen werden mit in den Vorgang aufgenommen.
             </p>
           </div>
@@ -383,13 +383,13 @@ export function NewVorgangPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Anlage (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Anlage (optional)</label>
             <select
               value={anlage?.id ?? ""}
               onChange={(e) =>
                 setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)
               }
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             >
               <option value="">Keine Anlage</option>
               {anlagenListe?.map((a) => (
@@ -411,23 +411,23 @@ export function NewVorgangPage() {
         )}
 
         {showNewAnlage && (
-          <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+          <div className="space-y-2 border border-ind-line-2 p-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Bezeichnung</label>
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Bezeichnung</label>
               <input
                 autoFocus
                 value={newAnlageBezeichnung}
                 onChange={(e) => setNewAnlageBezeichnung(e.target.value)}
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Typ (optional)</label>
+              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Typ (optional)</label>
               <input
                 value={newAnlageTyp}
                 onChange={(e) => setNewAnlageTyp(e.target.value)}
                 placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
-                className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
               />
             </div>
             {newAnlageError && <p className="text-sm text-red-700 dark:text-red-400">{newAnlageError}</p>}
@@ -436,7 +436,7 @@ export function NewVorgangPage() {
                 type="button"
                 onClick={handleCreateAnlage}
                 disabled={createAnlageMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
               >
                 Anlage anlegen
               </button>
@@ -455,61 +455,61 @@ export function NewVorgangPage() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Titel</label>
           <input
             required
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Beschreibung</label>
           <textarea
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
             rows={3}
-            className="w-full resize-none rounded-md border border-slate-300 p-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full resize-none border border-ind-line bg-transparent p-2 text-ind-ink"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">
             Adresse (optional)
           </label>
-          <p className="mb-1 text-xs text-slate-400 dark:text-stone-500">
+          <p className="mb-1 text-xs text-ind-ink-3">
             Nur nötig, wenn kein Standort ausgewählt ist -- damit weiß der Ausführende, wo er hin muss.
           </p>
           <input
             value={adrStrasse}
             onChange={(e) => setAdrStrasse(e.target.value)}
             placeholder="Straße + Hausnr."
-            className="btn-touch mb-2 w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch mb-2 w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
           />
           <div className="grid grid-cols-2 gap-2">
             <input
               value={adrPlz}
               onChange={(e) => setAdrPlz(e.target.value)}
               placeholder="PLZ"
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             />
             <input
               value={adrOrt}
               onChange={(e) => setAdrOrt(e.target.value)}
               placeholder="Ort"
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Leistungstyp</label>
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Leistungstyp</label>
             <select
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -519,11 +519,11 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Abrechnungsart</label>
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Abrechnungsart</label>
             <select
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
@@ -533,11 +533,11 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Priorität</label>
+            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Priorität</label>
             <select
               value={prioritaet}
               onChange={(e) => setPrioritaet(Number(e.target.value))}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
             >
               {PRIORITAET_OPTIONEN.map((p) => (
                 <option key={p.value} value={p.value}>
@@ -553,7 +553,7 @@ export function NewVorgangPage() {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-industry btn-industry-primary py-2 font-medium disabled:opacity-50"
         >
           Vorgang anlegen
         </button>

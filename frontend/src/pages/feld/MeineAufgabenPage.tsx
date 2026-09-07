@@ -118,8 +118,8 @@ export function MeineAufgabenPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Meine Aufgaben</h1>
-        <span className="text-sm font-medium text-slate-400 dark:text-stone-500">{offen.length} offen</span>
+        <h1 className="text-lg font-bold text-ind-ink">Meine Aufgaben</h1>
+        <span className="text-sm font-medium text-ind-ink-3">{offen.length} offen</span>
       </div>
 
       <div className="flex items-center gap-2 rounded-lg bg-white p-1 pl-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
@@ -138,14 +138,14 @@ export function MeineAufgabenPage() {
         <button
           onClick={() => neueAufgabe.trim() && erstellen.mutate(neueAufgabe.trim())}
           disabled={!neueAufgabe.trim() || erstellen.isPending}
-          className="btn-touch flex h-10 w-10 shrink-0 items-center justify-center rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white disabled:opacity-50"
+          className="btn-touch flex h-10 w-10 shrink-0 items-center justify-center rounded-md btn-industry btn-industry-primary disabled:opacity-50"
         >
           <Plus size={18} strokeWidth={2.5} />
         </button>
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : offen.length === 0 ? (
         <EmptyState icon={ListChecks} text="Keine offenen Aufgaben." />
       ) : (
@@ -155,7 +155,7 @@ export function MeineAufgabenPage() {
               className={`block text-[11px] font-bold tracking-wide uppercase ${
                 g === "ueberfaellig"
                   ? "text-rose-600 dark:text-rose-400"
-                  : "text-slate-400 dark:text-stone-500"
+                  : "text-ind-ink-3"
               }`}
             >
               {GRUPPEN_LABEL[g]}
@@ -166,7 +166,7 @@ export function MeineAufgabenPage() {
                 <div
                   key={a.id}
                   onClick={() => setPanelAufgabe(a)}
-                  className={`card-interactive flex cursor-pointer gap-2.5 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                  className={`card-interactive flex cursor-pointer gap-2.5 border border-ind-line bg-ind-bg p-3 ${
                     ueberfaellig ? "ring-1 ring-rose-300 dark:ring-rose-500/40" : ""
                   }`}
                 >
@@ -180,11 +180,11 @@ export function MeineAufgabenPage() {
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-[13.5px] font-semibold text-slate-800 dark:text-stone-100">{a.titel}</p>
+                      <p className="text-[13.5px] font-semibold text-ind-ink">{a.titel}</p>
                       {a.faelligkeit_am && (
                         <span
                           className={`shrink-0 text-[11px] font-semibold ${
-                            ueberfaellig ? "text-red-600 dark:text-red-400" : "text-slate-400 dark:text-stone-500"
+                            ueberfaellig ? "text-red-600 dark:text-red-400" : "text-ind-ink-3"
                           }`}
                         >
                           {ueberfaellig ? `vor ${tageSeit(a.faelligkeit_am)} Tagen` : a.faelligkeit_am}
@@ -211,7 +211,7 @@ export function MeineAufgabenPage() {
                       {a.anlage_id && <Building2 size={13} strokeWidth={2} className="text-amber-500 dark:text-amber-400" />}
                       {a.standort_id && <MapPin size={13} strokeWidth={2} className="text-rose-500 dark:text-rose-400" />}
                       {!!a.unteraufgaben_gesamt && (
-                        <span className="text-[10px] font-medium text-slate-400 dark:text-stone-500">
+                        <span className="text-[10px] font-medium text-ind-ink-3">
                           {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt} Unteraufgaben
                         </span>
                       )}
@@ -228,7 +228,7 @@ export function MeineAufgabenPage() {
         <div>
           <button
             onClick={() => setZeigeErledigt((v) => !v)}
-            className="flex items-center gap-1.5 py-1 text-xs font-medium text-slate-400 dark:text-stone-500"
+            className="flex items-center gap-1.5 py-1 text-xs font-medium text-ind-ink-3"
           >
             <CheckCircle2 size={14} strokeWidth={2} className="text-green-600 dark:text-green-400" />
             {erledigt.length} erledigt
@@ -239,7 +239,7 @@ export function MeineAufgabenPage() {
                 <div
                   key={a.id}
                   onClick={() => setPanelAufgabe(a)}
-                  className="card-interactive flex cursor-pointer items-center gap-2.5 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                  className="card-interactive flex cursor-pointer items-center gap-2.5 border border-ind-line bg-ind-bg p-3"
                 >
                   <button
                     onClick={(e) => {
