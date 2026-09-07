@@ -14,14 +14,17 @@ export const STATUS_LABEL: Record<VorgangStatus, string> = {
   storniert: "Storniert",
 };
 
+// "Industry"-Design (siehe docs/DESIGN.md): Rahmen-Tag statt gefuellter
+// Pastell-Pille -- Aufrufer duerfen "rounded-full"/"bg-..." nicht mehr
+// selbst ergaenzen, dieser Wert bringt bereits "border" mit.
 export const STATUS_BADGE: Record<VorgangStatus, string> = {
-  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
-  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
+  neu: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
+  wartet_kunde: "border border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
+  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
+  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
 export const LEISTUNGSTYP_LABEL: Record<string, string> = {

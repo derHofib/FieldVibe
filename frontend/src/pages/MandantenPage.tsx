@@ -14,9 +14,9 @@ const STATUS_LABEL: Record<MandantStatus, string> = {
 };
 
 const STATUS_BADGE: Record<MandantStatus, string> = {
-  aktiv: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  pausiert: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  gekuendigt: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300",
+  aktiv: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  pausiert: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
+  gekuendigt: "border border-red-400 text-red-700 dark:border-red-600 dark:text-red-300",
 };
 
 export function MandantenPage() {
@@ -120,7 +120,7 @@ export function MandantenPage() {
                   <td className="px-4 py-3 text-ind-ink-3">{m.slug}</td>
                   <td className="px-4 py-3 text-ind-ink-3">{m.branche ?? "–"}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_BADGE[m.status]}`}>
+                    <span className={`px-3 py-1 text-xs font-semibold ${STATUS_BADGE[m.status]}`}>
                       {STATUS_LABEL[m.status]}
                     </span>
                   </td>

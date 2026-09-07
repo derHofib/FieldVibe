@@ -143,7 +143,7 @@ export function MailClient({ account }: { account: MailAccount }) {
           <Search
             size={13}
             strokeWidth={2}
-            className="pointer-events-none absolute top-1/2 left-4.5 -translate-y-1/2 text-slate-400 dark:text-stone-500"
+            className="pointer-events-none absolute top-1/2 left-4.5 -translate-y-1/2 text-ind-ink-3"
           />
           <input
             value={suche}
@@ -154,7 +154,7 @@ export function MailClient({ account }: { account: MailAccount }) {
         </div>
         <div className="flex-1 overflow-y-auto">
           {nachrichtenLaden ? (
-            <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+            <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
           ) : nachrichten.length === 0 ? (
             <EmptyState icon={Inbox} text="Keine Nachrichten." />
           ) : (
@@ -170,20 +170,20 @@ export function MailClient({ account }: { account: MailAccount }) {
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <p
-                    className={`truncate text-[13px] ${n.gelesen ? "font-medium text-slate-600 dark:text-stone-300" : "font-bold text-slate-900 dark:text-white"}`}
+                    className={`truncate text-[13px] ${n.gelesen ? "font-medium text-ind-ink-2" : "font-bold text-slate-900 dark:text-white"}`}
                   >
                     {n.von_name || n.von_adresse || "Unbekannt"}
                   </p>
-                  <span className="shrink-0 text-[10.5px] text-slate-400 dark:text-stone-500">
+                  <span className="shrink-0 text-[10.5px] text-ind-ink-3">
                     {relativesDatum(n.datum)}
                   </span>
                 </div>
                 <p
-                  className={`truncate text-[12.5px] ${n.gelesen ? "text-slate-500 dark:text-stone-400" : "font-semibold text-slate-800 dark:text-stone-100"}`}
+                  className={`truncate text-[12.5px] ${n.gelesen ? "text-ind-ink-3" : "font-semibold text-ind-ink"}`}
                 >
                   {n.betreff || "(kein Betreff)"}
                 </p>
-                <p className="mt-0.5 flex items-center gap-1 truncate text-[11.5px] text-slate-400 dark:text-stone-500">
+                <p className="mt-0.5 flex items-center gap-1 truncate text-[11.5px] text-ind-ink-3">
                   {n.hat_anhang && <Paperclip size={11} strokeWidth={2} />}
                   {n.ausschnitt}
                 </p>
@@ -236,8 +236,8 @@ export function MailClient({ account }: { account: MailAccount }) {
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-slate-500 dark:text-stone-400">
-                Von <span className="font-medium text-slate-700 dark:text-stone-200">{detail.von_name || detail.von_adresse}</span>
+              <p className="text-xs text-ind-ink-3">
+                Von <span className="font-medium text-ind-ink">{detail.von_name || detail.von_adresse}</span>
                 {detail.an.length > 0 && <> · An {detail.an.join(", ")}</>}
               </p>
               {detail.anhaenge.length > 0 && (
@@ -257,7 +257,7 @@ export function MailClient({ account }: { account: MailAccount }) {
                   className="h-full w-full rounded-lg border border-slate-100 dark:border-stone-800"
                 />
               ) : (
-                <p className="text-sm whitespace-pre-wrap text-slate-700 dark:text-stone-200">{detail.body_text}</p>
+                <p className="text-sm whitespace-pre-wrap text-ind-ink">{detail.body_text}</p>
               )}
             </div>
           </div>

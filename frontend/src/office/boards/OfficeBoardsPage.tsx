@@ -72,21 +72,21 @@ export function OfficeBoardsPage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name</label>
+              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Name</label>
               <input
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="z. B. Projektplanung Rheinblick"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Art</label>
+              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Art</label>
               <select
                 value={typ}
                 onChange={(e) => setTyp(e.target.value as BoardTyp)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
               >
                 {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
                   <option key={t} value={t}>
@@ -104,7 +104,7 @@ export function OfficeBoardsPage() {
             </button>
             <button
               onClick={() => setZeigeNeu(false)}
-              className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 dark:text-stone-400"
+              className="rounded-lg px-3 py-2 text-xs font-medium text-ind-ink-3"
             >
               Abbrechen
             </button>
@@ -113,7 +113,7 @@ export function OfficeBoardsPage() {
       )}
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : !boards || boards.length === 0 ? (
         <EmptyState icon={StickyNote} text="Noch keine Boards angelegt." />
       ) : (
@@ -143,12 +143,12 @@ export function OfficeBoardsPage() {
                     </span>
                   </div>
                   <div className="p-3.5">
-                    <p className="truncate text-sm font-bold text-slate-800 dark:text-stone-100">{b.name}</p>
+                    <p className="truncate text-sm font-bold text-ind-ink">{b.name}</p>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-medium text-slate-400 dark:text-stone-500">
+                      <span className="text-[11px] font-medium text-ind-ink-3">
                         {TYP_LABEL[b.board_typ]}
                       </span>
-                      <span className="text-[11px] text-slate-400 dark:text-stone-500">
+                      <span className="text-[11px] text-ind-ink-3">
                         {relativeZeit(b.updated_at)}
                       </span>
                     </div>

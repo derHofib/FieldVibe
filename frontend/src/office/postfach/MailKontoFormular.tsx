@@ -115,13 +115,13 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-600 dark:bg-teal-500/15 dark:text-teal-300">
           <Mail size={18} strokeWidth={2} />
         </span>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-white">
+        <h1 className="text-lg font-bold text-ind-ink">
           {bearbeiten ? "Postfach bearbeiten" : "Postfach verbinden"}
         </h1>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-ind-ink-3">
           Name (nur für dich sichtbar)
           <input
             value={name}
@@ -130,7 +130,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
         </label>
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-ind-ink-3">
           E-Mail-Adresse
           <input
             type="email"
@@ -144,7 +144,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
         <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
           Posteingang (IMAP)
         </p>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Server
           <input
             value={imapHost}
@@ -153,7 +153,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Port
           <input
             type="number"
@@ -162,7 +162,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Verschlüsselung
           <select
             value={imapVerschluesselung}
@@ -176,7 +176,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             ))}
           </select>
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Benutzername
           <input
             value={imapBenutzername}
@@ -188,7 +188,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
         <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
           Postausgang (SMTP)
         </p>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Server
           <input
             value={smtpHost}
@@ -197,7 +197,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Port
           <input
             type="number"
@@ -206,7 +206,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Verschlüsselung
           <select
             value={smtpVerschluesselung}
@@ -220,7 +220,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             ))}
           </select>
         </label>
-        <label className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="text-xs font-medium text-ind-ink-3">
           Benutzername
           <input
             value={smtpBenutzername}
@@ -229,7 +229,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           />
         </label>
 
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-ind-ink-3">
           Passwort{bearbeiten && " (leer lassen, um es unverändert zu lassen)"}
           <input
             type="password"
@@ -245,7 +245,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           ) : null}
         </label>
 
-        <label className="sm:col-span-2 text-xs font-medium text-slate-500 dark:text-stone-400">
+        <label className="sm:col-span-2 text-xs font-medium text-ind-ink-3">
           Signatur (optional, wird an jede gesendete Mail angehängt)
           <textarea
             value={signatur}
@@ -288,7 +288,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             <button
               type="button"
               onClick={onAbbrechen}
-              className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 dark:text-stone-400"
+              className="rounded-lg px-3 py-2 text-xs font-semibold text-ind-ink-3"
             >
               Abbrechen
             </button>

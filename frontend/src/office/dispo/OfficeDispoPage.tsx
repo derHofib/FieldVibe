@@ -234,7 +234,7 @@ export function OfficeDispoPage() {
       <div className="flex items-start gap-4">
         <div className="w-64 shrink-0 space-y-2">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-slate-500 dark:text-stone-400">
+            <span className="text-xs font-bold text-ind-ink-3">
               Nicht disponiert
             </span>
             <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
@@ -242,7 +242,7 @@ export function OfficeDispoPage() {
             </span>
           </div>
           {backlogLaedt ? (
-            <p className="py-6 text-center text-xs text-slate-400 dark:text-stone-500">Lädt…</p>
+            <p className="py-6 text-center text-xs text-ind-ink-3">Lädt…</p>
           ) : backlog.length === 0 ? (
             <EmptyState icon={Inbox} text="Alles disponiert." />
           ) : (
@@ -261,22 +261,22 @@ export function OfficeDispoPage() {
                     className={`card-interactive cursor-grab rounded-xl border bg-white p-2.5 dark:bg-stone-900 ${
                       ueberfaellig
                         ? "border-rose-300 dark:border-rose-500/40"
-                        : "border-slate-200 dark:border-stone-800"
+                        : "border-ind-line"
                     }`}
                   >
                     <div className="flex items-start gap-1.5">
                       <GripVertical
                         size={14}
-                        className="mt-0.5 shrink-0 text-slate-300 dark:text-stone-600"
+                        className="mt-0.5 shrink-0 text-ind-ink-3"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10.5px] font-bold text-slate-400 dark:text-stone-500">
+                        <p className="text-[10.5px] font-bold text-ind-ink-3">
                           {v.vorgangsnummer}
                         </p>
-                        <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                        <p className="truncate text-[13px] font-semibold text-ind-ink">
                           {v.titel}
                         </p>
-                        <p className="truncate text-[11.5px] text-slate-500 dark:text-stone-400">
+                        <p className="truncate text-[11.5px] text-ind-ink-3">
                           {v.kunde_name}
                         </p>
                         {v.faelligkeit_am && (
@@ -311,7 +311,7 @@ export function OfficeDispoPage() {
               <ChevronLeft size={16} />
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-700 dark:text-stone-200">
+              <span className="text-sm font-semibold text-ind-ink">
                 {formatTag(tag)}
               </span>
               {!heute && (
@@ -337,7 +337,7 @@ export function OfficeDispoPage() {
           ) : (
             <div className="overflow-x-auto">
               <div style={{ width: LABEL_BREITE + GESAMT_BREITE }}>
-                <div className="flex border-b border-slate-200 dark:border-stone-800">
+                <div className="flex border-b border-ind-line">
                   <div
                     className="sticky left-0 z-10 shrink-0 bg-white dark:bg-stone-900"
                     style={{ width: LABEL_BREITE }}
@@ -534,7 +534,7 @@ function TerminBearbeitenPanel({
         className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-stone-100">Termin bearbeiten</h2>
+          <h2 className="text-sm font-bold text-ind-ink">Termin bearbeiten</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
@@ -551,20 +551,20 @@ function TerminBearbeitenPanel({
         </button>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Titel</label>
           <input
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Techniker</label>
           <select
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
@@ -576,28 +576,28 @@ function TerminBearbeitenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Start</label>
             <input
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Ende</label>
             <input
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-ind-ink-3">
               <Car size={12} /> Fahrzeit (Min.)
             </label>
             <input
@@ -606,11 +606,11 @@ function TerminBearbeitenPanel({
               value={fahrzeit}
               onChange={(e) => setFahrzeit(e.target.value)}
               placeholder="0"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-ind-ink-3">
               <Coffee size={12} /> Pause danach (Min.)
             </label>
             <input
@@ -619,18 +619,18 @@ function TerminBearbeitenPanel({
               value={pause}
               onChange={(e) => setPause(e.target.value)}
               placeholder="0"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Notiz</label>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Notiz</label>
           <textarea
             value={notiz}
             onChange={(e) => setNotiz(e.target.value)}
             rows={2}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
           />
         </div>
 
@@ -645,7 +645,7 @@ function TerminBearbeitenPanel({
           </button>
           <button
             onClick={speichern}
-            className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white"
+            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium"
           >
             Speichern
           </button>

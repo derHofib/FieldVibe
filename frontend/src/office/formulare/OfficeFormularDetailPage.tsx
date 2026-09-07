@@ -21,7 +21,7 @@ export function OfficeFormularDetailPage() {
   });
 
   if (isLoading) {
-    return <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>;
   }
   if (!formular) {
     return <EmptyState icon={Pencil} text="Formular nicht gefunden." />;

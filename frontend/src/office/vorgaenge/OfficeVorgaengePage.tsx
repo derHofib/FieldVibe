@@ -120,7 +120,7 @@ export function OfficeVorgaengePage() {
           <Search
             size={13}
             strokeWidth={2}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-slate-400 dark:text-stone-500"
+            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ind-ink-3"
           />
           <input
             value={suche}
@@ -155,7 +155,7 @@ export function OfficeVorgaengePage() {
           onClick={() => setZeigeFilter((v) => !v)}
           className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
             zeigeFilter || aktiveFilterAnzahl > 0
-              ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+              ? "btn-industry btn-industry-primary text-white"
               : "border border-slate-200 bg-slate-100 text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
           }`}
         >
@@ -174,13 +174,13 @@ export function OfficeVorgaengePage() {
           {filterChips.map((c) => (
             <span
               key={c.key}
-              className="flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pr-1.5 pl-2.5 text-xs font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-200"
+              className="flex items-center gap-1.5 border border-ind-line py-1 pr-1.5 pl-2.5 text-xs font-medium text-ind-ink-2"
             >
               {c.label}
               <button
                 onClick={() => setField(c.key, "")}
                 aria-label={`${c.label} entfernen`}
-                className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-stone-700 dark:text-stone-400"
+                className="flex h-4 w-4 items-center justify-center border border-ind-line text-ind-ink-2"
               >
                 <X size={9} strokeWidth={3} />
               </button>
@@ -198,7 +198,7 @@ export function OfficeVorgaengePage() {
       {zeigeFilter && (
         <div className="mb-4 space-y-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900">
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+            <div className="mb-1 text-xs font-medium text-ind-ink-3">
               Status (Mehrfachauswahl möglich)
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -211,7 +211,7 @@ export function OfficeVorgaengePage() {
                     onClick={() => toggleStatus(value)}
                     className={`rounded-full px-3 py-1.5 text-xs font-medium ${
                       aktiv
-                        ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                        ? "btn-industry btn-industry-primary text-white"
                         : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
                     }`}
                   >
@@ -225,7 +225,7 @@ export function OfficeVorgaengePage() {
             <select
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -237,7 +237,7 @@ export function OfficeVorgaengePage() {
             <select
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -251,25 +251,25 @@ export function OfficeVorgaengePage() {
               value={filter.faellig_von ?? ""}
               onChange={(e) => setField("faellig_von", e.target.value)}
               title="Fällig ab"
-              className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
             />
             <input
               type="date"
               value={filter.faellig_bis ?? ""}
               onChange={(e) => setField("faellig_bis", e.target.value)}
               title="Fällig bis"
-              className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
             />
             <input
               value={filter.tag ?? ""}
               onChange={(e) => setField("tag", e.target.value)}
               placeholder="#Tag"
-              className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
             />
             <select
               value={filter.sort ?? "last_activity_at"}
               onChange={(e) => setField("sort", e.target.value)}
-              className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
             >
               <option value="last_activity_at">Sortiert nach Aktivität</option>
               <option value="prioritaet">Sortiert nach Priorität</option>
@@ -283,7 +283,7 @@ export function OfficeVorgaengePage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : vorgaenge.length === 0 ? (
         <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
       ) : ansicht === "liste" ? (

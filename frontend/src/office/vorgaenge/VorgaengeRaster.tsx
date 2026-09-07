@@ -102,7 +102,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
           >
             Auswahl aufheben
           </button>
-          <span className="ml-auto font-medium text-slate-400 dark:text-stone-500">
+          <span className="ml-auto font-medium text-ind-ink-3">
             Auswählen mit <Taste>x</Taste> · navigieren mit <Taste>j</Taste> <Taste>k</Taste> ·
             öffnen mit <Taste>Enter</Taste>
           </span>
@@ -115,7 +115,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
           <div key={gruppe} className="mb-4 last:mb-0">
             <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
               {GRUPPEN_LABEL[gruppe]}
-              <span className="font-medium normal-case text-slate-300 dark:text-stone-600">{cards.length}</span>
+              <span className="font-medium normal-case text-ind-ink-3">{cards.length}</span>
             </p>
             <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
               {cards.map((v) => {
@@ -143,14 +143,14 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                     </button>
 
                     <button onClick={() => navigate(`/vorgaenge/${v.id}`)} className="block w-full text-left">
-                      <p className="text-[10px] font-bold text-slate-400 dark:text-stone-500">
+                      <p className="text-[10px] font-bold text-ind-ink-3">
                         {v.vorgangsnummer}
                       </p>
-                      <p className="mt-0.5 pr-5 text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                      <p className="mt-0.5 pr-5 text-[13px] font-semibold text-ind-ink">
                         {v.titel}
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className="truncate text-[11px] text-slate-500 dark:text-stone-400">
+                        <span className="truncate text-[11px] text-ind-ink-3">
                           {v.kunde_name}
                         </span>
                         <span

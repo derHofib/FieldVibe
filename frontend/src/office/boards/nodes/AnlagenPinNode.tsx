@@ -42,7 +42,7 @@ export function AnlagenPinNode({ id, data, selected }: NodeProps<BoardNode>) {
           {anlage ? (
             <>
               <p className="text-[10px] font-bold tracking-wide text-slate-400 uppercase">Anlage</p>
-              <p className="mt-0.5 text-sm font-bold text-slate-800 dark:text-stone-100">{anlage.bezeichnung}</p>
+              <p className="mt-0.5 text-sm font-bold text-ind-ink">{anlage.bezeichnung}</p>
               <div className="mt-2 flex items-center gap-3">
                 <button
                   onClick={() => navigate(`/anlagen/${anlage.id}`)}
@@ -52,7 +52,7 @@ export function AnlagenPinNode({ id, data, selected }: NodeProps<BoardNode>) {
                 </button>
                 <button
                   onClick={() => updateNodeData(id, { anlage_id: null })}
-                  className="text-xs font-medium text-slate-400 dark:text-stone-500"
+                  className="text-xs font-medium text-ind-ink-3"
                 >
                   Entfernen
                 </button>
@@ -60,7 +60,7 @@ export function AnlagenPinNode({ id, data, selected }: NodeProps<BoardNode>) {
             </>
           ) : (
             <>
-              <p className="mb-2 text-xs text-slate-500 dark:text-stone-400">Noch keine Anlage verknüpft.</p>
+              <p className="mb-2 text-xs text-ind-ink-3">Noch keine Anlage verknüpft.</p>
               <SearchableSelect
                 value=""
                 onChange={(v) => {

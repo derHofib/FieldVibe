@@ -20,11 +20,11 @@ const UMSCHALTER = [
 ];
 
 const RECHNUNG_STATUS_BADGE: Record<RechnungStatus, string> = {
-  entwurf: "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400",
-  versendet: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  teilweise_bezahlt: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  bezahlt: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
+  entwurf: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
+  versendet: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  teilweise_bezahlt: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
+  bezahlt: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
 const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
@@ -36,10 +36,10 @@ const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
 };
 
 const ANGEBOT_STATUS_BADGE: Record<AngebotStatus, string> = {
-  entwurf: "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400",
-  versendet: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  angenommen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgelehnt: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  entwurf: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
+  versendet: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  angenommen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  abgelehnt: "border border-rose-400 text-rose-700 dark:border-rose-600 dark:text-rose-300",
 };
 
 const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
@@ -61,7 +61,7 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
   return (
     <Karte className="mb-4 space-y-3 p-4">
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
+        <label className="mb-1 block text-xs font-medium text-ind-ink-3">Kunde</label>
         <SearchableSelect
           value={kundeId}
           onChange={setKundeId}
@@ -77,7 +77,7 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
         >
           Angebot anlegen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-slate-500 dark:text-stone-400">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
           Abbrechen
         </button>
       </div>
@@ -175,16 +175,16 @@ export function OfficeRechnungenPage() {
         ))}
 
       {rechnungen.data && bereich === "rechnungen" && (
-        <div className="mb-4 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-stone-400">
+        <div className="mb-4 flex flex-wrap gap-4 text-xs text-ind-ink-3">
           <span>
             Summe brutto:{" "}
-            <strong className="tabular-nums text-slate-800 dark:text-stone-100">
+            <strong className="tabular-nums text-ind-ink">
               {euro(rechnungen.data.summe_brutto)}
             </strong>
           </span>
           <span>
             Davon offen:{" "}
-            <strong className="tabular-nums text-slate-800 dark:text-stone-100">
+            <strong className="tabular-nums text-ind-ink">
               {euro(rechnungen.data.summe_offen)}
             </strong>
           </span>
@@ -192,7 +192,7 @@ export function OfficeRechnungenPage() {
       )}
 
       {laedt ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : eintraege.length === 0 ? (
         <EmptyState
           icon={bereich === "rechnungen" ? Receipt : FileCheck2}
@@ -211,7 +211,7 @@ export function OfficeRechnungenPage() {
                     : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
                 }`}
               >
-                <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                <p className="truncate text-[13px] font-semibold text-ind-ink">
                   {e.nummer} · <span className="tabular-nums">{e.betrag}</span>
                 </p>
                 {e.zusatz && (
@@ -219,14 +219,14 @@ export function OfficeRechnungenPage() {
                     className={`mt-0.5 truncate text-[11.5px] ${
                       e.warnung
                         ? "font-bold text-rose-600 dark:text-rose-300"
-                        : "text-slate-500 dark:text-stone-400"
+                        : "text-ind-ink-3"
                     }`}
                   >
                     {e.zusatz}
                   </p>
                 )}
                 <span
-                  className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${e.badge}`}
+                  className={`mt-1.5 inline-block px-2 py-0.5 text-[10px] font-semibold ${e.badge}`}
                 >
                   {e.label}
                 </span>

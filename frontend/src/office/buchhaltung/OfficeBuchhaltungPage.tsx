@@ -32,7 +32,7 @@ export function OfficeBuchhaltungPage() {
       <SeitenKopf titel="Buchhaltung" />
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : !data ? (
         <EmptyState icon={Receipt} text="Keine Auswertung verfügbar." />
       ) : (
@@ -99,7 +99,7 @@ function PostenTabelle({
 }) {
   return (
     <div>
-      <h2 className="mb-2 text-sm font-bold text-slate-700 dark:text-stone-200">{titel}</h2>
+      <h2 className="mb-2 text-sm font-bold text-ind-ink">{titel}</h2>
       {eintraege.length === 0 ? (
         <EmptyState icon={Wallet} text="Nichts offen." />
       ) : (
@@ -121,16 +121,16 @@ function PostenTabelle({
                   onClick={() => onOeffnen(e.id)}
                   className="cursor-pointer border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-stone-800 dark:hover:bg-stone-800/50"
                 >
-                  <td className="px-3.5 py-2.5 font-semibold text-slate-600 dark:text-stone-300">
+                  <td className="px-3.5 py-2.5 font-semibold text-ind-ink-2">
                     {e.nummer}
                   </td>
-                  <td className="px-3.5 py-2.5 text-slate-700 dark:text-stone-200">
+                  <td className="px-3.5 py-2.5 text-ind-ink">
                     {e.partner_name}
                   </td>
-                  <td className="px-3.5 py-2.5 text-right font-bold tabular-nums text-slate-800 dark:text-stone-100">
+                  <td className="px-3.5 py-2.5 text-right font-bold tabular-nums text-ind-ink">
                     {euro(e.offener_betrag)}
                   </td>
-                  <td className="px-3.5 py-2.5 tabular-nums text-slate-500 dark:text-stone-400">
+                  <td className="px-3.5 py-2.5 tabular-nums text-ind-ink-3">
                     {e.faellig_am ?? "–"}
                   </td>
                   <td className="px-3.5 py-2.5 text-right">
@@ -139,7 +139,7 @@ function PostenTabelle({
                         {e.tage_ueberfaellig} Tage
                       </span>
                     ) : (
-                      <span className="text-slate-400 dark:text-stone-500">–</span>
+                      <span className="text-ind-ink-3">–</span>
                     )}
                   </td>
                 </tr>

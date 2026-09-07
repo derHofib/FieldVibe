@@ -31,7 +31,7 @@ export function OfficeFormularePage() {
       </SeitenKopf>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : !formulare || formulare.length === 0 ? (
         <EmptyState icon={FileText} text="Noch keine Formulare angelegt." />
       ) : (
@@ -45,11 +45,11 @@ export function OfficeFormularePage() {
               <Karte className="card-interactive h-full p-4">
                 <div className="mb-2.5 flex items-center gap-2.5">
                   <IconBadge icon={FileText} tone={f.aktiv ? "violet" : "slate"} size="sm" />
-                  <p className="text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                  <p className="text-[13px] font-semibold text-ind-ink">
                     {f.name}
                   </p>
                 </div>
-                <p className="mb-2.5 text-[11px] text-slate-500 dark:text-stone-400">
+                <p className="mb-2.5 text-[11px] text-ind-ink-3">
                   {f.felder.length} {f.felder.length === 1 ? "Feld" : "Felder"} ·{" "}
                   {f.anzahl_seiten} {f.anzahl_seiten === 1 ? "Seite" : "Seiten"}
                   {!f.aktiv && " · inaktiv"}

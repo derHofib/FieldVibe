@@ -54,10 +54,10 @@ export function VorgaengeListe({
                       : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
                   }`}
                 >
-                  <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                  <p className="truncate text-[13px] font-semibold text-ind-ink">
                     {v.vorgangsnummer} · {v.titel}
                   </p>
-                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-slate-500 dark:text-stone-400">
+                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-ind-ink-3">
                     <span className="truncate">{v.kunde_name}</span>
                     {istUeberfaellig(v.faelligkeit_am) && (
                       <span className="shrink-0 font-bold text-rose-600 dark:text-rose-300">
@@ -66,7 +66,7 @@ export function VorgaengeListe({
                     )}
                   </p>
                   <span
-                    className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[v.status]}`}
+                    className={`mt-1.5 inline-block px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[v.status]}`}
                   >
                     {STATUS_LABEL[v.status]}
                   </span>
@@ -102,7 +102,7 @@ export function VorgaengeListe({
             <VorgangDetailPage id={aktiv} />
           </>
         ) : (
-          <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">
+          <p className="py-10 text-center text-sm text-ind-ink-3">
             Links einen Vorgang auswählen.
           </p>
         )}

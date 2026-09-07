@@ -71,22 +71,22 @@ export function VorgangKarteNode({ id, data, selected }: NodeProps<BoardNode>) {
         {vorgang ? (
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</p>
-              <p className="mt-0.5 truncate text-[13px] font-bold text-slate-800 dark:text-stone-100">
+              <p className="text-[10px] font-bold text-ind-ink-3">{vorgang.vorgangsnummer}</p>
+              <p className="mt-0.5 truncate text-[13px] font-bold text-ind-ink">
                 {vorgang.titel}
               </p>
               {kunde && (
-                <p className="mt-0.5 truncate text-[11.5px] text-slate-500 dark:text-stone-400">{kunde.name}</p>
+                <p className="mt-0.5 truncate text-[11.5px] text-ind-ink-3">{kunde.name}</p>
               )}
             </div>
             <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}
+              className={`shrink-0 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}
             >
               {STATUS_LABEL[vorgang.status]}
             </span>
           </div>
         ) : (
-          <p className="text-xs text-slate-400 dark:text-stone-500">Lädt…</p>
+          <p className="text-xs text-ind-ink-3">Lädt…</p>
         )}
       </div>
       <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />

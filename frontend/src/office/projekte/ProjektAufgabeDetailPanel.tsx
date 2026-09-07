@@ -286,7 +286,7 @@ export function ProjektAufgabeDetailPanel({
               onChange={(e) => setTitel(e.target.value)}
               placeholder="Titel der Aufgabe"
               className={`w-full border-none p-0 text-base font-bold outline-none dark:bg-transparent ${
-                erledigt ? "text-slate-400 line-through dark:text-stone-500" : "text-slate-800 dark:text-stone-100"
+                erledigt ? "text-slate-400 line-through dark:text-stone-500" : "text-ind-ink"
               }`}
             />
           </div>
@@ -307,7 +307,7 @@ export function ProjektAufgabeDetailPanel({
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={3}
-              className="w-full resize-none rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full resize-none border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
             />
           </div>
 
@@ -320,7 +320,7 @@ export function ProjektAufgabeDetailPanel({
                 type="date"
                 value={faelligkeitAm}
                 onChange={(e) => setFaelligkeitAm(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
             </div>
             <div>
@@ -335,7 +335,7 @@ export function ProjektAufgabeDetailPanel({
                     className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold ${
                       prioritaet === option.wert
                         ? PRIORITAET_AKTIV_KLASSE[option.wert]
-                        : "text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
+                        : "text-slate-500 hover:text-ind-ink-2 dark:hover:text-stone-200"
                     }`}
                   >
                     {option.label}
@@ -353,7 +353,7 @@ export function ProjektAufgabeDetailPanel({
               <select
                 value={spalteId}
                 onChange={(e) => setSpalteId(e.target.value)}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               >
                 {spalten.map((spalte) => (
                   <option key={spalte.id} value={spalte.id}>
@@ -454,7 +454,7 @@ export function ProjektAufgabeDetailPanel({
                     className={`flex-1 text-sm ${
                       punkt.erledigt
                         ? "text-slate-400 line-through dark:text-stone-500"
-                        : "text-slate-800 dark:text-stone-100"
+                        : "text-ind-ink"
                     }`}
                   >
                     {punkt.text}
@@ -468,7 +468,7 @@ export function ProjektAufgabeDetailPanel({
                 </div>
               ))}
               <div className="flex items-center gap-2 py-1">
-                <Plus size={14} strokeWidth={2} className="shrink-0 text-slate-400 dark:text-stone-500" />
+                <Plus size={14} strokeWidth={2} className="shrink-0 text-ind-ink-3" />
                 <input
                   value={neuerPunkt}
                   onChange={(e) => setNeuerPunkt(e.target.value)}
@@ -506,7 +506,7 @@ export function ProjektAufgabeDetailPanel({
                       className={`flex-1 text-sm ${
                         u.erledigt_am
                           ? "text-slate-400 line-through dark:text-stone-500"
-                          : "text-slate-800 dark:text-stone-100"
+                          : "text-ind-ink"
                       }`}
                     >
                       {u.titel}
@@ -520,7 +520,7 @@ export function ProjektAufgabeDetailPanel({
                   </div>
                 ))}
                 <div className="flex items-center gap-2 py-1">
-                  <Plus size={14} strokeWidth={2} className="shrink-0 text-slate-400 dark:text-stone-500" />
+                  <Plus size={14} strokeWidth={2} className="shrink-0 text-ind-ink-3" />
                   <input
                     value={neueUnteraufgabe}
                     onChange={(e) => setNeueUnteraufgabe(e.target.value)}
@@ -556,7 +556,7 @@ export function ProjektAufgabeDetailPanel({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="btn-touch rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-semibold"
             >
               Abbrechen
             </button>

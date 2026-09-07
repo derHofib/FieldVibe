@@ -65,7 +65,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 dark:border-stone-800">
-        <p className="text-sm font-semibold text-slate-800 dark:text-stone-100">{titel}</p>
+        <p className="text-sm font-semibold text-ind-ink">{titel}</p>
         <button
           onClick={onAbbrechen}
           aria-label="Schließen"

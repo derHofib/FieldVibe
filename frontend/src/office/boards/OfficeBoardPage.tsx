@@ -307,21 +307,21 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
   };
 
   if (!board) {
-    return <p className="p-8 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <p className="p-8 text-center text-sm text-ind-ink-3">Lädt…</p>;
   }
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-slate-200 dark:border-stone-800">
+    <div className="flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-ind-line">
       <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 dark:border-stone-800 dark:bg-stone-900">
         <button
           onClick={() => navigate("/boards")}
-          className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-stone-400 dark:hover:text-stone-200"
+          className="text-xs font-semibold text-slate-500 hover:text-ind-ink-2 dark:hover:text-stone-200"
         >
           ← Boards
         </button>
         <div className="h-5 w-px bg-slate-200 dark:bg-stone-700" />
-        <p className="text-sm font-bold text-slate-800 dark:text-stone-100">{board.name}</p>
-        <span className="text-xs text-slate-400 dark:text-stone-500">
+        <p className="text-sm font-bold text-ind-ink">{board.name}</p>
+        <span className="text-xs text-ind-ink-3">
           {speichern.isPending ? "Speichert…" : "Gespeichert"}
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -452,12 +452,12 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
               </>
             )}
             <div className="my-1 h-px bg-slate-100 dark:bg-stone-800" />
-            <span title="Verbinden: von einem Punkt am Rand einer Karte zur naechsten ziehen" className="flex h-9 w-9 items-center justify-center text-slate-300 dark:text-stone-600">
+            <span title="Verbinden: von einem Punkt am Rand einer Karte zur naechsten ziehen" className="flex h-9 w-9 items-center justify-center text-ind-ink-3">
               <ArrowUpRight size={17} strokeWidth={2} />
             </span>
             <span
               title="Duplizieren: Strg/Cmd+D oder Rechtsklick auf eine Karte · Kopieren/Einfügen: Strg/Cmd+C dann Strg/Cmd+V"
-              className="flex h-9 w-9 items-center justify-center text-slate-300 dark:text-stone-600"
+              className="flex h-9 w-9 items-center justify-center text-ind-ink-3"
             >
               <Copy size={15} strokeWidth={2} />
             </span>

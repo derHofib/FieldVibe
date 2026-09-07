@@ -87,7 +87,7 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
               className="min-w-0 rounded-lg"
             >
               <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-xs font-bold text-slate-500 dark:text-stone-400">
+                <span className="text-xs font-bold text-ind-ink-3">
                   {STATUS_LABEL[status]}
                 </span>
                 <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
@@ -110,16 +110,16 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                       className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 text-left dark:bg-stone-900 ${
                         ueberfaellig
                           ? "border-rose-300 dark:border-rose-500/40"
-                          : "border-slate-200 dark:border-stone-800"
+                          : "border-ind-line"
                       }`}
                     >
-                      <p className="text-[10.5px] font-bold text-slate-400 dark:text-stone-500">
+                      <p className="text-[10.5px] font-bold text-ind-ink-3">
                         {v.vorgangsnummer}
                       </p>
-                      <p className="mt-0.5 text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                      <p className="mt-0.5 text-[13px] font-semibold text-ind-ink">
                         {v.titel}
                       </p>
-                      <p className="mt-2 truncate text-[11.5px] text-slate-500 dark:text-stone-400">
+                      <p className="mt-2 truncate text-[11.5px] text-ind-ink-3">
                         {v.kunde_name}
                       </p>
                       <div className="mt-1.5 flex items-center justify-between gap-2">

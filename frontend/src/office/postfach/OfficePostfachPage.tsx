@@ -25,7 +25,7 @@ export function OfficePostfachPage() {
   const aktivesKonto = accounts?.find((a) => a.id === aktivesKontoId) ?? accounts?.[0];
 
   if (isLoading) {
-    return <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>;
   }
 
   if (!accounts || accounts.length === 0 || ansicht.art === "konto-neu") {

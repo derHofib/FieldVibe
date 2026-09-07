@@ -72,14 +72,14 @@ export function OfficeNavSettingsPage() {
       <div>
         <button
           onClick={() => navigate(-1)}
-          className="text-sm text-slate-500 dark:text-stone-400"
+          className="text-sm text-ind-ink-3"
         >
           ‹ Zurück
         </button>
-        <h1 className="mt-1 text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h1 className="mt-1 text-lg font-bold text-ind-ink">
           Seitenleiste anpassen
         </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <p className="mt-1 text-sm text-ind-ink-3">
           Wähle, welche Bereiche in deiner Office-Seitenleiste erscheinen sollen. Die Auswahl
           gilt nur für dich und ändert nichts an deinen eigentlichen Rechten.
         </p>
@@ -87,7 +87,7 @@ export function OfficeNavSettingsPage() {
 
       {gruppen.map(({ kategorie, seiten }) => (
         <section key={kategorie} className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
             {kategorie}
           </h2>
           <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
@@ -103,7 +103,7 @@ export function OfficeNavSettingsPage() {
                   className="size-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-stone-600 dark:bg-stone-800"
                 />
                 <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
-                <span className="min-w-0 flex-1 truncate font-medium text-slate-800 dark:text-stone-100">
+                <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">
                   {seite.label}
                 </span>
               </label>

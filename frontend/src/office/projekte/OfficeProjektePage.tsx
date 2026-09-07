@@ -104,7 +104,7 @@ export function OfficeProjektePage() {
   };
 
   if (projekteLaden) {
-    return <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>;
   }
 
   return (
@@ -114,7 +114,7 @@ export function OfficeProjektePage() {
           <select
             value={aktivesProjekt ?? ""}
             onChange={(e) => setProjektId(e.target.value)}
-            className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm font-medium dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="border border-ind-line bg-transparent px-2.5 py-1.5 text-sm font-medium text-ind-ink"
           >
             {projekte.map((p) => (
               <option key={p.id} value={p.id}>
@@ -136,14 +136,14 @@ export function OfficeProjektePage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name</label>
+              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Name</label>
               <input
                 autoFocus
                 value={neuerProjektName}
                 onChange={(e) => setNeuerProjektName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && neuerProjektName.trim() && projektErstellen.mutate()}
                 placeholder="z. B. Neubau Lagerhalle"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
               />
             </div>
             <button
@@ -155,7 +155,7 @@ export function OfficeProjektePage() {
             </button>
             <button
               onClick={() => setZeigeNeuesProjekt(false)}
-              className="rounded-lg px-3 py-2 text-xs font-medium text-slate-500 dark:text-stone-400"
+              className="rounded-lg px-3 py-2 text-xs font-medium text-ind-ink-3"
             >
               Abbrechen
             </button>
@@ -192,7 +192,7 @@ export function OfficeProjektePage() {
                 className="w-72 shrink-0 rounded-lg"
               >
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-xs font-bold text-slate-500 dark:text-stone-400">{spalte.name}</span>
+                  <span className="text-xs font-bold text-ind-ink-3">{spalte.name}</span>
                   <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
                     {karten.length}
                   </span>
@@ -213,10 +213,10 @@ export function OfficeProjektePage() {
                         }}
                         onClick={() => setPanel({ aufgabe: a })}
                         className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 text-left dark:bg-stone-900 ${
-                          ueberfaellig ? "border-rose-300 dark:border-rose-500/40" : "border-slate-200 dark:border-stone-800"
+                          ueberfaellig ? "border-rose-300 dark:border-rose-500/40" : "border-ind-line"
                         }`}
                       >
-                        <p className="text-[13px] font-semibold text-slate-800 dark:text-stone-100">{a.titel}</p>
+                        <p className="text-[13px] font-semibold text-ind-ink">{a.titel}</p>
                         {a.vorgang_vorgangsnummer && (
                           <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-sky-600 dark:text-sky-300">
                             <Link2 size={11} strokeWidth={2} />
@@ -233,13 +233,13 @@ export function OfficeProjektePage() {
                             </span>
                           )}
                           {checklisteGesamt > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-stone-500">
+                            <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
                               <CheckSquare size={11} strokeWidth={2} />
                               {checklisteErledigt}/{checklisteGesamt}
                             </span>
                           )}
                           {!!a.unteraufgaben_gesamt && (
-                            <span className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-stone-500">
+                            <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
                               <ListTree size={11} strokeWidth={2} />
                               {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
                             </span>
