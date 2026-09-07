@@ -55,9 +55,9 @@ function AdresseBearbeiten({
     return (
       <div className="mt-1 flex items-center gap-2">
         {zeile ? (
-          <p className="text-sm text-slate-500 dark:text-stone-400">{zeile}</p>
+          <p className="text-sm text-ind-ink-3">{zeile}</p>
         ) : (
-          kannVerwalten && <p className="text-sm text-slate-400 dark:text-stone-500">Keine Adresse hinterlegt.</p>
+          kannVerwalten && <p className="text-sm text-ind-ink-3">Keine Adresse hinterlegt.</p>
         )}
         {kannVerwalten && (
           <button
@@ -75,32 +75,32 @@ function AdresseBearbeiten({
   }
 
   return (
-    <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+    <div className="mt-2 space-y-2 border border-ind-line-2 p-2">
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
         />
       </div>
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -200,26 +200,26 @@ function AnlagenVerwaltung({
 
   if (modus === "neu") {
     return (
-      <form onSubmit={handleSubmitNeu} className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+      <form onSubmit={handleSubmitNeu} className="space-y-2 border border-ind-line-2 p-3">
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
           placeholder="Bezeichnung"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
         />
         <input
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="Typ (optional)"
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
         />
         {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={neuMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -236,16 +236,16 @@ function AnlagenVerwaltung({
   }
 
   return (
-    <div className="space-y-2 rounded-lg bg-slate-50 p-3 dark:bg-stone-800/60">
+    <div className="space-y-2 border border-ind-line-2 p-3">
       {zuordenbar.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-stone-500">
+        <p className="text-sm text-ind-ink-3">
           Keine weiteren Anlagen dieses Kunden verfügbar.
         </p>
       ) : (
         <select
           value={zuordnenId}
           onChange={(e) => setZuordnenId(e.target.value)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
         >
           <option value="">Anlage wählen…</option>
           {zuordenbar.map((a) => (
@@ -260,7 +260,7 @@ function AnlagenVerwaltung({
         <button
           disabled={!zuordnenId || zuordnenMutation.isPending}
           onClick={() => zuordnenMutation.mutate()}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Zuordnen
         </button>
@@ -303,12 +303,12 @@ export function StandortDetailPage() {
     },
   });
 
-  if (isLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading || !profil) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -326,9 +326,9 @@ export function StandortDetailPage() {
         )}
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-start justify-between">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.bezeichnung}</h1>
+          <h1 className="text-lg font-bold text-ind-ink">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
               onClick={() => toggleAktivMutation.mutate()}
@@ -355,10 +355,10 @@ export function StandortDetailPage() {
         <AdresseBearbeiten standortId={id!} adresse={profil.adresse} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Auswertung</h2>
+      <div className="border border-ind-line bg-ind-bg p-4">
+        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Auswertung</h2>
         {Object.keys(profil.vorgaenge_nach_status).length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Vorgänge an diesem Standort.</p>
+          <p className="text-sm text-ind-ink-3">Noch keine Vorgänge an diesem Standort.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
@@ -376,7 +376,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Assets an diesem Standort</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Assets an diesem Standort</h2>
         {profil.anlagen.length === 0 ? (
           <EmptyState icon={Boxes} text="Keine Assets an diesem Standort." className="py-4" />
         ) : (
@@ -390,8 +390,8 @@ export function StandortDetailPage() {
                 }`}
               >
                 <div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{a.bezeichnung}</div>
-                  {a.anlagentyp && <div className="text-xs text-slate-400 dark:text-stone-500">{a.anlagentyp}</div>}
+                  <div className="text-sm font-medium text-ind-ink">{a.bezeichnung}</div>
+                  {a.anlagentyp && <div className="text-xs text-ind-ink-3">{a.anlagentyp}</div>}
                 </div>
                 {!a.aktiv && (
                   <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
@@ -411,7 +411,7 @@ export function StandortDetailPage() {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Vorgänge an diesem Standort</h2>
+        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Vorgänge an diesem Standort</h2>
         {profil.vorgaenge.length === 0 ? (
           <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
@@ -425,7 +425,7 @@ export function StandortDetailPage() {
                 }`}
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">
+                  <div className="text-xs text-ind-ink-3">
                     {v.vorgangsnummer}
                     {v.dauerauftrag_id && (
                       <>
@@ -434,7 +434,7 @@ export function StandortDetailPage() {
                       </>
                     )}
                   </div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
+                  <div className="text-sm font-medium text-ind-ink">{v.titel}</div>
                 </div>
                 <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
                   {v.status}
