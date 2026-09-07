@@ -88,7 +88,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         ) : (
           <span className="text-xs text-ind-ink-3">Kein Logo hinterlegt</span>
         )}
-        <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300">
+        <label className="btn-touch cursor-pointer btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-medium">
           Logo hochladen
           <input
             type="file"

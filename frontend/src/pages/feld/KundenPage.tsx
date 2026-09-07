@@ -76,7 +76,7 @@ export function KundenPage() {
         {istModulAktiv(currentUser, "kundenportal") && (
           <button
             onClick={() => navigate("/anfragen")}
-            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
           >
             Auftragsanfragen
           </button>
@@ -85,7 +85,7 @@ export function KundenPage() {
 
       <button
         onClick={() => setShowForm((v) => !v)}
-        className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+        className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-medium"
       >
         {showForm ? "Abbrechen" : "+ Neuer Kunde"}
       </button>

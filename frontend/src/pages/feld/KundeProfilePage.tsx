@@ -557,7 +557,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
               {kannVerwalten && (
                 <button
                   onClick={() => toggleAktivMutation.mutate({ id: s.id, aktiv: !s.aktiv })}
-                  className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+                  className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
                 >
                   {s.aktiv ? "Deaktivieren" : "Aktivieren"}
                 </button>
@@ -772,7 +772,7 @@ function AnlageAktivToggle({ anlage, kundeId }: { anlage: Anlage; kundeId: strin
     <button
       onClick={() => toggleMutation.mutate()}
       disabled={toggleMutation.isPending}
-      className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+      className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
     >
       {anlage.aktiv ? "Deaktivieren" : "Aktivieren"}
     </button>
@@ -799,7 +799,7 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
       </div>
       <button
         onClick={() => toggleMutation.mutate()}
-        className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+        className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
       >
         {zugang.aktiv ? "Deaktivieren" : "Aktivieren"}
       </button>
@@ -875,7 +875,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
                 className="h-12 w-12 rounded-md object-contain ring-1 ring-slate-200 dark:ring-stone-700"
               />
             )}
-            <label className="btn-touch cursor-pointer rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300">
+            <label className="btn-touch cursor-pointer btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold">
               {kunde.logo_object_key ? "Logo ersetzen" : "Logo hochladen"}
               <input
                 type="file"

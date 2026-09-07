@@ -451,7 +451,7 @@ function LvPositionFormular({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="btn-touch rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-semibold"
             >
               Abbrechen
             </button>

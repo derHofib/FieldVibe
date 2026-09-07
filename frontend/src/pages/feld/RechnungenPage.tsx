@@ -47,7 +47,7 @@ function AngeboteListe() {
     <div className="space-y-4">
       <button
         onClick={() => setShowForm((v) => !v)}
-        className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+        className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-medium"
       >
         {showForm ? "Abbrechen" : "+ Neues Angebot"}
       </button>
@@ -160,7 +160,7 @@ export function RechnungenPage() {
         {bereich === "rechnungen" && (
           <button
             onClick={exportieren}
-            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-sm font-medium"
           >
             CSV-Export
           </button>
@@ -195,7 +195,7 @@ export function RechnungenPage() {
         <>
           <button
             onClick={() => setZeigeNeu((v) => !v)}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-medium"
           >
             {zeigeNeu ? "Abbrechen" : "+ Neue Rechnung"}
           </button>
@@ -328,7 +328,7 @@ export function RechnungenPage() {
           {gibtMehr && (
             <button
               onClick={() => setSeiten((v) => v + 1)}
-              className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch w-full btn-industry btn-industry-secondary px-3 py-2 text-sm font-medium"
             >
               Mehr laden
             </button>
