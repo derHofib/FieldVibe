@@ -564,12 +564,12 @@ export function FeedPage() {
               />
             </Suspense>
             {ohneKoordinatenAnzahl > 0 && (
-              <p className="text-center text-xs text-slate-400 dark:text-stone-500">
+              <p className="text-center text-xs text-ind-ink-3">
                 {ohneKoordinatenAnzahl} von {cards.length} Vorgängen ohne Standort nicht auf der Karte angezeigt.
               </p>
             )}
             {hasNextPage && (
-              <p className="text-center text-xs text-slate-400 dark:text-stone-500">Lädt weitere Vorgänge…</p>
+              <p className="text-center text-xs text-ind-ink-3">Lädt weitere Vorgänge…</p>
             )}
           </>
         )

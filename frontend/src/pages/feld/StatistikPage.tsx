@@ -67,19 +67,19 @@ export function StatistikPage() {
 
       {statistik && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="border border-ind-line bg-ind-bg p-3 text-center">
             <div className="text-xl font-bold text-ind-ink">
               {formatStundenAlsHHMM(Number(statistik.wochenstunden))}
             </div>
             <div className="text-xs text-ind-ink-3">Std. diese Woche</div>
           </div>
-          <div className="rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="border border-ind-line bg-ind-bg p-3 text-center">
             <div className="text-xl font-bold text-ind-ink">
               {formatStundenAlsHHMM(Number(statistik.monatsstunden))}
             </div>
             <div className="text-xs text-ind-ink-3">Std. dieser Monat</div>
           </div>
-          <div className="rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="border border-ind-line bg-ind-bg p-3 text-center">
             <div className="text-xl font-bold text-ind-ink">
               {formatStundenAlsHHMM(Number(statistik.jahresstunden))}
             </div>

@@ -116,7 +116,7 @@ export function FormularePage() {
             <button
               key={f.id}
               onClick={() => navigate(`/formulare/${f.id}`)}
-              className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
             >
               <div>
                 <div className="text-sm font-medium text-ind-ink">{f.name}</div>

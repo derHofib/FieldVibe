@@ -83,7 +83,7 @@ function AngeboteListe() {
             <button
               key={a.id}
               onClick={() => navigate(`/angebote/${a.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="card-interactive btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
             >
               <div>
                 <div className="text-xs text-ind-ink-3">{a.angebotsnummer}</div>
@@ -260,7 +260,7 @@ export function RechnungenPage() {
           </div>
 
           {data && (
-            <div className="grid grid-cols-3 gap-2 rounded-lg bg-white p-3 text-center shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <div className="grid grid-cols-3 gap-2 border border-ind-line bg-ind-bg p-3 text-center">
               <div>
                 <div className="text-xs text-ind-ink-3">Treffer</div>
                 <div className="text-sm font-semibold tabular-nums text-ind-ink">

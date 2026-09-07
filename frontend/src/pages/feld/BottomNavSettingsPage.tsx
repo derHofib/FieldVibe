@@ -153,7 +153,7 @@ export function BottomNavSettingsPage() {
                 <button
                   key={seite.key}
                   onClick={() => platzWaehlen(bearbeiteterPlatz.index, seite.key)}
-                  className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                  className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-3 text-left"
                 >
                   <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={false} />
                   <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">
@@ -225,7 +225,7 @@ export function BottomNavSettingsPage() {
               <button
                 key={seite.key}
                 onClick={() => rotundeHinzufuegen(seite.key)}
-                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-3 text-left"
               >
                 <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={false} />
                 <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">

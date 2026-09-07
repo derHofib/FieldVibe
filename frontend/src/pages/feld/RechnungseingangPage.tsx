@@ -237,7 +237,7 @@ export function RechnungseingangPage() {
           <button
             key={e.id}
             onClick={() => navigate(`/rechnungseingang/${e.id}`)}
-            className="btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+            className="btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
           >
             <div>
               <div className="text-sm font-semibold text-ind-ink">
