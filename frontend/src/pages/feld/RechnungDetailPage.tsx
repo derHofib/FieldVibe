@@ -75,7 +75,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
             <span className="flex-1 text-ind-ink">
               {v.beschreibung}, {v.menge} {v.einheit} × {v.einzelpreis} EUR
             </span>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-stone-800 dark:text-stone-400">
+            <span className="border border-ind-line px-2 py-0.5 text-[10px] font-semibold text-ind-ink-3">
               {v.quelle === "material" ? "Material" : v.quelle === "leistung" ? "Leistungsverzeichnis" : "Zeiterfassung"}
             </span>
           </label>

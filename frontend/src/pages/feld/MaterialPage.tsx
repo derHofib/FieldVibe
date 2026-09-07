@@ -266,7 +266,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
               className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
             >
               <span className="text-ind-ink">{l.bezeichnung}</span>
-              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+              <span className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
                 {OBJEKTTYP_LABEL[l.objekttyp]}
               </span>
             </button>
@@ -830,7 +830,7 @@ export function MaterialPage() {
                     className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
                   >
                     <span className="text-ind-ink">{b.bestellnummer}</span>
-                    <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                    <span className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
                       {BESTELLUNG_STATUS_LABEL[b.status]}
                     </span>
                   </button>

@@ -216,7 +216,7 @@ export function PartnerPage() {
                 )}
               </div>
               {!p.aktiv && (
-                <span className="rounded-full bg-slate-200 px-2 py-1 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                <span className="border border-ind-line px-2 py-1 text-xs text-ind-ink-2">
                   inaktiv
                 </span>
               )}

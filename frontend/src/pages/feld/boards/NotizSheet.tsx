@@ -69,7 +69,7 @@ export function NeueNotizSheet({
 
   return (
     <SheetGeruest onClose={onAbbrechen}>
-      <h2 className="mb-3 text-base font-bold text-slate-800 dark:text-stone-100">Neue Notiz</h2>
+      <h2 className="mb-3 text-base font-bold text-ind-ink">Neue Notiz</h2>
       <textarea
         autoFocus
         value={text}
@@ -98,7 +98,7 @@ export function NeueNotizSheet({
         >
           Auf Board setzen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-slate-500 dark:text-stone-400">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
           Abbrechen
         </button>
       </div>
@@ -131,7 +131,7 @@ export function NotizAktionSheet({
   if (modus === "bearbeiten") {
     return (
       <SheetGeruest onClose={onAbbrechen}>
-        <h2 className="mb-3 text-base font-bold text-slate-800 dark:text-stone-100">Notiz bearbeiten</h2>
+        <h2 className="mb-3 text-base font-bold text-ind-ink">Notiz bearbeiten</h2>
         <textarea
           autoFocus
           value={text}
@@ -158,7 +158,7 @@ export function NotizAktionSheet({
           >
             Speichern
           </button>
-          <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-slate-500 dark:text-stone-400">
+          <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
             Abbrechen
           </button>
         </div>
@@ -194,7 +194,7 @@ export function NotizAktionSheet({
               onClick={onDuplizieren}
               aria-label="Duplizieren"
               title="Duplizieren"
-              className="btn-touch flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+              className="btn-touch flex h-7 w-7 items-center justify-center border border-ind-line text-ind-ink-2"
             >
               <Copy size={13} strokeWidth={2.25} />
             </button>
@@ -202,7 +202,7 @@ export function NotizAktionSheet({
           <button
             onClick={onAbbrechen}
             aria-label="Schließen"
-            className="btn-touch flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+            className="btn-touch flex h-7 w-7 items-center justify-center border border-ind-line text-ind-ink-2"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -220,8 +220,8 @@ export function NotizAktionSheet({
           <Link2 size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
-          <span className="block text-sm font-bold text-slate-800 dark:text-stone-100">Neuer Vorgang</span>
-          <span className="block text-xs text-slate-400 dark:text-stone-500">Kunde, Leistungsart und Abrechnung wählen</span>
+          <span className="block text-sm font-bold text-ind-ink">Neuer Vorgang</span>
+          <span className="block text-xs text-ind-ink-3">Kunde, Leistungsart und Abrechnung wählen</span>
         </span>
       </button>
       <button
@@ -232,8 +232,8 @@ export function NotizAktionSheet({
           <AlertTriangle size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
-          <span className="block text-sm font-bold text-slate-800 dark:text-stone-100">Mangel melden</span>
-          <span className="block text-xs text-slate-400 dark:text-stone-500">An bestehenden Vorgang hängen</span>
+          <span className="block text-sm font-bold text-ind-ink">Mangel melden</span>
+          <span className="block text-xs text-ind-ink-3">An bestehenden Vorgang hängen</span>
         </span>
       </button>
 
@@ -282,7 +282,7 @@ function NeuerVorgangForm({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-bold text-slate-800 dark:text-stone-100">Neuer Vorgang</h2>
+      <h2 className="text-base font-bold text-ind-ink">Neuer Vorgang</h2>
       <SearchableSelect
         value={kundeId}
         onChange={setKundeId}
@@ -292,7 +292,7 @@ function NeuerVorgangForm({
       <select
         value={leistungstyp}
         onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
       >
         {LEISTUNGSTYP_OPTIONEN.map((o) => (
           <option key={o.value} value={o.value}>
@@ -303,7 +303,7 @@ function NeuerVorgangForm({
       <select
         value={abrechnungsart}
         onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
       >
         {ABRECHNUNGSART_OPTIONEN.map((o) => (
           <option key={o.value} value={o.value}>
@@ -320,7 +320,7 @@ function NeuerVorgangForm({
         >
           Vorgang anlegen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-slate-500 dark:text-stone-400">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
           Zurück
         </button>
       </div>
@@ -346,7 +346,7 @@ function MangelMeldenForm({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-bold text-slate-800 dark:text-stone-100">Mangel melden</h2>
+      <h2 className="text-base font-bold text-ind-ink">Mangel melden</h2>
       <SearchableSelect
         value={vorgangId}
         onChange={setVorgangId}
@@ -369,7 +369,7 @@ function MangelMeldenForm({
         >
           Mangel melden
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-slate-500 dark:text-stone-400">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
           Zurück
         </button>
       </div>

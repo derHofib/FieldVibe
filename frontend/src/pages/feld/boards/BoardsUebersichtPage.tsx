@@ -73,8 +73,8 @@ export function BoardsUebersichtPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Boards</h1>
-          <span className="text-sm font-medium text-slate-400 dark:text-stone-500">{boards?.length ?? 0}</span>
+          <h1 className="text-lg font-bold text-ind-ink">Boards</h1>
+          <span className="text-sm font-medium text-ind-ink-3">{boards?.length ?? 0}</span>
         </div>
         <button
           onClick={() => setZeigeNeu((v) => !v)}
@@ -92,12 +92,12 @@ export function BoardsUebersichtPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z. B. Projektplanung Rheinblick"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
           />
           <select
             value={typ}
             onChange={(e) => setTyp(e.target.value as BoardTyp)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
           >
             {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
               <option key={t} value={t}>
@@ -115,7 +115,7 @@ export function BoardsUebersichtPage() {
             </button>
             <button
               onClick={() => setZeigeNeu(false)}
-              className="text-sm font-medium text-slate-500 dark:text-stone-400"
+              className="text-sm font-medium text-ind-ink-3"
             >
               Abbrechen
             </button>
@@ -140,7 +140,7 @@ export function BoardsUebersichtPage() {
       </div>
 
       {isLoading ? (
-        <p className="py-8 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <p className="py-8 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : gefiltert.length === 0 ? (
         <EmptyState icon={StickyNote} text="Noch keine Boards angelegt." />
       ) : (
@@ -157,8 +157,8 @@ export function BoardsUebersichtPage() {
                   <Icon size={19} strokeWidth={2} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14.5px] font-bold text-slate-800 dark:text-stone-100">{b.name}</p>
-                  <p className="mt-0.5 text-xs text-slate-400 dark:text-stone-500">
+                  <p className="truncate text-[14.5px] font-bold text-ind-ink">{b.name}</p>
+                  <p className="mt-0.5 text-xs text-ind-ink-3">
                     {TYP_LABEL[b.board_typ]} &middot; {relativeZeit(b.updated_at)}
                   </p>
                 </div>

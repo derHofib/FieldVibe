@@ -61,18 +61,18 @@ function VorgangKarteAnsicht({ data }: { data: VorgangKarteDaten }) {
         {vorgang ? (
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</p>
-              <p className="mt-0.5 truncate text-[13px] font-bold text-slate-800 dark:text-stone-100">{vorgang.titel}</p>
-              {kunde && <p className="mt-0.5 truncate text-[11px] text-slate-500 dark:text-stone-400">{kunde.name}</p>}
+              <p className="text-[10px] font-bold text-ind-ink-3">{vorgang.vorgangsnummer}</p>
+              <p className="mt-0.5 truncate text-[13px] font-bold text-ind-ink">{vorgang.titel}</p>
+              {kunde && <p className="mt-0.5 truncate text-[11px] text-ind-ink-3">{kunde.name}</p>}
             </div>
             <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}
+              className={`shrink-0 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}
             >
               {STATUS_LABEL[vorgang.status]}
             </span>
           </div>
         ) : (
-          <p className="text-xs text-slate-400 dark:text-stone-500">Lädt…</p>
+          <p className="text-xs text-ind-ink-3">Lädt…</p>
         )}
       </div>
     </div>
@@ -93,8 +93,8 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "text": {
       const { text } = data as TextDaten;
       return (
-        <div className="w-[170px] text-sm font-semibold text-slate-700 dark:text-stone-200">
-          {text || <span className="text-slate-300 dark:text-stone-600">Leerer Text</span>}
+        <div className="w-[170px] text-sm font-semibold text-ind-ink">
+          {text || <span className="text-ind-ink-3">Leerer Text</span>}
         </div>
       );
     }
@@ -146,8 +146,8 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { label, sub } = data as ProzessSchrittDaten;
       return (
         <div className="w-[150px] rounded-xl border-[1.5px] border-slate-200 bg-white p-2.5 shadow-sm dark:border-stone-700 dark:bg-stone-900">
-          <p className="text-[12px] font-bold text-slate-800 dark:text-stone-100">{label}</p>
-          {sub && <p className="mt-0.5 text-[10px] text-slate-400 dark:text-stone-500">{sub}</p>}
+          <p className="text-[12px] font-bold text-ind-ink">{label}</p>
+          {sub && <p className="mt-0.5 text-[10px] text-ind-ink-3">{sub}</p>}
         </div>
       );
     }
@@ -172,8 +172,8 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const erledigt = punkte.filter((p) => p.erledigt).length;
       return (
         <div className="w-[170px] rounded-xl bg-white p-2.5 shadow-md dark:bg-stone-900">
-          <p className="truncate text-[11px] font-bold text-slate-700 dark:text-stone-200">{titel || "Checkliste"}</p>
-          <p className="mt-0.5 text-[10px] text-slate-400 dark:text-stone-500">
+          <p className="truncate text-[11px] font-bold text-ind-ink">{titel || "Checkliste"}</p>
+          <p className="mt-0.5 text-[10px] text-ind-ink-3">
             {erledigt}/{punkte.length} erledigt
           </p>
         </div>
@@ -184,7 +184,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       return (
         <div className="flex w-[150px] items-center gap-1.5 rounded-xl bg-white p-2.5 shadow-md dark:bg-stone-900">
           <Paperclip size={13} strokeWidth={2} className="shrink-0 text-cyan-600 dark:text-cyan-400" />
-          <span className="truncate text-[11px] font-medium text-slate-600 dark:text-stone-300">
+          <span className="truncate text-[11px] font-medium text-ind-ink-2">
             {dateiname || "Kein Anhang"}
           </span>
         </div>

@@ -156,7 +156,7 @@ export function AnlagenFelderPage() {
                   >
                     <span className="text-sm text-ind-ink">{f.feld_name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                      <span className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
                         {FELD_TYP_LABEL[f.feld_typ]}
                       </span>
                       <button

@@ -45,7 +45,7 @@ function VorgangZeile({ vorgangId, onOeffnen }: { vorgangId: string; onOeffnen: 
   return (
     <button
       onClick={onOeffnen}
-      className="btn-touch flex w-full items-center gap-3 rounded-xl bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+      className="btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-3 text-left"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
         <Link2 size={15} strokeWidth={2} />
@@ -53,15 +53,15 @@ function VorgangZeile({ vorgangId, onOeffnen }: { vorgangId: string; onOeffnen: 
       <span className="min-w-0 flex-1">
         {vorgang ? (
           <>
-            <span className="block truncate text-sm font-bold text-slate-800 dark:text-stone-100">{vorgang.titel}</span>
-            <span className="block text-xs text-slate-400 dark:text-stone-500">{vorgang.vorgangsnummer}</span>
+            <span className="block truncate text-sm font-bold text-ind-ink">{vorgang.titel}</span>
+            <span className="block text-xs text-ind-ink-3">{vorgang.vorgangsnummer}</span>
           </>
         ) : (
-          <span className="text-sm text-slate-400 dark:text-stone-500">Lädt…</span>
+          <span className="text-sm text-ind-ink-3">Lädt…</span>
         )}
       </span>
       {vorgang && (
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}>
+        <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap ${STATUS_BADGE[vorgang.status]}`}>
           {STATUS_LABEL[vorgang.status]}
         </span>
       )}
@@ -184,7 +184,7 @@ export function BoardMobilePage() {
   const offenerNode = offeneNotizId ? nodes.find((n) => n.id === offeneNotizId) : null;
 
   if (!board) {
-    return <p className="py-8 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <p className="py-8 text-center text-sm text-ind-ink-3">Lädt…</p>;
   }
 
   return (
@@ -193,7 +193,7 @@ export function BoardMobilePage() {
         <div className="flex items-center justify-between">
           <button
             onClick={() => navigate("/boards")}
-            className="btn-touch -ml-1 flex items-center gap-0.5 text-sm font-medium text-slate-500 dark:text-stone-400"
+            className="btn-touch -ml-1 flex items-center gap-0.5 text-sm font-medium text-ind-ink-3"
           >
             <ChevronLeft size={16} strokeWidth={2.25} /> Boards
           </button>
@@ -209,26 +209,26 @@ export function BoardMobilePage() {
           </button>
         </div>
         <div className="mt-0.5 flex items-baseline gap-2">
-          <h1 className="truncate text-lg font-bold text-slate-800 dark:text-stone-100">{board.name}</h1>
-          <span className="shrink-0 text-xs text-slate-400 dark:text-stone-500">
+          <h1 className="truncate text-lg font-bold text-ind-ink">{board.name}</h1>
+          <span className="shrink-0 text-xs text-ind-ink-3">
             {speichern.isPending ? "Speichert…" : "Gespeichert"}
           </span>
         </div>
       </div>
 
-      <div className="inline-flex rounded-full bg-white p-1 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="inline-flex border border-ind-line">
         <button
           onClick={() => setAnsicht("liste")}
-          className={`btn-touch rounded-full px-4 py-1.5 text-xs font-semibold ${
-            ansicht === "liste" ? "bg-slate-800 text-white dark:bg-stone-100 dark:text-stone-900" : "text-slate-500 dark:text-stone-400"
+          className={`btn-touch px-4 py-1.5 text-xs font-semibold ${
+            ansicht === "liste" ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-3 hover:bg-ind-hover"
           }`}
         >
           Liste
         </button>
         <button
           onClick={() => setAnsicht("canvas")}
-          className={`btn-touch rounded-full px-4 py-1.5 text-xs font-semibold ${
-            ansicht === "canvas" ? "bg-slate-800 text-white dark:bg-stone-100 dark:text-stone-900" : "text-slate-500 dark:text-stone-400"
+          className={`btn-touch border-l border-ind-line px-4 py-1.5 text-xs font-semibold ${
+            ansicht === "canvas" ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-3 hover:bg-ind-hover"
           }`}
         >
           Canvas
@@ -237,7 +237,7 @@ export function BoardMobilePage() {
 
       {ansicht === "liste" ? (
         notizen.length === 0 ? (
-          <p className="py-8 text-center text-sm text-slate-400 dark:text-stone-500">
+          <p className="py-8 text-center text-sm text-ind-ink-3">
             Noch keine Notizen auf diesem Board.
           </p>
         ) : (
@@ -265,9 +265,9 @@ export function BoardMobilePage() {
           </div>
         )
       ) : (
-        <div className="relative h-[calc(100dvh-280px)] min-h-[320px] overflow-hidden rounded-xl border border-slate-200 dark:border-stone-800">
+        <div className="relative h-[calc(100dvh-280px)] min-h-[320px] overflow-hidden rounded-xl border border-ind-line">
           <Suspense
-            fallback={<div className="flex h-full items-center justify-center text-sm text-slate-400 dark:text-stone-500">Lädt…</div>}
+            fallback={<div className="flex h-full items-center justify-center text-sm text-ind-ink-3">Lädt…</div>}
           >
             <BoardCanvasAnsicht nodes={nodes} edges={edges} onNodeTap={nodeTippen} />
           </Suspense>
@@ -276,13 +276,13 @@ export function BoardMobilePage() {
 
       <button
         onClick={() => setZeigeNeueNotiz(true)}
-        className="btn-clay fixed right-4 bottom-24 z-30 flex items-center gap-2 rounded-full bg-white py-2 pr-4 pl-2.5 shadow-lg dark:bg-stone-900"
+        className="fixed right-4 bottom-24 z-30 flex items-center gap-2 border border-ind-line bg-ind-bg py-2 pr-4 pl-2.5 shadow-lg"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-r from-cyan-500 to-blue-600 text-white">
-          <Plus size={18} strokeWidth={2.5} />
+        <span className="flex h-9 w-9 items-center justify-center bg-ind-btn-bg text-ind-btn-ink">
+          <Plus size={18} strokeWidth={1.5} />
         </span>
-        <span className="flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-stone-100">
+        <span className="flex items-center gap-1.5 text-sm font-bold text-ind-ink">
           <StickyNote size={14} strokeWidth={2} /> Notiz
         </span>
       </button>

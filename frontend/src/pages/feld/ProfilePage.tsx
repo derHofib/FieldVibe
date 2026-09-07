@@ -19,7 +19,7 @@ export function ProfilePage() {
     <div className="space-y-4">
       <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-lg font-bold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <div className="flex h-12 w-12 items-center justify-center border border-ind-line text-lg font-bold text-ind-ink-2">
             {currentUser?.name?.slice(0, 1)}
           </div>
           <div>

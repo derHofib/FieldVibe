@@ -362,7 +362,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 <div>
                   <div className="text-ind-ink-2">
                     {p.positionstyp === "arbeitszeit" && (
-                      <span className="mr-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                      <span className="mr-1.5 border border-amber-400 px-1.5 py-0.5 text-xs text-amber-700 dark:border-amber-600 dark:text-amber-300">
                         {POSITIONSTYP_LABEL.arbeitszeit}
                       </span>
                     )}
