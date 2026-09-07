@@ -1021,8 +1021,10 @@ export interface LvMaterialPosten {
 
 export interface LeistungsverzeichnisPosition {
   id: string;
-  // NULL = gilt fuer alle Kunden (mandantenweiter Katalog).
-  kunde_id: string | null;
+  // Leer = gilt fuer alle Kunden. Eine Position kann keinem, einem oder
+  // mehreren Kunden zugewiesen sein. Nur bei eigenstaendigen Positionen
+  // gefuellt, Unterpunkte haben immer [].
+  kunden_ids: string[];
   // Gesetzt = Unterpunkt eines Hauptpunkts, eine Ebene tief.
   eltern_position_id: string | null;
   bezeichnung: string;

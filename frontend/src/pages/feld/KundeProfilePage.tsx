@@ -587,7 +587,7 @@ function NeueLvPosition({ kundeId }: { kundeId: string }) {
   const createMutation = useMutation({
     mutationFn: () =>
       leistungsverzeichnisApi.create({
-        kunde_id: kundeId,
+        kunden_ids: [kundeId],
         bezeichnung,
         einheit,
         einzelpreis: einzelpreis || undefined,
@@ -727,11 +727,11 @@ function LeistungsverzeichnisVerwaltung({ kundeId, kannVerwalten }: { kundeId: s
     queryKey: ["leistungsverzeichnis", kundeId],
     queryFn: () => leistungsverzeichnisApi.list(kundeId),
   });
-  // list(kundeId) liefert bewusst zusaetzlich den mandantenweiten Katalog
-  // mit (siehe leistungsverzeichnisApi.list) -- hier zaehlt aber nur, was
-  // fuer DIESEN Kunden als Sonderkondition angelegt wurde; der allgemeine
-  // Katalog wird zentral unter "Leistungsverzeichnis" gepflegt.
-  const positionen = alle?.filter((p) => p.kunde_id === kundeId);
+  // list(kundeId) liefert bewusst zusaetzlich den allgemeinen Katalog mit
+  // (siehe leistungsverzeichnisApi.list) -- hier zaehlt aber nur, was fuer
+  // DIESEN Kunden als Sonderkondition angelegt wurde; der komplette Katalog
+  // wird zentral unter "Leistungsverzeichnis" gepflegt.
+  const positionen = alle?.filter((p) => p.kunden_ids.includes(kundeId));
 
   return (
     <div>

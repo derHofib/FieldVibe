@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, ClipboardList, Plus, X } from "lucide-react";
 import { useState } from "react";
 
-import { leistungsverzeichnisApi, materialApi } from "../../api/endpoints";
+import { kundenApi, leistungsverzeichnisApi, materialApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -90,12 +90,57 @@ function MaterialPostenZeile({
   );
 }
 
+/** Mehrfachauswahl von Kunden -- SearchableSelect kennt nur Einzelauswahl,
+ * deshalb hier: gewaehlte Kunden als entfernbare Chips, darunter dieselbe
+ * SearchableSelect zum Hinzufuegen eines weiteren (leert sich nach jeder
+ * Auswahl, gleiches Prinzip wie die Materialposten-Zeile). Leer = gilt fuer
+ * alle Kunden. */
+function KundenZuweisung({ kundenIds, onChange }: { kundenIds: string[]; onChange: (ids: string[]) => void }) {
+  const { data: kunden } = useQuery({ queryKey: ["kunden-alle"], queryFn: () => kundenApi.list() });
+
+  return (
+    <div>
+      <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+        Kunden-Zuweisung
+      </label>
+      <p className="mb-1.5 text-xs text-slate-400 dark:text-stone-500">Leer = gilt für alle Kunden</p>
+      {kundenIds.length > 0 && (
+        <div className="mb-1.5 flex flex-wrap gap-1.5">
+          {kundenIds.map((id) => (
+            <span
+              key={id}
+              className="flex items-center gap-1 rounded-full bg-violet-100 py-0.5 pr-1 pl-2.5 text-xs font-medium text-violet-700 dark:bg-violet-500/10 dark:text-violet-300"
+            >
+              {kunden?.find((k) => k.id === id)?.name ?? "…"}
+              <button
+                onClick={() => onChange(kundenIds.filter((x) => x !== id))}
+                className="rounded-full p-0.5 hover:bg-violet-200 dark:hover:bg-violet-500/20"
+              >
+                <X size={11} strokeWidth={2.5} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <SearchableSelect
+        value=""
+        onChange={(id) => {
+          if (!kundenIds.includes(id)) onChange([...kundenIds, id]);
+        }}
+        placeholder="Kunde hinzufügen…"
+        options={(kunden ?? [])
+          .filter((k) => !kundenIds.includes(k.id))
+          .map((k) => ({ value: k.id, label: k.name }))}
+      />
+    </div>
+  );
+}
+
 /** Neu-Anlage (position=null) und Bearbeiten teilen sich dieses Formular.
  * elternPositionId setzt es in den Unterpunkt-Modus (kein "Stundensatz"-
- * Flag, kunde_id wird serverseitig vom Hauptpunkt geerbt). Hat die
- * bearbeitete Position bereits eigene Unterpunkte, ist ihr Preis rein
- * rechnerisch die Summe daraus -- die Kalkulationsfelder werden dann nur
- * schreibgeschuetzt als Info angezeigt. */
+ * Flag, keine eigene Kunden-Zuweisung). Hat die bearbeitete Position bereits
+ * eigene Unterpunkte, ist ihr Preis rein rechnerisch die Summe daraus -- die
+ * Kalkulationsfelder werden dann nur schreibgeschuetzt als Info angezeigt. */
 function LvPositionFormular({
   position,
   elternPositionId,
@@ -124,6 +169,7 @@ function LvPositionFormular({
   const [lohnStundensatz, setLohnStundensatz] = useState(position?.lohn_stundensatz ?? "");
   const [materialPosten, setMaterialPosten] = useState<LvMaterialPosten[]>(position?.material_posten ?? []);
   const [materialAufschlag, setMaterialAufschlag] = useState(position?.material_aufschlag_prozent ?? "0");
+  const [kundenIds, setKundenIds] = useState<string[]>(position?.kunden_ids ?? []);
   const [error, setError] = useState<string | null>(null);
 
   const { data: stundensaetze } = useQuery({
@@ -152,6 +198,7 @@ function LvPositionFormular({
         lohn_stundensatz: kalkulationsmodus === "berechnet" ? lohnStundensatz || null : null,
         material_posten: kalkulationsmodus === "berechnet" ? materialPosten : [],
         material_aufschlag_prozent: kalkulationsmodus === "berechnet" ? materialAufschlag : "0",
+        kunden_ids: istUnterpunkt ? undefined : kundenIds,
       };
       return istNeu
         ? leistungsverzeichnisApi.create({ eltern_position_id: elternPositionId, ...body })
@@ -227,6 +274,8 @@ function LvPositionFormular({
               Als Stundenverrechnungssatz in der Zeiterfassung wählbar
             </label>
           )}
+
+          {!istUnterpunkt && <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />}
 
           {gesperrt ? (
             <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-500 dark:bg-stone-800/60 dark:text-stone-400">
@@ -452,6 +501,17 @@ function LvHauptpunktZeile({ position }: { position: LeistungsverzeichnisPositio
     queryFn: () => leistungsverzeichnisApi.unterpunkte(position.id),
     enabled: offen,
   });
+  const { data: kunden } = useQuery({
+    queryKey: ["kunden-alle"],
+    queryFn: () => kundenApi.list(),
+    enabled: position.kunden_ids.length > 0,
+  });
+  const kundenBadge =
+    position.kunden_ids.length === 0
+      ? null
+      : position.kunden_ids.length === 1
+        ? (kunden?.find((k) => k.id === position.kunden_ids[0])?.name ?? "1 Kunde")
+        : `${position.kunden_ids.length} Kunden`;
 
   return (
     <div className="rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
@@ -470,9 +530,9 @@ function LvHauptpunktZeile({ position }: { position: LeistungsverzeichnisPositio
                 SVS
               </span>
             )}
-            {position.kunde_id && (
+            {kundenBadge && (
               <span className="ml-2 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-normal text-violet-700 dark:bg-violet-500/10 dark:text-violet-300">
-                kundenspezifisch
+                {kundenBadge}
               </span>
             )}
           </p>
@@ -515,12 +575,15 @@ function LvHauptpunktZeile({ position }: { position: LeistungsverzeichnisPositio
   );
 }
 
-/** Mandantenweiter Leistungskatalog mit Kalkulator: Hauptpunkte koennen
- * Unterpunkte bekommen (eine Ebene tief), deren Lohn/Material-Kalkulation
- * sich automatisch zum Hauptpunkt-Preis summiert (siehe app/api/routes/
- * leistungsverzeichnis.py). Kundenspezifische Sonderkonditionen werden
- * weiterhin direkt am Kunden gepflegt (siehe KundeProfilePage.tsx), diese
- * Seite zeigt nur den allgemeinen Katalog. */
+/** Kompletter Leistungskatalog eines Mandanten mit Kalkulator: zeigt ALLE
+ * eigenstaendigen Positionen zusammen -- allgemeine (keinem Kunden
+ * zugewiesen) und kundenspezifische. Hauptpunkte koennen Unterpunkte
+ * bekommen (eine Ebene tief), deren Lohn/Material-Kalkulation sich
+ * automatisch zum Hauptpunkt-Preis summiert (siehe app/api/routes/
+ * leistungsverzeichnis.py). Eine Position kann keinem, einem oder mehreren
+ * Kunden zugewiesen werden (siehe KundenZuweisung); KundeProfilePage.tsx
+ * zeigt zusaetzlich eine schnelle, auf den jeweiligen Kunden gefilterte
+ * Sicht. */
 export function LeistungsverzeichnisPage() {
   const { hatRecht } = useAuth();
   const kannVerwalten = hatRecht("kunden", "bearbeiten");

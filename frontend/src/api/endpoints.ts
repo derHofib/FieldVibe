@@ -1246,7 +1246,7 @@ export const materialApi = {
 };
 
 interface LvPositionSchreibbarePfelder {
-  kunde_id?: string;
+  kunden_ids?: string[];
   eltern_position_id?: string;
   bezeichnung: string;
   einheit?: string;
@@ -1261,9 +1261,10 @@ interface LvPositionSchreibbarePfelder {
 }
 
 export const leistungsverzeichnisApi = {
-  // Ohne kundeId: nur der mandantenweite Katalog (Hauptpunkte/eigenstaendige
-  // Eintraege). Mit kundeId: zusaetzlich die kundenspezifischen Eintraege
-  // dieses Kunden -- siehe app/api/routes/leistungsverzeichnis.py.
+  // Ohne kundeId: ALLE eigenstaendigen Positionen des Mandanten (allgemeine
+  // und kundenspezifische zusammen -- die Uebersichtsseite). Mit kundeId:
+  // nur die fuer diesen Kunden anwendbaren (allgemeine + ihm zugewiesene) --
+  // siehe app/api/routes/leistungsverzeichnis.py.
   list: (kundeId?: string, nurStundensaetze = false) => {
     const params = new URLSearchParams();
     if (kundeId) params.set("kunde_id", kundeId);
