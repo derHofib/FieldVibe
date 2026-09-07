@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenportalAuthApi } from "../../api/endpoints";
-import { Starfield } from "../../components/Starfield";
+import Blueprint from "../../components/Blueprint";
 import { useKundenAuth } from "../../context/KundenAuthContext";
 
 export function PortalRegistrierenPage() {
@@ -32,53 +32,47 @@ export function PortalRegistrierenPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950">
-      <Starfield />
-      <div className="relative w-full max-w-sm rounded-xl border border-cyan-400/20 bg-slate-900/60 p-8 shadow-[0_0_45px_-10px_rgba(34,211,238,0.25)] backdrop-blur-xl">
-        <h1 className="mb-6 text-xl font-bold text-white">
-          Kunden<span className="text-cyan-400">portal</span> — Zugang einrichten
+    <div className="flex min-h-screen items-center justify-center bg-ind-bg p-4">
+      <Blueprint className="w-full max-w-sm bg-ind-bg p-8">
+        <h1 className="mb-6 font-heading text-xl font-semibold uppercase tracking-wide text-ind-ink">
+          Kunden<span className="text-ind-acc-txt">portal</span> — Zugang einrichten
         </h1>
 
         {!token && (
-          <p className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          <p className="mb-4 border border-red-500/40 px-3 py-2 text-sm text-red-600 dark:text-red-400">
             Der Link ist unvollständig. Bitte den Einladungslink erneut vom Betrieb anfordern.
           </p>
         )}
 
         <form onSubmit={handleSubmit}>
           {error && (
-            <div className="mb-4 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            <div className="mb-4 border border-red-500/40 px-3 py-2 text-sm text-red-600 dark:text-red-400">
               {error}
             </div>
           )}
 
-          <label className="mb-1 block text-sm font-medium text-slate-300">Name</label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="btn-touch mb-4 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
-          />
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
+          <input required value={name} onChange={(e) => setName(e.target.value)} className="input-industry btn-touch mb-4" />
 
-          <label className="mb-1 block text-sm font-medium text-slate-300">Passwort</label>
+          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Passwort</label>
           <input
             type="password"
             required
             minLength={10}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="btn-touch mb-6 w-full rounded-md border border-slate-700 bg-slate-800/60 px-3 py-2 text-white placeholder:text-slate-500 focus:border-cyan-400/60 focus:outline-hidden focus:ring-1 focus:ring-cyan-400/60"
+            className="input-industry btn-touch mb-6"
           />
 
           <button
             type="submit"
             disabled={submitting || !token}
-            className="btn-touch w-full rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 font-medium text-white shadow-[0_0_20px_-5px_rgba(34,211,238,0.6)] hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50"
+            className="btn-touch btn-industry btn-industry-primary w-full py-2 disabled:opacity-50"
           >
             {submitting ? "Registrieren…" : "Zugang einrichten"}
           </button>
         </form>
-      </div>
+      </Blueprint>
     </div>
   );
 }

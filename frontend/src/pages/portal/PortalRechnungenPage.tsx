@@ -15,18 +15,18 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
   });
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="border border-ind-line bg-ind-bg p-4">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-slate-400 dark:text-stone-500">{rechnung.rechnungsnummer}</div>
-          <div className="font-medium text-slate-800 dark:text-stone-100">{rechnung.betrag_brutto} EUR</div>
+          <div className="text-xs text-ind-ink-3">{rechnung.rechnungsnummer}</div>
+          <div className="font-medium text-ind-ink">{rechnung.betrag_brutto} EUR</div>
           {rechnung.faellig_am && (
-            <div className="text-xs text-slate-500 dark:text-stone-400">
+            <div className="text-xs text-ind-ink-3">
               Fällig am {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
             </div>
           )}
         </div>
-        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+        <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
           {RECHNUNG_STATUS_LABEL[rechnung.status]}
         </span>
       </div>
@@ -49,7 +49,7 @@ export function PortalRechnungenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Ihre Rechnungen</h1>
+      <h1 className="text-lg font-bold text-ind-ink">Ihre Rechnungen</h1>
       {isLoading ? (
         <SkeletonList count={3} />
       ) : !rechnungen || rechnungen.length === 0 ? (
