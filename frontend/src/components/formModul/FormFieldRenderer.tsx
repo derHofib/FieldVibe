@@ -1,7 +1,6 @@
-// Rendert ein einzelnes FormField anhand seines feld_typ -- Pendant zu
-// FeldRenderer in pages/feld/FormularAusfuellenPage.tsx (altes Modell),
-// aber key-basiert statt UUID-basiert und ohne Positions-/Seiten-Bezug
-// (das ist Sache der jeweiligen View, nicht des Feld-Renderers selbst).
+// Rendert ein einzelnes FormField anhand seines feld_typ, key-basiert (nicht
+// UUID-basiert) und ohne Positions-/Seiten-Bezug (das ist Sache der
+// jeweiligen View, nicht des Feld-Renderers selbst).
 import { Camera, MapPin, PenLine, ScanLine } from "lucide-react";
 import { useRef, useState } from "react";
 

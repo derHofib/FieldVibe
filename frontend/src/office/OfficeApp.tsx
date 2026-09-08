@@ -12,7 +12,9 @@ import { DauerauftragDetailPage } from "../pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "../pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "../pages/feld/DauerauftraegePage";
 import { EingangsrechnungDetailPage } from "../pages/feld/EingangsrechnungDetailPage";
-import { FormularAusfuellenPage } from "../pages/feld/FormularAusfuellenPage";
+import { FormSchemaEditorPage } from "../pages/feld/FormSchemaEditorPage";
+import { FormSchemasPage } from "../pages/feld/FormSchemasPage";
+import { FormSubmissionAusfuellenPage } from "../pages/feld/FormSubmissionAusfuellenPage";
 import { HighlightsPage } from "../pages/feld/HighlightsPage";
 import { InsightsPage } from "../pages/feld/InsightsPage";
 import { IntegrationenPage } from "../pages/feld/IntegrationenPage";
@@ -45,18 +47,20 @@ import { OfficeBoardPage } from "./boards/OfficeBoardPage";
 import { OfficeBoardsPage } from "./boards/OfficeBoardsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
-import { OfficeFormularDetailPage } from "./formulare/OfficeFormularDetailPage";
-import { OfficeFormularePage } from "./formulare/OfficeFormularePage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 
-/** Router der Desktop-Oberflaeche. Die vier ausgebauten Bereiche (Vorgaenge,
- * Rechnungen/Angebote, Formulare, Dispo/Buchhaltung) haben eigene, auf die
- * Breite ausgelegte Seiten; alles Uebrige nutzt bewusst dieselbe Komponente
- * wie die Feld-App -- diese Seiten sind ohnehin schmale Formular-/
- * Detailansichten, fuer die eine zweite Fassung nur Pflegeaufwand waere. */
+/** Router der Desktop-Oberflaeche. Die drei ausgebauten Bereiche (Vorgaenge,
+ * Rechnungen/Angebote, Dispo/Buchhaltung) haben eigene, auf die Breite
+ * ausgelegte Seiten; alles Uebrige nutzt bewusst dieselbe Komponente wie die
+ * Feld-App -- diese Seiten sind ohnehin schmale Formular-/Detailansichten,
+ * fuer die eine zweite Fassung nur Pflegeaufwand waere. Das Formular-Modul
+ * (Schema-Editor + Ausfuellen) gehoert bewusst hierher statt zu den
+ * ausgebauten Bereichen: kein Drag&Drop-Canvas mehr (siehe Nicht-Ziel im
+ * Migrationsplan), also keine Breite noetig, die eine eigene Desktop-Seite
+ * rechtfertigen wuerde. */
 export function OfficeApp() {
   const { currentUser } = useAuth();
   const startseite = currentUser?.role === "loesch_ansicht" ? "/papierkorb" : "/vorgaenge";
@@ -69,8 +73,6 @@ export function OfficeApp() {
         <Route path="/dispo" element={<OfficeDispoPage />} />
         <Route path="/rechnungen" element={<OfficeRechnungenPage />} />
         <Route path="/angebote" element={<OfficeRechnungenPage />} />
-        <Route path="/formulare" element={<OfficeFormularePage />} />
-        <Route path="/formulare/:id" element={<OfficeFormularDetailPage />} />
         <Route path="/auswertung" element={<OfficeBuchhaltungPage />} />
         <Route path="/postfach" element={<OfficePostfachPage />} />
         <Route path="/boards" element={<OfficeBoardsPage />} />
@@ -90,7 +92,9 @@ export function OfficeApp() {
         <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
         <Route path="/standorte/:id" element={<StandortDetailPage />} />
         <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
-        <Route path="/vorgang-formulare/:id" element={<FormularAusfuellenPage />} />
+        <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
+        <Route path="/form-schemas" element={<FormSchemasPage />} />
+        <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
         <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
         <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
         <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />

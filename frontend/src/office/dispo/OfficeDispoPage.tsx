@@ -86,7 +86,7 @@ interface Techniker {
 
 /** Gantt-Dispo: Zeilen = Techniker, Spalten = Tagesstunden. Bestehende
  * Termine sind per react-rnd verschieb-/verlaengerbar (dieselbe Bibliothek
- * wie FormularRasterEditor -- volle Kontrolle, keine neue Abhaengigkeit).
+ * wie ein freihaendiger Pointer-Handler -- volle Kontrolle, keine neue Abhaengigkeit).
  * Unbisponierte Vorgaenge (kein aktiver Termin, siehe app/models/termin.py)
  * sammeln sich links nach Faelligkeit sortiert und werden per natives
  * Drag&Drop (gleiche Technik wie DispoBoardPage.tsx) in die Zeitachse

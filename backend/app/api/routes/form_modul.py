@@ -36,6 +36,7 @@ from app.models.kunde import Kunde
 from app.models.standort import Standort
 from app.models.user import User
 from app.models.vorgang import Vorgang
+from app.models.vorgang_event import VorgangEvent
 from app.schemas.form_modul import (
     FormAuftragstypZuordnungCreate,
     FormAuftragstypZuordnungRead,
@@ -69,6 +70,7 @@ from app.schemas.form_modul import (
     FormViewUpdate,
 )
 from app.services import form_modul_service, storage_service
+from app.services.event_bus import event_bus
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
 from app.services.pdf_service import generate_form_submission_pdf
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
@@ -687,12 +689,12 @@ async def list_submissions(
     vorgang_id: UUID = Query(...),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> list[FormSubmission]:
+) -> list[FormSubmissionRead]:
     await _require_own_vorgang(session, auth, vorgang_id)
     result = await session.execute(
         select(FormSubmission).where(FormSubmission.vorgang_id == vorgang_id).order_by(FormSubmission.created_at.desc())
     )
-    return list(result.scalars().all())
+    return [await form_modul_service.to_submission_read(session, s) for s in result.scalars().all()]
 
 
 @submissions_router.post("", response_model=FormSubmissionRead, status_code=status.HTTP_201_CREATED)
@@ -701,7 +703,7 @@ async def start_submission(
     vorgang_id: UUID = Query(...),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> FormSubmission:
+) -> FormSubmissionRead:
     vorgang = await _require_own_vorgang(session, auth, vorgang_id)
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(
@@ -732,14 +734,15 @@ async def start_submission(
     session.add(submission)
     await session.flush()
     await session.refresh(submission)
-    return submission
+    return await form_modul_service.to_submission_read(session, submission)
 
 
 @submissions_router.get("/{submission_id}", response_model=FormSubmissionRead)
 async def get_submission(
     submission_id: UUID, auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
-) -> FormSubmission:
-    return await _get_own_submission(session, auth, submission_id)
+) -> FormSubmissionRead:
+    submission = await _get_own_submission(session, auth, submission_id)
+    return await form_modul_service.to_submission_read(session, submission)
 
 
 @submissions_router.get("/{submission_id}/pdf")
@@ -801,7 +804,7 @@ async def update_submission_values(
     body: FormSubmissionValuesUpdate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
-) -> FormSubmission:
+) -> FormSubmissionRead:
     """Autosave: ersetzt die uebergebenen Top-Level-Keys in `values`
     (Root-Feld-Key oder Gruppen-Key mit der kompletten neuen Zeilen-Liste),
     unveraenderte Keys bleiben erhalten. Schreibt fuer jeden tatsaechlich
@@ -829,7 +832,7 @@ async def update_submission_values(
     submission.values = neue_werte
     await session.flush()
     await session.refresh(submission)
-    return submission
+    return await form_modul_service.to_submission_read(session, submission)
 
 
 @submissions_router.post("/{submission_id}/dateien")
@@ -901,7 +904,7 @@ def _missing_pflichtfelder(fields: list[FormField], states: dict, values: dict) 
 @submissions_router.post("/{submission_id}/abschliessen", response_model=FormSubmissionRead)
 async def abschliessen_submission(
     submission_id: UUID, auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
-) -> FormSubmission:
+) -> FormSubmissionRead:
     submission = await _get_own_submission(session, auth, submission_id)
     if submission.status != "offen":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ausfüllung ist bereits abgeschlossen")
@@ -920,11 +923,34 @@ async def abschliessen_submission(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"Pflichtfelder fehlen: {', '.join(fehlend)}"
         )
 
+    schema = await session.get(FormSchema, submission.schema_id)
     submission.status = "abgeschlossen"
     submission.abgeschlossen_am = datetime.now(timezone.utc)
+
+    # Feed-Eintrag (Pendant zu abschliessen_vorgang_formular im alten
+    # Modul) -- derselbe event_type "formular" (Check-Constraint erlaubt
+    # ihn weiterhin), ref_entity_type "form_submission" statt
+    # "vorgang_formular" markiert die Herkunft aus dem neuen Modul.
+    session.add(
+        VorgangEvent(
+            mandant_id=auth.mandant_id,
+            vorgang_id=submission.vorgang_id,
+            event_type="formular",
+            author_user_id=auth.user_id,
+            body=schema.name if schema else None,
+            payload={"form_submission_id": str(submission.id)},
+            ref_entity_type="form_submission",
+            ref_entity_id=submission.id,
+            kundensichtbar=submission.kundensichtbar,
+        )
+    )
     await session.flush()
     await session.refresh(submission)
-    return submission
+
+    await event_bus.publish(
+        auth.mandant_id, "vorgang_event", {"vorgang_id": str(submission.vorgang_id), "event_type": "formular"}
+    )
+    return await form_modul_service.to_submission_read(session, submission)
 
 
 @submissions_router.delete("/{submission_id}", status_code=status.HTTP_204_NO_CONTENT)

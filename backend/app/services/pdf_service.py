@@ -10,7 +10,6 @@ from fpdf.util import builtin_srgb2014_bytes
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.form_modul import FormField, FormGroup, FormPresentationElement, FormSubmission, FormViewFieldLayout
-from app.models.formular import GRID_SPALTEN, VorgangFormular
 from app.models.kunde import Kunde
 from app.models.lieferant import Lieferant
 from app.models.mandant import Mandant
@@ -614,48 +613,6 @@ def generate_bestellung_pdf(
     return bytes(pdf.output())
 
 
-def _formular_antwort_text(feld: dict, antwort: object) -> str:
-    if antwort is None or antwort == "":
-        return "-"
-    if feld["feld_typ"] == "ja_nein":
-        return "Ja" if antwort else "Nein"
-    if feld["feld_typ"] == "mehrfachauswahl" and isinstance(antwort, list):
-        return _pdf_safe_text(", ".join(str(v) for v in antwort) or "-")
-    return _pdf_safe_text(antwort)
-
-
-def generate_formular_pdf(
-    mandant: Mandant,
-    vorgang: Vorgang,
-    vorgang_formular: VorgangFormular,
-    bilder: dict[str, bytes],
-    ist_vorschau: bool = False,
-) -> bytes:
-    """bilder enthaelt die heruntergeladenen Rohbytes je Foto-/
-    Unterschrift-Feld (feld_id -> Bilddaten) -- der Route-Handler laedt
-    diese vorher async aus dem Storage, da diese Funktion selbst
-    synchron laeuft (siehe app/api/routes/vorgang_formulare.py).
-    snapshot_version unterscheidet drei historisch gewachsene Layout-
-    Formate (siehe formular_service.snapshot_von): 3 = freie Positionierung
-    auf expliziten A4-Seiten (aktuell, wie MS-Access-Formular-Designer),
-    2 = 12-Spalten-Raster mit automatischem Seitenumbruch, kein Feld/fehlend
-    = urspruenglicher Flow-Renderer. Aeltere, bereits abgeschlossene
-    Ausfuellungen laufen immer ueber den zu ihrer Version passenden
-    Renderer, damit einmal ausgestellte PDFs bit-identisch reproduzierbar
-    bleiben -- neue Snapshots werden nur noch in Version 3 erzeugt.
-    ist_vorschau=True setzt einen Hinweisbanner auf Seite 1 (siehe
-    _formular_vorschau_banner) -- fuer einen Export VOR dem Abschliessen,
-    waehrend der Techniker noch ausfuellt (kein archiviertes, sondern ein
-    jederzeit neu gerendertes Dokument, siehe vorgang_formular_pdf)."""
-    snapshot = vorgang_formular.formular_snapshot
-    version = snapshot.get("snapshot_version")
-    if version == 3:
-        return _generate_formular_pdf_freeform(mandant, vorgang, vorgang_formular, bilder, ist_vorschau)
-    if version == 2:
-        return _generate_formular_pdf_raster(mandant, vorgang, vorgang_formular, bilder, ist_vorschau)
-    return _generate_formular_pdf_legacy(mandant, vorgang, vorgang_formular, bilder, ist_vorschau)
-
-
 def _formular_vorschau_banner(pdf: FPDF) -> None:
     """Auffaelliger Hinweis auf Seite 1, wenn das PDF vor dem Abschliessen
     der Ausfuellung erzeugt wird -- verhindert, dass eine Vorschau mit
@@ -672,80 +629,15 @@ def _formular_vorschau_banner(pdf: FPDF) -> None:
     pdf.ln(2)
 
 
-def _generate_formular_pdf_legacy(
-    mandant: Mandant,
-    vorgang: Vorgang,
-    vorgang_formular: VorgangFormular,
-    bilder: dict[str, bytes],
-    ist_vorschau: bool = False,
-) -> bytes:
-    snapshot = vorgang_formular.formular_snapshot
-    antworten = vorgang_formular.antworten
-
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(
-        0,
-        6,
-        _pdf_safe_text(f"{snapshot.get('name', 'Formular')}: {vorgang.vorgangsnummer} - {vorgang.titel}"),
-        new_x=XPos.LMARGIN,
-        new_y=YPos.NEXT,
-    )
-    pdf.cell(
-        0,
-        6,
-        f"Ausgefuellt am {_fmt_datum(vorgang_formular.abgeschlossen_am or vorgang_formular.created_at)}",
-        new_x=XPos.LMARGIN,
-        new_y=YPos.NEXT,
-    )
-    pdf.ln(6)
-    if ist_vorschau:
-        _formular_vorschau_banner(pdf)
-
-    for feld in sorted(snapshot.get("felder", []), key=lambda f: f["reihenfolge"]):
-        if feld["feld_typ"] == "abschnitt":
-            pdf.set_font("Helvetica", "B", 12)
-            pdf.cell(0, 8, _pdf_safe_text(feld["label"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            pdf.ln(1)
-            continue
-
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 6, _pdf_safe_text(feld["label"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_font("Helvetica", "", 10)
-
-        antwort = antworten.get(feld["id"])
-        if feld["feld_typ"] in ("foto", "unterschrift"):
-            bild = bilder.get(feld["id"])
-            if bild:
-                try:
-                    pdf.image(BytesIO(bild), h=40)
-                except RuntimeError:
-                    pdf.cell(0, 6, "[Bild konnte nicht eingebettet werden]", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            else:
-                pdf.cell(0, 6, "-", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        else:
-            pdf.multi_cell(0, 6, _formular_antwort_text(feld, antwort))
-        pdf.ln(2)
-
-    if not snapshot.get("felder"):
-        pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
-    return bytes(pdf.output())
-
-
 _FORMULAR_RAND_LR = 15
 _FORMULAR_RAND_OBEN_FOLGESEITE = 22
 _FORMULAR_RAND_UNTEN = 15
 
 
 class _FormularPDF(FPDF):
-    """Eigene Subklasse fuer die positionsbasierten Renderer (snapshot_
-    version 2 = Raster, 3 = freie Positionierung) -- Seite 1 traegt den
-    vollen Kopf (Mandant/Formularname/Vorgang/Datum) als normalen Flow-Text
-    (siehe _generate_formular_pdf_raster/_generate_formular_pdf_freeform),
+    """Eigene Subklasse fuer den positionsbasierten Formular-Renderer
+    (siehe generate_form_submission_pdf) -- Seite 1 traegt den vollen Kopf
+    (Mandant/Schema-Name/Vorgang/Datum) als normalen Flow-Text,
     Folgeseiten nur eine schmale Kennzeile, analog zum Muster in
     _AngebotPDF."""
 
@@ -770,194 +662,6 @@ class _FormularPDF(FPDF):
             ),
         )
         self.set_text_color(0, 0, 0)
-
-
-def _formular_spaltenbreite_mm(pdf: FPDF) -> float:
-    nutzbare_breite = pdf.w - pdf.l_margin - pdf.r_margin
-    return nutzbare_breite / GRID_SPALTEN
-
-
-def _render_formular_feld_zelle(
-    pdf: FPDF,
-    feld: dict,
-    antwort: object,
-    bild: bytes | None,
-    x: float,
-    y: float,
-    breite: float,
-    hoehe: float,
-) -> None:
-    if feld["feld_typ"] == "abschnitt":
-        pdf.set_xy(x, y + hoehe / 2 - 3)
-        pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(breite, 6, _pdf_safe_text(feld["label"]))
-        pdf.line(x, y + hoehe - 1, x + breite, y + hoehe - 1)
-        return
-
-    label_hoehe = min(4.0, hoehe / 2)
-    pdf.set_xy(x, y)
-    pdf.set_font("Helvetica", "", 7)
-    pdf.set_text_color(110, 110, 110)
-    pdf.cell(breite, label_hoehe, _pdf_safe_text(feld["label"]))
-    pdf.set_text_color(0, 0, 0)
-
-    wert_y = y + label_hoehe
-    wert_hoehe = max(hoehe - label_hoehe, 3.0)
-    if feld["feld_typ"] in ("foto", "unterschrift"):
-        if bild:
-            try:
-                pdf.image(BytesIO(bild), x=x, y=wert_y, w=breite, h=wert_hoehe)
-            except RuntimeError:
-                pdf.set_xy(x, wert_y)
-                pdf.set_font("Helvetica", "", 9)
-                pdf.cell(breite, wert_hoehe, "[Bild konnte nicht eingebettet werden]")
-        else:
-            pdf.set_xy(x, wert_y)
-            pdf.set_font("Helvetica", "", 9)
-            pdf.cell(breite, wert_hoehe, "-")
-        return
-
-    pdf.set_xy(x, wert_y)
-    pdf.set_font("Helvetica", "", 9)
-    pdf.multi_cell(breite, min(wert_hoehe, 5.0), _formular_antwort_text(feld, antwort))
-
-
-def _generate_formular_pdf_raster(
-    mandant: Mandant,
-    vorgang: Vorgang,
-    vorgang_formular: VorgangFormular,
-    bilder: dict[str, bytes],
-    ist_vorschau: bool = False,
-) -> bytes:
-    snapshot = vorgang_formular.formular_snapshot
-    antworten = vorgang_formular.antworten
-    formular_name = snapshot.get("name", "Formular")
-    zeilenhoehe_mm = snapshot.get("zeilenhoehe_mm", 8)
-    felder = sorted(snapshot.get("felder", []), key=lambda f: (f["raster_zeile"], f["raster_spalte"]))
-
-    pdf = _FormularPDF(mandant, formular_name, vorgang.vorgangsnummer)
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(
-        0,
-        6,
-        _pdf_safe_text(f"{formular_name}: {vorgang.vorgangsnummer} - {vorgang.titel}"),
-        new_x=XPos.LMARGIN,
-        new_y=YPos.NEXT,
-    )
-    pdf.cell(
-        0,
-        6,
-        f"Ausgefuellt am {_fmt_datum(vorgang_formular.abgeschlossen_am or vorgang_formular.created_at)}",
-        new_x=XPos.LMARGIN,
-        new_y=YPos.NEXT,
-    )
-    pdf.ln(4)
-    if ist_vorschau:
-        _formular_vorschau_banner(pdf)
-
-    if not felder:
-        pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        return bytes(pdf.output())
-
-    spaltenbreite_mm = _formular_spaltenbreite_mm(pdf)
-    raster_start_y = pdf.get_y()
-    seite_start_zeile = 0
-
-    def zeilen_kapazitaet(start_y: float) -> int:
-        verfuegbar = pdf.h - pdf.b_margin - start_y
-        return max(int(verfuegbar // zeilenhoehe_mm), 1)
-
-    kapazitaet = zeilen_kapazitaet(raster_start_y)
-
-    for feld in felder:
-        lokale_zeile = feld["raster_zeile"] - seite_start_zeile
-        if lokale_zeile + feld["raster_hoehe"] > kapazitaet:
-            # Feld wuerde ueber die Seitengrenze ragen -- komplett auf die
-            # naechste Seite verschieben statt anzuschneiden (siehe Docstring
-            # von generate_formular_pdf).
-            pdf.add_page()
-            seite_start_zeile = feld["raster_zeile"]
-            raster_start_y = _FORMULAR_RAND_OBEN_FOLGESEITE
-            kapazitaet = zeilen_kapazitaet(raster_start_y)
-            lokale_zeile = 0
-
-        x = pdf.l_margin + feld["raster_spalte"] * spaltenbreite_mm
-        y = raster_start_y + lokale_zeile * zeilenhoehe_mm
-        breite = feld["raster_breite"] * spaltenbreite_mm
-        hoehe = feld["raster_hoehe"] * zeilenhoehe_mm
-        antwort = antworten.get(feld["id"])
-        bild = bilder.get(feld["id"]) if feld["feld_typ"] in ("foto", "unterschrift") else None
-        _render_formular_feld_zelle(pdf, feld, antwort, bild, x, y, breite, hoehe)
-
-    return bytes(pdf.output())
-
-
-def _generate_formular_pdf_freeform(
-    mandant: Mandant,
-    vorgang: Vorgang,
-    vorgang_formular: VorgangFormular,
-    bilder: dict[str, bytes],
-    ist_vorschau: bool = False,
-) -> bytes:
-    """snapshot_version 3 -- jede Seite ist eine feste A4-Flaeche, auf der
-    Felder frei per x_mm/y_mm/breite_mm/hoehe_mm positioniert sind (wie
-    Steuerelemente im MS-Access-Formular-Designer). Die Seitenaufteilung
-    legt der Nutzer im Canvas-Editor explizit fest ("Seite hinzufuegen",
-    siehe Formular.anzahl_seiten) -- anders als beim aelteren Raster-
-    Renderer gibt es hier keinen automatischen Seitenumbruch und keine
-    Sonderbehandlung fuer Felder, die ueber den Seitenrand ragen wuerden:
-    das liegt vollstaendig in der Verantwortung des Nutzers."""
-    snapshot = vorgang_formular.formular_snapshot
-    antworten = vorgang_formular.antworten
-    formular_name = snapshot.get("name", "Formular")
-    anzahl_seiten = snapshot.get("anzahl_seiten", 1)
-    felder_je_seite: dict[int, list[dict]] = {}
-    for feld in snapshot.get("felder", []):
-        felder_je_seite.setdefault(feld["seite"], []).append(feld)
-
-    pdf = _FormularPDF(mandant, formular_name, vorgang.vorgangsnummer)
-
-    for seite_idx in range(anzahl_seiten):
-        pdf.add_page()
-        if seite_idx == 0:
-            pdf.set_font("Helvetica", "B", 18)
-            pdf.cell(0, 10, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            pdf.set_font("Helvetica", "", 10)
-            pdf.cell(
-                0,
-                6,
-                _pdf_safe_text(f"{formular_name}: {vorgang.vorgangsnummer} - {vorgang.titel}"),
-                new_x=XPos.LMARGIN,
-                new_y=YPos.NEXT,
-            )
-            pdf.cell(
-                0,
-                6,
-                f"Ausgefuellt am {_fmt_datum(vorgang_formular.abgeschlossen_am or vorgang_formular.created_at)}",
-                new_x=XPos.LMARGIN,
-                new_y=YPos.NEXT,
-            )
-            pdf.ln(4)
-            if ist_vorschau:
-                _formular_vorschau_banner(pdf)
-            seiten_top_mm = pdf.get_y()
-        else:
-            seiten_top_mm = _FORMULAR_RAND_OBEN_FOLGESEITE
-
-        for feld in sorted(felder_je_seite.get(seite_idx, []), key=lambda f: (f["y_mm"], f["x_mm"])):
-            x = pdf.l_margin + feld["x_mm"]
-            y = seiten_top_mm + feld["y_mm"]
-            antwort = antworten.get(feld["id"])
-            bild = bilder.get(feld["id"]) if feld["feld_typ"] in ("foto", "unterschrift") else None
-            _render_formular_feld_zelle(pdf, feld, antwort, bild, x, y, feld["breite_mm"], feld["hoehe_mm"])
-
-    if not snapshot.get("felder"):
-        pdf.cell(0, 8, "Keine Felder in diesem Formular.", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
-    return bytes(pdf.output())
 
 
 def _form_antwort_text(field: FormField, wert: object) -> str:
@@ -1014,13 +718,13 @@ def generate_form_submission_pdf(
     bilder: dict[str, bytes],
     ist_vorschau: bool = False,
 ) -> bytes:
-    """PDF fuer eine form_submission ueber eine print-View (Formular-Modul
-    v2) -- Pendant zu _generate_formular_pdf_freeform, aber key-basiert
-    (fields[].key statt einer UUID) und mit den Layout-/Element-Zeilen der
-    jeweiligen View statt einem eingefrorenen formular_snapshot: die
-    aktuelle Schema-Definition entscheidet, dieselbe Herangehensweise wie
-    beim Rest von Formular-Modul v2 (siehe Docstring Migration 0076 --
-    "alte Versionen bleiben stehen statt dupliziert zu werden").
+    """PDF fuer eine form_submission ueber eine print-View: Root-Felder frei
+    positioniert nach x_mm/y_mm/breite_mm/hoehe_mm der form_view_field_
+    layouts einer View (key-basiert, fields[].key statt einer UUID), keine
+    eingefrorene Momentaufnahme -- die aktuelle Schema-Definition
+    entscheidet, dieselbe Herangehensweise wie beim Rest von Formular-Modul
+    v2 (siehe Docstring Migration 0076 -- "alte Versionen bleiben stehen
+    statt dupliziert zu werden").
 
     Wiederholgruppen lassen sich nicht sinnvoll frei positionieren (eine
     unbekannte Anzahl Zeilen passt nicht auf feste x_mm/y_mm-Koordinaten)

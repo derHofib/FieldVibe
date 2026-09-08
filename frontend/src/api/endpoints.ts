@@ -55,13 +55,7 @@ import type {
   FormViewFieldLayout,
   FormViewResolved,
   FormViewTyp,
-  Formular,
-  FormularAuftragstypZuordnung,
-  Formularfeld,
   FormularfeldDatenquelle,
-  FormularfeldPosition,
-  FormularfeldTyp,
-  FormularVerfuegbar,
   GespeicherterFilter,
   GespeicherterFilterEntitaet,
   Highlight,
@@ -143,7 +137,6 @@ import type {
   VorgangAnfrage,
   VorgangEvent,
   VorgangEventType,
-  VorgangFormular,
   VorgangPartnerZuweisungResponse,
   Zeiterfassung,
   ZeiterfassungKategorie,
@@ -741,109 +734,6 @@ export const vorgangEventsApi = {
     formData.append("unterzeichner_name", unterzeichnerName);
     formData.append("kundensichtbar", String(kundensichtbar));
     return apiFetchForm<VorgangEvent>(`/api/vorgaenge/${vorgangId}/events/unterschrift`, formData);
-  },
-};
-
-export const formulareApi = {
-  list: (aktiv?: boolean) =>
-    apiFetch<Formular[]>(`/api/formulare${aktiv !== undefined ? `?aktiv=${aktiv}` : ""}`),
-  get: (id: string) => apiFetch<Formular>(`/api/formulare/${id}`),
-  create: (body: { name: string; beschreibung?: string; snap_mm?: number | null }) =>
-    apiFetch<Formular>("/api/formulare", { method: "POST", body: JSON.stringify(body) }),
-  update: (
-    id: string,
-    body: Partial<{
-      name: string;
-      beschreibung: string;
-      aktiv: boolean;
-      snap_mm: number | null;
-      anzahl_seiten: number;
-    }>,
-  ) => apiFetch<Formular>(`/api/formulare/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  createFeld: (
-    formularId: string,
-    body: {
-      feld_typ: FormularfeldTyp;
-      label: string;
-      hilfetext?: string;
-      pflichtfeld?: boolean;
-      optionen?: Record<string, unknown>;
-      seite?: number;
-      x_mm?: number;
-      y_mm?: number;
-      breite_mm?: number;
-      hoehe_mm?: number;
-      datenquelle?: FormularfeldDatenquelle | null;
-    },
-  ) =>
-    apiFetch<Formularfeld>(`/api/formulare/${formularId}/felder`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-  updateFeld: (
-    formularId: string,
-    feldId: string,
-    body: Partial<{
-      feld_typ: FormularfeldTyp;
-      label: string;
-      hilfetext: string | null;
-      pflichtfeld: boolean;
-      optionen: Record<string, unknown>;
-      datenquelle: FormularfeldDatenquelle | null;
-    }>,
-  ) =>
-    apiFetch<Formularfeld>(`/api/formulare/${formularId}/felder/${feldId}`, {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    }),
-  updatePositionen: (formularId: string, positionen: FormularfeldPosition[]) =>
-    apiFetch<Formularfeld[]>(`/api/formulare/${formularId}/felder/positionen`, {
-      method: "PUT",
-      body: JSON.stringify(positionen),
-    }),
-  deleteFeld: (formularId: string, feldId: string) =>
-    apiFetch<void>(`/api/formulare/${formularId}/felder/${feldId}`, { method: "DELETE" }),
-  createZuordnung: (formularId: string, body: { leistungstyp: Leistungstyp; pflicht_vor_abschluss?: boolean }) =>
-    apiFetch<FormularAuftragstypZuordnung>(`/api/formulare/${formularId}/zuordnungen`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
-  updateZuordnung: (formularId: string, zuordnungId: string, pflichtVorAbschluss: boolean) =>
-    apiFetch<FormularAuftragstypZuordnung>(`/api/formulare/${formularId}/zuordnungen/${zuordnungId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ pflicht_vor_abschluss: pflichtVorAbschluss }),
-    }),
-  deleteZuordnung: (formularId: string, zuordnungId: string) =>
-    apiFetch<void>(`/api/formulare/${formularId}/zuordnungen/${zuordnungId}`, { method: "DELETE" }),
-};
-
-export const vorgangFormulareApi = {
-  verfuegbar: (vorgangId: string) =>
-    apiFetch<FormularVerfuegbar[]>(`/api/vorgang-formulare/verfuegbar?vorgang_id=${vorgangId}`),
-  list: (vorgangId: string) =>
-    apiFetch<VorgangFormular[]>(`/api/vorgang-formulare?vorgang_id=${vorgangId}`),
-  start: (vorgangId: string, formularId: string) =>
-    apiFetch<VorgangFormular>(`/api/vorgang-formulare?vorgang_id=${vorgangId}`, {
-      method: "POST",
-      body: JSON.stringify({ formular_id: formularId }),
-    }),
-  get: (id: string) => apiFetch<VorgangFormular>(`/api/vorgang-formulare/${id}`),
-  updateAntworten: (id: string, antworten: Record<string, unknown>) =>
-    apiFetch<VorgangFormular>(`/api/vorgang-formulare/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ antworten }),
-    }),
-  abschliessen: (id: string) =>
-    apiFetch<VorgangFormular>(`/api/vorgang-formulare/${id}/abschliessen`, { method: "POST" }),
-  remove: (id: string) => apiFetch<void>(`/api/vorgang-formulare/${id}`, { method: "DELETE" }),
-  pdf: (id: string) => apiFetchBlob(`/api/vorgang-formulare/${id}/pdf`),
-  uploadDatei: (id: string, feldId: string, file: Blob, filename: string) => {
-    const formData = new FormData();
-    formData.append("file", file, filename);
-    return apiFetchForm<{ feld_id: string; key: string; content_type: string; size: number; url: string }>(
-      `/api/vorgang-formulare/${id}/dateien?feld_id=${encodeURIComponent(feldId)}`,
-      formData,
-    );
   },
 };
 

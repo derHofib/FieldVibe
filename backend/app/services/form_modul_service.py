@@ -25,6 +25,7 @@ from app.models.form_modul import (
 from app.models.kunde import Kunde
 from app.models.standort import Standort
 from app.models.vorgang import Vorgang
+from app.schemas.form_modul import FormSubmissionRead
 from app.services.form_logic_engine import RuleApplicationResult, apply_rules
 
 LEISTUNGSTYP_LABEL = {
@@ -182,6 +183,17 @@ def auto_fill_values(
         if wert is not None:
             values[field.key] = wert
     return values
+
+
+async def to_submission_read(session: AsyncSession, submission: FormSubmission) -> FormSubmissionRead:
+    """Reichert eine form_submission um den Schema-Namen an, damit das
+    Frontend (siehe FormularAbschnitt.tsx) diesen nicht separat je
+    Ausfuellung nachladen muss."""
+    schema = await session.get(FormSchema, submission.schema_id)
+    return FormSubmissionRead(
+        **{k: getattr(submission, k) for k in FormSubmissionRead.model_fields if k != "schema_name"},
+        schema_name=schema.name if schema else "Formular",
+    )
 
 
 async def verfuegbare_schemas_fuer(session: AsyncSession, vorgang: Vorgang) -> list[tuple[FormSchema, bool]]:

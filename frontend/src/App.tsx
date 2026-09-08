@@ -29,12 +29,9 @@ import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
 import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { EingangsrechnungDetailPage } from "./pages/feld/EingangsrechnungDetailPage";
 import { FeedPage } from "./pages/feld/FeedPage";
-import { FormularAusfuellenPage } from "./pages/feld/FormularAusfuellenPage";
 import { FormSchemaEditorPage } from "./pages/feld/FormSchemaEditorPage";
 import { FormSchemasPage } from "./pages/feld/FormSchemasPage";
 import { FormSubmissionAusfuellenPage } from "./pages/feld/FormSubmissionAusfuellenPage";
-import { FormularDetailPage } from "./pages/feld/FormularDetailPage";
-import { FormularePage } from "./pages/feld/FormularePage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
 import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
@@ -152,9 +149,6 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
           <Route path="/standorte/:id" element={<StandortDetailPage />} />
           <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
-          <Route path="/formulare" element={<FormularePage />} />
-          <Route path="/formulare/:id" element={<FormularDetailPage />} />
-          <Route path="/vorgang-formulare/:id" element={<FormularAusfuellenPage />} />
           <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
           <Route path="/form-schemas" element={<FormSchemasPage />} />
           <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />

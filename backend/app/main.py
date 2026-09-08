@@ -21,7 +21,6 @@ from app.api.routes import (
     fahrzeug_zuweisungen,
     feed,
     form_modul,
-    formulare,
     gespeicherte_filter,
     highlights,
     impersonation,
@@ -64,7 +63,6 @@ from app.api.routes import (
     vorgaenge,
     vorgang_anfragen,
     vorgang_events,
-    vorgang_formulare,
     zeiterfassung,
     zuweisungen,
 )
@@ -121,8 +119,6 @@ app.include_router(vertraege.router)
 app.include_router(vorgaenge.router)
 app.include_router(vorgang_anfragen.router)
 app.include_router(vorgang_events.router)
-app.include_router(formulare.router)
-app.include_router(vorgang_formulare.router)
 app.include_router(form_modul.router)
 app.include_router(form_modul.submissions_router)
 app.include_router(tags.router)

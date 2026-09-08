@@ -1486,27 +1486,10 @@ export interface OffenePostenBericht {
   kreditoren_buckets: OffenePostenBucket[];
 }
 
-// --- Formular-Baukasten ------------------------------------------------------
-
-export type FormularfeldTyp =
-  | "text"
-  | "textarea"
-  | "zahl"
-  | "datum"
-  | "dropdown"
-  | "mehrfachauswahl"
-  | "ja_nein"
-  | "bewertung"
-  | "foto"
-  | "unterschrift"
-  | "gps"
-  | "qr_scan"
-  | "abschnitt";
-
-// Nutzbare Breite einer A4-Seite in mm -- Obergrenze fuer x_mm + breite_mm
-// eines frei positionierten Formularfelds, siehe NUTZBARE_BREITE_MM in
-// backend/app/models/formular.py.
-export const FORMULAR_NUTZBARE_BREITE_MM = 180;
+// --- Formular-Modul: geteiltes Vokabular ----------------------------------
+// FormularfeldDatenquelle wird sowohl vom (entfernten) alten Modell als
+// Referenz genannt als auch von FormField.datenquelle unten verwendet --
+// eigenstaendiger Abschnitt statt Teil des alten Formular-Baukasten-Blocks.
 
 export type FormularfeldDatenquelle =
   | "vorgang.vorgangsnummer"
@@ -1529,82 +1512,10 @@ export type FormularfeldDatenquelle =
   | "standort.bezeichnung"
   | "standort.adresse";
 
-export interface Formularfeld {
-  id: string;
-  feld_typ: FormularfeldTyp;
-  label: string;
-  hilfetext: string | null;
-  pflichtfeld: boolean;
-  reihenfolge: number;
-  optionen: Record<string, unknown>;
-  seite: number;
-  x_mm: number;
-  y_mm: number;
-  breite_mm: number;
-  hoehe_mm: number;
-  datenquelle: FormularfeldDatenquelle | null;
-}
-
-export interface FormularfeldPosition {
-  id: string;
-  seite: number;
-  x_mm: number;
-  y_mm: number;
-  breite_mm: number;
-  hoehe_mm: number;
-}
-
-export interface FormularAuftragstypZuordnung {
-  id: string;
-  leistungstyp: Leistungstyp;
-  pflicht_vor_abschluss: boolean;
-}
-
-export interface Formular {
-  id: string;
-  name: string;
-  beschreibung: string | null;
-  aktiv: boolean;
-  erstellt_von: string | null;
-  anzahl_seiten: number;
-  snap_mm: number | null;
-  created_at: string;
-  updated_at: string;
-  felder: Formularfeld[];
-  zuordnungen: FormularAuftragstypZuordnung[];
-}
-
-export interface FormularVerfuegbar {
-  id: string;
-  name: string;
-  beschreibung: string | null;
-  pflicht_vor_abschluss: boolean;
-}
-
-export interface VorgangFormular {
-  id: string;
-  vorgang_id: string;
-  formular_id: string;
-  formular_snapshot: {
-    snapshot_version?: number;
-    name: string;
-    anzahl_seiten?: number;
-    felder: Formularfeld[];
-  };
-  antworten: Record<string, unknown>;
-  status: "offen" | "abgeschlossen";
-  ausgefuellt_von: string | null;
-  kundensichtbar: boolean;
-  abgeschlossen_am: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 // --- Formular-Modul v2 (Trennung Erfassung/Visualisierung) ----------------
 // Siehe backend/app/schemas/form_modul.py -- key-basierte Referenzen statt
 // UUIDs (form_fields.key/form_groups.key), damit Regeln/Layouts stabil
-// bleiben. Existiert parallel zu Formular/Formularfeld oben, bis das alte
-// Modul (Migrationsplan Schritt 10) entfernt wird.
+// bleiben.
 
 export type FormFeldTyp =
   | "text"
@@ -1749,6 +1660,7 @@ export interface FormSubmission {
   id: string;
   vorgang_id: string;
   schema_id: string;
+  schema_name: string;
   schema_version: number;
   values: Record<string, unknown>;
   status: FormSubmissionStatus;

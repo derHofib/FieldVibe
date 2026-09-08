@@ -318,6 +318,7 @@ class FormSubmissionRead(BaseModel):
     id: UUID
     vorgang_id: UUID
     schema_id: UUID
+    schema_name: str
     schema_version: int
     values: dict[str, Any]
     status: FormSubmissionStatus

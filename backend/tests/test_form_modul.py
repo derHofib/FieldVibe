@@ -334,6 +334,33 @@ async def test_submission_pdf_ueber_print_view(client, make_mandant, make_user, 
 
 
 @pytest.mark.asyncio
+async def test_abschliessen_erzeugt_vorgang_event_fuer_feed(client, make_mandant, make_user, make_kunde, make_vorgang):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    schema = await _make_published_schema(client, token, name="Wartungsprotokoll")
+    submission = (
+        await client.post(
+            "/api/form-submissions",
+            headers=auth_headers(token),
+            params={"vorgang_id": str(vorgang.id)},
+            json={"schema_id": schema["id"]},
+        )
+    ).json()
+    await client.post(f"/api/form-submissions/{submission['id']}/abschliessen", headers=auth_headers(token))
+
+    events = (await client.get(f"/api/vorgaenge/{vorgang.id}/events", headers=auth_headers(token))).json()
+    formular_events = [e for e in events if e["event_type"] == "formular"]
+    assert len(formular_events) == 1
+    assert formular_events[0]["body"] == "Wartungsprotokoll"
+    assert formular_events[0]["ref_entity_type"] == "form_submission"
+    assert formular_events[0]["ref_entity_id"] == submission["id"]
+
+
+@pytest.mark.asyncio
 async def test_rls_isolation_form_schemas_und_submissions(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):

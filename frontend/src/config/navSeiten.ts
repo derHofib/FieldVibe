@@ -315,7 +315,7 @@ export const NAV_SEITEN: NavSeite[] = [
     label: "Formulare",
     icon: ClipboardList,
     tone: "violet",
-    route: "/formulare",
+    route: "/form-schemas",
     kategorie: "Verwaltung",
     sichtbar: ({ hatRecht }) => hatRecht("formulare", "sehen"),
   },

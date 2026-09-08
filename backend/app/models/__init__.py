@@ -10,11 +10,17 @@ from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.einladung import Einladung
 from app.models.email_log import EmailLog
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
-from app.models.formular import (
-    Formular,
-    FormularAuftragstypZuordnung,
-    Formularfeld,
-    VorgangFormular,
+from app.models.form_modul import (
+    FormAuftragstypZuordnung,
+    FormField,
+    FormGroup,
+    FormLogicRule,
+    FormPresentationElement,
+    FormSchema,
+    FormSubmission,
+    FormSubmissionAudit,
+    FormView,
+    FormViewFieldLayout,
 )
 from app.models.gespeicherter_filter import GespeicherterFilter
 from app.models.highlight import Highlight
@@ -74,10 +80,16 @@ __all__ = [
     "Einladung",
     "EmailLog",
     "FahrzeugZuweisung",
-    "Formular",
-    "FormularAuftragstypZuordnung",
-    "Formularfeld",
-    "VorgangFormular",
+    "FormAuftragstypZuordnung",
+    "FormField",
+    "FormGroup",
+    "FormLogicRule",
+    "FormPresentationElement",
+    "FormSchema",
+    "FormSubmission",
+    "FormSubmissionAudit",
+    "FormView",
+    "FormViewFieldLayout",
     "GespeicherterFilter",
     "Highlight",
     "MandantIntegration",

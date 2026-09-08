@@ -1,5 +1,4 @@
-// Uebersicht der Formular-Modul-v2-Schemas -- Pendant zu FormularePage.tsx
-// (altes Modell), aber gegen /api/form-schemas.
+// Uebersicht der Formular-Modul-v2-Schemas, gegen /api/form-schemas.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, Plus } from "lucide-react";
 import { useState, type FormEvent } from "react";

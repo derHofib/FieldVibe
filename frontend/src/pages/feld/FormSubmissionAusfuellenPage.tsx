@@ -1,9 +1,8 @@
-// Ausfuellen-Seite fuer das Formular-Modul v2 -- Pendant zu
-// FormularAusfuellenPage.tsx (altes Modell), aber gegen /api/form-submissions
-// und mit CaptureRenderer/SummaryRenderer statt einem eigenen Feld-Loop:
-// ein Schema, zwei Views (capture zum Ausfuellen, summary zum Nachlesen
-// nach Abschluss) ohne doppelte Erfassungslogik -- siehe Abnahmekriterium
-// "ein Schema bedient mindestens zwei Views ohne Duplizierung".
+// Ausfuellen-Seite fuer das Formular-Modul v2, gegen /api/form-submissions,
+// mit CaptureRenderer/SummaryRenderer statt einem eigenen Feld-Loop: ein
+// Schema, zwei Views (capture zum Ausfuellen, summary zum Nachlesen nach
+// Abschluss) ohne doppelte Erfassungslogik -- siehe Abnahmekriterium "ein
+// Schema bedient mindestens zwei Views ohne Duplizierung".
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
 import { useEffect, useState } from "react";

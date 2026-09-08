@@ -110,7 +110,7 @@ export function SettingsPage() {
             tone="violet"
             label="Formulare"
             beschreibung="Checklisten & Protokolle für Auftragstypen erstellen"
-            onClick={() => navigate("/formulare")}
+            onClick={() => navigate("/form-schemas")}
           />
         )}
         {istModulAktiv(currentUser, "statistik") && (

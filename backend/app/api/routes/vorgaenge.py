@@ -41,7 +41,7 @@ from app.services.audit_service import log_action
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
-from app.services.formular_service import offene_pflichtformulare
+from app.services.form_modul_service import offene_pflichtschemas
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.partner_service import partner_hat_gueltige_freistellungsbescheinigung
 from app.services.rechte_service import (
@@ -674,7 +674,7 @@ async def update_vorgang(
 
     if "status" in changes and changes["status"] != alter_status:
         if changes["status"] == "abgeschlossen":
-            offene_formulare = await offene_pflichtformulare(session, vorgang)
+            offene_formulare = await offene_pflichtschemas(session, vorgang)
             if offene_formulare:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
