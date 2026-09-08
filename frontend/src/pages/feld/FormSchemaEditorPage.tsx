@@ -4,16 +4,25 @@
 // Positionierung je View passiert ueber "Layout automatisch aus Feldern
 // übernehmen" (stapelt alle Root-Felder der Reihe nach), nicht per Maus.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { FileText, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
-import type { FormFeldTyp, FormLogicEffekt, FormViewTyp, Leistungstyp } from "../../types";
+import { FieldValueInput, RuleConditionBuilder } from "../../components/formModul/RuleConditionBuilder";
+import type {
+  FormFeldTyp,
+  FormLogicEffekt,
+  FormLogicRule,
+  FormSchemaDetail,
+  FormView,
+  FormViewTyp,
+  Leistungstyp,
+} from "../../types";
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
-import { FileText } from "lucide-react";
+import { describeCondition } from "../../utils/ruleConditionBuilder";
 
 const FELD_TYPEN: FormFeldTyp[] = [
   "text",
@@ -30,11 +39,134 @@ const FELD_TYPEN: FormFeldTyp[] = [
   "qr_scan",
 ];
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
-const EFFEKTE: FormLogicEffekt[] = ["show", "hide", "require", "readonly", "set_value"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
 
 const inputClass = "btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink";
 const sectionClass = "space-y-3 border border-ind-line bg-ind-bg p-4";
+
+const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {
+  show: "Anzeigen, wenn",
+  hide: "Ausblenden, wenn",
+  require: "Pflicht, wenn",
+  readonly: "Schreibgeschützt, wenn",
+  set_value: "Wert setzen, wenn",
+};
+
+interface RegelFormPayload {
+  target_key: string;
+  effect: FormLogicEffekt;
+  condition: unknown;
+  value?: unknown;
+  view_id: string | null;
+  reihenfolge: number;
+}
+
+/** Formular fuer eine einzelne Regel -- gemeinsam fuer "neue Regel
+ * anlegen" und "bestehende Regel bearbeiten" (initial=null bzw. die zu
+ * bearbeitende Regel), damit der visuelle Bedingungs-Baukasten
+ * (RuleConditionBuilder) nur einmal gepflegt werden muss. */
+function RegelForm({
+  schema,
+  views,
+  initial,
+  onSubmit,
+  onCancel,
+  submitting,
+  error,
+}: {
+  schema: FormSchemaDetail;
+  views: FormView[];
+  initial: FormLogicRule | null;
+  onSubmit: (payload: RegelFormPayload) => void;
+  onCancel?: () => void;
+  submitting: boolean;
+  error: string | null;
+}) {
+  const [targetKey, setTargetKey] = useState(initial?.target_key ?? "");
+  const [effect, setEffect] = useState<FormLogicEffekt>(initial?.effect ?? "show");
+  const [condition, setCondition] = useState<unknown>(initial?.condition ?? true);
+  const [value, setValue] = useState<unknown>(initial?.value ?? "");
+  const [viewId, setViewId] = useState(initial?.view_id ?? "");
+
+  const targetOptions = [
+    ...schema.fields.map((f) => ({
+      key: f.key,
+      label: f.group_key ? `${f.label.de ?? f.key} (in ${schema.groups.find((g) => g.key === f.group_key)?.label.de ?? f.group_key})` : f.label.de ?? f.key,
+    })),
+    ...schema.groups.map((g) => ({ key: g.key, label: `Gruppe: ${g.label.de ?? g.key}` })),
+  ];
+  const zielFeld = schema.fields.find((f) => f.key === targetKey);
+
+  return (
+    <div className="space-y-2 border border-ind-line-2 p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <select value={targetKey} onChange={(e) => setTargetKey(e.target.value)} className={inputClass}>
+          <option value="">Ziel wählen…</option>
+          {targetOptions.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)} className={inputClass}>
+          {(Object.keys(EFFEKT_LABEL) as FormLogicEffekt[]).map((e) => (
+            <option key={e} value={e}>
+              {EFFEKT_LABEL[e]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <RuleConditionBuilder fields={schema.fields} condition={condition} onChange={setCondition} />
+
+      {effect === "set_value" && (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">Zu setzender Wert</label>
+          <FieldValueInput feld={zielFeld} value={value} onChange={setValue} />
+        </div>
+      )}
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-ind-ink-2">Gültig in</label>
+        <select value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
+          <option value="">Global (alle Views)</option>
+          {views.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name} ({v.type})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+
+      <div className="flex items-center justify-end gap-2">
+        {onCancel && (
+          <button type="button" onClick={onCancel} className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+            Abbrechen
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() =>
+            onSubmit({
+              target_key: targetKey,
+              effect,
+              condition,
+              value: effect === "set_value" ? value : undefined,
+              view_id: viewId || null,
+              reihenfolge: initial?.reihenfolge ?? 0,
+            })
+          }
+          disabled={!targetKey || submitting}
+          className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+        >
+          <Plus size={15} /> {initial ? "Speichern" : "Regel hinzufügen"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function FormSchemaEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -138,35 +270,26 @@ export function FormSchemaEditorPage() {
   });
 
   // --- Regeln ---
-  const [regelTarget, setRegelTarget] = useState("");
-  const [regelEffekt, setRegelEffekt] = useState<FormLogicEffekt>("show");
-  const [regelCondition, setRegelCondition] = useState('{"==": [{"var": "feld_key"}, "wert"]}');
-  const [regelValue, setRegelValue] = useState("");
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [regelFehler, setRegelFehler] = useState<string | null>(null);
 
   const createRuleMutation = useMutation({
-    mutationFn: () => {
-      let condition: unknown;
-      let value: unknown;
-      try {
-        condition = JSON.parse(regelCondition);
-      } catch {
-        throw new Error("Bedingung ist kein gültiges JSON");
-      }
-      if (regelValue.trim()) {
-        try {
-          value = JSON.parse(regelValue);
-        } catch {
-          throw new Error("Wert ist kein gültiges JSON");
-        }
-      }
-      return formModulApi.createRule(id!, { target_key: regelTarget.trim(), effect: regelEffekt, condition, value });
-    },
+    mutationFn: (payload: Parameters<typeof formModulApi.createRule>[1]) => formModulApi.createRule(id!, payload),
     onSuccess: () => {
-      setRegelTarget("");
-      setRegelValue("");
+      setRegelFehler(null);
       invalidate();
     },
-    onError: (err) => setFehler(err instanceof Error ? err.message : "Regel konnte nicht angelegt werden"),
+    onError: (err) => setRegelFehler(err instanceof ApiError ? err.message : "Regel konnte nicht angelegt werden"),
+  });
+  const updateRuleMutation = useMutation({
+    mutationFn: ({ ruleId, payload }: { ruleId: string; payload: Parameters<typeof formModulApi.updateRule>[2] }) =>
+      formModulApi.updateRule(id!, ruleId, payload),
+    onSuccess: () => {
+      setRegelFehler(null);
+      setEditingRuleId(null);
+      invalidate();
+    },
+    onError: (err) => setRegelFehler(err instanceof ApiError ? err.message : "Regel konnte nicht gespeichert werden"),
   });
   const deleteRuleMutation = useMutation({
     mutationFn: (ruleId: string) => formModulApi.deleteRule(id!, ruleId),
@@ -298,42 +421,58 @@ export function FormSchemaEditorPage() {
 
       <div className={sectionClass}>
         <h2 className="text-sm font-semibold text-ind-ink">Regeln</h2>
-        <p className="text-xs text-ind-ink-3">Bedingung/Wert als JSON, z.B. {"{"}"==": [{"{"}"var": "leistungstyp"{"}"}, "wartung"]{"}"}</p>
-        {(rules ?? []).map((r) => (
-          <div key={r.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-            <span className="text-ind-ink">
-              {r.effect} → {r.target_key} <span className="text-ind-ink-3">({JSON.stringify(r.condition)})</span>
-            </span>
-            <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-ind-ink-3 hover:text-rose-600">
-              <Trash2 size={14} />
-            </button>
-          </div>
-        ))}
-        <div className="grid grid-cols-2 gap-2">
-          <input value={regelTarget} onChange={(e) => setRegelTarget(e.target.value)} placeholder="target_key" className={inputClass} />
-          <select value={regelEffekt} onChange={(e) => setRegelEffekt(e.target.value as FormLogicEffekt)} className={inputClass}>
-            {EFFEKTE.map((e) => (
-              <option key={e} value={e}>
-                {e}
-              </option>
-            ))}
-          </select>
-          <input value={regelCondition} onChange={(e) => setRegelCondition(e.target.value)} placeholder="condition (JSON)" className={`${inputClass} col-span-2`} />
-          {regelEffekt === "set_value" && (
-            <input value={regelValue} onChange={(e) => setRegelValue(e.target.value)} placeholder="value (JSON)" className={`${inputClass} col-span-2`} />
-          )}
-        </div>
-        <button
-          onClick={(e: FormEvent) => {
-            e.preventDefault();
-            setFehler(null);
-            createRuleMutation.mutate();
-          }}
-          disabled={!regelTarget.trim() || createRuleMutation.isPending}
-          className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-1.5 text-sm font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
-        >
-          <Plus size={15} /> Regel hinzufügen
-        </button>
+        {(rules ?? []).map((r) => {
+          const zielLabel =
+            schema.fields.find((f) => f.key === r.target_key)?.label.de ??
+            schema.groups.find((g) => g.key === r.target_key)?.label.de ??
+            r.target_key;
+          if (editingRuleId === r.id) {
+            return (
+              <RegelForm
+                key={r.id}
+                schema={schema}
+                views={views ?? []}
+                initial={r}
+                submitting={updateRuleMutation.isPending}
+                error={regelFehler}
+                onCancel={() => {
+                  setEditingRuleId(null);
+                  setRegelFehler(null);
+                }}
+                onSubmit={(payload) => updateRuleMutation.mutate({ ruleId: r.id, payload })}
+              />
+            );
+          }
+          return (
+            <div key={r.id} className="flex items-center justify-between gap-2 border-b border-ind-line py-1.5 text-sm">
+              <span className="text-ind-ink">
+                {EFFEKT_LABEL[r.effect]} <span className="text-ind-ink-3">{describeCondition(r.condition, (k) => schema.fields.find((f) => f.key === k)?.label.de ?? k)}</span>
+                {" → "}
+                {zielLabel}
+                {r.effect === "set_value" && <span className="text-ind-ink-3"> = {JSON.stringify(r.value)}</span>}
+              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <button onClick={() => setEditingRuleId(r.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
+                  Bearbeiten
+                </button>
+                <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-ind-ink-3 hover:text-rose-600">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {editingRuleId === null && (
+          <RegelForm
+            key="neu"
+            schema={schema}
+            views={views ?? []}
+            initial={null}
+            submitting={createRuleMutation.isPending}
+            error={regelFehler}
+            onSubmit={(payload) => createRuleMutation.mutate(payload)}
+          />
+        )}
       </div>
 
       <div className={sectionClass}>
