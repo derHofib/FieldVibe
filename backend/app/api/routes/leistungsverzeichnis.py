@@ -135,11 +135,21 @@ async def _neu_berechnen(session: AsyncSession, position: LeistungsverzeichnisPo
     ).scalars().all()
 
     if kinder:
+        # einzelpreis wird bewusst NICHT als lohn+material der Kinder
+        # gebildet, sondern als Summe ihrer tatsaechlichen einzelpreis-Werte:
+        # ein Festpreis-Unterpunkt hat kein lohn_gesamt/material_gesamt
+        # (bleibt dort immer 0, siehe _berechne_eigenen_preis), sein Preis
+        # steckt ausschliesslich in einzelpreis -- eine Summe ueber
+        # lohn_gesamt+material_gesamt wuerde einen Festpreis-Unterpunkt sonst
+        # stillschweigend mit 0 EUR zaehlen. lohn_gesamt/material_gesamt am
+        # Hauptpunkt bleiben ein rein informativer Teil-Breakdown ueber die
+        # "berechnet"-Unterpunkte, muessen sich also nicht zwingend zu
+        # einzelpreis aufaddieren, wenn Festpreis-Unterpunkte gemischt sind.
         lohn = sum((k.lohn_gesamt for k in kinder), Decimal("0"))
         material = sum((k.material_gesamt for k in kinder), Decimal("0"))
         position.lohn_gesamt = lohn
         position.material_gesamt = material
-        position.einzelpreis = lohn + material
+        position.einzelpreis = sum((k.einzelpreis for k in kinder), Decimal("0"))
     elif position.kalkulationsmodus == "berechnet":
         lohn, material = _berechne_eigenen_preis(position)
         position.lohn_gesamt = lohn

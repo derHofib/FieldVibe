@@ -421,6 +421,55 @@ async def test_lv_kalkulation_unterpunkt_lohn_und_material(client, make_mandant,
 
 
 @pytest.mark.asyncio
+async def test_hauptpunkt_summe_beruecksichtigt_festpreis_unterpunkt(client, make_mandant, make_user):
+    """Regression: ein Festpreis-Unterpunkt hat kein lohn_gesamt/
+    material_gesamt (bleibt dort immer 0, siehe _berechne_eigenen_preis) --
+    _neu_berechnen muss trotzdem seinen tatsaechlichen einzelpreis in die
+    Summe des Hauptpunkts einrechnen, statt ihn stillschweigend mit 0 EUR
+    zu zaehlen."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    lv = await _make_lv(mandant, name="LV")
+
+    hauptpunkt = await _make_lv_position(mandant, lv, bezeichnung="Installation Wallbox", ist_stundensatz=False)
+
+    festpreis_unterpunkt = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "eltern_position_id": str(hauptpunkt.id),
+            "bezeichnung": "Anfahrt",
+            "einzelpreis": "15.00",
+        },
+    )
+    assert festpreis_unterpunkt.status_code == 201
+    assert festpreis_unterpunkt.json()["lohn_gesamt"] == "0.00"
+    assert festpreis_unterpunkt.json()["material_gesamt"] == "0.00"
+
+    berechnet_unterpunkt = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "eltern_position_id": str(hauptpunkt.id),
+            "bezeichnung": "Montage",
+            "kalkulationsmodus": "berechnet",
+            "lohn_minuten": 60,
+            "lohn_stundensatz": "50.00",
+        },
+    )
+    assert berechnet_unterpunkt.status_code == 201
+    assert berechnet_unterpunkt.json()["einzelpreis"] == "50.00"
+
+    async with system_session() as session:
+        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
+        # 15.00 (Festpreis) + 50.00 (berechnet) -- nicht nur 50.00.
+        assert haupt_db.einzelpreis == Decimal("65.00")
+        assert haupt_db.lohn_gesamt == Decimal("50.00")
+        assert haupt_db.material_gesamt == Decimal("0.00")
+
+
+@pytest.mark.asyncio
 async def test_hauptpunkt_preis_ist_summe_der_unterpunkte(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
