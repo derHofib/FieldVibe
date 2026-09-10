@@ -7,11 +7,12 @@ import { leistungsverzeichnisApi, leistungsverzeichnisseApi, mandantEinstellunge
 import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
+import { SeitenPanel } from "../../components/SeitenPanel";
 import { useAuth } from "../../context/AuthContext";
 import type { LeistungsverzeichnisPosition, LvKalkulationsmodus, LvMaterialPosten } from "../../types";
 import { KundenZuweisung } from "./LeistungsverzeichnisPage";
 
-function euro(wert: string): string {
+function euro(wert: string | number): string {
   return `${Number(wert).toFixed(2)} €`;
 }
 
@@ -84,42 +85,55 @@ function MaterialPostenZeile({
       </div>
       <button
         onClick={onEntfernen}
-        className="mb-0.5 shrink-0 rounded-md p-1.5 text-slate-300 hover:text-rose-600 dark:text-stone-600 dark:hover:text-rose-400"
+        className="mb-0.5 shrink-0 p-1.5 text-ind-ink-3 hover:text-red-600 dark:hover:text-red-400"
       >
-        <X size={14} strokeWidth={2} />
+        <X size={14} strokeWidth={1.5} />
       </button>
     </div>
   );
 }
 
-/** Neu-Anlage (position=null) und Bearbeiten teilen sich dieses Formular.
- * elternPositionId setzt es in den Unterpunkt-Modus (kein "Stundensatz"-
- * Flag). Hat die bearbeitete Position bereits eigene Unterpunkte, ist ihr
- * Preis rein rechnerisch die Summe daraus -- die Kalkulationsfelder werden
- * dann nur schreibgeschuetzt als Info angezeigt. */
-function LvPositionFormular({
+/** Kern-Baustein: alle Felder einer Position (Stammdaten, Kalkulation,
+ * Notiz), rekursiv wiederverwendet fuer Haupt- UND Unterpunkte -- ein
+ * Unterpunkt hat schlicht keine eigenen Unterpositionen, gesteuert ueber
+ * istUnterpunkt (eine Ebene tief, wie serverseitig durchgesetzt). Wird
+ * sowohl als Hauptinhalt eines SeitenPanel (Hauptpunkt) als auch inline
+ * innerhalb einer aufklappbaren Unterpunkt-Zeile eingesetzt -- deshalb
+ * ohne eigenes Rahmen-/Panel-Chrome, nur der reine Feld-/Aktions-Block.
+ * Hat die Position bereits eigene Unterpunkte, ist ihr Preis rein
+ * rechnerisch deren Summe -- die Kalkulationsfelder werden dann nur
+ * schreibgeschuetzt als Summen-Rechnung am unteren Ende angezeigt. */
+function LvPositionFelder({
   leistungsverzeichnisId,
   position,
   elternPositionId,
-  hatUnterpunkte,
-  onClose,
+  onFertig,
 }: {
   leistungsverzeichnisId: string;
   position: LeistungsverzeichnisPosition | null;
   elternPositionId?: string;
-  hatUnterpunkte?: boolean;
-  onClose: () => void;
+  onFertig: () => void;
 }) {
   const queryClient = useQueryClient();
   const istNeu = position === null;
   const istUnterpunkt = !!(position?.eltern_position_id ?? elternPositionId);
-  const gesperrt = !!hatUnterpunkte;
 
   const { data: mandantEinstellungen } = useQuery({
     queryKey: ["mandant-einstellungen"],
     queryFn: mandantEinstellungenApi.get,
     enabled: istNeu,
   });
+
+  // Unterpositionen nur fuer bereits bestehende Hauptpunkte relevant --
+  // treibt sowohl die "Unterpositionen"-Liste als auch die Sperre der
+  // eigenen Kalkulationsfelder (hatUnterpunkte).
+  const { data: unterpunkte } = useQuery({
+    queryKey: ["leistungsverzeichnis", "unterpunkte", position?.id],
+    queryFn: () => leistungsverzeichnisApi.unterpunkte(position!.id),
+    enabled: !istNeu && !istUnterpunkt,
+  });
+  const hatUnterpunkte = !istNeu && !istUnterpunkt && !!unterpunkte?.length;
+  const [neuerUnterpunktOffen, setNeuerUnterpunktOffen] = useState(false);
 
   const [bezeichnung, setBezeichnung] = useState(position?.bezeichnung ?? "");
   const [einheit, setEinheit] = useState(position?.einheit ?? "Stk");
@@ -144,7 +158,7 @@ function LvPositionFormular({
   const { data: stundensaetze } = useQuery({
     queryKey: ["leistungsverzeichnis", "stundensaetze"],
     queryFn: () => leistungsverzeichnisApi.list(undefined, true),
-    enabled: kalkulationsmodus === "berechnet",
+    enabled: kalkulationsmodus === "berechnet" && !hatUnterpunkte,
   });
 
   const lohnBasis =
@@ -184,7 +198,7 @@ function LvPositionFormular({
     },
     onSuccess: () => {
       invalidieren();
-      onClose();
+      onFertig();
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Position konnte nicht gespeichert werden"),
   });
@@ -193,328 +207,383 @@ function LvPositionFormular({
     mutationFn: () => leistungsverzeichnisApi.remove(position!.id),
     onSuccess: () => {
       invalidieren();
-      onClose();
+      onFertig();
     },
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4" onClick={onClose}>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="max-h-full w-full max-w-lg overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900"
-      >
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-stone-800">
-          <h2 className="text-base font-bold text-ind-ink">
-            {istNeu ? (istUnterpunkt ? "Neuer Unterpunkt" : "Neue Position") : "Position bearbeiten"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
-          >
-            <X size={16} strokeWidth={2} />
-          </button>
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="col-span-2">
+          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+            Bezeichnung
+          </label>
+          <input
+            autoFocus
+            value={bezeichnung}
+            onChange={(e) => setBezeichnung(e.target.value)}
+            placeholder={istUnterpunkt ? "z. B. Liefern und Montieren" : "z. B. Installation Wallbox"}
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          />
         </div>
+        <div>
+          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+            Einheit
+          </label>
+          <input
+            value={einheit}
+            onChange={(e) => setEinheit(e.target.value)}
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          />
+        </div>
+      </div>
 
-        <div className="space-y-4 px-5 py-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
-                Bezeichnung
-              </label>
-              <input
-                autoFocus
-                value={bezeichnung}
-                onChange={(e) => setBezeichnung(e.target.value)}
-                placeholder={istUnterpunkt ? "z. B. Liefern und Montieren" : "z. B. Installation Wallbox"}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
-                Einheit
-              </label>
-              <input
-                value={einheit}
-                onChange={(e) => setEinheit(e.target.value)}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
-              />
+      {!istUnterpunkt && (
+        <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+          <input
+            type="checkbox"
+            checked={istStundensatz}
+            onChange={(e) => setIstStundensatz(e.target.checked)}
+            className="h-4 w-4 border-ind-line"
+          />
+          Als Stundenverrechnungssatz in der Zeiterfassung wählbar
+        </label>
+      )}
+
+      {hatUnterpunkte ? (
+        <p className="border border-ind-line-2 bg-ind-hover/40 p-3 text-sm text-ind-ink-3">
+          Diese Position hat Unterpositionen -- ihr Preis ergibt sich automatisch aus deren Summe (siehe
+          Summen-Rechnung unten). Um die Kalkulation zu ändern, bitte die Unterpositionen bearbeiten.
+        </p>
+      ) : (
+        <>
+          <div>
+            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+              Preisermittlung
+            </label>
+            <div className="seg-industry flex border border-ind-line">
+              {(["festpreis", "berechnet"] as LvKalkulationsmodus[]).map((modus) => (
+                <button
+                  key={modus}
+                  onClick={() => setKalkulationsmodus(modus)}
+                  className={`flex-1 px-3 py-1.5 text-xs font-semibold ${
+                    kalkulationsmodus === modus
+                      ? "bg-ind-field text-ind-field-ink"
+                      : "text-ind-ink-2 hover:bg-ind-hover"
+                  }`}
+                >
+                  {modus === "festpreis" ? "Festpreis" : "Berechnet (Lohn + Material)"}
+                </button>
+              ))}
             </div>
           </div>
 
-          {!istUnterpunkt && (
-            <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+          {kalkulationsmodus === "festpreis" ? (
+            <div>
+              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+                Einzelpreis (€)
+              </label>
               <input
-                type="checkbox"
-                checked={istStundensatz}
-                onChange={(e) => setIstStundensatz(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+                type="number"
+                step="0.01"
+                value={einzelpreis}
+                onChange={(e) => setEinzelpreis(e.target.value)}
+                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
               />
-              Als Stundenverrechnungssatz in der Zeiterfassung wählbar
-            </label>
-          )}
-
-          {gesperrt ? (
-            <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-500 dark:bg-stone-800/60 dark:text-stone-400">
-              Diese Position hat Unterpunkte -- ihr Preis ergibt sich automatisch aus deren Summe (aktuell{" "}
-              <strong className="text-ind-ink">{euro(position!.einzelpreis)}</strong>). Um die
-              Kalkulation zu ändern, bitte die Unterpunkte bearbeiten.
             </div>
           ) : (
-            <>
-              <div>
-                <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
-                  Preisermittlung
-                </label>
-                <div className="flex gap-0.5 rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-stone-700 dark:bg-stone-800">
-                  {(["festpreis", "berechnet"] as LvKalkulationsmodus[]).map((modus) => (
-                    <button
-                      key={modus}
-                      onClick={() => setKalkulationsmodus(modus)}
-                      className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold ${
-                        kalkulationsmodus === modus
-                          ? "bg-white text-slate-800 shadow-xs dark:bg-stone-900 dark:text-stone-100"
-                          : "text-slate-500 hover:text-ind-ink-2 dark:hover:text-stone-200"
-                      }`}
-                    >
-                      {modus === "festpreis" ? "Festpreis" : "Berechnet (Lohn + Material)"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {kalkulationsmodus === "festpreis" ? (
-                <div>
-                  <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
-                    Einzelpreis (€)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={einzelpreis}
-                    onChange={(e) => setEinzelpreis(e.target.value)}
-                    className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-slate-200 p-3 dark:border-stone-800">
-                    <p className="mb-2 text-xs font-bold text-ind-ink-2">Lohn</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
-                          Zeit (Minuten)
-                        </label>
-                        <input
-                          type="number"
-                          value={lohnMinuten}
-                          onChange={(e) => setLohnMinuten(e.target.value)}
-                          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
-                          Stundensatz (€)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={lohnStundensatz}
-                          onChange={(e) => setLohnStundensatz(e.target.value)}
-                          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
-                        />
-                      </div>
-                    </div>
-                    {!!stundensaetze?.length && (
-                      <div className="mt-2">
-                        <SearchableSelect
-                          value=""
-                          onChange={(id) => {
-                            const gewaehlt = stundensaetze.find((s) => s.id === id);
-                            if (gewaehlt) setLohnStundensatz(gewaehlt.einzelpreis);
-                          }}
-                          placeholder="Aus Stundensatz-Katalog übernehmen…"
-                          options={stundensaetze.map((s) => ({
-                            value: s.id,
-                            label: `${s.bezeichnung} · ${euro(s.einzelpreis)}`,
-                          }))}
-                        />
-                      </div>
-                    )}
-                    <div className="mt-2">
-                      <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
-                        Gemeinkosten (%)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={lohnGemeinkosten}
-                        onChange={(e) => setLohnGemeinkosten(e.target.value)}
-                        className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-ind-ink-3">
-                      Lohn-Basis {euro(lohnBasis.toFixed(2))} + Gemeinkosten = {euro(lohnGesamt.toFixed(2))}
-                    </p>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 p-3 dark:border-stone-800">
-                    <p className="mb-2 text-xs font-bold text-ind-ink-2">Material</p>
-                    <div className="space-y-1.5">
-                      {materialPosten.map((p, i) => (
-                        <MaterialPostenZeile
-                          key={i}
-                          posten={p}
-                          onChange={(neu) =>
-                            setMaterialPosten((bisher) => bisher.map((x, xi) => (xi === i ? neu : x)))
-                          }
-                          onEntfernen={() => setMaterialPosten((bisher) => bisher.filter((_, xi) => xi !== i))}
-                        />
-                      ))}
-                      <button
-                        onClick={() =>
-                          setMaterialPosten((bisher) => [
-                            ...bisher,
-                            { bezeichnung: "", menge: "1", einzelpreis: "0", material_id: null },
-                          ])
-                        }
-                        className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800/60"
-                      >
-                        <Plus size={13} strokeWidth={2} /> Materialposten hinzufügen
-                      </button>
-                    </div>
-                    <div className="mt-2">
-                      <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
-                        Materialaufschlag (%)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={materialAufschlag}
-                        onChange={(e) => setMaterialAufschlag(e.target.value)}
-                        className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-ind-ink-3">
-                      Material-Basis {euro(materialBasis.toFixed(2))} + Aufschlag ={" "}
-                      {euro(materialGesamtVorGewinn.toFixed(2))}
-                    </p>
-                  </div>
-
-                  <div className="rounded-lg border border-slate-200 p-3 dark:border-stone-800">
-                    <p className="mb-1 text-xs text-ind-ink-3">Zwischensumme {euro(zwischensumme.toFixed(2))}</p>
-                    <label className="mb-1 mt-2 block text-[10.5px] font-medium text-ind-ink-3">
-                      Gewinn/Wagnis (%)
+            <div className="space-y-4">
+              <div className="border border-ind-line-2 p-3">
+                <p className="mb-2 text-xs font-bold text-ind-ink-2">Lohn</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                      Zeit (Minuten)
                     </label>
                     <input
                       type="number"
-                      step="0.1"
-                      value={gewinnWagnis}
-                      onChange={(e) => setGewinnWagnis(e.target.value)}
-                      className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                      value={lohnMinuten}
+                      onChange={(e) => setLohnMinuten(e.target.value)}
+                      className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
                     />
                   </div>
-
-                  <div className="rounded-lg bg-slate-50 p-3 text-sm font-bold text-slate-800 dark:bg-stone-800/60 dark:text-stone-100">
-                    Gesamt: {euro(gesamt.toFixed(2))}
+                  <div>
+                    <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                      Stundensatz (€)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={lohnStundensatz}
+                      onChange={(e) => setLohnStundensatz(e.target.value)}
+                      className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                    />
                   </div>
                 </div>
-              )}
-            </>
+                {!!stundensaetze?.length && (
+                  <div className="mt-2">
+                    <SearchableSelect
+                      value=""
+                      onChange={(id) => {
+                        const gewaehlt = stundensaetze.find((s) => s.id === id);
+                        if (gewaehlt) setLohnStundensatz(gewaehlt.einzelpreis);
+                      }}
+                      placeholder="Aus Stundensatz-Katalog übernehmen…"
+                      options={stundensaetze.map((s) => ({
+                        value: s.id,
+                        label: `${s.bezeichnung} · ${euro(s.einzelpreis)}`,
+                      }))}
+                    />
+                  </div>
+                )}
+                <div className="mt-2">
+                  <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                    Gemeinkosten (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={lohnGemeinkosten}
+                    onChange={(e) => setLohnGemeinkosten(e.target.value)}
+                    className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  />
+                </div>
+              </div>
+
+              <div className="border border-ind-line-2 p-3">
+                <p className="mb-2 text-xs font-bold text-ind-ink-2">Material</p>
+                <div className="space-y-1.5">
+                  {materialPosten.map((p, i) => (
+                    <MaterialPostenZeile
+                      key={i}
+                      posten={p}
+                      onChange={(neu) =>
+                        setMaterialPosten((bisher) => bisher.map((x, xi) => (xi === i ? neu : x)))
+                      }
+                      onEntfernen={() => setMaterialPosten((bisher) => bisher.filter((_, xi) => xi !== i))}
+                    />
+                  ))}
+                  <button
+                    onClick={() =>
+                      setMaterialPosten((bisher) => [
+                        ...bisher,
+                        { bezeichnung: "", menge: "1", einzelpreis: "0", material_id: null },
+                      ])
+                    }
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-ind-ink-3 hover:bg-ind-hover"
+                  >
+                    <Plus size={13} strokeWidth={1.5} /> Materialposten hinzufügen
+                  </button>
+                </div>
+                <div className="mt-2">
+                  <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                    Materialaufschlag (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={materialAufschlag}
+                    onChange={(e) => setMaterialAufschlag(e.target.value)}
+                    className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  />
+                </div>
+              </div>
+
+              <div className="border border-ind-line-2 p-3">
+                <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                  Gewinn/Wagnis (%)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={gewinnWagnis}
+                  onChange={(e) => setGewinnWagnis(e.target.value)}
+                  className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                />
+              </div>
+            </div>
           )}
+        </>
+      )}
 
-          <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
-              Notiz
-            </label>
-            <textarea
-              value={notiz}
-              onChange={(e) => setNotiz(e.target.value)}
-              rows={2}
-              className="w-full resize-none border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+      <div>
+        <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+          Notiz
+        </label>
+        <textarea
+          value={notiz}
+          onChange={(e) => setNotiz(e.target.value)}
+          rows={2}
+          className="w-full resize-none border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+        />
+      </div>
+
+      {!istNeu && !istUnterpunkt && (
+        <div className="space-y-2 border-t border-ind-line pt-4">
+          <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Unterpositionen</p>
+          {(unterpunkte ?? []).map((u) => (
+            <UnterpunktZeileAufklappbar
+              key={u.id}
+              leistungsverzeichnisId={leistungsverzeichnisId}
+              elternPositionId={position!.id}
+              position={u}
             />
-          </div>
-
-          {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
-        </div>
-
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-4 dark:border-stone-800">
-          {istNeu ? (
-            <span />
+          ))}
+          {neuerUnterpunktOffen ? (
+            <div className="border border-ind-line-2 p-3">
+              <LvPositionFelder
+                leistungsverzeichnisId={leistungsverzeichnisId}
+                position={null}
+                elternPositionId={position!.id}
+                onFertig={() => setNeuerUnterpunktOffen(false)}
+              />
+            </div>
           ) : (
             <button
-              onClick={() => {
-                if (window.confirm(`"${position!.bezeichnung}" wirklich löschen?`)) loeschen.mutate();
-              }}
-              disabled={loeschen.isPending}
-              className="btn-touch text-xs font-medium text-slate-400 hover:text-red-600 disabled:opacity-50 dark:text-stone-500 dark:hover:text-red-400"
+              onClick={() => setNeuerUnterpunktOffen(true)}
+              className="flex w-full items-center gap-1.5 border border-dashed border-ind-line px-2 py-2 text-xs font-medium text-ind-ink-3 hover:bg-ind-hover"
             >
-              Löschen
+              <Plus size={13} strokeWidth={1.5} /> Unterpunkt hinzufügen
             </button>
           )}
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-semibold"
-            >
-              Abbrechen
-            </button>
-            <button
-              onClick={() => speichern.mutate()}
-              disabled={!bezeichnung.trim() || speichern.isPending}
-              className="btn-touch btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              Speichern
-            </button>
+        </div>
+      )}
+
+      {/* Summen-Rechnung: bei einer Position mit Unterpositionen die
+       * Summe daraus, sonst -- im Modus "berechnet" -- die vollstaendige
+       * Aufschluesselung. Bewusst als letzter Block vor den
+       * Aktions-Buttons, siehe Komponenten-Docstring. */}
+      {hatUnterpunkte ? (
+        <div className="border-t border-ind-line pt-4">
+          <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Summe</p>
+          <div className="flex items-center justify-between border border-ind-line-2 bg-ind-hover/40 p-3 text-sm font-bold text-ind-ink">
+            <span>Gesamt (Summe der Unterpositionen)</span>
+            <span>{euro(position!.einzelpreis)}</span>
           </div>
+        </div>
+      ) : (
+        kalkulationsmodus === "berechnet" && (
+          <div className="border-t border-ind-line pt-4">
+            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Summe</p>
+            <div className="space-y-1 border border-ind-line-2 p-3 text-xs text-ind-ink-3">
+              <div className="flex justify-between">
+                <span>Lohn-Basis</span>
+                <span>{euro(lohnBasis)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>+ Gemeinkosten ({lohnGemeinkosten || 0}%)</span>
+                <span>{euro(lohnGesamt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Material-Basis</span>
+                <span>{euro(materialBasis)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>+ Aufschlag ({materialAufschlag || 0}%)</span>
+                <span>{euro(materialGesamtVorGewinn)}</span>
+              </div>
+              <div className="flex justify-between border-t border-ind-line-2 pt-1 font-medium text-ind-ink-2">
+                <span>Zwischensumme</span>
+                <span>{euro(zwischensumme)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>+ Gewinn/Wagnis ({gewinnWagnis || 0}%)</span>
+                <span>{euro(gesamt)}</span>
+              </div>
+              <div className="flex justify-between border-t border-ind-line-2 pt-1.5 text-sm font-bold text-ind-ink">
+                <span>Gesamt</span>
+                <span>{euro(gesamt)}</span>
+              </div>
+            </div>
+          </div>
+        )
+      )}
+
+      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+
+      <div className="flex items-center justify-between gap-3 border-t border-ind-line pt-4">
+        {istNeu ? (
+          <span />
+        ) : (
+          <button
+            onClick={() => {
+              if (window.confirm(`"${position!.bezeichnung}" wirklich löschen?`)) loeschen.mutate();
+            }}
+            disabled={loeschen.isPending}
+            className="btn-touch text-xs font-medium text-ind-ink-3 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+          >
+            Löschen
+          </button>
+        )}
+        <div className="flex gap-2">
+          <button onClick={onFertig} className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-semibold">
+            Abbrechen
+          </button>
+          <button
+            onClick={() => speichern.mutate()}
+            disabled={!bezeichnung.trim() || speichern.isPending}
+            className="btn-touch btn-industry btn-industry-primary px-4 py-2 text-sm font-semibold disabled:opacity-50"
+          >
+            Speichern
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function LvUnterpunktZeile({ position, onEdit }: { position: LeistungsverzeichnisPosition; onEdit: () => void }) {
+/** Eine Unterposition als aufklappbare Zeile -- Klick zeigt/versteckt das
+ * Bearbeiten-Formular direkt inline (kein weiteres Panel), siehe
+ * Komponenten-Docstring von LvPositionFelder. */
+function UnterpunktZeileAufklappbar({
+  leistungsverzeichnisId,
+  elternPositionId,
+  position,
+}: {
+  leistungsverzeichnisId: string;
+  elternPositionId: string;
+  position: LeistungsverzeichnisPosition;
+}) {
+  const [offen, setOffen] = useState(false);
   return (
-    <button
-      onClick={onEdit}
-      className="card-interactive flex w-full items-center justify-between gap-2 rounded-lg bg-slate-50 p-2.5 text-left dark:bg-stone-800/60"
-    >
-      <div className="min-w-0">
-        <p className="truncate text-[13px] font-medium text-ind-ink">{position.bezeichnung}</p>
-        {position.kalkulationsmodus === "berechnet" && (
-          <p className="text-[11px] text-ind-ink-3">
-            Lohn {euro(position.lohn_gesamt)} · Material {euro(position.material_gesamt)}
-          </p>
+    <div className="border border-ind-line-2">
+      <button onClick={() => setOffen((v) => !v)} className="flex w-full items-center gap-2 p-2.5 text-left">
+        {offen ? (
+          <ChevronDown size={14} strokeWidth={1.5} className="shrink-0 text-ind-ink-3" />
+        ) : (
+          <ChevronRight size={14} strokeWidth={1.5} className="shrink-0 text-ind-ink-3" />
         )}
-      </div>
-      <span className="shrink-0 text-sm font-semibold text-ind-ink">
-        {euro(position.einzelpreis)}
-      </span>
-    </button>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ind-ink">{position.bezeichnung}</span>
+        <span className="shrink-0 text-sm font-semibold text-ind-ink">{euro(position.einzelpreis)}</span>
+      </button>
+      {offen && (
+        <div className="border-t border-ind-line-2 p-3">
+          <LvPositionFelder
+            leistungsverzeichnisId={leistungsverzeichnisId}
+            position={position}
+            elternPositionId={elternPositionId}
+            onFertig={() => setOffen(false)}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
+/** Zeile in der Positionen-Liste -- oeffnet beim Klick das rechtsseitige
+ * Detail-/Bearbeiten-Panel (SeitenPanel) statt eines zentrierten Modals;
+ * Unterpositionen erscheinen darin, nicht mehr als eigenes Akkordeon in
+ * der Liste. */
 function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverzeichnisId: string; position: LeistungsverzeichnisPosition }) {
   const [offen, setOffen] = useState(false);
-  const [panel, setPanel] = useState<
-    { modus: "bearbeiten"; position: LeistungsverzeichnisPosition } | { modus: "neuer-unterpunkt" } | null
-  >(null);
-
-  const { data: unterpunkte } = useQuery({
-    queryKey: ["leistungsverzeichnis", "unterpunkte", position.id],
-    queryFn: () => leistungsverzeichnisApi.unterpunkte(position.id),
-    enabled: offen,
-  });
 
   return (
-    <div className="rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-      <div className="flex items-center gap-2 p-3">
-        <button
-          onClick={() => setOffen((v) => !v)}
-          className="btn-touch flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
-        >
-          {offen ? <ChevronDown size={16} strokeWidth={2} /> : <ChevronRight size={16} strokeWidth={2} />}
-        </button>
-        <button onClick={() => setPanel({ modus: "bearbeiten", position })} className="min-w-0 flex-1 text-left">
+    <>
+      <button
+        onClick={() => setOffen(true)}
+        className="card-interactive flex w-full items-center gap-2 border border-ind-line bg-ind-bg p-3 text-left"
+      >
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-ind-ink">
             {position.bezeichnung}
             {position.ist_stundensatz && (
@@ -528,43 +597,23 @@ function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverz
               Lohn {euro(position.lohn_gesamt)} · Material {euro(position.material_gesamt)}
             </p>
           )}
-        </button>
+        </div>
         <span className="shrink-0 text-sm font-bold text-ind-ink">
           {euro(position.einzelpreis)} / {position.einheit}
         </span>
-      </div>
+        <ChevronRight size={16} strokeWidth={1.5} className="shrink-0 text-ind-ink-3" />
+      </button>
 
       {offen && (
-        <div className="space-y-1.5 border-t border-slate-100 p-3 dark:border-stone-800">
-          {(unterpunkte ?? []).map((u) => (
-            <LvUnterpunktZeile key={u.id} position={u} onEdit={() => setPanel({ modus: "bearbeiten", position: u })} />
-          ))}
-          <button
-            onClick={() => setPanel({ modus: "neuer-unterpunkt" })}
-            className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800/60"
-          >
-            <Plus size={13} strokeWidth={2} /> Unterpunkt hinzufügen
-          </button>
-        </div>
+        <SeitenPanel title={position.bezeichnung} onClose={() => setOffen(false)}>
+          <LvPositionFelder
+            leistungsverzeichnisId={leistungsverzeichnisId}
+            position={position}
+            onFertig={() => setOffen(false)}
+          />
+        </SeitenPanel>
       )}
-
-      {panel?.modus === "bearbeiten" && (
-        <LvPositionFormular
-          leistungsverzeichnisId={leistungsverzeichnisId}
-          position={panel.position}
-          hatUnterpunkte={panel.position.id === position.id && !!unterpunkte?.length}
-          onClose={() => setPanel(null)}
-        />
-      )}
-      {panel?.modus === "neuer-unterpunkt" && (
-        <LvPositionFormular
-          leistungsverzeichnisId={leistungsverzeichnisId}
-          position={null}
-          elternPositionId={position.id}
-          onClose={() => setPanel(null)}
-        />
-      )}
-    </div>
+    </>
   );
 }
 
@@ -618,9 +667,9 @@ export function LeistungsverzeichnisDetailPage() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate("/leistungsverzeichnis")}
-          className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+          className="btn-touch btn-industry btn-industry-secondary btn-industry-icon"
         >
-          <ArrowLeft size={16} strokeWidth={2} />
+          <ArrowLeft size={16} strokeWidth={1.5} />
         </button>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-bold text-ind-ink">{lv.name}</h1>
@@ -631,25 +680,25 @@ export function LeistungsverzeichnisDetailPage() {
             <button
               onClick={() => duplizieren.mutate()}
               disabled={duplizieren.isPending}
-              className="btn-touch flex items-center gap-1.5 rounded-lg btn-industry btn-industry-secondary px-3 py-2 text-xs font-semibold disabled:opacity-50"
+              className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-secondary px-3 py-2 text-xs font-semibold disabled:opacity-50"
             >
-              <Copy size={13} strokeWidth={2} /> Duplizieren
+              <Copy size={13} strokeWidth={1.5} /> Duplizieren
             </button>
             <button
               onClick={() => {
                 if (window.confirm(`"${lv.name}" samt aller Positionen wirklich löschen?`)) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
-              className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-stone-500 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+              className="btn-touch btn-industry btn-industry-secondary btn-industry-icon text-ind-ink-3 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
             >
-              <Trash2 size={15} strokeWidth={2} />
+              <Trash2 size={15} strokeWidth={1.5} />
             </button>
           </>
         )}
       </div>
 
       {kannVerwalten ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900">
+        <div className="border border-ind-line bg-ind-bg p-3">
           <KundenZuweisung kundenIds={lv.kunden_ids} onChange={(ids) => kundenSpeichern.mutate(ids)} />
         </div>
       ) : (
@@ -663,9 +712,9 @@ export function LeistungsverzeichnisDetailPage() {
         {kannVerwalten && (
           <button
             onClick={() => setNeuePosition(true)}
-            className="btn-touch flex items-center gap-1.5 rounded-lg btn-industry btn-industry-primary px-3 py-2 text-xs font-semibold"
+            className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-primary px-3 py-2 text-xs font-semibold"
           >
-            <Plus size={14} strokeWidth={2.5} />
+            <Plus size={14} strokeWidth={1.5} />
             Neue Position
           </button>
         )}
@@ -684,7 +733,9 @@ export function LeistungsverzeichnisDetailPage() {
       )}
 
       {neuePosition && (
-        <LvPositionFormular leistungsverzeichnisId={id!} position={null} onClose={() => setNeuePosition(false)} />
+        <SeitenPanel title="Neue Position" onClose={() => setNeuePosition(false)}>
+          <LvPositionFelder leistungsverzeichnisId={id!} position={null} onFertig={() => setNeuePosition(false)} />
+        </SeitenPanel>
       )}
     </div>
   );
