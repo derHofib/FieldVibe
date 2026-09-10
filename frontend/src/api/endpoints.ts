@@ -67,6 +67,7 @@ import type {
   KundeProfil,
   KundenportalLinkInfo,
   KundenportalZugang,
+  Leistungsverzeichnis,
   LeistungsverzeichnisPosition,
   LeistungsverzeichnisVerwendung,
   LeistungsverzeichnisVerwendungMitDetails,
@@ -1299,8 +1300,32 @@ export const materialApi = {
   remove: (id: string) => apiFetch<void>(`/api/material/${id}`, { method: "DELETE" }),
 };
 
-interface LvPositionSchreibbarePfelder {
+interface LvSchreibbareFelder {
+  name: string;
+  beschreibung?: string | null;
   kunden_ids?: string[];
+}
+
+export const leistungsverzeichnisseApi = {
+  list: () => apiFetch<Leistungsverzeichnis[]>("/api/leistungsverzeichnisse"),
+  get: (id: string) => apiFetch<Leistungsverzeichnis>(`/api/leistungsverzeichnisse/${id}`),
+  create: (body: LvSchreibbareFelder) =>
+    apiFetch<Leistungsverzeichnis>("/api/leistungsverzeichnisse", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  update: (id: string, body: Partial<LvSchreibbareFelder>) =>
+    apiFetch<Leistungsverzeichnis>(`/api/leistungsverzeichnisse/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  remove: (id: string) => apiFetch<void>(`/api/leistungsverzeichnisse/${id}`, { method: "DELETE" }),
+  duplizieren: (id: string) =>
+    apiFetch<Leistungsverzeichnis>(`/api/leistungsverzeichnisse/${id}/duplizieren`, { method: "POST" }),
+};
+
+interface LvPositionSchreibbarePfelder {
+  leistungsverzeichnis_id?: string;
   eltern_position_id?: string;
   bezeichnung: string;
   einheit?: string;
@@ -1310,18 +1335,22 @@ interface LvPositionSchreibbarePfelder {
   kalkulationsmodus?: LvKalkulationsmodus;
   lohn_minuten?: number | null;
   lohn_stundensatz?: string | null;
+  lohn_gemeinkosten_prozent?: string;
   material_posten?: (Omit<LvMaterialPosten, "material_id"> & { material_id?: string | null })[];
   material_aufschlag_prozent?: string;
+  gewinn_wagnis_prozent?: string;
 }
 
 export const leistungsverzeichnisApi = {
-  // Ohne kundeId: ALLE eigenstaendigen Positionen des Mandanten (allgemeine
-  // und kundenspezifische zusammen -- die Uebersichtsseite). Mit kundeId:
-  // nur die fuer diesen Kunden anwendbaren (allgemeine + ihm zugewiesene) --
-  // siehe app/api/routes/leistungsverzeichnis.py.
-  list: (kundeId?: string, nurStundensaetze = false) => {
+  // Ohne Filter: ALLE eigenstaendigen Positionen des Mandanten. Mit
+  // leistungsverzeichnisId: nur die Hauptpunkte dieses einen LV
+  // (Verwaltungsseite). Mit kundeId: nur die fuer diesen Kunden anwendbaren
+  // (aus allgemeinen LVs + ihm zugewiesenen LVs) -- siehe
+  // app/api/routes/leistungsverzeichnis.py.
+  list: (kundeId?: string, nurStundensaetze = false, leistungsverzeichnisId?: string) => {
     const params = new URLSearchParams();
-    if (kundeId) params.set("kunde_id", kundeId);
+    if (leistungsverzeichnisId) params.set("leistungsverzeichnis_id", leistungsverzeichnisId);
+    else if (kundeId) params.set("kunde_id", kundeId);
     if (nurStundensaetze) params.set("nur_stundensaetze", "true");
     return apiFetch<LeistungsverzeichnisPosition[]>(`/api/leistungsverzeichnis?${params}`);
   },
@@ -1334,7 +1363,10 @@ export const leistungsverzeichnisApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  update: (id: string, body: Partial<Omit<LvPositionSchreibbarePfelder, "eltern_position_id">>) =>
+  update: (
+    id: string,
+    body: Partial<Omit<LvPositionSchreibbarePfelder, "eltern_position_id" | "leistungsverzeichnis_id">>,
+  ) =>
     apiFetch<LeistungsverzeichnisPosition>(`/api/leistungsverzeichnis/${id}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -1468,7 +1500,12 @@ export const kundenportalAuthApi = {
 
 export const mandantEinstellungenApi = {
   get: () => apiFetch<MandantEinstellungen>("/api/mandant/einstellungen"),
-  update: (body: { scheduler_stunde_utc?: number | null; wiedervorlage_standard_tage?: number | null }) =>
+  update: (body: {
+    scheduler_stunde_utc?: number | null;
+    wiedervorlage_standard_tage?: number | null;
+    standard_lohn_gemeinkosten_prozent?: string;
+    standard_gewinn_wagnis_prozent?: string;
+  }) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
       method: "PATCH",
       body: JSON.stringify(body),

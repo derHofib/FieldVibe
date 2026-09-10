@@ -1019,12 +1019,21 @@ export interface LvMaterialPosten {
   material_id: string | null;
 }
 
+// Kopf-Entitaet: buendelt Positionen und traegt selbst die Kunden-Zuweisung.
+export interface Leistungsverzeichnis {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  // Leer = gilt fuer alle Kunden. Ein LV kann keinem, einem oder mehreren
+  // Kunden zugewiesen sein.
+  kunden_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LeistungsverzeichnisPosition {
   id: string;
-  // Leer = gilt fuer alle Kunden. Eine Position kann keinem, einem oder
-  // mehreren Kunden zugewiesen sein. Nur bei eigenstaendigen Positionen
-  // gefuellt, Unterpunkte haben immer [].
-  kunden_ids: string[];
+  leistungsverzeichnis_id: string;
   // Gesetzt = Unterpunkt eines Hauptpunkts, eine Ebene tief.
   eltern_position_id: string | null;
   bezeichnung: string;
@@ -1037,8 +1046,10 @@ export interface LeistungsverzeichnisPosition {
   kalkulationsmodus: LvKalkulationsmodus;
   lohn_minuten: number | null;
   lohn_stundensatz: string | null;
+  lohn_gemeinkosten_prozent: string;
   material_posten: LvMaterialPosten[];
   material_aufschlag_prozent: string;
+  gewinn_wagnis_prozent: string;
   lohn_gesamt: string;
   material_gesamt: string;
   created_at: string;
@@ -1309,6 +1320,10 @@ export interface MandantEinstellungen {
   effektive_wiedervorlage_standard_tage: number;
   firmendaten: MandantFirmendaten;
   logo_object_key: string | null;
+  // Vorbelegung fuer NEU angelegte Leistungsverzeichnis-Positionen im Modus
+  // "berechnet" -- wirkt nicht rueckwirkend auf bereits angelegte Positionen.
+  standard_lohn_gemeinkosten_prozent: string;
+  standard_gewinn_wagnis_prozent: string;
 }
 
 export interface MandantLogoUrl {

@@ -35,6 +35,7 @@ import { FormSubmissionAusfuellenPage } from "./pages/feld/FormSubmissionAusfuel
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
 import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
+import { LeistungsverzeichnisDetailPage } from "./pages/feld/LeistungsverzeichnisDetailPage";
 import { LeistungsverzeichnisPage } from "./pages/feld/LeistungsverzeichnisPage";
 import { KundenPage } from "./pages/feld/KundenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
@@ -178,6 +179,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/insights" element={<InsightsPage />} />
           <Route path="/integrationen" element={<IntegrationenPage />} />
           <Route path="/leistungsverzeichnis" element={<LeistungsverzeichnisPage />} />
+          <Route path="/leistungsverzeichnis/:id" element={<LeistungsverzeichnisDetailPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/account-typen" element={<AccountTypenPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />

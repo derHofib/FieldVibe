@@ -9,6 +9,7 @@ import {
   kundenApi,
   kundenportalZugaengeApi,
   leistungsverzeichnisApi,
+  leistungsverzeichnisseApi,
   standorteApi,
   usersApi,
 } from "../../api/endpoints";
@@ -575,7 +576,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
   );
 }
 
-function NeueLvPosition({ kundeId }: { kundeId: string }) {
+function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kundeName: string; zielLvId: string | undefined }) {
   const queryClient = useQueryClient();
   const [zeigen, setZeigen] = useState(false);
   const [bezeichnung, setBezeichnung] = useState("");
@@ -585,16 +586,31 @@ function NeueLvPosition({ kundeId }: { kundeId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      leistungsverzeichnisApi.create({
-        kunden_ids: [kundeId],
+    // Ohne bestehendes kundenspezifisches LV wird eines still angelegt --
+    // die Seite bietet bewusst weiterhin das Anlegen "in einem Schritt", die
+    // Zwei-Stufen-Struktur (erst LV, dann Position) ist nur auf der
+    // eigenstaendigen Verwaltungsseite sichtbar (siehe
+    // LeistungsverzeichnisDetailPage.tsx).
+    mutationFn: async () => {
+      const lvId =
+        zielLvId ??
+        (
+          await leistungsverzeichnisseApi.create({
+            name: `Kundenspezifisch – ${kundeName}`,
+            kunden_ids: [kundeId],
+          })
+        ).id;
+      return leistungsverzeichnisApi.create({
+        leistungsverzeichnis_id: lvId,
         bezeichnung,
         einheit,
         einzelpreis: einzelpreis || undefined,
         ist_stundensatz: istStundensatz,
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis", kundeId] });
+      queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnisse"] });
       setZeigen(false);
       setBezeichnung("");
       setEinheit("Stk");
@@ -722,16 +738,31 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
   );
 }
 
-function LeistungsverzeichnisVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kannVerwalten: boolean }) {
+function LeistungsverzeichnisVerwaltung({
+  kundeId,
+  kundeName,
+  kannVerwalten,
+}: {
+  kundeId: string;
+  kundeName: string;
+  kannVerwalten: boolean;
+}) {
+  // Die Kunden-Zuweisung sitzt am Leistungsverzeichnis (LV), nicht mehr an
+  // der einzelnen Position -- hier zaehlt daher nur, was aus einem diesem
+  // Kunden zugewiesenen LV stammt; der komplette Katalog inkl. Verwaltung
+  // der LVs selbst wird zentral unter "Leistungsverzeichnisse" gepflegt.
+  const { data: lvs } = useQuery({
+    queryKey: ["leistungsverzeichnisse"],
+    queryFn: () => leistungsverzeichnisseApi.list(),
+  });
+  const zugewieseneLvs = (lvs ?? []).filter((lv) => lv.kunden_ids.includes(kundeId));
+  const zugewieseneLvIds = new Set(zugewieseneLvs.map((lv) => lv.id));
+
   const { data: alle } = useQuery({
     queryKey: ["leistungsverzeichnis", kundeId],
     queryFn: () => leistungsverzeichnisApi.list(kundeId),
   });
-  // list(kundeId) liefert bewusst zusaetzlich den allgemeinen Katalog mit
-  // (siehe leistungsverzeichnisApi.list) -- hier zaehlt aber nur, was fuer
-  // DIESEN Kunden als Sonderkondition angelegt wurde; der komplette Katalog
-  // wird zentral unter "Leistungsverzeichnis" gepflegt.
-  const positionen = alle?.filter((p) => p.kunden_ids.includes(kundeId));
+  const positionen = alle?.filter((p) => zugewieseneLvIds.has(p.leistungsverzeichnis_id));
 
   return (
     <div>
@@ -754,7 +785,7 @@ function LeistungsverzeichnisVerwaltung({ kundeId, kannVerwalten }: { kundeId: s
       )}
       {kannVerwalten && (
         <div className="mt-2">
-          <NeueLvPosition kundeId={kundeId} />
+          <NeueLvPosition kundeId={kundeId} kundeName={kundeName} zielLvId={zugewieseneLvs[0]?.id} />
         </div>
       )}
     </div>
@@ -1230,7 +1261,7 @@ export function KundeProfilePage() {
 
       <StandorteVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
 
-      <LeistungsverzeichnisVerwaltung kundeId={id!} kannVerwalten={kannVerwalten} />
+      <LeistungsverzeichnisVerwaltung kundeId={id!} kundeName={profil.name} kannVerwalten={kannVerwalten} />
 
       {kannVerwalten && istModulAktiv(currentUser, "kundenportal") && (
         <>
