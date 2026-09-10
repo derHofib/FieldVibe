@@ -37,6 +37,8 @@ def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
         ),
         firmendaten=mandant.firmendaten,
         logo_object_key=mandant.logo_object_key,
+        standard_lohn_gemeinkosten_prozent=mandant.standard_lohn_gemeinkosten_prozent,
+        standard_gewinn_wagnis_prozent=mandant.standard_gewinn_wagnis_prozent,
     )
 
 
@@ -71,6 +73,10 @@ async def update_einstellungen(
         # Ausschnitt -- ein blindes Ueberschreiben wuerde sonst die zuletzt
         # gespeicherten Felder der anderen Formulare verwerfen.
         mandant.firmendaten = {**(mandant.firmendaten or {}), **updates["firmendaten"]}
+    if updates.get("standard_lohn_gemeinkosten_prozent") is not None:
+        mandant.standard_lohn_gemeinkosten_prozent = updates["standard_lohn_gemeinkosten_prozent"]
+    if updates.get("standard_gewinn_wagnis_prozent") is not None:
+        mandant.standard_gewinn_wagnis_prozent = updates["standard_gewinn_wagnis_prozent"]
     await session.flush()
     await session.refresh(mandant)
     return _to_read_model(mandant)

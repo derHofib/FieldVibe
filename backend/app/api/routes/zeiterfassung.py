@@ -15,7 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
-from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition, LeistungsverzeichnisPositionKunde
+from app.models.leistungsverzeichnis import LeistungsverzeichnisKunde, LeistungsverzeichnisPosition
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -420,11 +420,13 @@ async def _lv_position_pruefen(
     session: AsyncSession, lv_position_id: UUID, vorgang: Vorgang | None
 ) -> None:
     """SVS-Kopplung: der gewaehlte Stundenverrechnungssatz muss ein
-    ist_stundensatz-Eintrag sein und -- falls er ueberhaupt Kunden zugewiesen
-    ist -- zum Kunden des Vorgangs gehoeren, sonst koennte man versehentlich
-    den Satz eines fremden Kunden hinterlegen. Keine Zuweisung heisst "gilt
-    fuer alle Kunden", siehe LeistungsverzeichnisPositionKunde. RLS scopt
-    session.get() bereits auf den eigenen Mandanten."""
+    ist_stundensatz-Eintrag sein und -- falls sein Leistungsverzeichnis
+    ueberhaupt Kunden zugewiesen ist -- zum Kunden des Vorgangs gehoeren,
+    sonst koennte man versehentlich den Satz eines fremden Kunden
+    hinterlegen. Keine Zuweisung heisst "gilt fuer alle Kunden", siehe
+    LeistungsverzeichnisKunde (die Kunden-Zuweisung sitzt am LV, nicht mehr
+    an der einzelnen Position). RLS scopt session.get() bereits auf den
+    eigenen Mandanten."""
     lv_position = await session.get(LeistungsverzeichnisPosition, lv_position_id)
     if lv_position is None or lv_position.geloescht_am is not None or not lv_position.ist_stundensatz:
         raise HTTPException(
@@ -434,8 +436,8 @@ async def _lv_position_pruefen(
     if vorgang is not None:
         zugeordnete_kunden = (
             await session.execute(
-                select(LeistungsverzeichnisPositionKunde.kunde_id).where(
-                    LeistungsverzeichnisPositionKunde.lv_position_id == lv_position_id
+                select(LeistungsverzeichnisKunde.kunde_id).where(
+                    LeistungsverzeichnisKunde.leistungsverzeichnis_id == lv_position.leistungsverzeichnis_id
                 )
             )
         ).scalars().all()

@@ -12,12 +12,13 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
-from app.models.kunde import Kunde
 from app.models.leistungsverzeichnis import (
+    Leistungsverzeichnis,
+    LeistungsverzeichnisKunde,
     LeistungsverzeichnisPosition,
-    LeistungsverzeichnisPositionKunde,
     LeistungsverzeichnisVerwendung,
 )
+from app.models.mandant import Mandant
 from app.models.material import Material
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
@@ -55,58 +56,11 @@ async def _require_position(session: AsyncSession, lv_position_id: UUID) -> Leis
     return position
 
 
-async def _kunden_ids_lesen(session: AsyncSession, position_ids: list[UUID]) -> dict[UUID, list[UUID]]:
-    if not position_ids:
-        return {}
-    result = await session.execute(
-        select(LeistungsverzeichnisPositionKunde.lv_position_id, LeistungsverzeichnisPositionKunde.kunde_id).where(
-            LeistungsverzeichnisPositionKunde.lv_position_id.in_(position_ids)
-        )
-    )
-    zuordnung: dict[UUID, list[UUID]] = {}
-    for pos_id, kunde_id in result.all():
-        zuordnung.setdefault(pos_id, []).append(kunde_id)
-    return zuordnung
-
-
-async def _annotiere_kunden_ids(session: AsyncSession, positionen: list[LeistungsverzeichnisPosition]) -> None:
-    """Haengt kunden_ids als transientes (nicht in der DB gespeichertes)
-    Attribut an -- LeistungsverzeichnisPositionRead.model_validate() liest
-    es per from_attributes wie jedes andere Feld."""
-    zuordnung = await _kunden_ids_lesen(session, [p.id for p in positionen])
-    for p in positionen:
-        p.kunden_ids = zuordnung.get(p.id, [])  # type: ignore[attr-defined]
-
-
-async def _kunden_setzen(
-    session: AsyncSession, auth: AuthContext, position_id: UUID, kunden_ids: list[UUID]
-) -> None:
-    neue = set(kunden_ids)
-    for kunde_id in neue:
-        kunde = await session.get(Kunde, kunde_id)
-        if kunde is None or kunde.geloescht_am is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
-            )
-
-    bestehende_result = await session.execute(
-        select(LeistungsverzeichnisPositionKunde).where(
-            LeistungsverzeichnisPositionKunde.lv_position_id == position_id
-        )
-    )
-    bestehende = {z.kunde_id: z for z in bestehende_result.scalars().all()}
-
-    for kunde_id, zuweisung in bestehende.items():
-        if kunde_id not in neue:
-            await session.delete(zuweisung)
-    for kunde_id in neue - bestehende.keys():
-        session.add(
-            LeistungsverzeichnisPositionKunde(
-                mandant_id=auth.mandant_id, lv_position_id=position_id, kunde_id=kunde_id
-            )
-        )
-    await session.flush()
+async def _require_lv(session: AsyncSession, lv_id: UUID) -> Leistungsverzeichnis:
+    lv = await session.get(Leistungsverzeichnis, lv_id)
+    if lv is None or lv.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Leistungsverzeichnis nicht gefunden")
+    return lv
 
 
 async def _pruefe_material_posten(session: AsyncSession, posten: list[MaterialPosten]) -> None:
@@ -134,20 +88,32 @@ def _material_posten_zu_json(posten: list[MaterialPosten]) -> list[dict]:
 
 def _berechne_eigenen_preis(position: LeistungsverzeichnisPosition) -> tuple[Decimal, Decimal]:
     """(lohn_gesamt, material_gesamt) einer Position OHNE Kinder, gemaess
-    ihres eigenen kalkulationsmodus. Fuer "festpreis" gibt es keinen
-    Lohn/Material-Split -- einzelpreis ist dann der einzige Wert."""
+    ihres eigenen kalkulationsmodus -- BEREITS inklusive Gemeinkosten-
+    Aufschlag (Lohn) bzw. Materialaufschlag UND der abschliessenden
+    Gewinn/Wagnis-Marge auf die Zwischensumme aus beidem (proportional auf
+    Lohn- und Materialanteil verteilt, damit lohn_gesamt + material_gesamt
+    weiterhin exakt einzelpreis ergibt -- wichtig fuer die Summenbildung bei
+    Hauptpunkten mit Unterpunkten, siehe _neu_berechnen). Fuer "festpreis"
+    gibt es keinen Lohn/Material-Split -- einzelpreis ist dann der einzige,
+    frei editierbare Wert, kein automatischer Aufschlag."""
     if position.kalkulationsmodus != "berechnet":
         return Decimal("0"), Decimal("0")
-    lohn = Decimal("0")
+    lohn_basis = Decimal("0")
     if position.lohn_minuten and position.lohn_stundensatz:
-        lohn = (Decimal(position.lohn_minuten) / Decimal(60)) * position.lohn_stundensatz
+        lohn_basis = (Decimal(position.lohn_minuten) / Decimal(60)) * position.lohn_stundensatz
+    gemeinkosten = position.lohn_gemeinkosten_prozent or Decimal("0")
+    lohn = lohn_basis * (Decimal("1") + gemeinkosten / Decimal("100"))
+
     material_basis = sum(
         (Decimal(str(p["menge"])) * Decimal(str(p["einzelpreis"])) for p in position.material_posten),
         Decimal("0"),
     )
     aufschlag = position.material_aufschlag_prozent or Decimal("0")
     material = material_basis * (Decimal("1") + aufschlag / Decimal("100"))
-    return lohn, material
+
+    gewinn_wagnis = position.gewinn_wagnis_prozent or Decimal("0")
+    gewinn_faktor = Decimal("1") + gewinn_wagnis / Decimal("100")
+    return lohn * gewinn_faktor, material * gewinn_faktor
 
 
 async def _neu_berechnen(session: AsyncSession, position: LeistungsverzeichnisPosition) -> None:
@@ -155,7 +121,10 @@ async def _neu_berechnen(session: AsyncSession, position: LeistungsverzeichnisPo
     und kaskadiert -- eine Ebene tief -- zu ihrem Hauptpunkt, falls sie ein
     Unterpunkt ist. Hat die Position selbst aktive Kinder, ist sie ein
     Hauptpunkt: ihr Preis ist dann immer die Summe der Kinder, unabhaengig
-    vom eigenen kalkulationsmodus (der wird dann ignoriert)."""
+    vom eigenen kalkulationsmodus (der wird dann ignoriert) -- die Kinder
+    tragen ihre eigene Gewinn/Wagnis-Marge bereits in ihrem lohn_gesamt/
+    material_gesamt, eine erneute Anwendung auf Hauptpunkt-Ebene waere eine
+    Doppelverrechnung."""
     kinder = (
         await session.execute(
             select(LeistungsverzeichnisPosition).where(
@@ -192,6 +161,7 @@ async def _neu_berechnen(session: AsyncSession, position: LeistungsverzeichnisPo
 @router.get("", response_model=list[LeistungsverzeichnisPositionRead])
 async def list_positionen(
     kunde_id: UUID | None = Query(default=None),
+    leistungsverzeichnis_id: UUID | None = Query(default=None),
     eltern_position_id: UUID | None = Query(default=None),
     nur_stundensaetze: bool = Query(default=False),
     session: AsyncSession = Depends(get_db),
@@ -209,28 +179,32 @@ async def list_positionen(
             LeistungsverzeichnisPosition.eltern_position_id.is_(None),
             LeistungsverzeichnisPosition.geloescht_am.is_(None),
         )
-        if kunde_id is not None:
+        if leistungsverzeichnis_id is not None:
+            # Verwaltungsseite eines konkreten LV: nur dessen eigene
+            # Hauptpunkte.
+            stmt = stmt.where(LeistungsverzeichnisPosition.leistungsverzeichnis_id == leistungsverzeichnis_id)
+        elif kunde_id is not None:
             # Kundengefilterter Blick (Angebot/Vorgang/Zeiterfassung-Picker):
-            # allgemeine Positionen (keine Kunden-Zuordnung) PLUS die diesem
-            # Kunden konkret zugewiesenen.
-            zugeordnete_ids = select(LeistungsverzeichnisPositionKunde.lv_position_id).where(
-                LeistungsverzeichnisPositionKunde.kunde_id == kunde_id
+            # Positionen aus allgemeinen LVs (keine Kunden-Zuordnung) PLUS
+            # aus LVs, die diesem Kunden konkret zugewiesen sind -- die
+            # Kunden-Zuordnung sitzt am LV, nicht mehr an der Position
+            # selbst (siehe app/models/leistungsverzeichnis.py).
+            zugeordnete_lv_ids = select(LeistungsverzeichnisKunde.leistungsverzeichnis_id).where(
+                LeistungsverzeichnisKunde.kunde_id == kunde_id
             )
-            irgendwo_zugeordnete_ids = select(LeistungsverzeichnisPositionKunde.lv_position_id)
+            irgendwo_zugeordnete_lv_ids = select(LeistungsverzeichnisKunde.leistungsverzeichnis_id)
             stmt = stmt.where(
-                LeistungsverzeichnisPosition.id.in_(zugeordnete_ids)
-                | LeistungsverzeichnisPosition.id.not_in(irgendwo_zugeordnete_ids)
+                LeistungsverzeichnisPosition.leistungsverzeichnis_id.in_(zugeordnete_lv_ids)
+                | LeistungsverzeichnisPosition.leistungsverzeichnis_id.not_in(irgendwo_zugeordnete_lv_ids)
             )
-        # Ohne kunde_id (die Leistungsverzeichnis-Uebersichtsseite): alle
-        # eigenstaendigen Positionen des Mandanten, allgemeine UND
-        # kundenspezifische zusammen -- keine weitere Einschraenkung.
+        # Ohne Filter: alle eigenstaendigen Positionen des Mandanten,
+        # allgemeine UND kundenspezifische zusammen (z.B. fuer den
+        # Stundensatz-Katalog in LvPositionFormular).
     if nur_stundensaetze:
         stmt = stmt.where(LeistungsverzeichnisPosition.ist_stundensatz.is_(True))
     stmt = stmt.order_by(LeistungsverzeichnisPosition.bezeichnung)
     result = await session.execute(stmt)
-    positionen = list(result.scalars().all())
-    await _annotiere_kunden_ids(session, positionen)
-    return positionen
+    return list(result.scalars().all())
 
 
 @router.get("/verwendungen", response_model=list[LeistungsverzeichnisVerwendungMitDetails])
@@ -299,11 +273,29 @@ async def create_position(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Unterpunkte können nicht verschachtelt werden"
             )
+        leistungsverzeichnis_id = eltern.leistungsverzeichnis_id
+    else:
+        if body.leistungsverzeichnis_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="leistungsverzeichnis_id ist erforderlich"
+            )
+        lv = await _require_lv(session, body.leistungsverzeichnis_id)
+        leistungsverzeichnis_id = lv.id
 
     await _pruefe_material_posten(session, body.material_posten)
 
+    lohn_gemeinkosten_prozent = body.lohn_gemeinkosten_prozent
+    gewinn_wagnis_prozent = body.gewinn_wagnis_prozent
+    if lohn_gemeinkosten_prozent is None or gewinn_wagnis_prozent is None:
+        mandant = await session.get(Mandant, auth.mandant_id)
+        if lohn_gemeinkosten_prozent is None:
+            lohn_gemeinkosten_prozent = mandant.standard_lohn_gemeinkosten_prozent
+        if gewinn_wagnis_prozent is None:
+            gewinn_wagnis_prozent = mandant.standard_gewinn_wagnis_prozent
+
     position = LeistungsverzeichnisPosition(
         mandant_id=auth.mandant_id,
+        leistungsverzeichnis_id=leistungsverzeichnis_id,
         eltern_position_id=body.eltern_position_id,
         bezeichnung=body.bezeichnung,
         einheit=body.einheit,
@@ -313,18 +305,15 @@ async def create_position(
         kalkulationsmodus=body.kalkulationsmodus,
         lohn_minuten=body.lohn_minuten,
         lohn_stundensatz=body.lohn_stundensatz,
+        lohn_gemeinkosten_prozent=lohn_gemeinkosten_prozent,
         material_posten=_material_posten_zu_json(body.material_posten),
         material_aufschlag_prozent=body.material_aufschlag_prozent,
+        gewinn_wagnis_prozent=gewinn_wagnis_prozent,
     )
     session.add(position)
     await session.flush()
     await _neu_berechnen(session, position)
-    # Unterpunkte bekommen bewusst keine eigene Kunden-Zuweisung -- sie
-    # erscheinen nie eigenstaendig in einer kundengefilterten Liste.
-    if body.eltern_position_id is None and body.kunden_ids:
-        await _kunden_setzen(session, auth, position.id, body.kunden_ids)
     await session.refresh(position)
-    await _annotiere_kunden_ids(session, [position])
     return position
 
 
@@ -339,13 +328,11 @@ async def create_position(
 async def update_position(
     lv_position_id: UUID,
     body: LeistungsverzeichnisPositionUpdate,
-    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> LeistungsverzeichnisPosition:
     position = await _require_position(session, lv_position_id)
     changes = body.model_dump(exclude_unset=True)
 
-    kunden_ids = changes.pop("kunden_ids", None)
     if "material_posten" in changes and changes["material_posten"] is not None:
         await _pruefe_material_posten(session, body.material_posten)
         changes["material_posten"] = _material_posten_zu_json(body.material_posten)
@@ -355,11 +342,7 @@ async def update_position(
     await session.flush()
     await _neu_berechnen(session, position)
 
-    if kunden_ids is not None and position.eltern_position_id is None:
-        await _kunden_setzen(session, auth, position.id, kunden_ids)
-
     await session.refresh(position)
-    await _annotiere_kunden_ids(session, [position])
     return position
 
 
@@ -409,8 +392,8 @@ async def verwendung_erfassen(
         )
     zugeordnete_kunden = (
         await session.execute(
-            select(LeistungsverzeichnisPositionKunde.kunde_id).where(
-                LeistungsverzeichnisPositionKunde.lv_position_id == lv_position_id
+            select(LeistungsverzeichnisKunde.kunde_id).where(
+                LeistungsverzeichnisKunde.leistungsverzeichnis_id == position.leistungsverzeichnis_id
             )
         )
     ).scalars().all()

@@ -30,7 +30,7 @@ from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
-from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition
+from app.models.leistungsverzeichnis import Leistungsverzeichnis, LeistungsverzeichnisPosition
 from app.models.lieferant import Lieferant
 from app.models.mangel import Mangel
 from app.models.material import Material
@@ -70,12 +70,12 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
             ("anlage", "kunde_id"),
             ("vorgang_anfrage", "kunde_id"),
             ("vorgang", "kunde_id"),
-            # KEIN Cascade-Eintrag fuer leistungsverzeichnis_position mehr:
-            # eine LV-Position kann mehreren Kunden zugewiesen sein (siehe
-            # leistungsverzeichnis_position_kunden), das Loeschen eines
-            # Kunden darf eine ggf. geteilte Position nicht mitreissen --
-            # nur die Zuordnung wird ueber die echte FK-CASCADE beim
-            # physischen Loeschen entfernt (siehe Migration 0075).
+            # KEIN Cascade-Eintrag fuer leistungsverzeichnis(_position) mehr:
+            # ein Leistungsverzeichnis kann mehreren Kunden zugewiesen sein
+            # (siehe leistungsverzeichnis_kunden), das Loeschen eines Kunden
+            # darf ein ggf. geteiltes LV nicht mitreissen -- nur die
+            # Zuordnung wird ueber die echte FK-CASCADE beim physischen
+            # Loeschen entfernt (siehe Migration 0075/0079).
         ),
     ),
     "standort": EntityKind(
@@ -126,6 +126,9 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     # Verwendungen (Buchungshistorie an Vorgaengen) kaskadieren bewusst
     # nicht mit -- gleiche Regel wie bei material_verwendungen, siehe
     # delete_material in app/api/routes/material.py.
+    "leistungsverzeichnis": EntityKind(
+        Leistungsverzeichnis, "name", (("leistungsverzeichnis_position", "leistungsverzeichnis_id"),)
+    ),
     "leistungsverzeichnis_position": EntityKind(
         LeistungsverzeichnisPosition, "bezeichnung", (("leistungsverzeichnis_position", "eltern_position_id"),)
     ),

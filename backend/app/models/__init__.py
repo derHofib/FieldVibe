@@ -30,8 +30,9 @@ from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.kundenportal import KundenportalZugang
 from app.models.leistungsverzeichnis import (
+    Leistungsverzeichnis,
+    LeistungsverzeichnisKunde,
     LeistungsverzeichnisPosition,
-    LeistungsverzeichnisPositionKunde,
     LeistungsverzeichnisVerwendung,
 )
 from app.models.lieferant import Lieferant
@@ -97,8 +98,9 @@ __all__ = [
     "Kunde",
     "KundeZuweisung",
     "KundenportalZugang",
+    "Leistungsverzeichnis",
+    "LeistungsverzeichnisKunde",
     "LeistungsverzeichnisPosition",
-    "LeistungsverzeichnisPositionKunde",
     "LeistungsverzeichnisVerwendung",
     "Lieferant",
     "MailAccount",

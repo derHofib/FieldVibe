@@ -1,6 +1,7 @@
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, SmallInteger, String, Text
+from sqlalchemy import CheckConstraint, Numeric, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -79,3 +80,13 @@ class Mandant(TimestampMixin, Base):
     # Kunde.adresse -- spart eine Migration pro zusaetzlichem Feld.
     firmendaten: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     logo_object_key: Mapped[str | None] = mapped_column(Text)
+    # Vorbelegung fuer neu angelegte Leistungsverzeichnis-Positionen im Modus
+    # "berechnet" (siehe LeistungsverzeichnisPosition) -- wirkt NUR beim
+    # Anlegen, spaeter geaenderte Mandant-Defaults rechnen bereits
+    # bestehende Positionen bewusst nicht rueckwirkend neu.
+    standard_lohn_gemeinkosten_prozent: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0")
+    )
+    standard_gewinn_wagnis_prozent: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0")
+    )

@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.db.session import system_session
 from app.models.anlage import Anlage
-from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition, LeistungsverzeichnisVerwendung
+from app.models.leistungsverzeichnis import Leistungsverzeichnis, LeistungsverzeichnisPosition, LeistungsverzeichnisVerwendung
 from app.models.material import Material, MaterialBestand, MaterialVerwendung
 from app.models.rechnung import Rechnung
 from app.models.vorgang import Vorgang
@@ -537,8 +537,12 @@ async def test_positionsvorschlaege_aus_leistungsverzeichnis(
     token = await login(client, admin.email, "pw-123456")
 
     async with system_session() as session:
+        lv = Leistungsverzeichnis(mandant_id=mandant.id, name="LV")
+        session.add(lv)
+        await session.flush()
         svs = LeistungsverzeichnisPosition(
             mandant_id=mandant.id,
+            leistungsverzeichnis_id=lv.id,
             bezeichnung="Stundensatz Monteur",
             einheit="Std",
             einzelpreis=Decimal("65.00"),
@@ -546,6 +550,7 @@ async def test_positionsvorschlaege_aus_leistungsverzeichnis(
         )
         pauschale = LeistungsverzeichnisPosition(
             mandant_id=mandant.id,
+            leistungsverzeichnis_id=lv.id,
             bezeichnung="Anfahrtspauschale",
             einheit="Stk",
             einzelpreis=Decimal("29.00"),

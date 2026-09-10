@@ -4,15 +4,28 @@ import pytest
 from sqlalchemy import select
 
 from app.db.session import system_session
-from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition, LeistungsverzeichnisPositionKunde
+from app.models.leistungsverzeichnis import Leistungsverzeichnis, LeistungsverzeichnisKunde, LeistungsverzeichnisPosition
 from app.models.vorgang_event import VorgangEvent
 from tests.conftest import auth_headers, login
 
 
-async def _make_lv_position(mandant, kunde, **kwargs) -> LeistungsverzeichnisPosition:
+async def _make_lv(mandant, kunde=None, **kwargs) -> Leistungsverzeichnis:
+    async with system_session() as session:
+        lv = Leistungsverzeichnis(mandant_id=mandant.id, name=kwargs.pop("name", "Allgemein"), **kwargs)
+        session.add(lv)
+        await session.flush()
+        if kunde is not None:
+            session.add(LeistungsverzeichnisKunde(mandant_id=mandant.id, leistungsverzeichnis_id=lv.id, kunde_id=kunde.id))
+            await session.flush()
+        await session.refresh(lv)
+        return lv
+
+
+async def _make_lv_position(mandant, lv, **kwargs) -> LeistungsverzeichnisPosition:
     async with system_session() as session:
         position = LeistungsverzeichnisPosition(
             mandant_id=mandant.id,
+            leistungsverzeichnis_id=lv.id,
             bezeichnung=kwargs.pop("bezeichnung", "Stundensatz Monteur"),
             einheit=kwargs.pop("einheit", "Std"),
             einzelpreis=kwargs.pop("einzelpreis", Decimal("65.00")),
@@ -21,38 +34,40 @@ async def _make_lv_position(mandant, kunde, **kwargs) -> LeistungsverzeichnisPos
         )
         session.add(position)
         await session.flush()
-        if kunde is not None:
-            session.add(
-                LeistungsverzeichnisPositionKunde(mandant_id=mandant.id, lv_position_id=position.id, kunde_id=kunde.id)
-            )
-            await session.flush()
         await session.refresh(position)
         return position
 
 
 @pytest.mark.asyncio
-async def test_admin_kann_lv_position_anlegen_und_listen(client, make_mandant, make_user, make_kunde):
+async def test_admin_kann_lv_anlegen_und_position_hinzufuegen(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
 
-    resp = await client.post(
+    lv_resp = await client.post(
+        "/api/leistungsverzeichnisse",
+        headers=auth_headers(token),
+        json={"name": "Wartungsvertraege", "kunden_ids": [str(kunde.id)]},
+    )
+    assert lv_resp.status_code == 201
+    lv = lv_resp.json()
+    assert lv["kunden_ids"] == [str(kunde.id)]
+
+    pos_resp = await client.post(
         "/api/leistungsverzeichnis",
         headers=auth_headers(token),
         json={
-            "kunden_ids": [str(kunde.id)],
+            "leistungsverzeichnis_id": lv["id"],
             "bezeichnung": "Stundensatz Monteur",
             "einheit": "Std",
             "einzelpreis": "65.00",
             "ist_stundensatz": True,
         },
     )
-    assert resp.status_code == 201
-    body = resp.json()
-    assert body["bezeichnung"] == "Stundensatz Monteur"
-    assert body["ist_stundensatz"] is True
-    assert body["kunden_ids"] == [str(kunde.id)]
+    assert pos_resp.status_code == 201
+    position = pos_resp.json()
+    assert position["leistungsverzeichnis_id"] == lv["id"]
 
     liste = await client.get(
         "/api/leistungsverzeichnis", headers=auth_headers(token), params={"kunde_id": str(kunde.id)}
@@ -67,39 +82,49 @@ async def test_admin_kann_lv_position_anlegen_und_listen(client, make_mandant, m
     )
     assert len(nur_stundensaetze.json()) == 1
 
+    je_lv = await client.get(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"leistungsverzeichnis_id": lv["id"]}
+    )
+    assert len(je_lv.json()) == 1
+
 
 @pytest.mark.asyncio
-async def test_techniker_kann_lv_position_nicht_anlegen_oder_loeschen(
-    client, make_mandant, make_user, make_kunde
-):
+async def test_position_ohne_lv_id_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    resp = await client.post(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), json={"bezeichnung": "Ohne LV"}
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_techniker_kann_lv_nicht_anlegen_oder_loeschen(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
-    position = await _make_lv_position(mandant, kunde)
+    lv = await _make_lv(mandant, kunde)
     token = await login(client, techniker.email, "pw-123456")
 
     create_resp = await client.post(
-        "/api/leistungsverzeichnis",
-        headers=auth_headers(token),
-        json={"kunden_ids": [str(kunde.id)], "bezeichnung": "Pauschale"},
+        "/api/leistungsverzeichnisse", headers=auth_headers(token), json={"name": "Pauschalen"}
     )
     assert create_resp.status_code == 403
 
-    delete_resp = await client.delete(
-        f"/api/leistungsverzeichnis/{position.id}", headers=auth_headers(token)
-    )
+    delete_resp = await client.delete(f"/api/leistungsverzeichnisse/{lv.id}", headers=auth_headers(token))
     assert delete_resp.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_lv_position_ueber_mandantengrenze_nicht_sichtbar(
-    client, make_mandant, make_user, make_kunde
-):
+async def test_lv_position_ueber_mandantengrenze_nicht_sichtbar(client, make_mandant, make_user, make_kunde):
     mandant_a = await make_mandant(name="Betrieb A")
     mandant_b = await make_mandant(name="Betrieb B")
     admin_b = await make_user(mandant=mandant_b, role="mandant_admin", password="pw-123456")
     kunde_a = await make_kunde(mandant=mandant_a)
-    position_a = await _make_lv_position(mandant_a, kunde_a)
+    lv_a = await _make_lv(mandant_a, kunde_a)
+    position_a = await _make_lv_position(mandant_a, lv_a)
     token_b = await login(client, admin_b.email, "pw-123456")
 
     resp = await client.patch(
@@ -109,16 +134,18 @@ async def test_lv_position_ueber_mandantengrenze_nicht_sichtbar(
     )
     assert resp.status_code == 404
 
+    lv_resp = await client.get(f"/api/leistungsverzeichnisse/{lv_a.id}", headers=auth_headers(token_b))
+    assert lv_resp.status_code == 404
+
 
 @pytest.mark.asyncio
-async def test_lv_verwendung_erstellt_verwendung_und_event(
-    client, make_mandant, make_user, make_kunde, make_vorgang
-):
+async def test_lv_verwendung_erstellt_verwendung_und_event(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
-    position = await _make_lv_position(mandant, kunde, bezeichnung="Anfahrtspauschale", ist_stundensatz=False)
+    lv = await _make_lv(mandant, kunde)
+    position = await _make_lv_position(mandant, lv, bezeichnung="Anfahrtspauschale", ist_stundensatz=False)
     token = await login(client, admin.email, "pw-123456")
 
     resp = await client.post(
@@ -161,9 +188,7 @@ async def test_lv_verwendung_erstellt_verwendung_und_event(
 
 
 @pytest.mark.asyncio
-async def test_lv_verwendung_entfernen_unbekannte_id_404(
-    client, make_mandant, make_user
-):
+async def test_lv_verwendung_entfernen_unbekannte_id_404(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
@@ -176,15 +201,14 @@ async def test_lv_verwendung_entfernen_unbekannte_id_404(
 
 
 @pytest.mark.asyncio
-async def test_lv_verwendung_lehnt_fremden_kunden_ab(
-    client, make_mandant, make_user, make_kunde, make_vorgang
-):
+async def test_lv_verwendung_lehnt_fremden_kunden_ab(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde_a = await make_kunde(mandant=mandant, name="Kunde A")
     kunde_b = await make_kunde(mandant=mandant, name="Kunde B")
     vorgang_b = await make_vorgang(mandant=mandant, kunde=kunde_b)
-    position_a = await _make_lv_position(mandant, kunde_a)
+    lv_a = await _make_lv(mandant, kunde_a)
+    position_a = await _make_lv_position(mandant, lv_a)
     token = await login(client, admin.email, "pw-123456")
 
     resp = await client.post(
@@ -196,14 +220,13 @@ async def test_lv_verwendung_lehnt_fremden_kunden_ab(
 
 
 @pytest.mark.asyncio
-async def test_zeiterfassung_manuell_mit_svs_kopplung(
-    client, make_mandant, make_user, make_kunde, make_vorgang
-):
+async def test_zeiterfassung_manuell_mit_svs_kopplung(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
-    svs = await _make_lv_position(mandant, kunde)
+    lv = await _make_lv(mandant, kunde)
+    svs = await _make_lv_position(mandant, lv)
     token = await login(client, admin.email, "pw-123456")
 
     resp = await client.post(
@@ -223,15 +246,14 @@ async def test_zeiterfassung_manuell_mit_svs_kopplung(
 
 
 @pytest.mark.asyncio
-async def test_zeiterfassung_lehnt_svs_fremden_kunden_ab(
-    client, make_mandant, make_user, make_kunde, make_vorgang
-):
+async def test_zeiterfassung_lehnt_svs_fremden_kunden_ab(client, make_mandant, make_user, make_kunde, make_vorgang):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde_a = await make_kunde(mandant=mandant, name="Kunde A")
     kunde_b = await make_kunde(mandant=mandant, name="Kunde B")
     vorgang_b = await make_vorgang(mandant=mandant, kunde=kunde_b)
-    svs_a = await _make_lv_position(mandant, kunde_a)
+    lv_a = await _make_lv(mandant, kunde_a)
+    svs_a = await _make_lv_position(mandant, lv_a)
     token = await login(client, admin.email, "pw-123456")
 
     resp = await client.post(
@@ -250,33 +272,6 @@ async def test_zeiterfassung_lehnt_svs_fremden_kunden_ab(
 
 
 @pytest.mark.asyncio
-async def test_lv_uebersicht_zeigt_alle_positionen_zusammen(client, make_mandant, make_user, make_kunde):
-    """Die Uebersichtsseite (kein kunde_id-Filter) zeigt ALLE eigenstaendigen
-    Positionen eines Mandanten, allgemeine UND kundenspezifische zusammen."""
-    mandant = await make_mandant()
-    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
-    kunde = await make_kunde(mandant=mandant)
-    token = await login(client, admin.email, "pw-123456")
-
-    allgemein = await client.post(
-        "/api/leistungsverzeichnis",
-        headers=auth_headers(token),
-        json={"bezeichnung": "Installation Wallbox"},
-    )
-    assert allgemein.status_code == 201
-    assert allgemein.json()["kunden_ids"] == []
-
-    await client.post(
-        "/api/leistungsverzeichnis",
-        headers=auth_headers(token),
-        json={"kunden_ids": [str(kunde.id)], "bezeichnung": "Sonderkondition Kunde"},
-    )
-
-    uebersicht = await client.get("/api/leistungsverzeichnis", headers=auth_headers(token))
-    assert {p["bezeichnung"] for p in uebersicht.json()} == {"Installation Wallbox", "Sonderkondition Kunde"}
-
-
-@pytest.mark.asyncio
 async def test_lv_kundenfilter_zeigt_allgemeine_plus_zugewiesene(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
@@ -284,14 +279,10 @@ async def test_lv_kundenfilter_zeigt_allgemeine_plus_zugewiesene(client, make_ma
     kunde_b = await make_kunde(mandant=mandant, name="Kunde B")
     token = await login(client, admin.email, "pw-123456")
 
-    await client.post(
-        "/api/leistungsverzeichnis", headers=auth_headers(token), json={"bezeichnung": "Allgemein"}
-    )
-    await client.post(
-        "/api/leistungsverzeichnis",
-        headers=auth_headers(token),
-        json={"kunden_ids": [str(kunde_a.id)], "bezeichnung": "Nur A"},
-    )
+    lv_allgemein = await _make_lv(mandant, kunde=None, name="Allgemein")
+    await _make_lv_position(mandant, lv_allgemein, bezeichnung="Allgemein")
+    lv_a = await _make_lv(mandant, kunde=kunde_a, name="Nur A")
+    await _make_lv_position(mandant, lv_a, bezeichnung="Nur A")
 
     fuer_a = await client.get(
         "/api/leistungsverzeichnis", headers=auth_headers(token), params={"kunde_id": str(kunde_a.id)}
@@ -305,7 +296,7 @@ async def test_lv_kundenfilter_zeigt_allgemeine_plus_zugewiesene(client, make_ma
 
 
 @pytest.mark.asyncio
-async def test_lv_position_mehreren_kunden_zuweisen_und_aendern(client, make_mandant, make_user, make_kunde):
+async def test_lv_mehreren_kunden_zuweisen_und_aendern(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde_a = await make_kunde(mandant=mandant, name="Kunde A")
@@ -314,15 +305,15 @@ async def test_lv_position_mehreren_kunden_zuweisen_und_aendern(client, make_man
     token = await login(client, admin.email, "pw-123456")
 
     erstellt = await client.post(
-        "/api/leistungsverzeichnis",
+        "/api/leistungsverzeichnisse",
         headers=auth_headers(token),
-        json={"kunden_ids": [str(kunde_a.id), str(kunde_b.id)], "bezeichnung": "Mehrfach zugewiesen"},
+        json={"name": "Mehrfach zugewiesen", "kunden_ids": [str(kunde_a.id), str(kunde_b.id)]},
     )
     assert erstellt.status_code == 201
     assert set(erstellt.json()["kunden_ids"]) == {str(kunde_a.id), str(kunde_b.id)}
 
     geaendert = await client.patch(
-        f"/api/leistungsverzeichnis/{erstellt.json()['id']}",
+        f"/api/leistungsverzeichnisse/{erstellt.json()['id']}",
         headers=auth_headers(token),
         json={"kunden_ids": [str(kunde_c.id)]},
     )
@@ -331,24 +322,83 @@ async def test_lv_position_mehreren_kunden_zuweisen_und_aendern(client, make_man
 
 
 @pytest.mark.asyncio
-async def test_lv_kalkulation_unterpunkt_lohn_und_material(client, make_mandant, make_user):
+async def test_lv_duplizieren_kopiert_positionen_ohne_kunden(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    lv = await _make_lv(mandant, kunde=kunde, name="Original")
+    hauptpunkt = await _make_lv_position(mandant, lv, bezeichnung="Hauptpunkt", ist_stundensatz=False)
+    await _make_lv_position(
+        mandant, lv, bezeichnung="Unterpunkt", ist_stundensatz=False, eltern_position_id=hauptpunkt.id
+    )
+
+    resp = await client.post(f"/api/leistungsverzeichnisse/{lv.id}/duplizieren", headers=auth_headers(token))
+    assert resp.status_code == 201
+    kopie = resp.json()
+    assert kopie["name"] == "Original (Kopie)"
+    # Unabhaengige Kunden-Zuweisung: die Kopie erbt sie nicht vom Original.
+    assert kopie["kunden_ids"] == []
+
+    positionen = await client.get(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"leistungsverzeichnis_id": kopie["id"]}
+    )
+    assert len(positionen.json()) == 1
+    kopierter_hauptpunkt = positionen.json()[0]
+    assert kopierter_hauptpunkt["bezeichnung"] == "Hauptpunkt"
+
+    unterpunkte = await client.get(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        params={"eltern_position_id": kopierter_hauptpunkt["id"]},
+    )
+    assert len(unterpunkte.json()) == 1
+    assert unterpunkte.json()[0]["bezeichnung"] == "Unterpunkt"
+
+    # Original bleibt unveraendert.
+    original_positionen = await client.get(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"leistungsverzeichnis_id": lv.id}
+    )
+    assert len(original_positionen.json()) == 1
+
+
+@pytest.mark.asyncio
+async def test_lv_loeschen_kaskadiert_auf_positionen(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
 
-    hauptpunkt = (
-        await client.post(
-            "/api/leistungsverzeichnis",
-            headers=auth_headers(token),
-            json={"bezeichnung": "Installation Wallbox"},
-        )
-    ).json()
+    lv = await _make_lv(mandant, name="Zu loeschen")
+    position = await _make_lv_position(mandant, lv, bezeichnung="Position")
+
+    resp = await client.delete(f"/api/leistungsverzeichnisse/{lv.id}", headers=auth_headers(token))
+    assert resp.status_code == 204
+
+    async with system_session() as session:
+        position_db = await session.get(LeistungsverzeichnisPosition, position.id)
+        assert position_db.geloescht_am is not None
+
+    liste = await client.get(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"leistungsverzeichnis_id": str(lv.id)}
+    )
+    assert liste.json() == []
+
+
+@pytest.mark.asyncio
+async def test_lv_kalkulation_unterpunkt_lohn_und_material(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    lv = await _make_lv(mandant, name="LV")
+
+    hauptpunkt = await _make_lv_position(mandant, lv, bezeichnung="Installation Wallbox", ist_stundensatz=False)
 
     unterpunkt = await client.post(
         "/api/leistungsverzeichnis",
         headers=auth_headers(token),
         json={
-            "eltern_position_id": hauptpunkt["id"],
+            "eltern_position_id": str(hauptpunkt.id),
             "bezeichnung": "Liefern und Montieren",
             "kalkulationsmodus": "berechnet",
             "lohn_minuten": 90,
@@ -359,13 +409,12 @@ async def test_lv_kalkulation_unterpunkt_lohn_und_material(client, make_mandant,
     )
     assert unterpunkt.status_code == 201
     up = unterpunkt.json()
-    assert up["kunden_ids"] == []  # Unterpunkte bekommen keine eigene Zuweisung
     assert up["lohn_gesamt"] == "97.50"
     assert up["material_gesamt"] == "495.00"
     assert up["einzelpreis"] == "592.50"
 
     async with system_session() as session:
-        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt["id"])
+        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
         assert haupt_db.lohn_gesamt == Decimal("97.50")
         assert haupt_db.material_gesamt == Decimal("495.00")
         assert haupt_db.einzelpreis == Decimal("592.50")
@@ -376,20 +425,15 @@ async def test_hauptpunkt_preis_ist_summe_der_unterpunkte(client, make_mandant, 
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
+    lv = await _make_lv(mandant, name="LV")
 
-    hauptpunkt = (
-        await client.post(
-            "/api/leistungsverzeichnis",
-            headers=auth_headers(token),
-            json={"bezeichnung": "Installation Wallbox"},
-        )
-    ).json()
+    hauptpunkt = await _make_lv_position(mandant, lv, bezeichnung="Installation Wallbox", ist_stundensatz=False)
 
     await client.post(
         "/api/leistungsverzeichnis",
         headers=auth_headers(token),
         json={
-            "eltern_position_id": hauptpunkt["id"],
+            "eltern_position_id": str(hauptpunkt.id),
             "bezeichnung": "Liefern und Montieren",
             "kalkulationsmodus": "berechnet",
             "lohn_minuten": 60,
@@ -401,7 +445,7 @@ async def test_hauptpunkt_preis_ist_summe_der_unterpunkte(client, make_mandant, 
         "/api/leistungsverzeichnis",
         headers=auth_headers(token),
         json={
-            "eltern_position_id": hauptpunkt["id"],
+            "eltern_position_id": str(hauptpunkt.id),
             "bezeichnung": "Prüfung",
             "kalkulationsmodus": "berechnet",
             "lohn_minuten": 30,
@@ -411,20 +455,20 @@ async def test_hauptpunkt_preis_ist_summe_der_unterpunkte(client, make_mandant, 
     assert zweiter.status_code == 201
 
     async with system_session() as session:
-        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt["id"])
+        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
         assert haupt_db.lohn_gesamt == Decimal("90.00")
         assert haupt_db.material_gesamt == Decimal("400.00")
         assert haupt_db.einzelpreis == Decimal("490.00")
 
     kinder = await client.get(
-        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"eltern_position_id": hauptpunkt["id"]}
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"eltern_position_id": str(hauptpunkt.id)}
     )
     assert len(kinder.json()) == 2
 
     # Loeschen eines Unterpunkts berechnet den Hauptpunkt neu.
     await client.delete(f"/api/leistungsverzeichnis/{zweiter.json()['id']}", headers=auth_headers(token))
     async with system_session() as session:
-        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt["id"])
+        haupt_db = await session.get(LeistungsverzeichnisPosition, hauptpunkt.id)
         assert haupt_db.lohn_gesamt == Decimal("60.00")
         assert haupt_db.einzelpreis == Decimal("460.00")
 
@@ -434,17 +478,14 @@ async def test_unterpunkt_kann_nicht_verschachtelt_werden(client, make_mandant, 
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
+    lv = await _make_lv(mandant, name="LV")
 
-    hauptpunkt = (
-        await client.post(
-            "/api/leistungsverzeichnis", headers=auth_headers(token), json={"bezeichnung": "Hauptpunkt"}
-        )
-    ).json()
+    hauptpunkt = await _make_lv_position(mandant, lv, bezeichnung="Hauptpunkt", ist_stundensatz=False)
     unterpunkt = (
         await client.post(
             "/api/leistungsverzeichnis",
             headers=auth_headers(token),
-            json={"eltern_position_id": hauptpunkt["id"], "bezeichnung": "Unterpunkt"},
+            json={"eltern_position_id": str(hauptpunkt.id), "bezeichnung": "Unterpunkt"},
         )
     ).json()
 
@@ -461,11 +502,13 @@ async def test_lv_material_posten_mit_unbekanntem_material_wird_abgelehnt(client
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
+    lv = await _make_lv(mandant, name="LV")
 
     resp = await client.post(
         "/api/leistungsverzeichnis",
         headers=auth_headers(token),
         json={
+            "leistungsverzeichnis_id": str(lv.id),
             "bezeichnung": "Mit Fantasie-Material",
             "kalkulationsmodus": "berechnet",
             "material_posten": [
@@ -486,12 +529,13 @@ async def test_lv_festpreis_bleibt_frei_editierbar(client, make_mandant, make_us
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     token = await login(client, admin.email, "pw-123456")
+    lv = await _make_lv(mandant, name="LV")
 
     position = (
         await client.post(
             "/api/leistungsverzeichnis",
             headers=auth_headers(token),
-            json={"bezeichnung": "Anfahrtspauschale", "einzelpreis": "35.00"},
+            json={"leistungsverzeichnis_id": str(lv.id), "bezeichnung": "Anfahrtspauschale", "einzelpreis": "35.00"},
         )
     ).json()
     assert position["kalkulationsmodus"] == "festpreis"
@@ -503,3 +547,76 @@ async def test_lv_festpreis_bleibt_frei_editierbar(client, make_mandant, make_us
         json={"einzelpreis": "40.00"},
     )
     assert geaendert.json()["einzelpreis"] == "40.00"
+
+
+@pytest.mark.asyncio
+async def test_lv_gemeinkosten_und_gewinn_wagnis_in_preis(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    lv = await _make_lv(mandant, name="LV")
+
+    resp = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "leistungsverzeichnis_id": str(lv.id),
+            "bezeichnung": "Mit Gemeinkosten",
+            "kalkulationsmodus": "berechnet",
+            "lohn_minuten": 60,
+            "lohn_stundensatz": "50.00",
+            "lohn_gemeinkosten_prozent": "20",
+            "material_posten": [{"bezeichnung": "Kabel", "menge": "1", "einzelpreis": "100.00"}],
+            "material_aufschlag_prozent": "10",
+            "gewinn_wagnis_prozent": "15",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    # Lohn: 50 * (1+0.20) = 60, Material: 100 * (1+0.10) = 110,
+    # Zwischensumme 170 * (1+0.15) = 195.50.
+    assert body["lohn_gesamt"] == "69.00"
+    assert body["material_gesamt"] == "126.50"
+    assert body["einzelpreis"] == "195.50"
+
+
+@pytest.mark.asyncio
+async def test_lv_position_uebernimmt_mandant_defaults_bei_anlage(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+
+    await client.patch(
+        "/api/mandant/einstellungen",
+        headers=auth_headers(token),
+        json={"standard_lohn_gemeinkosten_prozent": "25", "standard_gewinn_wagnis_prozent": "5"},
+    )
+
+    lv = await _make_lv(mandant, name="LV")
+    resp = await client.post(
+        "/api/leistungsverzeichnis",
+        headers=auth_headers(token),
+        json={
+            "leistungsverzeichnis_id": str(lv.id),
+            "bezeichnung": "Mit Default",
+            "kalkulationsmodus": "berechnet",
+            "lohn_minuten": 60,
+            "lohn_stundensatz": "40.00",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["lohn_gemeinkosten_prozent"] == "25.00"
+    assert body["gewinn_wagnis_prozent"] == "5.00"
+
+    # Danach geaenderter Mandant-Default rechnet die bereits angelegte
+    # Position NICHT rueckwirkend neu.
+    await client.patch(
+        "/api/mandant/einstellungen",
+        headers=auth_headers(token),
+        json={"standard_lohn_gemeinkosten_prozent": "99"},
+    )
+    unveraendert = await client.get(
+        "/api/leistungsverzeichnis", headers=auth_headers(token), params={"leistungsverzeichnis_id": str(lv.id)}
+    )
+    assert unveraendert.json()[0]["lohn_gemeinkosten_prozent"] == "25.00"
