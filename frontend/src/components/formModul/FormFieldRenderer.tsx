@@ -372,7 +372,13 @@ export function FormFieldRenderer({
       return (
         <div className={wrapperClass}>
           {labelNode}
-          {foto && <img src={foto.url} alt={label} className="mb-2 max-h-48 rounded-md object-contain" />}
+          {foto ? (
+            <img src={foto.url} alt={label} className="mb-2 max-h-48 rounded-md object-contain" />
+          ) : (
+            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+              <Camera size={24} strokeWidth={1.3} />
+            </div>
+          )}
           {!readOnly && onUpload && (
             <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
               <Camera size={16} />
@@ -399,8 +405,8 @@ export function FormFieldRenderer({
       return (
         <div className={wrapperClass}>
           {labelNode}
-          {datei &&
-            (istBild ? (
+          {datei ? (
+            istBild ? (
               <img src={datei.url} alt={label} className="mb-2 max-h-48 rounded-md object-contain" />
             ) : (
               <a
@@ -412,7 +418,12 @@ export function FormFieldRenderer({
                 <FileText size={16} strokeWidth={1.5} className="shrink-0" />
                 <span className="truncate">{datei.filename || "Datei ansehen"}</span>
               </a>
-            ))}
+            )
+          ) : (
+            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+              <Paperclip size={24} strokeWidth={1.3} />
+            </div>
+          )}
           {!readOnly && onUpload && (
             <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
               <Paperclip size={16} />
@@ -437,8 +448,12 @@ export function FormFieldRenderer({
       return (
         <div className={wrapperClass}>
           {labelNode}
-          {unterschrift && (
+          {unterschrift ? (
             <img src={unterschrift.url} alt="Unterschrift" className="mb-2 max-h-32 rounded-md border border-slate-200 bg-white object-contain dark:border-stone-700" />
+          ) : (
+            <div className="mb-2 flex h-20 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+              <PenLine size={22} strokeWidth={1.3} />
+            </div>
           )}
           {!readOnly && onUpload &&
             (unterschriftOffen ? (
