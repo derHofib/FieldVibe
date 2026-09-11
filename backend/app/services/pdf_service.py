@@ -676,6 +676,13 @@ def _form_antwort_text(field: FormField, wert: object) -> str:
         # (kein Bild, ggf. PDF-in-PDF) -- nur der Dateiname als Hinweis,
         # dass etwas hochgeladen wurde.
         return _pdf_safe_text(wert.get("filename") or "Datei hochgeladen")
+    if field.feld_typ == "foto_plan":
+        # Nur fuer die fliessende Wiederholgruppen-Liste (siehe
+        # generate_form_submission_pdf) -- die frei positionierte Seite
+        # bettet das zusammengesetzte Bild ueber _render_form_feld_zelle
+        # ein, hier reicht ein Text-Hinweis wie bei "datei".
+        hat_foto = isinstance(wert, dict) and bool(wert.get("foto"))
+        return "Foto hinterlegt" if hat_foto else "-"
     if field.feld_typ == "adresse" and isinstance(wert, dict):
         teile = [str(wert[k]) for k in ("strasse", "plz", "ort") if wert.get(k)]
         return _pdf_safe_text(", ".join(teile) or "-")
@@ -695,7 +702,7 @@ def _render_form_feld_zelle(
 
     wert_y = y + label_hoehe
     wert_hoehe = max(hoehe - label_hoehe, 3.0)
-    if field.feld_typ in ("foto", "unterschrift"):
+    if field.feld_typ in ("foto", "unterschrift", "foto_plan"):
         if bild:
             try:
                 pdf.image(BytesIO(bild), x=x, y=wert_y, w=breite, h=wert_hoehe)
@@ -794,7 +801,7 @@ def generate_form_submission_pdf(
             x = pdf.l_margin + layout.x_mm
             y = seiten_top_mm + layout.y_mm
             wert = values.get(field.key)
-            bild = bilder.get(field.key) if field.feld_typ in ("foto", "unterschrift") else None
+            bild = bilder.get(field.key) if field.feld_typ in ("foto", "unterschrift", "foto_plan") else None
             _render_form_feld_zelle(pdf, field, wert, bild, x, y, layout.breite_mm, layout.hoehe_mm)
 
     if not layouts and not headings_je_seite:

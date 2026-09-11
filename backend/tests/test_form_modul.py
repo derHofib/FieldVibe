@@ -1,3 +1,5 @@
+import base64
+
 import pytest
 
 from tests.conftest import auth_headers, login
@@ -392,3 +394,95 @@ async def test_rls_isolation_form_schemas_und_submissions(
 
     fremdzugriff = await client.get(f"/api/form-submissions/{submission['id']}", headers=auth_headers(token_b))
     assert fremdzugriff.status_code == 404
+
+
+# Kleinstes gueltiges PNG (1x1 Pixel) -- reicht Pillow zum Oeffnen, egal ob
+# als Hintergrundfoto oder als Plan-Symbol verwendet.
+_PNG_1PX = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)
+
+
+@pytest.mark.asyncio
+async def test_submission_pdf_mit_foto_plan_feld(client, make_mandant, make_user, make_kunde, make_vorgang):
+    """Ende-zu-Ende fuer das Foto-Plan-Feature: Symbol hochladen, Feld mit
+    freigegebenem Symbol anlegen, Foto hochladen + Markierung setzen, PDF
+    erzeugen -- deckt photo_service.compose_foto_plan_bild und die
+    Bild-Beschaffung in submission_pdf ab (dort ist die eigentliche neue
+    Logik, kein reiner Rendering-Test)."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    symbol = (
+        await client.post(
+            "/api/plan-symbole",
+            headers=auth_headers(token),
+            data={"name": "Wallbox"},
+            files={"file": ("wallbox.png", _PNG_1PX, "image/png")},
+        )
+    ).json()
+
+    schema = await _make_published_schema(client, token, name="E-Check")
+    await client.post(
+        f"/api/form-schemas/{schema['id']}/fields",
+        headers=auth_headers(token),
+        json={
+            "key": "verteilerfoto",
+            "feld_typ": "foto_plan",
+            "label": {"de": "Verteilerfoto"},
+            "optionen": {"symbol_ids": [symbol["id"]]},
+        },
+    )
+    print_view = (
+        await client.post(
+            f"/api/form-schemas/{schema['id']}/views",
+            headers=auth_headers(token),
+            json={"type": "print", "name": "Ausdruck"},
+        )
+    ).json()
+    await client.put(
+        f"/api/form-schemas/{schema['id']}/views/{print_view['id']}/layouts",
+        headers=auth_headers(token),
+        json=[{"field_key": "verteilerfoto", "x_mm": 0, "y_mm": 0, "breite_mm": 80, "hoehe_mm": 80}],
+    )
+
+    submission = (
+        await client.post(
+            "/api/form-submissions",
+            headers=auth_headers(token),
+            params={"vorgang_id": str(vorgang.id)},
+            json={"schema_id": schema["id"]},
+        )
+    ).json()
+
+    upload = (
+        await client.post(
+            f"/api/form-submissions/{submission['id']}/dateien",
+            headers=auth_headers(token),
+            params={"field_key": "verteilerfoto"},
+            files={"file": ("verteiler.png", _PNG_1PX, "image/png")},
+        )
+    ).json()
+    await client.patch(
+        f"/api/form-submissions/{submission['id']}",
+        headers=auth_headers(token),
+        json={
+            "values": {
+                "verteilerfoto": {
+                    "foto": {"key": upload["key"], "url": upload["url"], "content_type": upload["content_type"]},
+                    "markierungen": [
+                        {"art": "symbol", "symbol_id": symbol["id"], "x": 0.5, "y": 0.5, "winkel": 90},
+                        {"art": "linie", "punkte": [{"x": 0.1, "y": 0.1}, {"x": 0.9, "y": 0.9}], "farbe": "#dc2626"},
+                    ],
+                }
+            }
+        },
+    )
+
+    resp = await client.get(f"/api/form-submissions/{submission['id']}/pdf", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content.startswith(b"%PDF")

@@ -70,7 +70,7 @@ from app.schemas.form_modul import (
     FormViewResolvedRead,
     FormViewUpdate,
 )
-from app.services import form_modul_service, storage_service
+from app.services import form_modul_service, photo_service, storage_service
 from app.services.event_bus import event_bus
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
 from app.services.pdf_service import generate_form_submission_pdf
@@ -812,10 +812,25 @@ async def submission_pdf(
 
     bilder: dict[str, bytes] = {}
     for field in fields:
-        if field.feld_typ not in ("foto", "unterschrift"):
+        if field.feld_typ not in ("foto", "unterschrift", "foto_plan"):
             continue
         wert = submission.values.get(field.key)
-        if isinstance(wert, dict) and wert.get("key"):
+        if not isinstance(wert, dict):
+            continue
+        if field.feld_typ == "foto_plan":
+            foto = wert.get("foto")
+            if not isinstance(foto, dict) or not foto.get("key"):
+                continue
+            foto_bytes = await storage_service.download_bytes(foto["key"])
+            markierungen = wert.get("markierungen") or []
+            symbol_ids = {m["symbol_id"] for m in markierungen if isinstance(m, dict) and m.get("art") == "symbol" and m.get("symbol_id")}
+            symbol_bytes_je_id: dict[str, bytes] = {}
+            if symbol_ids:
+                result = await session.execute(select(PlanSymbol).where(PlanSymbol.id.in_(symbol_ids)))
+                for symbol in result.scalars().all():
+                    symbol_bytes_je_id[str(symbol.id)] = await storage_service.download_bytes(symbol.object_key)
+            bilder[field.key] = await photo_service.compose_foto_plan_bild(foto_bytes, markierungen, symbol_bytes_je_id)
+        elif wert.get("key"):
             bilder[field.key] = await storage_service.download_bytes(wert["key"])
 
     ist_vorschau = submission.status != "abgeschlossen"
