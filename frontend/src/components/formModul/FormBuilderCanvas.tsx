@@ -29,14 +29,15 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, GripVertical, Layers, PenLine, Rows3, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { formModulApi } from "../../api/endpoints";
+import { formModulApi, planSymboleApi } from "../../api/endpoints";
 import { SeitenPanel } from "../SeitenPanel";
-import type { FormFeldTyp, FormField, FormGroup, FormSchemaDetail } from "../../types";
+import type { FormFeldTyp, FormField, FormGroup, FormSchemaDetail, PlanSymbol } from "../../types";
 import { FELD_TYP_KATALOG, FELD_TYP_LABEL } from "../../utils/feldTypKatalog";
 import { FormFieldRenderer } from "./FormFieldRenderer";
 
@@ -340,6 +341,8 @@ function InspectorFeld({
   onLabelSpeichern,
   onPflichtfeldToggle,
   onLoeschen,
+  planSymbole,
+  onSymbolIdsSpeichern,
 }: {
   feld: FormField;
   regelnAnzahl: number;
@@ -347,8 +350,19 @@ function InspectorFeld({
   onLabelSpeichern: (label: string) => void;
   onPflichtfeldToggle: () => void;
   onLoeschen: () => void;
+  planSymbole: PlanSymbol[];
+  onSymbolIdsSpeichern: (ids: string[]) => void;
 }) {
   const [label, setLabel] = useState(feld.label.de ?? feld.key);
+  const ausgewaehlteSymbolIds = Array.isArray(feld.optionen.symbol_ids) ? (feld.optionen.symbol_ids as string[]) : [];
+
+  function symbolUmschalten(symbolId: string) {
+    const neu = ausgewaehlteSymbolIds.includes(symbolId)
+      ? ausgewaehlteSymbolIds.filter((id) => id !== symbolId)
+      : [...ausgewaehlteSymbolIds, symbolId];
+    onSymbolIdsSpeichern(neu);
+  }
+
   return (
     <div className="space-y-4 p-4">
       <div>
@@ -375,6 +389,38 @@ function InspectorFeld({
         Pflichtfeld
         <input type="checkbox" checked={feld.pflichtfeld} onChange={onPflichtfeldToggle} className="h-4 w-4" />
       </label>
+      {feld.feld_typ === "foto_plan" && (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">Verfügbare Symbole</label>
+          {planSymbole.length === 0 ? (
+            <p className="text-xs text-ind-ink-3">
+              Noch keine Plan-Symbole angelegt —{" "}
+              <Link to="/plan-symbole" className="text-ind-acc-txt hover:underline">
+                Symbol-Bibliothek öffnen
+              </Link>
+              .
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              {planSymbole.map((s) => {
+                const ausgewaehlt = ausgewaehlteSymbolIds.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => symbolUmschalten(s.id)}
+                    className={`flex flex-col items-center gap-1 border p-1.5 text-center text-[10px] ${
+                      ausgewaehlt ? "border-ind-acc bg-ind-acc-soft text-ind-acc-txt" : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+                    }`}
+                  >
+                    <img src={s.url} alt={s.name} className="h-8 w-8 object-contain" />
+                    <span className="truncate w-full">{s.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       <div>
         <p className="mb-1 text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Regeln &amp; Formel</p>
         <button
@@ -702,6 +748,14 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  // Fuer den Inspector bei einem "foto_plan"-Feld (Symbol-Mehrfachauswahl,
+  // siehe InspectorFeld) -- mandantenweite Bibliothek, unabhaengig vom
+  // Schema, daher hier und nicht in FormSchemaEditorPage.tsx geladen.
+  const { data: planSymbole } = useQuery({
+    queryKey: ["plan-symbole"],
+    queryFn: () => planSymboleApi.list(),
+  });
+
   const rootEntries: RootEintrag[] = useMemo(() => {
     const felder: RootEintrag[] = schema.fields
       .filter((f) => f.group_key === null)
@@ -996,6 +1050,13 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
                   )
                 }
                 onLoeschen={() => deleteFieldMutation.mutate(ausgewaehltesFeld.id)}
+                planSymbole={planSymbole ?? []}
+                onSymbolIdsSpeichern={(ids) =>
+                  updateFieldMutation.mutate(
+                    { fieldId: ausgewaehltesFeld.id, body: { optionen: { ...ausgewaehltesFeld.optionen, symbol_ids: ids } } },
+                    { onSuccess: invalidate },
+                  )
+                }
               />
             ) : ausgewaehlteGruppe ? (
               <InspectorGruppe
