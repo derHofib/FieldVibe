@@ -8,7 +8,8 @@
 import { useMemo } from "react";
 
 import { applyRules } from "../../utils/formLogicEngine";
-import type { FormField, FormGroup, FormLogicRule, FormPresentationElement } from "../../types";
+import { FotoPlanBild } from "./FotoPlanBild";
+import type { FormField, FormGroup, FormLogicRule, FormPresentationElement, FotoPlanWert } from "../../types";
 
 interface SummaryRendererProps {
   fields: FormField[];
@@ -42,6 +43,9 @@ function formatWert(feld: FormField, wert: unknown): string {
     const datei = wert as { filename?: string | null };
     return feld.feld_typ === "datei" ? datei.filename || "Datei hinterlegt" : "Datei hinterlegt";
   }
+  if (feld.feld_typ === "foto_plan") {
+    return (wert as FotoPlanWert)?.foto ? "Foto hinterlegt" : "—";
+  }
   return String(wert);
 }
 
@@ -74,6 +78,15 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
         {rootFelder.map((feld) => {
           const state = states.get(feld.key);
           if (state && !state.visible) return null;
+          if (feld.feld_typ === "foto_plan") {
+            const wert = values[feld.key] as FotoPlanWert | undefined;
+            return (
+              <div key={feld.id} className="space-y-1.5 border-b border-ind-line py-1.5">
+                <span className="block text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
+                {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-ind-ink">—</span>}
+              </div>
+            );
+          }
           return (
             <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-ind-line py-1.5">
               <span className="text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
@@ -98,12 +111,23 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
           return (
             <div key={gruppe.id}>
               <h3 className="mb-1.5 text-base font-semibold text-ind-ink">{gruppe.label.de ?? gruppe.key}</h3>
-              {gruppenFelder.map((feld) => (
-                <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-ind-line py-1.5">
-                  <span className="text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
-                  <span className="text-right text-sm font-medium text-ind-ink">{formatWert(feld, zeile[feld.key])}</span>
-                </div>
-              ))}
+              {gruppenFelder.map((feld) => {
+                if (feld.feld_typ === "foto_plan") {
+                  const wert = zeile[feld.key] as FotoPlanWert | undefined;
+                  return (
+                    <div key={feld.id} className="space-y-1.5 border-b border-ind-line py-1.5">
+                      <span className="block text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
+                      {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-ind-ink">—</span>}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-ind-line py-1.5">
+                    <span className="text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
+                    <span className="text-right text-sm font-medium text-ind-ink">{formatWert(feld, zeile[feld.key])}</span>
+                  </div>
+                );
+              })}
             </div>
           );
         }
