@@ -87,10 +87,18 @@ export function FormSubmissionAusfuellenPage() {
     mutationFn: ({ fieldKey, file, filename }: { fieldKey: string; file: Blob; filename: string }) =>
       formSubmissionsApi.uploadDatei(id!, fieldKey, file, filename),
     onSuccess: (result) =>
-      setValues((v) => ({
-        ...v,
-        [result.field_key]: { key: result.key, url: result.url, content_type: result.content_type, filename: result.filename },
-      })),
+      setValues((v) => {
+        const datei = { key: result.key, url: result.url, content_type: result.content_type, filename: result.filename };
+        const feldTyp = schema?.fields.find((f) => f.key === result.field_key)?.feld_typ;
+        // foto_plan: Upload ersetzt nur das Hintergrundfoto, nicht den
+        // ganzen (zusammengesetzten) Feld-Wert -- bereits gesetzte
+        // Markierungen bleiben erhalten (siehe FormFieldRenderer.tsx).
+        if (feldTyp === "foto_plan") {
+          const bisher = v[result.field_key] as { markierungen?: unknown[] } | undefined;
+          return { ...v, [result.field_key]: { foto: datei, markierungen: bisher?.markierungen ?? [] } };
+        }
+        return { ...v, [result.field_key]: datei };
+      }),
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Upload fehlgeschlagen"),
   });
 

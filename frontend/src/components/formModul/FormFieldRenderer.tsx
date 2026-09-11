@@ -1,11 +1,13 @@
 // Rendert ein einzelnes FormField anhand seines feld_typ, key-basiert (nicht
 // UUID-basiert) und ohne Positions-/Seiten-Bezug (das ist Sache der
 // jeweiligen View, nicht des Feld-Renderers selbst).
-import { Camera, FileText, MapPin, Paperclip, PenLine, ScanLine } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Camera, FileText, MapPin, Paperclip, PenLine, PenTool, ScanLine, Slash, X } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { planSymboleApi } from "../../api/endpoints";
 import { QrScanner } from "../QrScanner";
-import type { FormField } from "../../types";
+import type { FormField, FotoPlanWert, PlanMarkierungLinie, PlanMarkierungSymbol } from "../../types";
 
 interface DateiAntwort {
   key: string;
@@ -83,6 +85,298 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
           Übernehmen
         </button>
       </div>
+    </div>
+  );
+}
+
+// Werkzeugleiste + Zeichenflaeche fuer feld_typ="foto_plan": ein Foto, auf dem
+// Techniker Anlagen-Symbole (Wallbox, LS-Schalter, ...) platzieren und
+// Leitungswege einzeichnen. Eigene Komponente statt ein weiterer switch-case
+// mit Hooks, weil die Platzier-/Zieh-/Zeichenlogik eigenen lokalen State
+// braucht (Rules of Hooks).
+function FotoPlanFeld({
+  field,
+  value,
+  onChange,
+  readOnly,
+  onUpload,
+  hochladenPending,
+  label,
+  labelNode,
+  wrapperClass,
+}: {
+  field: FormField;
+  value: FotoPlanWert | undefined;
+  onChange: (value: FotoPlanWert) => void;
+  readOnly: boolean;
+  onUpload?: (fieldKey: string, file: Blob, filename: string) => void;
+  hochladenPending?: boolean;
+  label: string;
+  labelNode: React.ReactNode;
+  wrapperClass: string;
+}) {
+  // Volle Bibliothek laden (nicht nur die fuer dieses Feld erlaubten Symbole)
+  // -- so werden auch schon platzierte Symbole korrekt angezeigt, falls die
+  // Feld-Konfiguration nachtraeglich eingeschraenkt wurde.
+  const { data: alleSymbole } = useQuery({
+    queryKey: ["plan-symbole"],
+    queryFn: () => planSymboleApi.list(),
+  });
+  const erlaubteIds = Array.isArray(field.optionen.symbol_ids) ? (field.optionen.symbol_ids as string[]) : [];
+  const erlaubteSymbole = (alleSymbole ?? []).filter((s) => erlaubteIds.includes(s.id));
+  const symbolNachId = new Map((alleSymbole ?? []).map((s) => [s.id, s]));
+
+  const [werkzeug, setWerkzeug] = useState<{ art: "symbol"; symbolId: string } | { art: "linie" } | null>(null);
+  const [linienPunkte, setLinienPunkte] = useState<{ x: number; y: number }[]>([]);
+  const [ziehIndex, setZiehIndex] = useState<number | null>(null);
+  const bildRef = useRef<HTMLDivElement | null>(null);
+
+  const foto = value?.foto ?? null;
+  const markierungen = value?.markierungen ?? [];
+
+  function relPosition(e: { clientX: number; clientY: number }) {
+    const rect = bildRef.current!.getBoundingClientRect();
+    return {
+      x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+      y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+    };
+  }
+
+  function bildKlick(e: React.MouseEvent<HTMLDivElement>) {
+    if (readOnly || !werkzeug) return;
+    const pos = relPosition(e);
+    if (werkzeug.art === "symbol") {
+      const neu: PlanMarkierungSymbol = { art: "symbol", symbol_id: werkzeug.symbolId, x: pos.x, y: pos.y, winkel: 0 };
+      onChange({ foto, markierungen: [...markierungen, neu] });
+      setWerkzeug(null);
+    } else {
+      setLinienPunkte((p) => [...p, pos]);
+    }
+  }
+
+  function linieUebernehmen() {
+    if (linienPunkte.length >= 2) {
+      const neu: PlanMarkierungLinie = { art: "linie", punkte: linienPunkte, farbe: "#dc2626" };
+      onChange({ foto, markierungen: [...markierungen, neu] });
+    }
+    setLinienPunkte([]);
+    setWerkzeug(null);
+  }
+
+  function markierungLoeschen(index: number) {
+    onChange({ foto, markierungen: markierungen.filter((_, i) => i !== index) });
+  }
+
+  function symbolZiehenStart(index: number, e: React.PointerEvent) {
+    if (readOnly) return;
+    e.stopPropagation();
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    setZiehIndex(index);
+  }
+  function symbolBewegen(e: React.PointerEvent<HTMLDivElement>) {
+    if (ziehIndex === null) return;
+    const pos = relPosition(e);
+    onChange({
+      foto,
+      markierungen: markierungen.map((m, i) => (i === ziehIndex && m.art === "symbol" ? { ...m, x: pos.x, y: pos.y } : m)),
+    });
+  }
+
+  if (!foto) {
+    return (
+      <div className={wrapperClass}>
+        {labelNode}
+        <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+          <PenTool size={24} strokeWidth={1.3} />
+        </div>
+        {!readOnly && onUpload && (
+          <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+            <Camera size={16} />
+            {hochladenPending ? "Lädt hoch…" : "Foto aufnehmen"}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) onUpload(field.key, file, file.name);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={wrapperClass}>
+      {labelNode}
+
+      {!readOnly && (
+        <div className="mb-2 space-y-2">
+          {erlaubteSymbole.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {erlaubteSymbole.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setLinienPunkte([]);
+                    setWerkzeug(werkzeug?.art === "symbol" && werkzeug.symbolId === s.id ? null : { art: "symbol", symbolId: s.id });
+                  }}
+                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium ${
+                    werkzeug?.art === "symbol" && werkzeug.symbolId === s.id
+                      ? "border-ind-acc bg-ind-acc-soft text-ind-acc-txt"
+                      : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+                  }`}
+                >
+                  <img src={s.url} alt="" className="h-4 w-4 object-contain" />
+                  {s.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setLinienPunkte([]);
+                setWerkzeug(werkzeug?.art === "linie" ? null : { art: "linie" });
+              }}
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium ${
+                werkzeug?.art === "linie" ? "border-ind-acc bg-ind-acc-soft text-ind-acc-txt" : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+              }`}
+            >
+              <Slash size={13} /> Leitungslinie
+            </button>
+            {werkzeug?.art === "linie" && (
+              <>
+                <button
+                  type="button"
+                  onClick={linieUebernehmen}
+                  disabled={linienPunkte.length < 2}
+                  className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
+                >
+                  Fertig
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinienPunkte([]);
+                    setWerkzeug(null);
+                  }}
+                  className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                >
+                  Abbrechen
+                </button>
+              </>
+            )}
+          </div>
+          {werkzeug && (
+            <p className="text-[11px] text-ind-ink-3">
+              {werkzeug.art === "symbol" ? "Auf das Foto tippen, um das Symbol zu platzieren." : "Punkte entlang der Leitung antippen, dann „Fertig“."}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div
+        ref={bildRef}
+        onClick={bildKlick}
+        onPointerMove={symbolBewegen}
+        onPointerUp={() => setZiehIndex(null)}
+        className={`relative mb-2 w-full overflow-hidden rounded-md border border-slate-200 bg-white dark:border-stone-700 ${
+          werkzeug ? "cursor-crosshair" : ""
+        }`}
+      >
+        <img src={foto.url} alt={label} className="block w-full select-none" draggable={false} />
+        <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
+          {markierungen.map((m, i) =>
+            m.art === "linie" ? (
+              <polyline
+                key={i}
+                points={m.punkte.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke={m.farbe}
+                strokeWidth={2}
+                vectorEffect="non-scaling-stroke"
+              />
+            ) : null,
+          )}
+          {linienPunkte.length > 0 && (
+            <polyline
+              points={linienPunkte.map((p) => `${p.x},${p.y}`).join(" ")}
+              fill="none"
+              stroke="#dc2626"
+              strokeDasharray="4 3"
+              strokeWidth={2}
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+        </svg>
+        {markierungen.map((m, i) =>
+          m.art === "symbol" ? (
+            <div
+              key={i}
+              onPointerDown={(e) => symbolZiehenStart(i, e)}
+              style={{ left: `${m.x * 100}%`, top: `${m.y * 100}%`, transform: `translate(-50%, -50%) rotate(${m.winkel}deg)` }}
+              className="absolute"
+            >
+              <img src={symbolNachId.get(m.symbol_id)?.url} alt="" className="h-8 w-8 object-contain drop-shadow" draggable={false} />
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markierungLoeschen(i);
+                  }}
+                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-white"
+                  aria-label="Symbol entfernen"
+                >
+                  <X size={10} strokeWidth={2.5} />
+                </button>
+              )}
+            </div>
+          ) : null,
+        )}
+      </div>
+
+      {markierungen.some((m) => m.art === "linie") && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {markierungen.map((m, i) =>
+            m.art === "linie" ? (
+              <span key={i} className="flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+                Leitung {i + 1}
+                {!readOnly && (
+                  <button type="button" onClick={() => markierungLoeschen(i)} aria-label="Leitung löschen" className="text-slate-400 hover:text-rose-600">
+                    <X size={11} />
+                  </button>
+                )}
+              </span>
+            ) : null,
+          )}
+        </div>
+      )}
+
+      {!readOnly && onUpload && (
+        <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <Camera size={16} />
+          {hochladenPending ? "Lädt hoch…" : "Foto ersetzen"}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onUpload(field.key, file, file.name);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      )}
     </div>
   );
 }
@@ -443,6 +737,20 @@ export function FormFieldRenderer({
         </div>
       );
     }
+    case "foto_plan":
+      return (
+        <FotoPlanFeld
+          field={field}
+          value={value as FotoPlanWert | undefined}
+          onChange={onChange}
+          readOnly={readOnly}
+          onUpload={onUpload}
+          hochladenPending={hochladenPending}
+          label={label}
+          labelNode={labelNode}
+          wrapperClass={wrapperClass}
+        />
+      );
     case "unterschrift": {
       const unterschrift = value as DateiAntwort | undefined;
       return (
