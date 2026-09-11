@@ -1,7 +1,7 @@
 // Rendert ein einzelnes FormField anhand seines feld_typ, key-basiert (nicht
 // UUID-basiert) und ohne Positions-/Seiten-Bezug (das ist Sache der
 // jeweiligen View, nicht des Feld-Renderers selbst).
-import { Camera, MapPin, PenLine, ScanLine } from "lucide-react";
+import { Camera, FileText, MapPin, Paperclip, PenLine, ScanLine } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { QrScanner } from "../QrScanner";
@@ -11,6 +11,9 @@ interface DateiAntwort {
   key: string;
   url: string;
   content_type: string;
+  // Nur bei feld_typ="datei" gefuellt/relevant (Anzeige, wenn keine
+  // Bild-Vorschau moeglich ist, siehe Case "datei" unten).
+  filename?: string | null;
 }
 
 function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void; onCancel: () => void }) {
@@ -125,6 +128,34 @@ export function FormFieldRenderer({
           {field.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{field.hilfetext}</p>}
         </div>
       );
+    case "email":
+      return (
+        <div className={wrapperClass}>
+          {labelNode}
+          <input
+            type="email"
+            value={(value as string) ?? ""}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={readOnly}
+            className={inputClass}
+          />
+          {field.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{field.hilfetext}</p>}
+        </div>
+      );
+    case "telefon":
+      return (
+        <div className={wrapperClass}>
+          {labelNode}
+          <input
+            type="tel"
+            value={(value as string) ?? ""}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={readOnly}
+            className={inputClass}
+          />
+          {field.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{field.hilfetext}</p>}
+        </div>
+      );
     case "textarea":
       return (
         <div className={wrapperClass}>
@@ -146,6 +177,23 @@ export function FormFieldRenderer({
           <input type="number" value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} className={inputClass} />
         </div>
       );
+    case "betrag":
+      return (
+        <div className={wrapperClass}>
+          {labelNode}
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              step="0.01"
+              value={(value as string) ?? ""}
+              onChange={(e) => onChange(e.target.value)}
+              disabled={readOnly}
+              className={inputClass}
+            />
+            <span className="shrink-0 text-sm text-ind-ink-3">€</span>
+          </div>
+        </div>
+      );
     case "datum":
       return (
         <div className={wrapperClass}>
@@ -153,6 +201,40 @@ export function FormFieldRenderer({
           <input type="date" value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} className={inputClass} />
         </div>
       );
+    case "adresse": {
+      const adresse = (value as { strasse?: string; plz?: string; ort?: string } | undefined) ?? {};
+      const setzen = (feld: "strasse" | "plz" | "ort", wert: string) => onChange({ ...adresse, [feld]: wert });
+      return (
+        <div className={wrapperClass}>
+          {labelNode}
+          <div className="space-y-1.5">
+            <input
+              value={adresse.strasse ?? ""}
+              onChange={(e) => setzen("strasse", e.target.value)}
+              disabled={readOnly}
+              placeholder="Straße, Hausnummer"
+              className={inputClass}
+            />
+            <div className="flex gap-1.5">
+              <input
+                value={adresse.plz ?? ""}
+                onChange={(e) => setzen("plz", e.target.value)}
+                disabled={readOnly}
+                placeholder="PLZ"
+                className={`${inputClass} w-24`}
+              />
+              <input
+                value={adresse.ort ?? ""}
+                onChange={(e) => setzen("ort", e.target.value)}
+                disabled={readOnly}
+                placeholder="Ort"
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
     case "dropdown":
       return (
         <div className={wrapperClass}>
@@ -299,6 +381,45 @@ export function FormFieldRenderer({
                 type="file"
                 accept="image/*"
                 capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onUpload(field.key, file, file.name);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          )}
+        </div>
+      );
+    }
+    case "datei": {
+      const datei = value as DateiAntwort | undefined;
+      const istBild = Boolean(datei?.content_type?.startsWith("image/"));
+      return (
+        <div className={wrapperClass}>
+          {labelNode}
+          {datei &&
+            (istBild ? (
+              <img src={datei.url} alt={label} className="mb-2 max-h-48 rounded-md object-contain" />
+            ) : (
+              <a
+                href={datei.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mb-2 flex items-center gap-2 border border-ind-line bg-ind-bg p-2 text-sm text-ind-acc-txt"
+              >
+                <FileText size={16} strokeWidth={1.5} className="shrink-0" />
+                <span className="truncate">{datei.filename || "Datei ansehen"}</span>
+              </a>
+            ))}
+          {!readOnly && onUpload && (
+            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+              <Paperclip size={16} />
+              {hochladenPending ? "Lädt hoch…" : datei ? "Datei ersetzen" : "Datei anhängen"}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];

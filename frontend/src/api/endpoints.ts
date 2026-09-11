@@ -878,7 +878,7 @@ export const formSubmissionsApi = {
   uploadDatei: (id: string, fieldKey: string, file: Blob, filename: string) => {
     const formData = new FormData();
     formData.append("file", file, filename);
-    return apiFetchForm<{ field_key: string; key: string; content_type: string; size: number; url: string }>(
+    return apiFetchForm<{ field_key: string; key: string; content_type: string; size: number; url: string; filename: string | null }>(
       `/api/form-submissions/${id}/dateien?field_key=${encodeURIComponent(fieldKey)}`,
       formData,
     );

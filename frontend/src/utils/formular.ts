@@ -29,4 +29,5 @@ export const DATENQUELLE_LABEL: Record<FormularfeldDatenquelle, string> = {
   "anlage.anlagentyp": "Anlage → Anlagentyp",
   "standort.bezeichnung": "Standort → Bezeichnung",
   "standort.adresse": "Standort → Adresse",
+  "system.jetzt": "Automatisch → Heutiges Datum",
 };

@@ -123,6 +123,35 @@ export function CaptureRenderer({
         if (gruppenState && !gruppenState.visible) return null;
         const zeilen = Array.isArray(values[eintrag.gruppe.key]) ? (values[eintrag.gruppe.key] as Record<string, unknown>[]) : [];
         const label = eintrag.gruppe.label.de ?? eintrag.gruppe.key;
+
+        // Abschnitt (repeatable=false): genau ein Block ohne Zeilen-
+        // Steuerung -- Werte liegen technisch trotzdem als values[key][0]
+        // (dieselbe Speicherform wie ein Sub-Formular mit einer Zeile),
+        // das spart eigene Auswertungslogik in form_logic_engine/-.ts.
+        if (!eintrag.gruppe.repeatable) {
+          const zeile = zeilen[0] ?? {};
+          return (
+            <div key={eintrag.gruppe.id} className="space-y-2 border border-ind-line-2 p-2">
+              <h3 className="text-sm font-semibold text-ind-ink">{label}</h3>
+              {eintrag.felder.map((feld) => {
+                const path = `${eintrag.gruppe.key}[0].${feld.key}`;
+                const state = states.get(path);
+                if (state && !state.visible) return null;
+                return (
+                  <FormFieldRenderer
+                    key={feld.id}
+                    field={feld}
+                    value={zeile[feld.key]}
+                    onChange={(v) => setGruppenZeile(eintrag.gruppe.key, 0, feld.key, v)}
+                    readOnly={readOnly || Boolean(state?.readonly)}
+                    required={feld.pflichtfeld || Boolean(state?.required)}
+                  />
+                );
+              })}
+            </div>
+          );
+        }
+
         return (
           <div key={eintrag.gruppe.id} className="space-y-2 border border-ind-line-2 p-2">
             <h3 className="text-sm font-semibold text-ind-ink">{label}</h3>

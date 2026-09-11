@@ -1525,7 +1525,8 @@ export type FormularfeldDatenquelle =
   | "anlage.seriennummer"
   | "anlage.anlagentyp"
   | "standort.bezeichnung"
-  | "standort.adresse";
+  | "standort.adresse"
+  | "system.jetzt";
 
 // --- Formular-Modul v2 (Trennung Erfassung/Visualisierung) ----------------
 // Siehe backend/app/schemas/form_modul.py -- key-basierte Referenzen statt
@@ -1544,7 +1545,12 @@ export type FormFeldTyp =
   | "foto"
   | "unterschrift"
   | "gps"
-  | "qr_scan";
+  | "qr_scan"
+  | "datei"
+  | "email"
+  | "telefon"
+  | "betrag"
+  | "adresse";
 
 export type FormSchemaStatus = "draft" | "published" | "archived";
 export type FormViewTyp = "capture" | "print" | "summary" | "table" | "public";

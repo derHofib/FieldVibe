@@ -4,6 +4,7 @@ einer Schema-Definition, die Anwendung von form_logic_engine auf eine
 form_submission sowie den Datenquellen-Autofill -- funktional das Pendant
 zu app/services/formular_service.py fuer das alte Modell.
 """
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -155,6 +156,11 @@ def auto_fill_values(
         ),
         "vorgang.adresse": _adresse_einzeilig(vorgang.adresse),
         "vorgang.zugewiesener_name": zugewiesener_name,
+        # Automatischer Zeitstempel: einmalig beim Start der Ausfuellung
+        # gesetzt (wie jede andere Datenquelle hier), nicht bei jedem
+        # Autosave neu -- ein "erfasst am" soll den Beginn dokumentieren,
+        # nicht sich waehrend des Ausfuellens weiterbewegen.
+        "system.jetzt": date.today().isoformat(),
     }
     if kunde is not None:
         quellen["kunde.kundennummer"] = kunde.kundennummer

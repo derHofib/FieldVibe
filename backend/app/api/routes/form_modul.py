@@ -78,7 +78,11 @@ from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import assigned_kunde_ids
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
-FELDTYPEN_MIT_DATEI = ("foto", "unterschrift")
+# "datei" erlaubt zusaetzlich PDFs (siehe datei_hochladen) -- foto/
+# unterschrift bleiben bewusst auf Bilder beschraenkt, das sind
+# Kamera-/Zeichenflaechen-Aufnahmen, kein allgemeiner Datei-Upload.
+FELDTYPEN_MIT_DATEI = ("foto", "unterschrift", "datei")
+_ERLAUBTE_CONTENT_TYPES_DATEI = ("application/pdf",)
 
 router = APIRouter(
     prefix="/api/form-schemas",
@@ -854,7 +858,13 @@ async def datei_hochladen(
     field = next((f for f in fields if f.key == field_key), None)
     if field is None or field.feld_typ not in FELDTYPEN_MIT_DATEI:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiges Feld")
-    if not file.content_type or not file.content_type.startswith("image/"):
+    ist_bild = bool(file.content_type) and file.content_type.startswith("image/")
+    if field.feld_typ == "datei":
+        if not ist_bild and file.content_type not in _ERLAUBTE_CONTENT_TYPES_DATEI:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Nur Bilder oder PDF-Dateien werden unterstützt"
+            )
+    elif not ist_bild:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nur Bilddateien werden unterstützt")
 
     data = await file.read()
@@ -869,6 +879,10 @@ async def datei_hochladen(
         "content_type": file.content_type,
         "size": len(data),
         "url": storage_service.presigned_get_url(key),
+        # Nur fuer feld_typ="datei" relevant (Anzeige/Download-Link bei
+        # Nicht-Bild-Dateien, siehe FormFieldRenderer.tsx) -- bei foto/
+        # unterschrift bleibt es ungenutzt.
+        "filename": file.filename,
     }
 
 

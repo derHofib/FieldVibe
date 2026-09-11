@@ -24,6 +24,11 @@ FormFeldTyp = Literal[
     "unterschrift",
     "gps",
     "qr_scan",
+    "datei",
+    "email",
+    "telefon",
+    "betrag",
+    "adresse",
 ]
 FormFeldDatenquelle = Literal[
     "vorgang.vorgangsnummer",
@@ -45,6 +50,7 @@ FormFeldDatenquelle = Literal[
     "anlage.anlagentyp",
     "standort.bezeichnung",
     "standort.adresse",
+    "system.jetzt",
 ]
 
 # Erlaubte Zeichen fuer form_fields.key/form_groups.key: von Hand vergebene

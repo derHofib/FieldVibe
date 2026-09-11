@@ -671,6 +671,14 @@ def _form_antwort_text(field: FormField, wert: object) -> str:
         return "Ja" if wert else "Nein"
     if field.feld_typ == "mehrfachauswahl" and isinstance(wert, list):
         return _pdf_safe_text(", ".join(str(v) for v in wert) or "-")
+    if field.feld_typ == "datei" and isinstance(wert, dict):
+        # Anders als foto/unterschrift wird eine Datei nie eingebettet
+        # (kein Bild, ggf. PDF-in-PDF) -- nur der Dateiname als Hinweis,
+        # dass etwas hochgeladen wurde.
+        return _pdf_safe_text(wert.get("filename") or "Datei hochgeladen")
+    if field.feld_typ == "adresse" and isinstance(wert, dict):
+        teile = [str(wert[k]) for k in ("strasse", "plz", "ort") if wert.get(k)]
+        return _pdf_safe_text(", ".join(teile) or "-")
     return _pdf_safe_text(wert)
 
 
@@ -802,14 +810,20 @@ def generate_form_submission_pdf(
         pdf.set_font("Helvetica", "B", 12)
         pdf.cell(0, 8, _pdf_safe_text(group.label.get("de", group.key)), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(2)
+        # Abschnitt (repeatable=False): genau ein Block ohne "Eintrag
+        # N"-Kennzeichnung -- fachlich kein Wiederholbereich, nur eine
+        # Gruppierung von Feldern.
         for idx, zeile in enumerate(zeilen):
-            pdf.set_font("Helvetica", "B", 10)
-            pdf.cell(0, 6, f"Eintrag {idx + 1}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            if group.repeatable:
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.cell(0, 6, f"Eintrag {idx + 1}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
             pdf.set_font("Helvetica", "", 9)
             for field in gruppen_felder:
                 label = field.label.get("de", field.key)
                 text = _form_antwort_text(field, zeile.get(field.key) if isinstance(zeile, dict) else None)
                 pdf.multi_cell(0, 5, f"{label}: {text}")
             pdf.ln(2)
+            if not group.repeatable:
+                break
 
     return bytes(pdf.output())

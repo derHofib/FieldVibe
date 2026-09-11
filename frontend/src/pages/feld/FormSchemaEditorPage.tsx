@@ -19,12 +19,17 @@ import {
   Camera,
   ChevronDown,
   ChevronRight,
+  Euro,
   FileText,
   Hash,
+  Home,
   List,
   ListChecks,
+  Mail,
   MapPin,
+  Paperclip,
   PenLine,
+  Phone,
   Plus,
   ScanLine,
   SlidersHorizontal,
@@ -41,6 +46,7 @@ import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldValueInput, RuleConditionBuilder } from "../../components/formModul/RuleConditionBuilder";
+import { FormulaBuilder } from "../../components/formModul/FormulaBuilder";
 import { SeitenPanel } from "../../components/SeitenPanel";
 import type {
   FormFeldTyp,
@@ -66,7 +72,11 @@ const FELD_TYP_KATALOG: { name: string; typen: { typ: FormFeldTyp; label: string
       { typ: "text", label: "Text (einzeilig)", icon: Type },
       { typ: "textarea", label: "Text (mehrzeilig)", icon: AlignLeft },
       { typ: "zahl", label: "Zahl", icon: Hash },
+      { typ: "betrag", label: "Betrag (€)", icon: Euro },
       { typ: "datum", label: "Datum", icon: Calendar },
+      { typ: "email", label: "E-Mail", icon: Mail },
+      { typ: "telefon", label: "Telefon", icon: Phone },
+      { typ: "adresse", label: "Adresse", icon: Home },
     ],
   },
   {
@@ -82,6 +92,7 @@ const FELD_TYP_KATALOG: { name: string; typen: { typ: FormFeldTyp; label: string
     name: "Erfassung vor Ort",
     typen: [
       { typ: "foto", label: "Foto", icon: Camera },
+      { typ: "datei", label: "Datei (Bild/PDF)", icon: Paperclip },
       { typ: "unterschrift", label: "Unterschrift", icon: PenLine },
       { typ: "gps", label: "GPS-Standort", icon: MapPin },
       { typ: "qr_scan", label: "QR-/Barcode-Scan", icon: ScanLine },
@@ -202,8 +213,16 @@ function RegelForm({
   const [condition, setCondition] = useState<unknown>(initial?.condition ?? true);
   const [value, setValue] = useState<unknown>(initial?.value ?? "");
   const [viewId, setViewId] = useState(initial?.view_id ?? "");
+  // Formel-Werte sind immer Objekte ({var:...} oder {"+": [...]} etc.) --
+  // ein "fester Wert" ist dagegen immer ein primitives Literal (String/
+  // Zahl/Bool). Reicht als Heuristik, um beim Bearbeiten einer bestehenden
+  // Regel den richtigen Reiter vorzuwaehlen.
+  const [wertModus, setWertModus] = useState<"fest" | "formel">(() =>
+    typeof initial?.value === "object" && initial.value !== null ? "formel" : "fest",
+  );
 
   const zielFeld = schema.fields.find((f) => f.key === festesZiel);
+  const istZielNumerisch = zielFeld?.feld_typ === "zahl" || zielFeld?.feld_typ === "betrag";
 
   return (
     <div className="space-y-2 border border-ind-line-2 p-3">
@@ -219,8 +238,38 @@ function RegelForm({
 
       {effect === "set_value" && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-ind-ink-2">Zu setzender Wert</label>
-          <FieldValueInput feld={zielFeld} value={value} onChange={setValue} />
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs font-medium text-ind-ink-2">Zu setzender Wert</label>
+            {istZielNumerisch && (
+              <div className="flex border border-ind-line text-[11px] font-medium">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWertModus("fest");
+                    setValue("");
+                  }}
+                  className={`px-2 py-0.5 ${wertModus === "fest" ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-3 hover:bg-ind-hover"}`}
+                >
+                  Fester Wert
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWertModus("formel");
+                    setValue(null);
+                  }}
+                  className={`px-2 py-0.5 ${wertModus === "formel" ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-3 hover:bg-ind-hover"}`}
+                >
+                  Formel
+                </button>
+              </div>
+            )}
+          </div>
+          {wertModus === "formel" && istZielNumerisch ? (
+            <FormulaBuilder fields={schema.fields} value={value} onChange={setValue} />
+          ) : (
+            <FieldValueInput feld={zielFeld} value={value} onChange={setValue} />
+          )}
         </div>
       )}
 
@@ -435,6 +484,12 @@ export function FormSchemaEditorPage() {
   const [feldGruppe, setFeldGruppe] = useState("");
   const [gruppeKey, setGruppeKey] = useState("");
   const [gruppeLabel, setGruppeLabel] = useState("");
+  // repeatable=true -> Sub-Formular/Liste (mehrere Eintraege, "+ Eintrag
+  // hinzufuegen" beim Ausfuellen); repeatable=false -> Abschnitt (genau ein
+  // Block, nur zum Gruppieren/gemeinsamen Ein-/Ausblenden von Feldern).
+  const [gruppeRepeatable, setGruppeRepeatable] = useState(true);
+  const [gruppeMinItems, setGruppeMinItems] = useState("");
+  const [gruppeMaxItems, setGruppeMaxItems] = useState("");
 
   const createFieldMutation = useMutation({
     mutationFn: () =>
@@ -456,10 +511,20 @@ export function FormSchemaEditorPage() {
     onSuccess: invalidate,
   });
   const createGroupMutation = useMutation({
-    mutationFn: () => formModulApi.createGroup(id!, { key: gruppeKey.trim(), label: { de: gruppeLabel.trim() || gruppeKey.trim() } }),
+    mutationFn: () =>
+      formModulApi.createGroup(id!, {
+        key: gruppeKey.trim(),
+        label: { de: gruppeLabel.trim() || gruppeKey.trim() },
+        repeatable: gruppeRepeatable,
+        min_items: gruppeRepeatable && gruppeMinItems ? Number(gruppeMinItems) : null,
+        max_items: gruppeRepeatable && gruppeMaxItems ? Number(gruppeMaxItems) : null,
+      }),
     onSuccess: () => {
       setGruppeKey("");
       setGruppeLabel("");
+      setGruppeRepeatable(true);
+      setGruppeMinItems("");
+      setGruppeMaxItems("");
       invalidate();
     },
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Gruppe konnte nicht angelegt werden"),
@@ -559,11 +624,16 @@ export function FormSchemaEditorPage() {
       {tab === "felder" && (
         <>
           <div className={sectionClass}>
-            <h2 className="text-sm font-semibold text-ind-ink">Gruppen (Wiederholbereiche)</h2>
+            <h2 className="text-sm font-semibold text-ind-ink">Gruppen (Abschnitte &amp; Sub-Formulare)</h2>
             {schema.groups.map((g) => (
               <div key={g.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
                 <span className="min-w-0 text-ind-ink">
-                  {g.label.de ?? g.key} <span className="text-ind-ink-3">({g.key})</span>
+                  {g.label.de ?? g.key} <span className="text-ind-ink-3">({g.key})</span>{" "}
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+                    {g.repeatable
+                      ? `Sub-Formular${g.min_items || g.max_items ? ` (min ${g.min_items ?? 0}${g.max_items ? ` / max ${g.max_items}` : ""})` : ""}`
+                      : "Abschnitt"}
+                  </span>
                 </span>
                 <div className="flex shrink-0 items-center gap-2">
                   <button
@@ -579,11 +649,61 @@ export function FormSchemaEditorPage() {
                 </div>
               </div>
             ))}
-            <div className="flex gap-2">
-              <input value={gruppeKey} onChange={(e) => setGruppeKey(e.target.value)} placeholder="key (z.B. maengel)" className={inputClass} />
-              <input value={gruppeLabel} onChange={(e) => setGruppeLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
-              <button onClick={() => createGroupMutation.mutate()} disabled={!gruppeKey.trim() || createGroupMutation.isPending} className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 disabled:opacity-50">
-                <Plus size={16} />
+            <div className="space-y-2 border-t border-ind-line pt-3">
+              <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Neue Gruppe</p>
+              <div className="seg-industry flex border border-ind-line">
+                <button
+                  onClick={() => setGruppeRepeatable(false)}
+                  className={`flex-1 px-3 py-1.5 text-xs font-semibold ${
+                    !gruppeRepeatable ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
+                  }`}
+                >
+                  Abschnitt (einmalig)
+                </button>
+                <button
+                  onClick={() => setGruppeRepeatable(true)}
+                  className={`flex-1 px-3 py-1.5 text-xs font-semibold ${
+                    gruppeRepeatable ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
+                  }`}
+                >
+                  Sub-Formular (Liste)
+                </button>
+              </div>
+              <p className="text-xs text-ind-ink-3">
+                {gruppeRepeatable
+                  ? "Mehrere Eintraege moeglich (z. B. Maengel-Liste) -- beim Ausfuellen koennen Zeilen hinzugefuegt/entfernt werden."
+                  : "Genau ein Block zum Gruppieren von Feldern -- z. B. um sie per Regel gemeinsam ein-/auszublenden."}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <input value={gruppeKey} onChange={(e) => setGruppeKey(e.target.value)} placeholder="key (z.B. maengel)" className={inputClass} />
+                <input value={gruppeLabel} onChange={(e) => setGruppeLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
+              </div>
+              {gruppeRepeatable && (
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={gruppeMinItems}
+                    onChange={(e) => setGruppeMinItems(e.target.value)}
+                    placeholder="Min. Eintraege (optional)"
+                    type="number"
+                    min={0}
+                    className={inputClass}
+                  />
+                  <input
+                    value={gruppeMaxItems}
+                    onChange={(e) => setGruppeMaxItems(e.target.value)}
+                    placeholder="Max. Eintraege (optional)"
+                    type="number"
+                    min={0}
+                    className={inputClass}
+                  />
+                </div>
+              )}
+              <button
+                onClick={() => createGroupMutation.mutate()}
+                disabled={!gruppeKey.trim() || createGroupMutation.isPending}
+                className="btn-touch flex w-full items-center justify-center gap-1.5 btn-industry btn-industry-secondary py-1.5 text-sm font-medium disabled:opacity-50"
+              >
+                <Plus size={15} /> {gruppeRepeatable ? "Sub-Formular" : "Abschnitt"} hinzufügen
               </button>
             </div>
           </div>

@@ -86,7 +86,11 @@ export function FormSubmissionAusfuellenPage() {
   const uploadMutation = useMutation({
     mutationFn: ({ fieldKey, file, filename }: { fieldKey: string; file: Blob; filename: string }) =>
       formSubmissionsApi.uploadDatei(id!, fieldKey, file, filename),
-    onSuccess: (result) => setValues((v) => ({ ...v, [result.field_key]: { key: result.key, url: result.url, content_type: result.content_type } })),
+    onSuccess: (result) =>
+      setValues((v) => ({
+        ...v,
+        [result.field_key]: { key: result.key, url: result.url, content_type: result.content_type, filename: result.filename },
+      })),
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Upload fehlgeschlagen"),
   });
 

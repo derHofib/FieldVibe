@@ -31,7 +31,17 @@ function formatWert(feld: FormField, wert: unknown): string {
     const gps = wert as { lat: number; lng: number };
     return `${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)}`;
   }
-  if (typeof wert === "object" && wert !== null && "url" in wert) return "Datei hinterlegt";
+  if (feld.feld_typ === "adresse" && typeof wert === "object") {
+    const adresse = wert as { strasse?: string; plz?: string; ort?: string };
+    return [adresse.strasse, [adresse.plz, adresse.ort].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "—";
+  }
+  if (feld.feld_typ === "betrag" && (typeof wert === "number" || typeof wert === "string")) {
+    return `${Number(wert).toFixed(2)} €`;
+  }
+  if (typeof wert === "object" && wert !== null && "url" in wert) {
+    const datei = wert as { filename?: string | null };
+    return feld.feld_typ === "datei" ? datei.filename || "Datei hinterlegt" : "Datei hinterlegt";
+  }
   return String(wert);
 }
 
@@ -79,6 +89,24 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
         const gruppenFelder = fields.filter((f) => f.group_key === gruppe.key).sort((a, b) => a.reihenfolge - b.reihenfolge);
         const zeilen = Array.isArray(values[gruppe.key]) ? (values[gruppe.key] as Record<string, unknown>[]) : [];
         const numerischeSpalten = gruppenFelder.filter((f) => f.feld_typ === "zahl");
+
+        // Abschnitt (repeatable=false): flache Label/Wert-Liste wie Root-
+        // Felder statt einer Tabelle -- eine Tabelle mit nur einer Zeile
+        // waere hier nur unnoetiger Overhead.
+        if (!gruppe.repeatable) {
+          const zeile = zeilen[0] ?? {};
+          return (
+            <div key={gruppe.id}>
+              <h3 className="mb-1.5 text-base font-semibold text-ind-ink">{gruppe.label.de ?? gruppe.key}</h3>
+              {gruppenFelder.map((feld) => (
+                <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-ind-line py-1.5">
+                  <span className="text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
+                  <span className="text-right text-sm font-medium text-ind-ink">{formatWert(feld, zeile[feld.key])}</span>
+                </div>
+              ))}
+            </div>
+          );
+        }
 
         return (
           <div key={gruppe.id}>

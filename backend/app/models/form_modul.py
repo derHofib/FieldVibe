@@ -38,8 +38,14 @@ FELD_TYPEN = (
     "unterschrift",
     "gps",
     "qr_scan",
+    # Migration 0080:
+    "datei",
+    "email",
+    "telefon",
+    "betrag",
+    "adresse",
 )
-FELD_TYPEN_MIT_DATENQUELLE = ("text", "textarea", "zahl", "datum")
+FELD_TYPEN_MIT_DATENQUELLE = ("text", "textarea", "zahl", "datum", "email", "telefon", "betrag")
 DATENQUELLEN = (
     "vorgang.vorgangsnummer",
     "vorgang.titel",
@@ -60,6 +66,9 @@ DATENQUELLEN = (
     "anlage.anlagentyp",
     "standort.bezeichnung",
     "standort.adresse",
+    # Migration 0080: automatischer Zeitstempel statt Bezug auf
+    # Vorgang/Kunde/Anlage/Standort -- nur fuer feld_typ="datum" sinnvoll.
+    "system.jetzt",
 )
 LEISTUNGSTYPEN = ("installation", "pruefung", "wartung", "stoerung", "beratung", "planung")
 
