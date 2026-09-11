@@ -484,7 +484,7 @@ export function FormSchemaEditorPage() {
   const [feldGruppe, setFeldGruppe] = useState("");
   const [gruppeKey, setGruppeKey] = useState("");
   const [gruppeLabel, setGruppeLabel] = useState("");
-  // repeatable=true -> Sub-Formular/Liste (mehrere Eintraege, "+ Eintrag
+  // repeatable=true -> Unterformular/Liste (mehrere Eintraege, "+ Eintrag
   // hinzufuegen" beim Ausfuellen); repeatable=false -> Abschnitt (genau ein
   // Block, nur zum Gruppieren/gemeinsamen Ein-/Ausblenden von Feldern).
   const [gruppeRepeatable, setGruppeRepeatable] = useState(true);
@@ -624,14 +624,14 @@ export function FormSchemaEditorPage() {
       {tab === "felder" && (
         <>
           <div className={sectionClass}>
-            <h2 className="text-sm font-semibold text-ind-ink">Gruppen (Abschnitte &amp; Sub-Formulare)</h2>
+            <h2 className="text-sm font-semibold text-ind-ink">Gruppen (Abschnitte &amp; Unterformulare)</h2>
             {schema.groups.map((g) => (
               <div key={g.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
                 <span className="min-w-0 text-ind-ink">
                   {g.label.de ?? g.key} <span className="text-ind-ink-3">({g.key})</span>{" "}
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                     {g.repeatable
-                      ? `Sub-Formular${g.min_items || g.max_items ? ` (min ${g.min_items ?? 0}${g.max_items ? ` / max ${g.max_items}` : ""})` : ""}`
+                      ? `Unterformular${g.min_items || g.max_items ? ` (min ${g.min_items ?? 0}${g.max_items ? ` / max ${g.max_items}` : ""})` : ""}`
                       : "Abschnitt"}
                   </span>
                 </span>
@@ -666,7 +666,7 @@ export function FormSchemaEditorPage() {
                     gruppeRepeatable ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
                   }`}
                 >
-                  Sub-Formular (Liste)
+                  Unterformular (Liste)
                 </button>
               </div>
               <p className="text-xs text-ind-ink-3">
@@ -675,7 +675,7 @@ export function FormSchemaEditorPage() {
                   : "Genau ein Block zum Gruppieren von Feldern -- z. B. um sie per Regel gemeinsam ein-/auszublenden."}
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <input value={gruppeKey} onChange={(e) => setGruppeKey(e.target.value)} placeholder="key (z.B. maengel)" className={inputClass} />
+                <input value={gruppeKey} onChange={(e) => setGruppeKey(e.target.value)} placeholder="Schlüssel (z. B. maengel)" className={inputClass} />
                 <input value={gruppeLabel} onChange={(e) => setGruppeLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
               </div>
               {gruppeRepeatable && (
@@ -703,7 +703,7 @@ export function FormSchemaEditorPage() {
                 disabled={!gruppeKey.trim() || createGroupMutation.isPending}
                 className="btn-touch flex w-full items-center justify-center gap-1.5 btn-industry btn-industry-secondary py-1.5 text-sm font-medium disabled:opacity-50"
               >
-                <Plus size={15} /> {gruppeRepeatable ? "Sub-Formular" : "Abschnitt"} hinzufügen
+                <Plus size={15} /> {gruppeRepeatable ? "Unterformular" : "Abschnitt"} hinzufügen
               </button>
             </div>
           </div>
@@ -738,7 +738,7 @@ export function FormSchemaEditorPage() {
               <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Neues Feld</p>
               <FeldTypPalette ausgewaehlt={feldTyp} onWaehlen={setFeldTyp} />
               <div className="grid grid-cols-2 gap-2">
-                <input value={feldKey} onChange={(e) => setFeldKey(e.target.value)} placeholder="key (z.B. kommentar)" className={inputClass} />
+                <input value={feldKey} onChange={(e) => setFeldKey(e.target.value)} placeholder="Schlüssel (z. B. kommentar)" className={inputClass} />
                 <input value={feldLabel} onChange={(e) => setFeldLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
               </div>
               <select value={feldGruppe} onChange={(e) => setFeldGruppe(e.target.value)} className={inputClass}>

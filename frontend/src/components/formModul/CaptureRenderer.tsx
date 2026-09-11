@@ -126,7 +126,7 @@ export function CaptureRenderer({
 
         // Abschnitt (repeatable=false): genau ein Block ohne Zeilen-
         // Steuerung -- Werte liegen technisch trotzdem als values[key][0]
-        // (dieselbe Speicherform wie ein Sub-Formular mit einer Zeile),
+        // (dieselbe Speicherform wie ein Unterformular mit einer Zeile),
         // das spart eigene Auswertungslogik in form_logic_engine/-.ts.
         if (!eintrag.gruppe.repeatable) {
           const zeile = zeilen[0] ?? {};
