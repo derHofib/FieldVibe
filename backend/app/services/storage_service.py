@@ -99,6 +99,11 @@ def new_partner_nachweis_key(partner_id: uuid.UUID, filename: str) -> str:
     return f"partner-nachweise/{partner_id}/{uuid.uuid4()}.{suffix}"
 
 
+def new_plan_symbol_key(mandant_id: uuid.UUID, filename: str) -> str:
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return f"mandanten/{mandant_id}/plan-symbole/{uuid.uuid4()}.{suffix}"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) verschluesselt
     # Kundenfotos/Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der

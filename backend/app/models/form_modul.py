@@ -44,6 +44,9 @@ FELD_TYPEN = (
     "telefon",
     "betrag",
     "adresse",
+    # Migration 0081: Foto mit einzeichenbaren Symbolen/Leitungswegen aus der
+    # mandanteneigenen Symbol-Bibliothek (siehe app/models/plan_symbol.py).
+    "foto_plan",
 )
 FELD_TYPEN_MIT_DATENQUELLE = ("text", "textarea", "zahl", "datum", "email", "telefon", "betrag")
 DATENQUELLEN = (

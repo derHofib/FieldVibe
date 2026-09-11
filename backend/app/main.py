@@ -46,6 +46,7 @@ from app.api.routes import (
     partner,
     partner_auth,
     partner_portal,
+    plan_symbole,
     plattform_integrationen,
     projekte,
     pruefmittel,
@@ -122,6 +123,7 @@ app.include_router(vorgang_anfragen.router)
 app.include_router(vorgang_events.router)
 app.include_router(form_modul.router)
 app.include_router(form_modul.submissions_router)
+app.include_router(plan_symbole.router)
 app.include_router(tags.router)
 app.include_router(feed.router)
 app.include_router(gespeicherte_filter.router)

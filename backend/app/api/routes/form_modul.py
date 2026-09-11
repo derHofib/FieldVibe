@@ -33,6 +33,7 @@ from app.models.form_modul import (
     FormViewFieldLayout,
 )
 from app.models.kunde import Kunde
+from app.models.plan_symbol import PlanSymbol
 from app.models.standort import Standort
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -79,9 +80,12 @@ from app.services.zuweisung_service import assigned_kunde_ids
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 # "datei" erlaubt zusaetzlich PDFs (siehe datei_hochladen) -- foto/
-# unterschrift bleiben bewusst auf Bilder beschraenkt, das sind
+# unterschrift/foto_plan bleiben bewusst auf Bilder beschraenkt, das sind
 # Kamera-/Zeichenflaechen-Aufnahmen, kein allgemeiner Datei-Upload.
-FELDTYPEN_MIT_DATEI = ("foto", "unterschrift", "datei")
+# foto_plan laedt hierueber nur das Hintergrundfoto hoch -- die Markierungen
+# (Symbole/Linien) werden separat per PATCH auf denselben Feld-Wert gelegt
+# (siehe update_submission_values), nicht Teil dieses Uploads.
+FELDTYPEN_MIT_DATEI = ("foto", "unterschrift", "datei", "foto_plan")
 _ERLAUBTE_CONTENT_TYPES_DATEI = ("application/pdf",)
 
 router = APIRouter(
@@ -129,6 +133,27 @@ async def _existing_keys(session: AsyncSession, schema_id: UUID) -> set[str]:
     fields = await form_modul_service.fields_fuer(session, schema_id)
     groups = await form_modul_service.groups_fuer(session, schema_id)
     return {f.key for f in fields} | {g.key for g in groups}
+
+
+async def _validate_symbol_ids(session: AsyncSession, feld_typ: str, optionen: dict) -> None:
+    """optionen.symbol_ids (foto_plan) muss auf existierende Symbole der
+    Mandanten-Bibliothek zeigen -- die Session ist RLS-gescoped (get_db),
+    ein Query genuegt also, um fremde/geloeschte IDs zu erkennen."""
+    if feld_typ != "foto_plan":
+        return
+    symbol_ids = optionen.get("symbol_ids")
+    if not symbol_ids:
+        return
+    if not isinstance(symbol_ids, list) or not all(isinstance(s, str) for s in symbol_ids):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="optionen.symbol_ids muss eine Liste von IDs sein")
+    stmt = select(PlanSymbol.id).where(PlanSymbol.id.in_(symbol_ids))
+    result = await session.execute(stmt)
+    gefundene = {str(i) for i in result.scalars().all()}
+    unbekannt = set(symbol_ids) - gefundene
+    if unbekannt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unbekannte Symbol-IDs: {', '.join(sorted(unbekannt))}"
+        )
 
 
 @router.get("", response_model=list[FormSchemaRead])
@@ -267,6 +292,7 @@ async def create_field(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=f"Gruppe '{body.group_key}' existiert nicht"
             )
+    await _validate_symbol_ids(session, body.feld_typ, body.optionen)
     field = FormField(mandant_id=auth.mandant_id, schema_id=schema_id, **body.model_dump())
     session.add(field)
     await session.flush()
@@ -292,6 +318,8 @@ async def update_field(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail=f"Gruppe '{daten['group_key']}' existiert nicht"
             )
+    if "optionen" in daten:
+        await _validate_symbol_ids(session, daten.get("feld_typ", field.feld_typ), daten["optionen"])
     for f, value in daten.items():
         setattr(field, f, value)
     await session.flush()

@@ -29,6 +29,7 @@ FormFeldTyp = Literal[
     "telefon",
     "betrag",
     "adresse",
+    "foto_plan",
 ]
 FormFeldDatenquelle = Literal[
     "vorgang.vorgangsnummer",
