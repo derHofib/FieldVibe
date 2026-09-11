@@ -16,6 +16,7 @@ import {
   applyRules,
   detectCycles,
   evaluateBool,
+  evaluateCondition,
   FormLogicCycleError,
   type FieldDef,
   type GroupDef,
@@ -34,6 +35,13 @@ interface ConditionEvalCase {
   condition: unknown;
   context: Record<string, unknown>;
   expected: boolean;
+}
+
+interface ArithmeticEvalCase {
+  name: string;
+  expression: unknown;
+  context: Record<string, unknown>;
+  expected: number | null;
 }
 
 interface CycleDetectionCase {
@@ -57,6 +65,14 @@ describe("evaluateCondition (condition-eval.json)", () => {
   for (const c of load<ConditionEvalCase>("condition-eval.json")) {
     it(c.name, () => {
       expect(evaluateBool(c.condition, c.context)).toBe(c.expected);
+    });
+  }
+});
+
+describe("evaluateCondition arithmetik (arithmetic-eval.json)", () => {
+  for (const c of load<ArithmeticEvalCase>("arithmetic-eval.json")) {
+    it(c.name, () => {
+      expect(evaluateCondition(c.expression, c.context)).toBe(c.expected);
     });
   }
 });

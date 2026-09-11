@@ -14,6 +14,7 @@ from app.services.form_logic_engine import (
     apply_rules,
     detect_cycles,
     evaluate_bool,
+    evaluate_condition,
 )
 
 _FIXTURES_DIR = Path(__file__).resolve().parents[2] / "shared" / "form-logic-fixtures"
@@ -26,6 +27,11 @@ def _load(name: str) -> list[dict]:
 @pytest.mark.parametrize("case", _load("condition-eval.json"), ids=lambda c: c["name"])
 def test_condition_eval_fixtures(case):
     assert evaluate_bool(case["condition"], case["context"]) == case["expected"]
+
+
+@pytest.mark.parametrize("case", _load("arithmetic-eval.json"), ids=lambda c: c["name"])
+def test_arithmetic_eval_fixtures(case):
+    assert evaluate_condition(case["expression"], case["context"]) == case["expected"]
 
 
 @pytest.mark.parametrize("case", _load("cycle-detection.json"), ids=lambda c: c["name"])

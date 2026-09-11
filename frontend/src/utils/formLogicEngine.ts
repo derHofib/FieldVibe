@@ -22,6 +22,7 @@ const COMPARATORS: Record<string, (a: unknown, b: unknown) => boolean> = {
   ">": (a, b) => (a as number) > (b as number),
   ">=": (a, b) => (a as number) >= (b as number),
 };
+const ARITHMETIK = new Set(["+", "-", "*", "/"]);
 
 function isPlainObject(node: unknown): node is Record<string, unknown> {
   return typeof node === "object" && node !== null && !Array.isArray(node);
@@ -54,6 +55,27 @@ export function evaluateCondition(node: unknown, context: Record<string, unknown
     }
     const [a, b] = args;
     return COMPARATORS[op](evaluateCondition(a, context), evaluateCondition(b, context));
+  }
+  if (ARITHMETIK.has(op)) {
+    // Fuer Formel-Felder (set_value mit einem Ausdruck statt einem Literal
+    // als value, siehe applyRules) -- bewusst null statt eines Fehlers bei
+    // fehlenden/nicht-numerischen Operanden oder Division durch 0: eine
+    // unvollstaendig ausgefuellte Formel soll das Formular nicht zum
+    // Absturz bringen, das Zielfeld bleibt dann leer.
+    if (!Array.isArray(args) || args.length < 2) {
+      throw new FormLogicError(`Operator '${op}' braucht mindestens zwei Argumente: ${JSON.stringify(args)}`);
+    }
+    const werte = args.map((a) => evaluateCondition(a, context));
+    if (werte.some((w) => typeof w !== "number" || Number.isNaN(w))) return null;
+    let ergebnis = werte[0] as number;
+    for (const w of werte.slice(1) as number[]) {
+      if (op === "+") ergebnis += w;
+      else if (op === "-") ergebnis -= w;
+      else if (op === "*") ergebnis *= w;
+      else if (w === 0) return null;
+      else ergebnis /= w;
+    }
+    return ergebnis;
   }
   if (op === "and") {
     if (!Array.isArray(args)) {
@@ -233,7 +255,10 @@ export function applyRules(args: {
     if (groupKey === null) {
       const active = evaluateBool(rule.condition, workingValues);
       if (rule.effect === "set_value") {
-        if (active) workingValues[target] = rule.value ?? null;
+        // value ist ein Ausdruck (Literal ODER Formel mit var/Arithmetik) --
+        // ein Literal wertet sich in evaluateCondition auf sich selbst aus,
+        // das ist also abwaertskompatibel zu reinen Fest-Werten.
+        if (active) workingValues[target] = evaluateCondition(rule.value ?? null, workingValues);
       } else {
         applyEffect(states, target, rule.effect, active);
       }
@@ -247,7 +272,7 @@ export function applyRules(args: {
       const active = evaluateBool(rule.condition, ctx);
       const path = `${groupKey}[${idx}].${target}`;
       if (rule.effect === "set_value") {
-        if (active) row[target] = rule.value ?? null;
+        if (active) row[target] = evaluateCondition(rule.value ?? null, ctx);
       } else {
         applyEffect(states, path, rule.effect, active);
       }

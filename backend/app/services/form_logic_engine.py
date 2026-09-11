@@ -34,6 +34,7 @@ _COMPARATORS = {
     ">": lambda a, b: a > b,
     ">=": lambda a, b: a >= b,
 }
+_ARITHMETIK = ("+", "-", "*", "/")
 
 
 def evaluate_condition(node: Any, context: dict[str, Any]) -> Any:
@@ -62,6 +63,30 @@ def evaluate_condition(node: Any, context: dict[str, Any]) -> Any:
             raise FormLogicError(f"Operator '{op}' braucht genau zwei Argumente: {args!r}")
         a, b = args
         return _COMPARATORS[op](evaluate_condition(a, context), evaluate_condition(b, context))
+    if op in _ARITHMETIK:
+        # Fuer Formel-Felder (set_value mit einem Ausdruck statt einem
+        # Literal als value, siehe apply_rules) -- bewusst None statt eines
+        # Fehlers bei fehlenden/nicht-numerischen Operanden oder
+        # Division durch 0: eine unvollstaendig ausgefuellte Formel soll das
+        # Formular nicht zum Absturz bringen, das Zielfeld bleibt dann leer.
+        if not isinstance(args, list) or len(args) < 2:
+            raise FormLogicError(f"Operator '{op}' braucht mindestens zwei Argumente: {args!r}")
+        werte = [evaluate_condition(a, context) for a in args]
+        if any(not isinstance(w, (int, float)) or isinstance(w, bool) for w in werte):
+            return None
+        ergebnis = werte[0]
+        for w in werte[1:]:
+            if op == "+":
+                ergebnis = ergebnis + w
+            elif op == "-":
+                ergebnis = ergebnis - w
+            elif op == "*":
+                ergebnis = ergebnis * w
+            elif w == 0:
+                return None
+            else:
+                ergebnis = ergebnis / w
+        return ergebnis
     if op == "and":
         if not isinstance(args, list):
             raise FormLogicError(f"Operator 'and' braucht eine Liste: {args!r}")
@@ -231,7 +256,11 @@ def apply_rules(
             active = evaluate_bool(rule["condition"], working_values)
             if effect == "set_value":
                 if active:
-                    working_values[target] = rule.get("value")
+                    # value ist ein Ausdruck (Literal ODER Formel mit
+                    # var/Arithmetik) -- ein Literal wertet sich in
+                    # evaluate_condition auf sich selbst aus, das ist also
+                    # abwaertskompatibel zu reinen Fest-Werten.
+                    working_values[target] = evaluate_condition(rule.get("value"), working_values)
             else:
                 _apply_effect(states, target, effect, active)
             continue
@@ -243,7 +272,7 @@ def apply_rules(
             path = f"{group_key}[{idx}].{target}"
             if effect == "set_value":
                 if active:
-                    row[target] = rule.get("value")
+                    row[target] = evaluate_condition(rule.get("value"), ctx)
             else:
                 _apply_effect(states, path, effect, active)
 

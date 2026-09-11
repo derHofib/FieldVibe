@@ -161,6 +161,28 @@
     "expected_values": {}
   },
   {
+    "name": "set_value mit Formel (Ausdruck statt Literal) -- Flaeche = Laenge x Breite",
+    "fields": [
+      { "key": "laenge", "group_key": null },
+      { "key": "breite", "group_key": null },
+      { "key": "flaeche", "group_key": null }
+    ],
+    "groups": [],
+    "rules": [
+      {
+        "target_key": "flaeche",
+        "effect": "set_value",
+        "condition": true,
+        "value": { "*": [{ "var": "laenge" }, { "var": "breite" }] },
+        "reihenfolge": 0
+      }
+    ],
+    "values": { "laenge": 2.5, "breite": 4 },
+    "view_id": null,
+    "expected_states": {},
+    "expected_values": { "laenge": 2.5, "breite": 4, "flaeche": 10 }
+  },
+  {
     "name": "reihenfolge bestimmt die Anwendungsreihenfolge, nicht die Position im Array",
     "fields": [{ "key": "feld", "group_key": null }],
     "groups": [],
