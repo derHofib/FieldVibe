@@ -1,8 +1,11 @@
 // Editor fuer ein Formular-Modul-v2-Schema: Felder/Gruppen, Views, Regeln
-// und Auftragstyp-Zuordnungen verwalten. Bewusst formularbasiert statt ein
-// visueller Drag&Drop-Builder (siehe Nicht-Ziel im Migrationsplan) --
-// Positionierung je View passiert ueber "Layout automatisch aus Feldern
-// übernehmen" (stapelt alle Root-Felder der Reihe nach), nicht per Maus.
+// und Auftragstyp-Zuordnungen verwalten. Der Felder-Tab ist ein visueller
+// WYSIWYG-Drag&Drop-Builder (siehe FormBuilderCanvas.tsx) -- Kategorien-
+// Palette links, Formular-Vorschau in der Mitte, feste Eigenschaften-Spalte
+// rechts. Positionierung je VIEW (Druck/PDF) passiert weiterhin ueber
+// "Layout automatisch aus Feldern übernehmen" (stapelt alle Root-Felder der
+// Reihe nach), nicht per Maus -- das ist ein eigenes Thema (Seiten-Layout
+// fuer den Druck) und unabhaengig von der Feld-Reihenfolge im Canvas.
 //
 // Bewusst in drei Tabs aufgeteilt (Felder / Visualisierung / Zuordnungen)
 // statt einer langen Seite mit allem untereinander -- das Anlegen eines
@@ -13,95 +16,20 @@
 // gerade bearbeiteten Feld war unuebersichtlich, sobald ein Schema mehr als
 // eine Handvoll Regeln hatte.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlignLeft,
-  Calendar,
-  Camera,
-  ChevronDown,
-  ChevronRight,
-  Euro,
-  FileText,
-  Hash,
-  Home,
-  List,
-  ListChecks,
-  Mail,
-  MapPin,
-  Paperclip,
-  PenLine,
-  Phone,
-  Plus,
-  ScanLine,
-  SlidersHorizontal,
-  Star,
-  ToggleLeft,
-  Trash2,
-  Type,
-  type LucideIcon,
-} from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FormBuilderCanvas } from "../../components/formModul/FormBuilderCanvas";
 import { FieldValueInput, RuleConditionBuilder } from "../../components/formModul/RuleConditionBuilder";
 import { FormulaBuilder } from "../../components/formModul/FormulaBuilder";
 import { SeitenPanel } from "../../components/SeitenPanel";
-import type {
-  FormFeldTyp,
-  FormLogicEffekt,
-  FormLogicRule,
-  FormSchemaDetail,
-  FormView,
-  FormViewTyp,
-  Leistungstyp,
-} from "../../types";
+import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, FormViewTyp, Leistungstyp } from "../../types";
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
-
-// Katalog der verfuegbaren Feldtypen, in "ausklappbaren Gruppen" (Kategorien)
-// sortiert -- das ist die Kaestchen-Liste, aus der ein neues Feld "gezogen"
-// wird (siehe FeldTypPalette unten). Reihenfolge/Kategorisierung ist eine
-// Vereinfachung fuer den Einstieg; welche FELD_TYPEN es ueberhaupt geben
-// soll, ist ein eigenes, spaeteres Thema.
-const FELD_TYP_KATALOG: { name: string; typen: { typ: FormFeldTyp; label: string; icon: LucideIcon }[] }[] = [
-  {
-    name: "Text & Zahlen",
-    typen: [
-      { typ: "text", label: "Text (einzeilig)", icon: Type },
-      { typ: "textarea", label: "Text (mehrzeilig)", icon: AlignLeft },
-      { typ: "zahl", label: "Zahl", icon: Hash },
-      { typ: "betrag", label: "Betrag (€)", icon: Euro },
-      { typ: "datum", label: "Datum", icon: Calendar },
-      { typ: "email", label: "E-Mail", icon: Mail },
-      { typ: "telefon", label: "Telefon", icon: Phone },
-      { typ: "adresse", label: "Adresse", icon: Home },
-    ],
-  },
-  {
-    name: "Auswahl",
-    typen: [
-      { typ: "dropdown", label: "Dropdown", icon: List },
-      { typ: "mehrfachauswahl", label: "Mehrfachauswahl", icon: ListChecks },
-      { typ: "ja_nein", label: "Ja / Nein", icon: ToggleLeft },
-      { typ: "bewertung", label: "Bewertung (Skala)", icon: Star },
-    ],
-  },
-  {
-    name: "Erfassung vor Ort",
-    typen: [
-      { typ: "foto", label: "Foto", icon: Camera },
-      { typ: "datei", label: "Datei (Bild/PDF)", icon: Paperclip },
-      { typ: "unterschrift", label: "Unterschrift", icon: PenLine },
-      { typ: "gps", label: "GPS-Standort", icon: MapPin },
-      { typ: "qr_scan", label: "QR-/Barcode-Scan", icon: ScanLine },
-    ],
-  },
-];
-const FELD_TYP_LABEL = Object.fromEntries(
-  FELD_TYP_KATALOG.flatMap((k) => k.typen.map((t) => [t.typ, t.label])),
-) as Record<FormFeldTyp, string>;
 
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
@@ -116,63 +44,6 @@ const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {
   readonly: "Schreibgeschützt, wenn",
   set_value: "Wert setzen, wenn",
 };
-
-/** Kaestchen-Liste der Feldtypen, in ausklappbare Kategorien sortiert --
- * Klick auf ein Kaestchen waehlt den Typ fuer das "Neues Feld"-Formular
- * aus (siehe FELD_TYP_KATALOG). */
-function FeldTypPalette({ ausgewaehlt, onWaehlen }: { ausgewaehlt: FormFeldTyp; onWaehlen: (t: FormFeldTyp) => void }) {
-  const [offeneKategorien, setOffeneKategorien] = useState<Set<string>>(new Set([FELD_TYP_KATALOG[0].name]));
-
-  function toggeln(name: string) {
-    setOffeneKategorien((bisher) => {
-      const neu = new Set(bisher);
-      if (neu.has(name)) neu.delete(name);
-      else neu.add(name);
-      return neu;
-    });
-  }
-
-  return (
-    <div className="space-y-1.5">
-      {FELD_TYP_KATALOG.map((kat) => {
-        const offen = offeneKategorien.has(kat.name);
-        return (
-          <div key={kat.name} className="border border-ind-line-2">
-            <button
-              onClick={() => toggeln(kat.name)}
-              className="flex w-full items-center gap-2 p-2 text-left text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase hover:bg-ind-hover"
-            >
-              {offen ? (
-                <ChevronDown size={14} strokeWidth={1.5} />
-              ) : (
-                <ChevronRight size={14} strokeWidth={1.5} />
-              )}
-              {kat.name}
-            </button>
-            {offen && (
-              <div className="grid grid-cols-2 gap-1.5 p-2 pt-0 sm:grid-cols-4">
-                {kat.typen.map(({ typ, label, icon: Icon }) => (
-                  <button
-                    key={typ}
-                    onClick={() => onWaehlen(typ)}
-                    className={`flex flex-col items-center gap-1 border p-2 text-center text-[11px] font-medium ${
-                      ausgewaehlt === typ
-                        ? "border-ind-acc bg-ind-acc-soft text-ind-acc-txt"
-                        : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
-                    }`}
-                  >
-                    <Icon size={18} strokeWidth={1.5} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 interface RegelFormPayload {
   target_key: string;
@@ -477,63 +348,6 @@ export function FormSchemaEditorPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Konnte nicht veröffentlicht werden"),
   });
 
-  // --- Felder/Gruppen ---
-  const [feldKey, setFeldKey] = useState("");
-  const [feldLabel, setFeldLabel] = useState("");
-  const [feldTyp, setFeldTyp] = useState<FormFeldTyp>("text");
-  const [feldGruppe, setFeldGruppe] = useState("");
-  const [gruppeKey, setGruppeKey] = useState("");
-  const [gruppeLabel, setGruppeLabel] = useState("");
-  // repeatable=true -> Unterformular/Liste (mehrere Eintraege, "+ Eintrag
-  // hinzufuegen" beim Ausfuellen); repeatable=false -> Abschnitt (genau ein
-  // Block, nur zum Gruppieren/gemeinsamen Ein-/Ausblenden von Feldern).
-  const [gruppeRepeatable, setGruppeRepeatable] = useState(true);
-  const [gruppeMinItems, setGruppeMinItems] = useState("");
-  const [gruppeMaxItems, setGruppeMaxItems] = useState("");
-
-  const createFieldMutation = useMutation({
-    mutationFn: () =>
-      formModulApi.createField(id!, {
-        key: feldKey.trim(),
-        feld_typ: feldTyp,
-        label: { de: feldLabel.trim() || feldKey.trim() },
-        group_key: feldGruppe || null,
-      }),
-    onSuccess: () => {
-      setFeldKey("");
-      setFeldLabel("");
-      invalidate();
-    },
-    onError: (err) => setFehler(err instanceof ApiError ? err.message : "Feld konnte nicht angelegt werden"),
-  });
-  const deleteFieldMutation = useMutation({
-    mutationFn: (fieldId: string) => formModulApi.deleteField(id!, fieldId),
-    onSuccess: invalidate,
-  });
-  const createGroupMutation = useMutation({
-    mutationFn: () =>
-      formModulApi.createGroup(id!, {
-        key: gruppeKey.trim(),
-        label: { de: gruppeLabel.trim() || gruppeKey.trim() },
-        repeatable: gruppeRepeatable,
-        min_items: gruppeRepeatable && gruppeMinItems ? Number(gruppeMinItems) : null,
-        max_items: gruppeRepeatable && gruppeMaxItems ? Number(gruppeMaxItems) : null,
-      }),
-    onSuccess: () => {
-      setGruppeKey("");
-      setGruppeLabel("");
-      setGruppeRepeatable(true);
-      setGruppeMinItems("");
-      setGruppeMaxItems("");
-      invalidate();
-    },
-    onError: (err) => setFehler(err instanceof ApiError ? err.message : "Gruppe konnte nicht angelegt werden"),
-  });
-  const deleteGroupMutation = useMutation({
-    mutationFn: (groupId: string) => formModulApi.deleteGroup(id!, groupId),
-    onSuccess: invalidate,
-  });
-
   // --- Views ---
   const [viewTyp, setViewTyp] = useState<FormViewTyp>("capture");
   const [viewName, setViewName] = useState("");
@@ -622,143 +436,15 @@ export function FormSchemaEditorPage() {
       </div>
 
       {tab === "felder" && (
-        <>
-          <div className={sectionClass}>
-            <h2 className="text-sm font-semibold text-ind-ink">Gruppen (Abschnitte &amp; Unterformulare)</h2>
-            {schema.groups.map((g) => (
-              <div key={g.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-                <span className="min-w-0 text-ind-ink">
-                  {g.label.de ?? g.key} <span className="text-ind-ink-3">({g.key})</span>{" "}
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-                    {g.repeatable
-                      ? `Unterformular${g.min_items || g.max_items ? ` (min ${g.min_items ?? 0}${g.max_items ? ` / max ${g.max_items}` : ""})` : ""}`
-                      : "Abschnitt"}
-                  </span>
-                </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    onClick={() => setRegelnZiel({ key: g.key, label: g.label.de ?? g.key })}
-                    className="flex items-center gap-1 text-xs text-cyan-700 dark:text-cyan-400"
-                  >
-                    <SlidersHorizontal size={12} strokeWidth={1.5} />
-                    Regeln{regelnAnzahl(g.key) > 0 && ` (${regelnAnzahl(g.key)})`}
-                  </button>
-                  <button onClick={() => deleteGroupMutation.mutate(g.id)} className="text-ind-ink-3 hover:text-rose-600">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-            <div className="space-y-2 border-t border-ind-line pt-3">
-              <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Neue Gruppe</p>
-              <div className="seg-industry flex border border-ind-line">
-                <button
-                  onClick={() => setGruppeRepeatable(false)}
-                  className={`flex-1 px-3 py-1.5 text-xs font-semibold ${
-                    !gruppeRepeatable ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
-                  }`}
-                >
-                  Abschnitt (einmalig)
-                </button>
-                <button
-                  onClick={() => setGruppeRepeatable(true)}
-                  className={`flex-1 px-3 py-1.5 text-xs font-semibold ${
-                    gruppeRepeatable ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
-                  }`}
-                >
-                  Unterformular (Liste)
-                </button>
-              </div>
-              <p className="text-xs text-ind-ink-3">
-                {gruppeRepeatable
-                  ? "Mehrere Eintraege moeglich (z. B. Maengel-Liste) -- beim Ausfuellen koennen Zeilen hinzugefuegt/entfernt werden."
-                  : "Genau ein Block zum Gruppieren von Feldern -- z. B. um sie per Regel gemeinsam ein-/auszublenden."}
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <input value={gruppeKey} onChange={(e) => setGruppeKey(e.target.value)} placeholder="Schlüssel (z. B. maengel)" className={inputClass} />
-                <input value={gruppeLabel} onChange={(e) => setGruppeLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
-              </div>
-              {gruppeRepeatable && (
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    value={gruppeMinItems}
-                    onChange={(e) => setGruppeMinItems(e.target.value)}
-                    placeholder="Min. Eintraege (optional)"
-                    type="number"
-                    min={0}
-                    className={inputClass}
-                  />
-                  <input
-                    value={gruppeMaxItems}
-                    onChange={(e) => setGruppeMaxItems(e.target.value)}
-                    placeholder="Max. Eintraege (optional)"
-                    type="number"
-                    min={0}
-                    className={inputClass}
-                  />
-                </div>
-              )}
-              <button
-                onClick={() => createGroupMutation.mutate()}
-                disabled={!gruppeKey.trim() || createGroupMutation.isPending}
-                className="btn-touch flex w-full items-center justify-center gap-1.5 btn-industry btn-industry-secondary py-1.5 text-sm font-medium disabled:opacity-50"
-              >
-                <Plus size={15} /> {gruppeRepeatable ? "Unterformular" : "Abschnitt"} hinzufügen
-              </button>
-            </div>
-          </div>
-
-          <div className={sectionClass}>
-            <h2 className="text-sm font-semibold text-ind-ink">Felder</h2>
-            {schema.fields.map((f) => (
-              <div key={f.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-                <span className="min-w-0 text-ind-ink">
-                  {f.label.de ?? f.key}{" "}
-                  <span className="text-ind-ink-3">
-                    ({f.key} · {FELD_TYP_LABEL[f.feld_typ]}
-                    {f.group_key ? ` · in ${f.group_key}` : ""})
-                  </span>
-                </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  <button
-                    onClick={() => setRegelnZiel({ key: f.key, label: f.label.de ?? f.key })}
-                    className="flex items-center gap-1 text-xs text-cyan-700 dark:text-cyan-400"
-                  >
-                    <SlidersHorizontal size={12} strokeWidth={1.5} />
-                    Regeln{regelnAnzahl(f.key) > 0 && ` (${regelnAnzahl(f.key)})`}
-                  </button>
-                  <button onClick={() => deleteFieldMutation.mutate(f.id)} className="text-ind-ink-3 hover:text-rose-600">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            <div className="space-y-2 border-t border-ind-line pt-3">
-              <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Neues Feld</p>
-              <FeldTypPalette ausgewaehlt={feldTyp} onWaehlen={setFeldTyp} />
-              <div className="grid grid-cols-2 gap-2">
-                <input value={feldKey} onChange={(e) => setFeldKey(e.target.value)} placeholder="Schlüssel (z. B. kommentar)" className={inputClass} />
-                <input value={feldLabel} onChange={(e) => setFeldLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
-              </div>
-              <select value={feldGruppe} onChange={(e) => setFeldGruppe(e.target.value)} className={inputClass}>
-                <option value="">Kein Gruppen-Feld</option>
-                {schema.groups.map((g) => (
-                  <option key={g.key} value={g.key}>
-                    {g.label.de ?? g.key}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => createFieldMutation.mutate()}
-                disabled={!feldKey.trim() || createFieldMutation.isPending}
-                className="btn-touch flex w-full items-center justify-center gap-1.5 btn-industry btn-industry-primary py-1.5 text-sm font-medium disabled:opacity-50"
-              >
-                <Plus size={15} /> {FELD_TYP_LABEL[feldTyp]}-Feld hinzufügen
-              </button>
-            </div>
-          </div>
-        </>
+        <FormBuilderCanvas
+          schemaId={id!}
+          schema={schema}
+          regelnAnzahl={regelnAnzahl}
+          onRegelnOeffnen={setRegelnZiel}
+          invalidate={invalidate}
+          fehler={fehler}
+          setFehler={setFehler}
+        />
       )}
 
       {tab === "visualisierung" && (
