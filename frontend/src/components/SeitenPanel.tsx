@@ -15,9 +15,15 @@ interface SeitenPanelProps {
   // Fuer Inhalte mit mehr Spalten (z.B. Formulare mit Nebeneinander-
   // Layouts) -- Default passt fuer die meisten Detail-/Formular-Panels.
   breit?: boolean;
+  // Rueckt das Panel um so viele px vom rechten Rand ab -- fuer gestapelte
+  // Panels (z.B. Unterformular-Editor + darueber das Regeln-Panel): das
+  // hintere Panel bekommt die Breite des vorderen als Versatz, damit sein
+  // rechter Rand sichtbar hinter dem neuen Panel hervorschaut statt
+  // komplett verdeckt zu werden (siehe FormBuilderCanvas.tsx).
+  versatzRechtsPx?: number;
 }
 
-export function SeitenPanel({ onClose, title, children, breit = false }: SeitenPanelProps) {
+export function SeitenPanel({ onClose, title, children, breit = false, versatzRechtsPx = 0 }: SeitenPanelProps) {
   // Panel wird zunaechst ausserhalb des sichtbaren Bereichs gerendert und
   // erst im naechsten Frame eingeblendet, damit die CSS-Transition beim
   // OEFFNEN greift (ein sofort gesetztes translate-x-0 haette keinen
@@ -37,7 +43,8 @@ export function SeitenPanel({ onClose, title, children, breit = false }: SeitenP
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className={`flex h-full w-full ${breit ? "max-w-2xl" : "max-w-md"} flex-col border-l border-ind-line bg-ind-bg shadow-2xl transition-transform duration-200 ease-out ${
+        style={{ marginRight: versatzRechtsPx }}
+        className={`flex h-full w-full ${breit ? "max-w-2xl" : "max-w-md"} flex-col border-l border-ind-line bg-ind-bg shadow-2xl transition-[transform,margin] duration-200 ease-out ${
           eingeblendet ? "translate-x-0" : "translate-x-full"
         }`}
       >

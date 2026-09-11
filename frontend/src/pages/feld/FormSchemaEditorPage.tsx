@@ -441,6 +441,7 @@ export function FormSchemaEditorPage() {
           schema={schema}
           regelnAnzahl={regelnAnzahl}
           onRegelnOeffnen={setRegelnZiel}
+          regelnPanelOffen={regelnZiel !== null}
           invalidate={invalidate}
           setFehler={setFehler}
         />

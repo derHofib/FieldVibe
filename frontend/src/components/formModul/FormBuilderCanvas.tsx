@@ -30,11 +30,12 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, GripVertical, Layers, Rows3, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Layers, PenLine, Rows3, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
+import { SeitenPanel } from "../SeitenPanel";
 import type { FormFeldTyp, FormField, FormGroup, FormSchemaDetail } from "../../types";
 import { FELD_TYP_KATALOG, FELD_TYP_LABEL } from "../../utils/feldTypKatalog";
 import { FormFieldRenderer } from "./FormFieldRenderer";
@@ -84,7 +85,10 @@ function PaletteItem({ dragId, label, icon: Icon }: { dragId: string; label: str
   );
 }
 
-function FeldTypPalette() {
+// ohneStruktur: fuer die Palette IM Unterformular-Panel -- ein Unterformular
+// kann keine weitere Gruppe enthalten (siehe Kommentar an gruppeEinfuegen),
+// also macht "Abschnitt"/"Unterformular" dort als Drag-Quelle keinen Sinn.
+function FeldTypPalette({ ohneStruktur = false }: { ohneStruktur?: boolean }) {
   const [offeneKategorien, setOffeneKategorien] = useState<Set<string>>(new Set(["Struktur", FELD_TYP_KATALOG[0].name]));
 
   function toggeln(name: string) {
@@ -96,7 +100,10 @@ function FeldTypPalette() {
     });
   }
 
-  const kategorien = [{ name: "Struktur", typen: STRUKTUR_KATALOG }, ...FELD_TYP_KATALOG.map((k) => ({ name: k.name, typen: k.typen.map((t) => ({ dragId: `palette:${t.typ}`, label: t.label, icon: t.icon })) }))];
+  const kategorien = [
+    ...(ohneStruktur ? [] : [{ name: "Struktur", typen: STRUKTUR_KATALOG }]),
+    ...FELD_TYP_KATALOG.map((k) => ({ name: k.name, typen: k.typen.map((t) => ({ dragId: `palette:${t.typ}`, label: t.label, icon: t.icon })) })),
+  ];
 
   return (
     <div className="w-64 shrink-0 space-y-1.5 border-r border-ind-line pr-4">
@@ -162,6 +169,14 @@ function FeldKarte({ field, ausgewaehlt, onSelect }: { field: FormField; ausgewa
   );
 }
 
+// Unterformulare (repeatable=true) sind in der Erfassung eine WIEDERHOLBARE
+// Liste -- Felder direkt im Haupt-Canvas hineinzuziehen wuerde nur EINE
+// Instanz zeigen und suggeriert faelschlich ein WYSIWYG des kompletten
+// Formulars. Stattdessen: kollabierte Karte mit "Unterformular bearbeiten",
+// das die Feld-Verwaltung in ein eigenes SeitenPanel auslagert (siehe
+// UnterformularPanel weiter unten). Abschnitte (repeatable=false) bleiben
+// dagegen inline bearbeitbar wie jedes andere Root-Element -- sie sind ja
+// nur EIN Block, kein WYSIWYG-Bruch.
 function GruppenKarte({
   gruppe,
   felder,
@@ -169,6 +184,7 @@ function GruppenKarte({
   onSelect,
   ausgewaehltesFeldId,
   onFeldSelect,
+  onUnterformularOeffnen,
 }: {
   gruppe: FormGroup;
   felder: FormField[];
@@ -176,12 +192,12 @@ function GruppenKarte({
   onSelect: () => void;
   ausgewaehltesFeldId: string | null;
   onFeldSelect: (id: string) => void;
+  onUnterformularOeffnen: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `group:${gruppe.id}`,
     data: { kind: "group" },
   });
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `group-body:${gruppe.id}` });
   const itemIds = felder.map((f) => `field:${f.id}`);
 
   return (
@@ -206,16 +222,55 @@ function GruppenKarte({
           {gruppe.repeatable ? "Unterformular" : "Abschnitt"}
         </span>
       </div>
-      <div ref={setDropRef} className={`space-y-1 p-2 ${isOver ? "bg-ind-acc-soft" : ""}`}>
-        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-          {felder.map((f) => (
-            <FeldKarte key={f.id} field={f} ausgewaehlt={ausgewaehltesFeldId === f.id} onSelect={() => onFeldSelect(f.id)} />
-          ))}
-        </SortableContext>
-        {felder.length === 0 && (
-          <div className="border border-dashed border-ind-line-2 p-3 text-center text-xs text-ind-ink-3">Feld hierher ziehen</div>
-        )}
-      </div>
+      {gruppe.repeatable ? (
+        <div className="p-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUnterformularOeffnen();
+            }}
+            className="flex w-full items-center justify-center gap-1.5 border border-ind-line py-2.5 text-sm font-medium text-ind-ink-2 hover:bg-ind-hover"
+          >
+            <PenLine size={15} strokeWidth={1.5} />
+            Unterformular bearbeiten
+            {felder.length > 0 && <span className="text-ind-ink-3">({felder.length} Feld{felder.length === 1 ? "" : "er"})</span>}
+          </button>
+        </div>
+      ) : (
+        <GruppenKoerper gruppe={gruppe} felder={felder} itemIds={itemIds} ausgewaehltesFeldId={ausgewaehltesFeldId} onFeldSelect={onFeldSelect} />
+      )}
+    </div>
+  );
+}
+
+// Ausgelagert, damit useDroppable (der Drop-Zielbereich fuer Felder) nur
+// fuer Abschnitte aufgerufen wird -- ein Unterformular braucht diesen Hook
+// gar nicht mehr (siehe GruppenKarte oben), Hooks lassen sich aber nicht
+// bedingt in derselben Komponente aufrufen.
+function GruppenKoerper({
+  gruppe,
+  felder,
+  itemIds,
+  ausgewaehltesFeldId,
+  onFeldSelect,
+}: {
+  gruppe: FormGroup;
+  felder: FormField[];
+  itemIds: string[];
+  ausgewaehltesFeldId: string | null;
+  onFeldSelect: (id: string) => void;
+}) {
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: `group-body:${gruppe.id}` });
+  return (
+    <div ref={setDropRef} className={`space-y-1 p-2 ${isOver ? "bg-ind-acc-soft" : ""}`}>
+      <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+        {felder.map((f) => (
+          <FeldKarte key={f.id} field={f} ausgewaehlt={ausgewaehltesFeldId === f.id} onSelect={() => onFeldSelect(f.id)} />
+        ))}
+      </SortableContext>
+      {felder.length === 0 && (
+        <div className="border border-dashed border-ind-line-2 p-3 text-center text-xs text-ind-ink-3">Feld hierher ziehen</div>
+      )}
     </div>
   );
 }
@@ -227,6 +282,7 @@ function Canvas({
   ausgewaehlt,
   onSelectFeld,
   onSelectGruppe,
+  onUnterformularOeffnen,
 }: {
   rootEntries: RootEintrag[];
   rootItemIds: string[];
@@ -234,6 +290,7 @@ function Canvas({
   ausgewaehlt: Auswahl;
   onSelectFeld: (id: string) => void;
   onSelectGruppe: (id: string) => void;
+  onUnterformularOeffnen: (gruppe: FormGroup) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: "root" });
   return (
@@ -256,6 +313,7 @@ function Canvas({
               onSelect={() => onSelectGruppe(e.gruppe.id)}
               ausgewaehltesFeldId={ausgewaehlt?.art === "feld" ? ausgewaehlt.id : null}
               onFeldSelect={onSelectFeld}
+              onUnterformularOeffnen={() => onUnterformularOeffnen(e.gruppe)}
             />
           ),
         )}
@@ -431,6 +489,191 @@ function InspectorGruppe({
   );
 }
 
+// --- Unterformular-Panel ---------------------------------------------------
+
+// Eine Zeile im Unterformular-Panel: wie FeldKarte (Grip + WYSIWYG-Vorschau),
+// aber mit direkt sichtbaren Regeln-/Loeschen-Knoepfen statt einer separaten
+// Inspektor-Spalte -- fuer den schmaleren Panel-Kontext reicht das.
+function UnterformularFeldZeile({
+  field,
+  regelnAnzahl,
+  onRegelnOeffnen,
+  onLoeschen,
+}: {
+  field: FormField;
+  regelnAnzahl: number;
+  onRegelnOeffnen: () => void;
+  onLoeschen: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `field:${field.id}`,
+    data: { kind: "field" },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, touchAction: "none" }}
+      className={`flex items-start gap-1.5 border border-transparent p-1 hover:border-ind-line ${isDragging ? "opacity-30" : ""}`}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        type="button"
+        aria-label="Feld verschieben"
+        className="mt-3 shrink-0 cursor-grab text-ind-ink-3 hover:text-ind-ink-2"
+      >
+        <GripVertical size={15} strokeWidth={1.5} />
+      </button>
+      <div className="min-w-0 flex-1">
+        <FormFieldRenderer field={field} value={undefined} onChange={() => {}} readOnly required={field.pflichtfeld} />
+      </div>
+      <div className="mt-1 flex shrink-0 flex-col items-end gap-1">
+        <span className="border border-ind-line bg-ind-bg px-1.5 py-0.5 text-[10px] text-ind-ink-3">{field.feld_typ}</span>
+        <div className="flex gap-1">
+          <button
+            onClick={onRegelnOeffnen}
+            aria-label="Regeln bearbeiten"
+            title="Regeln bearbeiten"
+            className="btn-industry btn-industry-secondary btn-industry-icon h-7 w-7"
+          >
+            <SlidersHorizontal size={13} strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={onLoeschen}
+            aria-label="Feld löschen"
+            title="Feld löschen"
+            className="btn-industry btn-industry-secondary btn-industry-icon h-7 w-7 hover:border-rose-400 hover:text-rose-600"
+          >
+            <Trash2 size={13} strokeWidth={1.5} />
+          </button>
+        </div>
+        {regelnAnzahl > 0 && <span className="text-[10px] text-ind-ink-3">{regelnAnzahl} Regel{regelnAnzahl === 1 ? "" : "n"}</span>}
+      </div>
+    </div>
+  );
+}
+
+function UnterformularFeldListe({
+  felder,
+  itemIds,
+  regelnAnzahl,
+  onRegelnOeffnen,
+  onLoeschen,
+}: {
+  felder: FormField[];
+  itemIds: string[];
+  regelnAnzahl: (key: string) => number;
+  onRegelnOeffnen: (ziel: { key: string; label: string }) => void;
+  onLoeschen: (fieldId: string) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: "unterformular-body" });
+  return (
+    <div ref={setNodeRef} className={`min-h-[200px] flex-1 space-y-1.5 ${isOver ? "bg-ind-acc-soft/30" : ""}`}>
+      <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+        {felder.map((f) => (
+          <UnterformularFeldZeile
+            key={f.id}
+            field={f}
+            regelnAnzahl={regelnAnzahl(f.key)}
+            onRegelnOeffnen={() => onRegelnOeffnen({ key: f.key, label: f.label.de ?? f.key })}
+            onLoeschen={() => onLoeschen(f.id)}
+          />
+        ))}
+      </SortableContext>
+      {felder.length === 0 && (
+        <div className="border border-dashed border-ind-line-2 p-8 text-center text-sm text-ind-ink-3">
+          Feldtyp aus der Palette hierher ziehen
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Eigenes, kleineres DndContext (statt das der Haupt-Canvas mitzubenutzen)
+// -- hier gibt es nur EIN Ziel (die Felder dieses einen Unterformulars),
+// das vereinfacht die Drop-Aufloesung stark gegenueber aufloesen() oben.
+function UnterformularPanel({
+  gruppe,
+  felder,
+  regelnAnzahl,
+  onRegelnOeffnen,
+  onClose,
+  versatzRechtsPx,
+  onFeldEinfuegen,
+  onFeldVerschieben,
+  onFeldLoeschen,
+}: {
+  gruppe: FormGroup;
+  felder: FormField[];
+  regelnAnzahl: (key: string) => number;
+  onRegelnOeffnen: (ziel: { key: string; label: string }) => void;
+  onClose: () => void;
+  versatzRechtsPx: number;
+  onFeldEinfuegen: (typ: FormFeldTyp, index: number) => void;
+  onFeldVerschieben: (fieldId: string, index: number) => void;
+  onFeldLoeschen: (fieldId: string) => void;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const [aktivId, setAktivId] = useState<string | null>(null);
+  const itemIds = felder.map((f) => `field:${f.id}`);
+
+  function handleDragEnd(event: DragEndEvent) {
+    setAktivId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    let index = felder.length;
+    if (overId.startsWith("field:")) {
+      const fid = overId.slice("field:".length);
+      const idx = felder.findIndex((f) => f.id === fid);
+      if (idx >= 0) index = idx;
+    }
+
+    if (activeId.startsWith("palette:")) {
+      onFeldEinfuegen(activeId.slice("palette:".length) as FormFeldTyp, index);
+    } else if (activeId.startsWith("field:")) {
+      onFeldVerschieben(activeId.slice("field:".length), index);
+    }
+  }
+
+  return (
+    <SeitenPanel
+      title={`Unterformular: ${gruppe.label.de ?? gruppe.key}`}
+      onClose={onClose}
+      breit
+      versatzRechtsPx={versatzRechtsPx}
+    >
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => setAktivId(String(e.active.id))} onDragEnd={handleDragEnd}>
+        <div className="flex gap-4">
+          <FeldTypPalette ohneStruktur />
+          <UnterformularFeldListe
+            felder={felder}
+            itemIds={itemIds}
+            regelnAnzahl={regelnAnzahl}
+            onRegelnOeffnen={onRegelnOeffnen}
+            onLoeschen={onFeldLoeschen}
+          />
+        </div>
+        <DragOverlay>
+          {aktivId?.startsWith("palette:") && (
+            <div className="border border-ind-acc bg-ind-bg px-3 py-2 text-sm text-ind-ink shadow-lg">
+              {FELD_TYP_LABEL[aktivId.slice("palette:".length) as FormFeldTyp]}
+            </div>
+          )}
+          {aktivId?.startsWith("field:") &&
+            (() => {
+              const f = felder.find((x) => x.id === aktivId.slice("field:".length));
+              return f ? <div className="border border-ind-acc bg-ind-bg px-3 py-2 text-sm text-ind-ink shadow-lg">{f.label.de ?? f.key}</div> : null;
+            })()}
+        </DragOverlay>
+      </DndContext>
+    </SeitenPanel>
+  );
+}
+
 // --- Hauptkomponente ------------------------------------------------------
 
 interface FormBuilderCanvasProps {
@@ -438,12 +681,23 @@ interface FormBuilderCanvasProps {
   schema: FormSchemaDetail;
   regelnAnzahl: (key: string) => number;
   onRegelnOeffnen: (ziel: { key: string; label: string }) => void;
+  // Ob das (in FormSchemaEditorPage lebende) Regeln-SeitenPanel gerade
+  // offen ist -- steuert, ob das Unterformular-Panel dafuer Platz macht
+  // (siehe versatzRechtsPx an UnterformularPanel unten).
+  regelnPanelOffen: boolean;
   invalidate: () => void;
   setFehler: (msg: string | null) => void;
 }
 
-export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeffnen, invalidate, setFehler }: FormBuilderCanvasProps) {
+// Breite des (nicht-breiten) Regeln-SeitenPanels in px -- max-w-md, siehe
+// SeitenPanel.tsx. Fix hinterlegt statt gemessen, da beide Panels dieselbe
+// Tailwind-Klasse verwenden und sich so nicht verschieben koennen, ohne
+// dass dieser Wert mitgepflegt wird.
+const REGELN_PANEL_BREITE_PX = 448;
+
+export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeffnen, regelnPanelOffen, invalidate, setFehler }: FormBuilderCanvasProps) {
   const [ausgewaehlt, setAusgewaehlt] = useState<Auswahl>(null);
+  const [unterformularGruppeId, setUnterformularGruppeId] = useState<string | null>(null);
   const [aktivId, setAktivId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -697,6 +951,7 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
 
   const ausgewaehltesFeld = ausgewaehlt?.art === "feld" ? schema.fields.find((f) => f.id === ausgewaehlt.id) ?? null : null;
   const ausgewaehlteGruppe = ausgewaehlt?.art === "gruppe" ? schema.groups.find((g) => g.id === ausgewaehlt.id) ?? null : null;
+  const unterformularGruppe = unterformularGruppeId ? schema.groups.find((g) => g.id === unterformularGruppeId) ?? null : null;
 
   return (
     // Durchbricht das mx-auto max-w-2xl der Feld-App-Shell (FeldLayout.tsx)
@@ -723,6 +978,7 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
               ausgewaehlt={ausgewaehlt}
               onSelectFeld={(id) => setAusgewaehlt({ art: "feld", id })}
               onSelectGruppe={(id) => setAusgewaehlt({ art: "gruppe", id })}
+              onUnterformularOeffnen={(gruppe) => setUnterformularGruppeId(gruppe.id)}
             />
           </div>
           <div className="w-72 shrink-0 border-l border-ind-line">
@@ -788,6 +1044,20 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
             })()}
         </DragOverlay>
       </DndContext>
+
+      {unterformularGruppe && (
+        <UnterformularPanel
+          gruppe={unterformularGruppe}
+          felder={gruppenFelder(unterformularGruppe.key)}
+          regelnAnzahl={regelnAnzahl}
+          onRegelnOeffnen={onRegelnOeffnen}
+          onClose={() => setUnterformularGruppeId(null)}
+          versatzRechtsPx={regelnPanelOffen ? REGELN_PANEL_BREITE_PX : 0}
+          onFeldEinfuegen={(typ, index) => feldEinfuegen(typ, `group-body:${unterformularGruppe.id}`, index)}
+          onFeldVerschieben={(fieldId, index) => feldVerschieben(fieldId, `group-body:${unterformularGruppe.id}`, index)}
+          onFeldLoeschen={(fieldId) => deleteFieldMutation.mutate(fieldId)}
+        />
+      )}
     </div>
   );
 }
