@@ -3,8 +3,37 @@
 // visueller Drag&Drop-Builder (siehe Nicht-Ziel im Migrationsplan) --
 // Positionierung je View passiert ueber "Layout automatisch aus Feldern
 // übernehmen" (stapelt alle Root-Felder der Reihe nach), nicht per Maus.
+//
+// Bewusst in drei Tabs aufgeteilt (Felder / Visualisierung / Zuordnungen)
+// statt einer langen Seite mit allem untereinander -- das Anlegen eines
+// Formulars soll sich auf jeweils EIN Thema konzentrieren koennen. Regeln
+// sind dabei kein eigener Tab mehr, sondern haengen direkt am jeweiligen
+// Feld/an der jeweiligen Gruppe (Button "Regeln" oeffnet ein SeitenPanel,
+// vorbefuellt mit diesem Ziel) -- eine globale Regel-Liste ohne Bezug zum
+// gerade bearbeiteten Feld war unuebersichtlich, sobald ein Schema mehr als
+// eine Handvoll Regeln hatte.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import {
+  AlignLeft,
+  Calendar,
+  Camera,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Hash,
+  List,
+  ListChecks,
+  MapPin,
+  PenLine,
+  Plus,
+  ScanLine,
+  SlidersHorizontal,
+  Star,
+  ToggleLeft,
+  Trash2,
+  Type,
+  type LucideIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -12,6 +41,7 @@ import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FieldValueInput, RuleConditionBuilder } from "../../components/formModul/RuleConditionBuilder";
+import { SeitenPanel } from "../../components/SeitenPanel";
 import type {
   FormFeldTyp,
   FormLogicEffekt,
@@ -24,20 +54,44 @@ import type {
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
 
-const FELD_TYPEN: FormFeldTyp[] = [
-  "text",
-  "textarea",
-  "zahl",
-  "datum",
-  "dropdown",
-  "mehrfachauswahl",
-  "ja_nein",
-  "bewertung",
-  "foto",
-  "unterschrift",
-  "gps",
-  "qr_scan",
+// Katalog der verfuegbaren Feldtypen, in "ausklappbaren Gruppen" (Kategorien)
+// sortiert -- das ist die Kaestchen-Liste, aus der ein neues Feld "gezogen"
+// wird (siehe FeldTypPalette unten). Reihenfolge/Kategorisierung ist eine
+// Vereinfachung fuer den Einstieg; welche FELD_TYPEN es ueberhaupt geben
+// soll, ist ein eigenes, spaeteres Thema.
+const FELD_TYP_KATALOG: { name: string; typen: { typ: FormFeldTyp; label: string; icon: LucideIcon }[] }[] = [
+  {
+    name: "Text & Zahlen",
+    typen: [
+      { typ: "text", label: "Text (einzeilig)", icon: Type },
+      { typ: "textarea", label: "Text (mehrzeilig)", icon: AlignLeft },
+      { typ: "zahl", label: "Zahl", icon: Hash },
+      { typ: "datum", label: "Datum", icon: Calendar },
+    ],
+  },
+  {
+    name: "Auswahl",
+    typen: [
+      { typ: "dropdown", label: "Dropdown", icon: List },
+      { typ: "mehrfachauswahl", label: "Mehrfachauswahl", icon: ListChecks },
+      { typ: "ja_nein", label: "Ja / Nein", icon: ToggleLeft },
+      { typ: "bewertung", label: "Bewertung (Skala)", icon: Star },
+    ],
+  },
+  {
+    name: "Erfassung vor Ort",
+    typen: [
+      { typ: "foto", label: "Foto", icon: Camera },
+      { typ: "unterschrift", label: "Unterschrift", icon: PenLine },
+      { typ: "gps", label: "GPS-Standort", icon: MapPin },
+      { typ: "qr_scan", label: "QR-/Barcode-Scan", icon: ScanLine },
+    ],
+  },
 ];
+const FELD_TYP_LABEL = Object.fromEntries(
+  FELD_TYP_KATALOG.flatMap((k) => k.typen.map((t) => [t.typ, t.label])),
+) as Record<FormFeldTyp, string>;
+
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
 
@@ -52,6 +106,63 @@ const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {
   set_value: "Wert setzen, wenn",
 };
 
+/** Kaestchen-Liste der Feldtypen, in ausklappbare Kategorien sortiert --
+ * Klick auf ein Kaestchen waehlt den Typ fuer das "Neues Feld"-Formular
+ * aus (siehe FELD_TYP_KATALOG). */
+function FeldTypPalette({ ausgewaehlt, onWaehlen }: { ausgewaehlt: FormFeldTyp; onWaehlen: (t: FormFeldTyp) => void }) {
+  const [offeneKategorien, setOffeneKategorien] = useState<Set<string>>(new Set([FELD_TYP_KATALOG[0].name]));
+
+  function toggeln(name: string) {
+    setOffeneKategorien((bisher) => {
+      const neu = new Set(bisher);
+      if (neu.has(name)) neu.delete(name);
+      else neu.add(name);
+      return neu;
+    });
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {FELD_TYP_KATALOG.map((kat) => {
+        const offen = offeneKategorien.has(kat.name);
+        return (
+          <div key={kat.name} className="border border-ind-line-2">
+            <button
+              onClick={() => toggeln(kat.name)}
+              className="flex w-full items-center gap-2 p-2 text-left text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase hover:bg-ind-hover"
+            >
+              {offen ? (
+                <ChevronDown size={14} strokeWidth={1.5} />
+              ) : (
+                <ChevronRight size={14} strokeWidth={1.5} />
+              )}
+              {kat.name}
+            </button>
+            {offen && (
+              <div className="grid grid-cols-2 gap-1.5 p-2 pt-0 sm:grid-cols-4">
+                {kat.typen.map(({ typ, label, icon: Icon }) => (
+                  <button
+                    key={typ}
+                    onClick={() => onWaehlen(typ)}
+                    className={`flex flex-col items-center gap-1 border p-2 text-center text-[11px] font-medium ${
+                      ausgewaehlt === typ
+                        ? "border-ind-acc bg-ind-acc-soft text-ind-acc-txt"
+                        : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+                    }`}
+                  >
+                    <Icon size={18} strokeWidth={1.5} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 interface RegelFormPayload {
   target_key: string;
   effect: FormLogicEffekt;
@@ -64,11 +175,15 @@ interface RegelFormPayload {
 /** Formular fuer eine einzelne Regel -- gemeinsam fuer "neue Regel
  * anlegen" und "bestehende Regel bearbeiten" (initial=null bzw. die zu
  * bearbeitende Regel), damit der visuelle Bedingungs-Baukasten
- * (RuleConditionBuilder) nur einmal gepflegt werden muss. */
+ * (RuleConditionBuilder) nur einmal gepflegt werden muss. festesZiel wird
+ * aus dem Feld/der Gruppe uebernommen, ueber die dieses Formular geoeffnet
+ * wurde -- kein Ziel-Dropdown mehr noetig, das Formular sitzt bereits im
+ * Regeln-Panel genau dieses Ziels. */
 function RegelForm({
   schema,
   views,
   initial,
+  festesZiel,
   onSubmit,
   onCancel,
   submitting,
@@ -77,45 +192,28 @@ function RegelForm({
   schema: FormSchemaDetail;
   views: FormView[];
   initial: FormLogicRule | null;
+  festesZiel: string;
   onSubmit: (payload: RegelFormPayload) => void;
   onCancel?: () => void;
   submitting: boolean;
   error: string | null;
 }) {
-  const [targetKey, setTargetKey] = useState(initial?.target_key ?? "");
   const [effect, setEffect] = useState<FormLogicEffekt>(initial?.effect ?? "show");
   const [condition, setCondition] = useState<unknown>(initial?.condition ?? true);
   const [value, setValue] = useState<unknown>(initial?.value ?? "");
   const [viewId, setViewId] = useState(initial?.view_id ?? "");
 
-  const targetOptions = [
-    ...schema.fields.map((f) => ({
-      key: f.key,
-      label: f.group_key ? `${f.label.de ?? f.key} (in ${schema.groups.find((g) => g.key === f.group_key)?.label.de ?? f.group_key})` : f.label.de ?? f.key,
-    })),
-    ...schema.groups.map((g) => ({ key: g.key, label: `Gruppe: ${g.label.de ?? g.key}` })),
-  ];
-  const zielFeld = schema.fields.find((f) => f.key === targetKey);
+  const zielFeld = schema.fields.find((f) => f.key === festesZiel);
 
   return (
     <div className="space-y-2 border border-ind-line-2 p-3">
-      <div className="grid grid-cols-2 gap-2">
-        <select value={targetKey} onChange={(e) => setTargetKey(e.target.value)} className={inputClass}>
-          <option value="">Ziel wählen…</option>
-          {targetOptions.map((o) => (
-            <option key={o.key} value={o.key}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)} className={inputClass}>
-          {(Object.keys(EFFEKT_LABEL) as FormLogicEffekt[]).map((e) => (
-            <option key={e} value={e}>
-              {EFFEKT_LABEL[e]}
-            </option>
-          ))}
-        </select>
-      </div>
+      <select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)} className={inputClass}>
+        {(Object.keys(EFFEKT_LABEL) as FormLogicEffekt[]).map((e) => (
+          <option key={e} value={e}>
+            {EFFEKT_LABEL[e]}
+          </option>
+        ))}
+      </select>
 
       <RuleConditionBuilder fields={schema.fields} condition={condition} onChange={setCondition} />
 
@@ -142,7 +240,7 @@ function RegelForm({
 
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
-          <button type="button" onClick={onCancel} className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <button type="button" onClick={onCancel} className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-sm">
             Abbrechen
           </button>
         )}
@@ -150,7 +248,7 @@ function RegelForm({
           type="button"
           onClick={() =>
             onSubmit({
-              target_key: targetKey,
+              target_key: festesZiel,
               effect,
               condition,
               value: effect === "set_value" ? value : undefined,
@@ -158,8 +256,8 @@ function RegelForm({
               reihenfolge: initial?.reihenfolge ?? 0,
             })
           }
-          disabled={!targetKey || submitting}
-          className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          disabled={submitting}
+          className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           <Plus size={15} /> {initial ? "Speichern" : "Regel hinzufügen"}
         </button>
@@ -168,11 +266,139 @@ function RegelForm({
   );
 }
 
+/** Inhalt des Regeln-SeitenPanels: alle Regeln, deren target_key auf das
+ * geoeffnete Feld/die Gruppe zeigt -- Regeln anderer Ziele werden hier
+ * bewusst nicht angezeigt, das Panel soll sich nur auf dieses eine Ziel
+ * konzentrieren. */
+function RegelnPanelInhalt({
+  schema,
+  views,
+  targetKey,
+  rules,
+  createRuleMutation,
+  updateRuleMutation,
+  deleteRuleMutation,
+  regelFehler,
+  setRegelFehler,
+}: {
+  schema: FormSchemaDetail;
+  views: FormView[];
+  targetKey: string;
+  rules: FormLogicRule[] | undefined;
+  createRuleMutation: ReturnType<typeof useCreateRuleMutation>;
+  updateRuleMutation: ReturnType<typeof useUpdateRuleMutation>;
+  deleteRuleMutation: ReturnType<typeof useDeleteRuleMutation>;
+  regelFehler: string | null;
+  setRegelFehler: (msg: string | null) => void;
+}) {
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const zielRegeln = (rules ?? []).filter((r) => r.target_key === targetKey);
+
+  return (
+    <div className="space-y-3">
+      {zielRegeln.length === 0 && (
+        <p className="text-sm text-ind-ink-3">Noch keine Regeln für dieses Ziel.</p>
+      )}
+      {zielRegeln.map((r) =>
+        editingRuleId === r.id ? (
+          <RegelForm
+            key={r.id}
+            schema={schema}
+            views={views}
+            initial={r}
+            festesZiel={targetKey}
+            submitting={updateRuleMutation.isPending}
+            error={regelFehler}
+            onCancel={() => {
+              setEditingRuleId(null);
+              setRegelFehler(null);
+            }}
+            onSubmit={(payload) =>
+              updateRuleMutation.mutate(
+                { ruleId: r.id, payload },
+                { onSuccess: () => setEditingRuleId(null) },
+              )
+            }
+          />
+        ) : (
+          <div key={r.id} className="flex items-center justify-between gap-2 border-b border-ind-line py-1.5 text-sm">
+            <span className="min-w-0 text-ind-ink">
+              {EFFEKT_LABEL[r.effect]}{" "}
+              <span className="text-ind-ink-3">
+                {describeCondition(r.condition, (k) => schema.fields.find((f) => f.key === k)?.label.de ?? k)}
+              </span>
+              {r.effect === "set_value" && <span className="text-ind-ink-3"> = {JSON.stringify(r.value)}</span>}
+            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <button onClick={() => setEditingRuleId(r.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
+                Bearbeiten
+              </button>
+              <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-ind-ink-3 hover:text-rose-600">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        ),
+      )}
+      {editingRuleId === null && (
+        <RegelForm
+          key="neu"
+          schema={schema}
+          views={views}
+          initial={null}
+          festesZiel={targetKey}
+          submitting={createRuleMutation.isPending}
+          error={regelFehler}
+          onSubmit={(payload) => createRuleMutation.mutate(payload)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Kleine Typ-Helfer, nur damit RegelnPanelInhalt die Mutation-Objekte
+// typisieren kann, ohne sie zusaetzlich zu duplizieren.
+function useCreateRuleMutation(id: string, invalidate: () => void, setRegelFehler: (m: string | null) => void) {
+  return useMutation({
+    mutationFn: (payload: Parameters<typeof formModulApi.createRule>[1]) => formModulApi.createRule(id, payload),
+    onSuccess: () => {
+      setRegelFehler(null);
+      invalidate();
+    },
+    onError: (err) => setRegelFehler(err instanceof ApiError ? err.message : "Regel konnte nicht angelegt werden"),
+  });
+}
+function useUpdateRuleMutation(id: string, invalidate: () => void, setRegelFehler: (m: string | null) => void) {
+  return useMutation({
+    mutationFn: ({ ruleId, payload }: { ruleId: string; payload: Parameters<typeof formModulApi.updateRule>[2] }) =>
+      formModulApi.updateRule(id, ruleId, payload),
+    onSuccess: () => {
+      setRegelFehler(null);
+      invalidate();
+    },
+    onError: (err) => setRegelFehler(err instanceof ApiError ? err.message : "Regel konnte nicht gespeichert werden"),
+  });
+}
+function useDeleteRuleMutation(id: string, invalidate: () => void) {
+  return useMutation({
+    mutationFn: (ruleId: string) => formModulApi.deleteRule(id, ruleId),
+    onSuccess: invalidate,
+  });
+}
+
+type EditorTab = "felder" | "visualisierung" | "zuordnungen";
+const TAB_LABEL: Record<EditorTab, string> = {
+  felder: "Felder",
+  visualisierung: "Visualisierung",
+  zuordnungen: "Zuordnungen",
+};
+
 export function FormSchemaEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [fehler, setFehler] = useState<string | null>(null);
+  const [tab, setTab] = useState<EditorTab>("felder");
 
   const { data: schema, isLoading } = useQuery({
     queryKey: ["form-schema", id],
@@ -269,32 +495,16 @@ export function FormSchemaEditorPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Layout konnte nicht übernommen werden"),
   });
 
-  // --- Regeln ---
-  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  // --- Regeln (im Seitenpanel je Feld/Gruppe, siehe RegelnPanelInhalt) ---
   const [regelFehler, setRegelFehler] = useState<string | null>(null);
+  const [regelnZiel, setRegelnZiel] = useState<{ key: string; label: string } | null>(null);
+  const createRuleMutation = useCreateRuleMutation(id!, invalidate, setRegelFehler);
+  const updateRuleMutation = useUpdateRuleMutation(id!, invalidate, setRegelFehler);
+  const deleteRuleMutation = useDeleteRuleMutation(id!, invalidate);
 
-  const createRuleMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof formModulApi.createRule>[1]) => formModulApi.createRule(id!, payload),
-    onSuccess: () => {
-      setRegelFehler(null);
-      invalidate();
-    },
-    onError: (err) => setRegelFehler(err instanceof ApiError ? err.message : "Regel konnte nicht angelegt werden"),
-  });
-  const updateRuleMutation = useMutation({
-    mutationFn: ({ ruleId, payload }: { ruleId: string; payload: Parameters<typeof formModulApi.updateRule>[2] }) =>
-      formModulApi.updateRule(id!, ruleId, payload),
-    onSuccess: () => {
-      setRegelFehler(null);
-      setEditingRuleId(null);
-      invalidate();
-    },
-    onError: (err) => setRegelFehler(err instanceof ApiError ? err.message : "Regel konnte nicht gespeichert werden"),
-  });
-  const deleteRuleMutation = useMutation({
-    mutationFn: (ruleId: string) => formModulApi.deleteRule(id!, ruleId),
-    onSuccess: invalidate,
-  });
+  function regelnAnzahl(key: string): number {
+    return (rules ?? []).filter((r) => r.target_key === key).length;
+  }
 
   // --- Zuordnungen ---
   const [zuLeistungstyp, setZuLeistungstyp] = useState<Leistungstyp>("wartung");
@@ -332,177 +542,191 @@ export function FormSchemaEditorPage() {
       </div>
       {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
 
-      <div className={sectionClass}>
-        <h2 className="text-sm font-semibold text-ind-ink">Gruppen (Wiederholbereiche)</h2>
-        {schema.groups.map((g) => (
-          <div key={g.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-            <span className="text-ind-ink">{g.label.de ?? g.key} <span className="text-ind-ink-3">({g.key})</span></span>
-            <button onClick={() => deleteGroupMutation.mutate(g.id)} className="text-ind-ink-3 hover:text-rose-600">
-              <Trash2 size={14} />
-            </button>
-          </div>
-        ))}
-        <div className="flex gap-2">
-          <input value={gruppeKey} onChange={(e) => setGruppeKey(e.target.value)} placeholder="key (z.B. maengel)" className={inputClass} />
-          <input value={gruppeLabel} onChange={(e) => setGruppeLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
-          <button onClick={() => createGroupMutation.mutate()} disabled={!gruppeKey.trim() || createGroupMutation.isPending} className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300">
-            <Plus size={16} />
+      <div className="seg-industry flex border border-ind-line">
+        {(Object.keys(TAB_LABEL) as EditorTab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 px-3 py-2 text-xs font-semibold ${
+              tab === t ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
+            }`}
+          >
+            {TAB_LABEL[t]}
           </button>
-        </div>
-      </div>
-
-      <div className={sectionClass}>
-        <h2 className="text-sm font-semibold text-ind-ink">Felder</h2>
-        {schema.fields.map((f) => (
-          <div key={f.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-            <span className="text-ind-ink">
-              {f.label.de ?? f.key} <span className="text-ind-ink-3">({f.key} · {f.feld_typ}{f.group_key ? ` · in ${f.group_key}` : ""})</span>
-            </span>
-            <button onClick={() => deleteFieldMutation.mutate(f.id)} className="text-ind-ink-3 hover:text-rose-600">
-              <Trash2 size={14} />
-            </button>
-          </div>
         ))}
-        <div className="grid grid-cols-2 gap-2">
-          <input value={feldKey} onChange={(e) => setFeldKey(e.target.value)} placeholder="key (z.B. kommentar)" className={inputClass} />
-          <input value={feldLabel} onChange={(e) => setFeldLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
-          <select value={feldTyp} onChange={(e) => setFeldTyp(e.target.value as FormFeldTyp)} className={inputClass}>
-            {FELD_TYPEN.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <select value={feldGruppe} onChange={(e) => setFeldGruppe(e.target.value)} className={inputClass}>
-            <option value="">Kein Gruppen-Feld</option>
-            {schema.groups.map((g) => (
-              <option key={g.key} value={g.key}>
-                {g.label.de ?? g.key}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button onClick={() => createFieldMutation.mutate()} disabled={!feldKey.trim() || createFieldMutation.isPending} className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-1.5 text-sm font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300">
-          <Plus size={15} /> Feld hinzufügen
-        </button>
       </div>
 
-      <div className={sectionClass}>
-        <h2 className="text-sm font-semibold text-ind-ink">Views</h2>
-        {(views ?? []).map((v) => (
-          <div key={v.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-            <span className="text-ind-ink">{v.name} <span className="text-ind-ink-3">({v.type})</span></span>
-            <div className="flex items-center gap-2">
-              {v.type !== "capture" ? null : (
-                <button onClick={() => autoLayoutMutation.mutate(v.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
-                  Layout aus Feldern übernehmen
-                </button>
-              )}
-              <button onClick={() => deleteViewMutation.mutate(v.id)} className="text-ind-ink-3 hover:text-rose-600">
-                <Trash2 size={14} />
+      {tab === "felder" && (
+        <>
+          <div className={sectionClass}>
+            <h2 className="text-sm font-semibold text-ind-ink">Gruppen (Wiederholbereiche)</h2>
+            {schema.groups.map((g) => (
+              <div key={g.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
+                <span className="min-w-0 text-ind-ink">
+                  {g.label.de ?? g.key} <span className="text-ind-ink-3">({g.key})</span>
+                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    onClick={() => setRegelnZiel({ key: g.key, label: g.label.de ?? g.key })}
+                    className="flex items-center gap-1 text-xs text-cyan-700 dark:text-cyan-400"
+                  >
+                    <SlidersHorizontal size={12} strokeWidth={1.5} />
+                    Regeln{regelnAnzahl(g.key) > 0 && ` (${regelnAnzahl(g.key)})`}
+                  </button>
+                  <button onClick={() => deleteGroupMutation.mutate(g.id)} className="text-ind-ink-3 hover:text-rose-600">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <input value={gruppeKey} onChange={(e) => setGruppeKey(e.target.value)} placeholder="key (z.B. maengel)" className={inputClass} />
+              <input value={gruppeLabel} onChange={(e) => setGruppeLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
+              <button onClick={() => createGroupMutation.mutate()} disabled={!gruppeKey.trim() || createGroupMutation.isPending} className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 disabled:opacity-50">
+                <Plus size={16} />
               </button>
             </div>
           </div>
-        ))}
-        <div className="flex gap-2">
-          <select value={viewTyp} onChange={(e) => setViewTyp(e.target.value as FormViewTyp)} className={inputClass}>
-            {VIEW_TYPEN.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <input value={viewName} onChange={(e) => setViewName(e.target.value)} placeholder="Name (z.B. Erfassung)" className={inputClass} />
-          <button onClick={() => createViewMutation.mutate()} disabled={!viewName.trim() || createViewMutation.isPending} className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300">
-            <Plus size={16} />
-          </button>
-        </div>
-      </div>
 
-      <div className={sectionClass}>
-        <h2 className="text-sm font-semibold text-ind-ink">Regeln</h2>
-        {(rules ?? []).map((r) => {
-          const zielLabel =
-            schema.fields.find((f) => f.key === r.target_key)?.label.de ??
-            schema.groups.find((g) => g.key === r.target_key)?.label.de ??
-            r.target_key;
-          if (editingRuleId === r.id) {
-            return (
-              <RegelForm
-                key={r.id}
-                schema={schema}
-                views={views ?? []}
-                initial={r}
-                submitting={updateRuleMutation.isPending}
-                error={regelFehler}
-                onCancel={() => {
-                  setEditingRuleId(null);
-                  setRegelFehler(null);
-                }}
-                onSubmit={(payload) => updateRuleMutation.mutate({ ruleId: r.id, payload })}
-              />
-            );
-          }
-          return (
-            <div key={r.id} className="flex items-center justify-between gap-2 border-b border-ind-line py-1.5 text-sm">
-              <span className="text-ind-ink">
-                {EFFEKT_LABEL[r.effect]} <span className="text-ind-ink-3">{describeCondition(r.condition, (k) => schema.fields.find((f) => f.key === k)?.label.de ?? k)}</span>
-                {" → "}
-                {zielLabel}
-                {r.effect === "set_value" && <span className="text-ind-ink-3"> = {JSON.stringify(r.value)}</span>}
-              </span>
-              <div className="flex shrink-0 items-center gap-2">
-                <button onClick={() => setEditingRuleId(r.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
-                  Bearbeiten
-                </button>
-                <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-ind-ink-3 hover:text-rose-600">
+          <div className={sectionClass}>
+            <h2 className="text-sm font-semibold text-ind-ink">Felder</h2>
+            {schema.fields.map((f) => (
+              <div key={f.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
+                <span className="min-w-0 text-ind-ink">
+                  {f.label.de ?? f.key}{" "}
+                  <span className="text-ind-ink-3">
+                    ({f.key} · {FELD_TYP_LABEL[f.feld_typ]}
+                    {f.group_key ? ` · in ${f.group_key}` : ""})
+                  </span>
+                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button
+                    onClick={() => setRegelnZiel({ key: f.key, label: f.label.de ?? f.key })}
+                    className="flex items-center gap-1 text-xs text-cyan-700 dark:text-cyan-400"
+                  >
+                    <SlidersHorizontal size={12} strokeWidth={1.5} />
+                    Regeln{regelnAnzahl(f.key) > 0 && ` (${regelnAnzahl(f.key)})`}
+                  </button>
+                  <button onClick={() => deleteFieldMutation.mutate(f.id)} className="text-ind-ink-3 hover:text-rose-600">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div className="space-y-2 border-t border-ind-line pt-3">
+              <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Neues Feld</p>
+              <FeldTypPalette ausgewaehlt={feldTyp} onWaehlen={setFeldTyp} />
+              <div className="grid grid-cols-2 gap-2">
+                <input value={feldKey} onChange={(e) => setFeldKey(e.target.value)} placeholder="key (z.B. kommentar)" className={inputClass} />
+                <input value={feldLabel} onChange={(e) => setFeldLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
+              </div>
+              <select value={feldGruppe} onChange={(e) => setFeldGruppe(e.target.value)} className={inputClass}>
+                <option value="">Kein Gruppen-Feld</option>
+                {schema.groups.map((g) => (
+                  <option key={g.key} value={g.key}>
+                    {g.label.de ?? g.key}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={() => createFieldMutation.mutate()}
+                disabled={!feldKey.trim() || createFieldMutation.isPending}
+                className="btn-touch flex w-full items-center justify-center gap-1.5 btn-industry btn-industry-primary py-1.5 text-sm font-medium disabled:opacity-50"
+              >
+                <Plus size={15} /> {FELD_TYP_LABEL[feldTyp]}-Feld hinzufügen
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === "visualisierung" && (
+        <div className={sectionClass}>
+          <h2 className="text-sm font-semibold text-ind-ink">Views</h2>
+          {(views ?? []).map((v) => (
+            <div key={v.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
+              <span className="text-ind-ink">{v.name} <span className="text-ind-ink-3">({v.type})</span></span>
+              <div className="flex items-center gap-2">
+                {v.type !== "capture" ? null : (
+                  <button onClick={() => autoLayoutMutation.mutate(v.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
+                    Layout aus Feldern übernehmen
+                  </button>
+                )}
+                <button onClick={() => deleteViewMutation.mutate(v.id)} className="text-ind-ink-3 hover:text-rose-600">
                   <Trash2 size={14} />
                 </button>
               </div>
             </div>
-          );
-        })}
-        {editingRuleId === null && (
-          <RegelForm
-            key="neu"
-            schema={schema}
-            views={views ?? []}
-            initial={null}
-            submitting={createRuleMutation.isPending}
-            error={regelFehler}
-            onSubmit={(payload) => createRuleMutation.mutate(payload)}
-          />
-        )}
-      </div>
-
-      <div className={sectionClass}>
-        <h2 className="text-sm font-semibold text-ind-ink">Auftragstyp-Zuordnungen</h2>
-        {schema.zuordnungen.map((z) => (
-          <div key={z.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-            <span className="text-ind-ink">
-              {LEISTUNGSTYP_LABEL[z.leistungstyp]} {z.pflicht_vor_abschluss && <span className="text-ind-ink-3">(Pflicht vor Abschluss)</span>}
-            </span>
-            <button onClick={() => deleteZuordnungMutation.mutate(z.id)} className="text-ind-ink-3 hover:text-rose-600">
-              <Trash2 size={14} />
+          ))}
+          <div className="flex gap-2">
+            <select value={viewTyp} onChange={(e) => setViewTyp(e.target.value as FormViewTyp)} className={inputClass}>
+              {VIEW_TYPEN.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            <input value={viewName} onChange={(e) => setViewName(e.target.value)} placeholder="Name (z.B. Erfassung)" className={inputClass} />
+            <button onClick={() => createViewMutation.mutate()} disabled={!viewName.trim() || createViewMutation.isPending} className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 disabled:opacity-50">
+              <Plus size={16} />
             </button>
           </div>
-        ))}
-        <div className="flex items-center gap-2">
-          <select value={zuLeistungstyp} onChange={(e) => setZuLeistungstyp(e.target.value as Leistungstyp)} className={inputClass}>
-            {LEISTUNGSTYPEN.map((lt) => (
-              <option key={lt} value={lt}>
-                {LEISTUNGSTYP_LABEL[lt]}
-              </option>
-            ))}
-          </select>
-          <label className="flex shrink-0 items-center gap-1.5 text-xs text-ind-ink-2">
-            <input type="checkbox" checked={zuPflicht} onChange={(e) => setZuPflicht(e.target.checked)} /> Pflicht
-          </label>
-          <button onClick={() => createZuordnungMutation.mutate()} className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-            <Plus size={16} />
-          </button>
         </div>
-      </div>
+      )}
+
+      {tab === "zuordnungen" && (
+        <div className={sectionClass}>
+          <h2 className="text-sm font-semibold text-ind-ink">Auftragstyp-Zuordnungen</h2>
+          {schema.zuordnungen.map((z) => (
+            <div key={z.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
+              <span className="text-ind-ink">
+                {LEISTUNGSTYP_LABEL[z.leistungstyp]} {z.pflicht_vor_abschluss && <span className="text-ind-ink-3">(Pflicht vor Abschluss)</span>}
+              </span>
+              <button onClick={() => deleteZuordnungMutation.mutate(z.id)} className="text-ind-ink-3 hover:text-rose-600">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <select value={zuLeistungstyp} onChange={(e) => setZuLeistungstyp(e.target.value as Leistungstyp)} className={inputClass}>
+              {LEISTUNGSTYPEN.map((lt) => (
+                <option key={lt} value={lt}>
+                  {LEISTUNGSTYP_LABEL[lt]}
+                </option>
+              ))}
+            </select>
+            <label className="flex shrink-0 items-center gap-1.5 text-xs text-ind-ink-2">
+              <input type="checkbox" checked={zuPflicht} onChange={(e) => setZuPflicht(e.target.checked)} /> Pflicht
+            </label>
+            <button onClick={() => createZuordnungMutation.mutate()} className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3">
+              <Plus size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {regelnZiel && (
+        <SeitenPanel
+          title={`Regeln: ${regelnZiel.label}`}
+          onClose={() => {
+            setRegelnZiel(null);
+            setRegelFehler(null);
+          }}
+        >
+          <RegelnPanelInhalt
+            schema={schema}
+            views={views ?? []}
+            targetKey={regelnZiel.key}
+            rules={rules}
+            createRuleMutation={createRuleMutation}
+            updateRuleMutation={updateRuleMutation}
+            deleteRuleMutation={deleteRuleMutation}
+            regelFehler={regelFehler}
+            setRegelFehler={setRegelFehler}
+          />
+        </SeitenPanel>
+      )}
     </div>
   );
 }
