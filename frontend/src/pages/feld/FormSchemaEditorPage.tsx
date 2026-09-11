@@ -442,7 +442,6 @@ export function FormSchemaEditorPage() {
           regelnAnzahl={regelnAnzahl}
           onRegelnOeffnen={setRegelnZiel}
           invalidate={invalidate}
-          fehler={fehler}
           setFehler={setFehler}
         />
       )}

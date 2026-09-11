@@ -30,7 +30,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, GripVertical, Plus, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Layers, Rows3, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ApiError } from "../../api/client";
@@ -52,10 +52,20 @@ function rootEintragId(e: RootEintrag): string {
 
 // --- Palette (Drag-Quelle) --------------------------------------------
 
-function PaletteItem({ typ, label, icon: Icon }: { typ: FormFeldTyp; label: string; icon: LucideIcon }) {
+// Abschnitt/Unterformular sind hier bewusst KEIN Sonderweg (eigener Button +
+// Mini-Formular), sondern Kaestchen in der Palette wie jeder Feldtyp auch --
+// "eine Gruppe ist wie ein Feld, in das ich andere Felder einfuegen und fuer
+// das ich Regeln bestimmen kann" (Nutzer-Feedback). Eigene Kategorie
+// "Struktur", da sie anders wirken (kein feld_typ, sondern ein Container).
+const STRUKTUR_KATALOG: { dragId: string; label: string; icon: LucideIcon }[] = [
+  { dragId: "struktur:abschnitt", label: "Abschnitt", icon: Layers },
+  { dragId: "struktur:unterformular", label: "Unterformular", icon: Rows3 },
+];
+
+function PaletteItem({ dragId, label, icon: Icon }: { dragId: string; label: string; icon: LucideIcon }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `palette:${typ}`,
-    data: { kind: "palette", typ },
+    id: dragId,
+    data: { kind: "palette" },
   });
   return (
     <button
@@ -75,7 +85,7 @@ function PaletteItem({ typ, label, icon: Icon }: { typ: FormFeldTyp; label: stri
 }
 
 function FeldTypPalette() {
-  const [offeneKategorien, setOffeneKategorien] = useState<Set<string>>(new Set([FELD_TYP_KATALOG[0].name]));
+  const [offeneKategorien, setOffeneKategorien] = useState<Set<string>>(new Set(["Struktur", FELD_TYP_KATALOG[0].name]));
 
   function toggeln(name: string) {
     setOffeneKategorien((bisher) => {
@@ -86,10 +96,12 @@ function FeldTypPalette() {
     });
   }
 
+  const kategorien = [{ name: "Struktur", typen: STRUKTUR_KATALOG }, ...FELD_TYP_KATALOG.map((k) => ({ name: k.name, typen: k.typen.map((t) => ({ dragId: `palette:${t.typ}`, label: t.label, icon: t.icon })) }))];
+
   return (
     <div className="w-64 shrink-0 space-y-1.5 border-r border-ind-line pr-4">
       <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Feldtypen — ziehen &amp; ablegen</p>
-      {FELD_TYP_KATALOG.map((kat) => {
+      {kategorien.map((kat) => {
         const offen = offeneKategorien.has(kat.name);
         return (
           <div key={kat.name} className="border border-ind-line-2">
@@ -102,8 +114,8 @@ function FeldTypPalette() {
             </button>
             {offen && (
               <div className="grid grid-cols-2 gap-1.5 p-2 pt-0">
-                {kat.typen.map(({ typ, label, icon }) => (
-                  <PaletteItem key={typ} typ={typ} label={label} icon={icon} />
+                {kat.typen.map(({ dragId, label, icon }) => (
+                  <PaletteItem key={dragId} dragId={dragId} label={label} icon={icon} />
                 ))}
               </div>
             )}
@@ -332,15 +344,24 @@ function InspectorGruppe({
   regelnAnzahl,
   onRegelnOeffnen,
   onLabelSpeichern,
+  onMinMaxSpeichern,
   onLoeschen,
 }: {
   gruppe: FormGroup;
   regelnAnzahl: number;
   onRegelnOeffnen: () => void;
   onLabelSpeichern: (label: string) => void;
+  onMinMaxSpeichern: (minItems: number | null, maxItems: number | null) => void;
   onLoeschen: () => void;
 }) {
   const [label, setLabel] = useState(gruppe.label.de ?? gruppe.key);
+  const [minItems, setMinItems] = useState(gruppe.min_items?.toString() ?? "");
+  const [maxItems, setMaxItems] = useState(gruppe.max_items?.toString() ?? "");
+
+  function minMaxSpeichern() {
+    onMinMaxSpeichern(minItems ? Number(minItems) : null, maxItems ? Number(maxItems) : null);
+  }
+
   return (
     <div className="space-y-4 p-4">
       <div>
@@ -363,6 +384,31 @@ function InspectorGruppe({
         <label className="mb-1 block text-xs font-medium text-ind-ink-2">Schlüssel</label>
         <p className="border border-ind-line bg-ind-hover px-2 py-1.5 text-sm text-ind-ink-3">{gruppe.key}</p>
       </div>
+      {gruppe.repeatable && (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-2">Einträge (optional)</label>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              value={minItems}
+              onChange={(e) => setMinItems(e.target.value)}
+              onBlur={minMaxSpeichern}
+              placeholder="Min."
+              type="number"
+              min={0}
+              className={inputClass}
+            />
+            <input
+              value={maxItems}
+              onChange={(e) => setMaxItems(e.target.value)}
+              onBlur={minMaxSpeichern}
+              placeholder="Max."
+              type="number"
+              min={0}
+              className={inputClass}
+            />
+          </div>
+        </div>
+      )}
       <div>
         <p className="mb-1 text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Regeln</p>
         <button
@@ -385,68 +431,6 @@ function InspectorGruppe({
   );
 }
 
-// --- Neue Gruppe (Abschnitt/Unterformular) -- kein Drag, eigenes Mini-Formular ---
-
-function NeueGruppeForm({
-  onAbbrechen,
-  onErstellen,
-  submitting,
-  error,
-}: {
-  onAbbrechen: () => void;
-  onErstellen: (payload: { key: string; label: string; repeatable: boolean; minItems: string; maxItems: string }) => void;
-  submitting: boolean;
-  error: string | null;
-}) {
-  const [repeatable, setRepeatable] = useState(true);
-  const [key, setKey] = useState("");
-  const [label, setLabel] = useState("");
-  const [minItems, setMinItems] = useState("");
-  const [maxItems, setMaxItems] = useState("");
-
-  return (
-    <div className="space-y-2 border border-ind-line-2 bg-ind-bg p-3">
-      <div className="seg-industry flex border border-ind-line">
-        <button
-          onClick={() => setRepeatable(false)}
-          className={`flex-1 px-3 py-1.5 text-xs font-semibold ${!repeatable ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"}`}
-        >
-          Abschnitt (einmalig)
-        </button>
-        <button
-          onClick={() => setRepeatable(true)}
-          className={`flex-1 px-3 py-1.5 text-xs font-semibold ${repeatable ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"}`}
-        >
-          Unterformular (Liste)
-        </button>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="Schlüssel (z. B. maengel)" className={inputClass} />
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Bezeichnung" className={inputClass} />
-      </div>
-      {repeatable && (
-        <div className="grid grid-cols-2 gap-2">
-          <input value={minItems} onChange={(e) => setMinItems(e.target.value)} placeholder="Min. Einträge (optional)" type="number" min={0} className={inputClass} />
-          <input value={maxItems} onChange={(e) => setMaxItems(e.target.value)} placeholder="Max. Einträge (optional)" type="number" min={0} className={inputClass} />
-        </div>
-      )}
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
-      <div className="flex items-center justify-end gap-2">
-        <button onClick={onAbbrechen} className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-sm">
-          Abbrechen
-        </button>
-        <button
-          onClick={() => onErstellen({ key, label, repeatable, minItems, maxItems })}
-          disabled={!key.trim() || submitting}
-          className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-        >
-          <Plus size={15} /> {repeatable ? "Unterformular" : "Abschnitt"} hinzufügen
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // --- Hauptkomponente ------------------------------------------------------
 
 interface FormBuilderCanvasProps {
@@ -455,13 +439,11 @@ interface FormBuilderCanvasProps {
   regelnAnzahl: (key: string) => number;
   onRegelnOeffnen: (ziel: { key: string; label: string }) => void;
   invalidate: () => void;
-  fehler: string | null;
   setFehler: (msg: string | null) => void;
 }
 
-export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeffnen, invalidate, fehler, setFehler }: FormBuilderCanvasProps) {
+export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeffnen, invalidate, setFehler }: FormBuilderCanvasProps) {
   const [ausgewaehlt, setAusgewaehlt] = useState<Auswahl>(null);
-  const [neueGruppeOffen, setNeueGruppeOffen] = useState(false);
   const [aktivId, setAktivId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -497,10 +479,6 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
   });
   const createGroupMutation = useMutation({
     mutationFn: (body: Parameters<typeof formModulApi.createGroup>[1]) => formModulApi.createGroup(schemaId, body),
-    onSuccess: () => {
-      setNeueGruppeOffen(false);
-      invalidate();
-    },
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Gruppe konnte nicht angelegt werden"),
   });
   const updateGroupMutation = useMutation({
@@ -515,13 +493,13 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
     },
   });
 
-  function generiereKey(typ: FormFeldTyp): string {
+  function generiereKey(praefix: string): string {
     const vorhandene = new Set([...schema.fields.map((f) => f.key), ...schema.groups.map((g) => g.key)]);
     let n = 1;
-    let kandidat = `${typ}_${n}`;
+    let kandidat = `${praefix}_${n}`;
     while (vorhandene.has(kandidat)) {
       n += 1;
-      kandidat = `${typ}_${n}`;
+      kandidat = `${praefix}_${n}`;
     }
     return kandidat;
   }
@@ -580,6 +558,35 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
       );
       invalidate();
       setAusgewaehlt({ art: "feld", id: neuesFeld.id });
+    } catch {
+      // Fehler wurde bereits ueber die Mutation-onError-Handler gesetzt.
+    }
+  }
+
+  // Abschnitt/Unterformular aus der Palette -- immer root-level (Gruppen
+  // koennen nicht verschachtelt werden), sonst analog zu feldEinfuegen.
+  async function gruppeEinfuegen(repeatable: boolean, index: number) {
+    const nachfolgerIds = rootItemIds.slice(index);
+    try {
+      const neueGruppe = await createGroupMutation.mutateAsync({
+        key: generiereKey(repeatable ? "unterformular" : "abschnitt"),
+        label: { de: repeatable ? "Neues Unterformular" : "Neuer Abschnitt" },
+        repeatable,
+        reihenfolge: index,
+      });
+      await Promise.all(
+        nachfolgerIds.map((rid, i) => {
+          const zielIndex = index + 1 + i;
+          if (rid.startsWith("group:")) {
+            const gid = rid.slice("group:".length);
+            return updateGroupMutation.mutateAsync({ groupId: gid, body: { reihenfolge: zielIndex } });
+          }
+          const fid = rid.slice("field:".length);
+          return updateFieldMutation.mutateAsync({ fieldId: fid, body: { reihenfolge: zielIndex } });
+        }),
+      );
+      invalidate();
+      setAusgewaehlt({ art: "gruppe", id: neueGruppe.id });
     } catch {
       // Fehler wurde bereits ueber die Mutation-onError-Handler gesetzt.
     }
@@ -659,6 +666,16 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
     const overId = String(over.id);
     if (activeId === overId) return;
 
+    if (activeId.startsWith("struktur:")) {
+      const { containerId, index } = aufloesen(overId);
+      // Abschnitt/Unterformular koennen nicht in einer anderen Gruppe
+      // liegen -- landet man ueber einem Gruppen-Innenraum, faellt die
+      // Position auf "Ende der Wurzel-Liste" zurueck statt den Drop zu
+      // verwerfen (fuehlt sich beim Ziehen sonst wie ein Bug an).
+      const zielIndex = containerId === "root" ? index : rootEntries.length;
+      await gruppeEinfuegen(activeId === "struktur:unterformular", zielIndex);
+      return;
+    }
     if (activeId.startsWith("palette:")) {
       const typ = activeId.slice("palette:".length) as FormFeldTyp;
       const { containerId, index } = aufloesen(overId);
@@ -685,36 +702,13 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
     // Durchbricht das mx-auto max-w-2xl der Feld-App-Shell (FeldLayout.tsx)
     // -- die ist auf schmale, mobile Listen-Seiten ausgelegt, der WYSIWYG-
     // Builder mit drei Spalten braucht dagegen die volle Breite. Betrifft
-    // bewusst nur diesen Tab, nicht die restlichen Feld-App-Seiten.
-    <div className="relative left-1/2 w-screen max-w-none -translate-x-1/2 space-y-2 px-3 sm:px-6">
-      <div className="mx-auto flex max-w-[1400px] items-center justify-between">
-        <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Formular</p>
-        <button
-          onClick={() => setNeueGruppeOffen((v) => !v)}
-          className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-secondary px-3 py-1.5 text-sm font-medium"
-        >
-          <Plus size={15} /> Abschnitt / Unterformular
-        </button>
-      </div>
-      {neueGruppeOffen && (
-        <div className="mx-auto max-w-[1400px]">
-          <NeueGruppeForm
-            onAbbrechen={() => setNeueGruppeOffen(false)}
-            submitting={createGroupMutation.isPending}
-            error={fehler}
-            onErstellen={({ key, label, repeatable, minItems, maxItems }) =>
-              createGroupMutation.mutate({
-                key: key.trim(),
-                label: { de: label.trim() || key.trim() },
-                repeatable,
-                min_items: repeatable && minItems ? Number(minItems) : null,
-                max_items: repeatable && maxItems ? Number(maxItems) : null,
-                reihenfolge: rootEntries.length,
-              })
-            }
-          />
-        </div>
-      )}
+    // bewusst nur diesen Tab, nicht die restlichen Feld-App-Seiten. Ueber
+    // negative Margins statt left-1/2 + transform: dnd-kit's DragOverlay
+    // ist NICHT in einem Portal (position:fixed, inline im Baum) -- ein
+    // transform auf einem Vorfahren macht diesen zum Containing-Block fuer
+    // position:fixed und hat den Overlay weit vom Cursor weg gerissen.
+    <div className="mx-[calc(50%-50vw)] w-screen max-w-none space-y-2 px-3 sm:px-6">
+      <p className="mx-auto max-w-[1400px] text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Formular</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="mx-auto flex max-w-[1400px] gap-4 border border-ind-line bg-ind-bg" style={{ minHeight: 520 }}>
@@ -756,6 +750,12 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
                 onLabelSpeichern={(label) =>
                   updateGroupMutation.mutate({ groupId: ausgewaehlteGruppe.id, body: { label: { de: label } } }, { onSuccess: invalidate })
                 }
+                onMinMaxSpeichern={(minItems, maxItems) =>
+                  updateGroupMutation.mutate(
+                    { groupId: ausgewaehlteGruppe.id, body: { min_items: minItems, max_items: maxItems } },
+                    { onSuccess: invalidate },
+                  )
+                }
                 onLoeschen={() => deleteGroupMutation.mutate(ausgewaehlteGruppe.id)}
               />
             ) : (
@@ -764,6 +764,11 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
           </div>
         </div>
         <DragOverlay>
+          {aktivId?.startsWith("struktur:") && (
+            <div className="border border-ind-acc bg-ind-bg px-3 py-2 text-sm text-ind-ink shadow-lg">
+              {aktivId === "struktur:unterformular" ? "Unterformular" : "Abschnitt"}
+            </div>
+          )}
           {aktivId?.startsWith("palette:") && (
             <div className="border border-ind-acc bg-ind-bg px-3 py-2 text-sm text-ind-ink shadow-lg">
               {FELD_TYP_LABEL[aktivId.slice("palette:".length) as FormFeldTyp]}
