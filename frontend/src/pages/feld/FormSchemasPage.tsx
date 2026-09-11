@@ -1,6 +1,6 @@
 // Uebersicht der Formular-Modul-v2-Schemas, gegen /api/form-schemas.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardList, Plus } from "lucide-react";
+import { ClipboardList, Plus, Shapes } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -48,12 +48,20 @@ export function FormSchemasPage() {
         ← Zurück
       </button>
 
-      <div>
-        <h1 className="text-lg font-bold text-ind-ink">Formular-Schemas</h1>
-        <p className="mt-1 text-sm text-ind-ink-3">
-          Datenerfassung getrennt von Ansicht: ein Schema kann mehrere Views (Erfassung, Zusammenfassung,
-          Ausdruck) bedienen.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-bold text-ind-ink">Formular-Schemas</h1>
+          <p className="mt-1 text-sm text-ind-ink-3">
+            Datenerfassung getrennt von Ansicht: ein Schema kann mehrere Views (Erfassung, Zusammenfassung,
+            Ausdruck) bedienen.
+          </p>
+        </div>
+        <button
+          onClick={() => navigate("/plan-symbole")}
+          className="btn-touch flex shrink-0 items-center gap-1.5 btn-industry btn-industry-secondary px-3 py-1.5 text-sm font-medium"
+        >
+          <Shapes size={15} strokeWidth={1.5} /> Plan-Symbole
+        </button>
       </div>
 
       {formOffen ? (

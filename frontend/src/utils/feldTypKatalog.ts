@@ -18,6 +18,7 @@ import {
   MapPin,
   Paperclip,
   PenLine,
+  PenTool,
   Phone,
   ScanLine,
   Star,
@@ -55,6 +56,7 @@ export const FELD_TYP_KATALOG: { name: string; typen: { typ: FormFeldTyp; label:
     name: "Erfassung vor Ort",
     typen: [
       { typ: "foto", label: "Foto", icon: Camera },
+      { typ: "foto_plan", label: "Foto (Plan)", icon: PenTool },
       { typ: "datei", label: "Datei (Bild/PDF)", icon: Paperclip },
       { typ: "unterschrift", label: "Unterschrift", icon: PenLine },
       { typ: "gps", label: "GPS-Standort", icon: MapPin },

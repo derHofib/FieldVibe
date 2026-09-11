@@ -102,6 +102,7 @@ import type {
   Partner,
   PartnerNachweis,
   PartnerNachweisTyp,
+  PlanSymbol,
   PlattformIntegration,
   Projekt,
   ProjektAufgabe,
@@ -854,6 +855,21 @@ export const formModulApi = {
     }),
   deleteZuordnung: (schemaId: string, zuordnungId: string) =>
     apiFetch<void>(`/api/form-schemas/${schemaId}/zuordnungen/${zuordnungId}`, { method: "DELETE" }),
+};
+
+// Mandanten-eigene Symbol-Bibliothek fuer den Feldtyp "foto_plan" (siehe
+// PlanSymbolePage.tsx + FormBuilderCanvas.tsx-Inspector).
+export const planSymboleApi = {
+  list: () => apiFetch<PlanSymbol[]>("/api/plan-symbole"),
+  upload: (file: Blob, name: string, filename = "symbol.png") => {
+    const formData = new FormData();
+    formData.append("file", file, filename);
+    formData.append("name", name);
+    return apiFetchForm<PlanSymbol>("/api/plan-symbole", formData);
+  },
+  rename: (symbolId: string, name: string) =>
+    apiFetch<PlanSymbol>(`/api/plan-symbole/${symbolId}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  remove: (symbolId: string) => apiFetch<void>(`/api/plan-symbole/${symbolId}`, { method: "DELETE" }),
 };
 
 export const formSubmissionsApi = {

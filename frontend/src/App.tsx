@@ -31,6 +31,7 @@ import { EingangsrechnungDetailPage } from "./pages/feld/EingangsrechnungDetailP
 import { FeedPage } from "./pages/feld/FeedPage";
 import { FormSchemaEditorPage } from "./pages/feld/FormSchemaEditorPage";
 import { FormSchemasPage } from "./pages/feld/FormSchemasPage";
+import { PlanSymbolePage } from "./pages/feld/PlanSymbolePage";
 import { FormSubmissionAusfuellenPage } from "./pages/feld/FormSubmissionAusfuellenPage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
@@ -153,6 +154,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
           <Route path="/form-schemas" element={<FormSchemasPage />} />
           <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
+          <Route path="/plan-symbole" element={<PlanSymbolePage />} />
           <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
           <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />

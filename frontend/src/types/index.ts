@@ -1550,7 +1550,8 @@ export type FormFeldTyp =
   | "email"
   | "telefon"
   | "betrag"
-  | "adresse";
+  | "adresse"
+  | "foto_plan";
 
 export type FormSchemaStatus = "draft" | "published" | "archived";
 export type FormViewTyp = "capture" | "print" | "summary" | "table" | "public";
@@ -1594,6 +1595,43 @@ export interface FormAuftragstypZuordnungV2 {
   id: string;
   leistungstyp: Leistungstyp;
   pflicht_vor_abschluss: boolean;
+}
+
+// Mandanten-eigene Symbol-Bibliothek fuer den Feldtyp "foto_plan" (Wallbox,
+// Leitungsschutzschalter, Leitungsweg, ...), siehe api/routes/plan_symbole.py.
+export interface PlanSymbol {
+  id: string;
+  name: string;
+  content_type: string;
+  url: string;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Wert eines "foto_plan"-Feldes: das Hintergrundfoto bleibt unveraendert,
+// jede Markierung liegt als eigener Eintrag mit RELATIVEN Koordinaten
+// (0..1 von Bildbreite/-hoehe) vor -- unabhaengig von der tatsaechlichen
+// Anzeigegroesse. Kein eigenes Backend-Datenmodell dafuer (siehe Migration
+// 0081), lebt strukturiert im form_submissions.values-JSON wie "adresse"/
+// "gps" auch.
+export interface PlanMarkierungSymbol {
+  art: "symbol";
+  symbol_id: string;
+  x: number;
+  y: number;
+  winkel: number;
+}
+export interface PlanMarkierungLinie {
+  art: "linie";
+  punkte: { x: number; y: number }[];
+  farbe: string;
+}
+export type PlanMarkierung = PlanMarkierungSymbol | PlanMarkierungLinie;
+
+export interface FotoPlanWert {
+  foto: { key: string; url: string; content_type: string } | null;
+  markierungen: PlanMarkierung[];
 }
 
 export interface FormSchema {
