@@ -576,8 +576,11 @@ function TerminBearbeitenPanel({
       techniker_id: technikerId,
       start_at: new Date(start).toISOString(),
       ende_at: new Date(endeWert).toISOString(),
-      fahrzeit_minuten: fahrzeit === "" ? null : Number(fahrzeit),
-      pause_minuten: pause === "" ? null : Number(pause),
+      // Math.max statt einer eigenen Fehlermeldung -- ein negativer Wert ist
+      // hier so gut wie immer ein Vertipper (Minus statt Loeschen), kein
+      // absichtlicher Eingabewert, den man dem Nutzer erst erklaeren muesste.
+      fahrzeit_minuten: fahrzeit === "" ? null : Math.max(0, Number(fahrzeit)),
+      pause_minuten: pause === "" ? null : Math.max(0, Number(pause)),
       notiz: notiz === "" ? null : notiz,
     });
   };
