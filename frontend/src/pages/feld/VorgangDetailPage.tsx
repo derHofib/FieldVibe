@@ -393,6 +393,14 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const [showFolgeAuftragDialog, setShowFolgeAuftragDialog] = useState(false);
   const [folgeAuftragLeistungstyp, setFolgeAuftragLeistungstyp] = useState<Leistungstyp>("stoerung");
   const [folgeVorgangId, setFolgeVorgangId] = useState<string | null>(null);
+  // Gemeinsame Fehleranzeige fuer alle Aktionen unten, die keinen eigenen
+  // Inline-Fehlertext neben einem Formular haben (z. B. Uebernehmen, Foto-
+  // Upload, Timer) -- sonst verpufft ein Fehlschlag beim Techniker unsichtbar.
+  const [aktionsFehler, setAktionsFehler] = useState<string | null>(null);
+  const meldeAktionsFehler = (err: unknown) =>
+    setAktionsFehler(
+      err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.",
+    );
 
   const kannDisponieren = hatRecht("vorgaenge", "bearbeiten");
   const kannLoeschen = hatRecht("vorgaenge", "loeschen");
@@ -469,10 +477,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setShowAnlageHinzufuegen(false);
       setNeueAnlageId("");
     },
+    onError: meldeAktionsFehler,
   });
   const anlageEntfernenMutation = useMutation({
     mutationFn: (anlageId: string) => vorgaengeApi.anlageEntfernen(id!, anlageId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] }),
+    onError: meldeAktionsFehler,
   });
   const { data: alleKunden } = useQuery({
     queryKey: ["kunden"],
@@ -494,7 +504,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setEditingZuordnung(false);
       setZuordnungError(null);
     },
-    onError: (err) => setZuordnungError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setZuordnungError(
+        err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.",
+      ),
   });
   const adresseMutation = useMutation({
     mutationFn: () =>
@@ -513,7 +526,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setEditingAdresse(false);
       setAdresseError(null);
     },
-    onError: (err) => setAdresseError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setAdresseError(
+        err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.",
+      ),
   });
   const { data: events } = useQuery({
     queryKey: ["vorgang-events", id],
@@ -573,6 +589,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setTerminTitel("");
       queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const { data: maengel } = useQuery({
@@ -600,6 +617,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const mangelStatusMutation = useMutation({
@@ -609,16 +627,19 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const deleteMangelMutation = useMutation({
     mutationFn: (mangelId: string) => maengelApi.remove(mangelId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const deleteTerminMutation = useMutation({
     mutationFn: (terminId: string) => termineApi.remove(terminId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
@@ -626,28 +647,34 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const angebotAusMaengelnMutation = useMutation({
     mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+    onError: meldeAktionsFehler,
   });
 
   const angebotAusVorgangMutation = useMutation({
     mutationFn: () => angeboteApi.createFromVorgang(id!),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+    onError: meldeAktionsFehler,
   });
 
   const rechnungAusVorgangMutation = useMutation({
     mutationFn: () => rechnungenApi.create({ kunde_id: vorgang!.kunde_id, vorgang_id: id }),
     onSuccess: (rechnung) => navigate(`/rechnungen/${rechnung.id}`),
+    onError: meldeAktionsFehler,
   });
 
   const maengelProtokollMutation = useMutation({
     mutationFn: () => maengelApi.protokollPdf(id!),
     onSuccess: openPdfBlob,
+    onError: meldeAktionsFehler,
   });
 
   const highlightMutation = useMutation({
     mutationFn: (eventId: number) => highlightsApi.create(eventId),
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
-        window.alert("Dieses Foto ist bereits als Highlight markiert.");
+        setAktionsFehler("Dieses Foto ist bereits als Highlight markiert.");
+      } else {
+        meldeAktionsFehler(err);
       }
     },
   });
@@ -677,6 +704,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["material-verwendungen", "vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const { data: leistungsverzeichnis } = useQuery({
@@ -695,12 +723,14 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const lvVerwendungEntfernenMutation = useMutation({
     mutationFn: (verwendungId: string) => leistungsverzeichnisApi.verwendungEntfernen(verwendungId),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const { data: partnerListe } = useQuery({
@@ -723,6 +753,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setPartnerWarnung(antwort.freistellungsbescheinigung_warnung);
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const partnerAufhebenMutation = useMutation({
@@ -731,6 +762,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setPartnerWarnung(false);
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   useEffect(() => {
@@ -798,11 +830,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["material"] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const bedarfEntfernenMutation = useMutation({
     mutationFn: (bedarfId: string) => materialBedarfeApi.remove(bedarfId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const deleteVorgangMutation = useMutation({
@@ -811,6 +845,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       navigate("/feed");
     },
+    onError: meldeAktionsFehler,
   });
 
   const statusMutation = useMutation({
@@ -837,6 +872,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const folgeAuftragMutation = useMutation({
@@ -846,6 +882,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgaenge", "folge", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const uebernehmenMutation = useMutation({
@@ -854,11 +891,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const prioritaetMutation = useMutation({
     mutationFn: (prioritaet: number) => vorgaengeApi.update(id!, { prioritaet }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const commentMutation = useMutation({
@@ -882,6 +921,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const fotoMutation = useMutation({
@@ -906,6 +946,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const dokumentMutation = useMutation({
@@ -930,6 +971,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const unterschriftMutation = useMutation({
@@ -950,6 +992,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const stopTimerMutation = useMutation({
@@ -960,6 +1003,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeAktionsFehler,
   });
 
   if (!vorgang) return <p className="text-center text-ind-ink-3">Lädt…</p>;
@@ -1027,6 +1071,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           </button>
         )}
       </div>
+
+      {aktionsFehler && (
+        <div className="flex items-center justify-between gap-2 border border-ind-bad px-3 py-2 text-sm text-ind-bad">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
+          </span>
+          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-xs underline">
+            Ausblenden
+          </button>
+        </div>
+      )}
 
       {/* Fakten-Leiste: die wichtigsten Eckdaten auf einen Blick, bevor man
           in die Karte darunter eintaucht (siehe Design-Vorschlag "Feed und
@@ -2529,7 +2584,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 <p className="mt-1 text-xs text-red-700 dark:text-red-400">
                   {unterschriftMutation.error instanceof ApiError
                     ? unterschriftMutation.error.message
-                    : "Fehler beim Speichern der Unterschrift"}
+                    : "Unterschrift konnte nicht gespeichert werden — bitte erneut versuchen."}
                 </p>
               )}
             </div>
