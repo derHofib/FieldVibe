@@ -140,7 +140,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             setCompose({ art: "neu", accountId: account.id });
             setAktiveNachricht(null);
           }}
-          className="btn-clay mx-3 mt-2 w-[calc(100%-1.5rem)] rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-xs font-semibold text-white"
+          className="btn-industry btn-industry-primary mx-3 mt-2 w-[calc(100%-1.5rem)] py-2 text-xs"
         >
           Neu
         </button>

@@ -296,7 +296,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           <button
             type="submit"
             disabled={!kannSpeichern || speichernMutation.isPending}
-            className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+            className="btn-industry btn-industry-primary flex items-center gap-1.5 px-4 py-2 text-xs"
           >
             {speichernMutation.isPending && <Loader2 size={13} className="animate-spin" />}
             {bearbeiten ? "Speichern" : "Postfach anlegen"}

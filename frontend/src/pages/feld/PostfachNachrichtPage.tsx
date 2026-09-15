@@ -112,7 +112,7 @@ export function PostfachNachrichtPage() {
       ) : (
         <button
           onClick={() => setAntwortenOffen(true)}
-          className="btn-touch btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white"
+          className="btn-touch btn-industry btn-industry-primary flex items-center gap-1.5 px-4 py-2 text-xs"
         >
           <Reply size={13} strokeWidth={2} /> Antworten
         </button>

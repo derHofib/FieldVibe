@@ -96,7 +96,7 @@ export function PostfachPage() {
         </h1>
         <button
           onClick={() => navigate("/postfach/neu")}
-          className="btn-touch flex items-center gap-1 rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+          className="btn-touch btn-industry btn-industry-primary flex items-center gap-1 px-3 py-1.5 text-xs"
         >
           <Plus size={14} strokeWidth={2.5} /> Neu
         </button>

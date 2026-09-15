@@ -94,7 +94,7 @@ export function NeueNotizSheet({
         <button
           onClick={() => onErstellen({ text: text.trim(), farbe })}
           disabled={!text.trim()}
-          className="btn-clay flex-1 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+          className="btn-industry btn-industry-primary flex-1 py-2.5 text-sm"
         >
           Auf Board setzen
         </button>
@@ -154,7 +154,7 @@ export function NotizAktionSheet({
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => onSpeichern({ text: text.trim(), farbe })}
-            className="btn-clay flex-1 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 py-2.5 text-sm font-semibold text-white"
+            className="btn-industry btn-industry-primary flex-1 py-2.5 text-sm"
           >
             Speichern
           </button>
@@ -316,7 +316,7 @@ function NeuerVorgangForm({
         <button
           onClick={() => erstellen.mutate()}
           disabled={!kundeId || erstellen.isPending}
-          className="btn-clay flex-1 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+          className="btn-industry btn-industry-primary flex-1 py-2.5 text-sm"
         >
           Vorgang anlegen
         </button>

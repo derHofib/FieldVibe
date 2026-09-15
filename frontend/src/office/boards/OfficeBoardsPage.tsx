@@ -61,7 +61,7 @@ export function OfficeBoardsPage() {
       <SeitenKopf titel="Boards" anzahl={boards?.length}>
         <button
           onClick={() => setZeigeNeu(true)}
-          className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white"
+          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-2 text-xs"
         >
           <Plus size={14} strokeWidth={2.5} />
           Neues Board
@@ -98,7 +98,7 @@ export function OfficeBoardsPage() {
             <button
               onClick={() => erstellen.mutate()}
               disabled={!name.trim() || erstellen.isPending}
-              className="btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+              className="btn-industry btn-industry-primary px-4 py-2 text-xs"
             >
               Anlegen
             </button>

@@ -109,7 +109,7 @@ export function BoardsUebersichtPage() {
             <button
               onClick={() => erstellen.mutate()}
               disabled={!name.trim() || erstellen.isPending}
-              className="btn-clay flex-1 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 py-2 text-sm font-semibold text-white disabled:opacity-40"
+              className="btn-industry btn-industry-primary flex-1 py-2 text-sm"
             >
               Anlegen
             </button>

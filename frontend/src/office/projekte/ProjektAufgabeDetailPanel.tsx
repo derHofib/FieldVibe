@@ -563,7 +563,7 @@ export function ProjektAufgabeDetailPanel({
             <button
               onClick={() => speichern.mutate()}
               disabled={!titel.trim() || (!istPrivat && istEigenstaendig && !spalteId) || speichern.isPending}
-              className="btn-touch btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="btn-touch btn-industry btn-industry-primary px-4 py-2 text-sm"
             >
               Speichern
             </button>

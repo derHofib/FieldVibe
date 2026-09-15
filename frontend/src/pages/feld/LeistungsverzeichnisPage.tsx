@@ -121,7 +121,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
           <button
             onClick={() => erstellen.mutate()}
             disabled={!name.trim() || erstellen.isPending}
-            className="btn-touch btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="btn-touch btn-industry btn-industry-primary px-4 py-2 text-sm"
           >
             Anlegen
           </button>
@@ -264,7 +264,7 @@ function StandardKalkulation() {
           <button
             onClick={() => speichern.mutate()}
             disabled={speichern.isPending}
-            className="btn-touch btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+            className="btn-touch btn-industry btn-industry-primary px-4 py-1.5 text-xs"
           >
             Speichern
           </button>

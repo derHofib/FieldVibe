@@ -65,6 +65,13 @@ export function OfficeProjektePage() {
       queryClient.invalidateQueries({ queryKey: ["projekte"] });
     },
   });
+  // Gleiches Doppel-Submit-Risiko wie bei spalteAnlegen oben -- siehe Kommentar dort.
+  const projektAnlegenLaeuft = useRef(false);
+  const projektAnlegen = () => {
+    if (!neuerProjektName.trim() || projektAnlegenLaeuft.current) return;
+    projektAnlegenLaeuft.current = true;
+    projektErstellen.mutate(undefined, { onSettled: () => (projektAnlegenLaeuft.current = false) });
+  };
 
   const spalteErstellen = useMutation({
     mutationFn: (name: string) => projekteApi.createSpalte(aktivesProjekt!, name),
@@ -136,7 +143,7 @@ export function OfficeProjektePage() {
         )}
         <button
           onClick={() => setZeigeNeuesProjekt(true)}
-          className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white"
+          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-2 text-xs"
         >
           <Plus size={14} strokeWidth={2.5} />
           Neues Projekt
@@ -152,15 +159,15 @@ export function OfficeProjektePage() {
                 autoFocus
                 value={neuerProjektName}
                 onChange={(e) => setNeuerProjektName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && neuerProjektName.trim() && projektErstellen.mutate()}
+                onKeyDown={(e) => e.key === "Enter" && projektAnlegen()}
                 placeholder="z. B. Neubau Lagerhalle"
                 className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
               />
             </div>
             <button
-              onClick={() => projektErstellen.mutate()}
+              onClick={projektAnlegen}
               disabled={!neuerProjektName.trim() || projektErstellen.isPending}
-              className="btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+              className="btn-industry btn-industry-primary px-4 py-2 text-xs"
             >
               Anlegen
             </button>

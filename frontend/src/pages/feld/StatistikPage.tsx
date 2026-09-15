@@ -48,7 +48,7 @@ export function StatistikPage() {
         <h1 className="text-lg font-bold text-ind-ink">Meine Arbeitszeit</h1>
         <button
           onClick={() => setFormularOffen(true)}
-          className="btn-touch btn-clay rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white"
+          className="btn-touch btn-industry btn-industry-primary px-3 py-1.5 text-sm"
         >
           + Zeit erfassen
         </button>
