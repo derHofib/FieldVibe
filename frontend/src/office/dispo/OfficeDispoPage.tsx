@@ -612,7 +612,7 @@ function TerminBearbeitenPanel({
         </button>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Titel</label>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Titel *</label>
           <input
             ref={titelRef}
             value={titel}
@@ -707,7 +707,8 @@ function TerminBearbeitenPanel({
           </button>
           <button
             onClick={speichern}
-            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium"
+            disabled={!titel.trim()}
+            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Speichern
           </button>

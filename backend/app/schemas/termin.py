@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TerminCreate(BaseModel):
@@ -13,6 +13,14 @@ class TerminCreate(BaseModel):
     notiz: str | None = None
     fahrzeit_minuten: int | None = Field(default=None, ge=0)
     pause_minuten: int | None = Field(default=None, ge=0)
+
+    @field_validator("titel")
+    @classmethod
+    def _titel_nicht_leer(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Titel darf nicht leer sein")
+        return v
 
     @model_validator(mode="after")
     def _check_zeitraum(self) -> "TerminCreate":
@@ -30,6 +38,16 @@ class TerminUpdate(BaseModel):
     notiz: str | None = None
     fahrzeit_minuten: int | None = Field(default=None, ge=0)
     pause_minuten: int | None = Field(default=None, ge=0)
+
+    @field_validator("titel")
+    @classmethod
+    def _titel_nicht_leer(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("Titel darf nicht leer sein")
+        return v
 
 
 class TerminRead(BaseModel):
