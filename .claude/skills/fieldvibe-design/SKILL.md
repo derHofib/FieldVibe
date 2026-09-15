@@ -36,6 +36,18 @@ vereinzelte seiteneigene Pillen/Chips können noch Restbestände zeigen --
 im Zweifel Code gegenchecken statt dieses Dokument als absolute Wahrheit
 zu nehmen.
 
+**Zweite Überarbeitung ("plastischer", siehe `index.css`)**: die Marken-
+Akzentfarbe wechselte von Stahlblau auf "Graphit" (dunkles, neutrales
+Grau), und Karten/Buttons/Inputs sind nicht mehr komplett flach --
+Karten tragen jetzt `--shadow-ind-card` + eine gegenüber der Seite
+hellere Fläche (`--color-ind-bg-raised`), Buttons einen Bevel-Schatten
+mit Press-State, Inputs einen eingelassenen Innenschatten. Quadratisch
+(kein Radius) und Haarlinien-Rahmen bleiben unverändert Pflicht --
+"plastischer" heißt hier gerichtetes Licht in Graustufen (wie ein
+gefrästes Bauteil), **nicht** die Rückkehr zu Farbverlauf/Pastellton/
+Rundung des alten Claymorphism. Details siehe §2 (Farbe/Schatten-Token)
+und §6 (Buttons).
+
 ## Checkliste, bevor du etwas Neues baust
 
 1. **Tone/Statusfarbe**: Passt einer der 8 IconBadge-Tones oder eine der
@@ -140,20 +152,25 @@ transparenten Zwischenstufen):
 
 | Token | Rolle |
 |---|---|
-| `ind-bg` | Seiten-/Karten-Hintergrund (kein Kontrast Karte vs. Seite -- nur der Rahmen trennt) |
+| `ind-bg` | Seiten-Hintergrund |
+| `ind-bg-raised` | Karten-/Panel-Fläche -- bewusst heller als `ind-bg` (Träger der Tiefe, siehe unten), nicht mehr identisch mit der Seite |
 | `ind-ink` | Primärtext, Überschriften |
 | `ind-ink-2` | Sekundärtext |
 | `ind-ink-3` | Meta-/Placeholder-Text, am meisten benutzte Muted-Stufe |
 | `ind-line` | Standard-Rahmen (Karten, Buttons, Inputs) |
 | `ind-line-2` | Kräftigerer Rahmen (verschachtelte Blöcke, Passermarken-Farbe) |
-| `ind-acc` | Akzent für Icons/Rahmen (steel blue) |
-| `ind-acc-txt` | Akzent-Text (etwas heller/lesbarer als `ind-acc`) |
+| `ind-acc` | Akzent für Icons/Rahmen ("Graphit" -- dunkles Grau, vorher Stahlblau) |
+| `ind-acc-txt` | Akzent-Text (im Light-Mode dunkler/kräftiger, im Dark-Mode heller/lesbarer als `ind-acc`) |
 | `ind-acc-soft` | Dezente Akzent-Fläche (z. B. aktiver Filter-Button-Hintergrund) |
 | `ind-hover` | Hover-Zustand neutraler Elemente |
 | `ind-field` / `ind-field-ink` | Gefüllte Aktiv-Fläche (Segmented-Control aktiv, Offline-Banner) |
 | `ind-btn-bg` / `ind-btn-bg-h` / `ind-btn-ink` | Primär-Button: Ruhe / Hover / Text |
 | `ind-warn` | Warnung (Rahmen+Text, keine Fläche) |
 | `ind-bad` | Fehler (Rahmen+Text, keine Fläche) |
+| `shadow-ind-card` | Karten-Schatten (Ruhezustand) |
+| `shadow-ind-raised` | Kräftigerer Schatten für Hero-Karten (`.blueprint`) und schwebende Elemente (Bottom-Nav-Insel, FAB) |
+| `shadow-ind-btn` / `shadow-ind-btn-active` | Bevel-Schatten für gefüllte/umrandete Buttons -- Ruhe / Press-State |
+| `shadow-ind-input` | Eingelassener Innenschatten für Inputs |
 
 Definiert in `index.css`: helle Werte im `@theme`-Block, dunkle Werte in
 einem `.dark { }`-Block direkt darunter. Tailwind v4 löst `@theme`-Werte
@@ -232,16 +249,27 @@ den sticky/klebende Leisten zum unteren Rand halten müssen -- siehe §5.
 border border-ind-line bg-ind-bg p-3   /* p-3 kompakt, p-4 Formular-/Detailkarten */
 ```
 
-Kein Schatten, kein Ring-Split zwischen Hell/Dunkel mehr nötig -- die
-`ind-line`/`ind-bg`-Token lösen pro Theme automatisch auf. Das ist die
-zentrale Vereinfachung gegenüber dem alten Rezept (`rounded-lg bg-white
-p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1
+Kein Ring-Split zwischen Hell/Dunkel mehr nötig -- die `ind-line`/
+`ind-bg`-Token lösen pro Theme automatisch auf. Das ist die zentrale
+Vereinfachung gegenüber dem alten Rezept (`rounded-lg bg-white p-3
+shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1
 dark:ring-stone-800`), das noch getrennte Light/Dark-Behandlung brauchte.
+
+Trotz identischer Klassen im JSX bekommt jede so gebaute Karte seit der
+"plastischer"-Überarbeitung automatisch Tiefe: `index.css` definiert
+einen zusammengesetzten Selektor `.border.border-ind-line.bg-ind-bg`,
+der `background-color: var(--color-ind-bg-raised)` und
+`box-shadow: var(--shadow-ind-card)` ergänzt -- ohne dass diese
+Komponenten selbst etwas dafür tun müssten. **Wichtig für neuen Code:**
+genau diese drei Klassen (`border`, `border-ind-line`, `bg-ind-bg`)
+verwenden, egal in welcher Reihenfolge im JSX, sonst greift der
+Selektor nicht und die Karte bleibt flach.
 
 **Hero-Karten mit Passermarken** -- `Blueprint`-Komponente
 (`components/Blueprint.tsx`): für die prominentesten Karten einer Seite
-(Feed-Karten, Übersichtskarte auf Vorgang-Detail, Login-Karte). Rendert
-automatisch 4 `<i class="corner tl/tr/bl/br">`-Spans:
+(Feed-Karten, Übersichtskarte auf Vorgang-Detail, Login-Karte). Trägt
+zusätzlich `--shadow-ind-raised` (kräftiger als der normale Karten-
+Schatten). Rendert automatisch 4 `<i class="corner tl/tr/bl/br">`-Spans:
 
 ```tsx
 <Blueprint className="bg-ind-bg p-4">...</Blueprint>
@@ -342,24 +370,32 @@ Form/Struktur bewusst **nicht** eckig gemacht -- `rounded-full` (Pill),
 floatet 0.75rem von allen unteren Rändern ab, spannt nicht die volle
 Breite. Das ist ein eingespieltes, konfigurierbares Mobil-Pattern
 (Fixzone + zentraler FAB + swipebare "Rotunde"-Zone), keine reine Optik-
-Frage -- nur die Oberflächenbehandlung wechselte von Neumorphismus-
-Schatten (`.navbar-soft`) auf Haarlinie.
+Frage -- die Oberflächenbehandlung wechselte von Neumorphismus-Schatten
+(`.navbar-soft`) auf Haarlinie, trägt seit der "plastischer"-
+Überarbeitung aber wieder einen Schatten (`--shadow-ind-raised`, reine
+Graustufen statt Neumorphismus-Farbverlauf) -- passend zur "schwebenden
+Insel"-Metapher. Technisch greift dafür derselbe zusammengesetzte
+Karten-Selektor aus §3, hier per zusätzlichem `.rounded-full` auf den
+kräftigeren Schatten hochgestuft (siehe `index.css`).
 
 FAB:
 ```
--mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-ind-btn-bg text-ind-btn-ink ring-4 ring-ind-bg hover:bg-ind-btn-bg-h
+-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-ind-btn-bg text-ind-btn-ink ring-4 ring-ind-bg shadow-ind-raised hover:bg-ind-btn-bg-h
 ```
 Solide Fläche in `--color-ind-btn-bg` statt Cyan-Blau-Gradient + Clay-
-Schatten. Negativer Top-Margin lässt ihn weiterhin aus der Leiste
+Schatten -- der neue Schatten (`shadow-ind-raised`-Utility, aus dem
+gleichnamigen `--shadow-ind-raised`-Token generiert) ist rein grau, kein
+Neumorphismus. Negativer Top-Margin lässt ihn weiterhin aus der Leiste
 herausragen; `ring-4` in Seitenhintergrundfarbe erzeugt weiterhin einen
 "Aussparungs"-Halo.
 
 `--klebe-abstand`: `6rem` Default (Feld-App, Platz für die Bottom-Nav), in
 `OfficeLayout` inline auf `0.75rem` überschrieben (kein Bottom-Nav dort).
 
-Marken-Akzentfarbe: **`--color-ind-acc`/`-acc-txt`** (steel blue), nicht
-mehr Cyan -- Wortmarke, FAB, Fokus-Zustände etc. nutzen durchgängig diesen
-einen Akzent statt verschiedener Cyan/Blau-Gradients.
+Marken-Akzentfarbe: **`--color-ind-acc`/`-acc-txt`** ("Graphit", dunkles
+Grau -- vorher Stahlblau, davor Cyan) -- Wortmarke, FAB, Fokus-Zustände
+etc. nutzen durchgängig diesen einen Akzent statt verschiedener
+Cyan/Blau-Gradients.
 
 > **Erledigt, nicht mehr aktuell**: `docs/DESIGN.md` (ältere Versionen)
 > beschrieb noch ein "Nur Kernaktionen + Mehr-Menü"-Bottom-Nav-Modell.
@@ -377,8 +413,12 @@ btn-touch btn-industry btn-industry-primary
 Füllung `--color-ind-btn-bg`, Text `--color-ind-btn-ink`, Hover
 `--color-ind-btn-bg-h`. Ersetzt das alte `btn-clay bg-linear-to-r
 from-cyan-500 to-blue-600 ... text-white` -- **kein** Gradient, **kein**
-Neumorphismus-Schatten mehr. `.btn-clay` existiert nur noch als Restklasse
-in `index.css`, nicht mehr für neue Buttons verwenden.
+Pastellton. `.btn-clay` existiert nur noch als Restklasse in `index.css`,
+nicht mehr für neue Buttons verwenden. Seit der "plastischer"-
+Überarbeitung trägt `.btn-industry-primary` einen Bevel-Schatten
+(`--shadow-ind-btn`, reine Graustufen, kein Farbverlauf) und drückt sich
+im `:active`-Zustand sichtbar 1px nach unten (`--shadow-ind-btn-active`)
+-- Tastengefühl über Bewegung statt Neumorphismus.
 
 **Secondary**:
 ```
@@ -386,6 +426,9 @@ btn-touch btn-industry btn-industry-secondary
 ```
 Haarlinien-Rahmen (`--color-ind-line`), Hover-Fläche `--color-ind-hover`.
 Ersetzt `bg-slate-100 ... text-slate-700 dark:bg-stone-800 dark:text-stone-300`.
+Trägt seit der "plastischer"-Überarbeitung ebenfalls einen Karten-
+Schatten + `--color-ind-bg-raised` als Füllung (vorher transparent) und
+denselben Press-State wie Primary.
 
 **Ghost**:
 ```
@@ -437,7 +480,10 @@ Input-Rezept (auch generell für normale Formularfelder):
 input-industry   /* Haarlinien-Rahmen (--color-ind-line), transparenter Hintergrund, width:100% */
 ```
 Ersetzt `w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm
-dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100`. Für Inputs,
+dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100`. Trägt seit
+der "plastischer"-Überarbeitung `--shadow-ind-input` (leichter
+Innenschatten) -- Inputs wirken dadurch "eingelassen", im Gegensatz zu
+den "erhabenen" Karten/Buttons. Für Inputs,
 die NICHT die volle Breite haben sollen (z. B. `w-20`, `flex-1` neben
 einem Button), `.input-industry` nicht verwenden (setzt `width:100%`
 unlayered, das gewinnt gegen eine Tailwind-Breiten-Utility) -- statt-
