@@ -40,6 +40,7 @@ function NeueAnfrage() {
   const [zeigeNeuerStandort, setZeigeNeuerStandort] = useState(false);
   const [neuerStandortName, setNeuerStandortName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [gesendet, setGesendet] = useState(false);
 
   const { data: standorte } = useQuery({
     queryKey: ["portal-standorte"],
@@ -80,6 +81,8 @@ function NeueAnfrage() {
       setStandortId("");
       setAnlageId("");
       setError(null);
+      setGesendet(true);
+      window.setTimeout(() => setGesendet(false), 4000);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Anfrage konnte nicht gesendet werden"),
   });
@@ -96,12 +99,19 @@ function NeueAnfrage() {
 
   if (!zeigen) {
     return (
-      <button
-        onClick={() => setZeigen(true)}
-        className="btn-touch w-full rounded-lg btn-industry btn-industry-primary py-3 text-sm font-medium"
-      >
-        + Neue Auftragsanfrage stellen
-      </button>
+      <div className="space-y-2">
+        {gesendet && (
+          <p className="border border-green-400 px-3 py-2 text-sm text-green-700 dark:border-green-600 dark:text-green-300">
+            Ihre Anfrage wurde gesendet.
+          </p>
+        )}
+        <button
+          onClick={() => setZeigen(true)}
+          className="btn-touch w-full rounded-lg btn-industry btn-industry-primary py-3 text-sm font-medium"
+        >
+          + Neue Auftragsanfrage stellen
+        </button>
+      </div>
     );
   }
 

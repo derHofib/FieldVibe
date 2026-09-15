@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
 import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotStatus } from "../../types";
@@ -17,6 +19,9 @@ export function PortalAngebotDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [fehler, setFehler] = useState<string | null>(null);
+  const meldeFehler = (err: unknown) =>
+    setFehler(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.");
 
   const { data: angebot } = useQuery({
     queryKey: ["portal-angebot", id],
@@ -27,14 +32,17 @@ export function PortalAngebotDetailPage() {
   const antwortMutation = useMutation({
     mutationFn: (status: "angenommen" | "abgelehnt") => kundenportalApi.antwortAufAngebot(id!, status),
     onSuccess: () => {
+      setFehler(null);
       queryClient.invalidateQueries({ queryKey: ["portal-angebot", id] });
       queryClient.invalidateQueries({ queryKey: ["portal-angebote"] });
     },
+    onError: meldeFehler,
   });
 
   const pdfMutation = useMutation({
     mutationFn: () => kundenportalApi.angebotPdf(id!),
     onSuccess: openPdfBlob,
+    onError: meldeFehler,
   });
 
   if (!angebot) return <p className="text-center text-ind-ink-3">Lädt…</p>;
@@ -62,9 +70,11 @@ export function PortalAngebotDetailPage() {
           disabled={pdfMutation.isPending}
           className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
         >
-          <FileText size={14} strokeWidth={2} /> PDF anzeigen
+          <FileText size={14} strokeWidth={2} /> {pdfMutation.isPending ? "PDF wird geladen…" : "PDF anzeigen"}
         </button>
       </div>
+
+      {fehler && <p className="text-sm text-red-700 dark:text-red-400">{fehler}</p>}
 
       <div className="border border-ind-line bg-ind-bg p-4">
         <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Positionen</h2>
@@ -106,7 +116,11 @@ export function PortalAngebotDetailPage() {
             Annehmen
           </button>
           <button
-            onClick={() => antwortMutation.mutate("abgelehnt")}
+            onClick={() => {
+              if (window.confirm("Angebot wirklich ablehnen? Der Betrieb wird darüber benachrichtigt.")) {
+                antwortMutation.mutate("abgelehnt");
+              }
+            }}
             disabled={antwortMutation.isPending}
             className="btn-touch flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >

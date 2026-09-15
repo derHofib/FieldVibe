@@ -1,6 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { FileText, Receipt } from "lucide-react";
+import { useState } from "react";
 
+import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
@@ -9,9 +11,12 @@ import { openPdfBlob } from "../../utils/pdf";
 import type { Rechnung } from "../../types";
 
 function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
+  const [fehler, setFehler] = useState<string | null>(null);
   const pdfMutation = useMutation({
     mutationFn: () => kundenportalApi.rechnungPdf(rechnung.id),
     onSuccess: openPdfBlob,
+    onError: (err) =>
+      setFehler(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen."),
   });
 
   return (
@@ -31,12 +36,16 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
         </span>
       </div>
       <button
-        onClick={() => pdfMutation.mutate()}
+        onClick={() => {
+          setFehler(null);
+          pdfMutation.mutate();
+        }}
         disabled={pdfMutation.isPending}
         className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
       >
-        <FileText size={14} strokeWidth={2} /> PDF anzeigen
+        <FileText size={14} strokeWidth={2} /> {pdfMutation.isPending ? "PDF wird geladen…" : "PDF anzeigen"}
       </button>
+      {fehler && <p className="mt-1 text-xs text-red-700 dark:text-red-400">{fehler}</p>}
     </div>
   );
 }
