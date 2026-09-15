@@ -54,6 +54,7 @@ import type {
   MangelStatus,
   MaterialBedarfZweck,
   PartnerFreigabeStatus,
+  TerminStatus,
   TerminWarnung,
   VorgangEvent,
   VorgangStatus,
@@ -70,6 +71,35 @@ const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
   { value: "hoch", label: "Hoch" },
   { value: "kritisch", label: "Kritisch" },
 ];
+
+const SCHWEREGRAD_LABEL: Record<MangelSchweregrad, string> = Object.fromEntries(
+  SCHWEREGRAD_OPTIONEN.map((o) => [o.value, o.label]),
+) as Record<MangelSchweregrad, string>;
+
+// Hervorhebung bei kritisch/hoch statt neutralem border-ind-line -- sonst
+// sieht ein kritischer Mangel unter Zeitdruck optisch identisch zu einem
+// niedrigen aus (siehe ind-warn/ind-bad in docs/DESIGN.md).
+const SCHWEREGRAD_BADGE: Record<MangelSchweregrad, string> = {
+  niedrig: "border-ind-line text-ind-ink-2",
+  mittel: "border-ind-line text-ind-ink-2",
+  hoch: "border-ind-warn text-ind-warn",
+  kritisch: "border-ind-bad text-ind-bad",
+};
+
+const MANGEL_STATUS_LABEL: Record<MangelStatus, string> = {
+  offen: "Offen",
+  in_angebot: "Im Angebot",
+  in_bearbeitung: "In Bearbeitung",
+  behoben: "Behoben",
+  abgelehnt: "Abgelehnt",
+};
+
+const TERMIN_STATUS_LABEL: Record<TerminStatus, string> = {
+  geplant: "Geplant",
+  bestaetigt: "Bestätigt",
+  abgeschlossen: "Abgeschlossen",
+  abgesagt: "Abgesagt",
+};
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -1348,7 +1378,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                       <button
                         onClick={() => anlageEntfernenMutation.mutate(a.id)}
                         disabled={anlageEntfernenMutation.isPending}
-                        className="text-ind-ink-3 hover:text-red-600 dark:hover:text-red-400"
+                        className="relative text-ind-ink-3 before:absolute before:-inset-2.5 hover:text-red-600 dark:hover:text-red-400"
                         aria-label={`${a.bezeichnung} entfernen`}
                       >
                         ✕
@@ -1796,7 +1826,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                         : "border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300"
                     }`}
                   >
-                    {t.status}
+                    {TERMIN_STATUS_LABEL[t.status]}
                   </span>
                   {kannPapierkorbLoeschen && (
                     <button
@@ -1880,12 +1910,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               <div key={m.id} className="border border-ind-line-2 p-2 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-ind-ink-2">{m.beschreibung}</p>
-                  <span className="shrink-0 border border-ind-line px-2 py-0.5 text-xs font-medium text-ind-ink-2">
-                    {m.schweregrad}
+                  <span className={`shrink-0 border px-2 py-0.5 text-xs font-medium ${SCHWEREGRAD_BADGE[m.schweregrad]}`}>
+                    {SCHWEREGRAD_LABEL[m.schweregrad]}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between">
-                  <span className="text-xs text-ind-ink-3">{m.status}</span>
+                  <span className="text-xs text-ind-ink-3">{MANGEL_STATUS_LABEL[m.status]}</span>
                   <div className="flex gap-2">
                     {m.status === "offen" && (
                       <>
