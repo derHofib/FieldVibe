@@ -45,7 +45,7 @@ function PortalEventBubble({ event }: { event: VorgangEvent }) {
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap text-sm text-ind-ink">{event.body}</p>
+        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink">{event.body}</p>
       )}
     </div>
   );

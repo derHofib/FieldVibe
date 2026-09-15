@@ -263,7 +263,7 @@ function EventBubble({
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap text-sm text-ind-ink">
+        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink">
           <MentionText text={event.body} />
         </p>
       )}
@@ -343,7 +343,7 @@ function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clien
       ) : item.kind === "status" ? (
         <p className="text-sm text-ind-ink-2">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
-        <p className="whitespace-pre-wrap text-sm text-ind-ink-2">{item.body}</p>
+        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink-2">{item.body}</p>
       )}
     </div>
   );

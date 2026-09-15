@@ -288,7 +288,7 @@ export function MailClient({ account }: { account: MailAccount }) {
                   className="h-full w-full rounded-lg border border-slate-100 dark:border-stone-800"
                 />
               ) : (
-                <p className="text-sm whitespace-pre-wrap text-ind-ink">{detail.body_text}</p>
+                <p className="text-sm whitespace-pre-wrap break-words text-ind-ink">{detail.body_text}</p>
               )}
             </div>
           </div>

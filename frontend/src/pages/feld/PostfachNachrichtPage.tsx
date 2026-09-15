@@ -94,7 +94,7 @@ export function PostfachNachrichtPage() {
         </div>
       )}
 
-      <p className="text-sm whitespace-pre-wrap text-ind-ink">{detail.body_text}</p>
+      <p className="text-sm whitespace-pre-wrap break-words text-ind-ink">{detail.body_text}</p>
 
       {antwortenOffen ? (
         <div className="-mx-4 border-t border-slate-100 pt-3 dark:border-stone-800">
