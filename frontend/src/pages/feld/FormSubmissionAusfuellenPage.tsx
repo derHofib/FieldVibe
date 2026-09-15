@@ -21,6 +21,7 @@ export function FormSubmissionAusfuellenPage() {
   const queryClient = useQueryClient();
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [fehler, setFehler] = useState<string | null>(null);
+  const [gespeichert, setGespeichert] = useState(false);
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ["form-submission", id],
@@ -67,6 +68,11 @@ export function FormSubmissionAusfuellenPage() {
 
   const saveMutation = useMutation({
     mutationFn: () => formSubmissionsApi.updateValues(id!, values),
+    onSuccess: () => {
+      setFehler(null);
+      setGespeichert(true);
+      window.setTimeout(() => setGespeichert(false), 3000);
+    },
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Speichern fehlgeschlagen"),
   });
 
@@ -157,7 +163,11 @@ export function FormSubmissionAusfuellenPage() {
         />
       )}
 
-      {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+      {fehler ? (
+        <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>
+      ) : (
+        gespeichert && <p className="text-sm text-emerald-700 dark:text-emerald-400">Gespeichert.</p>
+      )}
 
       <button
         onClick={() => pdfMutation.mutate()}
@@ -177,7 +187,11 @@ export function FormSubmissionAusfuellenPage() {
             Speichern
           </button>
           <button
-            onClick={() => abschliessenMutation.mutate()}
+            onClick={() => {
+              if (window.confirm("Formular abschließen? Danach nicht mehr bearbeitbar.")) {
+                abschliessenMutation.mutate();
+              }
+            }}
             disabled={abschliessenMutation.isPending}
             className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium shadow-md disabled:opacity-50"
           >

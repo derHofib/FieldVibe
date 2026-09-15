@@ -3,6 +3,7 @@ import { Bell, CheckCircle2, Clock, Filter, Inbox, List, Map as MapIcon, Message
 import { Suspense, lazy, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { ApiError } from "../../api/client";
 import { kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { EmptyState } from "../../components/EmptyState";
@@ -149,7 +150,13 @@ function FeedCardView({ card }: { card: FeedCard }) {
   const zeigeFertigMelden = card.status === "in_arbeit";
   const zeigeNachfragen = card.status === "wartet_kunde";
   const aktionLaeuft = zuweisenMutation.isPending || statusMutation.isPending;
-  const aktionFehler = zuweisenMutation.isError || statusMutation.isError;
+  const aktionFehlerQuelle = zuweisenMutation.error ?? statusMutation.error;
+  const aktionFehlerText =
+    zuweisenMutation.isError || statusMutation.isError
+      ? aktionFehlerQuelle instanceof ApiError
+        ? aktionFehlerQuelle.message
+        : "Keine Verbindung — bitte erneut versuchen"
+      : null;
 
   return (
     <Blueprint className={`bg-ind-bg ${card.status === "storniert" ? "opacity-60 grayscale" : ""}`}>
@@ -229,7 +236,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
       </button>
       {(zeigeUebernehmen || zeigeStarten || zeigeFertigMelden || zeigeNachfragen) && (
         <div className="flex items-center justify-end gap-1.5 border-t border-ind-line px-3 py-2">
-          {aktionFehler && <span className="mr-auto text-xs text-red-600 dark:text-red-400">Aktion fehlgeschlagen</span>}
+          {aktionFehlerText && <span className="mr-auto text-xs text-red-600 dark:text-red-400">{aktionFehlerText}</span>}
           {zeigeUebernehmen && (
             <button
               onClick={(e) => {
@@ -578,7 +585,20 @@ export function FeedPage() {
           {isLoading ? (
             <SkeletonList count={4} />
           ) : cards.length === 0 ? (
-            <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
+            <EmptyState
+              icon={Inbox}
+              text={aktiveFilterAnzahl > 0 ? "Keine Vorgänge für die aktuellen Filter." : "Keine Vorgänge gefunden."}
+              action={
+                aktiveFilterAnzahl > 0 && (
+                  <button
+                    onClick={() => setFilter((f) => (f.nur_meine ? { nur_meine: f.nur_meine } : LEER_FILTER))}
+                    className="btn-touch btn-industry btn-industry-ghost mt-1 text-xs"
+                  >
+                    Filter zurücksetzen
+                  </button>
+                )
+              }
+            />
           ) : (
             <div className="space-y-5">
               {gruppiereNachFaelligkeit(cards).map(({ gruppe, cards: gruppenCards }) => (

@@ -179,7 +179,8 @@ export function NewVorgangPage() {
         navigate("/feed");
       }
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen."),
   });
 
   async function handleScan(code: string) {
