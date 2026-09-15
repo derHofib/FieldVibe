@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckSquare, KanbanSquare, Link2, ListTree, Plus, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
@@ -73,6 +73,17 @@ export function OfficeProjektePage() {
       queryClient.invalidateQueries({ queryKey: ["projekt-spalten", aktivesProjekt] });
     },
   });
+  // `spalteErstellen.isPending` allein reicht nicht als Doppel-Submit-Schutz:
+  // zwei sehr schnelle Klicks koennen beide feuern, bevor React nach dem
+  // ersten mutate()-Aufruf neu gerendert hat und `disabled` tatsaechlich
+  // greift. Ref ist synchron, unabhaengig vom Render-Zyklus.
+  const spalteAnlegenLaeuft = useRef(false);
+  const spalteAnlegen = () => {
+    const name = neueSpalteName?.trim();
+    if (!name || spalteAnlegenLaeuft.current) return;
+    spalteAnlegenLaeuft.current = true;
+    spalteErstellen.mutate(name, { onSettled: () => (spalteAnlegenLaeuft.current = false) });
+  };
 
   const spalteVerschieben = useMutation({
     mutationFn: ({ id, spalte_id }: { id: string; spalte_id: string }) =>
@@ -309,17 +320,12 @@ export function OfficeProjektePage() {
                   value={neueSpalteName}
                   disabled={spalteErstellen.isPending}
                   onChange={(e) => setNeueSpalteName(e.target.value)}
-                  onKeyDown={(e) =>
-                    e.key === "Enter" &&
-                    neueSpalteName.trim() &&
-                    !spalteErstellen.isPending &&
-                    spalteErstellen.mutate(neueSpalteName.trim())
-                  }
+                  onKeyDown={(e) => e.key === "Enter" && spalteAnlegen()}
                   placeholder="Name der Spalte"
                   className="w-full border-none bg-transparent px-1 py-1 text-sm outline-none disabled:opacity-50 dark:text-stone-100"
                 />
                 <button
-                  onClick={() => neueSpalteName.trim() && spalteErstellen.mutate(neueSpalteName.trim())}
+                  onClick={spalteAnlegen}
                   disabled={spalteErstellen.isPending}
                   className="shrink-0 rounded-md p-1 text-slate-400 hover:text-slate-700 disabled:opacity-50 dark:text-stone-500 dark:hover:text-stone-200"
                 >

@@ -649,6 +649,16 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     },
     onError: meldeAktionsFehler,
   });
+  // `mangelMutation.isPending` allein reicht nicht als Doppel-Submit-Schutz --
+  // zwei sehr schnelle Klicks koennen beide feuern, bevor React nach dem
+  // ersten mutate()-Aufruf neu gerendert hat (disabled greift dann zu spaet).
+  // Ref ist synchron, unabhaengig vom Render-Zyklus.
+  const mangelErfassenLaeuft = useRef(false);
+  const mangelErfassen = () => {
+    if (!mangelBeschreibung.trim() || mangelErfassenLaeuft.current) return;
+    mangelErfassenLaeuft.current = true;
+    mangelMutation.mutate(undefined, { onSettled: () => (mangelErfassenLaeuft.current = false) });
+  };
 
   const mangelStatusMutation = useMutation({
     mutationFn: ({ mangelId, status }: { mangelId: string; status: MangelStatus }) =>
@@ -1894,7 +1904,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             </select>
             <button
               disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
-              onClick={() => mangelMutation.mutate()}
+              onClick={mangelErfassen}
               className="btn-touch btn-industry btn-industry-primary w-full px-3 py-1.5 text-sm"
             >
               Erfassen
