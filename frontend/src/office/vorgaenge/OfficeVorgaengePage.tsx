@@ -285,7 +285,17 @@ export function OfficeVorgaengePage() {
       {isLoading ? (
         <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : vorgaenge.length === 0 ? (
-        <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
+        <EmptyState
+          icon={Inbox}
+          text={aktiveFilterAnzahl > 0 ? "Keine Vorgänge für die aktuellen Filter." : "Keine Vorgänge gefunden."}
+          action={
+            aktiveFilterAnzahl > 0 && (
+              <button onClick={() => setFilter(LEER_FILTER)} className="btn-touch btn-industry btn-industry-ghost mt-1 text-xs">
+                Filter zurücksetzen
+              </button>
+            )
+          }
+        />
       ) : ansicht === "liste" ? (
         <VorgaengeListe
           vorgaenge={vorgaenge}

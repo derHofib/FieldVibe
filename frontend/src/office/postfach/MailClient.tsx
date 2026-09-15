@@ -169,7 +169,17 @@ export function MailClient({ account }: { account: MailAccount }) {
           {nachrichtenLaden ? (
             <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
           ) : nachrichten.length === 0 ? (
-            <EmptyState icon={Inbox} text="Keine Nachrichten." />
+            <EmptyState
+              icon={Inbox}
+              text={suche ? `Keine Treffer für „${suche}“.` : "Keine Nachrichten."}
+              action={
+                suche && (
+                  <button onClick={() => setSuche("")} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+                    Suche zurücksetzen
+                  </button>
+                )
+              }
+            />
           ) : (
             nachrichten.map((n) => (
               <button
