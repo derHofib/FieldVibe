@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, ListChecks } from "lucide-react";
+import { Ban, FileText, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { ApiError } from "../../api/client";
 import { kundenApi, leistungsverzeichnisApi, rechnungenApi } from "../../api/endpoints";
 import type { RechnungPositionVorschlag } from "../../types";
 import { EmailSection } from "../../components/EmailSection";
+import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
@@ -126,10 +128,15 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     },
   });
 
-  const { data: rechnung } = useQuery({
+  const {
+    data: rechnung,
+    isError: rechnungIstFehler,
+    error: rechnungFehler,
+  } = useQuery({
     queryKey: ["rechnung", id],
     queryFn: () => rechnungenApi.get(id!),
     enabled: !!id,
+    retry: false,
   });
   const { data: kunde } = useQuery({
     queryKey: ["kunde", rechnung?.kunde_id],
@@ -210,6 +217,23 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     },
   });
 
+  if (rechnungIstFehler) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+          ← Zurück
+        </button>
+        <EmptyState
+          icon={Ban}
+          text={
+            rechnungFehler instanceof ApiError && rechnungFehler.status === 404
+              ? "Rechnung nicht gefunden oder kein Zugriff."
+              : "Rechnung konnte nicht geladen werden."
+          }
+        />
+      </div>
+    );
+  }
   if (!rechnung) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   return (

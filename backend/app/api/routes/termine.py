@@ -20,6 +20,8 @@ from app.schemas.termin import TerminCreate, TerminCreateResult, TerminRead, Ter
 from app.services import papierkorb_service
 from app.services.dispo_service import compute_warnungen
 from app.services.event_bus import event_bus
+from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
+from app.services.zuweisung_service import assigned_kunde_ids
 
 router = APIRouter(
     prefix="/api/termine",
@@ -50,6 +52,22 @@ async def _load_vorgang_and_techniker(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Techniker nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    # Ohne diese Pruefung konnte ein Termin fuer einen auf zugewiesene Kunden
+    # beschraenkten Techniker angelegt werden, dessen Account aber gar keinen
+    # Zugriff auf den Kunden dieses Vorgangs hat (siehe zuweisung_service.py)
+    # -- der Techniker sah dann einen Termin im Feed, dessen Vorgang-Detail
+    # fuer ihn 404 liefert (Sackgasse). Frueh mit klarer Meldung ablehnen,
+    # statt diesen kaputten Zustand ueberhaupt erst entstehen zu lassen.
+    if await ist_auf_zugewiesene_kunden_beschraenkt(
+        session, role=techniker.role, account_typ_id=techniker.account_typ_id
+    ) and vorgang.kunde_id not in await assigned_kunde_ids(session, techniker.id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"{techniker.name} ist dem Kunden dieses Vorgangs nicht zugewiesen -- "
+                "zuerst über Kundenverwaltung → Techniker-Zuweisung zuordnen."
+            ),
         )
     return vorgang
 

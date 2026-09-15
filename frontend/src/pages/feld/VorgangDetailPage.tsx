@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, Paperclip, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
+import { AlertTriangle, Ban, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, Paperclip, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -28,6 +28,7 @@ import {
   zeiterfassungApi,
 } from "../../api/endpoints";
 import { EmailSection } from "../../components/EmailSection";
+import { EmptyState } from "../../components/EmptyState";
 import { FormularAbschnitt } from "../../components/FormularAbschnitt";
 import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -437,10 +438,15 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const kannPartnerVerwalten =
     istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "bearbeiten");
 
-  const { data: vorgang } = useQuery({
+  const {
+    data: vorgang,
+    isError: vorgangIstFehler,
+    error: vorgangFehler,
+  } = useQuery({
     queryKey: ["vorgang", id],
     queryFn: () => vorgaengeApi.get(id!),
     enabled: !!id,
+    retry: false,
   });
   const { data: kunde } = useQuery({
     queryKey: ["kunde", vorgang?.kunde_id],
@@ -1046,6 +1052,23 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     onError: meldeAktionsFehler,
   });
 
+  if (vorgangIstFehler) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+          ← Zurück
+        </button>
+        <EmptyState
+          icon={Ban}
+          text={
+            vorgangFehler instanceof ApiError && vorgangFehler.status === 404
+              ? "Vorgang nicht gefunden oder kein Zugriff."
+              : "Vorgang konnte nicht geladen werden."
+          }
+        />
+      </div>
+    );
+  }
   if (!vorgang) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
