@@ -54,11 +54,22 @@ export function PortalRegistrierenPage() {
             </div>
           )}
 
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
-          <input required value={name} onChange={(e) => setName(e.target.value)} className="input-industry btn-touch mb-4" />
-
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Passwort</label>
+          <label htmlFor="portal-register-name" className="mb-1 block text-sm font-medium text-ind-ink-2">
+            Name
+          </label>
           <input
+            id="portal-register-name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="input-industry btn-touch mb-4"
+          />
+
+          <label htmlFor="portal-register-password" className="mb-1 block text-sm font-medium text-ind-ink-2">
+            Passwort
+          </label>
+          <input
+            id="portal-register-password"
             type="password"
             required
             minLength={10}

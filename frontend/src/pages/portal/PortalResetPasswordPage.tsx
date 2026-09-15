@@ -60,8 +60,11 @@ export function PortalResetPasswordPage() {
                 {error}
               </div>
             )}
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Neues Passwort</label>
+            <label htmlFor="portal-reset-password" className="mb-1 block text-sm font-medium text-ind-ink-2">
+              Neues Passwort
+            </label>
             <input
+              id="portal-reset-password"
               type="password"
               required
               minLength={10}

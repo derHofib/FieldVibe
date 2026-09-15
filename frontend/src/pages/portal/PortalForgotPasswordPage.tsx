@@ -40,8 +40,11 @@ export function PortalForgotPasswordPage() {
           </p>
         ) : (
           <form onSubmit={handleSubmit}>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">E-Mail</label>
+            <label htmlFor="portal-forgot-email" className="mb-1 block text-sm font-medium text-ind-ink-2">
+              E-Mail
+            </label>
             <input
+              id="portal-forgot-email"
               type="email"
               required
               value={email}

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
+import { SkeletonCard } from "../../components/Skeleton";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { VorgangEvent, VorgangStatus } from "../../types";
 
@@ -65,7 +66,7 @@ export function PortalVorgangDetailPage() {
     enabled: !!id,
   });
 
-  if (!vorgang) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+  if (!vorgang) return <SkeletonCard />;
 
   const eventsChronological = [...(events ?? [])].reverse();
 

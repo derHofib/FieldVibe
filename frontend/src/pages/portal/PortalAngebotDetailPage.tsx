@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
+import { SkeletonCard } from "../../components/Skeleton";
 import { openPdfBlob } from "../../utils/pdf";
 import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_ERKLAERUNG, ANGEBOT_STATUS_LABEL } from "./status";
 
@@ -38,7 +39,7 @@ export function PortalAngebotDetailPage() {
     onError: meldeFehler,
   });
 
-  if (!angebot) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+  if (!angebot) return <SkeletonCard />;
 
   return (
     <div className="space-y-4">
