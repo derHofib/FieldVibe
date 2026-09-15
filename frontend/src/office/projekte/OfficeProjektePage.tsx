@@ -211,55 +211,72 @@ export function OfficeProjektePage() {
                           e.dataTransfer.setData("text/plain", a.id);
                           e.dataTransfer.effectAllowed = "move";
                         }}
-                        onClick={() => setPanel({ aufgabe: a })}
-                        className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 text-left dark:bg-stone-900 ${
+                        className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 dark:bg-stone-900 ${
                           ueberfaellig ? "border-rose-300 dark:border-rose-500/40" : "border-ind-line"
                         }`}
                       >
-                        <p className="text-[13px] font-semibold text-ind-ink">{a.titel}</p>
-                        {a.vorgang_vorgangsnummer && (
-                          <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-sky-600 dark:text-sky-300">
-                            <Link2 size={11} strokeWidth={2} />
-                            {a.vorgang_vorgangsnummer}
-                          </p>
-                        )}
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
-                            {PRIORITAET_LABEL[a.prioritaet]}
-                          </span>
-                          {ueberfaellig && a.faelligkeit_am && (
-                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
-                              {tageSeit(a.faelligkeit_am)} Tage überfällig
-                            </span>
+                        <button type="button" onClick={() => setPanel({ aufgabe: a })} className="block w-full text-left">
+                          <p className="text-[13px] font-semibold text-ind-ink">{a.titel}</p>
+                          {a.vorgang_vorgangsnummer && (
+                            <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-sky-600 dark:text-sky-300">
+                              <Link2 size={11} strokeWidth={2} />
+                              {a.vorgang_vorgangsnummer}
+                            </p>
                           )}
-                          {checklisteGesamt > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
-                              <CheckSquare size={11} strokeWidth={2} />
-                              {checklisteErledigt}/{checklisteGesamt}
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
+                              {PRIORITAET_LABEL[a.prioritaet]}
                             </span>
-                          )}
-                          {!!a.unteraufgaben_gesamt && (
-                            <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
-                              <ListTree size={11} strokeWidth={2} />
-                              {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-between gap-2">
-                          <span />
-                          {a.zugewiesener_name && (
-                            <span
-                              title={a.zugewiesener_name}
-                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
-                            >
-                              {a.zugewiesener_name
-                                .split(" ")
-                                .map((t) => t[0])
-                                .slice(0, 2)
-                                .join("")}
-                            </span>
-                          )}
-                        </div>
+                            {ueberfaellig && a.faelligkeit_am && (
+                              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
+                                {tageSeit(a.faelligkeit_am)} Tage überfällig
+                              </span>
+                            )}
+                            {checklisteGesamt > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
+                                <CheckSquare size={11} strokeWidth={2} />
+                                {checklisteErledigt}/{checklisteGesamt}
+                              </span>
+                            )}
+                            {!!a.unteraufgaben_gesamt && (
+                              <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
+                                <ListTree size={11} strokeWidth={2} />
+                                {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-between gap-2">
+                            <span />
+                            {a.zugewiesener_name && (
+                              <span
+                                title={a.zugewiesener_name}
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+                              >
+                                {a.zugewiesener_name
+                                  .split(" ")
+                                  .map((t) => t[0])
+                                  .slice(0, 2)
+                                  .join("")}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                        {/* Tastatur-/Screenreader-Alternative zum Drag&Drop-Spaltenwechsel. */}
+                        <label htmlFor={`projekt-spalte-${a.id}`} className="sr-only">
+                          Spalte von „{a.titel}“ ändern
+                        </label>
+                        <select
+                          id={`projekt-spalte-${a.id}`}
+                          value={a.spalte_id ?? ""}
+                          onChange={(e) => handleDrop(e.target.value, a.id)}
+                          className="mt-1.5 w-full border border-ind-line bg-transparent px-1 py-0.5 text-[10px] text-ind-ink-3"
+                        >
+                          {(spalten ?? []).map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     );
                   })}

@@ -106,43 +106,66 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                         e.dataTransfer.setData("text/plain", v.id);
                         e.dataTransfer.effectAllowed = "move";
                       }}
-                      onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                      className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 text-left dark:bg-stone-900 ${
+                      className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 dark:bg-stone-900 ${
                         ueberfaellig
                           ? "border-rose-300 dark:border-rose-500/40"
                           : "border-ind-line"
                       }`}
                     >
-                      <p className="text-[10.5px] font-bold text-ind-ink-3">
-                        {v.vorgangsnummer}
-                      </p>
-                      <p className="mt-0.5 text-[13px] font-semibold text-ind-ink">
-                        {v.titel}
-                      </p>
-                      <p className="mt-2 truncate text-[11.5px] text-ind-ink-3">
-                        {v.kunde_name}
-                      </p>
-                      <div className="mt-1.5 flex items-center justify-between gap-2">
-                        {ueberfaellig ? (
-                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                            {tageSeit(v.faelligkeit_am!)} Tage
-                          </span>
-                        ) : (
-                          <span />
-                        )}
-                        {v.zugewiesener_name && (
-                          <span
-                            title={v.zugewiesener_name}
-                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
-                          >
-                            {v.zugewiesener_name
-                              .split(" ")
-                              .map((t) => t[0])
-                              .slice(0, 2)
-                              .join("")}
-                          </span>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/vorgaenge/${v.id}`)}
+                        className="block w-full text-left"
+                      >
+                        <p className="text-[10.5px] font-bold text-ind-ink-3">
+                          {v.vorgangsnummer}
+                        </p>
+                        <p className="mt-0.5 text-[13px] font-semibold text-ind-ink">
+                          {v.titel}
+                        </p>
+                        <p className="mt-2 truncate text-[11.5px] text-ind-ink-3">
+                          {v.kunde_name}
+                        </p>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                          {ueberfaellig ? (
+                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                              {tageSeit(v.faelligkeit_am!)} Tage
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                          {v.zugewiesener_name && (
+                            <span
+                              title={v.zugewiesener_name}
+                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+                            >
+                              {v.zugewiesener_name
+                                .split(" ")
+                                .map((t) => t[0])
+                                .slice(0, 2)
+                                .join("")}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      {/* Tastatur-/Screenreader-Alternative zum Drag&Drop-Statuswechsel
+                          -- die Karte selbst ist nur per Maus zwischen Spalten
+                          verschiebbar. */}
+                      <label htmlFor={`kanban-status-${v.id}`} className="sr-only">
+                        Status von „{v.titel}“ ändern
+                      </label>
+                      <select
+                        id={`kanban-status-${v.id}`}
+                        value={effektiverStatus(v)}
+                        onChange={(e) => handleDrop(e.target.value as VorgangStatus, v.id)}
+                        className="mt-1.5 w-full border border-ind-line bg-transparent px-1 py-0.5 text-[10px] text-ind-ink-3"
+                      >
+                        {KANBAN_SPALTEN.map((s) => (
+                          <option key={s} value={s}>
+                            {STATUS_LABEL[s]}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   );
                 })}
