@@ -290,14 +290,21 @@ export function OfficeProjektePage() {
                 <input
                   autoFocus
                   value={neueSpalteName}
+                  disabled={spalteErstellen.isPending}
                   onChange={(e) => setNeueSpalteName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && neueSpalteName.trim() && spalteErstellen.mutate(neueSpalteName.trim())}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    neueSpalteName.trim() &&
+                    !spalteErstellen.isPending &&
+                    spalteErstellen.mutate(neueSpalteName.trim())
+                  }
                   placeholder="Name der Spalte"
-                  className="w-full border-none bg-transparent px-1 py-1 text-sm outline-none dark:text-stone-100"
+                  className="w-full border-none bg-transparent px-1 py-1 text-sm outline-none disabled:opacity-50 dark:text-stone-100"
                 />
                 <button
                   onClick={() => neueSpalteName.trim() && spalteErstellen.mutate(neueSpalteName.trim())}
-                  className="shrink-0 rounded-md p-1 text-slate-400 hover:text-slate-700 dark:text-stone-500 dark:hover:text-stone-200"
+                  disabled={spalteErstellen.isPending}
+                  className="shrink-0 rounded-md p-1 text-slate-400 hover:text-slate-700 disabled:opacity-50 dark:text-stone-500 dark:hover:text-stone-200"
                 >
                   <Plus size={14} strokeWidth={2} />
                 </button>

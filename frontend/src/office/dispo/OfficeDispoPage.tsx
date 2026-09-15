@@ -15,6 +15,7 @@ import { useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 import { useNavigate } from "react-router-dom";
 
+import { ApiError } from "../../api/client";
 import { termineApi, usersApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
@@ -96,6 +97,9 @@ export function OfficeDispoPage() {
   const queryClient = useQueryClient();
   const [tag, setTag] = useState(() => new Date());
   const [warnungen, setWarnungen] = useState<TerminWarnung[]>([]);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const meldeFehler = (err: unknown) =>
+    setFehler(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.");
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -132,6 +136,7 @@ export function OfficeDispoPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeFehler,
   });
 
   const updateMutation = useMutation({
@@ -141,6 +146,7 @@ export function OfficeDispoPage() {
       setWarnungen(result.warnungen);
       queryClient.invalidateQueries({ queryKey: ["termine"] });
     },
+    onError: meldeFehler,
   });
 
   const deleteMutation = useMutation({
@@ -150,6 +156,7 @@ export function OfficeDispoPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeFehler,
   });
 
   const technikerIndex = new Map(technikers.map((t, i) => [t.id, i]));
@@ -217,6 +224,17 @@ export function OfficeDispoPage() {
   return (
     <div>
       <SeitenKopf titel="Dispo" />
+
+      {fehler && (
+        <div className="mb-4 flex items-center justify-between gap-2 border border-ind-bad px-3 py-2 text-sm text-ind-bad">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} strokeWidth={1.5} /> {fehler}
+          </span>
+          <button onClick={() => setFehler(null)} className="text-xs underline">
+            Ausblenden
+          </button>
+        </div>
+      )}
 
       {warnungen.length > 0 && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">

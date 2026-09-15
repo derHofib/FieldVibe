@@ -22,23 +22,30 @@ function relativesDatum(iso: string | null): string {
 
 function AnhangZeile({ messageId, anhang }: { messageId: string; anhang: MailAttachment }) {
   const [laedt, setLaedt] = useState(false);
+  const [fehler, setFehler] = useState(false);
   return (
-    <button
-      disabled={laedt}
-      onClick={async () => {
-        setLaedt(true);
-        try {
-          const { url } = await mailApi.attachmentUrl(messageId, anhang.id);
-          window.open(url, "_blank", "noopener,noreferrer");
-        } finally {
-          setLaedt(false);
-        }
-      }}
-      className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
-    >
-      {laedt ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} strokeWidth={2} />}
-      {anhang.dateiname}
-    </button>
+    <div className="flex flex-col items-start gap-1">
+      <button
+        disabled={laedt}
+        onClick={async () => {
+          setLaedt(true);
+          setFehler(false);
+          try {
+            const { url } = await mailApi.attachmentUrl(messageId, anhang.id);
+            window.open(url, "_blank", "noopener,noreferrer");
+          } catch {
+            setFehler(true);
+          } finally {
+            setLaedt(false);
+          }
+        }}
+        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+      >
+        {laedt ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} strokeWidth={2} />}
+        {anhang.dateiname}
+      </button>
+      {fehler && <span className="text-xs text-red-600 dark:text-red-400">Anhang konnte nicht geöffnet werden.</span>}
+    </div>
   );
 }
 
@@ -48,6 +55,7 @@ export function MailClient({ account }: { account: MailAccount }) {
   const [aktiveNachricht, setAktiveNachricht] = useState<string | null>(null);
   const [suche, setSuche] = useState("");
   const [compose, setCompose] = useState<ComposeModus | null>(null);
+  const [gesendetHinweis, setGesendetHinweis] = useState(false);
 
   const { data: ordner } = useQuery({
     queryKey: ["mail-folders", account.id],
@@ -152,6 +160,11 @@ export function MailClient({ account }: { account: MailAccount }) {
             className="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-2 pl-7 text-xs text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
           />
         </div>
+        {gesendetHinweis && (
+          <p className="border-b border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+            Nachricht gesendet.
+          </p>
+        )}
         <div className="flex-1 overflow-y-auto">
           {nachrichtenLaden ? (
             <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
@@ -204,7 +217,15 @@ export function MailClient({ account }: { account: MailAccount }) {
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900">
         {compose ? (
-          <ComposePanel modus={compose} onGesendet={() => setCompose(null)} onAbbrechen={() => setCompose(null)} />
+          <ComposePanel
+            modus={compose}
+            onGesendet={() => {
+              setCompose(null);
+              setGesendetHinweis(true);
+              window.setTimeout(() => setGesendetHinweis(false), 3000);
+            }}
+            onAbbrechen={() => setCompose(null)}
+          />
         ) : !detail ? (
           <EmptyState icon={Inbox} text="Nachricht auswählen." className="h-full justify-center" />
         ) : (
