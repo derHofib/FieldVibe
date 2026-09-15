@@ -203,6 +203,10 @@ export function NewVorgangPage() {
       setError("Bitte einen Kunden auswählen");
       return;
     }
+    if (!titel.trim()) {
+      setError("Bitte einen Titel eingeben");
+      return;
+    }
     createMutation.mutate();
   }
 
