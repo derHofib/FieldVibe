@@ -264,6 +264,10 @@ body {
   opacity: 0.45;
   cursor: not-allowed;
 }
+.btn-industry:focus-visible {
+  outline: 2px solid var(--color-ind-acc);
+  outline-offset: 1px;
+}
 .btn-industry-primary {
   background: var(--color-ind-btn-bg);
   border-color: var(--color-ind-btn-bg);
