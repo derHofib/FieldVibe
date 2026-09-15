@@ -116,7 +116,7 @@ export function MailClient({ account }: { account: MailAccount }) {
   }, [detail]);
 
   return (
-    <div className="grid h-[calc(100vh-7.5rem)] grid-cols-[160px_300px_1fr] gap-3">
+    <div className="grid h-[calc(100vh-7.5rem)] grid-cols-[minmax(120px,160px)_minmax(220px,300px)_minmax(280px,1fr)] gap-3">
       <div className="overflow-y-auto rounded-xl border border-slate-200 bg-white py-2 dark:border-stone-800 dark:bg-stone-900">
         {(ordner ?? []).map((o) => (
           <button

@@ -35,7 +35,7 @@ export function VorgaengeListe({
   const gruppen = gruppiereNachFaelligkeit(vorgaenge);
 
   return (
-    <div className="grid grid-cols-[minmax(280px,340px)_1fr] gap-4">
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(280px,340px)_1fr]">
       <Karte className="max-h-[calc(100vh-13rem)] overflow-y-auto">
         {gruppen.map(({ gruppe, cards }) => (
           <div key={gruppe}>
@@ -89,7 +89,7 @@ export function VorgaengeListe({
 
       <Karte className="max-h-[calc(100vh-13rem)] overflow-y-auto p-4">
         {aktiv ? (
-          <>
+          <div className="mx-auto max-w-3xl">
             <div className="mb-3 flex justify-end">
               <button
                 onClick={() => navigate(`/vorgaenge/${aktiv}`)}
@@ -100,7 +100,7 @@ export function VorgaengeListe({
               </button>
             </div>
             <VorgangDetailPage id={aktiv} />
-          </>
+          </div>
         ) : (
           <p className="py-10 text-center text-sm text-ind-ink-3">
             Links einen Vorgang auswählen.
