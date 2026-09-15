@@ -6,14 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
 import { openPdfBlob } from "../../utils/pdf";
-import type { AngebotStatus } from "../../types";
-
-const STATUS_LABEL: Record<AngebotStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  angenommen: "Angenommen",
-  abgelehnt: "Abgelehnt",
-};
+import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_ERKLAERUNG, ANGEBOT_STATUS_LABEL } from "./status";
 
 export function PortalAngebotDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,11 +48,12 @@ export function PortalAngebotDetailPage() {
 
       <div className="border border-ind-line bg-ind-bg p-4">
         <div className="flex items-start justify-between">
-          <div className="text-xs text-ind-ink-3">{angebot.angebotsnummer}</div>
-          <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
-            {STATUS_LABEL[angebot.status]}
+          <div className="text-xs text-ind-ink-3">Angebot Nr. {angebot.angebotsnummer}</div>
+          <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[angebot.status]}`}>
+            {ANGEBOT_STATUS_LABEL[angebot.status]}
           </span>
         </div>
+        <p className="mt-1 text-xs text-ind-ink-3">{ANGEBOT_STATUS_ERKLAERUNG[angebot.status]}</p>
         {angebot.gueltig_bis && (
           <p className="mt-1 text-xs text-ind-ink-3">
             Gültig bis {new Date(angebot.gueltig_bis).toLocaleDateString("de-DE")}
