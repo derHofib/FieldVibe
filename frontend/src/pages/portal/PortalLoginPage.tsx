@@ -42,7 +42,11 @@ export function PortalLoginPage() {
       await login(email, password);
       navigate("/portal/vorgaenge", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Anmeldung fehlgeschlagen");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen oder \"Passwort vergessen?\" unten nutzen.",
+      );
     } finally {
       setSubmitting(false);
     }

@@ -280,7 +280,12 @@ export function PortalAnfragenPage() {
                 <p className="mt-1 text-sm text-ind-ink-3">{a.beschreibung}</p>
               )}
               {a.ablehnungsgrund && (
-                <p className="mt-1 text-xs text-ind-ink-3">Grund: {a.ablehnungsgrund}</p>
+                <>
+                  <p className="mt-1 text-xs text-ind-ink-3">Grund: {a.ablehnungsgrund}</p>
+                  <p className="mt-1 text-xs text-ind-ink-3">
+                    Bei Fragen wenden Sie sich gerne direkt an uns, oder stellen Sie eine neue Anfrage.
+                  </p>
+                </>
               )}
             </div>
           ))}

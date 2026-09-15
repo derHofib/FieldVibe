@@ -34,9 +34,12 @@ export function PortalRegistrierenPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-ind-bg p-4">
       <Blueprint className="w-full max-w-sm bg-ind-bg p-8">
-        <h1 className="mb-6 font-heading text-xl font-semibold uppercase tracking-wide text-ind-ink">
+        <h1 className="mb-2 font-heading text-xl font-semibold uppercase tracking-wide text-ind-ink">
           Kunden<span className="text-ind-acc-txt">portal</span> — Zugang einrichten
         </h1>
+        <p className="mb-6 text-sm text-ind-ink-3">
+          Mit diesem Zugang sehen Sie jederzeit den Status Ihrer Aufträge, Angebote und Rechnungen.
+        </p>
 
         {!token && (
           <p className="mb-4 border border-red-500/40 px-3 py-2 text-sm text-red-600 dark:text-red-400">
@@ -61,8 +64,9 @@ export function PortalRegistrierenPage() {
             minLength={10}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input-industry btn-touch mb-6"
+            className="input-industry btn-touch mb-1"
           />
+          <p className="mb-6 text-xs text-ind-ink-3">Mindestens 10 Zeichen.</p>
 
           <button
             type="submit"

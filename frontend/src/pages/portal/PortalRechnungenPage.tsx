@@ -6,12 +6,13 @@ import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
-import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
+import { RECHNUNG_STATUS_LABEL, istRechnungUeberfaellig } from "../../utils/buchhaltung";
 import { openPdfBlob } from "../../utils/pdf";
 import type { Rechnung } from "../../types";
 
 function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
   const [fehler, setFehler] = useState<string | null>(null);
+  const ueberfaellig = istRechnungUeberfaellig(rechnung);
   const pdfMutation = useMutation({
     mutationFn: () => kundenportalApi.rechnungPdf(rechnung.id),
     onSuccess: openPdfBlob,
@@ -23,16 +24,23 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
     <div className="border border-ind-line bg-ind-bg p-4">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-ind-ink-3">{rechnung.rechnungsnummer}</div>
+          <div className="text-xs text-ind-ink-3">Rechnung Nr. {rechnung.rechnungsnummer}</div>
           <div className="font-medium text-ind-ink">{rechnung.betrag_brutto} EUR</div>
           {rechnung.faellig_am && (
-            <div className="text-xs text-ind-ink-3">
-              Fällig am {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
+            <div className={`text-xs ${ueberfaellig ? "font-medium text-ind-bad" : "text-ind-ink-3"}`}>
+              {ueberfaellig ? "Überfällig seit " : "Fällig am "}
+              {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
             </div>
           )}
         </div>
-        <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
-          {RECHNUNG_STATUS_LABEL[rechnung.status]}
+        <span
+          className={
+            ueberfaellig
+              ? "border border-ind-bad px-2 py-1 text-xs font-semibold text-ind-bad"
+              : "border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2"
+          }
+        >
+          {ueberfaellig ? "Überfällig" : RECHNUNG_STATUS_LABEL[rechnung.status]}
         </span>
       </div>
       <button

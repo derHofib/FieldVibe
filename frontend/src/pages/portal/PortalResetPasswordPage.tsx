@@ -67,8 +67,9 @@ export function PortalResetPasswordPage() {
               minLength={10}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-industry btn-touch mb-4"
+              className="input-industry btn-touch mb-1"
             />
+            <p className="mb-4 text-xs text-ind-ink-3">Mindestens 10 Zeichen.</p>
             <button
               type="submit"
               disabled={submitting || !token}
