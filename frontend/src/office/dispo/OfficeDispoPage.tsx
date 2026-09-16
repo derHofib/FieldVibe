@@ -238,7 +238,7 @@ export function OfficeDispoPage() {
       )}
 
       {warnungen.length > 0 && (
-        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+        <div className="mb-4 border border-ind-warn p-3 text-sm text-ind-warn">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -483,10 +483,10 @@ export function OfficeDispoPage() {
                             <button
                               onClick={() => setBearbeitenId(termin.id)}
                               title={termin.titel}
-                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden rounded-md px-2 text-left text-xs shadow-xs ${
+                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border border-ind-line px-2 text-left text-xs ${
                                 abgesagt
-                                  ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
-                                  : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+                                  ? "text-ind-ink-3 line-through"
+                                  : "bg-ind-hover text-ind-ink"
                               }`}
                             >
                               <span className="truncate font-semibold">{termin.titel}</span>

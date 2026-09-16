@@ -43,7 +43,7 @@ function LinkKopierenButton({ link }: { link: string }) {
         setKopiert(true);
         setTimeout(() => setKopiert(false), 1500);
       }}
-      className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+      className="btn-touch btn-industry btn-industry-secondary"
     >
       {kopiert ? "Kopiert ✓" : "Link kopieren"}
     </button>
@@ -249,7 +249,7 @@ export function UsersPage() {
               ) : (
                 <Link
                   to="/account-typen"
-                  className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400"
+                  className="text-sm font-medium text-ind-acc-txt hover:underline"
                 >
                   Noch keine Account-Typen — jetzt anlegen →
                 </Link>
@@ -279,14 +279,14 @@ export function UsersPage() {
           <button
             type="submit"
             disabled={createMutation.isPending || einladenMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+            className="btn-touch btn-industry btn-industry-primary"
           >
             {kannEingeladenWerden ? "Einladen" : "Anlegen"}
           </button>
         </form>
         {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
         {letzteEinladung && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-cyan-50 px-4 py-3 text-sm text-cyan-900 dark:bg-cyan-500/10 dark:text-cyan-200">
+          <div className="mt-3 flex flex-wrap items-center gap-3 border border-green-400 px-4 py-3 text-sm text-green-700 dark:border-green-600 dark:text-green-300">
             <span>
               Einladung an <strong>{letzteEinladung.email}</strong> verschickt.
             </span>
@@ -300,8 +300,8 @@ export function UsersPage() {
       {einladungen && einladungen.length > 0 && (
         <section>
           <h2 className="mb-4 text-lg font-bold text-ind-ink">Offene Einladungen</h2>
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
+          <table className="w-full border border-ind-line bg-ind-bg text-left">
+            <thead className="text-sm text-ind-ink-3">
               <tr>
                 <th className="px-4 py-3">E-Mail</th>
                 <th className="px-4 py-3">Rolle</th>
@@ -309,7 +309,7 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
+            <tbody className="divide-y divide-ind-line text-sm">
               {einladungen
                 .filter((e) => e.status === "offen")
                 .map((e) => (
@@ -318,10 +318,10 @@ export function UsersPage() {
                     <td className="px-4 py-3 text-ind-ink-2">{einladungRolleLabel(e)}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        className={`border px-2 py-0.5 text-xs font-semibold ${
                           e.abgelaufen
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
-                            : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-400"
+                            ? "border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300"
+                            : "border-ind-line text-ind-ink-3"
                         }`}
                       >
                         {e.abgelaufen ? "Abgelaufen" : "Offen"}
@@ -332,7 +332,7 @@ export function UsersPage() {
                         {e.registrierungslink && <LinkKopierenButton link={e.registrierungslink} />}
                         <button
                           onClick={() => resendMutation.mutate(e.id)}
-                          className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                          className="btn-touch btn-industry btn-industry-secondary"
                         >
                           Erneut senden
                         </button>
@@ -342,7 +342,7 @@ export function UsersPage() {
                               revokeMutation.mutate(e.id);
                             }
                           }}
-                          className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                          className="btn-touch border border-red-400 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
                         >
                           Widerrufen
                         </button>
@@ -361,8 +361,8 @@ export function UsersPage() {
         {isLoading ? (
           <p className="text-ind-ink-3">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
+          <table className="w-full border border-ind-line bg-ind-bg text-left">
+            <thead className="text-sm text-ind-ink-3">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">E-Mail</th>
@@ -372,7 +372,7 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
+            <tbody className="divide-y divide-ind-line text-sm">
               {users?.map((u) => (
                 <tr key={u.id}>
                   <td className="px-4 py-3 font-medium text-ind-ink">{u.name}</td>
@@ -387,10 +387,10 @@ export function UsersPage() {
                   )}
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      className={`border px-2 py-0.5 text-xs font-semibold ${
                         u.aktiv
-                          ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
-                          : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-400"
+                          ? "border-green-400 text-green-700 dark:border-green-600 dark:text-green-300"
+                          : "border-ind-line text-ind-ink-3"
                       }`}
                     >
                       {u.aktiv ? "Aktiv" : "Deaktiviert"}
@@ -402,7 +402,7 @@ export function UsersPage() {
                         onClick={() =>
                           toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
                         }
-                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                        className="btn-touch btn-industry btn-industry-secondary"
                       >
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
                       </button>
@@ -415,7 +415,7 @@ export function UsersPage() {
                         }}
                         disabled={u.id === currentUser?.id}
                         title={u.id === currentUser?.id ? "Eigener Account kann nicht gelöscht werden" : undefined}
-                        className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                        className="btn-touch border border-red-400 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
                       >
                         Löschen
                       </button>

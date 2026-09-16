@@ -114,7 +114,7 @@ export function MandantDetailPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
-      <Link to="/mandanten" className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">
+      <Link to="/mandanten" className="text-sm font-medium text-ind-acc-txt hover:underline">
         ← Zurück zu Mandanten
       </Link>
 
@@ -153,7 +153,7 @@ export function MandantDetailPage() {
             <button
               type="submit"
               disabled={stammdatenMutation.isPending}
-              className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+              className="btn-touch btn-industry btn-industry-primary"
             >
               Speichern
             </button>

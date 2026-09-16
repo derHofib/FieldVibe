@@ -188,7 +188,7 @@ export function UebersichtPage() {
           <h2 className="text-lg font-bold text-ind-ink">Letzte Aktivität</h2>
           <Link
             to="/audit-log"
-            className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400"
+            className="text-sm font-medium text-ind-acc-txt hover:underline"
           >
             Gesamtes Audit-Log →
           </Link>
