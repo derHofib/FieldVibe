@@ -1740,6 +1740,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                       {e.taetigkeit && ` · ${e.taetigkeit}`}
                       {" · "}
                       {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+                      {" · "}
+                      {new Date(e.start_at).toLocaleTimeString("de-DE", {
+                        timeZone: "Europe/Berlin",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      –
+                      {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
+                        timeZone: "Europe/Berlin",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                     <span className="shrink-0 font-medium text-ind-ink-2">
                       {formatSekundenAlsHHMM(dauerSekunden)} Std.
