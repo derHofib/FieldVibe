@@ -7,12 +7,14 @@ import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungTagesliste } from "../../components/ZeiterfassungTagesliste";
 import { usersApi, zeiterfassungApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { istModulAktiv } from "../../utils/module";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
 
 export function TeamZeitenPage() {
   const navigate = useNavigate();
-  const { hatRecht } = useAuth();
-  const darf = hatRecht("mitarbeiterverwaltung", "bearbeiten");
+  const { hatRecht, currentUser } = useAuth();
+  const darf = hatRecht("mitarbeiterverwaltung", "bearbeiten") && istModulAktiv(currentUser, "zeiterfassung");
+  const kannAuswerten = istModulAktiv(currentUser, "statistik");
 
   const [technikerId, setTechnikerId] = useState<string>("");
   const [wocheMontag, setWocheMontag] = useState(() => montagDerWoche(new Date()));
@@ -104,14 +106,16 @@ export function TeamZeitenPage() {
             />
           )}
 
-          <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
-            <button
-              onClick={exportieren}
-              className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium"
-            >
-              <FileText size={15} strokeWidth={2} /> Als PDF exportieren
-            </button>
-          </div>
+          {kannAuswerten && (
+            <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
+              <button
+                onClick={exportieren}
+                className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium"
+              >
+                <FileText size={15} strokeWidth={2} /> Als PDF exportieren
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

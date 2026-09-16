@@ -9,6 +9,7 @@ import { ZeiterfassungTagesliste } from "../../components/ZeiterfassungTageslist
 import { zeiterfassungApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
+import { istModulAktiv } from "../../utils/module";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
 
 export function StatistikPage() {
@@ -17,9 +18,17 @@ export function StatistikPage() {
   const [wocheMontag, setWocheMontag] = useState(() => montagDerWoche(new Date()));
   const [formularOffen, setFormularOffen] = useState(false);
 
+  // Zwei unabhaengig schaltbare Mandanten-Module auf einer Seite: "Zeit
+  // erfassen" (eigene Arbeitszeit tracken/einsehen) und "Auswertung &
+  // Export" (Kennzahlen-Kacheln + PDF-Export) -- historisch beides an
+  // "statistik" gekoppelt (siehe docs/BACKLOG.md), jetzt getrennt.
+  const kannErfassen = istModulAktiv(currentUser, "zeiterfassung");
+  const kannAuswerten = istModulAktiv(currentUser, "statistik");
+
   const { data: statistik, refetch: statistikNeuLaden } = useQuery({
     queryKey: ["zeiterfassung-statistik", currentUser?.id],
     queryFn: () => zeiterfassungApi.statistik(),
+    enabled: kannAuswerten,
   });
 
   const wocheEnde = new Date(wocheMontag);
@@ -33,6 +42,7 @@ export function StatistikPage() {
         von: toDateInput(wocheMontag),
         bis: toDateInput(wocheEnde),
       }),
+    enabled: kannErfassen,
   });
 
   async function exportieren() {
@@ -42,16 +52,22 @@ export function StatistikPage() {
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
+  if (!kannErfassen && !kannAuswerten) {
+    return <EmptyState icon={Clock} text="Diese Funktion ist für deinen Account nicht freigeschaltet." />;
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold text-ind-ink">Meine Arbeitszeit</h1>
-        <button
-          onClick={() => setFormularOffen(true)}
-          className="btn-touch btn-industry btn-industry-primary px-3 py-1.5 text-sm"
-        >
-          + Zeit erfassen
-        </button>
+        {kannErfassen && (
+          <button
+            onClick={() => setFormularOffen(true)}
+            className="btn-touch btn-industry btn-industry-primary px-3 py-1.5 text-sm"
+          >
+            + Zeit erfassen
+          </button>
+        )}
       </div>
 
       {formularOffen && (
@@ -65,7 +81,7 @@ export function StatistikPage() {
         />
       )}
 
-      {statistik && (
+      {kannAuswerten && statistik && (
         <div className="grid grid-cols-3 gap-2">
           <div className="border border-ind-line bg-ind-bg p-3 text-center">
             <div className="text-xl font-bold text-ind-ink">
@@ -88,51 +104,55 @@ export function StatistikPage() {
         </div>
       )}
 
-      <div className="border border-ind-line bg-ind-bg p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <button
-            onClick={() => {
-              const vorherigeWoche = new Date(wocheMontag);
-              vorherigeWoche.setDate(wocheMontag.getDate() - 7);
-              setWocheMontag(vorherigeWoche);
-            }}
-            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-          >
-            ← Woche
-          </button>
-          <span className="text-sm font-medium text-ind-ink-2">
-            {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
-          </span>
-          <button
-            onClick={() => {
-              const naechsteWoche = new Date(wocheMontag);
-              naechsteWoche.setDate(wocheMontag.getDate() + 7);
-              setWocheMontag(naechsteWoche);
-            }}
-            className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-          >
-            Woche →
-          </button>
-        </div>
+      {kannErfassen && (
+        <div className="border border-ind-line bg-ind-bg p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <button
+              onClick={() => {
+                const vorherigeWoche = new Date(wocheMontag);
+                vorherigeWoche.setDate(wocheMontag.getDate() - 7);
+                setWocheMontag(vorherigeWoche);
+              }}
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            >
+              ← Woche
+            </button>
+            <span className="text-sm font-medium text-ind-ink-2">
+              {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
+            </span>
+            <button
+              onClick={() => {
+                const naechsteWoche = new Date(wocheMontag);
+                naechsteWoche.setDate(wocheMontag.getDate() + 7);
+                setWocheMontag(naechsteWoche);
+              }}
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+            >
+              Woche →
+            </button>
+          </div>
 
-        {(wochenEintraege ?? []).length === 0 ? (
-          <EmptyState icon={Clock} text="Keine Zeiterfassungen in dieser Woche." />
-        ) : (
-          <ZeiterfassungTagesliste
-            eintraege={wochenEintraege!}
-            onEintragKlick={(vorgangId) => navigate(`/vorgaenge/${vorgangId}`)}
-          />
-        )}
+          {(wochenEintraege ?? []).length === 0 ? (
+            <EmptyState icon={Clock} text="Keine Zeiterfassungen in dieser Woche." />
+          ) : (
+            <ZeiterfassungTagesliste
+              eintraege={wochenEintraege!}
+              onEintragKlick={(vorgangId) => navigate(`/vorgaenge/${vorgangId}`)}
+            />
+          )}
 
-        <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
-          <button
-            onClick={exportieren}
-            className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium"
-          >
-            <FileText size={15} strokeWidth={2} /> Als PDF exportieren
-          </button>
+          {kannAuswerten && (
+            <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
+              <button
+                onClick={exportieren}
+                className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium"
+              >
+                <FileText size={15} strokeWidth={2} /> Als PDF exportieren
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

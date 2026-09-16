@@ -12,6 +12,13 @@ from app.db.base import Base, TimestampMixin
 # plus Kunde per Dropdown waehlen oder inline anlegen) ist bewusst NICHT Teil
 # dieser Liste -- das ist der nicht abschaltbare Boden, ohne den "Auftraege
 # tracken" ueberhaupt nicht ginge (ein Vorgang braucht zwingend einen Kunden).
+# "zeiterfassung" und "statistik" waren frueher ein einziges Modul (siehe
+# docs/BACKLOG.md) und sind rein informativ getrennt: "zeiterfassung" blendet
+# die eigene Zeiterfassungs-Uebersicht (Profil-Kachel, /statistik-Formular +
+# Wochenliste, Team-Zeiten) im Frontend aus, "statistik" die Auswertung/den
+# Export (Kennzahlen-Kacheln, CSV/PDF) -- der Start/Stopp-Timer direkt am
+# Vorgang gehoert weiterhin zum "vorgaenge"-Boden oben und bleibt in jedem
+# Fall aktiv, backend-seitig gibt es dafuer daher keine neue Sperre.
 MANDANT_MODULE = (
     "kundenverwaltung",
     "dispo",
@@ -20,6 +27,7 @@ MANDANT_MODULE = (
     "abrechnung",
     "kundenportal",
     "dauerauftrag",
+    "zeiterfassung",
     "statistik",
     "fahrzeuge",
     "highlights",

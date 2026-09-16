@@ -65,7 +65,7 @@ export function ProfilePage() {
         </button>
       )}
 
-      {istModulAktiv(currentUser, "statistik") && (
+      {istModulAktiv(currentUser, "zeiterfassung") && (
         <button
           onClick={() => navigate("/statistik")}
           className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
