@@ -136,9 +136,12 @@ import type {
   User,
   VersionInfo,
   Vorgang,
+  VorgangAbhaengigkeit,
+  VorgangAbhaengigkeitenListe,
   VorgangAnfrage,
   VorgangEvent,
   VorgangEventType,
+  VorgangKennzahlen,
   VorgangPartnerZuweisungResponse,
   Zeiterfassung,
   ZeiterfassungKategorie,
@@ -635,6 +638,7 @@ export const vorgaengeApi = {
         | "kunde_id"
         | "anlage_id"
         | "standort_id"
+        | "projekt_id"
         | "faelligkeit_am"
         | "adresse"
         | "zugewiesener_user_id"
@@ -657,6 +661,15 @@ export const vorgaengeApi = {
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/vorgaenge/${id}/emails`),
   sendEmail: (id: string, body: { empfaenger: string; betreff: string; inhalt: string }) =>
     apiFetch<EmailLog>(`/api/vorgaenge/${id}/emails`, { method: "POST", body: JSON.stringify(body) }),
+  abhaengigkeiten: (id: string) =>
+    apiFetch<VorgangAbhaengigkeitenListe>(`/api/vorgaenge/${id}/abhaengigkeiten`),
+  abhaengigkeitHinzufuegen: (id: string, blockiertVonId: string) =>
+    apiFetch<VorgangAbhaengigkeit>(`/api/vorgaenge/${id}/abhaengigkeiten`, {
+      method: "POST",
+      body: JSON.stringify({ blockiert_von_id: blockiertVonId }),
+    }),
+  abhaengigkeitEntfernen: (id: string, blockiertVonId: string) =>
+    apiFetch<void>(`/api/vorgaenge/${id}/abhaengigkeiten/${blockiertVonId}`, { method: "DELETE" }),
   partnerZuweisen: (id: string, partnerId: string | null, honorarNetto?: string) =>
     apiFetch<VorgangPartnerZuweisungResponse>(`/api/vorgaenge/${id}/partner-zuweisung`, {
       method: "POST",
@@ -898,6 +911,14 @@ export const formSubmissionsApi = {
       `/api/form-submissions/${id}/dateien?field_key=${encodeURIComponent(fieldKey)}`,
       formData,
     );
+  },
+};
+
+export const statistikApi = {
+  vorgangKennzahlen: (filter: { projekt_id?: string; von?: string; bis?: string } = {}) => {
+    const entries = Object.entries(filter).filter(([, v]) => v);
+    const qs = new URLSearchParams(entries as [string, string][]).toString();
+    return apiFetch<VorgangKennzahlen>(`/api/statistik/vorgang-kennzahlen${qs ? `?${qs}` : ""}`);
   },
 };
 
@@ -1548,12 +1569,17 @@ export const navKategorienApi = {
 };
 
 export const projekteApi = {
-  list: () => apiFetch<Projekt[]>("/api/projekte"),
+  list: (filter?: { vertrag_id?: string }) => {
+    const qs = filter?.vertrag_id ? `?vertrag_id=${filter.vertrag_id}` : "";
+    return apiFetch<Projekt[]>(`/api/projekte${qs}`);
+  },
   get: (id: string) => apiFetch<Projekt>(`/api/projekte/${id}`),
-  create: (body: { name: string; beschreibung?: string }) =>
+  create: (body: { name: string; beschreibung?: string; vertrag_id?: string }) =>
     apiFetch<Projekt>("/api/projekte", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: { name?: string; beschreibung?: string; archiviert?: boolean }) =>
-    apiFetch<Projekt>(`/api/projekte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: { name?: string; beschreibung?: string; archiviert?: boolean; vertrag_id?: string | null },
+  ) => apiFetch<Projekt>(`/api/projekte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/projekte/${id}`, { method: "DELETE" }),
   spalten: (projektId: string) =>
     apiFetch<ProjektSpalte[]>(`/api/projekte/${projektId}/spalten`),

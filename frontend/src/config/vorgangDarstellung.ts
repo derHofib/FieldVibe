@@ -1,4 +1,4 @@
-import type { FeedCard, Kunde, VorgangStatus } from "../types";
+import type { FeedCard, Kunde, Projekt, VorgangStatus } from "../types";
 
 /** Beschriftungen und Farbklassen der Vorgangs-Status, gemeinsam genutzt von
  * Feld-App (pages/feld/FeedPage.tsx) und Desktop-Oberflaeche (office/). Zwei
@@ -102,7 +102,12 @@ export function gruppiereNachFaelligkeit<T extends Pick<FeedCard, "faelligkeit_a
 // zu verschwinden, damit ein spaeter ergaenzter Filter nie stillschweigend
 // ohne Chip bleibt. Gemeinsam genutzt vom Feed der Feld-App und der
 // Office-Vorgaengeliste.
-export function filterChipLabel(key: string, value: string, kunden: Kunde[] | undefined): string {
+export function filterChipLabel(
+  key: string,
+  value: string,
+  kunden: Kunde[] | undefined,
+  projekte?: Projekt[] | undefined,
+): string {
   switch (key) {
     case "status":
       return `Status: ${value
@@ -111,6 +116,8 @@ export function filterChipLabel(key: string, value: string, kunden: Kunde[] | un
         .join(", ")}`;
     case "kunde_id":
       return `Kunde: ${kunden?.find((k) => k.id === value)?.name ?? value}`;
+    case "projekt_id":
+      return `Projekt: ${projekte?.find((p) => p.id === value)?.name ?? value}`;
     case "leistungstyp":
       return `Typ: ${LEISTUNGSTYP_LABEL[value] ?? value}`;
     case "faellig_von":

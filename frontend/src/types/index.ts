@@ -364,6 +364,19 @@ export type VorgangAbrechnungsart =
 
 export type Leistungstyp = "installation" | "pruefung" | "wartung" | "stoerung" | "beratung" | "planung";
 
+export interface TechnikerOffeneVorgaenge {
+  techniker_id: string;
+  techniker_name: string;
+  anzahl_offen: number;
+}
+
+export interface VorgangKennzahlen {
+  offene_vorgaenge_gesamt: number;
+  offene_vorgaenge_je_techniker: TechnikerOffeneVorgaenge[];
+  durchschnittliche_durchlaufzeit_tage: number | null;
+  abgeschlossene_vorgaenge_zeitraum: number;
+}
+
 export interface Vorgang {
   id: string;
   vorgangsnummer: string;
@@ -372,6 +385,7 @@ export interface Vorgang {
   standort_id: string | null;
   vertrag_id: string | null;
   parent_vorgang_id: string | null;
+  projekt_id: string | null;
   dauerauftrag_id: string | null;
   titel: string;
   beschreibung: string | null;
@@ -1781,11 +1795,25 @@ export interface ChecklistenPunkt {
   erledigt: boolean;
 }
 
+export interface VorgangAbhaengigkeit {
+  id: string;
+  vorgang_id: string;
+  blockiert_von_id: string;
+  erstellt_von: string | null;
+  created_at: string;
+}
+
+export interface VorgangAbhaengigkeitenListe {
+  blockiert_von: VorgangAbhaengigkeit[];
+  blockiert: VorgangAbhaengigkeit[];
+}
+
 export interface Projekt {
   id: string;
   name: string;
   beschreibung: string | null;
   archiviert: boolean;
+  vertrag_id: string | null;
   erstellt_von: string;
   created_at: string;
   updated_at: string;
