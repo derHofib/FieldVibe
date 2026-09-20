@@ -15,14 +15,12 @@ import { useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 import { useNavigate } from "react-router-dom";
 
-import { termineApi, usersApi } from "../../api/endpoints";
+import { projekteApi, termineApi, usersApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
-
-const BACKLOG_FILTER = { unbisponiert: "true", sort: "faelligkeit_am" };
 
 const START_STUNDE = 7;
 const ENDE_STUNDE = 19;
@@ -97,6 +95,7 @@ export function OfficeDispoPage() {
   const [tag, setTag] = useState(() => new Date());
   const [warnungen, setWarnungen] = useState<TerminWarnung[]>([]);
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
+  const [projektId, setProjektId] = useState("");
   const gridRef = useRef<HTMLDivElement>(null);
 
   const beginn = useMemo(() => tagsBeginn(tag), [tag]);
@@ -110,17 +109,34 @@ export function OfficeDispoPage() {
     (u) => u.aktiv && (u.role === "mandant_admin" || u.role === "custom"),
   );
 
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+
   const { data: termine } = useQuery({
-    queryKey: ["termine", beginn.toISOString()],
-    queryFn: () => termineApi.list({ von: beginn.toISOString(), bis: ende.toISOString() }),
+    queryKey: ["termine", beginn.toISOString(), projektId],
+    queryFn: () =>
+      termineApi.list({
+        von: beginn.toISOString(),
+        bis: ende.toISOString(),
+        ...(projektId ? { projekt_id: projektId } : {}),
+      }),
   });
 
+  // Ein Projekt-Filter grenzt neben der Zeitachse auch den "Nicht
+  // disponiert"-Backlog links ein.
+  const backlogFilter = useMemo(
+    () => ({
+      unbisponiert: "true",
+      sort: "faelligkeit_am",
+      ...(projektId ? { projekt_id: projektId } : {}),
+    }),
+    [projektId],
+  );
   const {
     data: backlogData,
     fetchNextPage,
     hasNextPage,
     isLoading: backlogLaedt,
-  } = useVorgangsListe(BACKLOG_FILTER);
+  } = useVorgangsListe(backlogFilter);
   useAlleSeitenLaden(true, hasNextPage, fetchNextPage);
   const backlog: FeedCard[] = backlogData?.pages.flatMap((p) => p.items) ?? [];
 
@@ -216,7 +232,20 @@ export function OfficeDispoPage() {
 
   return (
     <div>
-      <SeitenKopf titel="Dispo" />
+      <SeitenKopf titel="Dispo">
+        <select
+          value={projektId}
+          onChange={(e) => setProjektId(e.target.value)}
+          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+        >
+          <option value="">Alle Projekte</option>
+          {(projekte ?? []).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </SeitenKopf>
 
       {warnungen.length > 0 && (
         <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
