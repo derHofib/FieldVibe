@@ -109,7 +109,7 @@ export function ExportPanel({
           </div>
           <button
             onClick={() => (format === "png" ? onExportPng() : format === "pdf" ? onExportPdf() : onExportCsv())}
-            className="btn-clay mb-6 w-full rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 py-2.5 text-xs font-bold text-white"
+            className="btn-industry btn-industry-primary mb-6 w-full py-2.5 text-xs"
           >
             {format.toUpperCase()} herunterladen
           </button>
@@ -239,7 +239,7 @@ function NeuerVorgangMiniform({
         <button
           onClick={() => erstellen.mutate()}
           disabled={!kundeId || erstellen.isPending}
-          className="btn-clay flex items-center gap-1 rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+          className="btn-industry btn-industry-primary flex items-center gap-1 px-3 py-1.5 text-xs"
         >
           <Link2 size={11} strokeWidth={2.5} /> Vorgang anlegen
         </button>

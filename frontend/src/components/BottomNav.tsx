@@ -218,7 +218,7 @@ export function BottomNav() {
 
       <NavLink
         to="/neu"
-        className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ind-btn-bg text-ind-btn-ink ring-4 ring-ind-bg transition-colors hover:bg-ind-btn-bg-h"
+        className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ind-btn-bg text-ind-btn-ink ring-4 ring-ind-bg shadow-ind-raised transition-colors hover:bg-ind-btn-bg-h"
         aria-label="Neuer Vorgang"
       >
         <Plus size={26} strokeWidth={1.5} />

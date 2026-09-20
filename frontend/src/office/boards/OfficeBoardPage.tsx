@@ -354,7 +354,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
           </button>
           <button
             onClick={() => speichern.mutate({ nodes, edges })}
-            className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white"
+            className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-1.5 text-xs"
           >
             <Save size={13} strokeWidth={2} /> Speichern
           </button>

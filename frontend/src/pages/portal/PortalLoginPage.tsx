@@ -42,7 +42,11 @@ export function PortalLoginPage() {
       await login(email, password);
       navigate("/portal/vorgaenge", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Anmeldung fehlgeschlagen");
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : "Anmeldung fehlgeschlagen. Bitte E-Mail und Passwort prüfen oder \"Passwort vergessen?\" unten nutzen.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -80,8 +84,11 @@ export function PortalLoginPage() {
             </div>
           )}
 
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">E-Mail</label>
+          <label htmlFor="portal-login-email" className="mb-1 block text-sm font-medium text-ind-ink-2">
+            E-Mail
+          </label>
           <input
+            id="portal-login-email"
             type="email"
             required
             value={email}
@@ -89,8 +96,11 @@ export function PortalLoginPage() {
             className="input-industry btn-touch mb-4"
           />
 
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Passwort</label>
+          <label htmlFor="portal-login-password" className="mb-1 block text-sm font-medium text-ind-ink-2">
+            Passwort
+          </label>
           <input
+            id="portal-login-password"
             type="password"
             required
             value={password}

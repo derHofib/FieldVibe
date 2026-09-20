@@ -194,3 +194,15 @@ und Office nachgewiesen und nach dem Fix erneut gemessen.
 - **Im IP-Modus (`docker-compose.ip.yml`) gibt es keine Desktop-Ansicht** –
   eine nackte IP hat keinen Hostnamen, an dem umgeschaltet werden könnte.
   Bewusst so dokumentiert statt einen zweiten Port zu erfinden.
+- **Dispo-Grid geht von Browser-Zeitzone = Europe/Berlin aus.**
+  Balkenposition/Tageszuordnung im Dispo-Raster (Office und Feld-App)
+  rechnen mit lokaler Browser-Zeit, die angezeigte Uhrzeit im
+  Termin-Balken ist dagegen fest auf Europe/Berlin formatiert. Weicht die
+  Browser-/OS-Zeitzone eines Nutzers von Europe/Berlin ab, verschieben
+  sich Balkenposition und angezeigte Uhrzeit um den Offset (z. B. 2h zur
+  Sommerzeit) – in dieser QA-Runde mit einem UTC-Testsystem reproduziert,
+  kein Testartefakt. Bewusst zurückgestellt: echte Nutzer sitzen
+  praktisch immer in Europe/Berlin-Browsern; ein sauberer Fix
+  (Tagesgrenzen/Positionierung per `Intl` fest auf Europe/Berlin statt
+  Browser-TZ, in beiden Boards inkl. Drag&Drop-Neuplanung) ist nicht
+  trivial und wurde als Aufwand/Nutzen-Abwägung zurückgestellt.

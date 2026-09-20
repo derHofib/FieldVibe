@@ -3,6 +3,7 @@ import { Users } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
+import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
@@ -21,6 +22,7 @@ export function KundenPage() {
   const kannSehen = istModulAktiv(currentUser, "kundenverwaltung") && hatRecht("kunden", "sehen");
 
   const [showForm, setShowForm] = useState(false);
+  const [kundeFehler, setKundeFehler] = useState<string | null>(null);
   const [kundenSuche, setKundenSuche] = useState("");
   const [neuerKunde, setNeuerKunde] = useState({
     name: "",
@@ -62,9 +64,12 @@ export function KundenPage() {
     onSuccess: (kunde) => {
       queryClient.invalidateQueries({ queryKey: ["kunden"] });
       setShowForm(false);
+      setKundeFehler(null);
       setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "", ustIdnr: "" });
       navigate(`/kunden/${kunde.id}`);
     },
+    onError: (err) =>
+      setKundeFehler(err instanceof ApiError ? err.message : "Kunde konnte nicht angelegt werden."),
   });
 
   if (!kannSehen) return <Navigate to="/feed" replace />;
@@ -177,6 +182,7 @@ export function KundenPage() {
           <p className="text-xs text-ind-ink-3">
             Ansprechpartner können anschließend auf der Kunden-Detailseite angelegt werden.
           </p>
+          {kundeFehler && <p className="text-sm text-red-700 dark:text-red-400">{kundeFehler}</p>}
           <button
             disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
             onClick={() => createKundeMutation.mutate()}

@@ -165,7 +165,7 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "cyan",
     route: "/statistik",
     kategorie: "Arbeit",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "statistik"),
+    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "zeiterfassung"),
   },
   {
     key: "pruefmittel",
@@ -299,7 +299,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "cyan",
     route: "/team-zeiten",
     kategorie: "Verwaltung",
-    sichtbar: ({ hatRecht }) => hatRecht("mitarbeiterverwaltung", "bearbeiten"),
+    sichtbar: ({ hatRecht, currentUser }) =>
+      hatRecht("mitarbeiterverwaltung", "bearbeiten") && istModulAktiv(currentUser, "zeiterfassung"),
   },
   {
     key: "anlagen_felder",

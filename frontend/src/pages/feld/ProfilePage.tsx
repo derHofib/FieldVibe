@@ -1,6 +1,7 @@
-import { Repeat, Timer, Wrench } from "lucide-react";
+import { LogOut, Repeat, Timer, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
@@ -47,36 +48,40 @@ export function ProfilePage() {
       {kannDisponieren && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
         >
-          <Wrench size={16} strokeWidth={2} className="text-emerald-500" /> Techniker-Zuweisungen
+          <IconBadge icon={Wrench} tone="emerald" size="sm" />
+          <span className="font-medium text-ind-ink">Techniker-Zuweisungen</span>
         </button>
       )}
 
       {kannDisponieren && istModulAktiv(currentUser, "dauerauftrag") && (
         <button
           onClick={() => navigate("/dauerauftraege")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
         >
-          <Repeat size={16} strokeWidth={2} className="text-amber-500" /> Dauer-Aufträge
+          <IconBadge icon={Repeat} tone="amber" size="sm" />
+          <span className="font-medium text-ind-ink">Dauer-Aufträge</span>
         </button>
       )}
 
-      {istModulAktiv(currentUser, "statistik") && (
+      {istModulAktiv(currentUser, "zeiterfassung") && (
         <button
           onClick={() => navigate("/statistik")}
-          className="card-interactive btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
         >
-          <Timer size={16} strokeWidth={2} className="text-cyan-500" />{" "}
-          {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
+          <IconBadge icon={Timer} tone="cyan" size="sm" />
+          <span className="font-medium text-ind-ink">
+            {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
+          </span>
         </button>
       )}
 
       <button
         onClick={logout}
-        className="card-interactive btn-touch w-full rounded-md bg-white py-2 font-medium text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="btn-touch btn-industry btn-industry-secondary flex w-full items-center justify-center gap-2"
       >
-        Abmelden
+        <LogOut size={16} strokeWidth={1.5} /> Abmelden
       </button>
     </div>
   );

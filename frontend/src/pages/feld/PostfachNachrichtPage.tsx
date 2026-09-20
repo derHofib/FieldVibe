@@ -94,7 +94,7 @@ export function PostfachNachrichtPage() {
         </div>
       )}
 
-      <p className="text-sm whitespace-pre-wrap text-ind-ink">{detail.body_text}</p>
+      <p className="text-sm whitespace-pre-wrap break-words text-ind-ink">{detail.body_text}</p>
 
       {antwortenOffen ? (
         <div className="-mx-4 border-t border-slate-100 pt-3 dark:border-stone-800">
@@ -112,7 +112,7 @@ export function PostfachNachrichtPage() {
       ) : (
         <button
           onClick={() => setAntwortenOffen(true)}
-          className="btn-touch btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white"
+          className="btn-touch btn-industry btn-industry-primary flex items-center gap-1.5 px-4 py-2 text-xs"
         >
           <Reply size={13} strokeWidth={2} /> Antworten
         </button>

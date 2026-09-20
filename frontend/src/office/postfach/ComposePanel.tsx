@@ -127,7 +127,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             senden.mutate();
           }}
           disabled={!parseAdressen(an).length || (modus.art === "neu" && !betreff.trim()) || senden.isPending}
-          className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-4 py-2 text-xs"
         >
           {senden.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} strokeWidth={2.25} />}
           Senden

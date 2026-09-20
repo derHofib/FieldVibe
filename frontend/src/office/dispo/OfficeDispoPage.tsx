@@ -11,10 +11,11 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 import { useNavigate } from "react-router-dom";
 
+import { ApiError } from "../../api/client";
 import { projekteApi, termineApi, usersApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
@@ -94,8 +95,12 @@ export function OfficeDispoPage() {
   const queryClient = useQueryClient();
   const [tag, setTag] = useState(() => new Date());
   const [warnungen, setWarnungen] = useState<TerminWarnung[]>([]);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const meldeFehler = (err: unknown) =>
+    setFehler(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.");
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
   const [projektId, setProjektId] = useState("");
+  const [planenVorgang, setPlanenVorgang] = useState<FeedCard | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const beginn = useMemo(() => tagsBeginn(tag), [tag]);
@@ -148,6 +153,7 @@ export function OfficeDispoPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeFehler,
   });
 
   const updateMutation = useMutation({
@@ -157,6 +163,7 @@ export function OfficeDispoPage() {
       setWarnungen(result.warnungen);
       queryClient.invalidateQueries({ queryKey: ["termine"] });
     },
+    onError: meldeFehler,
   });
 
   const deleteMutation = useMutation({
@@ -166,6 +173,7 @@ export function OfficeDispoPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeFehler,
   });
 
   const technikerIndex = new Map(technikers.map((t, i) => [t.id, i]));
@@ -247,8 +255,19 @@ export function OfficeDispoPage() {
         </select>
       </SeitenKopf>
 
+      {fehler && (
+        <div className="mb-4 flex items-center justify-between gap-2 border border-ind-bad px-3 py-2 text-sm text-ind-bad">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} strokeWidth={1.5} /> {fehler}
+          </span>
+          <button onClick={() => setFehler(null)} className="text-xs underline">
+            Ausblenden
+          </button>
+        </div>
+      )}
+
       {warnungen.length > 0 && (
-        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+        <div className="mb-4 border border-ind-warn p-3 text-sm text-ind-warn">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -293,7 +312,16 @@ export function OfficeDispoPage() {
                         : "border-ind-line"
                     }`}
                   >
-                    <div className="flex items-start gap-1.5">
+                    {/* Als Button: per Drag&Drop auf die Zeitachse ziehen bleibt
+                        der Hauptweg, aber per Tastatur/Screenreader ist die Karte
+                        sonst nicht erreichbar -- Klick/Enter öffnet dieselbe
+                        Terminplanung als Formular (BacklogPlanenPanel). */}
+                    <button
+                      type="button"
+                      onClick={() => setPlanenVorgang(v)}
+                      disabled={technikers.length === 0}
+                      className="flex w-full items-start gap-1.5 text-left disabled:cursor-not-allowed"
+                    >
                       <GripVertical
                         size={14}
                         className="mt-0.5 shrink-0 text-ind-ink-3"
@@ -322,7 +350,7 @@ export function OfficeDispoPage() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   </div>
                 );
               })}
@@ -484,10 +512,10 @@ export function OfficeDispoPage() {
                             <button
                               onClick={() => setBearbeitenId(termin.id)}
                               title={termin.titel}
-                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden rounded-md px-2 text-left text-xs shadow-xs ${
+                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border border-ind-line px-2 text-left text-xs ${
                                 abgesagt
-                                  ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
-                                  : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+                                  ? "text-ind-ink-3 line-through"
+                                  : "bg-ind-hover text-ind-ink"
                               }`}
                             >
                               <span className="truncate font-semibold">{termin.titel}</span>
@@ -517,6 +545,23 @@ export function OfficeDispoPage() {
           onZumVorgang={() => navigate(`/vorgaenge/${bearbeitenTermin.vorgang_id}`)}
         />
       )}
+
+      {planenVorgang && (
+        <BacklogPlanenPanel
+          vorgang={planenVorgang}
+          technikers={technikers}
+          beginn={beginn}
+          onClose={() => setPlanenVorgang(null)}
+          onErstellen={(body) => {
+            createMutation.mutate({
+              vorgang_id: planenVorgang.id,
+              titel: planenVorgang.titel,
+              ...body,
+            });
+            setPlanenVorgang(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -543,6 +588,16 @@ function TerminBearbeitenPanel({
   const [fahrzeit, setFahrzeit] = useState(termin.fahrzeit_minuten?.toString() ?? "");
   const [pause, setPause] = useState(termin.pause_minuten?.toString() ?? "");
   const [notiz, setNotiz] = useState(termin.notiz ?? "");
+  const titelRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    titelRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   const speichern = () => {
     onSave({
@@ -550,8 +605,11 @@ function TerminBearbeitenPanel({
       techniker_id: technikerId,
       start_at: new Date(start).toISOString(),
       ende_at: new Date(endeWert).toISOString(),
-      fahrzeit_minuten: fahrzeit === "" ? null : Number(fahrzeit),
-      pause_minuten: pause === "" ? null : Number(pause),
+      // Math.max statt einer eigenen Fehlermeldung -- ein negativer Wert ist
+      // hier so gut wie immer ein Vertipper (Minus statt Loeschen), kein
+      // absichtlicher Eingabewert, den man dem Nutzer erst erklaeren muesste.
+      fahrzeit_minuten: fahrzeit === "" ? null : Math.max(0, Number(fahrzeit)),
+      pause_minuten: pause === "" ? null : Math.max(0, Number(pause)),
       notiz: notiz === "" ? null : notiz,
     });
   };
@@ -559,6 +617,9 @@ function TerminBearbeitenPanel({
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Termin bearbeiten"
         onClick={(e) => e.stopPropagation()}
         className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
       >
@@ -580,8 +641,9 @@ function TerminBearbeitenPanel({
         </button>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Titel</label>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Titel *</label>
           <input
+            ref={titelRef}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
             className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
@@ -674,9 +736,120 @@ function TerminBearbeitenPanel({
           </button>
           <button
             onClick={speichern}
-            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium"
+            disabled={!titel.trim()}
+            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Speichern
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Tastatur-/Screenreader-Alternative zum Drag&Drop eines Backlog-Vorgangs
+ * auf die Zeitachse (siehe Klick-Handler an der Backlog-Karte oben) -- selbe
+ * Felder wie TerminBearbeitenPanel, aber fuer die Neuanlage aus dem Backlog. */
+function BacklogPlanenPanel({
+  vorgang,
+  technikers,
+  beginn,
+  onClose,
+  onErstellen,
+}: {
+  vorgang: FeedCard;
+  technikers: Techniker[];
+  beginn: Date;
+  onClose: () => void;
+  onErstellen: (body: { techniker_id: string; start_at: string; ende_at: string }) => void;
+}) {
+  const [technikerId, setTechnikerId] = useState(technikers[0]?.id ?? "");
+  const [start, setStart] = useState(toLocalInputValue(beginn));
+  const [endeWert, setEndeWert] = useState(toLocalInputValue(new Date(beginn.getTime() + 60 * 60000)));
+  const technikerRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    technikerRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Termin für ${vorgang.titel} planen`}
+        onClick={(e) => e.stopPropagation()}
+        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-ind-ink">Termin planen</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="text-xs text-ind-ink-3">
+          {vorgang.vorgangsnummer} — {vorgang.titel}
+        </p>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Techniker</label>
+          <select
+            ref={technikerRef}
+            value={technikerId}
+            onChange={(e) => setTechnikerId(e.target.value)}
+            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          >
+            {technikers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Start</label>
+            <input
+              type="datetime-local"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Ende</label>
+            <input
+              type="datetime-local"
+              value={endeWert}
+              onChange={(e) => setEndeWert(e.target.value)}
+              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={() =>
+              onErstellen({
+                techniker_id: technikerId,
+                start_at: new Date(start).toISOString(),
+                ende_at: new Date(endeWert).toISOString(),
+              })
+            }
+            disabled={!technikerId}
+            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+          >
+            Termin anlegen
           </button>
         </div>
       </div>

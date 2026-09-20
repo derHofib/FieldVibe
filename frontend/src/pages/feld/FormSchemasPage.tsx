@@ -89,7 +89,7 @@ export function FormSchemasPage() {
             <button type="button" onClick={() => setFormOffen(false)} className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
               Abbrechen
             </button>
-            <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-clay rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
+            <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-industry btn-industry-primary px-3 py-1.5 text-sm">
               Anlegen & bearbeiten
             </button>
           </div>

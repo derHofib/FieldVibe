@@ -237,7 +237,7 @@ export function OfficeNavKategorienPage() {
       <button
         onClick={speichern}
         disabled={speichernMutation.isPending}
-        className="btn-touch w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+        className="btn-industry btn-industry-primary w-full"
       >
         {speichernMutation.isPending ? "Speichern…" : "Speichern"}
       </button>

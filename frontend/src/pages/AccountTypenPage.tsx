@@ -65,9 +65,9 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
   if (isLoading) return <p className="p-4 text-sm text-ind-ink-3">Lädt…</p>;
 
   return (
-    <div className="overflow-x-auto border-t border-slate-100 dark:border-stone-800">
+    <div className="overflow-x-auto border-t border-ind-line">
       <table className="w-full text-left text-sm">
-        <thead className="bg-slate-50 text-xs text-slate-500 dark:bg-stone-800/60 dark:text-stone-400">
+        <thead className="text-xs text-ind-ink-3">
           <tr>
             <th className="px-4 py-2">Bereich</th>
             {AKTIONEN.map((aktion) => (
@@ -77,7 +77,7 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 dark:divide-stone-800">
+        <tbody className="divide-y divide-ind-line">
           {BEREICHE.map((bereich) => (
             <tr key={bereich}>
               <td className="px-4 py-2 font-medium text-ind-ink-2">
@@ -87,7 +87,7 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
                 <td key={aktion} className="px-3 py-2 text-center">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-cyan-600"
+                    className="h-4 w-4 accent-ind-acc"
                     checked={istErlaubt(bereich, aktion)}
                     disabled={setMutation.isPending}
                     onChange={(e) =>
@@ -161,7 +161,7 @@ export function AccountTypenPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/einstellungen" className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400">
+        <Link to="/einstellungen" className="text-sm font-medium text-ind-acc-txt hover:underline">
           ← Zurück zu Einstellungen
         </Link>
         <h1 className="mt-2 text-lg font-bold text-ind-ink">Account-Typen & Rechte</h1>
@@ -199,7 +199,7 @@ export function AccountTypenPage() {
           <label className="flex items-center gap-2 pb-2 text-sm text-ind-ink-2">
             <input
               type="checkbox"
-              className="h-4 w-4 accent-cyan-600"
+              className="h-4 w-4 accent-ind-acc"
               checked={nurZugewieseneKunden}
               onChange={(e) => setNurZugewieseneKunden(e.target.checked)}
             />
@@ -208,7 +208,7 @@ export function AccountTypenPage() {
           <label className="flex items-center gap-2 pb-2 text-sm text-ind-ink-2">
             <input
               type="checkbox"
-              className="h-4 w-4 accent-cyan-600"
+              className="h-4 w-4 accent-ind-acc"
               checked={darfSelbstUebernehmen}
               onChange={(e) => setDarfSelbstUebernehmen(e.target.checked)}
             />
@@ -217,7 +217,7 @@ export function AccountTypenPage() {
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+            className="btn-touch btn-industry btn-industry-primary"
           >
             Anlegen
           </button>
@@ -233,7 +233,7 @@ export function AccountTypenPage() {
           typen.map((typ) => (
             <div
               key={typ.id}
-              className="overflow-hidden rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="border border-ind-line bg-ind-bg"
             >
               <button
                 onClick={() => setExpandedId(expandedId === typ.id ? null : typ.id)}
@@ -266,7 +266,7 @@ export function AccountTypenPage() {
                       ? "Diesem Account-Typ sind noch Nutzer zugeordnet"
                       : undefined
                   }
-                  className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                  className="btn-touch border border-red-400 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
                 >
                   Löschen
                 </button>
@@ -276,10 +276,10 @@ export function AccountTypenPage() {
               </button>
               {expandedId === typ.id && (
                 <>
-                  <label className="flex items-center gap-2 border-t border-slate-100 px-4 py-3 text-sm text-slate-700 dark:border-stone-800 dark:text-stone-300">
+                  <label className="flex items-center gap-2 border-t border-ind-line px-4 py-3 text-sm text-ind-ink-2">
                     <input
                       type="checkbox"
-                      className="h-4 w-4 accent-cyan-600"
+                      className="h-4 w-4 accent-ind-acc"
                       checked={typ.darf_vorgaenge_selbst_uebernehmen}
                       onChange={(e) =>
                         updateMutation.mutate({

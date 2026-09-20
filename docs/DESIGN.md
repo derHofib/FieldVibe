@@ -10,17 +10,31 @@ Elementen zuerst hier nachsehen, danach im `fieldvibe-design`-Skill
 - Quadratisch statt rund: `rounded-none` überall (keine `rounded-lg`/
   `rounded-full`-Karten/Buttons mehr, Ausnahmen: Avatare/Initialen-Kreise,
   kleine Zähler-Badges, echte Kreis-Formen im Whiteboard/Board-Feature)
-- Haarlinien-Rahmen statt Schatten: `border border-ind-line` (bzw.
-  `-ind-line-2` für verschachtelte/untergeordnete Blöcke) statt
-  `shadow-xs`/`shadow-md`/Neumorphismus. Karten haben keinen Hintergrund-
-  Farbwechsel gegenüber der Seite (`bg-ind-bg`), sie grenzen sich nur
-  über den Rahmen ab
+- Haarlinien-Rahmen weiterhin Standard (`border border-ind-line`, bzw.
+  `-ind-line-2` für verschachtelte/untergeordnete Blöcke). Seit der
+  "plastischer"-Überarbeitung ("gefräst" statt "flach") tragen Karten
+  zusätzlich `--shadow-ind-card` und eine eigene, gegenüber der Seite
+  leicht hellere Fläche (`--color-ind-bg-raised` statt `--color-ind-bg`)
+  — technisch über einen einzigen zusammengesetzten Selektor
+  `.border.border-ind-line.bg-ind-bg` in `index.css`, der automatisch
+  jede bestehende Karte trifft, ohne Komponenten anzufassen (siehe unten)
 - Passermarken (`Blueprint`-Komponente, `components/Blueprint.tsx`):
   vier Eck-Häkchen für "hero"-Karten (Feed-Karten, Login-Karte,
-  Übersichts-Karte) — nicht für jede kleine Box, das wäre zu unruhig
+  Übersichts-Karte) — nicht für jede kleine Box, das wäre zu unruhig.
+  Trägt zusätzlich `--shadow-ind-raised` (kräftiger als der Karten-
+  Schatten, für die prominentesten Flächen einer Seite)
 - Primärfarbe (`--color-ind-acc`/`-acc-txt`/`-btn-bg`) ist die einzige
   kräftige Fläche: Primär-Buttons, aktive Segmented-Zustände
-  (`--color-ind-field`), Live-Indikatoren. Alles andere bleibt neutral
+  (`--color-ind-field`), Live-Indikatoren. Alles andere bleibt neutral.
+  Seit der "plastischer"-Überarbeitung "Graphit" (dunkles, neutrales
+  Grau) statt des vorherigen Stahlblaus — kein Marken-Blau mehr in der
+  App
+- Buttons/Inputs sind nicht mehr rein flach: gefüllte/umrandete Buttons
+  (`.btn-industry-primary`/`-secondary`) tragen einen Bevel-Schatten
+  (`--shadow-ind-btn`) und drücken sich beim Klick sichtbar 1px nach
+  unten; Inputs (`.input-industry`) wirken über `--shadow-ind-input`
+  leicht "eingelassen" statt neutral. Bewusst kein Neumorphismus (kein
+  Farbverlauf, keine Pastelltöne) — nur gerichtetes Licht in Graustufen
 
 ## Farbtoken (`frontend/src/index.css`, `@theme`-Block)
 Eigene, mit `ind-` präfixierte Custom Properties statt der
@@ -29,14 +43,18 @@ Migration, ist jetzt aber die durchgängige Quelle:
 
 | Token | Verwendung |
 |---|---|
-| `ind-bg` | Seiten-/Karten-Hintergrund |
+| `ind-bg` | Seiten-Hintergrund |
+| `ind-bg-raised` | Karten-/Panel-Fläche, bewusst heller als die Seite (Träger der Tiefe, s. u.) |
 | `ind-ink` / `ind-ink-2` / `ind-ink-3` | Text: Überschrift/Primärtext / Sekundärtext / Meta-Text |
 | `ind-line` / `ind-line-2` | Rahmen: Standard / kräftiger (verschachtelte Blöcke, Divider) |
-| `ind-acc` / `ind-acc-txt` / `ind-acc-soft` | Akzent: Icon/Rahmen / Text auf Akzent / dezente Flächen (Filter-aktiv) |
+| `ind-acc` / `ind-acc-txt` / `ind-acc-soft` | Akzent (Graphit): Icon/Rahmen / Text auf Akzent / dezente Flächen (Filter-aktiv) |
 | `ind-hover` | Hover-Zustand neutraler Elemente |
 | `ind-field` / `ind-field-ink` | Gefüllte Aktiv-Fläche (Segmented-Control, Offline-Banner) |
 | `ind-btn-bg` / `-btn-bg-h` / `-btn-ink` | Primär-Button (Ruhe/Hover/Text) |
 | `ind-warn` / `ind-bad` | Warnung / Fehler (Rahmen+Text, keine Fläche) |
+| `shadow-ind-card` / `-raised` | Karten-Schatten / kräftigerer Schatten für Hero-/schwebende Elemente |
+| `shadow-ind-btn` / `-btn-active` | Bevel-Schatten für gefüllte/umrandete Buttons, Ruhe/Press-State |
+| `shadow-ind-input` | Eingelassener Schatten für Inputs |
 
 Helle Werte in `@theme`, dunkle Werte in einem `.dark { }`-Block direkt
 darunter — Tailwind löst `@theme`-Werte als CSS-Variablen auf, ein
@@ -101,9 +119,12 @@ gefüllte Pille mehr. Aufrufer dürfen kein zusätzliches `rounded-full`/
   — das ist ein eingespieltes, konfigurierbares Mobil-Pattern
   (`config/navSeiten.ts`, `BottomNavSettingsPage.tsx`), keine reine
   Optik-Frage
-- Nur die Oberflächenbehandlung ist umgestellt: Haarlinie statt
-  Neumorphismus-Schatten, FAB solide in `--color-ind-btn-bg` statt
-  Cyan-Blau-Gradient
+- Oberflächenbehandlung: Haarlinie statt Neumorphismus-Schatten, FAB
+  solide in `--color-ind-btn-bg` statt Cyan-Blau-Gradient. Seit der
+  "plastischer"-Überarbeitung trägt die Insel wieder einen Schatten
+  (`--shadow-ind-raised`, kräftiger als der normale Karten-Schatten, da
+  sie über dem Inhalt schwebt statt darin zu liegen) — anders als beim
+  alten Neumorphismus ohne Farbverlauf/Pastellton, rein grau
 
 ## Desktop/Office (office.<domain>) & Super-Admin
 - Sidebar 1:1 nach CRM-Shell-Mockup: Hexagon-Logo-Box, Kategorie-Labels

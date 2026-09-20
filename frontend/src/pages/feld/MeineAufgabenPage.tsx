@@ -175,8 +175,9 @@ export function MeineAufgabenPage() {
                       e.stopPropagation();
                       umschalten.mutate({ id: a.id, erledigt: true });
                     }}
-                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 dark:border-stone-600"
+                    className="relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 before:absolute before:-inset-3.5 dark:border-stone-600"
                     title="Als erledigt markieren"
+                    aria-label="Als erledigt markieren"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
@@ -246,7 +247,9 @@ export function MeineAufgabenPage() {
                       e.stopPropagation();
                       umschalten.mutate({ id: a.id, erledigt: false });
                     }}
-                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-white"
+                    className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-white before:absolute before:-inset-3.5"
+                    title="Als offen markieren"
+                    aria-label="Als offen markieren"
                   >
                     <CheckCircle2 size={13} strokeWidth={2.5} />
                   </button>

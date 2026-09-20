@@ -2,16 +2,22 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
+import { SkeletonCard } from "../../components/Skeleton";
+import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { VorgangEvent, VorgangStatus } from "../../types";
 
-const STATUS_LABEL: Record<VorgangStatus, string> = {
-  neu: "Neu",
-  geplant: "Geplant",
-  in_arbeit: "In Arbeit",
-  wartet_kunde: "Wartet auf Kunde",
-  abgeschlossen: "Abgeschlossen",
-  abgerechnet: "Abgerechnet",
-  storniert: "Storniert",
+// Kurze, laienverstaendliche Erklaerung je Status -- die internen Labels
+// aus vorgangDarstellung.ts reichen fuer Technikerinnen, aber ein externer
+// Kunde ohne App-Vorwissen weiss bei "Wartet auf Kunde" sonst nicht, was
+// von ihm erwartet wird.
+const STATUS_ERKLAERUNG: Record<VorgangStatus, string> = {
+  neu: "Ihr Auftrag ist eingegangen und wird eingeplant.",
+  geplant: "Für Ihren Auftrag ist bereits ein Termin vorgesehen.",
+  in_arbeit: "Der Techniker arbeitet aktuell an diesem Auftrag.",
+  wartet_kunde: "Wir warten auf eine Rückmeldung von Ihnen — bitte im Verlauf unten nachsehen.",
+  abgeschlossen: "Die Arbeiten sind abgeschlossen.",
+  abgerechnet: "Der Auftrag ist abgeschlossen und wurde bereits abgerechnet.",
+  storniert: "Dieser Auftrag wurde storniert.",
 };
 
 function PortalEventBubble({ event }: { event: VorgangEvent }) {
@@ -39,7 +45,7 @@ function PortalEventBubble({ event }: { event: VorgangEvent }) {
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap text-sm text-ind-ink">{event.body}</p>
+        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink">{event.body}</p>
       )}
     </div>
   );
@@ -60,7 +66,7 @@ export function PortalVorgangDetailPage() {
     enabled: !!id,
   });
 
-  if (!vorgang) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+  if (!vorgang) return <SkeletonCard />;
 
   const eventsChronological = [...(events ?? [])].reverse();
 
@@ -71,14 +77,15 @@ export function PortalVorgangDetailPage() {
       </button>
 
       <div className="border border-ind-line bg-ind-bg p-4">
-        <div className="text-xs text-ind-ink-3">{vorgang.vorgangsnummer}</div>
+        <div className="text-xs text-ind-ink-3">Auftrag Nr. {vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-ind-ink">{vorgang.titel}</h1>
         {vorgang.beschreibung && (
           <p className="mt-2 text-sm text-ind-ink-2">{vorgang.beschreibung}</p>
         )}
-        <span className="mt-2 inline-block border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
+        <span className={`mt-2 inline-block px-2 py-1 text-xs font-semibold ${STATUS_BADGE[vorgang.status]}`}>
           {STATUS_LABEL[vorgang.status]}
         </span>
+        <p className="mt-1 text-xs text-ind-ink-3">{STATUS_ERKLAERUNG[vorgang.status]}</p>
       </div>
 
       <div>

@@ -73,7 +73,7 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
         <button
           disabled={!kundeId || erstellen.isPending}
           onClick={() => erstellen.mutate()}
-          className="btn-clay flex-1 rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-industry btn-industry-primary flex-1 px-4 py-2 text-sm"
         >
           Angebot anlegen
         </button>

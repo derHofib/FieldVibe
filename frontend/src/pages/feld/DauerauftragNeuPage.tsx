@@ -66,7 +66,8 @@ export function DauerauftragNeuPage() {
         toleranz_spaet_tage: toleranzSpaet ? Number(toleranzSpaet) : undefined,
       }),
     onSuccess: (dauerauftrag) => navigate(`/dauerauftraege/${dauerauftrag.id}`),
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen."),
   });
 
   function handleSubmit(e: FormEvent) {

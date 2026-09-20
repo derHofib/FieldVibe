@@ -5,14 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
-import type { AngebotStatus } from "../../types";
-
-const STATUS_LABEL: Record<AngebotStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  angenommen: "Angenommen",
-  abgelehnt: "Abgelehnt",
-};
+import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_LABEL } from "./status";
 
 export function PortalAngebotePage() {
   const navigate = useNavigate();
@@ -38,11 +31,11 @@ export function PortalAngebotePage() {
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-xs text-ind-ink-3">{a.angebotsnummer}</div>
+                  <div className="text-xs text-ind-ink-3">Angebot Nr. {a.angebotsnummer}</div>
                   <div className="font-medium text-ind-ink">{a.gesamt_brutto} EUR</div>
                 </div>
-                <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
-                  {STATUS_LABEL[a.status]}
+                <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[a.status]}`}>
+                  {ANGEBOT_STATUS_LABEL[a.status]}
                 </span>
               </div>
             </button>

@@ -17,6 +17,32 @@ export class ApiError extends Error {
   }
 }
 
+// FastAPI liefert bei 422 (Pydantic-Validierung) `detail` als ARRAY von
+// {loc, msg, type}-Objekten statt eines Strings -- das `typeof === "string"`-
+// Pruefung darunter griff dafuer nie, jeder 422-Fehler fiel deshalb bislang
+// auf resp.statusText ("Unprocessable Entity") zurueck, egal wie aussage-
+// kraeftig die eigentliche Meldung (z.B. ein model_validator-ValueError)
+// gewesen waere.
+function extractErrorDetail(body: unknown): string | null {
+  const detail = (body as { detail?: unknown } | null)?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const messages = detail
+      .map((d) => {
+        if (!d || typeof d !== "object") return null;
+        const msgRaw = (d as { msg?: unknown }).msg;
+        if (typeof msgRaw !== "string") return null;
+        const msg = msgRaw.replace(/^Value error,\s*/, "");
+        const loc = (d as { loc?: unknown }).loc;
+        const feld = Array.isArray(loc) ? loc.filter((l) => l !== "body").pop() : null;
+        return typeof feld === "string" ? `${feld}: ${msg}` : msg;
+      })
+      .filter((m): m is string => !!m);
+    if (messages.length > 0) return messages.join("; ");
+  }
+  return null;
+}
+
 async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -71,7 +97,7 @@ export async function apiFetch<T>(
     let detail = resp.statusText;
     try {
       const body = await resp.json();
-      if (typeof body?.detail === "string") detail = body.detail;
+      detail = extractErrorDetail(body) ?? detail;
     } catch {
       /* response had no JSON body */
     }
@@ -114,7 +140,7 @@ export async function apiFetchForm<T>(
     let detail = resp.statusText;
     try {
       const body = await resp.json();
-      if (typeof body?.detail === "string") detail = body.detail;
+      detail = extractErrorDetail(body) ?? detail;
     } catch {
       /* response had no JSON body */
     }

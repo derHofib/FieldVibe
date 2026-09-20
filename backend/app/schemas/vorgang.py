@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 PartnerFreigabeStatus = Literal["vorgeschlagen", "angenommen", "abgelehnt"]
 
@@ -49,6 +49,14 @@ class VorgangCreate(BaseModel):
     # sicher idempotent, dasselbe Muster wie VorgangEventCreate.client_uuid.
     client_uuid: UUID | None = None
 
+    @field_validator("titel")
+    @classmethod
+    def _titel_nicht_leer(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Titel darf nicht leer sein")
+        return v
+
 
 class VorgangAnlagenHinzufuegen(BaseModel):
     anlage_ids: list[UUID]
@@ -81,6 +89,16 @@ class VorgangUpdate(BaseModel):
     # es, greift der Mandanten- bzw. globale Default (siehe
     # app/api/routes/vorgaenge.py und Mandant.wiedervorlage_standard_tage).
     wiedervorlage_tage: int | None = Field(default=None, gt=0)
+
+    @field_validator("titel")
+    @classmethod
+    def _titel_nicht_leer(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("Titel darf nicht leer sein")
+        return v
 
 
 class VorgangRead(BaseModel):

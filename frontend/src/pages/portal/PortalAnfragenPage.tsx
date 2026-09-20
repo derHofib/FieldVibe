@@ -40,6 +40,7 @@ function NeueAnfrage() {
   const [zeigeNeuerStandort, setZeigeNeuerStandort] = useState(false);
   const [neuerStandortName, setNeuerStandortName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [gesendet, setGesendet] = useState(false);
 
   const { data: standorte } = useQuery({
     queryKey: ["portal-standorte"],
@@ -80,6 +81,8 @@ function NeueAnfrage() {
       setStandortId("");
       setAnlageId("");
       setError(null);
+      setGesendet(true);
+      window.setTimeout(() => setGesendet(false), 4000);
     },
     onError: (err) => setError(err instanceof ApiError ? err.message : "Anfrage konnte nicht gesendet werden"),
   });
@@ -96,12 +99,19 @@ function NeueAnfrage() {
 
   if (!zeigen) {
     return (
-      <button
-        onClick={() => setZeigen(true)}
-        className="btn-touch w-full rounded-lg btn-industry btn-industry-primary py-3 text-sm font-medium"
-      >
-        + Neue Auftragsanfrage stellen
-      </button>
+      <div className="space-y-2">
+        {gesendet && (
+          <p className="border border-green-400 px-3 py-2 text-sm text-green-700 dark:border-green-600 dark:text-green-300">
+            Ihre Anfrage wurde gesendet.
+          </p>
+        )}
+        <button
+          onClick={() => setZeigen(true)}
+          className="btn-touch w-full rounded-lg btn-industry btn-industry-primary py-3 text-sm font-medium"
+        >
+          + Neue Auftragsanfrage stellen
+        </button>
+      </div>
     );
   }
 
@@ -114,8 +124,11 @@ function NeueAnfrage() {
         Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
       </p>
       <div>
-        <label className="mb-1 block text-sm font-medium text-ind-ink-2">Titel</label>
+        <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          Titel
+        </label>
         <input
+          id="portal-anfrage-titel"
           autoFocus
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
@@ -123,8 +136,11 @@ function NeueAnfrage() {
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-ind-ink-2">Beschreibung</label>
+        <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          Beschreibung
+        </label>
         <textarea
+          id="portal-anfrage-beschreibung"
           value={beschreibung}
           onChange={(e) => setBeschreibung(e.target.value)}
           rows={3}
@@ -132,8 +148,11 @@ function NeueAnfrage() {
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-ind-ink-2">Art</label>
+        <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          Art
+        </label>
         <select
+          id="portal-anfrage-art"
           value={leistungstyp}
           onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
           className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
@@ -148,10 +167,11 @@ function NeueAnfrage() {
 
       {(standorte ?? []).length > 0 && (
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-ind-ink-2">
             Standort (optional)
           </label>
           <select
+            id="portal-anfrage-standort"
             value={standortId}
             onChange={(e) => {
               setStandortId(e.target.value);
@@ -198,10 +218,11 @@ function NeueAnfrage() {
 
       {anlagenFuerStandort.length > 0 && (
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-ind-ink-2">
             Anlage (optional)
           </label>
           <select
+            id="portal-anfrage-anlage"
             value={anlageId}
             onChange={(e) => setAnlageId(e.target.value)}
             className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
@@ -270,7 +291,12 @@ export function PortalAnfragenPage() {
                 <p className="mt-1 text-sm text-ind-ink-3">{a.beschreibung}</p>
               )}
               {a.ablehnungsgrund && (
-                <p className="mt-1 text-xs text-ind-ink-3">Grund: {a.ablehnungsgrund}</p>
+                <>
+                  <p className="mt-1 text-xs text-ind-ink-3">Grund: {a.ablehnungsgrund}</p>
+                  <p className="mt-1 text-xs text-ind-ink-3">
+                    Bei Fragen wenden Sie sich gerne direkt an uns, oder stellen Sie eine neue Anfrage.
+                  </p>
+                </>
               )}
             </div>
           ))}

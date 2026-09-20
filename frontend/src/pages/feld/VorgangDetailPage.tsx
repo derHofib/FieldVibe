@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, Paperclip, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
+import { AlertTriangle, Ban, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, Paperclip, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -28,6 +28,7 @@ import {
   zeiterfassungApi,
 } from "../../api/endpoints";
 import { EmailSection } from "../../components/EmailSection";
+import { EmptyState } from "../../components/EmptyState";
 import { FormularAbschnitt } from "../../components/FormularAbschnitt";
 import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -54,6 +55,7 @@ import type {
   MangelStatus,
   MaterialBedarfZweck,
   PartnerFreigabeStatus,
+  TerminStatus,
   TerminWarnung,
   VorgangEvent,
   VorgangStatus,
@@ -70,6 +72,35 @@ const SCHWEREGRAD_OPTIONEN: { value: MangelSchweregrad; label: string }[] = [
   { value: "hoch", label: "Hoch" },
   { value: "kritisch", label: "Kritisch" },
 ];
+
+const SCHWEREGRAD_LABEL: Record<MangelSchweregrad, string> = Object.fromEntries(
+  SCHWEREGRAD_OPTIONEN.map((o) => [o.value, o.label]),
+) as Record<MangelSchweregrad, string>;
+
+// Hervorhebung bei kritisch/hoch statt neutralem border-ind-line -- sonst
+// sieht ein kritischer Mangel unter Zeitdruck optisch identisch zu einem
+// niedrigen aus (siehe ind-warn/ind-bad in docs/DESIGN.md).
+const SCHWEREGRAD_BADGE: Record<MangelSchweregrad, string> = {
+  niedrig: "border-ind-line text-ind-ink-2",
+  mittel: "border-ind-line text-ind-ink-2",
+  hoch: "border-ind-warn text-ind-warn",
+  kritisch: "border-ind-bad text-ind-bad",
+};
+
+const MANGEL_STATUS_LABEL: Record<MangelStatus, string> = {
+  offen: "Offen",
+  in_angebot: "Im Angebot",
+  in_bearbeitung: "In Bearbeitung",
+  behoben: "Behoben",
+  abgelehnt: "Abgelehnt",
+};
+
+const TERMIN_STATUS_LABEL: Record<TerminStatus, string> = {
+  geplant: "Geplant",
+  bestaetigt: "Bestätigt",
+  abgeschlossen: "Abgeschlossen",
+  abgesagt: "Abgesagt",
+};
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -232,7 +263,7 @@ function EventBubble({
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap text-sm text-ind-ink">
+        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink">
           <MentionText text={event.body} />
         </p>
       )}
@@ -312,7 +343,7 @@ function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clien
       ) : item.kind === "status" ? (
         <p className="text-sm text-ind-ink-2">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
-        <p className="whitespace-pre-wrap text-sm text-ind-ink-2">{item.body}</p>
+        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink-2">{item.body}</p>
       )}
     </div>
   );
@@ -393,16 +424,29 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const [showFolgeAuftragDialog, setShowFolgeAuftragDialog] = useState(false);
   const [folgeAuftragLeistungstyp, setFolgeAuftragLeistungstyp] = useState<Leistungstyp>("stoerung");
   const [folgeVorgangId, setFolgeVorgangId] = useState<string | null>(null);
+  // Gemeinsame Fehleranzeige fuer alle Aktionen unten, die keinen eigenen
+  // Inline-Fehlertext neben einem Formular haben (z. B. Uebernehmen, Foto-
+  // Upload, Timer) -- sonst verpufft ein Fehlschlag beim Techniker unsichtbar.
+  const [aktionsFehler, setAktionsFehler] = useState<string | null>(null);
+  const meldeAktionsFehler = (err: unknown) =>
+    setAktionsFehler(
+      err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.",
+    );
 
   const kannDisponieren = hatRecht("vorgaenge", "bearbeiten");
   const kannLoeschen = hatRecht("vorgaenge", "loeschen");
   const kannPartnerVerwalten =
     istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "bearbeiten");
 
-  const { data: vorgang } = useQuery({
+  const {
+    data: vorgang,
+    isError: vorgangIstFehler,
+    error: vorgangFehler,
+  } = useQuery({
     queryKey: ["vorgang", id],
     queryFn: () => vorgaengeApi.get(id!),
     enabled: !!id,
+    retry: false,
   });
   const { data: kunde } = useQuery({
     queryKey: ["kunde", vorgang?.kunde_id],
@@ -469,10 +513,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setShowAnlageHinzufuegen(false);
       setNeueAnlageId("");
     },
+    onError: meldeAktionsFehler,
   });
   const anlageEntfernenMutation = useMutation({
     mutationFn: (anlageId: string) => vorgaengeApi.anlageEntfernen(id!, anlageId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] }),
+    onError: meldeAktionsFehler,
   });
   const { data: alleKunden } = useQuery({
     queryKey: ["kunden"],
@@ -494,7 +540,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setEditingZuordnung(false);
       setZuordnungError(null);
     },
-    onError: (err) => setZuordnungError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setZuordnungError(
+        err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.",
+      ),
   });
   const adresseMutation = useMutation({
     mutationFn: () =>
@@ -513,7 +562,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setEditingAdresse(false);
       setAdresseError(null);
     },
-    onError: (err) => setAdresseError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setAdresseError(
+        err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.",
+      ),
   });
   const { data: events } = useQuery({
     queryKey: ["vorgang-events", id],
@@ -573,6 +625,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setTerminTitel("");
       queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const { data: maengel } = useQuery({
@@ -600,7 +653,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
+  // `mangelMutation.isPending` allein reicht nicht als Doppel-Submit-Schutz --
+  // zwei sehr schnelle Klicks koennen beide feuern, bevor React nach dem
+  // ersten mutate()-Aufruf neu gerendert hat (disabled greift dann zu spaet).
+  // Ref ist synchron, unabhaengig vom Render-Zyklus.
+  const mangelErfassenLaeuft = useRef(false);
+  const mangelErfassen = () => {
+    if (!mangelBeschreibung.trim() || mangelErfassenLaeuft.current) return;
+    mangelErfassenLaeuft.current = true;
+    mangelMutation.mutate(undefined, { onSettled: () => (mangelErfassenLaeuft.current = false) });
+  };
 
   const mangelStatusMutation = useMutation({
     mutationFn: ({ mangelId, status }: { mangelId: string; status: MangelStatus }) =>
@@ -609,16 +673,19 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const deleteMangelMutation = useMutation({
     mutationFn: (mangelId: string) => maengelApi.remove(mangelId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const deleteTerminMutation = useMutation({
     mutationFn: (terminId: string) => termineApi.remove(terminId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
@@ -626,28 +693,34 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const angebotAusMaengelnMutation = useMutation({
     mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+    onError: meldeAktionsFehler,
   });
 
   const angebotAusVorgangMutation = useMutation({
     mutationFn: () => angeboteApi.createFromVorgang(id!),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
+    onError: meldeAktionsFehler,
   });
 
   const rechnungAusVorgangMutation = useMutation({
     mutationFn: () => rechnungenApi.create({ kunde_id: vorgang!.kunde_id, vorgang_id: id }),
     onSuccess: (rechnung) => navigate(`/rechnungen/${rechnung.id}`),
+    onError: meldeAktionsFehler,
   });
 
   const maengelProtokollMutation = useMutation({
     mutationFn: () => maengelApi.protokollPdf(id!),
     onSuccess: openPdfBlob,
+    onError: meldeAktionsFehler,
   });
 
   const highlightMutation = useMutation({
     mutationFn: (eventId: number) => highlightsApi.create(eventId),
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
-        window.alert("Dieses Foto ist bereits als Highlight markiert.");
+        setAktionsFehler("Dieses Foto ist bereits als Highlight markiert.");
+      } else {
+        meldeAktionsFehler(err);
       }
     },
   });
@@ -677,6 +750,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["material-verwendungen", "vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const { data: leistungsverzeichnis } = useQuery({
@@ -695,12 +769,14 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const lvVerwendungEntfernenMutation = useMutation({
     mutationFn: (verwendungId: string) => leistungsverzeichnisApi.verwendungEntfernen(verwendungId),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const { data: partnerListe } = useQuery({
@@ -723,6 +799,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setPartnerWarnung(antwort.freistellungsbescheinigung_warnung);
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const partnerAufhebenMutation = useMutation({
@@ -731,6 +808,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       setPartnerWarnung(false);
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   useEffect(() => {
@@ -798,11 +876,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["material"] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const bedarfEntfernenMutation = useMutation({
     mutationFn: (bedarfId: string) => materialBedarfeApi.remove(bedarfId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const deleteVorgangMutation = useMutation({
@@ -811,6 +891,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
       navigate("/feed");
     },
+    onError: meldeAktionsFehler,
   });
 
   const statusMutation = useMutation({
@@ -837,6 +918,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const folgeAuftragMutation = useMutation({
@@ -846,6 +928,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgaenge", "folge", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const uebernehmenMutation = useMutation({
@@ -854,11 +937,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const prioritaetMutation = useMutation({
     mutationFn: (prioritaet: number) => vorgaengeApi.update(id!, { prioritaet }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
+    onError: meldeAktionsFehler,
   });
 
   const commentMutation = useMutation({
@@ -882,6 +967,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const fotoMutation = useMutation({
@@ -906,6 +992,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const dokumentMutation = useMutation({
@@ -930,6 +1017,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const unterschriftMutation = useMutation({
@@ -950,6 +1038,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeAktionsFehler,
   });
 
   const stopTimerMutation = useMutation({
@@ -960,8 +1049,26 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeAktionsFehler,
   });
 
+  if (vorgangIstFehler) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+          ← Zurück
+        </button>
+        <EmptyState
+          icon={Ban}
+          text={
+            vorgangFehler instanceof ApiError && vorgangFehler.status === 404
+              ? "Vorgang nicht gefunden oder kein Zugriff."
+              : "Vorgang konnte nicht geladen werden."
+          }
+        />
+      </div>
+    );
+  }
   if (!vorgang) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
@@ -1027,6 +1134,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           </button>
         )}
       </div>
+
+      {aktionsFehler && (
+        <div className="flex items-center justify-between gap-2 border border-ind-bad px-3 py-2 text-sm text-ind-bad">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
+          </span>
+          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-xs underline">
+            Ausblenden
+          </button>
+        </div>
+      )}
 
       {/* Fakten-Leiste: die wichtigsten Eckdaten auf einen Blick, bevor man
           in die Karte darunter eintaucht (siehe Design-Vorschlag "Feed und
@@ -1293,7 +1411,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                       <button
                         onClick={() => anlageEntfernenMutation.mutate(a.id)}
                         disabled={anlageEntfernenMutation.isPending}
-                        className="text-ind-ink-3 hover:text-red-600 dark:hover:text-red-400"
+                        className="relative text-ind-ink-3 before:absolute before:-inset-2.5 hover:text-red-600 dark:hover:text-red-400"
                         aria-label={`${a.bezeichnung} entfernen`}
                       >
                         ✕
@@ -1622,6 +1740,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                       {e.taetigkeit && ` · ${e.taetigkeit}`}
                       {" · "}
                       {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+                      {" · "}
+                      {new Date(e.start_at).toLocaleTimeString("de-DE", {
+                        timeZone: "Europe/Berlin",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      –
+                      {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
+                        timeZone: "Europe/Berlin",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                     <span className="shrink-0 font-medium text-ind-ink-2">
                       {formatSekundenAlsHHMM(dauerSekunden)} Std.
@@ -1741,7 +1871,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                         : "border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300"
                     }`}
                   >
-                    {t.status}
+                    {TERMIN_STATUS_LABEL[t.status]}
                   </span>
                   {kannPapierkorbLoeschen && (
                     <button
@@ -1809,7 +1939,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             </select>
             <button
               disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
-              onClick={() => mangelMutation.mutate()}
+              onClick={mangelErfassen}
               className="btn-touch btn-industry btn-industry-primary w-full px-3 py-1.5 text-sm"
             >
               Erfassen
@@ -1825,12 +1955,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               <div key={m.id} className="border border-ind-line-2 p-2 text-sm">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-ind-ink-2">{m.beschreibung}</p>
-                  <span className="shrink-0 border border-ind-line px-2 py-0.5 text-xs font-medium text-ind-ink-2">
-                    {m.schweregrad}
+                  <span className={`shrink-0 border px-2 py-0.5 text-xs font-medium ${SCHWEREGRAD_BADGE[m.schweregrad]}`}>
+                    {SCHWEREGRAD_LABEL[m.schweregrad]}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between">
-                  <span className="text-xs text-ind-ink-3">{m.status}</span>
+                  <span className="text-xs text-ind-ink-3">{MANGEL_STATUS_LABEL[m.status]}</span>
                   <div className="flex gap-2">
                     {m.status === "offen" && (
                       <>
@@ -2529,7 +2659,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 <p className="mt-1 text-xs text-red-700 dark:text-red-400">
                   {unterschriftMutation.error instanceof ApiError
                     ? unterschriftMutation.error.message
-                    : "Fehler beim Speichern der Unterschrift"}
+                    : "Unterschrift konnte nicht gespeichert werden — bitte erneut versuchen."}
                 </p>
               )}
             </div>

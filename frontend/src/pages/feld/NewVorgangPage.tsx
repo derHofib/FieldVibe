@@ -179,7 +179,8 @@ export function NewVorgangPage() {
         navigate("/feed");
       }
     },
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen."),
   });
 
   async function handleScan(code: string) {
@@ -200,6 +201,10 @@ export function NewVorgangPage() {
     setError(null);
     if (!kundeId) {
       setError("Bitte einen Kunden auswählen");
+      return;
+    }
+    if (!titel.trim()) {
+      setError("Bitte einen Titel eingeben");
       return;
     }
     createMutation.mutate();

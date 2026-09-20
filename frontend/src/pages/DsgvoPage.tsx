@@ -98,7 +98,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
           <button
             onClick={() => inputRef.current?.click()}
             disabled={uploadMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+            className="btn-touch btn-industry btn-industry-primary"
           >
             {uploadMutation.isPending ? "Lädt hoch…" : dokument ? "Ersetzen" : "Hochladen"}
           </button>

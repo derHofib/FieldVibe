@@ -126,7 +126,7 @@ class Settings(BaseSettings):
     # per --build-arg GIT_COMMIT gesetzt (siehe docker-compose.yml/
     # scripts/deploy.sh), bleibt sonst "unknown".
     git_commit: str = "unknown"
-    github_repo: str = "derHofib/SocialCRM"
+    github_repo: str = "derHofib/FieldVibe"
     # TODO: nach dem Mergen dieses Branches in main hier "main" eintragen
     # (oder GITHUB_BRANCH in der .env setzen) -- siehe README.
     github_branch: str = "claude/multi-tenant-crm-social-feed-vea1l3"

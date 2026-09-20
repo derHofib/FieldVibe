@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckSquare, KanbanSquare, Link2, ListTree, Plus, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
@@ -65,6 +65,13 @@ export function OfficeProjektePage() {
       queryClient.invalidateQueries({ queryKey: ["projekte"] });
     },
   });
+  // Gleiches Doppel-Submit-Risiko wie bei spalteAnlegen oben -- siehe Kommentar dort.
+  const projektAnlegenLaeuft = useRef(false);
+  const projektAnlegen = () => {
+    if (!neuerProjektName.trim() || projektAnlegenLaeuft.current) return;
+    projektAnlegenLaeuft.current = true;
+    projektErstellen.mutate(undefined, { onSettled: () => (projektAnlegenLaeuft.current = false) });
+  };
 
   const spalteErstellen = useMutation({
     mutationFn: (name: string) => projekteApi.createSpalte(aktivesProjekt!, name),
@@ -73,6 +80,17 @@ export function OfficeProjektePage() {
       queryClient.invalidateQueries({ queryKey: ["projekt-spalten", aktivesProjekt] });
     },
   });
+  // `spalteErstellen.isPending` allein reicht nicht als Doppel-Submit-Schutz:
+  // zwei sehr schnelle Klicks koennen beide feuern, bevor React nach dem
+  // ersten mutate()-Aufruf neu gerendert hat und `disabled` tatsaechlich
+  // greift. Ref ist synchron, unabhaengig vom Render-Zyklus.
+  const spalteAnlegenLaeuft = useRef(false);
+  const spalteAnlegen = () => {
+    const name = neueSpalteName?.trim();
+    if (!name || spalteAnlegenLaeuft.current) return;
+    spalteAnlegenLaeuft.current = true;
+    spalteErstellen.mutate(name, { onSettled: () => (spalteAnlegenLaeuft.current = false) });
+  };
 
   const spalteVerschieben = useMutation({
     mutationFn: ({ id, spalte_id }: { id: string; spalte_id: string }) =>
@@ -125,7 +143,7 @@ export function OfficeProjektePage() {
         )}
         <button
           onClick={() => setZeigeNeuesProjekt(true)}
-          className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white"
+          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-2 text-xs"
         >
           <Plus size={14} strokeWidth={2.5} />
           Neues Projekt
@@ -141,15 +159,15 @@ export function OfficeProjektePage() {
                 autoFocus
                 value={neuerProjektName}
                 onChange={(e) => setNeuerProjektName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && neuerProjektName.trim() && projektErstellen.mutate()}
+                onKeyDown={(e) => e.key === "Enter" && projektAnlegen()}
                 placeholder="z. B. Neubau Lagerhalle"
                 className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
               />
             </div>
             <button
-              onClick={() => projektErstellen.mutate()}
+              onClick={projektAnlegen}
               disabled={!neuerProjektName.trim() || projektErstellen.isPending}
-              className="btn-clay rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+              className="btn-industry btn-industry-primary px-4 py-2 text-xs"
             >
               Anlegen
             </button>
@@ -211,55 +229,72 @@ export function OfficeProjektePage() {
                           e.dataTransfer.setData("text/plain", a.id);
                           e.dataTransfer.effectAllowed = "move";
                         }}
-                        onClick={() => setPanel({ aufgabe: a })}
-                        className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 text-left dark:bg-stone-900 ${
+                        className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 dark:bg-stone-900 ${
                           ueberfaellig ? "border-rose-300 dark:border-rose-500/40" : "border-ind-line"
                         }`}
                       >
-                        <p className="text-[13px] font-semibold text-ind-ink">{a.titel}</p>
-                        {a.vorgang_vorgangsnummer && (
-                          <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-sky-600 dark:text-sky-300">
-                            <Link2 size={11} strokeWidth={2} />
-                            {a.vorgang_vorgangsnummer}
-                          </p>
-                        )}
-                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
-                            {PRIORITAET_LABEL[a.prioritaet]}
-                          </span>
-                          {ueberfaellig && a.faelligkeit_am && (
-                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
-                              {tageSeit(a.faelligkeit_am)} Tage überfällig
-                            </span>
+                        <button type="button" onClick={() => setPanel({ aufgabe: a })} className="block w-full text-left">
+                          <p className="text-[13px] font-semibold text-ind-ink">{a.titel}</p>
+                          {a.vorgang_vorgangsnummer && (
+                            <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-sky-600 dark:text-sky-300">
+                              <Link2 size={11} strokeWidth={2} />
+                              {a.vorgang_vorgangsnummer}
+                            </p>
                           )}
-                          {checklisteGesamt > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
-                              <CheckSquare size={11} strokeWidth={2} />
-                              {checklisteErledigt}/{checklisteGesamt}
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${PRIORITAET_BADGE[a.prioritaet]}`}>
+                              {PRIORITAET_LABEL[a.prioritaet]}
                             </span>
-                          )}
-                          {!!a.unteraufgaben_gesamt && (
-                            <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
-                              <ListTree size={11} strokeWidth={2} />
-                              {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-between gap-2">
-                          <span />
-                          {a.zugewiesener_name && (
-                            <span
-                              title={a.zugewiesener_name}
-                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
-                            >
-                              {a.zugewiesener_name
-                                .split(" ")
-                                .map((t) => t[0])
-                                .slice(0, 2)
-                                .join("")}
-                            </span>
-                          )}
-                        </div>
+                            {ueberfaellig && a.faelligkeit_am && (
+                              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
+                                {tageSeit(a.faelligkeit_am)} Tage überfällig
+                              </span>
+                            )}
+                            {checklisteGesamt > 0 && (
+                              <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
+                                <CheckSquare size={11} strokeWidth={2} />
+                                {checklisteErledigt}/{checklisteGesamt}
+                              </span>
+                            )}
+                            {!!a.unteraufgaben_gesamt && (
+                              <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
+                                <ListTree size={11} strokeWidth={2} />
+                                {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-between gap-2">
+                            <span />
+                            {a.zugewiesener_name && (
+                              <span
+                                title={a.zugewiesener_name}
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+                              >
+                                {a.zugewiesener_name
+                                  .split(" ")
+                                  .map((t) => t[0])
+                                  .slice(0, 2)
+                                  .join("")}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                        {/* Tastatur-/Screenreader-Alternative zum Drag&Drop-Spaltenwechsel. */}
+                        <label htmlFor={`projekt-spalte-${a.id}`} className="sr-only">
+                          Spalte von „{a.titel}“ ändern
+                        </label>
+                        <select
+                          id={`projekt-spalte-${a.id}`}
+                          value={a.spalte_id ?? ""}
+                          onChange={(e) => handleDrop(e.target.value, a.id)}
+                          className="mt-1.5 w-full border border-ind-line bg-transparent px-1 py-0.5 text-[10px] text-ind-ink-3"
+                        >
+                          {(spalten ?? []).map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     );
                   })}
@@ -290,14 +325,16 @@ export function OfficeProjektePage() {
                 <input
                   autoFocus
                   value={neueSpalteName}
+                  disabled={spalteErstellen.isPending}
                   onChange={(e) => setNeueSpalteName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && neueSpalteName.trim() && spalteErstellen.mutate(neueSpalteName.trim())}
+                  onKeyDown={(e) => e.key === "Enter" && spalteAnlegen()}
                   placeholder="Name der Spalte"
-                  className="w-full border-none bg-transparent px-1 py-1 text-sm outline-none dark:text-stone-100"
+                  className="w-full border-none bg-transparent px-1 py-1 text-sm outline-none disabled:opacity-50 dark:text-stone-100"
                 />
                 <button
-                  onClick={() => neueSpalteName.trim() && spalteErstellen.mutate(neueSpalteName.trim())}
-                  className="shrink-0 rounded-md p-1 text-slate-400 hover:text-slate-700 dark:text-stone-500 dark:hover:text-stone-200"
+                  onClick={spalteAnlegen}
+                  disabled={spalteErstellen.isPending}
+                  className="shrink-0 rounded-md p-1 text-slate-400 hover:text-slate-700 disabled:opacity-50 dark:text-stone-500 dark:hover:text-stone-200"
                 >
                   <Plus size={14} strokeWidth={2} />
                 </button>

@@ -60,15 +60,19 @@ export function PortalResetPasswordPage() {
                 {error}
               </div>
             )}
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Neues Passwort</label>
+            <label htmlFor="portal-reset-password" className="mb-1 block text-sm font-medium text-ind-ink-2">
+              Neues Passwort
+            </label>
             <input
+              id="portal-reset-password"
               type="password"
               required
               minLength={10}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-industry btn-touch mb-4"
+              className="input-industry btn-touch mb-1"
             />
+            <p className="mb-4 text-xs text-ind-ink-3">Mindestens 10 Zeichen.</p>
             <button
               type="submit"
               disabled={submitting || !token}

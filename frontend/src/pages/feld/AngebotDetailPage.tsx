@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { Ban, FileText } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { ApiError } from "../../api/client";
 import { angeboteApi, kundenApi, leistungsverzeichnisApi } from "../../api/endpoints";
 import { EmailSection } from "../../components/EmailSection";
+import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { openPdfBlob } from "../../utils/pdf";
@@ -61,10 +63,15 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     },
   });
 
-  const { data: angebot } = useQuery({
+  const {
+    data: angebot,
+    isError: angebotIstFehler,
+    error: angebotFehler,
+  } = useQuery({
     queryKey: ["angebot", id],
     queryFn: () => angeboteApi.get(id!),
     enabled: !!id,
+    retry: false,
   });
   const { data: kunde } = useQuery({
     queryKey: ["kunde", angebot?.kunde_id],
@@ -150,6 +157,23 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     onSuccess: openPdfBlob,
   });
 
+  if (angebotIstFehler) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+          ← Zurück
+        </button>
+        <EmptyState
+          icon={Ban}
+          text={
+            angebotFehler instanceof ApiError && angebotFehler.status === 404
+              ? "Angebot nicht gefunden oder kein Zugriff."
+              : "Angebot konnte nicht geladen werden."
+          }
+        />
+      </div>
+    );
+  }
   if (!angebot) return <p className="text-center text-ind-ink-3">Lädt…</p>;
 
   return (

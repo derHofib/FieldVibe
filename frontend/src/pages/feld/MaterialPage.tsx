@@ -218,7 +218,9 @@ function MaterialZeile({
           </div>
           {umlagernMutation.isError && (
             <p className="text-xs text-red-700 dark:text-red-400">
-              {umlagernMutation.error instanceof ApiError ? umlagernMutation.error.message : "Fehler"}
+              {umlagernMutation.error instanceof ApiError
+                ? umlagernMutation.error.message
+                : "Verbindung fehlgeschlagen — bitte erneut versuchen."}
             </p>
           )}
         </div>

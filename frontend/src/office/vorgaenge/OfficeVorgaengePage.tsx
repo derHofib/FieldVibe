@@ -142,7 +142,7 @@ export function OfficeVorgaengePage() {
         </div>
         <button
           onClick={() => navigate("/neu")}
-          className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-2 text-xs font-semibold text-white"
+          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-2 text-xs"
         >
           <Plus size={14} strokeWidth={2.5} />
           Neuer Vorgang
@@ -321,7 +321,17 @@ export function OfficeVorgaengePage() {
       {isLoading ? (
         <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
       ) : vorgaenge.length === 0 ? (
-        <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
+        <EmptyState
+          icon={Inbox}
+          text={aktiveFilterAnzahl > 0 ? "Keine Vorgänge für die aktuellen Filter." : "Keine Vorgänge gefunden."}
+          action={
+            aktiveFilterAnzahl > 0 && (
+              <button onClick={() => setFilter(LEER_FILTER)} className="btn-touch btn-industry btn-industry-ghost mt-1 text-xs">
+                Filter zurücksetzen
+              </button>
+            )
+          }
+        />
       ) : ansicht === "liste" ? (
         <VorgaengeListe
           vorgaenge={vorgaenge}

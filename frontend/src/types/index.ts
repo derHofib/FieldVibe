@@ -89,6 +89,7 @@ export type MandantModul =
   | "abrechnung"
   | "kundenportal"
   | "dauerauftrag"
+  | "zeiterfassung"
   | "statistik"
   | "fahrzeuge"
   | "highlights"
