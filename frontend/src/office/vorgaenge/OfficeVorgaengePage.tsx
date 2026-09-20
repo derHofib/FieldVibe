@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { Columns3, Filter, Inbox, LayoutGrid, List, Plus, Search, X } from "lucide-react";
+import { Columns3, Filter, Inbox, LayoutGrid, List, Plus, Search, Table2, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { kundenApi } from "../../api/endpoints";
+import { anlagenApi, kundenApi, projekteApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import {
@@ -17,8 +17,9 @@ import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
 import { VorgaengeKanban } from "./VorgaengeKanban";
 import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
+import { VorgaengeTabelle } from "./VorgaengeTabelle";
 
-type Ansicht = "liste" | "kanban" | "raster";
+type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
 
 const ANSICHT_KEY = "fieldvibe-office-vorgaenge-ansicht";
 
@@ -26,12 +27,13 @@ const UMSCHALTER = [
   { wert: "liste" as const, label: "Liste", icon: List },
   { wert: "kanban" as const, label: "Kanban", icon: Columns3 },
   { wert: "raster" as const, label: "Raster", icon: LayoutGrid },
+  { wert: "tabelle" as const, label: "Tabelle", icon: Table2 },
 ];
 
 function gespeicherteAnsicht(): Ansicht {
   try {
     const wert = localStorage.getItem(ANSICHT_KEY);
-    if (wert === "liste" || wert === "kanban" || wert === "raster") return wert;
+    if (wert === "liste" || wert === "kanban" || wert === "raster" || wert === "tabelle") return wert;
   } catch {
     // privater Modus -- dann eben jedes Mal die Standardansicht
   }
@@ -60,6 +62,15 @@ export function OfficeVorgaengePage() {
   const [zeigeFilter, setZeigeFilter] = useState(false);
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  // Wie beim Leistungsverzeichnis abhaengiger Picker: erst ab gewaehltem
+  // Kunden laden, sonst waere die Liste ueber alle Mandanten-Anlagen hinweg
+  // fuer einen reinen Filter unnoetig gross.
+  const { data: anlagenFuerKunde } = useQuery({
+    queryKey: ["anlagen", filter.kunde_id],
+    queryFn: () => anlagenApi.list(filter.kunde_id),
+    enabled: !!filter.kunde_id,
+  });
 
   const wechsleAnsicht = (neu: Ansicht) => {
     setAnsicht(neu);
@@ -110,7 +121,7 @@ export function OfficeVorgaengePage() {
   const aktiveFilterAnzahl = Object.keys(filter).length;
   const filterChips = Object.entries(filter)
     .filter(([, value]) => value)
-    .map(([key, value]) => ({ key, label: filterChipLabel(key, value, kunden) }));
+    .map(([key, value]) => ({ key, label: filterChipLabel(key, value, kunden, projekte) }));
 
   return (
     <div>
@@ -235,6 +246,31 @@ export function OfficeVorgaengePage() {
               ))}
             </select>
             <select
+              value={filter.anlage_id ?? ""}
+              onChange={(e) => setField("anlage_id", e.target.value)}
+              disabled={!filter.kunde_id}
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink disabled:opacity-50"
+            >
+              <option value="">{filter.kunde_id ? "Alle Anlagen" : "Erst Kunden wählen"}</option>
+              {(anlagenFuerKunde ?? []).map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.bezeichnung}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filter.projekt_id ?? ""}
+              onChange={(e) => setField("projekt_id", e.target.value)}
+              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+            >
+              <option value="">Alle Projekte</option>
+              {(projekte ?? []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <select
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
               className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
@@ -295,6 +331,8 @@ export function OfficeVorgaengePage() {
         />
       ) : ansicht === "kanban" ? (
         <VorgaengeKanban vorgaenge={vorgaenge} />
+      ) : ansicht === "tabelle" ? (
+        <VorgaengeTabelle vorgaenge={vorgaenge} />
       ) : (
         <VorgaengeRaster vorgaenge={vorgaenge} />
       )}
