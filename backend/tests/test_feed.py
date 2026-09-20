@@ -480,13 +480,14 @@ async def test_feed_cursor_pagination_nach_faelligkeit_ist_exhaustiv(
 
 @pytest.mark.asyncio
 async def test_feed_unbisponiert_zeigt_nur_offene_vorgaenge_ohne_aktiven_termin(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
 
     ohne_termin = await make_vorgang(mandant=mandant, kunde=kunde, titel="Ohne Termin", status="neu")
     mit_termin = await make_vorgang(mandant=mandant, kunde=kunde, titel="Mit Termin", status="geplant")

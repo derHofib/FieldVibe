@@ -11,7 +11,7 @@ def _iso(dt: datetime) -> str:
 
 @pytest.mark.asyncio
 async def test_disponent_can_create_termin(
-    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
@@ -19,6 +19,7 @@ async def test_disponent_can_create_termin(
     kunde = await make_kunde(mandant=mandant)
     anlage = await make_anlage(mandant=mandant, kunde=kunde)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde, anlage_id=anlage.id)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, disponent.email, "pw-123456")
 
     start = datetime.now(timezone.utc) + timedelta(days=1)
@@ -100,7 +101,7 @@ async def test_ende_before_start_rejected(
 
 @pytest.mark.asyncio
 async def test_overlapping_termin_warns_but_does_not_block(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
@@ -108,6 +109,7 @@ async def test_overlapping_termin_warns_but_does_not_block(
     kunde = await make_kunde(mandant=mandant)
     vorgang1 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V1")
     vorgang2 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V2")
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, disponent.email, "pw-123456")
 
     start = datetime.now(timezone.utc) + timedelta(days=1)
@@ -144,7 +146,7 @@ async def test_overlapping_termin_warns_but_does_not_block(
 
 @pytest.mark.asyncio
 async def test_tight_travel_time_between_distant_anlagen_warns(
-    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
@@ -155,6 +157,7 @@ async def test_tight_travel_time_between_distant_anlagen_warns(
     muenchen = await make_anlage(mandant=mandant, kunde=kunde, geo_lat=48.14, geo_lng=11.58)
     vorgang1 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V1", anlage_id=berlin.id)
     vorgang2 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V2", anlage_id=muenchen.id)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, disponent.email, "pw-123456")
 
     start = datetime.now(timezone.utc) + timedelta(days=1)
@@ -189,7 +192,7 @@ async def test_tight_travel_time_between_distant_anlagen_warns(
 
 @pytest.mark.asyncio
 async def test_comfortable_gap_same_location_no_warning(
-    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_anlage, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
@@ -198,6 +201,7 @@ async def test_comfortable_gap_same_location_no_warning(
     anlage = await make_anlage(mandant=mandant, kunde=kunde, geo_lat=52.52, geo_lng=13.40)
     vorgang1 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V1", anlage_id=anlage.id)
     vorgang2 = await make_vorgang(mandant=mandant, kunde=kunde, titel="V2", anlage_id=anlage.id)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, disponent.email, "pw-123456")
 
     start = datetime.now(timezone.utc) + timedelta(days=1)
@@ -231,13 +235,14 @@ async def test_comfortable_gap_same_location_no_warning(
 
 @pytest.mark.asyncio
 async def test_update_termin_status_to_abgesagt(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, disponent.email, "pw-123456")
 
     start = datetime.now(timezone.utc) + timedelta(days=1)
@@ -263,7 +268,7 @@ async def test_update_termin_status_to_abgesagt(
 
 @pytest.mark.asyncio
 async def test_mandant_isolation_for_termine(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant1 = await make_mandant(name="Betrieb1")
     mandant2 = await make_mandant(name="Betrieb2")
@@ -272,6 +277,7 @@ async def test_mandant_isolation_for_termine(
     disponent2 = await make_user(mandant=mandant2, role="disponent", password="pw-123456")
     kunde1 = await make_kunde(mandant=mandant1)
     vorgang1 = await make_vorgang(mandant=mandant1, kunde=kunde1)
+    await make_kunde_zuweisung(mandant=mandant1, kunde=kunde1, techniker=techniker1)
     token1 = await login(client, disponent1.email, "pw-123456")
     token2 = await login(client, disponent2.email, "pw-123456")
 
@@ -299,13 +305,14 @@ async def test_mandant_isolation_for_termine(
 
 @pytest.mark.asyncio
 async def test_termin_kann_fahrzeit_und_pause_speichern(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, disponent.email, "pw-123456")
 
     start = datetime.now(timezone.utc) + timedelta(days=1)
@@ -339,13 +346,14 @@ async def test_termin_kann_fahrzeit_und_pause_speichern(
 
 @pytest.mark.asyncio
 async def test_termin_ohne_fahrzeit_und_pause_bleibt_null(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     disponent = await make_user(mandant=mandant, role="disponent", password="pw-123456")
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     token = await login(client, disponent.email, "pw-123456")
 
     start = datetime.now(timezone.utc) + timedelta(days=1)
