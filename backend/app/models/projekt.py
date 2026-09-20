@@ -16,12 +16,22 @@ class Projekt(SoftDeleteMixin, TimestampMixin, Base):
     Vorgaenge-Kanban (siehe office/vorgaenge/VorgaengeKanban.tsx). Eine
     Aufgabe kann optional auf einen Vorgang verweisen (ProjektAufgabe.
     vorgang_id), ohne dass Projekte/Vorgaenge sonst irgendetwas
-    miteinander zu tun haben."""
+    miteinander zu tun haben.
+
+    vertrag_id (optional) und die Vorgang-seitige Gegenstelle
+    Vorgang.projekt_id (app/models/vorgang.py) sind eine zweite, davon
+    unabhaengige Verwendung derselben Tabelle: ein Projekt kann zusaetzlich
+    als Sammelklammer fuer mehrere Vorgaenge eines Vertrags dienen, ganz
+    ohne eigene Kanban-Aufgaben zu haben. Beide Verwendungen schliessen sich
+    nicht aus, sind aber unabhaengig voneinander nutzbar."""
 
     __tablename__ = "projekte"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    vertrag_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vertraege.id"), nullable=True
+    )
     name: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text, nullable=True)
     archiviert: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

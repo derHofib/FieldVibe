@@ -89,6 +89,12 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     dauerauftrag_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("dauerauftraege.id"), nullable=True
     )
+    # Optionale Gruppierung mehrerer Vorgaenge unter einem Kanban-Projekt
+    # (app/models/projekt.py) -- rein referenziell, kein Status-Sync mit den
+    # Kanban-Spalten, analog zu ProjektAufgabe.vorgang_id dort.
+    projekt_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekte.id"), nullable=True
+    )
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text)
     abrechnungsart: Mapped[str] = mapped_column(Text, nullable=False)

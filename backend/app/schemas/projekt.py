@@ -15,12 +15,14 @@ class ChecklistenPunkt(BaseModel):
 class ProjektCreate(BaseModel):
     name: str
     beschreibung: str | None = None
+    vertrag_id: UUID | None = None
 
 
 class ProjektUpdate(BaseModel):
     name: str | None = None
     beschreibung: str | None = None
     archiviert: bool | None = None
+    vertrag_id: UUID | None = None
 
 
 class ProjektRead(BaseModel):
@@ -30,6 +32,7 @@ class ProjektRead(BaseModel):
     name: str
     beschreibung: str | None
     archiviert: bool
+    vertrag_id: UUID | None
     erstellt_von: UUID
     created_at: datetime
     updated_at: datetime

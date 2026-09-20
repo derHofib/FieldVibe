@@ -60,6 +60,7 @@ from app.models.termin import Termin
 from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.models.vorgang_abhaengigkeit import VorgangAbhaengigkeit
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
@@ -136,6 +137,7 @@ __all__ = [
     "User",
     "Vertrag",
     "Vorgang",
+    "VorgangAbhaengigkeit",
     "VorgangAnfrage",
     "VorgangAnlage",
     "VorgangEvent",
