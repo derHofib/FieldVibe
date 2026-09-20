@@ -18,6 +18,7 @@ from app.models.kunde import Kunde
 from app.models.projekt import Projekt, ProjektAufgabe, ProjektSpalte
 from app.models.standort import Standort
 from app.models.user import User
+from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.schemas.projekt import (
     ProjektAufgabeCreate,
@@ -107,10 +108,13 @@ async def _pruefe_zugriff_auf_aufgabe(
 
 
 @router.get("", response_model=list[ProjektRead])
-async def list_projekte(session: AsyncSession = Depends(get_db)) -> list[Projekt]:
-    result = await session.execute(
-        select(Projekt).where(Projekt.geloescht_am.is_(None)).order_by(Projekt.created_at)
-    )
+async def list_projekte(
+    vertrag_id: UUID | None = Query(default=None), session: AsyncSession = Depends(get_db)
+) -> list[Projekt]:
+    stmt = select(Projekt).where(Projekt.geloescht_am.is_(None)).order_by(Projekt.created_at)
+    if vertrag_id:
+        stmt = stmt.where(Projekt.vertrag_id == vertrag_id)
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -128,10 +132,16 @@ async def create_projekt(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Projekt:
+    if body.vertrag_id is not None and await session.get(Vertrag, body.vertrag_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
     projekt = Projekt(
         mandant_id=auth.mandant_id,
         name=body.name,
         beschreibung=body.beschreibung,
+        vertrag_id=body.vertrag_id,
         erstellt_von=auth.user_id,
     )
     session.add(projekt)
@@ -168,7 +178,13 @@ async def update_projekt(
     session: AsyncSession = Depends(get_db),
 ) -> Projekt:
     projekt = await _require_projekt(session, projekt_id)
-    for feld, wert in body.model_dump(exclude_unset=True).items():
+    changes = body.model_dump(exclude_unset=True)
+    if changes.get("vertrag_id") is not None and await session.get(Vertrag, changes["vertrag_id"]) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vertrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    for feld, wert in changes.items():
         setattr(projekt, feld, wert)
     await session.flush()
     await session.refresh(projekt)

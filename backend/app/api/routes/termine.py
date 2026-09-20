@@ -58,6 +58,7 @@ async def _load_vorgang_and_techniker(
 async def list_termine(
     techniker_id: UUID | None = Query(default=None),
     vorgang_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
     von: datetime | None = Query(default=None),
     bis: datetime | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
@@ -67,6 +68,11 @@ async def list_termine(
         stmt = stmt.where(Termin.techniker_id == techniker_id)
     if vorgang_id:
         stmt = stmt.where(Termin.vorgang_id == vorgang_id)
+    if projekt_id:
+        # Termin selbst hat kein projekt_id -- Filter ueber den verknuepften
+        # Vorgang, damit sich die Dispo-Zeitachse auf ein Projekt eingrenzen
+        # laesst (siehe office/dispo/OfficeDispoPage.tsx).
+        stmt = stmt.join(Vorgang, Vorgang.id == Termin.vorgang_id).where(Vorgang.projekt_id == projekt_id)
     if von:
         stmt = stmt.where(Termin.ende_at >= von)
     if bis:

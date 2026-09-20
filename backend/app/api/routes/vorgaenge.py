@@ -20,10 +20,12 @@ from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.partner import Partner
+from app.models.projekt import Projekt
 from app.models.standort import Standort
 from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.models.vorgang_abhaengigkeit import VorgangAbhaengigkeit
 from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.anlage import AnlageRead
@@ -35,6 +37,11 @@ from app.schemas.vorgang import (
     VorgangFolgeAuftragErstellen,
     VorgangRead,
     VorgangUpdate,
+)
+from app.schemas.vorgang_abhaengigkeit import (
+    VorgangAbhaengigkeitCreate,
+    VorgangAbhaengigkeitenListe,
+    VorgangAbhaengigkeitRead,
 )
 from app.services import papierkorb_service
 from app.services.audit_service import log_action
@@ -80,6 +87,7 @@ async def list_vorgaenge(
     abrechnungsart: str | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
     parent_vorgang_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
     partner_id: UUID | None = Query(default=None),
     faellig_von: date | None = Query(default=None),
     faellig_bis: date | None = Query(default=None),
@@ -103,6 +111,8 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.standort_id == standort_id)
     if parent_vorgang_id:
         stmt = stmt.where(Vorgang.parent_vorgang_id == parent_vorgang_id)
+    if projekt_id:
+        stmt = stmt.where(Vorgang.projekt_id == projekt_id)
     if partner_id:
         stmt = stmt.where(Vorgang.partner_id == partner_id)
     if leistungstyp:
@@ -201,6 +211,11 @@ async def _validate_references(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Übergeordneter Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    if body.projekt_id is not None and await session.get(Projekt, body.projekt_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
 
 
 @router.post(
@@ -244,6 +259,7 @@ async def create_vorgang(
         standort_id=body.standort_id,
         vertrag_id=body.vertrag_id,
         parent_vorgang_id=body.parent_vorgang_id,
+        projekt_id=body.projekt_id,
         titel=body.titel,
         beschreibung=body.beschreibung,
         abrechnungsart=body.abrechnungsart,
@@ -619,6 +635,12 @@ async def update_vorgang(
                 detail="Vertrag gehört nicht zum (neuen) Kunden dieses Vorgangs",
             )
 
+    if changes.get("projekt_id") is not None and await session.get(Projekt, changes["projekt_id"]) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+
     if changes.get("zugewiesener_user_id") is not None:
         if await session.get(User, changes["zugewiesener_user_id"]) is None:
             raise HTTPException(
@@ -926,3 +948,133 @@ async def delete_vorgang(
         entity_id=vorgang_id,
         payload={"vorgangsnummer": vorgang.vorgangsnummer},
     )
+
+
+async def _wuerde_zyklus_erzeugen(session: AsyncSession, vorgang_id: UUID, blockiert_von_id: UUID) -> bool:
+    # Breitensuche entlang der bestehenden "haengt ab von"-Kanten ab
+    # blockiert_von_id: wird dabei vorgang_id erreicht, wuerde die neue Kante
+    # (vorgang_id haengt ab von blockiert_von_id) einen Zyklus schliessen.
+    besucht: set[UUID] = set()
+    warteschlange = [blockiert_von_id]
+    while warteschlange:
+        aktuell = warteschlange.pop()
+        if aktuell == vorgang_id:
+            return True
+        if aktuell in besucht:
+            continue
+        besucht.add(aktuell)
+        result = await session.execute(
+            select(VorgangAbhaengigkeit.blockiert_von_id).where(VorgangAbhaengigkeit.vorgang_id == aktuell)
+        )
+        warteschlange.extend(result.scalars().all())
+    return False
+
+
+@router.get(
+    "/{vorgang_id}/abhaengigkeiten",
+    response_model=VorgangAbhaengigkeitenListe,
+    dependencies=[Depends(require_recht("vorgaenge", "sehen"))],
+)
+async def list_vorgang_abhaengigkeiten(
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangAbhaengigkeitenListe:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    blockiert_von = await session.execute(
+        select(VorgangAbhaengigkeit).where(VorgangAbhaengigkeit.vorgang_id == vorgang_id)
+    )
+    blockiert = await session.execute(
+        select(VorgangAbhaengigkeit).where(VorgangAbhaengigkeit.blockiert_von_id == vorgang_id)
+    )
+    return VorgangAbhaengigkeitenListe(
+        blockiert_von=list(blockiert_von.scalars().all()),
+        blockiert=list(blockiert.scalars().all()),
+    )
+
+
+@router.post(
+    "/{vorgang_id}/abhaengigkeiten",
+    response_model=VorgangAbhaengigkeitRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
+)
+async def add_vorgang_abhaengigkeit(
+    vorgang_id: UUID,
+    body: VorgangAbhaengigkeitCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangAbhaengigkeit:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    if body.blockiert_von_id == vorgang_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ein Vorgang kann sich nicht selbst blockieren")
+    # session.get() laeuft in der RLS-gescopten Session -- ein Vorgang eines
+    # anderen Mandanten liefert None, genau wie bei vertrag_id/anlage_id
+    # weiter oben in dieser Datei.
+    blockierender_vorgang = await session.get(Vorgang, body.blockiert_von_id)
+    if blockierender_vorgang is None or blockierender_vorgang.geloescht_am is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Blockierender Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if await _wuerde_zyklus_erzeugen(session, vorgang_id, body.blockiert_von_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Diese Abhängigkeit würde einen Zyklus erzeugen",
+        )
+
+    abhaengigkeit = VorgangAbhaengigkeit(
+        mandant_id=auth.mandant_id,
+        vorgang_id=vorgang_id,
+        blockiert_von_id=body.blockiert_von_id,
+        erstellt_von=auth.user_id,
+    )
+    session.add(abhaengigkeit)
+    try:
+        await session.flush()
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Diese Abhängigkeit besteht bereits")
+    return abhaengigkeit
+
+
+@router.delete(
+    "/{vorgang_id}/abhaengigkeiten/{blockiert_von_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
+    ],
+)
+async def remove_vorgang_abhaengigkeit(
+    vorgang_id: UUID,
+    blockiert_von_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang)
+
+    result = await session.execute(
+        select(VorgangAbhaengigkeit).where(
+            VorgangAbhaengigkeit.vorgang_id == vorgang_id,
+            VorgangAbhaengigkeit.blockiert_von_id == blockiert_von_id,
+        )
+    )
+    abhaengigkeit = result.scalar_one_or_none()
+    if abhaengigkeit is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Abhängigkeit nicht gefunden")
+    await session.delete(abhaengigkeit)
+    await session.flush()

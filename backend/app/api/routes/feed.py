@@ -96,6 +96,7 @@ async def get_feed(
     kunde_id: UUID | None = Query(default=None),
     anlage_id: UUID | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
     tag: str | None = Query(default=None, description="Tag-Label ohne '#'"),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
@@ -149,6 +150,8 @@ async def get_feed(
         stmt = stmt.where(Vorgang.anlage_id == anlage_id)
     if standort_id:
         stmt = stmt.where(Vorgang.standort_id == standort_id)
+    if projekt_id:
+        stmt = stmt.where(Vorgang.projekt_id == projekt_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
