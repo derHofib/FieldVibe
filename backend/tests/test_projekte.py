@@ -562,3 +562,39 @@ async def test_aufgabe_mit_anlage_kunde_standort_verknuepfen(
         json={"titel": "Y", "kunde_id": str(uuid.uuid4())},
     )
     assert unbekannt.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_projekt_vertrag_verknuepfung(client, make_mandant, make_user, make_kunde, make_vertrag):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vertrag = await make_vertrag(mandant=mandant, kunde=kunde)
+
+    unbekannt = await client.post(
+        "/api/projekte",
+        headers=auth_headers(token),
+        json={"name": "Sammelauftrag", "vertrag_id": str(uuid.uuid4())},
+    )
+    assert unbekannt.status_code == 400
+
+    created = await client.post(
+        "/api/projekte",
+        headers=auth_headers(token),
+        json={"name": "Sammelauftrag", "vertrag_id": str(vertrag.id)},
+    )
+    assert created.status_code == 201
+    projekt = created.json()
+    assert projekt["vertrag_id"] == str(vertrag.id)
+
+    gefiltert = await client.get(
+        "/api/projekte", headers=auth_headers(token), params={"vertrag_id": str(vertrag.id)}
+    )
+    assert [p["id"] for p in gefiltert.json()] == [projekt["id"]]
+
+    ohne_vertrag = await client.post(
+        "/api/projekte", headers=auth_headers(token), json={"name": "Reines Kanban-Projekt"}
+    )
+    assert ohne_vertrag.status_code == 201
+    assert ohne_vertrag.json()["vertrag_id"] is None

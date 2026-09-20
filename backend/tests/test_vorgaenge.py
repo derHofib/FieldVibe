@@ -590,3 +590,100 @@ async def test_vorgang_anlage_kann_nachtraeglich_hinzugefuegt_und_entfernt_werde
         f"/api/vorgaenge/{vorgang.id}/anlagen", headers=auth_headers(token)
     )
     assert list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_vorgang_projekt_id_zuweisung_und_filter(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+
+    projekt = (
+        await client.post("/api/projekte", headers=auth_headers(token), json={"name": "Rollout 2026"})
+    ).json()
+    vorgang_im_projekt = await make_vorgang(mandant=mandant, kunde=kunde, projekt_id=projekt["id"])
+    vorgang_ohne_projekt = await make_vorgang(mandant=mandant, kunde=kunde)
+
+    unbekannt = await client.patch(
+        f"/api/vorgaenge/{vorgang_ohne_projekt.id}",
+        headers=auth_headers(token),
+        json={"projekt_id": str(uuid.uuid4())},
+    )
+    assert unbekannt.status_code == 400
+
+    gefiltert = await client.get(
+        "/api/vorgaenge", headers=auth_headers(token), params={"projekt_id": projekt["id"]}
+    )
+    assert [v["id"] for v in gefiltert.json()] == [str(vorgang_im_projekt.id)]
+
+
+@pytest.mark.asyncio
+async def test_vorgang_abhaengigkeiten_crud_und_zyklus_ablehnung(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    a = await make_vorgang(mandant=mandant, kunde=kunde, titel="A")
+    b = await make_vorgang(mandant=mandant, kunde=kunde, titel="B")
+    c = await make_vorgang(mandant=mandant, kunde=kunde, titel="C")
+
+    # A haengt ab von B (B muss zuerst fertig werden).
+    resp = await client.post(
+        f"/api/vorgaenge/{a.id}/abhaengigkeiten",
+        headers=auth_headers(token),
+        json={"blockiert_von_id": str(b.id)},
+    )
+    assert resp.status_code == 201
+
+    # Doppelt anlegen -> Konflikt.
+    doppelt = await client.post(
+        f"/api/vorgaenge/{a.id}/abhaengigkeiten",
+        headers=auth_headers(token),
+        json={"blockiert_von_id": str(b.id)},
+    )
+    assert doppelt.status_code == 409
+
+    # Selbst-Referenz -> abgelehnt.
+    selbst = await client.post(
+        f"/api/vorgaenge/{a.id}/abhaengigkeiten",
+        headers=auth_headers(token),
+        json={"blockiert_von_id": str(a.id)},
+    )
+    assert selbst.status_code == 400
+
+    # B haengt ab von C -- unproblematisch (Kette C -> B -> A).
+    kette = await client.post(
+        f"/api/vorgaenge/{b.id}/abhaengigkeiten",
+        headers=auth_headers(token),
+        json={"blockiert_von_id": str(c.id)},
+    )
+    assert kette.status_code == 201
+
+    # C haengt ab von A wuerde den Zyklus A->B->C->A schliessen -> abgelehnt.
+    zyklus = await client.post(
+        f"/api/vorgaenge/{c.id}/abhaengigkeiten",
+        headers=auth_headers(token),
+        json={"blockiert_von_id": str(a.id)},
+    )
+    assert zyklus.status_code == 400
+
+    liste = (
+        await client.get(f"/api/vorgaenge/{a.id}/abhaengigkeiten", headers=auth_headers(token))
+    ).json()
+    assert [x["blockiert_von_id"] for x in liste["blockiert_von"]] == [str(b.id)]
+    assert liste["blockiert"] == []
+
+    loeschen = await client.delete(
+        f"/api/vorgaenge/{a.id}/abhaengigkeiten/{b.id}", headers=auth_headers(token)
+    )
+    assert loeschen.status_code == 204
+
+    nach_loeschen = (
+        await client.get(f"/api/vorgaenge/{a.id}/abhaengigkeiten", headers=auth_headers(token))
+    ).json()
+    assert nach_loeschen["blockiert_von"] == []
