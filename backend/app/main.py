@@ -54,6 +54,7 @@ from app.api.routes import (
     rechnungen,
     search,
     standorte,
+    statistik,
     stories,
     stream,
     system_resources,
@@ -130,6 +131,7 @@ app.include_router(gespeicherte_filter.router)
 app.include_router(boards.router)
 app.include_router(stories.router)
 app.include_router(search.router)
+app.include_router(statistik.router)
 app.include_router(notifications.router)
 app.include_router(stream.router)
 app.include_router(zeiterfassung.router)
