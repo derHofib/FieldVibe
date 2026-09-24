@@ -1,19 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckSquare, KanbanSquare, Link2, ListTree, Plus, X } from "lucide-react";
+import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
 import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
+import { Monogramm } from "../../components/apple/Monogramm";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
-import { Karte, SeitenKopf } from "../OfficeUi";
+import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { ProjektAufgabeDetailPanel } from "./ProjektAufgabeDetailPanel";
+import { ProjektUebersicht } from "./ProjektUebersicht";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
-  niedrig: "bg-slate-100 text-slate-800 dark:bg-stone-500/15 dark:text-stone-300",
-  mittel: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  hoch: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
+  niedrig: "bg-fill text-label2",
+  mittel: "bg-st-arbeit-bg text-st-arbeit",
+  hoch: "bg-st-fehlt-bg text-st-fehlt",
 };
 
 const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
@@ -28,8 +30,14 @@ const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
  * verweisen (rein referenziell, siehe ProjektAufgabeDetailPanel). Reihenfolge
  * innerhalb einer Spalte ist bewusst nicht manuell sortierbar -- neue Karten
  * haengen sich unten an, wie im bestehenden VorgaengeKanban auch. */
+const ANSICHT_UMSCHALTER = [
+  { wert: "uebersicht" as const, label: "Übersicht", icon: LayoutList },
+  { wert: "kanban" as const, label: "Kanban", icon: KanbanSquare },
+];
+
 export function OfficeProjektePage() {
   const queryClient = useQueryClient();
+  const [ansicht, setAnsicht] = useState<"uebersicht" | "kanban">("uebersicht");
   const [projektId, setProjektId] = useState<string | null>(null);
   const [zeigeNeuesProjekt, setZeigeNeuesProjekt] = useState(false);
   const [neuerProjektName, setNeuerProjektName] = useState("");
@@ -122,17 +130,19 @@ export function OfficeProjektePage() {
   };
 
   if (projekteLaden) {
-    return <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>;
+    return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
   }
 
   return (
     <div>
       <SeitenKopf titel="Projekte">
+        {aktivesProjekt && <AnsichtUmschalter wert={ansicht} optionen={ANSICHT_UMSCHALTER} onWechsel={setAnsicht} />}
         {projekte && projekte.length > 0 && (
           <select
             value={aktivesProjekt ?? ""}
             onChange={(e) => setProjektId(e.target.value)}
-            className="border border-ind-line bg-transparent px-2.5 py-1.5 text-sm font-medium text-ind-ink"
+            className="field-ap"
+            style={{ width: "auto", minHeight: 0 }}
           >
             {projekte.map((p) => (
               <option key={p.id} value={p.id}>
@@ -141,11 +151,8 @@ export function OfficeProjektePage() {
             ))}
           </select>
         )}
-        <button
-          onClick={() => setZeigeNeuesProjekt(true)}
-          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-2 text-xs"
-        >
-          <Plus size={14} strokeWidth={2.5} />
+        <button onClick={() => setZeigeNeuesProjekt(true)} className="btn-ap-primary">
+          <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
           Neues Projekt
         </button>
       </SeitenKopf>
@@ -154,27 +161,24 @@ export function OfficeProjektePage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Name</label>
+              <label className="mb-1 block text-xs font-medium text-label2">Name</label>
               <input
                 autoFocus
                 value={neuerProjektName}
                 onChange={(e) => setNeuerProjektName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && projektAnlegen()}
                 placeholder="z. B. Neubau Lagerhalle"
-                className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
+                className="field-ap"
               />
             </div>
             <button
               onClick={projektAnlegen}
               disabled={!neuerProjektName.trim() || projektErstellen.isPending}
-              className="btn-industry btn-industry-primary px-4 py-2 text-xs"
+              className="btn-ap-primary"
             >
               Anlegen
             </button>
-            <button
-              onClick={() => setZeigeNeuesProjekt(false)}
-              className="rounded-lg px-3 py-2 text-xs font-medium text-ind-ink-3"
-            >
+            <button onClick={() => setZeigeNeuesProjekt(false)} className="btn-ap">
               Abbrechen
             </button>
           </div>
@@ -182,9 +186,9 @@ export function OfficeProjektePage() {
       )}
 
       {fehler && (
-        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+        <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
           <span className="flex items-center gap-1.5">
-            <AlertTriangle size={14} strokeWidth={2} /> {fehler}
+            <AlertTriangle size={14} strokeWidth={2} aria-hidden="true" /> {fehler}
           </span>
           <button onClick={() => setFehler(null)} className="text-xs underline">
             Ausblenden
@@ -194,6 +198,8 @@ export function OfficeProjektePage() {
 
       {!aktivesProjekt ? (
         <EmptyState icon={KanbanSquare} text="Noch kein Projekt angelegt." />
+      ) : ansicht === "uebersicht" ? (
+        <ProjektUebersicht projektId={aktivesProjekt} />
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-2">
           {(spalten ?? []).map((spalte) => {
@@ -210,8 +216,8 @@ export function OfficeProjektePage() {
                 className="w-72 shrink-0 rounded-lg"
               >
                 <div className="mb-2 flex items-center justify-between px-1">
-                  <span className="text-xs font-bold text-ind-ink-3">{spalte.name}</span>
-                  <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
+                  <span className="text-xs font-bold text-label2">{spalte.name}</span>
+                  <span className="rounded-full bg-fill px-1.5 text-[10px] font-bold text-label3">
                     {karten.length}
                   </span>
                 </div>
@@ -229,15 +235,16 @@ export function OfficeProjektePage() {
                           e.dataTransfer.setData("text/plain", a.id);
                           e.dataTransfer.effectAllowed = "move";
                         }}
-                        className={`card-interactive w-full cursor-grab rounded-xl border bg-white p-3 dark:bg-stone-900 ${
-                          ueberfaellig ? "border-rose-300 dark:border-rose-500/40" : "border-ind-line"
-                        }`}
+                        className="card-interactive card-ap w-full cursor-grab p-3"
+                        // .card-ap setzt den Rahmen ausserhalb jedes @layer,
+                        // siehe gleiche Begruendung in VorgaengeKanban.tsx.
+                        style={ueberfaellig ? { borderColor: "var(--st-fehlt-dot)" } : undefined}
                       >
                         <button type="button" onClick={() => setPanel({ aufgabe: a })} className="block w-full text-left">
-                          <p className="text-[13px] font-semibold text-ind-ink">{a.titel}</p>
+                          <p className="text-[13px] font-semibold text-label">{a.titel}</p>
                           {a.vorgang_vorgangsnummer && (
-                            <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-sky-600 dark:text-sky-300">
-                              <Link2 size={11} strokeWidth={2} />
+                            <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-tint">
+                              <Link2 size={11} strokeWidth={2} aria-hidden="true" />
                               {a.vorgang_vorgangsnummer}
                             </p>
                           )}
@@ -246,38 +253,30 @@ export function OfficeProjektePage() {
                               {PRIORITAET_LABEL[a.prioritaet]}
                             </span>
                             {ueberfaellig && a.faelligkeit_am && (
-                              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800 dark:bg-rose-500/15 dark:text-rose-300">
+                              <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt">
                                 {tageSeit(a.faelligkeit_am)} Tage überfällig
                               </span>
                             )}
                             {checklisteGesamt > 0 && (
-                              <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
-                                <CheckSquare size={11} strokeWidth={2} />
+                              <span className="flex items-center gap-1 text-[10px] font-medium text-label2">
+                                <CheckSquare size={11} strokeWidth={2} aria-hidden="true" />
                                 {checklisteErledigt}/{checklisteGesamt}
                               </span>
                             )}
                             {!!a.unteraufgaben_gesamt && (
-                              <span className="flex items-center gap-1 text-[10px] font-medium text-ind-ink-3">
-                                <ListTree size={11} strokeWidth={2} />
+                              <span className="flex items-center gap-1 text-[10px] font-medium text-label2">
+                                <ListTree size={11} strokeWidth={2} aria-hidden="true" />
                                 {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt}
                               </span>
                             )}
                           </div>
-                          <div className="mt-1.5 flex items-center justify-between gap-2">
-                            <span />
-                            {a.zugewiesener_name && (
-                              <span
-                                title={a.zugewiesener_name}
-                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
-                              >
-                                {a.zugewiesener_name
-                                  .split(" ")
-                                  .map((t) => t[0])
-                                  .slice(0, 2)
-                                  .join("")}
+                          {a.zugewiesener_name && (
+                            <div className="mt-1.5 flex items-center justify-end gap-2">
+                              <span title={a.zugewiesener_name}>
+                                <Monogramm name={a.zugewiesener_name} groesse={20} />
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </button>
                         {/* Tastatur-/Screenreader-Alternative zum Drag&Drop-Spaltenwechsel. */}
                         <label htmlFor={`projekt-spalte-${a.id}`} className="sr-only">
@@ -287,7 +286,7 @@ export function OfficeProjektePage() {
                           id={`projekt-spalte-${a.id}`}
                           value={a.spalte_id ?? ""}
                           onChange={(e) => handleDrop(e.target.value, a.id)}
-                          className="mt-1.5 w-full border border-ind-line bg-transparent px-1 py-0.5 text-[10px] text-ind-ink-3"
+                          className="field-ap mt-1.5 h-auto px-1 py-0.5 text-[10px]"
                         >
                           {(spalten ?? []).map((s) => (
                             <option key={s.id} value={s.id}>
@@ -301,9 +300,9 @@ export function OfficeProjektePage() {
 
                   <button
                     onClick={() => setPanel({ aufgabe: null, spalteId: spalte.id })}
-                    className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800/60"
+                    className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-label3 hover:bg-fill"
                   >
-                    <Plus size={13} strokeWidth={2} />
+                    <Plus size={13} strokeWidth={2} aria-hidden="true" />
                     Aufgabe hinzufügen
                   </button>
                 </div>
@@ -315,13 +314,13 @@ export function OfficeProjektePage() {
             {neueSpalteName === null ? (
               <button
                 onClick={() => setNeueSpalteName("")}
-                className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800/60"
+                className="flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium text-label3 hover:bg-fill"
               >
-                <Plus size={13} strokeWidth={2} />
+                <Plus size={13} strokeWidth={2} aria-hidden="true" />
                 Spalte hinzufügen
               </button>
             ) : (
-              <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-1.5 dark:border-stone-800 dark:bg-stone-900">
+              <div className="card-ap flex items-center gap-1.5 p-1.5">
                 <input
                   autoFocus
                   value={neueSpalteName}
@@ -329,20 +328,20 @@ export function OfficeProjektePage() {
                   onChange={(e) => setNeueSpalteName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && spalteAnlegen()}
                   placeholder="Name der Spalte"
-                  className="w-full border-none bg-transparent px-1 py-1 text-sm outline-none disabled:opacity-50 dark:text-stone-100"
+                  className="w-full border-none bg-transparent px-1 py-1 text-sm text-label outline-none disabled:opacity-50"
                 />
                 <button
                   onClick={spalteAnlegen}
                   disabled={spalteErstellen.isPending}
-                  className="shrink-0 rounded-md p-1 text-slate-400 hover:text-slate-700 disabled:opacity-50 dark:text-stone-500 dark:hover:text-stone-200"
+                  className="shrink-0 rounded-md p-1 text-label3 hover:text-label disabled:opacity-50"
                 >
-                  <Plus size={14} strokeWidth={2} />
+                  <Plus size={14} strokeWidth={2} aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => setNeueSpalteName(null)}
-                  className="shrink-0 rounded-md p-1 text-slate-400 hover:text-rose-600 dark:text-stone-500 dark:hover:text-rose-400"
+                  className="shrink-0 rounded-md p-1 text-label3 hover:text-st-fehlt"
                 >
-                  <X size={14} strokeWidth={2} />
+                  <X size={14} strokeWidth={2} aria-hidden="true" />
                 </button>
               </div>
             )}
