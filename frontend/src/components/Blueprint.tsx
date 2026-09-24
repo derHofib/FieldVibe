@@ -1,9 +1,10 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 /**
- * "Industry"-Design (siehe docs/DESIGN.md): Karten-Wrapper mit
- * Passermarken statt Schatten/Rundung. Rendert die vier .corner-Spans
- * und ueberlaesst Hintergrund/Padding dem Aufrufer via className.
+ * Karten-Wrapper (Abschnitt 4.1 "Karte") -- ehemals das "Industry"-Design
+ * mit Passermarken-Ecken, seit dem Apple-Redesign schlicht `.card-ap`.
+ * Eigener Name bleibt (viele Aufrufer erwarten diese Komponente), aber ohne
+ * die frueheren .corner-Spans, deren Optik dem Apple-Stil widerspricht.
  */
 export default function Blueprint({
   children,
@@ -11,11 +12,7 @@ export default function Blueprint({
   ...rest
 }: { children: ReactNode; className?: string } & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={`blueprint ${className}`} {...rest}>
-      <i className="corner tl" aria-hidden="true" />
-      <i className="corner tr" aria-hidden="true" />
-      <i className="corner bl" aria-hidden="true" />
-      <i className="corner br" aria-hidden="true" />
+    <div className={`card-ap ${className}`} {...rest}>
       {children}
     </div>
   );

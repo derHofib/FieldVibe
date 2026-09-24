@@ -37,6 +37,26 @@ export const STATUS_KREIS_KLASSE: Record<StatusKey, string> = {
   wartet: "text-st-wartet-dot",
 };
 
+// Rohe Custom-Property je Status-Token (Kreis-Variante) -- fuer Stellen, die
+// Farbe imperativ statt per CSS-Klasse brauchen (Canvas-2D/Mapbox-GL lesen
+// keine Tailwind-Klassen, siehe AUDIT.md "Canvas-/Karten-Ausnahme").
+const STATUS_DOT_VAR: Record<StatusKey, string> = {
+  neu: "--st-neu-dot",
+  geplant: "--st-geplant-dot",
+  arbeit: "--st-arbeit-dot",
+  fehlt: "--st-fehlt-dot",
+  erledigt: "--st-erledigt-dot",
+  wartet: "--st-wartet-dot",
+};
+
+/** Liest den aktuell (hell/dunkel) geltenden Hex-/Farbwert eines Status-
+ * Tokens zur Laufzeit aus den CSS-Custom-Properties -- kein hartkodierter
+ * Farbwert, aber fuer eine imperative API (Mapbox-GL-Pins u. ae.) noetig,
+ * die selbst keine CSS-Variablen lesen kann. */
+export function statusDotFarbe(status: StatusKey): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(STATUS_DOT_VAR[status]).trim();
+}
+
 /** Vorgang.status (7 echte Werte) -> Status-Token (6 Design-Token). Siehe
  * AUDIT.md fuer die Begruendung des Mappings (abgerechnet/storniert teilen
  * sich bewusst Token mit erledigt/geplant statt eigener Farben). */
