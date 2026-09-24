@@ -22,7 +22,7 @@ export function MapboxMap({
   zoom?: number;
   className?: string;
 }) {
-  const { theme } = useTheme();
+  const { angewandtesTheme: theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   // Verhindert ein redundantes setStyle() direkt nach dem Aufbau -- die

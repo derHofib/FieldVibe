@@ -77,7 +77,7 @@ export function MapboxFeedMap({
   onPunktClick: (id: string) => void;
   className?: string;
 }) {
-  const { theme } = useTheme();
+  const { angewandtesTheme: theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const punkteRef = useRef(punkte);

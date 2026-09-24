@@ -3,52 +3,140 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* "Industry"-Design (Blaupausen-Optik, siehe docs/DESIGN.md): eigene
-     Schriften + Farbtoken, praefixiert mit "ind-" statt die bestehenden
-     slate/stone-Namen zu ueberschreiben -- so laesst sich seitenweise
-     migrieren, ohne noch nicht umgestellte Seiten zu verfaerben. Werte sind
-     die hellen (Standard); .dark ueberschreibt dieselben Custom Properties
-     weiter unten -- Tailwind v4 loest @theme-Werte als normale CSS-Variablen
-     auf, ein Re-Scope unter .dark greift also genauso wie bei jeder anderen
-     Variable. */
-  --font-heading: 'Barlow Condensed', ui-sans-serif, system-ui, sans-serif;
-  --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+  /* Systemschrift (Apple HIG) statt der vorherigen "Industry"-Schriften
+     Barlow/Barlow Condensed -- siehe docs/ui-redesign/AUDIT.md. Kein
+     Google-Fonts-Link mehr noetig (index.html). */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif;
 
-  --color-ind-bg: #f2f2f3;
-  /* Karten-/Panel-Flaeche, bewusst heller als die Seite (--color-ind-bg) --
-     Traeger der neuen Tiefe (siehe --shadow-ind-card weiter unten): eine
-     Karte "liegt auf" der Seite statt nur durch einen Rahmen abgegrenzt zu
-     sein. */
-  --color-ind-bg-raised: #ffffff;
-  --color-ind-ink: #1d1f20;
-  --color-ind-ink-2: rgba(29, 31, 32, 0.8);
-  --color-ind-ink-3: rgba(29, 31, 32, 0.64);
-  --color-ind-line: rgba(29, 31, 32, 0.16);
-  --color-ind-line-2: rgba(29, 31, 32, 0.34);
-  /* "Graphit" -- loeste das vorherige Stahlblau (#5980a6) ab, siehe
-     Design-Absprache. Dunkler, neutraler Grauton statt Marken-Blau. */
-  --color-ind-acc: #3a3d42;
-  --color-ind-acc-txt: #202226;
-  --color-ind-acc-soft: rgba(58, 61, 66, 0.08);
-  --color-ind-hover: rgba(58, 61, 66, 0.06);
-  --color-ind-field: #2b2b2b;
-  --color-ind-field-ink: #f5f5f5;
-  --color-ind-btn-bg: #3a3d42;
-  --color-ind-btn-bg-h: #202226;
-  --color-ind-btn-ink: #ffffff;
-  --color-ind-warn: #8a6a2c;
-  --color-ind-bad: #8a3b32;
+  /* ---- Apple-Design-Token -------------------------------------------
+     Kanonische Variablennamen 1:1 aus der Spezifikation (docs/ui-redesign,
+     Abschnitt 3), bewusst OHNE "--color-"-Praefix, damit backdrop-filter/
+     box-shadow/gradient-Deklarationen sie direkt per var(--tint) lesen
+     koennen. Zusaetzlich als --color-*-Alias registriert, damit Tailwind
+     v4 automatisch Utilities erzeugt (bg-cell, text-label2, border-sep,
+     bg-st-arbeit, ...). Werte hier = Hell-Modus (Standard); .dark
+     ueberschreibt dieselben Custom Properties weiter unten. */
+  --gbg: #f2f2f7;
+  --cell: #ffffff;
+  --win: #ffffff;
+  --card: #ffffff;
+  --insp: #f7f7f9;
+  --side: rgba(242, 242, 246, 0.94);
+  --bar: rgba(249, 249, 251, 0.9);
+  --menu: rgba(255, 255, 255, 0.96);
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill2: rgba(118, 118, 128, 0.2);
+  --thumb: #ffffff;
+  --label: #000000;
+  --label2: #6c6c70;
+  --label3: #aeaeb2;
+  --sep: rgba(60, 60, 67, 0.16);
+  --sepstrong: rgba(60, 60, 67, 0.29);
+  --tint: #0071e3;
+  --tintbg: rgba(0, 113, 227, 0.12);
+  --shadow-card-value: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 14px rgba(0, 0, 0, 0.05);
 
-  /* Tiefen-Rezept ("plastischer" Industry-Look, siehe Design-Absprache):
-     Karten/Buttons/Inputs wirken wie gefraeste/gestanzte Bauteile statt
-     rein flacher Haarlinien-Flaechen. Bewusst kein Neumorphismus (kein
-     Farbverlauf, keine Pastelltoene) -- nur gerichtetes Licht ueber
-     Schatten/Bevel in Graustufen. */
-  --shadow-ind-card: 0 1px 2px rgba(20, 20, 22, 0.06), 0 6px 16px rgba(20, 20, 22, 0.08);
-  --shadow-ind-raised: 0 2px 4px rgba(20, 20, 22, 0.1), 0 10px 24px rgba(20, 20, 22, 0.12);
-  --shadow-ind-btn: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-ind-btn-active: inset 0 -1px 0 rgba(255, 255, 255, 0.12), inset 0 1px 1px rgba(0, 0, 0, 0.25);
-  --shadow-ind-input: inset 0 1px 2px rgba(0, 0, 0, 0.06);
+  /* Status (Abschnitt 3.2). "wartet"/"fehlt" (Vorgang-Status "wartet_kunde"
+     bzw. Mangel-Status "Material fehlt") sind Erweiterungen ueber die 5 im
+     Auftrag benannten Stati hinaus -- siehe AUDIT.md "Statusfarben-Mapping"
+     fuer die Begruendung; gleiche Systematik (dunklere Textfarbe als
+     Apples Standardton fuer 4.5:1-Kontrast). */
+  --st-neu-text: #0040dd;
+  --st-neu-bg: rgba(0, 122, 255, 0.12);
+  --st-neu-dot: #007aff;
+  --st-geplant-text: #56565b;
+  --st-geplant-bg: rgba(120, 120, 128, 0.14);
+  --st-geplant-dot: #c7c7cc;
+  --st-arbeit-text: #a64b00;
+  --st-arbeit-bg: rgba(255, 149, 0, 0.18);
+  --st-arbeit-dot: #ff9500;
+  --st-fehlt-text: #c4000f;
+  --st-fehlt-bg: rgba(255, 59, 48, 0.12);
+  --st-fehlt-dot: #ff3b30;
+  --st-erledigt-text: #1b7431;
+  --st-erledigt-bg: rgba(52, 199, 89, 0.17);
+  --st-erledigt-dot: #34c759;
+  --st-wartet-text: #6e3ba8;
+  --st-wartet-bg: rgba(175, 82, 222, 0.14);
+  --st-wartet-dot: #af52de;
+
+  /* Herkunft (Abschnitt 3.3) -- Einzelauftrag nutzt bewusst --label2, kein
+     eigenes Token. */
+  --origin-projekt-text: #3634a3;
+  --origin-projekt-bg: rgba(88, 86, 214, 0.12);
+
+  /* Symbol-Kachel-Farben (Abschnitt 3.3) -- in beiden Modi identisch,
+     deshalb keine .dark-Ueberschreibung noetig. */
+  --tile-blue: #007aff;
+  --tile-red: #ff3b30;
+  --tile-green: #34c759;
+  --tile-orange: #ff9500;
+  --tile-indigo: #5856d6;
+  --tile-gray: #8e8e93;
+
+  /* Radien (Abschnitt 4.1). */
+  --radius-ap-sm: 7px;
+  /* Desktop-Buttons/Segment */
+  --radius-ap-input: 8px;
+  /* Suchfeld */
+  --radius-ap-md: 10px;
+  /* Karten/Gruppen Desktop (untere Grenze) */
+  --radius-ap-card: 12px;
+  /* Karten/Gruppen Desktop (obere Grenze), Mobil-Gruppen, Sheet oben */
+  --radius-ap-tile: 14px;
+  /* Mobil-Kacheln */
+  --radius-ap-pill: 999px;
+
+  /* Tailwind-Utility-Aliase. */
+  --color-gbg: var(--gbg);
+  --color-cell: var(--cell);
+  --color-win: var(--win);
+  --color-card: var(--card);
+  --color-insp: var(--insp);
+  --color-side: var(--side);
+  --color-bar: var(--bar);
+  --color-menu: var(--menu);
+  --color-fill: var(--fill);
+  --color-fill2: var(--fill2);
+  --color-thumb: var(--thumb);
+  --color-label: var(--label);
+  --color-label2: var(--label2);
+  --color-label3: var(--label3);
+  --color-sep: var(--sep);
+  --color-sepstrong: var(--sepstrong);
+  --color-tint: var(--tint);
+  --color-tintbg: var(--tintbg);
+
+  --color-st-neu: var(--st-neu-text);
+  --color-st-neu-bg: var(--st-neu-bg);
+  --color-st-neu-dot: var(--st-neu-dot);
+  --color-st-geplant: var(--st-geplant-text);
+  --color-st-geplant-bg: var(--st-geplant-bg);
+  --color-st-geplant-dot: var(--st-geplant-dot);
+  --color-st-arbeit: var(--st-arbeit-text);
+  --color-st-arbeit-bg: var(--st-arbeit-bg);
+  --color-st-arbeit-dot: var(--st-arbeit-dot);
+  --color-st-fehlt: var(--st-fehlt-text);
+  --color-st-fehlt-bg: var(--st-fehlt-bg);
+  --color-st-fehlt-dot: var(--st-fehlt-dot);
+  --color-st-erledigt: var(--st-erledigt-text);
+  --color-st-erledigt-bg: var(--st-erledigt-bg);
+  --color-st-erledigt-dot: var(--st-erledigt-dot);
+  --color-st-wartet: var(--st-wartet-text);
+  --color-st-wartet-bg: var(--st-wartet-bg);
+  --color-st-wartet-dot: var(--st-wartet-dot);
+
+  --color-origin-projekt: var(--origin-projekt-text);
+  --color-origin-projekt-bg: var(--origin-projekt-bg);
+
+  --color-tile-blue: var(--tile-blue);
+  --color-tile-red: var(--tile-red);
+  --color-tile-green: var(--tile-green);
+  --color-tile-orange: var(--tile-orange);
+  --color-tile-indigo: var(--tile-indigo);
+  --color-tile-gray: var(--tile-gray);
+
+  --shadow-card: var(--shadow-card-value);
 
   --animate-livepulse: livepulse 2.4s ease-in-out infinite;
   --animate-twinkle: twinkle 4s ease-in-out infinite;
@@ -102,74 +190,117 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+    border-color: var(--sep);
   }
 }
 
-body {
-  @apply bg-slate-100 text-slate-900 dark:bg-stone-950 dark:text-stone-100;
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
 }
 
-/* Dunkle Werte der "Industry"-Farbtoken -- Standard im Betrieb (siehe
-   docs/DESIGN.md), ueberschreibt dieselben Custom Properties aus dem
-   @theme-Block oben. */
-.dark {
-  /* Basispalette (bg/ink/line) war beim ersten Graphit-Umbau nur beim
-     Akzent (ind-acc) umgestellt worden -- diese Werte trugen bis hierher
-     noch den alten Blaustich (#0b1219/#eef6ff/rgba(148,188,227,..) aus der
-     Vor-Graphit-Blaupausen-Palette). Per Luminanz-erhaltender Entsaettigung
-     (R=G=B auf denselben wahrgenommenen Helligkeitswert) auf neutrales Grau
-     gebracht, damit sich Kontrast/Lesbarkeit nicht veraendern -- nur der
-     Farbton. */
-  --color-ind-bg: #111111;
-  /* Etwas heller als die Seite, gleiche Rolle wie im Light-Mode -- Schatten
-     allein liest man auf dunklem Grund kaum, die hellere Flaeche traegt die
-     Elevation hier mit. */
-  --color-ind-bg-raised: #1a1a1a;
-  --color-ind-ink: #f5f5f5;
-  --color-ind-ink-2: rgba(245, 245, 245, 0.82);
-  --color-ind-ink-3: rgba(245, 245, 245, 0.66);
-  --color-ind-line: rgba(182, 182, 182, 0.2);
-  --color-ind-line-2: rgba(182, 182, 182, 0.4);
-  /* "Graphit" im Dark Mode: helles, kuehles Grau statt dem vorherigen
-     Hellblau (#94bce3) -- muss auf dunklem Grund hell genug fuer Kontrast
-     bleiben, deshalb kein dunkles Grau wie im Light-Mode. */
-  --color-ind-acc: #a8adb5;
-  --color-ind-acc-txt: #c9ccd1;
-  --color-ind-acc-soft: rgba(168, 173, 181, 0.13);
-  --color-ind-hover: rgba(168, 173, 181, 0.08);
-  --color-ind-field: #2b2b2b;
-  --color-ind-field-ink: #f5f5f5;
-  --color-ind-btn-bg: #8f939b;
-  --color-ind-btn-bg-h: #a8adb5;
-  --color-ind-btn-ink: #0b1219;
-  --color-ind-warn: #d7ae5f;
-  --color-ind-bad: #e0847a;
+body {
+  background-color: var(--gbg);
+  color: var(--label);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
+}
 
-  --shadow-ind-card: 0 1px 0 rgba(255, 255, 255, 0.03), 0 6px 18px rgba(0, 0, 0, 0.45);
-  --shadow-ind-raised: 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 28px rgba(0, 0, 0, 0.55);
-  --shadow-ind-btn: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-ind-btn-active: inset 0 -1px 0 rgba(255, 255, 255, 0.06), inset 0 1px 1px rgba(0, 0, 0, 0.5);
-  --shadow-ind-input: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+/* Ueberschriften ab 20px bekommen den staerkeren Tracking-Wert aus
+   Abschnitt 2.2 -- als wiederverwendbare Utility statt an jeder
+   Ueberschrift ein Arbitrary-Value zu wiederholen. */
+.ap-heading {
+  letter-spacing: -0.02em;
+}
+
+/* Abschnitt 6: bei prefers-reduced-motion keine Uebergangsanimationen
+   (Ausnahme: die drei dekorativen @keyframes oben sind Ambient-Bewegung
+   auf Empty-States/Highlights, keine Zustands-Uebergaenge -- werden hier
+   bewusst mitgestoppt, weil sie dieselbe Bewegungs-Empfindlichkeit
+   ansprechen). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dunkle Werte der Apple-Design-Token -- ueberschreibt dieselben Custom
+   Properties aus dem @theme-Block oben. */
+.dark {
+  --gbg: #000000;
+  --cell: #1c1c1e;
+  --win: #1e1e1e;
+  --card: #2a2a2c;
+  --insp: #242426;
+  --side: rgba(38, 38, 40, 0.94);
+  --bar: rgba(22, 22, 24, 0.88);
+  --menu: rgba(44, 44, 46, 0.97);
+  --fill: rgba(118, 118, 128, 0.24);
+  --fill2: rgba(118, 118, 128, 0.34);
+  --thumb: #636366;
+  --label: #ffffff;
+  --label2: #98989f;
+  --label3: #5a5a5e;
+  --sep: rgba(84, 84, 88, 0.5);
+  --sepstrong: rgba(84, 84, 88, 0.7);
+  --tint: #0a84ff;
+  --tintbg: rgba(10, 132, 255, 0.22);
+  --shadow-card-value: none;
+
+  --st-neu-text: #6ab1ff;
+  --st-neu-bg: rgba(10, 132, 255, 0.22);
+  --st-neu-dot: #0a84ff;
+  --st-geplant-text: #aeaeb2;
+  --st-geplant-bg: rgba(142, 142, 147, 0.22);
+  --st-geplant-dot: #48484a;
+  --st-arbeit-text: #ffb340;
+  --st-arbeit-bg: rgba(255, 159, 10, 0.2);
+  --st-arbeit-dot: #ff9f0a;
+  --st-fehlt-text: #ff7b73;
+  --st-fehlt-bg: rgba(255, 69, 58, 0.2);
+  --st-fehlt-dot: #ff453a;
+  --st-erledigt-text: #4ade6e;
+  --st-erledigt-bg: rgba(48, 209, 88, 0.18);
+  --st-erledigt-dot: #30d158;
+  --st-wartet-text: #c89eff;
+  --st-wartet-bg: rgba(191, 90, 242, 0.22);
+  --st-wartet-dot: #bf5af2;
+
+  --origin-projekt-text: #9c9aff;
+  --origin-projekt-bg: rgba(94, 92, 230, 0.28);
+}
+
+/* Sheets (Modals von unten) weichen im Dunkelmodus von den sonstigen
+   Flaechenfarben ab (Abschnitt 3.1) -- eigene Klasse statt globaler
+   Umdefinition, damit nur der Sheet-Wrapper (Sheet.tsx) betroffen ist. */
+.dark .ap-sheet-surface {
+  --gbg: #1c1c1e;
+  --cell: #2c2c2e;
 }
 
 /* Abstand, den klebende Elemente (z. B. die Kommentar-Leiste der
    Vorgangs-Detailseite) zum unteren Rand halten muessen. In der Feld-App
-   schwebt dort die Bottom-Nav-Pille; die Office-Shell hat keine und setzt
-   den Wert in OfficeLayout auf einen schmalen Rest herunter -- sonst
-   klebte die Leiste 6rem ueber dem Rand mitten im Inhalt. */
+   schwebt dort die Tab-Bar; die Office-Shell hat keine und setzt den Wert
+   in OfficeLayout auf einen schmalen Rest herunter -- sonst klebte die
+   Leiste 6rem ueber dem Rand mitten im Inhalt. */
 :root {
   --klebe-abstand: 6rem;
 }
 
 .btn-touch {
-  @apply min-h-[48px] min-w-[48px];
+  @apply min-h-[44px] min-w-[44px];
 }
 
-/* Fuer die swipebare Bottom-Nav (siehe components/BottomNav.tsx): der
-   Scroll-Balken selbst waere in der schmalen, schwebenden Pille nur
-   visuelles Rauschen -- die Wischbarkeit bleibt ohne ihn vollstaendig
-   erhalten. */
+/* Fuer die swipebare Tab-Bar/Chip-Leisten: der Scroll-Balken selbst waere
+   in einer schmalen Leiste nur visuelles Rauschen -- die Wischbarkeit
+   bleibt ohne ihn vollstaendig erhalten. */
 .scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -178,19 +309,13 @@ body {
   display: none;
 }
 
-/* Individuelle Scrollbar statt des grellen System-Balkens -- der blieb im
-   Dark Mode hell und stach aus jeder dunklen Flaeche heraus. Firefox liest
+/* Individuelle Scrollbar statt des grellen System-Balkens, aus den
+   Apple-Token abgeleitet statt aus der Tailwind-Palette. Firefox liest
    scrollbar-color/-width, WebKit/Chromium/Edge nur die
-   ::-webkit-scrollbar-Pseudoelemente, deshalb beides parallel. Global auf
-   allen Elementen statt nur ausgewaehlten Containern -- die App hat zu
-   viele scrollbare Stellen (Sidebar, Tabellen, Gantt, Karten-Listen,
-   Modals), um sie einzeln zu pflegen. */
+   ::-webkit-scrollbar-Pseudoelemente, deshalb beides parallel. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-slate-300) transparent;
-}
-.dark * {
-  scrollbar-color: var(--color-stone-700) transparent;
+  scrollbar-color: var(--label3) transparent;
 }
 ::-webkit-scrollbar {
   width: 10px;
@@ -203,312 +328,179 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-slate-300);
+  background-color: var(--label3);
   border-radius: 9999px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-slate-400);
-}
-.dark ::-webkit-scrollbar-thumb {
-  background-color: var(--color-stone-700);
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-stone-600);
+  background-color: var(--label2);
 }
 
 .card-interactive {
   @apply transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:shadow-xs;
 }
 
-/* Karten-Tiefe app-weit, OHNE jede der 60+ Stellen einzeln anzufassen: das
-   Karten-"Rezept" ist ueberall exakt dieselbe Utility-Kombination (siehe
-   fieldvibe-design-Skill §3, "border border-ind-line bg-ind-bg"), nie eine
-   eigene Klasse -- ein zusammengesetzter Selektor auf genau diese drei
-   Klassen trifft deshalb automatisch jede bestehende Karte (Feld-App,
-   Office `Karte`, Super-Admin), unabhaengig von Klassen-Reihenfolge im
-   JSX. Ausserhalb jedes Tailwind-@layer (wie die uebrigen -industry-
-   Regeln) gewinnt das zuverlaessig gegen die Utility-Klassen selbst. */
-.border.border-ind-line.bg-ind-bg {
-  background-color: var(--color-ind-bg-raised);
-  box-shadow: var(--shadow-ind-card);
-}
-/* Schwebende Insel (Bottom-Nav, siehe BottomNav.tsx) traegt dieselbe
-   Klassen-Kombination wie eine normale Karte, ist aber ein fixiertes,
-   ueber dem Inhalt schwebendes Element -- verdient den kraeftigeren
-   "raised"-Schatten statt des ruhenden Karten-Schattens. Eindeutig ueber
-   das zusaetzliche rounded-full von jeder eckigen Karte unterscheidbar
-   (Quadratisch ist sonst durchgaengig Pflicht, siehe fieldvibe-design-
-   Skill Checkliste Punkt 7). */
-.rounded-full.border.border-ind-line.bg-ind-bg {
-  box-shadow: var(--shadow-ind-raised);
+/* ---- Apple-Recipe-Klassen (Abschnitt 4) --------------------------------
+   Ersetzt die vorherigen .btn-industry/.input-industry/.tag-industry/
+   .seg-industry/.card-soft/.blueprint/.btn-clay/.navbar-soft-Klassen
+   restlos (siehe AUDIT.md). Zustandsbehaftete Bausteine (Segmented
+   Control, Switch, Pull-down-Menue, Abhak-Kreis, Filter-Chip, Status-
+   Pille/-Kreis, Symbol-Kachel, Monogramm, gruppierte Liste, Sheet) sind
+   eigene React-Komponenten unter components/apple/ und benutzen diese
+   Klassen nur fuer die reine Optik. */
+
+.card-ap {
+  background-color: var(--card);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--radius-ap-card);
+  box-shadow: var(--shadow-card);
 }
 
-/* "Industry"-Design (siehe docs/DESIGN.md): Blaupausen-Karte mit
-   Passermarken (Registrierungskreuze) an den vier Ecken. Traegt seit der
-   "plastischer"-Ueberarbeitung zusaetzlich einen Schatten (--shadow-ind-
-   raised) statt komplett schattenlos zu bleiben -- Umsetzung via
-   Blueprint.tsx-Wrapper, der die vier .corner-Spans rendert.
-   Eckposition/-groesse 1:1 aus dem Design-Handoff (industry-styles.css),
-   Farben auf --color-ind-* umgestellt. */
-.blueprint {
-  position: relative;
-  border: 1px solid var(--color-ind-line);
-  border-radius: 0;
-  box-shadow: var(--shadow-ind-raised);
-}
-.blueprint > .corner {
-  position: absolute;
-  width: 11px;
-  height: 11px;
-  color: var(--color-ind-line-2);
-}
-.blueprint > .corner::before,
-.blueprint > .corner::after {
-  content: '';
-  position: absolute;
-  background: currentColor;
-}
-.blueprint > .corner::before {
-  left: 5px;
-  top: 0;
-  width: 1px;
-  height: 100%;
-}
-.blueprint > .corner::after {
-  top: 5px;
-  left: 0;
-  width: 100%;
-  height: 1px;
-}
-.blueprint > .corner.tl {
-  top: -6px;
-  left: -6px;
-}
-.blueprint > .corner.tr {
-  top: -6px;
-  right: -6px;
-}
-.blueprint > .corner.bl {
-  bottom: -6px;
-  left: -6px;
-}
-.blueprint > .corner.br {
-  bottom: -6px;
-  right: -6px;
-}
-
-/* "Industry"-Design: Button/Input/Tag/Seg-Rezepte als eigener Klassen-Satz
-   (praefixiert mit "-industry", analog zum "ind-"-Farbtoken-Ansatz oben) --
-   bestehende .btn-clay/.card-soft/Tailwind-Chip-Muster bleiben unveraendert
-   bestehen, bis eine Seite gezielt umgestellt wird. Quadratisch (kein
-   Radius). Gefuellte/umrandete Flaechen (primary/secondary) bekommen einen
-   Bevel-Schatten (--shadow-ind-btn) statt reiner Haarlinie -- liest sich
-   wie eine gestanzte Taste, nicht wie Neumorphismus (kein Farbverlauf,
-   keine Pastelltoene). :active kehrt den Bevel um + drueckt die Taste
-   1px nach unten -- Tastengefuehl ueber Bewegung, siehe Design-Absprache. */
-.btn-industry {
+.btn-ap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 0.8125rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  border-radius: 0;
-  border: 1px solid transparent;
-  padding: 0.5rem 0.9rem;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-ap-sm);
+  border: 0.5px solid var(--sepstrong);
+  background: var(--card);
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  color: var(--color-ind-ink);
-  transition: background-color 100ms ease, border-color 100ms ease, box-shadow 100ms ease, transform 100ms ease;
+  transition: background-color 100ms ease;
 }
-.btn-industry svg {
-  display: block;
+.btn-ap:hover:not(:disabled) {
+  background: var(--fill);
 }
-.btn-industry:disabled {
+.btn-ap:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.btn-industry:focus-visible {
-  outline: 2px solid var(--color-ind-acc);
-  outline-offset: 1px;
+
+.btn-ap-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-ap-sm);
+  border: none;
+  background: var(--tint);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 100ms ease;
 }
-.btn-industry-primary {
-  background: var(--color-ind-btn-bg);
-  border-color: var(--color-ind-btn-bg);
-  color: var(--color-ind-btn-ink);
-  box-shadow: var(--shadow-ind-btn);
+.btn-ap-primary:hover:not(:disabled) {
+  opacity: 0.88;
 }
-.btn-industry-primary:hover:not(:disabled) {
-  background: var(--color-ind-btn-bg-h);
-  border-color: var(--color-ind-btn-bg-h);
-}
-.btn-industry-primary:active:not(:disabled) {
-  box-shadow: var(--shadow-ind-btn-active);
-  transform: translateY(1px);
-}
-.btn-industry-secondary {
-  border-color: var(--color-ind-line);
-  background: var(--color-ind-bg-raised);
-  box-shadow: var(--shadow-ind-card);
-}
-.btn-industry-secondary:hover:not(:disabled) {
-  background: var(--color-ind-hover);
-}
-.btn-industry-secondary:active:not(:disabled) {
-  box-shadow: var(--shadow-ind-btn-active);
-  transform: translateY(1px);
-}
-.btn-industry-ghost {
-  border-color: transparent;
-  color: var(--color-ind-acc-txt);
-}
-.btn-industry-ghost:hover:not(:disabled) {
-  background: var(--color-ind-acc-soft);
-}
-.btn-industry-icon {
-  width: 36px;
-  height: 36px;
-  padding: 0;
+.btn-ap-primary:disabled {
+  background: var(--fill2);
+  color: var(--label3);
+  cursor: not-allowed;
 }
 
-/* Eingelassen statt neutral: leichter Innenschatten (--shadow-ind-input)
-   laesst Inputs im Gegensatz zu Karten/Buttons "vertieft" wirken -- die
-   Blaupausen-Flaeche bekommt dadurch spuerbare Ober-/Unterseiten statt
-   ueberall gleich flach zu sein, siehe Design-Absprache. */
-.input-industry {
+.btn-ap-toolbar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  width: 28px;
+  border-radius: var(--radius-ap-sm);
+  border: none;
+  background: transparent;
+  color: var(--label2);
+  cursor: pointer;
+  transition: background-color 100ms ease;
+}
+.btn-ap-toolbar:hover:not(:disabled) {
+  background: var(--fill);
+}
+.btn-ap-toolbar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-ap-capsule {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-ap-pill);
+  border: none;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-ap-capsule-primary {
+  background: var(--tint);
+  color: #ffffff;
+}
+.btn-ap-capsule-secondary {
+  background: var(--fill);
+  color: var(--tint);
+}
+.btn-ap-capsule:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.field-ap {
   width: 100%;
   min-height: 36px;
-  padding: 0.4rem 0.6rem;
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  color: var(--color-ind-ink);
-  background: transparent;
-  border: 1px solid var(--color-ind-line);
-  border-radius: 0;
-  box-shadow: var(--shadow-ind-input);
+  padding: 0.45rem 0.7rem;
+  font-size: 15px;
+  color: var(--label);
+  background: var(--card);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--radius-ap-input);
 }
-.input-industry::placeholder {
-  color: var(--color-ind-ink-3);
+.field-ap::placeholder {
+  color: var(--label3);
 }
-.input-industry:hover {
-  border-color: var(--color-ind-line-2);
+.field-ap:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
+  border-color: var(--tint);
 }
-.input-industry:focus-visible {
-  outline: 2px solid var(--color-ind-acc);
-  outline-offset: 0;
-  border-color: var(--color-ind-acc);
-}
-textarea.input-industry {
+textarea.field-ap {
   min-height: 90px;
   resize: vertical;
 }
 
-.tag-industry {
-  display: inline-flex;
+/* Suchfeld (Abschnitt 4.2) -- randlos, Fuellung statt Rahmen. Groesse
+   (Desktop 28px/Radius 8 vs. Mobil 36px/Radius 10) wird von der
+   aufrufenden Komponente (SearchField.tsx) per Prop gesteuert. */
+.search-ap {
+  display: flex;
   align-items: center;
-  font-family: var(--font-sans);
-  font-size: 0.6875rem;
-  letter-spacing: 0.02em;
-  padding: 0.15rem 0.55rem;
-  border-radius: 0;
+  gap: 6px;
+  background: var(--fill);
+  border-radius: var(--radius-ap-input);
+  border: none;
+  color: var(--label);
 }
-.tag-industry-accent {
-  background: var(--color-ind-acc-soft);
-  color: var(--color-ind-acc-txt);
+.search-ap input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--label);
+  width: 100%;
 }
-.tag-industry-neutral {
-  background: var(--color-ind-hover);
-  color: var(--color-ind-ink-2);
-}
-.tag-industry-outline {
-  border: 1px solid var(--color-ind-acc);
-  color: var(--color-ind-acc-txt);
+.search-ap input::placeholder {
+  color: var(--label2);
 }
 
-/* Segmented-Toggle-Gruppe, Office-Pendant zu OfficeUi.tsx' bisherigem
-   Segmented-Muster (siehe fieldvibe-design-Skill §6). */
-.seg-industry {
-  display: inline-flex;
-  overflow: hidden;
-  border: 1px solid var(--color-ind-line);
-  border-radius: 0;
-}
-.seg-industry > * {
-  border-left: 1px solid var(--color-ind-line);
-}
-.seg-industry > *:first-child {
-  border-left: none;
-}
-
-/* "Weiche Tiefe": Doppelschatten-Karten mit von links nach rechts
-   ausfadendem Statusfarb-Rahmen (Design-Vorschlag, siehe Artifact). Der
-   Rahmen kommt aus einem Gradient auf dem Aussen-Wrapper (.card-soft), der
-   durch das 2.5px-Padding hinter der eigentlichen Karte (.card-soft-inner)
-   hervorschimmert -- --frame-color wird pro Status per inline style gesetzt. */
-.card-soft {
-  padding: 2.5px;
-  border-radius: 1.125rem;
-  background: linear-gradient(to right, var(--frame-color, var(--color-slate-300)), transparent 78%);
-}
-.dark .card-soft {
-  background: linear-gradient(to right, var(--frame-color, var(--color-stone-600)), transparent 78%);
-}
-
-.card-soft-inner {
-  border-radius: 1rem;
-  box-shadow:
-    -6px -6px 14px rgba(255, 255, 255, 0.9),
-    7px 9px 18px rgba(120, 110, 90, 0.16);
-  transition: transform 150ms ease, box-shadow 150ms ease;
-}
-.card-soft-inner:hover {
-  transform: translateY(-2px);
-}
-.card-soft-inner:active {
-  transform: translateY(0);
-}
-.dark .card-soft-inner {
-  box-shadow:
-    -5px -5px 12px rgba(255, 255, 255, 0.035),
-    6px 8px 16px rgba(0, 0, 0, 0.55);
-}
-
-/* Weich geprägter Primaer-Button: gleiche Schattenlogik wie .card-soft,
-   Schatten kehrt sich beim Druecken nach innen um. */
-.btn-clay {
-  box-shadow:
-    -5px -5px 12px rgba(255, 255, 255, 0.5),
-    6px 7px 14px rgba(60, 80, 180, 0.35);
-  transition: box-shadow 100ms ease, transform 100ms ease;
-}
-.btn-clay:active {
-  box-shadow:
-    inset 3px 3px 8px rgba(30, 45, 120, 0.4),
-    inset -3px -3px 6px rgba(255, 255, 255, 0.2);
-}
-.dark .btn-clay {
-  box-shadow:
-    -4px -4px 10px rgba(255, 255, 255, 0.05),
-    5px 6px 12px rgba(0, 0, 0, 0.5);
-}
-.dark .btn-clay:active {
-  box-shadow:
-    inset 3px 3px 8px rgba(0, 0, 0, 0.5),
-    inset -3px -3px 6px rgba(255, 255, 255, 0.04);
-}
-
-/* Schwebende Nav-Leiste + FAB in derselben weichen Tiefe. */
-.navbar-soft {
-  box-shadow:
-    -6px -6px 14px rgba(255, 255, 255, 0.9),
-    7px 9px 18px rgba(120, 110, 90, 0.16);
-}
-.dark .navbar-soft {
-  box-shadow:
-    -5px -5px 12px rgba(255, 255, 255, 0.035),
-    6px 8px 16px rgba(0, 0, 0, 0.55);
+/* Fokusring app-weit (Abschnitt 6). */
+:focus-visible {
+  outline: 2px solid var(--tint);
+  outline-offset: 2px;
 }

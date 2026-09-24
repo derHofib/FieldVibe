@@ -3,14 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
     <title>FieldVibe</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@400;500;600&display=swap"
-    />
+    <script>
+      // Verhindert Aufblitzen (Abschnitt 2.1): setzt die .dark-Klasse vor dem
+      // ersten Paint, noch bevor React/ThemeContext geladen ist. Muss exakt
+      // dieselbe Logik wie ThemeContext.tsx:ermittleAngewandtesTheme()
+      // spiegeln (dort dokumentiert, warum "automatisch" == kein
+      // gespeicherter Wert).
+      (function () {
+        try {
+          var gespeichert = localStorage.getItem('ui.appearance');
+          var dunkel =
+            gespeichert === 'dark' ||
+            (gespeichert !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dunkel) document.documentElement.classList.add('dark');
+        } catch (e) {
+          // Privater Modus o. Ae. -- dann eben ohne Vorab-Anwendung, React
+          // uebernimmt gleich danach.
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
