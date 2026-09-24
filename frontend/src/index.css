@@ -74,6 +74,17 @@
   --tile-indigo: #5856d6;
   --tile-gray: #8e8e93;
 
+  /* Monogramm-Avatar (Abschnitt 4.1 Ausnahme "keine Farbverlaeufe als
+     Flaechen") -- fester Verlauf, in beiden Modi identisch. */
+  --mono-grad-1: #a5abb8;
+  --mono-grad-2: #858994;
+
+  /* Schalter (Switch, Abschnitt 4.2) -- an-Zustand ist Apple systemGreen,
+     in beiden Modi identisch (kein Statustoken, eigene Bedeutung). */
+  --switch-on: #34c759;
+
+  --color-switch-on: var(--switch-on);
+
   /* Radien (Abschnitt 4.1). */
   --radius-ap-sm: 7px;
   /* Desktop-Buttons/Segment */
