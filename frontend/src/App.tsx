@@ -22,7 +22,6 @@ import { AuswertungPage } from "./pages/feld/AuswertungPage";
 import { BestellungDetailPage } from "./pages/feld/BestellungDetailPage";
 import { BoardMobilePage } from "./pages/feld/boards/BoardMobilePage";
 import { BoardsUebersichtPage } from "./pages/feld/boards/BoardsUebersichtPage";
-import { BottomNavSettingsPage } from "./pages/feld/BottomNavSettingsPage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
@@ -43,6 +42,7 @@ import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
 import { MaterialPage } from "./pages/feld/MaterialPage";
 import { MeineAufgabenPage } from "./pages/feld/MeineAufgabenPage";
+import { MehrPage } from "./pages/feld/MehrPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
@@ -52,6 +52,7 @@ import { PostfachNachrichtPage } from "./pages/feld/PostfachNachrichtPage";
 import { PostfachPage } from "./pages/feld/PostfachPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
+import { ProjektePageMobil } from "./pages/feld/ProjektePageMobil";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { RechnungenPage } from "./pages/feld/RechnungenPage";
 import { RechnungseingangPage } from "./pages/feld/RechnungseingangPage";
@@ -160,6 +161,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
           <Route path="/dispo" element={<DispoBoardPage />} />
           <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
+          <Route path="/mehr" element={<MehrPage />} />
+          <Route path="/projekte" element={<ProjektePageMobil />} />
           <Route path="/boards" element={<BoardsUebersichtPage />} />
           <Route path="/boards/:id" element={<BoardMobilePage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />
@@ -185,7 +188,6 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/account-typen" element={<AccountTypenPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
-          <Route path="/einstellungen/menueleiste" element={<BottomNavSettingsPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
           <Route path="/team-zeiten" element={<TeamZeitenPage />} />

@@ -31,12 +31,12 @@ import type { IconTone } from "../components/IconBadge";
 import { istModulAktiv } from "../utils/module";
 import type { CurrentUser, NavKategorienRead, RechteAktion, RechteBereich } from "../types";
 
-// Einzige Quelle der Wahrheit fuer jede Seite, die ein Nutzer sich in die
-// individualisierbare Bottom-Nav legen kann (siehe components/BottomNav.tsx
-// + pages/feld/BottomNavSettingsPage.tsx). "sichtbar" spiegelt exakt dieselben
-// Rechte-/Modul-Gates, die die jeweilige Seite bzw. ihr bisheriger Einstiegs-
-// punkt (GeschaeftPage/DispoBoardPage/FeedPage/ProfilePage/SettingsPage)
-// schon vorher verwendet hat -- keine neuen Berechtigungen, nur ein neuer,
+// Einzige Quelle der Wahrheit fuer jede Seite in der Office-Seitenleiste
+// (office/OfficeLayout.tsx) und im "Mehr"-Tab der Feld-App
+// (pages/feld/MehrPage.tsx). "sichtbar" spiegelt exakt dieselben Rechte-/
+// Modul-Gates, die die jeweilige Seite bzw. ihr bisheriger Einstiegspunkt
+// (GeschaeftPage/DispoBoardPage/FeedPage/ProfilePage/SettingsPage) schon
+// vorher verwendet hat -- keine neuen Berechtigungen, nur ein neuer,
 // zentraler Ort dafuer.
 export type NavKategorie = "Arbeit" | "Finanzen" | "Kommunikation" | "Verwaltung";
 
@@ -60,8 +60,8 @@ export interface NavSeite {
     currentUser: CurrentUser | undefined;
     hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean;
   }) => boolean;
-  // Nur in der Office-Seitenleiste anwaehlbar, nie in der mobilen Bottom-Nav
-  // (weder als fester Link noch in der Rotunde) -- siehe BottomNav.tsx.
+  // Nur in der Office-Seitenleiste anwaehlbar, taucht im "Mehr"-Tab der
+  // Feld-App nicht auf -- siehe pages/feld/MehrPage.tsx.
   nurOffice?: boolean;
 }
 
@@ -341,63 +341,11 @@ export const NAV_SEITEN: NavSeite[] = [
   },
 ];
 
-// Bottom-Nav-Layout (siehe components/BottomNav.tsx): links vom Neu-Button
-// eine feste, nicht wischbare Zone mit genau LINKS_SLOT_ANZAHL Seiten,
-// rechts vom Neu-Button eine wischbare "Rotunde" beliebiger Laenge (das
-// zentrierte Icon gross, die Nachbarn kleiner). Beide Zonen sind frei
-// konfigurierbar (siehe pages/feld/BottomNavSettingsPage.tsx).
-export const LINKS_SLOT_ANZAHL = 2;
-
-// Standardbelegung fuer Nutzer ohne eigene Praeferenz (bottom_nav_items ===
-// null) -- entspricht dem bisherigen Verhalten: Feed/Profil fest, der Rest
-// wie im vormaligen "Mehr"-Menue.
-export const STANDARD_LINKS = ["feed", "profil"];
-export const STANDARD_ROTUNDE = [
-  "meldungen",
-  "dispo",
-  "kunden",
-  "material",
-  "rechnungen",
-  "rechnungseingang",
-  "buchhaltung",
-  "papierkorb",
-];
-
 export function sichtbareNavSeiten(
   currentUser: CurrentUser | undefined,
   hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean,
 ): NavSeite[] {
   return NAV_SEITEN.filter((seite) => seite.sichtbar({ currentUser, hatRecht }));
-}
-
-// Gemeinsam von BottomNav.tsx und BottomNavSettingsPage.tsx genutzt, damit
-// beide garantiert dieselbe feste Zone berechnen. Filtert auf gerade
-// sichtbare Seiten, kappt auf LINKS_SLOT_ANZAHL und fuellt bei Bedarf (leere
-// oder zu kurze gespeicherte Auswahl, aeltere Daten) aus STANDARD_LINKS auf,
-// damit die feste Zone nie eine kaputte Luecke zeigt.
-export function effektiveLinks(
-  gespeichert: string[] | null | undefined,
-  sichtbareSeiten: NavSeite[],
-): string[] {
-  const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
-  const basis = (gespeichert ?? STANDARD_LINKS)
-    .filter((key) => sichtbareKeys.has(key))
-    .slice(0, LINKS_SLOT_ANZAHL);
-  if (basis.length >= LINKS_SLOT_ANZAHL) return basis;
-  const auffuellen = STANDARD_LINKS.filter(
-    (key) => sichtbareKeys.has(key) && !basis.includes(key),
-  );
-  return [...basis, ...auffuellen].slice(0, LINKS_SLOT_ANZAHL);
-}
-
-// Analog fuer die wischbare Rotunde rechts -- keine Mindestlaenge, keine
-// Pflicht-Keys (Feed/Profil leben jetzt ausschliesslich in effektiveLinks).
-export function effektiveRotunde(
-  gespeichert: string[] | null | undefined,
-  sichtbareSeiten: NavSeite[],
-): string[] {
-  const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
-  return (gespeichert ?? STANDARD_ROTUNDE).filter((key) => sichtbareKeys.has(key));
 }
 
 export interface NavGruppe {

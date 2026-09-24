@@ -1,184 +1,46 @@
-import { useLayoutEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { CalendarDays, ClipboardCheck, Folder, MoreHorizontal, type LucideIcon } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
-import { effektiveLinks, effektiveRotunde, sichtbareNavSeiten, type NavSeite } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
-import { IconBadge } from "./IconBadge";
 
-// Feste Breite je Rotunde-Platz (siehe Rotunde weiter unten) -- bewusst als
-// Konstante statt aus dem DOM gemessen: dadurch laesst sich das gerade
-// zentrierte Icon direkt aus scrollLeft berechnen (scrollLeft / Schrittweite),
-// ohne Refs pro Icon oder einen IntersectionObserver zu brauchen. Muss zur
-// inline gesetzten Breite/dem Gap der Rotunde-Items unten passen.
-const ROTUNDE_SLOT_PX = 56;
-const ROTUNDE_GAP_PX = 8;
-const ROTUNDE_SCHRITT_PX = ROTUNDE_SLOT_PX + ROTUNDE_GAP_PX;
-
-function Badge({ anzahl }: { anzahl: number }) {
-  if (anzahl <= 0) return null;
-  return (
-    <span className="absolute right-0 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-ind-bad px-1 text-[10px] font-bold text-white">
-      {anzahl > 9 ? "9+" : anzahl}
-    </span>
-  );
+function heuteIso(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function FixItem({ seite, badge }: { seite: NavSeite; badge: number }) {
-  return (
-    <NavLink
-      to={seite.route}
-      className={({ isActive }) =>
-        `btn-touch relative flex shrink-0 flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] font-medium ${
-          isActive ? "text-ind-ink" : "text-ind-ink-3"
-        }`
-      }
-    >
-      {({ isActive }) => (
-        <>
-          <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={isActive} />
-          {seite.label}
-          <Badge anzahl={badge} />
-        </>
-      )}
-    </NavLink>
-  );
+interface Tab {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  route: string;
 }
 
-// klein-mittel-gross-mittel-klein statt eines harten Sprungs von "klein" auf
-// "unsichtbar": jede Distanzstufe ist nur wenig kleiner/blasser als die
-// davor, inklusive einer zusaetzlichen, stark abgeblendeten Ausklingstufe
-// (abstand 3) bevor ein Icon ganz verschwindet -- dadurch entsteht beim
-// Wischen keine ploetzliche Kante am Rand der sichtbaren Nachbarn.
-const ROTUNDE_STUFEN: { massstab: string; deckkraft: string }[] = [
-  { massstab: "scale-100", deckkraft: "opacity-100" }, // 0: gross, zentriert
-  { massstab: "scale-[0.82]", deckkraft: "opacity-100" }, // 1: mittel
-  { massstab: "scale-[0.64]", deckkraft: "opacity-90" }, // 2: klein
-  { massstab: "scale-[0.5]", deckkraft: "opacity-35" }, // 3: ausklingend
+// Abschnitt 5.3: genau 4 feste Tabs, kein wischbarer/individualisierbarer
+// Zusatzbereich mehr und kein schwebender Plus-Button (das ist Material
+// Design, nicht HIG -- "+" gehoert stattdessen in die Werkzeugleiste der
+// jeweiligen Liste). Alles, was vorher ueber die frei waehlbare Rotunde
+// erreichbar war, liegt jetzt vollstaendig unter "Mehr" (siehe MehrPage.tsx).
+const TABS: Tab[] = [
+  { key: "heute", label: "Heute", icon: CalendarDays, route: `/feed?faellig_von=${heuteIso()}&faellig_bis=${heuteIso()}` },
+  { key: "auftraege", label: "Aufträge", icon: ClipboardCheck, route: "/feed" },
+  { key: "projekte", label: "Projekte", icon: Folder, route: "/projekte" },
+  { key: "mehr", label: "Mehr", icon: MoreHorizontal, route: "/mehr" },
 ];
-const ROTUNDE_STUFE_UNSICHTBAR = { massstab: "scale-[0.5]", deckkraft: "opacity-0" };
 
-// Ein Rotunde-Platz: das gerade zentrierte Icon (abstand === 0) erscheint in
-// derselben Groesse wie die festen Icons links vom Neu-Button (IconBadge
-// "sm" ohne zusaetzliche Skalierung) und traegt als einziges ein Label --
-// nach aussen hin werden die Nachbarn stufenweise kleiner/blasser.
-function RotundeItem({
-  seite,
-  abstand,
-  badge,
-}: {
-  seite: NavSeite;
-  abstand: number;
-  badge: number;
-}) {
-  const zentriert = abstand === 0;
-  const { massstab, deckkraft } = ROTUNDE_STUFEN[abstand] ?? ROTUNDE_STUFE_UNSICHTBAR;
-
-  return (
-    <NavLink
-      to={seite.route}
-      style={{ width: ROTUNDE_SLOT_PX }}
-      className={({ isActive }) =>
-        `btn-touch relative flex shrink-0 snap-center flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-all duration-200 ${massstab} ${deckkraft} ${
-          isActive ? "text-ind-ink" : "text-ind-ink-3"
-        }`
-      }
-    >
-      {({ isActive }) => (
-        <>
-          <IconBadge icon={seite.icon} tone={seite.tone} size="sm" active={isActive} />
-          {zentriert && seite.label}
-          <Badge anzahl={badge} />
-        </>
-      )}
-    </NavLink>
-  );
-}
-
-function Rotunde({ items, unreadCount }: { items: NavSeite[]; unreadCount: number }) {
-  const location = useLocation();
-  // Beim ersten Rendern (z.B. frischer Seitenaufruf oder Klick aus einer
-  // Push-Benachrichtigung) direkt die gerade aktive Seite mittig zeigen,
-  // statt immer bei Position 0 zu starten -- ist die aktive Seite nicht Teil
-  // der Rotunde, faellt das auf Position 0 zurueck. Bewusst nur einmalig
-  // beim Mounten (useState-Initializer), nicht bei jeder Navigation
-  // innerhalb der App neu zentrieren.
-  const [startIndex] = useState(() => Math.max(0, items.findIndex((seite) => seite.route === location.pathname)));
-  const [zentrumIndex, setZentrumIndex] = useState(startIndex);
-  const frameRef = useRef<number | undefined>(undefined);
-  const containerRef = useRef<HTMLDivElement>(null);
-  // Seitliches Polster in Pixeln statt in %: CSS-Prozentpolster wuerde sich
-  // auf die Breite der Nav-Pille (des Eltern-Elements) beziehen, nicht auf
-  // die tatsaechlich uebrige Breite dieser Rotunde-Zone (die durch die
-  // festen Icons links und den Neu-Button schon geschmaelert ist) -- das
-  // hatte vorher eine falsch grosse Luecke zum Neu-Button erzeugt. Per JS
-  // gemessen, damit auch das erste/letzte Icon exakt bis zur Boxmitte
-  // scrollen kann.
-  const [seitenPolster, setSeitenPolster] = useState(0);
-
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const aktualisieren = () => setSeitenPolster(Math.max(0, (el.clientWidth - ROTUNDE_SLOT_PX) / 2));
-
-    // Erstmessung: Polster direkt am DOM-Element setzen statt nur per
-    // setSeitenPolster -- ein State-Update wirkt sich erst nach einem
-    // zusaetzlichen Render-Durchlauf im DOM aus. Wuerde die Erstpositionierung
-    // (scrollTo unten) vor diesem zweiten Durchlauf laufen, verschiebt sich
-    // das Polster danach unter dem bereits gesetzten scrollLeft weg --
-    // sichtbar als "falsch zentriertes/abgeschnittenes" Icon beim ersten
-    // Rendern. Padding synchron per Style setzen, bevor scrollTo() liest/
-    // schreibt (das erzwingt ohnehin ein Layout), vermeidet dieses Wettrennen.
-    const startPolster = Math.max(0, (el.clientWidth - ROTUNDE_SLOT_PX) / 2);
-    el.style.paddingLeft = `${startPolster}px`;
-    el.style.paddingRight = `${startPolster}px`;
-    setSeitenPolster(startPolster);
-    // scrollLeft = startIndex * Schrittweite zentriert den Startindex exakt
-    // unabhaengig von der Polstergroesse (rechnet sich algebraisch heraus).
-    // behavior: "instant" verhindert ein sichtbares Reinrutschen beim ersten
-    // Rendern, trotz scroll-smooth auf dem Container.
-    el.scrollTo({ left: startIndex * ROTUNDE_SCHRITT_PX, behavior: "instant" });
-
-    const beobachter = new ResizeObserver(aktualisieren);
-    beobachter.observe(el);
-    return () => beobachter.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (items.length === 0) return <div className="min-w-0 flex-1" aria-hidden />;
-
-  const onScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const scrollLeft = event.currentTarget.scrollLeft;
-    if (frameRef.current !== undefined) cancelAnimationFrame(frameRef.current);
-    frameRef.current = requestAnimationFrame(() => {
-      const index = Math.round(scrollLeft / ROTUNDE_SCHRITT_PX);
-      setZentrumIndex(Math.max(0, Math.min(items.length - 1, index)));
-    });
-  };
-
-  return (
-    <div
-      ref={containerRef}
-      className="scrollbar-none flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scroll-smooth snap-x snap-mandatory"
-      style={{ paddingLeft: seitenPolster, paddingRight: seitenPolster }}
-      onScroll={onScroll}
-    >
-      {items.map((seite, index) => (
-        <RotundeItem
-          key={seite.key}
-          seite={seite}
-          abstand={Math.abs(index - zentrumIndex)}
-          badge={seite.key === "meldungen" ? unreadCount : 0}
-        />
-      ))}
-    </div>
-  );
+// "Heute" und "Aufträge" fuehren beide auf /feed (nur mit unterschiedlichem
+// Filter in der Suche) -- React-Routers eingebauter NavLink-Abgleich
+// vergleicht nur den Pfad, nicht die Suche, deshalb hier von Hand ermittelt,
+// welcher der beiden gerade aktiv ist.
+function istHeuteFilter(search: string): boolean {
+  const params = new URLSearchParams(search);
+  const heute = heuteIso();
+  return params.get("faellig_von") === heute && params.get("faellig_bis") === heute && !params.get("projekt_id");
 }
 
 export function BottomNav() {
-  const { currentUser, hatRecht } = useAuth();
+  const location = useLocation();
+  const { currentUser } = useAuth();
   // loesch_ansicht sieht ausschliesslich den Papierkorb (siehe
   // app/api/routes/papierkorb.py) -- Meldungen wuerden fuer diese Rolle nur
   // mit 403 scheitern, daher gar nicht erst laden.
@@ -188,43 +50,49 @@ export function BottomNav() {
     queryFn: () => notificationsApi.list(true),
     enabled: !nurPapierkorb,
   });
+  // "Meldungen" ist jetzt ein Eintrag im "Mehr"-Tab statt eines eigenen
+  // fixen Slots -- der ungelesen-Zaehler wandert deshalb als Sammel-Badge
+  // auf das "Mehr"-Symbol selbst (verbreitetes iOS-Muster fuer einen
+  // "Mehr"-Tab, der mehrere Unterseiten buendelt).
   const unreadCount = unread?.length ?? 0;
-
-  // Zwei getrennte Zonen (siehe config/navSeiten.ts + Einstellungen ->
-  // "Menüleiste anpassen"): links vom Neu-Button eine feste, nicht wischbare
-  // Zone mit genau 2 Seiten, rechts eine wischbare Rotunde beliebiger Laenge.
-  // bottom_nav_items === null faellt fuer beide Zonen auf die jeweilige
-  // Standardauswahl zurueck.
-  // nurOffice-Seiten (z.B. Boards) sind hier bewusst nie waehlbar -- weder
-  // als fester Link noch in der Rotunde -- siehe config/navSeiten.ts.
-  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht).filter((seite) => !seite.nurOffice);
-  const sichtbarByKey = new Map(sichtbar.map((seite) => [seite.key, seite]));
-  const zuSeiten = (keys: string[]) =>
-    keys.map((key) => sichtbarByKey.get(key)).filter((seite): seite is NavSeite => seite !== undefined);
-
-  const linksItems = zuSeiten(effektiveLinks(currentUser?.bottom_nav_items?.links, sichtbar));
-  const rotundeItems = zuSeiten(effektiveRotunde(currentUser?.bottom_nav_items?.rotunde, sichtbar));
+  const aufFeed = location.pathname === "/feed";
+  const heuteAktiv = aufFeed && istHeuteFilter(location.search);
+  const aktivByKey: Record<string, boolean> = {
+    heute: heuteAktiv,
+    auftraege: aufFeed && !heuteAktiv,
+    projekte: location.pathname.startsWith("/projekte"),
+    mehr: location.pathname === "/mehr",
+  };
 
   return (
     <nav
-      className="fixed inset-x-3 bottom-3 z-40 flex items-center gap-1 rounded-full border border-ind-line bg-ind-bg py-1.5"
+      className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t-[0.5px] border-sepstrong bg-bar backdrop-blur-xl"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="flex shrink-0 items-center gap-1">
-        {linksItems.map((seite) => (
-          <FixItem key={seite.key} seite={seite} badge={seite.key === "meldungen" ? unreadCount : 0} />
-        ))}
-      </div>
-
-      <NavLink
-        to="/neu"
-        className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ind-btn-bg text-ind-btn-ink ring-4 ring-ind-bg shadow-ind-raised transition-colors hover:bg-ind-btn-bg-h"
-        aria-label="Neuer Vorgang"
-      >
-        <Plus size={26} strokeWidth={1.5} />
-      </NavLink>
-
-      <Rotunde items={rotundeItems} unreadCount={unreadCount} />
+      {TABS.map((tab) => {
+        const isActive = aktivByKey[tab.key];
+        return (
+          <Link
+            key={tab.key}
+            to={tab.route}
+            aria-current={isActive ? "page" : undefined}
+            className={`btn-touch flex flex-1 flex-col items-center justify-center gap-0.5 ${
+              isActive ? "text-tint" : "text-label2"
+            }`}
+            style={{ height: 49 }}
+          >
+            <span className="relative">
+              <tab.icon size={25} strokeWidth={isActive ? 2.2 : 2} aria-hidden="true" />
+              {tab.key === "mehr" && unreadCount > 0 && (
+                <span className="absolute -right-2 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-st-fehlt-dot px-1 text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </span>
+            <span className="text-[10px] font-medium">{tab.label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

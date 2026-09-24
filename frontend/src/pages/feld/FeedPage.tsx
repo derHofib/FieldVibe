@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, CheckCircle2, Clock, Filter, Inbox, List, Map as MapIcon, MessageCircle, Play, Repeat, Star, UserPlus, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
@@ -295,7 +295,19 @@ const LEER_FILTER: Record<string, string> = {};
 export function FeedPage() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const [filter, setFilter] = useState<Record<string, string>>(LEER_FILTER);
+  // Einstiegsfilter aus der URL (z. B. von der mobilen Projekte-Uebersicht
+  // per Tippen auf ein Projekt, oder vom "Heute"-Tab der Tab-Bar) -- nur
+  // beim ersten Rendern gelesen, danach lebt der Filter ausschliesslich im
+  // lokalen State wie zuvor.
+  const [searchParams] = useSearchParams();
+  const [filter, setFilter] = useState<Record<string, string>>(() => {
+    const uebernommen: Record<string, string> = {};
+    for (const key of ["projekt_id", "faellig_von", "faellig_bis"]) {
+      const wert = searchParams.get(key);
+      if (wert) uebernommen[key] = wert;
+    }
+    return Object.keys(uebernommen).length > 0 ? uebernommen : LEER_FILTER;
+  });
   const [zeigeFilter, setZeigeFilter] = useState(false);
   const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
 

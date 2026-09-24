@@ -1,7 +1,6 @@
 import {
   ClipboardList,
   Clock,
-  LayoutGrid,
   type LucideIcon,
   Plug,
   Tags,
@@ -122,19 +121,6 @@ export function SettingsPage() {
             onClick={() => navigate("/insights")}
           />
         )}
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
-          Darstellung
-        </h2>
-        <SettingsLink
-          icon={LayoutGrid}
-          tone="cyan"
-          label="Menüleiste anpassen"
-          beschreibung="Welche Seiten unten in der Navigation sichtbar sind"
-          onClick={() => navigate("/einstellungen/menueleiste")}
-        />
       </section>
 
       <section className="space-y-2">
