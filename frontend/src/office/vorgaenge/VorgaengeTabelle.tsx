@@ -10,7 +10,9 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { STATUS_BADGE, STATUS_LABEL, istUeberfaellig } from "../../config/vorgangDarstellung";
+import { StatusPille } from "../../components/apple/StatusPille";
+import { vorgangStatusZuToken } from "../../components/apple/status";
+import { STATUS_LABEL, istUeberfaellig } from "../../config/vorgangDarstellung";
 import type { FeedCard } from "../../types";
 import { Karte } from "../OfficeUi";
 
@@ -26,21 +28,17 @@ const SPALTEN = [
   }),
   spalten.accessor("status", {
     header: "Status",
-    cell: (info) => (
-      <span className={`inline-block px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[info.getValue()]}`}>
-        {STATUS_LABEL[info.getValue()]}
-      </span>
-    ),
+    cell: (info) => <StatusPille status={vorgangStatusZuToken(info.getValue())} label={STATUS_LABEL[info.getValue()]} />,
   }),
   spalten.accessor("prioritaet", { header: "Prio." }),
   spalten.accessor("faelligkeit_am", {
     header: "Fällig",
     cell: (info) => {
       const wert = info.getValue();
-      if (!wert) return <span className="text-ind-ink-3">—</span>;
+      if (!wert) return <span className="text-label2">—</span>;
       const ueberfaellig = istUeberfaellig(wert);
       return (
-        <span className={ueberfaellig ? "font-semibold text-rose-600 dark:text-rose-300" : undefined}>
+        <span className={ueberfaellig ? "font-semibold text-st-fehlt" : undefined}>
           {new Date(wert).toLocaleDateString("de-DE")}
         </span>
       );
@@ -71,14 +69,14 @@ export function VorgaengeTabelle({ vorgaenge }: { vorgaenge: FeedCard[] }) {
       <table className="w-full border-collapse text-sm">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id} className="border-b border-ind-line-2">
+            <tr key={headerGroup.id} className="border-b border-sepstrong">
               {headerGroup.headers.map((header) => {
                 const sortiert = header.column.getIsSorted();
                 return (
                   <th
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer px-3 py-2 text-left text-xs font-medium tracking-wide text-ind-ink-3 uppercase select-none hover:text-ind-ink-2"
+                    className="cursor-pointer px-3 py-2 text-left text-xs font-medium tracking-wide text-label2 uppercase select-none hover:text-label"
                   >
                     <span className="flex items-center gap-1">
                       {flexRender(header.column.columnDef.header, header.getContext())}
@@ -87,7 +85,7 @@ export function VorgaengeTabelle({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                       ) : sortiert === "desc" ? (
                         <ArrowDown size={12} strokeWidth={2.5} />
                       ) : (
-                        <ArrowUpDown size={11} strokeWidth={2} className="text-ind-ink-3/50" />
+                        <ArrowUpDown size={11} strokeWidth={2} className="text-label3" />
                       )}
                     </span>
                   </th>
@@ -101,10 +99,10 @@ export function VorgaengeTabelle({ vorgaenge }: { vorgaenge: FeedCard[] }) {
             <tr
               key={row.id}
               onClick={() => navigate(`/vorgaenge/${row.original.id}`)}
-              className="cursor-pointer border-b border-ind-line last:border-b-0 hover:bg-slate-50 dark:hover:bg-stone-800/50"
+              className="cursor-pointer border-b border-sep last:border-b-0 hover:bg-fill"
             >
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-3 py-2 text-ind-ink">
+                <td key={cell.id} className="px-3 py-2 text-label">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}

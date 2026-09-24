@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { vorgaengeApi } from "../../api/endpoints";
+import { StatusPille } from "../../components/apple/StatusPille";
+import { vorgangStatusZuToken } from "../../components/apple/status";
 import {
   GRUPPEN_LABEL,
-  STATUS_BADGE,
   STATUS_LABEL,
   gruppiereNachFaelligkeit,
   istUeberfaellig,
@@ -80,20 +81,12 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   return (
     <div>
       {ausgewaehlt.size > 0 && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300">
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-tintbg px-3 py-2 text-xs font-semibold text-tint">
           <span>{ausgewaehlt.size} ausgewählt</span>
-          <button
-            onClick={() => statusSetzen.mutate("geplant")}
-            disabled={statusSetzen.isPending}
-            className="rounded-lg border border-blue-300 px-2.5 py-1 font-medium disabled:opacity-50 dark:border-blue-500/40"
-          >
+          <button onClick={() => statusSetzen.mutate("geplant")} disabled={statusSetzen.isPending} className="btn-ap text-xs">
             Auf „Geplant" setzen
           </button>
-          <button
-            onClick={() => statusSetzen.mutate("in_arbeit")}
-            disabled={statusSetzen.isPending}
-            className="rounded-lg border border-blue-300 px-2.5 py-1 font-medium disabled:opacity-50 dark:border-blue-500/40"
-          >
+          <button onClick={() => statusSetzen.mutate("in_arbeit")} disabled={statusSetzen.isPending} className="btn-ap text-xs">
             Auf „In Arbeit" setzen
           </button>
           <button
@@ -102,7 +95,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
           >
             Auswahl aufheben
           </button>
-          <span className="ml-auto font-medium text-ind-ink-3">
+          <span className="ml-auto font-medium text-label2">
             Auswählen mit <Taste>x</Taste> · navigieren mit <Taste>j</Taste> <Taste>k</Taste> ·
             öffnen mit <Taste>Enter</Taste>
           </span>
@@ -113,55 +106,62 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
         let laufindex = -1;
         return gruppen.map(({ gruppe, cards }) => (
           <div key={gruppe} className="mb-4 last:mb-0">
-            <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+            <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-label3 uppercase">
               {GRUPPEN_LABEL[gruppe]}
-              <span className="font-medium normal-case text-ind-ink-3">{cards.length}</span>
+              <span className="font-medium normal-case text-label2">{cards.length}</span>
             </p>
             <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
               {cards.map((v) => {
                 laufindex++;
                 const index = laufindex;
                 const gewaehlt = ausgewaehlt.has(v.id);
+                const ueberfaellig = istUeberfaellig(v.faelligkeit_am);
                 return (
                   <Karte
                     key={v.id}
-                    className={`relative p-3 ${
-                      gewaehlt ? "border-blue-500 ring-1 ring-blue-500" : ""
-                    } ${index === fokus ? "ring-1 ring-slate-300 dark:ring-stone-600" : ""}`}
+                    className="relative p-3"
+                    // .card-ap setzt Rand/Schatten als CSS-Shorthand ausserhalb
+                    // jedes @layer -- Tailwind-Utilities (border-*/ring-*, im
+                    // "utilities"-Layer) koennten das nie ueberschreiben,
+                    // deshalb Auswahl-/Fokus-Ring hier per Inline-Style.
+                    style={{
+                      borderColor: gewaehlt ? "var(--tint)" : undefined,
+                      boxShadow: gewaehlt
+                        ? "0 0 0 1px var(--tint)"
+                        : index === fokus
+                          ? "0 0 0 1px var(--sepstrong)"
+                          : undefined,
+                    }}
                   >
                     <button
                       onClick={() => umschalten(v.id)}
                       aria-label={gewaehlt ? "Abwählen" : "Auswählen"}
                       aria-pressed={gewaehlt}
                       className={`absolute top-2.5 right-2.5 flex h-4 w-4 items-center justify-center rounded border ${
-                        gewaehlt
-                          ? "border-blue-500 bg-blue-500 text-white"
-                          : "border-slate-300 dark:border-stone-600"
+                        gewaehlt ? "border-tint bg-tint text-white" : "border-sepstrong"
                       }`}
                     >
-                      {gewaehlt && <Check size={11} strokeWidth={3} />}
+                      {gewaehlt && <Check size={11} strokeWidth={3} aria-hidden="true" />}
                     </button>
 
                     <button onClick={() => navigate(`/vorgaenge/${v.id}`)} className="block w-full text-left">
-                      <p className="text-[10px] font-bold text-ind-ink-3">
+                      <p className="text-[10px] font-bold text-label2">
                         {v.vorgangsnummer}
                       </p>
-                      <p className="mt-0.5 pr-5 text-[13px] font-semibold text-ind-ink">
+                      <p className="mt-0.5 pr-5 text-[13px] font-semibold text-label">
                         {v.titel}
                       </p>
                       <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className="truncate text-[11px] text-ind-ink-3">
+                        <span className="truncate text-[11px] text-label2">
                           {v.kunde_name}
                         </span>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                            istUeberfaellig(v.faelligkeit_am)
-                              ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-                              : STATUS_BADGE[v.status]
-                          }`}
-                        >
-                          {istUeberfaellig(v.faelligkeit_am) ? "Überfällig" : STATUS_LABEL[v.status]}
-                        </span>
+                        {ueberfaellig ? (
+                          <span className="shrink-0 rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt">
+                            Überfällig
+                          </span>
+                        ) : (
+                          <StatusPille status={vorgangStatusZuToken(v.status)} label={STATUS_LABEL[v.status]} />
+                        )}
                       </div>
                     </button>
                   </Karte>
@@ -177,7 +177,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
 
 function Taste({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded border border-b-2 border-slate-200 bg-slate-100 px-1 text-[10px] font-bold text-slate-500 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400">
+    <kbd className="rounded border border-b-2 border-sepstrong bg-fill px-1 text-[10px] font-bold text-label2">
       {children}
     </kbd>
   );

@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Columns3, Filter, Inbox, LayoutGrid, List, Plus, Search, Table2, X } from "lucide-react";
+import { Columns3, Filter, Inbox, LayoutGrid, List, Plus, Table2, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, kundenApi, projekteApi } from "../../api/endpoints";
+import { FilterChip } from "../../components/apple/FilterChip";
+import { SearchField } from "../../components/apple/SearchField";
+import { vorgangStatusZuToken } from "../../components/apple/status";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
 import {
@@ -12,7 +15,7 @@ import {
   filterChipLabel,
 } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
-import type { FeedCard } from "../../types";
+import type { FeedCard, VorgangStatus } from "../../types";
 import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
 import { VorgaengeKanban } from "./VorgaengeKanban";
 import { VorgaengeListe } from "./VorgaengeListe";
@@ -127,50 +130,32 @@ export function OfficeVorgaengePage() {
     <div>
       <SeitenKopf titel="Vorgänge" anzahl={vorgaenge.length}>
         <AnsichtUmschalter wert={ansicht} optionen={UMSCHALTER} onWechsel={wechsleAnsicht} />
-        <div className="relative">
-          <Search
-            size={13}
-            strokeWidth={2}
-            className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-ind-ink-3"
-          />
-          <input
-            value={suche}
-            onChange={(e) => setSuche(e.target.value)}
-            placeholder="Vorgang, Kunde, Anlage…"
-            className="w-56 rounded-lg border border-slate-200 bg-slate-100 py-1.5 pr-2 pl-7 text-xs text-slate-700 placeholder:text-slate-400 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:placeholder:text-stone-500"
-          />
-        </div>
-        <button
-          onClick={() => navigate("/neu")}
-          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-2 text-xs"
-        >
-          <Plus size={14} strokeWidth={2.5} />
+        <SearchField value={suche} onChange={setSuche} placeholder="Vorgang, Kunde, Anlage…" className="w-56" />
+        <button onClick={() => navigate("/neu")} className="btn-ap-primary">
+          <Plus size={14} strokeWidth={2.5} aria-hidden="true" />
           Neuer Vorgang
         </button>
       </SeitenKopf>
 
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setField("faellig_bis", heuteIso())}
-          className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
-        >
-          Überfällig
-        </button>
-        <button
-          onClick={() => setField("faellig_bis", heuteIso(7))}
-          className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
-        >
-          Diese Woche fällig
-        </button>
+        <FilterChip
+          label="Überfällig"
+          aktiv={filter.faellig_bis === heuteIso() && !filter.faellig_von}
+          onClick={() => setField("faellig_bis", filter.faellig_bis === heuteIso() ? "" : heuteIso())}
+        />
+        <FilterChip
+          label="Diese Woche fällig"
+          aktiv={filter.faellig_bis === heuteIso(7)}
+          onClick={() => setField("faellig_bis", filter.faellig_bis === heuteIso(7) ? "" : heuteIso(7))}
+        />
         <button
           onClick={() => setZeigeFilter((v) => !v)}
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-            zeigeFilter || aktiveFilterAnzahl > 0
-              ? "btn-industry btn-industry-primary text-white"
-              : "border border-slate-200 bg-slate-100 text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
+          aria-pressed={zeigeFilter || aktiveFilterAnzahl > 0}
+          className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-xs font-medium ${
+            zeigeFilter || aktiveFilterAnzahl > 0 ? "bg-tint text-white" : "bg-fill text-label"
           }`}
         >
-          <Filter size={13} strokeWidth={2} />
+          <Filter size={13} strokeWidth={2} aria-hidden="true" />
           Weitere Filter
           {aktiveFilterAnzahl > 0 && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-white/25 px-1 text-[10px] font-bold">
@@ -181,62 +166,51 @@ export function OfficeVorgaengePage() {
       </div>
 
       {filterChips.length > 0 && !zeigeFilter && (
-        <div className="mb-4 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 bg-white p-2.5 dark:border-stone-800 dark:bg-stone-900">
+        <div className="card-ap mb-4 flex flex-wrap items-center gap-1.5 p-2.5">
           {filterChips.map((c) => (
             <span
               key={c.key}
-              className="flex items-center gap-1.5 border border-ind-line py-1 pr-1.5 pl-2.5 text-xs font-medium text-ind-ink-2"
+              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-xs font-medium text-label"
             >
               {c.label}
               <button
                 onClick={() => setField(c.key, "")}
                 aria-label={`${c.label} entfernen`}
-                className="flex h-4 w-4 items-center justify-center border border-ind-line text-ind-ink-2"
+                className="flex h-4 w-4 items-center justify-center rounded-full bg-fill2 text-label2"
               >
                 <X size={9} strokeWidth={3} />
               </button>
             </span>
           ))}
-          <button
-            onClick={() => setZeigeFilter(true)}
-            className="ml-auto text-xs font-semibold text-blue-700 dark:text-blue-400"
-          >
+          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint">
             Bearbeiten
           </button>
         </div>
       )}
 
       {zeigeFilter && (
-        <div className="mb-4 space-y-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900">
+        <div className="card-ap mb-4 space-y-3 p-3">
           <div>
-            <div className="mb-1 text-xs font-medium text-ind-ink-3">
+            <div className="mb-1 text-xs font-medium text-label2">
               Status (Mehrfachauswahl möglich)
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {Object.entries(STATUS_LABEL).map(([value, label]) => {
-                const aktiv = aktiveStatus.includes(value);
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => toggleStatus(value)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium ${
-                      aktiv
-                        ? "btn-industry btn-industry-primary text-white"
-                        : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+              {(Object.keys(STATUS_LABEL) as VorgangStatus[]).map((value) => (
+                <FilterChip
+                  key={value}
+                  label={STATUS_LABEL[value]}
+                  status={vorgangStatusZuToken(value)}
+                  aktiv={aktiveStatus.includes(value)}
+                  onClick={() => toggleStatus(value)}
+                />
+              ))}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-6">
             <select
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+              className="field-ap"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -249,7 +223,7 @@ export function OfficeVorgaengePage() {
               value={filter.anlage_id ?? ""}
               onChange={(e) => setField("anlage_id", e.target.value)}
               disabled={!filter.kunde_id}
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink disabled:opacity-50"
+              className="field-ap disabled:opacity-50"
             >
               <option value="">{filter.kunde_id ? "Alle Anlagen" : "Erst Kunden wählen"}</option>
               {(anlagenFuerKunde ?? []).map((a) => (
@@ -261,7 +235,7 @@ export function OfficeVorgaengePage() {
             <select
               value={filter.projekt_id ?? ""}
               onChange={(e) => setField("projekt_id", e.target.value)}
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+              className="field-ap"
             >
               <option value="">Alle Projekte</option>
               {(projekte ?? []).map((p) => (
@@ -273,7 +247,7 @@ export function OfficeVorgaengePage() {
             <select
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+              className="field-ap"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -287,25 +261,25 @@ export function OfficeVorgaengePage() {
               value={filter.faellig_von ?? ""}
               onChange={(e) => setField("faellig_von", e.target.value)}
               title="Fällig ab"
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+              className="field-ap"
             />
             <input
               type="date"
               value={filter.faellig_bis ?? ""}
               onChange={(e) => setField("faellig_bis", e.target.value)}
               title="Fällig bis"
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+              className="field-ap"
             />
             <input
               value={filter.tag ?? ""}
               onChange={(e) => setField("tag", e.target.value)}
               placeholder="#Tag"
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+              className="field-ap"
             />
             <select
               value={filter.sort ?? "last_activity_at"}
               onChange={(e) => setField("sort", e.target.value)}
-              className="border border-ind-line bg-transparent px-2 py-2 text-sm text-ind-ink"
+              className="field-ap"
             >
               <option value="last_activity_at">Sortiert nach Aktivität</option>
               <option value="prioritaet">Sortiert nach Priorität</option>
@@ -319,14 +293,14 @@ export function OfficeVorgaengePage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
       ) : vorgaenge.length === 0 ? (
         <EmptyState
           icon={Inbox}
           text={aktiveFilterAnzahl > 0 ? "Keine Vorgänge für die aktuellen Filter." : "Keine Vorgänge gefunden."}
           action={
             aktiveFilterAnzahl > 0 && (
-              <button onClick={() => setFilter(LEER_FILTER)} className="btn-touch btn-industry btn-industry-ghost mt-1 text-xs">
+              <button onClick={() => setFilter(LEER_FILTER)} className="btn-ap mt-1 text-xs">
                 Filter zurücksetzen
               </button>
             )

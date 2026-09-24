@@ -2,9 +2,10 @@ import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { StatusPille } from "../../components/apple/StatusPille";
+import { vorgangStatusZuToken } from "../../components/apple/status";
 import {
   GRUPPEN_LABEL,
-  STATUS_BADGE,
   STATUS_LABEL,
   gruppiereNachFaelligkeit,
   istUeberfaellig,
@@ -39,7 +40,7 @@ export function VorgaengeListe({
       <Karte className="max-h-[calc(100vh-13rem)] overflow-y-auto">
         {gruppen.map(({ gruppe, cards }) => (
           <div key={gruppe}>
-            <p className="border-b border-slate-100 bg-slate-50/70 px-3 py-1 text-[10.5px] font-bold tracking-wide text-slate-400 uppercase dark:border-stone-800 dark:bg-stone-800/40 dark:text-stone-500">
+            <p className="border-b border-sep bg-fill/70 px-3 py-1 text-[10.5px] font-bold tracking-wide text-label2 uppercase">
               {GRUPPEN_LABEL[gruppe]} <span className="font-medium normal-case">{cards.length}</span>
             </p>
             {cards.map((v) => {
@@ -48,28 +49,22 @@ export function VorgaengeListe({
                 <button
                   key={v.id}
                   onClick={() => setGewaehlt(v.id)}
-                  className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left last:border-b-0 dark:border-stone-800 ${
-                    ausgewaehlt
-                      ? "border-l-2 border-l-blue-500 bg-blue-50/60 pl-[10px] dark:bg-blue-500/10"
-                      : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
+                  className={`block w-full border-b border-sep px-3 py-2.5 text-left last:border-b-0 ${
+                    ausgewaehlt ? "border-l-2 border-l-tint bg-tintbg pl-[10px]" : "hover:bg-fill"
                   }`}
                 >
-                  <p className="truncate text-[13px] font-semibold text-ind-ink">
+                  <p className="truncate text-[13px] font-semibold text-label">
                     {v.vorgangsnummer} · {v.titel}
                   </p>
-                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-ind-ink-3">
+                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-label2">
                     <span className="truncate">{v.kunde_name}</span>
                     {istUeberfaellig(v.faelligkeit_am) && (
-                      <span className="shrink-0 font-bold text-rose-600 dark:text-rose-300">
-                        · überfällig
-                      </span>
+                      <span className="shrink-0 font-bold text-st-fehlt">· überfällig</span>
                     )}
                   </p>
-                  <span
-                    className={`mt-1.5 inline-block px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[v.status]}`}
-                  >
-                    {STATUS_LABEL[v.status]}
-                  </span>
+                  <div className="mt-1.5">
+                    <StatusPille status={vorgangStatusZuToken(v.status)} label={STATUS_LABEL[v.status]} />
+                  </div>
                 </button>
               );
             })}
@@ -80,7 +75,7 @@ export function VorgaengeListe({
           <button
             onClick={onMehr}
             disabled={isFetchingNextPage}
-            className="w-full py-3 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-stone-800/50"
+            className="w-full py-3 text-xs font-semibold text-label2 hover:bg-fill disabled:opacity-50"
           >
             {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
           </button>
@@ -91,20 +86,15 @@ export function VorgaengeListe({
         {aktiv ? (
           <div className="mx-auto max-w-3xl">
             <div className="mb-3 flex justify-end">
-              <button
-                onClick={() => navigate(`/vorgaenge/${aktiv}`)}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
-              >
-                <ExternalLink size={13} strokeWidth={2} />
+              <button onClick={() => navigate(`/vorgaenge/${aktiv}`)} className="btn-ap text-xs">
+                <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
                 Ganze Seite
               </button>
             </div>
             <VorgangDetailPage id={aktiv} />
           </div>
         ) : (
-          <p className="py-10 text-center text-sm text-ind-ink-3">
-            Links einen Vorgang auswählen.
-          </p>
+          <p className="py-10 text-center text-sm text-label2">Links einen Vorgang auswählen.</p>
         )}
       </Karte>
     </div>
