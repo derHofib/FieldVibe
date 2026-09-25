@@ -552,8 +552,8 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
   siehe 7.3). Buchungsberechtigte können auch **direkt buchen**, ohne
   vorheriges Vormerken.
 - Nach dem Buchen ist der Eintrag für **alle unveränderbar**, auch für den,
-  der ihn gebucht hat. Buchungsberechtigte können die Buchung zurücknehmen
-  (mit Grund, protokolliert).
+  der ihn gebucht hat. **Jeder mit Buchungsrecht** kann eine Buchung
+  zurücknehmen (mit Grund, protokolliert), auch die eigene.
 - Vermerkte Zeit **zählt sofort als Arbeitszeit**.
 
 ### Noch offen
@@ -563,20 +563,15 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
 2. **Korrekturfrist** für eigene, noch nicht vorgemerkte Einträge: Braucht
    es die neben dem Buchen überhaupt noch? Vorschlag: weglassen, das
    Vormerken ist die natürliche Grenze.
-3. **Stornieren:** Soll jeder Buchungsberechtigte eine Buchung zurücknehmen
-   dürfen (Vorschlag, mit Grund und Protokoll)? Oder nur der
-   Mandanten-Admin, damit „gebucht“ härter bindet? Im ersten Fall kann ein
-   Techniker mit Buchungsrecht seine eigene Buchung stornieren und danach
-   ändern; das steht dann aber im Protokoll.
-4. **Altbestand** bei der Umstellung als `gebucht` übernehmen (5.1), damit
+3. **Altbestand** bei der Umstellung als `gebucht` übernehmen (5.1), damit
    laufende Abrechnungen nicht stocken – einverstanden?
-5. **km je Fahrt oder je Tag?** Vorschlag: je Fahrt (Hin- und Rückweg zwei
+4. **km je Fahrt oder je Tag?** Vorschlag: je Fahrt (Hin- und Rückweg zwei
    Einträge oder einer mit „Hin + Rück“).
-6. **Fahrzeit abrechnen:** gar nicht, nach Zeit, nach km oder beides? Gibt es
+5. **Fahrzeit abrechnen:** gar nicht, nach Zeit, nach km oder beides? Gibt es
    eine Anfahrtspauschale im Leistungsverzeichnis, die stattdessen greifen
    soll?
-7. **Fahrzeit = Arbeitszeit?** Heute ja (zählt in Wochen- und
+6. **Fahrzeit = Arbeitszeit?** Heute ja (zählt in Wochen- und
    Monatsstunden). So lassen?
-8. **Fahrzeug erfassen:** nötig, oder reichen km?
-9. **Reihenfolge:** Stufe 1 (Bearbeiten, ohne Migration) zuerst und direkt
+7. **Fahrzeug erfassen:** nötig, oder reichen km?
+8. **Reihenfolge:** Stufe 1 (Bearbeiten, ohne Migration) zuerst und direkt
    danach Stufe 2 (Buchen)? Oder Buchen zuerst?
