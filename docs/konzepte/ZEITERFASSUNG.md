@@ -180,7 +180,7 @@ oder löschen.
 |---|---|---|
 | `km_satz_netto` | `NULL` (aus) | €/km für Fahrtkosten-Vorschläge |
 | `fahrzeit_abrechnung` | `'keine'` | `'keine' \| 'zeit' \| 'km' \| 'zeit_und_km'` |
-| `zeit_korrekturfrist_tage` | `NULL` (keine) | Optional: so lange darf der Techniker eigene, noch **vermerkte** Einträge ändern. Möglicherweise überflüssig, weil Vormerken/Buchen die Grenze bildet (siehe offene Frage 4) |
+| `zeit_korrekturfrist_tage` | `NULL` (keine) | Optional: so lange darf der Techniker eigene, noch **vermerkte** Einträge ändern. Möglicherweise überflüssig, weil Vormerken/Buchen die Grenze bildet (siehe offene Frage 3) |
 
 ---
 
@@ -202,7 +202,7 @@ Rückwege:
 | vermerkt → vorgemerkt | Techniker (eigene), Büro (alle) | Timer beendet, **Tätigkeit ausgefüllt**, Vorgang nicht `abgerechnet`/`storniert` |
 | vorgemerkt → vermerkt („zurückziehen“) | Techniker (eigene), Büro | noch nicht gebucht |
 | vorgemerkt → gebucht | Büro | |
-| vermerkt → gebucht (direkt) | Büro | wie beim Vormerken; für den Fall, dass der Techniker das Vormerken vergessen hat |
+| vermerkt → gebucht (direkt) | Büro | wie beim Vormerken (Timer beendet, Tätigkeit ausgefüllt); Techniker muss nicht vorgemerkt haben |
 | gebucht → vermerkt („Buchung stornieren“) | Büro | noch nicht abgerechnet; **Grund Pflicht** |
 | gebucht → abgerechnet | Server | beim Übernehmen in eine Rechnung (Abschnitt 8) |
 | abgerechnet → gebucht | Server | Position wieder entfernt, solange die Rechnung `entwurf` ist |
@@ -493,6 +493,8 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
 - Nach dem Buchen ist der Eintrag **gesperrt**. Das **Büro kann die Buchung
   zurücknehmen** (mit Grund, protokolliert).
 - Vermerkte Zeit **zählt sofort als Arbeitszeit**.
+- Das **Büro kann auch direkt buchen**, ohne dass der Techniker vorgemerkt
+  hat (Übergang vermerkt → gebucht in 6.1).
 
 ### Noch offen
 
@@ -500,21 +502,20 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
    ein eigenes Recht bekommen, z. B. Bereich `abrechnung`, Aktion
    `bearbeiten`? Dann könnte die Buchhaltung buchen, ohne die
    Mitarbeiterverwaltung zu dürfen.
-2. **Darf das Büro direkt buchen,** ohne dass der Techniker vorgemerkt hat?
-   Vorschlag: ja, z. B. wenn der Techniker das Vormerken vergessen hat.
-3. **Tätigkeit Pflicht beim Vormerken** (nicht beim Erfassen) – passt das?
-4. **Korrekturfrist** für eigene, noch nicht vorgemerkte Einträge: Braucht
+2. **Tätigkeit Pflicht beim Vormerken und Buchen** (nicht beim Erfassen) –
+   passt das?
+3. **Korrekturfrist** für eigene, noch nicht vorgemerkte Einträge: Braucht
    es die neben dem Buchen überhaupt noch? Vorschlag: weglassen, das
    Vormerken ist die natürliche Grenze.
-5. **Altbestand** bei der Umstellung als `gebucht` übernehmen (5.1), damit
+4. **Altbestand** bei der Umstellung als `gebucht` übernehmen (5.1), damit
    laufende Abrechnungen nicht stocken – einverstanden?
-6. **km je Fahrt oder je Tag?** Vorschlag: je Fahrt (Hin- und Rückweg zwei
+5. **km je Fahrt oder je Tag?** Vorschlag: je Fahrt (Hin- und Rückweg zwei
    Einträge oder einer mit „Hin + Rück“).
-7. **Fahrzeit abrechnen:** gar nicht, nach Zeit, nach km oder beides? Gibt es
+6. **Fahrzeit abrechnen:** gar nicht, nach Zeit, nach km oder beides? Gibt es
    eine Anfahrtspauschale im Leistungsverzeichnis, die stattdessen greifen
    soll?
-8. **Fahrzeit = Arbeitszeit?** Heute ja (zählt in Wochen- und
+7. **Fahrzeit = Arbeitszeit?** Heute ja (zählt in Wochen- und
    Monatsstunden). So lassen?
-9. **Fahrzeug erfassen:** nötig, oder reichen km?
-10. **Reihenfolge:** Stufe 1 (Bearbeiten, ohne Migration) zuerst und direkt
-    danach Stufe 2 (Buchen)? Oder Buchen zuerst?
+8. **Fahrzeug erfassen:** nötig, oder reichen km?
+9. **Reihenfolge:** Stufe 1 (Bearbeiten, ohne Migration) zuerst und direkt
+   danach Stufe 2 (Buchen)? Oder Buchen zuerst?
