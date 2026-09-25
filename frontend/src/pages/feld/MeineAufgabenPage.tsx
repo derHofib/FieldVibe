@@ -166,7 +166,12 @@ export function MeineAufgabenPage() {
                 <div
                   key={a.id}
                   onClick={() => setPanelAufgabe(a)}
-                  className={`card-interactive flex cursor-pointer gap-2.5 card-ap p-3 ${
+                  // .card-ap bringt eine eigene, unlayered box-shadow mit,
+                  // die per Cascade-Layer-Falle (siehe DESIGN.md) den
+                  // Ueberfaellig-Ring (Tailwind-ring-*-Utility) stillschweigend
+                  // ueberschreiben wuerde -- deshalb hier Radius/Rand/Flaeche
+                  // einzeln statt ueber die Rezeptklasse gesetzt.
+                  className={`card-interactive flex cursor-pointer gap-2.5 rounded-[var(--radius-ap-card)] border border-sep bg-card p-3 ${
                     ueberfaellig ? "ring-1 ring-st-fehlt " : ""
                   }`}
                 >
