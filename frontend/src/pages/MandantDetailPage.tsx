@@ -184,7 +184,7 @@ export function MandantDetailPage() {
           <button
             disabled={isImpersonating || mandant.status !== "aktiv"}
             onClick={() => startImpersonation(mandant.id)}
-            className="btn-touch rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-st-arbeit hover:bg-amber-400 disabled:opacity-40"
+            className="btn-touch rounded-md bg-st-arbeit-dot px-3 py-2 text-xs font-semibold text-st-arbeit hover:bg-st-arbeit-dot disabled:opacity-40"
             title="Support-Zugriff: Login als Mandant"
           >
             Login als Mandant

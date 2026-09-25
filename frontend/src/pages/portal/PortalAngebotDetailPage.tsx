@@ -106,7 +106,7 @@ export function PortalAngebotDetailPage() {
           <button
             onClick={() => antwortMutation.mutate("angenommen")}
             disabled={antwortMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Annehmen
           </button>
@@ -117,7 +117,7 @@ export function PortalAngebotDetailPage() {
               }
             }}
             disabled={antwortMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md bg-st-fehlt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Ablehnen
           </button>

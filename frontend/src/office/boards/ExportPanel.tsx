@@ -293,7 +293,7 @@ function MangelMeldenMiniform({
         <button
           onClick={() => melden.mutate()}
           disabled={!vorgangId || !beschreibung.trim() || melden.isPending}
-          className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+          className="rounded-md bg-st-arbeit-dot px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
         >
           Mangel melden
         </button>

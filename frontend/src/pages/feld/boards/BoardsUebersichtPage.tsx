@@ -21,8 +21,8 @@ const TYP_LABEL: Record<BoardTyp, string> = {
 
 const TYP_TON: Record<BoardTyp, string> = {
   frei: "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
-  bauplanung: "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ",
-  prozess: "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/15 ",
+  bauplanung: "bg-st-arbeit-bg text-st-arbeit  ",
+  prozess: "bg-st-erledigt-bg text-st-erledigt  ",
 };
 
 const FILTER_OPTIONEN: { key: "alle" | BoardTyp; label: string }[] = [

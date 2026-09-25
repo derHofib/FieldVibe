@@ -78,7 +78,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
         ← Zurück
       </button>
 
-      <div className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-st-arbeit dark:bg-amber-500/10 ">
+      <div className="flex items-start gap-1.5 rounded-lg bg-st-arbeit-bg px-4 py-3 text-sm text-st-arbeit ">
         <Inbox size={15} strokeWidth={2} className="mt-0.5 shrink-0" />
         Per E-Mail importiert{eingangsrechnung.email_absender && ` von ${eingangsrechnung.email_absender}`}
         {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} -- bitte Angaben gegen den

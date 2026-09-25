@@ -8,7 +8,7 @@ export function ImpersonationBanner() {
   if (!isImpersonating) return null;
 
   return (
-    <div className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-amber-500 px-4 py-3 text-sm font-semibold text-st-arbeit shadow-xs">
+    <div className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-st-arbeit-dot px-4 py-3 text-sm font-semibold text-st-arbeit shadow-xs">
       <span className="flex items-center gap-1.5">
         <AlertTriangle size={16} strokeWidth={2} className="shrink-0" />
         Support-Zugriff aktiv: Du agierst als Mandant „{currentUser?.mandant_name ?? "…"}“.
@@ -16,7 +16,7 @@ export function ImpersonationBanner() {
       </span>
       <button
         onClick={endImpersonation}
-        className="btn-touch rounded-md bg-amber-950 px-4 py-2 text-st-arbeit hover:bg-amber-900"
+        className="btn-touch rounded-md bg-st-arbeit-dot px-4 py-2 text-st-arbeit hover:bg-st-arbeit-dot"
       >
         Beenden
       </button>

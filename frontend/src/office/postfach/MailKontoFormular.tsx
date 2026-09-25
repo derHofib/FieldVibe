@@ -257,17 +257,17 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
       </div>
 
       {testStatus === "ok" && (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-st-erledigt dark:bg-emerald-500/10 ">
+        <p className="rounded-lg bg-st-erledigt-bg px-3 py-2 text-xs font-medium text-st-erledigt ">
           Verbindung erfolgreich.
         </p>
       )}
       {testStatus === "fehler" && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-st-fehlt dark:bg-rose-500/10 ">
+        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
           {testFehler}
         </p>
       )}
       {speicherFehler && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-st-fehlt dark:bg-rose-500/10 ">
+        <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
           {speicherFehler}
         </p>
       )}

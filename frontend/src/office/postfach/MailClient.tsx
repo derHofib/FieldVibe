@@ -161,7 +161,7 @@ export function MailClient({ account }: { account: MailAccount }) {
           />
         </div>
         {gesendetHinweis && (
-          <p className="border-b border-st-erledigt bg-emerald-50 px-3 py-1.5 text-xs font-medium text-st-erledigt dark:bg-emerald-500/10 ">
+          <p className="border-b border-st-erledigt bg-st-erledigt-bg px-3 py-1.5 text-xs font-medium text-st-erledigt ">
             Nachricht gesendet.
           </p>
         )}
@@ -187,7 +187,7 @@ export function MailClient({ account }: { account: MailAccount }) {
                 onClick={() => waehleNachricht(n.id, n.gelesen)}
                 className={`block w-full border-b border-sep px-3 py-2.5 text-left last:border-b-0 ${
                   n.id === aktiveNachricht
-                    ? "border-l-2 border-l-blue-500 bg-blue-50/60 pl-[10px] dark:bg-blue-500/10"
+                    ? "border-l-2 border-l-blue-500 bg-tintbg pl-[10px] "
                     : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
                 }`}
               >

@@ -152,8 +152,8 @@ export function EmailSection({
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     e.status === "gesendet"
-                      ? "bg-green-100 text-st-erledigt dark:bg-green-500/15 "
-                      : "bg-red-100 text-st-fehlt dark:bg-red-500/15 "
+                      ? "bg-st-erledigt-bg text-st-erledigt  "
+                      : "bg-st-fehlt-bg text-st-fehlt  "
                   }`}
                 >
                   {e.status === "gesendet" ? "Gesendet" : "Fehler"}

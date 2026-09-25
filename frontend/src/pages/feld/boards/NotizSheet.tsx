@@ -9,10 +9,10 @@ import type { Leistungstyp, VorgangAbrechnungsart } from "../../../types";
 
 const KLEBEZETTEL_FARBEN: KlebezettelFarbe[] = ["gelb", "blau", "gruen", "rosa"];
 const FARB_SWATCH: Record<KlebezettelFarbe, string> = {
-  gelb: "bg-amber-200",
-  blau: "bg-blue-200",
-  gruen: "bg-emerald-200",
-  rosa: "bg-rose-200",
+  gelb: "bg-st-arbeit-bg",
+  blau: "bg-tintbg",
+  gruen: "bg-st-erledigt-bg",
+  rosa: "bg-st-fehlt-bg",
 };
 const FARB_LABEL: Record<KlebezettelFarbe, string> = { gelb: "Gelb", blau: "Blau", gruen: "Grün", rosa: "Rosa" };
 
@@ -216,7 +216,7 @@ export function NotizAktionSheet({
         onClick={() => setModus("vorgang")}
         className="btn-touch flex w-full items-center gap-3 border-b border-sep py-3 text-left "
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-tint dark:bg-blue-500/15 ">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-tintbg text-tint ">
           <Link2 size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
@@ -228,7 +228,7 @@ export function NotizAktionSheet({
         onClick={() => setModus("mangel")}
         className="btn-touch flex w-full items-center gap-3 border-b border-sep py-3 text-left "
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-st-arbeit-bg text-st-arbeit ">
           <AlertTriangle size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
@@ -246,7 +246,7 @@ export function NotizAktionSheet({
         </button>
         <button
           onClick={onLoeschen}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-rose-50 py-2.5 text-sm font-semibold text-st-fehlt dark:bg-rose-500/10 "
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-st-fehlt-bg py-2.5 text-sm font-semibold text-st-fehlt "
         >
           <Trash2 size={14} strokeWidth={2} /> Löschen
         </button>
@@ -365,7 +365,7 @@ function MangelMeldenForm({
         <button
           onClick={() => melden.mutate()}
           disabled={!vorgangId || !beschreibung.trim() || melden.isPending}
-          className="flex-1 rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+          className="flex-1 rounded-lg bg-st-arbeit-dot py-2.5 text-sm font-semibold text-white disabled:opacity-40"
         >
           Mangel melden
         </button>

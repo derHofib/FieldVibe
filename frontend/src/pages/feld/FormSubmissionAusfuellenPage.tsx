@@ -132,7 +132,7 @@ export function FormSubmissionAusfuellenPage() {
         <h1 className="text-lg font-bold text-label">{schema.name}</h1>
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-            readOnly ? "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/15 " : "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 "
+            readOnly ? "bg-st-erledigt-bg text-st-erledigt  " : "bg-st-arbeit-bg text-st-arbeit  "
           }`}
         >
           {readOnly ? "Abgeschlossen" : "Offen"}

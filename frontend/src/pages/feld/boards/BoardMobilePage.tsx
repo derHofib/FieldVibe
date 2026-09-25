@@ -24,16 +24,16 @@ const BoardCanvasAnsicht = lazy(() =>
 );
 
 const FARB_KLASSEN: Record<KlebezettelFarbe, string> = {
-  gelb: "bg-amber-100 text-st-arbeit",
-  blau: "bg-blue-100 text-tint",
-  gruen: "bg-emerald-100 text-st-erledigt",
-  rosa: "bg-rose-100 text-st-fehlt",
+  gelb: "bg-st-arbeit-bg text-st-arbeit",
+  blau: "bg-tintbg text-tint",
+  gruen: "bg-st-erledigt-bg text-st-erledigt",
+  rosa: "bg-st-fehlt-bg text-st-fehlt",
 };
 const FARB_PUNKT: Record<KlebezettelFarbe, string> = {
-  gelb: "bg-amber-400",
-  blau: "bg-blue-400",
-  gruen: "bg-emerald-400",
-  rosa: "bg-rose-400",
+  gelb: "bg-st-arbeit-dot",
+  blau: "bg-tint",
+  gruen: "bg-st-erledigt-dot",
+  rosa: "bg-st-fehlt-dot",
 };
 
 function VorgangZeile({ vorgangId, onOeffnen }: { vorgangId: string; onOeffnen: () => void }) {

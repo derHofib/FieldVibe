@@ -26,9 +26,9 @@ const FREIGABE_LABEL: Record<PartnerFreigabeStatus, string> = {
 };
 
 const FREIGABE_FARBE: Record<PartnerFreigabeStatus, string> = {
-  vorgeschlagen: "bg-amber-100 text-st-arbeit dark:bg-amber-500/10 ",
-  angenommen: "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/10 ",
-  abgelehnt: "bg-red-100 text-st-fehlt dark:bg-red-500/10 ",
+  vorgeschlagen: "bg-st-arbeit-bg text-st-arbeit  ",
+  angenommen: "bg-st-erledigt-bg text-st-erledigt  ",
+  abgelehnt: "bg-st-fehlt-bg text-st-fehlt  ",
 };
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
@@ -316,7 +316,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
       <div className="mb-2 flex items-center gap-2">
         <h2 className="text-sm font-semibold text-label2">Nachweise</h2>
         {abgelaufeneAnzahl > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-st-fehlt dark:bg-red-500/10 ">
+          <span className="flex items-center gap-1 rounded-full bg-st-fehlt-bg px-2 py-0.5 text-xs font-semibold text-st-fehlt ">
             <ShieldAlert size={12} strokeWidth={2} /> {abgelaufeneAnzahl} abgelaufen
           </span>
         )}
@@ -465,7 +465,7 @@ export function PartnerProfilePage() {
             onClick={() => {
               if (window.confirm(`${partner.name} wirklich löschen?`)) deleteMutation.mutate();
             }}
-            className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
+            className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >
             Löschen
           </button>

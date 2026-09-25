@@ -9,7 +9,7 @@ export function ProzessEntscheidungNode({ id, data, selected }: NodeProps<BoardN
     <div className="relative flex h-[120px] w-[120px] items-center justify-center">
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
       <div
-        className={`absolute inset-0 rotate-45 rounded-2xl border-[1.5px] border-st-arbeit bg-amber-50 dark:bg-amber-500/10 ${
+        className={`absolute inset-0 rotate-45 rounded-2xl border-[1.5px] border-st-arbeit bg-st-arbeit-bg ${
           selected ? "ring-2 ring-tint" : ""
         }`}
       />

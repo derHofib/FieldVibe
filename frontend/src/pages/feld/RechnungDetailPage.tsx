@@ -258,7 +258,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {rechnung.ist_storno && (
-        <div className="rounded-lg bg-amber-50 p-3 text-sm text-st-arbeit dark:bg-amber-500/10 ">
+        <div className="rounded-lg bg-st-arbeit-bg p-3 text-sm text-st-arbeit ">
           Diese Rechnung storniert{" "}
           {storniertRechnung ? (
             <button
@@ -275,7 +275,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       )}
 
       {rechnung.xml_object_key && (
-        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-st-erledigt dark:bg-emerald-500/10 ">
+        <div className="rounded-lg bg-st-erledigt-bg p-3 text-sm text-st-erledigt ">
           ZUGFeRD-Rechnung — diese PDF enthält eine eingebettete E-Rechnungs-XML.
         </div>
       )}
@@ -595,7 +595,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => statusMutation.mutate("bezahlt")}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Als bezahlt markieren
           </button>

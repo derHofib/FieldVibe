@@ -64,7 +64,7 @@ export function NotificationsPage() {
               key={n.id}
               onClick={() => handleClick(n)}
               className={`card-interactive btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-xs dark:shadow-none dark:ring-1 ${
-                n.gelesen_am ? "bg-white dark:bg-stone-900" : "bg-blue-50 dark:bg-blue-500/10"
+                n.gelesen_am ? "bg-white dark:bg-stone-900" : "bg-tintbg "
               }`}
             >
               <div>
@@ -73,7 +73,7 @@ export function NotificationsPage() {
                   {new Date(n.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
                 </div>
               </div>
-              {!n.gelesen_am && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-blue-600" />}
+              {!n.gelesen_am && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-tint" />}
             </button>
           ))}
         </div>

@@ -30,13 +30,13 @@ export function UpdatePage() {
       {data && (
         <div className="space-y-4">
           {data.fehler && (
-            <div className="rounded-md border border-st-arbeit bg-amber-50 p-3 text-sm text-st-arbeit dark:bg-amber-950 ">
+            <div className="rounded-md border border-st-arbeit bg-st-arbeit-bg p-3 text-sm text-st-arbeit ">
               Der neueste Stand auf GitHub konnte nicht ermittelt werden: {data.fehler}
             </div>
           )}
 
           {data.update_available === true && (
-            <div className="flex items-center gap-1.5 rounded-md border border-st-erledigt bg-emerald-50 p-3 text-sm font-medium text-st-erledigt dark:bg-emerald-950 ">
+            <div className="flex items-center gap-1.5 rounded-md border border-st-erledigt bg-st-erledigt-bg p-3 text-sm font-medium text-st-erledigt ">
               <ArrowUpCircle size={15} strokeWidth={2} /> Update verfügbar
             </div>
           )}

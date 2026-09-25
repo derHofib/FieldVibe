@@ -20,8 +20,8 @@ import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-slate-100 text-label dark:bg-stone-500/15 ",
-  mittel: "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ",
-  hoch: "bg-rose-100 text-st-fehlt dark:bg-rose-500/15 ",
+  mittel: "bg-st-arbeit-bg text-st-arbeit  ",
+  hoch: "bg-st-fehlt-bg text-st-fehlt  ",
 };
 
 const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
@@ -194,7 +194,7 @@ export function MeineAufgabenPage() {
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       {a.projekt_id ? (
-                        <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-st-arbeit dark:bg-amber-500/15 ">
+                        <span className="flex items-center gap-1 rounded-full bg-st-arbeit-bg px-2 py-0.5 text-[10px] font-semibold text-st-arbeit ">
                           <KanbanSquare size={11} strokeWidth={2} /> Projekt
                         </span>
                       ) : (
@@ -247,7 +247,7 @@ export function MeineAufgabenPage() {
                       e.stopPropagation();
                       umschalten.mutate({ id: a.id, erledigt: false });
                     }}
-                    className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-600 text-white before:absolute before:-inset-3.5"
+                    className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-st-erledigt-dot text-white before:absolute before:-inset-3.5"
                     title="Als offen markieren"
                     aria-label="Als offen markieren"
                   >

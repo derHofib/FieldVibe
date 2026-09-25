@@ -3,17 +3,17 @@ import { Handle, Position, useReactFlow, type NodeProps } from "@xyflow/react";
 import type { BoardNode, KlebezettelDaten, KlebezettelFarbe } from "../types";
 
 const FARB_KLASSEN: Record<KlebezettelFarbe, string> = {
-  gelb: "bg-amber-100 text-st-arbeit",
-  blau: "bg-blue-100 text-tint",
-  gruen: "bg-emerald-100 text-st-erledigt",
-  rosa: "bg-rose-100 text-st-fehlt",
+  gelb: "bg-st-arbeit-bg text-st-arbeit",
+  blau: "bg-tintbg text-tint",
+  gruen: "bg-st-erledigt-bg text-st-erledigt",
+  rosa: "bg-st-fehlt-bg text-st-fehlt",
 };
 
 const FARB_SWATCH: Record<KlebezettelFarbe, string> = {
-  gelb: "bg-amber-300",
-  blau: "bg-blue-300",
-  gruen: "bg-emerald-300",
-  rosa: "bg-rose-300",
+  gelb: "bg-st-arbeit-bg",
+  blau: "bg-tintbg",
+  gruen: "bg-st-erledigt-bg",
+  rosa: "bg-st-fehlt-bg",
 };
 
 const KLEBEZETTEL_FARBEN: KlebezettelFarbe[] = ["gelb", "blau", "gruen", "rosa"];

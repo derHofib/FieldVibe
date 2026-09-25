@@ -318,7 +318,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                   onClick={() => setForm({ ...form, positionstyp: typ })}
                   className={`btn-touch rounded-md px-3 py-1.5 text-xs font-medium ${
                     form.positionstyp === typ
-                      ? "bg-blue-600 text-white"
+                      ? "bg-tint text-white"
                       : "bg-white text-label ring-1 ring-sep dark:bg-stone-800 "
                   }`}
                 >
@@ -436,14 +436,14 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => statusMutation.mutate("angenommen")}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Angenommen
           </button>
           <button
             onClick={() => statusMutation.mutate("abgelehnt")}
             disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md bg-st-fehlt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Abgelehnt
           </button>

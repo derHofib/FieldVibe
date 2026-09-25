@@ -340,7 +340,7 @@ export function OfficeDispoPage() {
                           <span
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                               ueberfaellig
-                                ? "bg-rose-100 text-st-fehlt dark:bg-rose-500/15 "
+                                ? "bg-st-fehlt-bg text-st-fehlt  "
                                 : "bg-slate-100 text-label2 dark:bg-stone-800 "
                             }`}
                           >
@@ -453,7 +453,7 @@ export function OfficeDispoPage() {
                     ))}
                     {jetztOffsetPx !== null && (
                       <div
-                        className="absolute inset-y-0 z-20 w-px bg-rose-400 dark:bg-rose-500"
+                        className="absolute inset-y-0 z-20 w-px bg-st-fehlt-dot "
                         style={{ left: jetztOffsetPx }}
                       />
                     )}
@@ -730,7 +730,7 @@ function TerminBearbeitenPanel({
             onClick={() => {
               if (window.confirm("Termin wirklich löschen?")) onDelete();
             }}
-            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-st-fehlt hover:bg-rose-50 dark:hover:bg-rose-500/10"
+            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >
             <Trash2 size={14} /> Löschen
           </button>

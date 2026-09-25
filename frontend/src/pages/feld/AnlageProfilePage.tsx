@@ -448,7 +448,7 @@ export function AnlageProfilePage() {
                   deleteMutation.mutate();
                 }
               }}
-              className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
+              className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
             >
               Löschen
             </button>

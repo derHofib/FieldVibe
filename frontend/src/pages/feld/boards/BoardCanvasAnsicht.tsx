@@ -31,10 +31,10 @@ import type {
  * Inputs, nur Anzeige + Klick-Weiterleitung an onNodeClick der ReactFlow-
  * Instanz. */
 const FARB_KLASSEN: Record<KlebezettelFarbe, string> = {
-  gelb: "bg-amber-100 text-st-arbeit",
-  blau: "bg-blue-100 text-tint",
-  gruen: "bg-emerald-100 text-st-erledigt",
-  rosa: "bg-rose-100 text-st-fehlt",
+  gelb: "bg-st-arbeit-bg text-st-arbeit",
+  blau: "bg-tintbg text-tint",
+  gruen: "bg-st-erledigt-bg text-st-erledigt",
+  rosa: "bg-st-fehlt-bg text-st-fehlt",
 };
 
 function VorgangKarteAnsicht({ data }: { data: VorgangKarteDaten }) {
@@ -155,7 +155,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { label } = data as ProzessEntscheidungDaten;
       return (
         <div className="relative flex h-[110px] w-[110px] items-center justify-center">
-          <div className="absolute inset-0 rotate-45 rounded-2xl border-[1.5px] border-st-arbeit bg-amber-50 dark:bg-amber-500/10" />
+          <div className="absolute inset-0 rotate-45 rounded-2xl border-[1.5px] border-st-arbeit bg-st-arbeit-bg " />
           <span className="relative z-10 w-20 text-center text-[11px] font-bold text-st-arbeit ">
             {label}
           </span>

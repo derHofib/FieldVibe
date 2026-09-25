@@ -219,7 +219,7 @@ export function BestellungDetailPage() {
             <button
               onClick={() => statusMutation.mutate({ status: "eingegangen", positionen_preise: preise })}
               disabled={statusMutation.isPending}
-              className="btn-touch flex-1 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
             >
               Wareneingang jetzt buchen
             </button>
@@ -248,7 +248,7 @@ export function BestellungDetailPage() {
         <button
           onClick={wareneingangOeffnen}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           Wareneingang buchen
         </button>

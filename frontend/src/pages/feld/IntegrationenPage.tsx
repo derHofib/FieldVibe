@@ -339,7 +339,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
-              ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
+              ? "bg-st-erledigt-bg text-st-erledigt  "
               : "bg-slate-100 text-label2 dark:bg-stone-800 "
           }`}
         >
@@ -406,7 +406,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             if (window.confirm("SMTP-Integration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-red-500/10 "
+          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
         >
           Löschen
         </button>
@@ -443,7 +443,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
-              ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
+              ? "bg-st-erledigt-bg text-st-erledigt  "
               : "bg-slate-100 text-label2 dark:bg-stone-800 "
           }`}
         >
@@ -510,7 +510,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
             if (window.confirm("IMAP-Integration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-red-500/10 "
+          className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
         >
           Löschen
         </button>

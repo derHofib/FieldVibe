@@ -257,7 +257,7 @@ function FotoPlanFeld({
                   type="button"
                   onClick={linieUebernehmen}
                   disabled={linienPunkte.length < 2}
-                  className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
+                  className="rounded-md bg-st-erledigt-dot px-2 py-1 text-xs font-medium text-white disabled:opacity-40"
                 >
                   Fertig
                 </button>
@@ -332,7 +332,7 @@ function FotoPlanFeld({
                     e.stopPropagation();
                     markierungLoeschen(i);
                   }}
-                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 text-white"
+                  className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-st-fehlt-dot text-white"
                   aria-label="Symbol entfernen"
                 >
                   <X size={10} strokeWidth={2.5} />

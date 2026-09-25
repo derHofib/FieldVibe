@@ -97,7 +97,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
             if (window.confirm("Globale SMTP-Konfiguration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch border border-st-fehlt px-3 py-1.5 text-sm font-medium text-st-fehlt hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/30"
+          className="btn-touch border border-st-fehlt px-3 py-1.5 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
         >
           Löschen
         </button>

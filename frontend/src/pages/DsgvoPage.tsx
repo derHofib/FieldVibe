@@ -89,7 +89,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
                   if (window.confirm(`"${DOKUMENT_LABEL[typ]}" wirklich löschen?`)) removeMutation.mutate();
                 }}
                 disabled={removeMutation.isPending}
-                className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sm font-medium text-st-fehlt hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-500/10"
+                className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
               >
                 Löschen
               </button>

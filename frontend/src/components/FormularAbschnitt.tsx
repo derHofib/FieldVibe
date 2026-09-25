@@ -60,8 +60,8 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                   fs.status === "abgeschlossen"
-                    ? "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/15 "
-                    : "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 "
+                    ? "bg-st-erledigt-bg text-st-erledigt  "
+                    : "bg-st-arbeit-bg text-st-arbeit  "
                 }`}
               >
                 {fs.status === "abgeschlossen" ? "Abgeschlossen" : "Offen"}

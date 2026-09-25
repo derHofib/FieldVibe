@@ -181,7 +181,7 @@ export function DispoBoardPage() {
       </div>
 
       {warnungen.length > 0 && (
-        <div className="rounded-lg border border-st-arbeit bg-amber-50 p-3 text-sm text-st-arbeit dark:bg-amber-500/10 ">
+        <div className="rounded-lg border border-st-arbeit bg-st-arbeit-bg p-3 text-sm text-st-arbeit ">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -348,7 +348,7 @@ export function DispoBoardPage() {
                           className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-xs ${
                             t.status === "abgesagt"
                               ? "bg-slate-100 text-label2 line-through dark:bg-stone-800"
-                              : "bg-blue-50 text-tint dark:bg-blue-500/15 "
+                              : "bg-tintbg text-tint  "
                           }`}
                         >
                           <div className="font-semibold">

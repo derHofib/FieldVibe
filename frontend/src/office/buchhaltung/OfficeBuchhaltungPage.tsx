@@ -135,7 +135,7 @@ function PostenTabelle({
                   </td>
                   <td className="px-3.5 py-2.5 text-right">
                     {e.tage_ueberfaellig > 0 ? (
-                      <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-st-fehlt dark:bg-rose-500/15 ">
+                      <span className="rounded-full bg-st-fehlt-bg px-2 py-0.5 text-[10px] font-semibold text-st-fehlt ">
                         {e.tage_ueberfaellig} Tage
                       </span>
                     ) : (

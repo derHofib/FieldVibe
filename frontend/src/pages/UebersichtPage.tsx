@@ -22,8 +22,8 @@ function SystemStatus() {
     <div
       className={`flex items-center justify-between rounded-lg px-4 py-3 text-sm ${
         ok
-          ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
-          : "bg-red-50 text-st-fehlt dark:bg-red-500/10 "
+          ? "bg-st-erledigt-bg text-st-erledigt  "
+          : "bg-st-fehlt-bg text-st-fehlt  "
       }`}
     >
       <span className="flex items-center gap-1.5 font-medium">
@@ -50,9 +50,9 @@ function SystemStatus() {
 // >90% kritisch -- dieselbe Einteilung fuer alle drei Metriken, damit die
 // Kacheln auf den ersten Blick vergleichbar sind.
 function ampelFarbe(percent: number): { bar: string; text: string; spark: string } {
-  if (percent >= 90) return { bar: "bg-red-500", text: "text-st-fehlt ", spark: "#ef4444" };
-  if (percent >= 70) return { bar: "bg-amber-500", text: "text-st-arbeit ", spark: "#f59e0b" };
-  return { bar: "bg-emerald-500", text: "text-st-erledigt ", spark: "#10b981" };
+  if (percent >= 90) return { bar: "bg-st-fehlt-dot", text: "text-st-fehlt ", spark: "#ef4444" };
+  if (percent >= 70) return { bar: "bg-st-arbeit-dot", text: "text-st-arbeit ", spark: "#f59e0b" };
+  return { bar: "bg-st-erledigt-dot", text: "text-st-erledigt ", spark: "#10b981" };
 }
 
 function ResourceRow({

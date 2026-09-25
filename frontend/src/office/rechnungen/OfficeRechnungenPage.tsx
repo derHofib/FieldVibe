@@ -207,7 +207,7 @@ export function OfficeRechnungenPage() {
                 onClick={() => setGewaehlt(e.id)}
                 className={`block w-full border-b border-sep px-3 py-2.5 text-left last:border-b-0 ${
                   e.id === aktiv
-                    ? "border-l-2 border-l-blue-500 bg-blue-50/60 pl-[10px] dark:bg-blue-500/10"
+                    ? "border-l-2 border-l-blue-500 bg-tintbg pl-[10px] "
                     : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
                 }`}
               >

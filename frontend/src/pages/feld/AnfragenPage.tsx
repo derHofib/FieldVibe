@@ -76,7 +76,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           <span
             className={`rounded-full px-2 py-1 text-xs font-semibold ${
               anfrage.status === "angenommen"
-                ? "bg-green-100 text-st-erledigt dark:bg-green-500/15 "
+                ? "bg-st-erledigt-bg text-st-erledigt  "
                 : "bg-slate-200 text-label dark:bg-stone-700 "
             }`}
           >
@@ -157,7 +157,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 <button
                   onClick={() => ablehnenMutation.mutate()}
                   disabled={ablehnenMutation.isPending}
-                  className="btn-touch flex-1 rounded-md bg-red-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+                  className="btn-touch flex-1 rounded-md bg-st-fehlt-dot py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   Ablehnen bestätigen
                 </button>

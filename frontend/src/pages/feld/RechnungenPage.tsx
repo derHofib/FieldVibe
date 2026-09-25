@@ -238,8 +238,8 @@ export function RechnungenPage() {
               }}
               className={`btn-touch rounded-full px-3 py-1 font-medium ${
                 nurUeberfaellig
-                  ? "bg-rose-600 text-white"
-                  : "bg-rose-50 text-st-fehlt dark:bg-rose-500/10 "
+                  ? "bg-st-fehlt-dot text-white"
+                  : "bg-st-fehlt-bg text-st-fehlt  "
               }`}
             >
               Überfällig
@@ -251,8 +251,8 @@ export function RechnungenPage() {
               }}
               className={`btn-touch rounded-full px-3 py-1 font-medium ${
                 faelligBis7Tage
-                  ? "bg-amber-600 text-white"
-                  : "bg-amber-50 text-st-arbeit dark:bg-amber-500/10 "
+                  ? "bg-st-arbeit-dot text-white"
+                  : "bg-st-arbeit-bg text-st-arbeit  "
               }`}
             >
               Diese Woche fällig

@@ -173,12 +173,12 @@ export function AnsprechpartnerVerwaltung({
                 </div>
                 <div className="flex gap-1">
                   {a.operativ && (
-                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-tint dark:bg-blue-500/15 ">
+                    <span className="rounded-full bg-tintbg px-2 py-0.5 text-xs font-medium text-tint ">
                       Operativ
                     </span>
                   )}
                   {a.eskalationsstufe && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-st-arbeit dark:bg-amber-500/15 ">
+                    <span className="rounded-full bg-st-arbeit-bg px-2 py-0.5 text-xs font-medium text-st-arbeit ">
                       Stufe {a.eskalationsstufe}
                     </span>
                   )}
