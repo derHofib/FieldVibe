@@ -374,6 +374,31 @@ function toLocalInputValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Fuer den Termine-Wochenkalender im Desktop-Layout (layout="dicht") --
+// gleiche Rechenlogik wie office/DispoBoardPage.tsx, hier aber lokal
+// kopiert statt importiert: dort ist es eine Seiten-lokale Hilfsfunktion,
+// kein geteiltes Modul.
+const WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+function startOfWoche(d: Date): Date {
+  const date = new Date(d);
+  const tag = date.getDay(); // 0 = Sonntag
+  const diffZuMontag = tag === 0 ? -6 : 1 - tag;
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + diffZuMontag);
+  return date;
+}
+
+function addTage(d: Date, n: number): Date {
+  const date = new Date(d);
+  date.setDate(date.getDate() + n);
+  return date;
+}
+
+function tagesSchluessel(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 function leereAdresse(adresse: Adresse | null | undefined): { strasse: string; plz: string; ort: string } {
   return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
 }
@@ -419,6 +444,7 @@ export function VorgangDetailPage({
   const [terminTitel, setTerminTitel] = useState("");
   const [terminStart, setTerminStart] = useState("");
   const [terminEnde, setTerminEnde] = useState("");
+  const [terminWocheOffset, setTerminWocheOffset] = useState(0);
   const [showMangelForm, setShowMangelForm] = useState(false);
   const [mangelBeschreibung, setMangelBeschreibung] = useState("");
   const [mangelSchweregrad, setMangelSchweregrad] = useState<MangelSchweregrad>("mittel");
@@ -1988,53 +2014,155 @@ export function VorgangDetailPage({
           </div>
         )}
 
-        {(termine ?? []).length === 0 ? (
-          <p className="text-sm text-label2">Keine Termine geplant.</p>
-        ) : (
-          <div className="space-y-1.5">
-            {termine!.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between border border-sepstrong p-2 text-sm"
-              >
+        {layout === "dicht"
+          ? (() => {
+              const heute = new Date();
+              const sortiert = [...(termine ?? [])].sort(
+                (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
+              );
+              const naechster =
+                sortiert.find((t) => new Date(t.start_at).getTime() >= heute.getTime()) ??
+                sortiert[sortiert.length - 1];
+              const referenz = naechster ? new Date(naechster.start_at) : heute;
+              const wocheStart = addTage(startOfWoche(referenz), terminWocheOffset * 7);
+              const wocheTage = Array.from({ length: 7 }, (_, i) => addTage(wocheStart, i));
+              const wocheEnde = addTage(wocheStart, 6);
+              const perTag = new Map<string, typeof sortiert>();
+              for (const t of sortiert) {
+                const key = tagesSchluessel(new Date(t.start_at));
+                perTag.set(key, [...(perTag.get(key) ?? []), t]);
+              }
+              return (
                 <div>
-                  <div className="font-medium text-label">{t.titel}</div>
-                  <div className="text-xs text-label2">
-                    {new Date(t.start_at).toLocaleString("de-DE", {
-                      timeZone: "Europe/Berlin",
-                      dateStyle: "short",
-                      timeStyle: "short",
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setTerminWocheOffset((o) => o - 1)}
+                        className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                      >
+                        ← Vorherige Woche
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTerminWocheOffset(0)}
+                        disabled={terminWocheOffset === 0}
+                        className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill disabled:opacity-50"
+                      >
+                        Diese Woche
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTerminWocheOffset((o) => o + 1)}
+                        className="btn-touch border border-sep px-2 py-1 text-xs text-label hover:bg-fill"
+                      >
+                        Nächste Woche →
+                      </button>
+                    </div>
+                    <span className="text-xs text-label2">
+                      {wocheStart.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}–
+                      {wocheEnde.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-px overflow-hidden border border-sep bg-sep">
+                    {wocheTage.map((tag, i) => {
+                      const heuteFlag = tagesSchluessel(tag) === tagesSchluessel(heute);
+                      const eintraege = perTag.get(tagesSchluessel(tag)) ?? [];
+                      return (
+                        <div key={i} className="min-h-[110px] bg-card p-1.5">
+                          <div className={`mb-1 text-[11px] font-medium ${heuteFlag ? "text-tint" : "text-label2"}`}>
+                            {WOCHENTAGE[i]} {tag.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                          </div>
+                          <div className="space-y-1">
+                            {eintraege.map((t) => (
+                              <div
+                                key={t.id}
+                                title={t.titel}
+                                className={`rounded-[5px] border p-1 text-[11px] ${
+                                  t.status === "abgesagt"
+                                    ? "border-sep text-label2 line-through"
+                                    : "border-tint text-tint"
+                                }`}
+                              >
+                                <div className="font-semibold">
+                                  {new Date(t.start_at).toLocaleTimeString("de-DE", {
+                                    timeZone: "Europe/Berlin",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </div>
+                                <div className="truncate">{t.titel}</div>
+                                {kannPapierkorbLoeschen && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                                        deleteTerminMutation.mutate(t.id);
+                                      }
+                                    }}
+                                    disabled={deleteTerminMutation.isPending}
+                                    className="mt-0.5 text-[10px] font-medium text-st-fehlt"
+                                  >
+                                    Löschen
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
                     })}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`border px-2 py-0.5 text-xs font-medium ${
-                      t.status === "abgesagt"
-                        ? "border-sep text-label2"
-                        : "border-tint text-tint"
-                    }`}
+              );
+            })()
+          : (termine ?? []).length === 0 ? (
+              <p className="text-sm text-label2">Keine Termine geplant.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {termine!.map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between border border-sepstrong p-2 text-sm"
                   >
-                    {TERMIN_STATUS_LABEL[t.status]}
-                  </span>
-                  {kannPapierkorbLoeschen && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
-                          deleteTerminMutation.mutate(t.id);
-                        }
-                      }}
-                      disabled={deleteTerminMutation.isPending}
-                      className="btn-touch text-xs font-medium text-st-fehlt"
-                    >
-                      Löschen
-                    </button>
-                  )}
-                </div>
+                    <div>
+                      <div className="font-medium text-label">{t.titel}</div>
+                      <div className="text-xs text-label2">
+                        {new Date(t.start_at).toLocaleString("de-DE", {
+                          timeZone: "Europe/Berlin",
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`border px-2 py-0.5 text-xs font-medium ${
+                          t.status === "abgesagt"
+                            ? "border-sep text-label2"
+                            : "border-tint text-tint"
+                        }`}
+                      >
+                        {TERMIN_STATUS_LABEL[t.status]}
+                      </span>
+                      {kannPapierkorbLoeschen && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                              deleteTerminMutation.mutate(t.id);
+                            }
+                          }}
+                          disabled={deleteTerminMutation.isPending}
+                          className="btn-touch text-xs font-medium text-st-fehlt"
+                        >
+                          Löschen
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+            )}
       </div>
 
       {vorgang && (
