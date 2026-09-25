@@ -33,6 +33,8 @@ import { FormularAbschnitt } from "../../components/FormularAbschnitt";
 import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
+import { Sheet } from "../../components/apple/Sheet";
+import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
 import {
@@ -60,6 +62,7 @@ import type {
   VorgangAbrechnungsart,
   VorgangEvent,
   VorgangStatus,
+  Zeiterfassung,
 } from "../../types";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
@@ -155,6 +158,12 @@ const ABRECHNUNGSART_LABEL: Record<VorgangAbrechnungsart, string> = {
 // -- "Ticket übernehmen" ergibt fuer bereits geschlossene Vorgaenge keinen
 // Sinn mehr (das Backend lehnt es dort ohnehin mit 409 ab).
 const VORGANG_STATUS_GESCHLOSSEN: VorgangStatus[] = ["abgeschlossen", "abgerechnet", "storniert"];
+
+// Spiegelt app/api/routes/zeiterfassung.py:_VORGANG_STATUS_ZEIT_GESPERRT --
+// enger als VORGANG_STATUS_GESCHLOSSEN: Zeit nachtragen/bearbeiten bleibt
+// nach "abgeschlossen" bewusst moeglich, nur nach Abrechnung/Stornierung
+// nicht mehr (das Backend lehnt es sonst ohnehin mit 409 ab).
+const VORGANG_STATUS_ZEIT_GESPERRT: VorgangStatus[] = ["abgerechnet", "storniert"];
 
 const PRIORITAET_OPTIONEN = [1, 2, 3, 4, 5];
 
@@ -438,6 +447,15 @@ export function VorgangDetailPage({
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [showUnterschriftPad, setShowUnterschriftPad] = useState(false);
   const [taetigkeit, setTaetigkeit] = useState("");
+  // Zeit-Tab: Sheet zum Anlegen/Bearbeiten eines Eintrags (Stufe 1, siehe
+  // docs/konzepte/ZEITERFASSUNG.md) -- offen, wenn zeitSheetModus gesetzt ist.
+  // "neu" oeffnet leer (vorbelegt mit diesem Vorgang), ein Eintrag oeffnet
+  // zum Bearbeiten.
+  const [zeitSheetModus, setZeitSheetModus] = useState<"neu" | Zeiterfassung | null>(null);
+  // Kleines Taetigkeits-Sheet, das automatisch nach "Stoppen" erscheint --
+  // der gerade beendete Eintrag, oder null wenn keins offen ist.
+  const [nachStoppenEintrag, setNachStoppenEintrag] = useState<Zeiterfassung | null>(null);
+  const [nachStoppenTaetigkeit, setNachStoppenTaetigkeit] = useState("");
   const [showTerminForm, setShowTerminForm] = useState(false);
   const [terminWarnungen, setTerminWarnungen] = useState<TerminWarnung[]>([]);
   const [terminTechnikerId, setTerminTechnikerId] = useState("");
@@ -1099,11 +1117,28 @@ export function VorgangDetailPage({
 
   const stopTimerMutation = useMutation({
     mutationFn: (timerId: string) => zeiterfassungApi.stop(timerId),
-    onSuccess: () => {
+    onSuccess: (gestoppterEintrag) => {
       queryClient.invalidateQueries({ queryKey: ["zeiterfassung-laufend"] });
       queryClient.invalidateQueries({ queryKey: ["zeiterfassung", id] });
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
+      // Automatisches Taetigkeits-Sheet nach dem Stoppen (Stufe 1, siehe
+      // docs/konzepte/ZEITERFASSUNG.md) -- nur wenn die Taetigkeit noch
+      // fehlt, sonst waere die Nachfrage ueberfluessig.
+      if (!gestoppterEintrag.taetigkeit) {
+        setNachStoppenEintrag(gestoppterEintrag);
+        setNachStoppenTaetigkeit("");
+      }
+    },
+    onError: meldeAktionsFehler,
+  });
+
+  const nachStoppenTaetigkeitMutation = useMutation({
+    mutationFn: () =>
+      zeiterfassungApi.aktualisieren(nachStoppenEintrag!.id, { taetigkeit: nachStoppenTaetigkeit }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["zeiterfassung", id] });
+      setNachStoppenEintrag(null);
     },
     onError: meldeAktionsFehler,
   });
@@ -1795,9 +1830,19 @@ export function VorgangDetailPage({
       <div id="abschnitt-zeit" className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-zeit") ? "" : "hidden"}`} {...tabPanelProps("abschnitt-zeit")}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
-          <span className="text-sm font-medium text-label">
-            Bisher {gesamtStunden} Std.
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-label">
+              Bisher {gesamtStunden} Std.
+            </span>
+            {!VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) && (
+              <button
+                onClick={() => setZeitSheetModus("neu")}
+                className="btn-touch text-xs font-medium text-tint"
+              >
+                + Zeit nachtragen
+              </button>
+            )}
+          </div>
         </div>
         {timerLaeuftHier ? (
           <div className="flex items-center justify-between">
@@ -1859,9 +1904,19 @@ export function VorgangDetailPage({
                         (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
                       const techniker = users?.find((u) => u.id === e.techniker_id);
                       return (
-                        <tr key={e.id} className="border-t border-sep">
+                        <tr
+                          key={e.id}
+                          onClick={() => setZeitSheetModus(e)}
+                          className="cursor-pointer border-t border-sep hover:bg-fill"
+                        >
                           <td className="px-2 py-1.5 text-label">{techniker?.name ?? "—"}</td>
-                          <td className="px-2 py-1.5 text-label2">{e.taetigkeit || "—"}</td>
+                          <td className="px-2 py-1.5 text-label2">
+                            {e.taetigkeit || (
+                              <span className="flex items-center gap-1 text-st-arbeit">
+                                <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
+                              </span>
+                            )}
+                          </td>
                           <td className="px-2 py-1.5 tabular-nums text-label2">
                             {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                           </td>
@@ -1897,13 +1952,19 @@ export function VorgangDetailPage({
                     (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
                   const techniker = users?.find((u) => u.id === e.techniker_id);
                   return (
-                    <div
+                    <button
                       key={e.id}
-                      className="flex items-center justify-between text-xs text-label2"
+                      onClick={() => setZeitSheetModus(e)}
+                      className="btn-touch flex w-full items-center justify-between text-left text-xs text-label2 hover:bg-fill"
                     >
                       <span>
                         {techniker?.name ?? "—"}
-                        {e.taetigkeit && ` · ${e.taetigkeit}`}
+                        {" · "}
+                        {e.taetigkeit || (
+                          <span className="inline-flex items-center gap-1 text-st-arbeit">
+                            <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
+                          </span>
+                        )}
                         {" · "}
                         {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                         {" · "}
@@ -1922,7 +1983,7 @@ export function VorgangDetailPage({
                       <span className="shrink-0 font-medium text-label">
                         {formatSekundenAlsHHMM(dauerSekunden)} Std.
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
             </div>
@@ -3048,6 +3109,51 @@ export function VorgangDetailPage({
         </div>
       )}
       </div>
+
+      {zeitSheetModus && (
+        <ZeiteintragSheet
+          offen
+          onClose={() => setZeitSheetModus(null)}
+          vorgangId={id!}
+          eintrag={zeitSheetModus === "neu" ? null : zeitSheetModus}
+          onGespeichert={() => setZeitSheetModus(null)}
+        />
+      )}
+
+      <Sheet
+        offen={!!nachStoppenEintrag}
+        onClose={() => setNachStoppenEintrag(null)}
+        titel="Was hast du gemacht?"
+        links={
+          <button
+            type="button"
+            onClick={() => setNachStoppenEintrag(null)}
+            className="text-[17px] text-tint"
+          >
+            Später
+          </button>
+        }
+        rechts={
+          <button
+            type="button"
+            onClick={() => nachStoppenTaetigkeitMutation.mutate()}
+            disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
+            className="text-[17px] font-semibold text-tint disabled:opacity-40"
+          >
+            Fertig
+          </button>
+        }
+      >
+        <div className="space-y-4 p-4">
+          <input
+            autoFocus
+            value={nachStoppenTaetigkeit}
+            onChange={(e) => setNachStoppenTaetigkeit(e.target.value)}
+            placeholder="z. B. Wartung an Anlage durchgeführt"
+            className="field-ap"
+          />
+        </div>
+      </Sheet>
     </div>
   );
 }
