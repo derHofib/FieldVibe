@@ -1,6 +1,6 @@
 # Konzept: Arbeitszeiterfassung 2.0
 
-Status: **Entwurf zur Abstimmung** (noch nicht umgesetzt)
+Status: **Entwurf zur Abstimmung** (noch nicht umgesetzt) – Überarbeitung 1: Buchungsablauf
 Stand: 25.09.2026
 
 ## 1. Anlass und Ziel
@@ -14,6 +14,12 @@ Zeiteinträge an einem Vorgang müssen nachträglich bearbeitbar sein. Konkret:
 Daraus ergibt sich die Frage, wie Zeiterfassung insgesamt aufgestellt sein soll:
 wer darf was wann ändern, wie bleibt das nachvollziehbar, und wie fließt es in
 Abrechnung und Auswertung (inkl. der neuen Ebene Projekt → Auftrag → Vorgang).
+
+**Grundprinzip (abgestimmt):** Erfasste Zeit ist zunächst nur am Vorgang
+**vermerkt**. Abrechenbar wird sie erst, wenn sie **aktiv gebucht** wurde.
+Der Techniker merkt seine Einträge zur Buchung vor, das Büro prüft und bucht.
+Als Arbeitszeit des Mitarbeiters zählt sie trotzdem sofort ab dem Erfassen.
+Die Buchung betrifft nur die Abrechnung beim Kunden.
 
 ---
 
@@ -82,6 +88,7 @@ ob er schon auf einer Rechnung steht.
 | L7 | Büro kann nicht korrigieren | Vergisst ein Techniker das Stoppen, kann nur er selbst den Eintrag reparieren |
 | L8 | Keine Summen je Auftrag/Projekt | Neue Ebene Auftrag hat noch keine Zeitauswertung |
 | L9 | Timer-Einträge und nachgetragene Einträge nicht unterscheidbar | Vertrauen in die Daten, Auswertung |
+| L10 | Keine Freigabe vor der Abrechnung | Jede abrechenbare Zeit landet sofort in den Rechnungsvorschlägen, ungeprüft und auch mit leerer Tätigkeit |
 
 ---
 
@@ -91,20 +98,23 @@ ob er schon auf einer Rechnung steht.
 
 - **Techniker (Feld-App)**
   - Stoppt den Timer und wird gleich gefragt, was er gemacht hat. Das Feld
-    darf leer bleiben.
+    darf beim Erfassen leer bleiben.
   - Tippt später auf einen Eintrag und ergänzt die Tätigkeit oder korrigiert
     Uhrzeiten.
   - Erfasst die Fahrt zum Kunden: Dauer, gefahrene km, Fahrzeug
     (vorbelegt mit seinem zugewiesenen Fahrzeug).
   - Trägt Zeit direkt am Vorgang nach („+ Zeit nachtragen“).
+  - Markiert seine fertigen Einträge und klickt **„Zur Buchung vormerken“**.
 - **Büro/Dispo (Office)**
-  - Sieht im Vorgang alle Zeiten inkl. km und Summen.
+  - Sieht im Vorgang alle Zeiten inkl. km, Summen und Buchungsstatus.
+  - Prüft die vorgemerkten Einträge, markiert sie und klickt **„Buchen“**.
+  - Nimmt eine Buchung bei Bedarf zurück („Buchung stornieren“, mit Grund).
   - Korrigiert einen fremden Eintrag, gibt dabei einen Grund an, und die
     Änderung wird protokolliert.
-  - Sieht offene Punkte: „Einträge ohne Tätigkeit“ und „Timer läuft seit über
-    12 Std“.
+  - Sieht offene Punkte: „Zur Buchung vorgemerkt“, „Einträge ohne Tätigkeit“
+    und „Timer läuft seit über 12 Std“.
 - **Buchhaltung**
-  - Übernimmt Arbeitszeit, Fahrzeit und Fahrtkosten als Rechnungsvorschläge.
+  - Sieht in den Rechnungsvorschlägen **nur gebuchte** Zeit.
   - Abgerechnete Einträge sind danach gesperrt.
 - **Admin**
   - Stellt ein: km-Satz, ob und wie Fahrzeit abgerechnet wird, Korrekturfrist.
@@ -120,8 +130,26 @@ ob er schon auf einer Rechnung steht.
 | `km` | `NUMERIC(7,1)`, nullable | nur bei `kategorie = 'fahrzeit'`, `>= 0` (CHECK) |
 | `fahrzeug_id` | FK → `anlagen.id`, nullable | nur Anlagen mit `objekttyp = 'fahrzeug'`; nur bei Fahrzeit sinnvoll; Vorbelegung aus `FahrzeugZuweisung` |
 | `quelle` | `TEXT`, `'timer' \| 'manuell'` | vom Server gesetzt, nie per API änderbar; Altbestand wird `'timer'` bei vorhandenem Vorgang-Event `zeit_start`, sonst `'manuell'` |
-| `abgerechnet_rechnung_id` | FK → `rechnungen.id`, nullable | vom Server gesetzt (siehe Abschnitt 8), sperrt den Eintrag |
+| `buchungsstatus` | `TEXT`, Default `'vermerkt'` | `'vermerkt' \| 'vorgemerkt' \| 'gebucht' \| 'abgerechnet'` (CHECK); ändert sich nur über die Buchungs-Endpunkte (6.1), nie per PATCH |
+| `vorgemerkt_von` / `vorgemerkt_am` | FK → `users.id` / Zeitstempel, nullable | wer hat zur Buchung vorgemerkt |
+| `gebucht_von` / `gebucht_am` | FK → `users.id` / Zeitstempel, nullable | wer hat gebucht |
+| `abgerechnet_rechnung_id` | FK → `rechnungen.id`, nullable | vom Server gesetzt (siehe Abschnitt 8) |
 | `geloescht_am` / `geloescht_von` | Soft-Delete (`SoftDeleteMixin`) | Löschen landet im Papierkorb statt hart |
+
+`buchungsstatus` gibt es nur für Einträge **mit Vorgang**. Urlaub,
+Krankheit, Pause, Schulung usw. ohne Vorgang werden nicht beim Kunden
+abgerechnet und bleiben dauerhaft `vermerkt`. Buchen ist für sie nicht
+möglich.
+
+`abrechenbar` bleibt zusätzlich bestehen und bedeutet „soll dem Kunden
+berechnet werden“. Ein gebuchter Eintrag mit `abrechenbar = false` (z. B.
+Gewährleistung, Kulanz) ist geprüft und freigegeben, erscheint aber nicht in
+den Rechnungsvorschlägen.
+
+**Altbestand:** Bestehende Einträge an Vorgängen mit Status `abgerechnet`
+werden zu `abgerechnet`. Alle übrigen Einträge mit Vorgang werden zu
+`gebucht`, damit laufende Abrechnungen am Tag der Umstellung nicht plötzlich
+ohne Zeitvorschläge dastehen. Nur neu erfasste Zeit startet als `vermerkt`.
 
 Fahrzeit darf (wie heute schon technisch möglich) einen `vorgang_id` haben.
 Dann wird die Fahrt dem Vorgang zugeordnet und erscheint dort.
@@ -138,7 +166,7 @@ Nach dem Vorbild von `form_submission_audit`:
 |---|---|
 | `id`, `mandant_id` | Standard + RLS-Policy nach Muster aus Migration 0082/0083 |
 | `zeiterfassung_id` | FK, `ON DELETE CASCADE` |
-| `aktion` | `angelegt`, `geaendert`, `geloescht`, `wiederhergestellt` |
+| `aktion` | `angelegt`, `geaendert`, `geloescht`, `wiederhergestellt`, `vorgemerkt`, `vormerkung_zurueckgezogen`, `gebucht`, `buchung_storniert`, `abgerechnet` |
 | `feld`, `alter_wert`, `neuer_wert` | je geändertem Feld eine Zeile (JSONB-Werte) |
 | `grund` | Pflicht, wenn jemand einen **fremden** Eintrag ändert |
 | `geaendert_von`, `geaendert_am` | wer und wann |
@@ -152,43 +180,68 @@ oder löschen.
 |---|---|---|
 | `km_satz_netto` | `NULL` (aus) | €/km für Fahrtkosten-Vorschläge |
 | `fahrzeit_abrechnung` | `'keine'` | `'keine' \| 'zeit' \| 'km' \| 'zeit_und_km'` |
-| `zeit_korrekturfrist_tage` | `14` | So lange darf der Techniker eigene Einträge selbst ändern. Danach nur noch das Büro. `NULL` = unbegrenzt |
+| `zeit_korrekturfrist_tage` | `NULL` (keine) | Optional: so lange darf der Techniker eigene, noch **vermerkte** Einträge ändern. Möglicherweise überflüssig, weil Vormerken/Buchen die Grenze bildet (siehe offene Frage 4) |
 
 ---
 
 ## 6. Regeln
 
-### 6.1 Wer darf was?
+### 6.1 Buchungsablauf
 
-| Aktion | Techniker (eigener Eintrag) | Büro (fremder Eintrag) |
+```
+vermerkt ──(Techniker: vormerken)──▶ vorgemerkt ──(Büro: buchen)──▶ gebucht ──(Rechnung)──▶ abgerechnet
+
+Rückwege:
+  vorgemerkt ──(zurückziehen)──────────▶ vermerkt
+  gebucht    ──(Büro: stornieren)──────▶ vermerkt
+  abgerechnet ─(Position entfernt, Rechnung noch Entwurf)─▶ gebucht
+```
+
+| Übergang | Wer | Voraussetzung |
 |---|---|---|
-| Nachtragen | ja | ja, **für** einen Techniker (neu, mit Grund) |
-| Tätigkeit ändern | ja, auch bei laufendem Timer | ja, mit Grund |
-| Zeiten/Kategorie/km ändern | ja, innerhalb der Korrekturfrist | ja, mit Grund |
-| Löschen | ja, innerhalb der Frist (Papierkorb) | ja, mit Grund (Papierkorb) |
-| Laufenden Timer beenden | ja | ja („Timer beenden“, mit Grund; Ende frei wählbar) |
+| vermerkt → vorgemerkt | Techniker (eigene), Büro (alle) | Timer beendet, **Tätigkeit ausgefüllt**, Vorgang nicht `abgerechnet`/`storniert` |
+| vorgemerkt → vermerkt („zurückziehen“) | Techniker (eigene), Büro | noch nicht gebucht |
+| vorgemerkt → gebucht | Büro | |
+| vermerkt → gebucht (direkt) | Büro | wie beim Vormerken; für den Fall, dass der Techniker das Vormerken vergessen hat |
+| gebucht → vermerkt („Buchung stornieren“) | Büro | noch nicht abgerechnet; **Grund Pflicht** |
+| gebucht → abgerechnet | Server | beim Übernehmen in eine Rechnung (Abschnitt 8) |
+| abgerechnet → gebucht | Server | Position wieder entfernt, solange die Rechnung `entwurf` ist |
+
+Alle Übergänge gehen gesammelt über eigene Endpunkte, z. B.
+`POST /api/zeiterfassung/vormerken`, `/buchen`, `/buchung-stornieren` mit
+einer Liste von IDs. Es gilt alles oder nichts: Scheitert die Prüfung bei
+einem Eintrag, bucht der Endpunkt keinen und nennt die betroffenen Einträge.
+Jeder Übergang landet im Protokoll (5.2).
+
+Die Tätigkeit ist **beim Erfassen freiwillig**, **beim Vormerken Pflicht**.
+Das erzwingt keine Unterbrechung im Feld, sorgt aber dafür, dass keine Zeit
+ohne Beschreibung beim Kunden abgerechnet wird.
+
+### 6.2 Wer darf was?
 
 „Büro“ heißt: Recht `mitarbeiterverwaltung.bearbeiten`. Dieses Recht steuert
 schon heute die Einsicht in fremde Zeiten, deshalb wird kein neuer
 Rechte-Bereich angelegt. `mandant_admin` darf es immer.
 
-### 6.2 Sperren
+| Aktion | vermerkt | vorgemerkt | gebucht | abgerechnet |
+|---|---|---|---|---|
+| Techniker: eigene bearbeiten/löschen | ja (innerhalb Korrekturfrist) | nein, erst zurückziehen | nein | nein |
+| Techniker: Tätigkeit ergänzen | ja, auch bei laufendem Timer | nein, erst zurückziehen | nein | nein |
+| Büro: bearbeiten/löschen (mit Grund bei fremden) | ja | ja | nein, erst Buchung stornieren | nein |
+| Büro: für einen Techniker nachtragen | ja (neuer Eintrag startet als `vermerkt`) | – | – | – |
+| Büro: fremden laufenden Timer beenden | ja (mit Grund, Ende frei wählbar) | – | – | – |
 
-Ein Eintrag ist für **alle** gesperrt, wenn:
+### 6.3 Sperren durch den Vorgang
 
-1. `abgerechnet_rechnung_id` gesetzt ist und die Rechnung nicht mehr im
-   Status `entwurf` ist, **oder**
-2. sein Vorgang im Status `abgerechnet` oder `storniert` ist.
+Unabhängig vom Buchungsstatus gilt:
 
-Vereinheitlichung (behebt L6): Nachtragen und Bearbeiten bleiben bei Status
-`abgeschlossen` **erlaubt**, denn Nachtragen nach Abschluss ist genau der
-Anwendungsfall. Nur der Timer bleibt dort wie bisher gesperrt.
+- Vorgang `abgeschlossen`: Timer gesperrt (wie heute). Nachtragen,
+  Bearbeiten, Vormerken und Buchen bleiben **erlaubt**, denn Nachtragen nach
+  Abschluss ist genau der Anwendungsfall (behebt L6).
+- Vorgang `abgerechnet` oder `storniert`: alles gesperrt. Korrekturen laufen
+  dann über eine Rechnungskorrektur und liegen außerhalb dieses Konzepts.
 
-Bei `abgerechnet`/`storniert` sind Timer, Nachtragen und Bearbeiten gesperrt.
-Korrekturen laufen dann über eine Rechnungskorrektur und liegen außerhalb
-dieses Konzepts.
-
-### 6.3 Plausibilitätsprüfungen
+### 6.4 Plausibilitätsprüfungen
 
 | Prüfung | Art |
 |---|---|
@@ -215,13 +268,24 @@ ARBEITSZEIT                              Bisher 3:45 Std · 42 km
 [ + Zeit nachtragen ]  [ + Fahrt erfassen ]
 
 Heute
-  08:10–08:40  Fahrt · 21 km · WE-FV 123                    ›
-  08:40–11:15  Sabine Müller · Zählerschrank getauscht       ›
-  11:15–11:45  Fahrt · 21 km                                 ›
+☐ 08:10–08:40  Fahrt · 21 km · WE-FV 123        Vermerkt     ›
+☐ 08:40–11:15  Zählerschrank getauscht          Vermerkt     ›
+☐ 11:15–11:45  Fahrt · 21 km                    Vermerkt     ›
 Gestern
-  14:00–15:30  ⚠ Tätigkeit fehlt                             ›
+  14:00–15:30  ⚠ Tätigkeit fehlt                Vermerkt     ›
+  09:00–12:00  Leitung verlegt                  Gebucht 🔒   ›
+
+[ 3 ausgewählt · Zur Buchung vormerken ]
 ```
 
+- **Status je Eintrag** als Tag: Vermerkt (grau), Vorgemerkt (blau),
+  Gebucht (grün, Schloss), Abgerechnet (Schloss). Farbe steht nie allein,
+  immer mit Text (siehe `docs/DESIGN.md`).
+- **Auswahl-Kästchen** nur bei eigenen, vermerkten, fertigen Einträgen.
+  Ohne Tätigkeit ist das Kästchen deaktiviert mit Hinweis „Tätigkeit
+  fehlt“. Die Aktionsleiste „Zur Buchung vormerken“ erscheint, sobald
+  etwas ausgewählt ist.
+- Vorgemerkte eigene Einträge bieten „Zurückziehen“ an.
 - **Jede Zeile ist antippbar** und öffnet das Bearbeiten-Sheet (bestehende
   `Sheet`-Komponente).
 - **Sheet „Zeiteintrag“**:
@@ -231,47 +295,85 @@ Gestern
     und Standardtexte je Leistungstyp)
   - nur bei Arbeit: `abrechenbar`, Stundensatz (LV)
   - nur bei Fahrt: km, Fahrzeug (vorbelegt)
-  - unten: „Löschen“ und bei Bedarf der Hinweis „Gesperrt – bereits
-    abgerechnet“
+  - unten: „Löschen“, oder bei gesperrten Einträgen der Hinweis „Gebucht
+    am … von …“ bzw. „Abgerechnet in Rechnung …“
 - **Nach „Stoppen“** öffnet sich automatisch ein kleines Sheet: „Was hast du
   gemacht?“. Es enthält nur das Tätigkeitsfeld mit Chips sowie „Speichern“
   und „Später“. Das trifft L1 im Alltag am direktesten.
 - Einträge ohne Tätigkeit bekommen einen dezenten Hinweis `⚠ Tätigkeit fehlt`
   (Statusfarbe plus Symbol plus Text, siehe `docs/DESIGN.md`).
-- Gesperrte Einträge zeigen ein Schloss-Symbol und öffnen das Sheet nur zum
-  Lesen.
+- Gebuchte und abgerechnete Einträge zeigen ein Schloss-Symbol und öffnen
+  das Sheet nur zum Lesen.
 
 ### 7.2 Office: Vorgang → Tab Zeit (dichte Ansicht)
 
-- Die bestehende Tabelle bekommt die Spalten **Art**, **km**,
-  **abrechenbar** und **Status** (offen / gesperrt), dazu eine Summenzeile
-  (Arbeit, Fahrt, km).
-- Ein Klick auf eine Zeile öffnet das neue **SeitenPanel** (von rechts,
-  ziehbar). Darin: dasselbe Formular wie im Sheet, zusätzlich der
-  Reiter **„Verlauf“** mit dem Änderungsprotokoll.
+```
+☐ | Datum | Von–Bis | Mitarbeiter | Art | Tätigkeit | km | abr. | Status
+───────────────────────────────────────────────────────────────────────────
+Summe: Arbeit 6:45 · Fahrt 1:00 · 42 km   │ vermerkt 2:30 · vorgemerkt 3:15 · gebucht 2:00
+
+[ Buchen (4) ]  [ Alle vorgemerkten buchen ]  [ Buchung stornieren ]
+```
+
+- Die bestehende Tabelle bekommt die Spalten **Mitarbeiter**, **Art**,
+  **km**, **abrechenbar** und **Status**, dazu Auswahl-Kästchen und eine
+  Summenzeile nach Art **und** nach Buchungsstatus.
+- **Aktionsleiste fürs Büro:**
+  - „Buchen“ (Auswahl)
+  - „Alle vorgemerkten buchen“ (Abkürzung)
+  - „Buchung stornieren“ (Auswahl gebuchter Einträge, fragt nach dem Grund)
+- Vor dem Buchen zeigt ein kurzer Bestätigungsdialog Anzahl, Summe Stunden
+  und km sowie Warnungen (z. B. Überschneidung, > 12 Std).
+- Ein Klick auf eine Zeile öffnet das **SeitenPanel** (von rechts, ziehbar).
+  Darin steht dasselbe Formular wie im Sheet und zusätzlich der Reiter
+  **„Verlauf“** mit dem Änderungsprotokoll inkl. Buchungsschritten.
 - Buttons „+ Zeit nachtragen“ und „+ Fahrt erfassen“. Im Office gibt es dabei
   zusätzlich die Auswahl **„für Mitarbeiter“**.
 - Bei fremden Einträgen ist das Feld **Grund** Pflicht.
 
-### 7.3 Auftrag- und Projekt-Panel
+### 7.3 Neue Office-Seite „Zeiten buchen“
 
-Neuer Block „Zeit“ mit den Summen über alle zugehörigen Vorgänge: Arbeitszeit,
-Fahrzeit, km, davon abrechenbar und davon bereits abgerechnet. Nur Anzeige,
-bearbeitet wird am Vorgang.
+Arbeitsvorrat fürs Büro über **alle** Vorgänge, damit niemand jeden Vorgang
+einzeln öffnen muss:
 
-### 7.4 Team-Zeiten / Statistik
+- Standardfilter: Status „vorgemerkt“
+- Gruppiert nach Vorgang (Vorgangsnummer, Kunde, Auftrag/Projekt), darin die
+  Einträge
+- Weitere Filter: Mitarbeiter, Zeitraum, Kunde, Auftrag, Projekt, „vermerkt
+  älter als X Tage“
+- Dieselbe Aktionsleiste wie im Vorgang (Auswahl → Buchen / Stornieren),
+  Zeilenklick öffnet das SeitenPanel
+- Zähler in der Seitenleiste (Badge) mit der Anzahl vorgemerkter Einträge
 
-- Einträge in der Tagesliste werden für das Büro bearbeitbar (gleiches
-  SeitenPanel).
-- Filter „Ohne Tätigkeit“ und „Timer läuft > 12 Std“.
-- CSV-Export und Wochenzettel-PDF bekommen die Spalten **km** und **Fahrzeug**.
+### 7.4 Auftrag- und Projekt-Panel
+
+Neuer Block „Zeit“ mit den Summen über alle zugehörigen Vorgänge:
+Arbeitszeit, Fahrzeit und km, jeweils aufgeteilt nach vermerkt, vorgemerkt,
+gebucht und abgerechnet. Das ist nur eine Anzeige, bearbeitet und gebucht
+wird am Vorgang oder auf „Zeiten buchen“.
+
+### 7.5 Team-Zeiten / Statistik
+
+- Wochen- und Monatsstunden zählen **alle** erfassten Arbeitszeiten,
+  unabhängig vom Buchungsstatus (abgestimmt, siehe Abschnitt 1).
+- Die Tagesliste zeigt zusätzlich den Status-Tag je Eintrag. Einträge sind
+  für das Büro bearbeitbar (gleiches SeitenPanel).
+- Filter „Ohne Tätigkeit“, „Timer läuft > 12 Std“ und „Noch nicht vorgemerkt“.
+- CSV-Export und Wochenzettel-PDF bekommen die Spalten **km**, **Fahrzeug**
+  und **Status**.
 
 ---
 
 ## 8. Abrechnung
 
-Rechnungsvorschläge (`positionen_vorschlaege_fuer_vorgang`) werden
-erweitert, gesteuert über `fahrzeit_abrechnung` (Abschnitt 5.3):
+**Grundregel:** Rechnungsvorschläge (`positionen_vorschlaege_fuer_vorgang`)
+berücksichtigen nur noch Einträge mit `buchungsstatus = 'gebucht'` und
+`abrechenbar = true`. Vermerkte und vorgemerkte Zeit erscheint dort nicht.
+Die Box zeigt stattdessen einen Hinweis wie „2:15 Std noch nicht gebucht →
+Zeiten buchen“, damit nichts vergessen wird.
+
+Zusätzlich werden die Vorschläge erweitert, gesteuert über
+`fahrzeit_abrechnung` (Abschnitt 5.3):
 
 | Einstellung | Zusätzlicher Vorschlag |
 |---|---|
@@ -281,12 +383,13 @@ erweitert, gesteuert über `fahrzeit_abrechnung` (Abschnitt 5.3):
 | `keine` | nichts (wie heute) |
 
 Wird ein Vorschlag in eine Rechnung übernommen, setzt der Server bei allen
-beteiligten Einträgen `abgerechnet_rechnung_id`. Wird die Position wieder
-entfernt, solange die Rechnung im Entwurf ist, wird das Feld zurückgesetzt.
-Damit ist L5 geschlossen, und Zeit wird nicht doppelt abgerechnet.
+beteiligten Einträgen `abgerechnet_rechnung_id` und `buchungsstatus =
+'abgerechnet'`. Wird die Position wieder entfernt, solange die Rechnung im
+Entwurf ist, gehen die Einträge zurück auf `gebucht`. Damit ist L5
+geschlossen, und Zeit wird nicht doppelt abgerechnet.
 
-Offene Zeit, die noch nicht abgerechnet ist, zeigt der Vorgang als Hinweis
-an („2:15 Std noch nicht abgerechnet“).
+Der Vorgang zeigt als Hinweis „gebucht, aber noch nicht abgerechnet“ an
+(z. B. „3:00 Std gebucht, noch nicht abgerechnet“).
 
 ---
 
@@ -297,7 +400,9 @@ an („2:15 Std noch nicht abgerechnet“).
 - **Arbeitszeiterfassung:** Seit EuGH 2019 und BAG 2022 besteht für
   Arbeitgeber eine Pflicht zur Erfassung der Arbeitszeit. Nachträgliche
   Änderungen sollten nachvollziehbar sein, dafür ist das Protokoll aus 5.2
-  da, und Löschen geht nur noch in den Papierkorb.
+  da, und Löschen geht nur noch in den Papierkorb. Der Buchungsstatus
+  berührt das nicht: Arbeitszeit zählt ab dem Erfassen. Eine
+  Buchungsstornierung ändert nur den Status, nie die Zeit selbst.
 - **Fahrzeit als Arbeitszeit:** Heute zählt Fahrzeit als Arbeitszeit
   (`fahrzeit` steht nicht in `ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT`).
   Das bleibt so, ist aber in Abschnitt 11 als Frage aufgenommen.
@@ -305,8 +410,8 @@ an („2:15 Std noch nicht abgerechnet“).
   müsste lückenlos, zeitnah und unveränderbar sein und km-Stände, Ziel und
   Zweck enthalten. Die Oberfläche soll das nicht suggerieren. Die
   Beschriftung ist deshalb „gefahrene km“, nicht „Fahrtenbuch“.
-- **GoBD:** Abgerechnete Einträge sind die Grundlage einer Rechnung und
-  werden deshalb gesperrt (6.2).
+- **GoBD:** Gebuchte und abgerechnete Einträge sind die Grundlage einer
+  Rechnung und werden deshalb gesperrt (6.2).
 - **DSGVO:** Arbeitszeiten sind personenbezogen. Die bestehende
   Zugriffsregel (nur eigene Zeit oder Recht `mitarbeiterverwaltung.bearbeiten`)
   gilt unverändert auch für das Protokoll.
@@ -333,22 +438,41 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
 - **Tests:** Backend-Tests für die Sperrregeln; Playwright-Durchlauf
   Timer → Tätigkeit → Bearbeiten.
 
-### Stufe 2 – Fahrten mit km (löst L3, L9)
+### Stufe 2 – Buchen: vormerken, prüfen, buchen (löst L10, L4, L7)
+- **Migration:**
+  - `buchungsstatus`, `vorgemerkt_von/_am`, `gebucht_von/_am`
+    (Altbestand wie in 5.1)
+  - `zeiterfassung_aenderungen` (Protokoll)
+  - Soft-Delete
+- **Backend:**
+  - Endpunkte vormerken, zurückziehen, buchen und stornieren (gesammelt,
+    alles oder nichts)
+  - Sperrregeln je Status (6.2), Büro darf fremde Einträge bearbeiten und
+    nachtragen (Grund Pflicht)
+  - Rechnungsvorschläge nur noch aus **gebuchter** Zeit
+- **Frontend:**
+  - Status-Tags, Auswahl und Aktionsleiste im Zeit-Tab (Feld und Office)
+  - Bestätigungsdialog beim Buchen, Reiter „Verlauf“ im SeitenPanel
+  - Neue Office-Seite **„Zeiten buchen“** mit Zähler in der Seitenleiste
+  - „Timer beenden“ für fremde Timer
+- **Tests:**
+  - Backend: alle Übergänge inkl. verbotener Übergänge,
+    alles-oder-nichts, Protokolleinträge, Rechnungsvorschläge nur aus
+    gebuchter Zeit
+  - Playwright: Techniker merkt vor → Büro bucht → Techniker kann nicht
+    mehr ändern
+
+### Stufe 3 – Fahrten mit km (löst L3, L9)
 - Migration: `km`, `fahrzeug_id`, `quelle`
 - „+ Fahrt erfassen“, Felder im Formular, Fahrzeug-Vorbelegung
 - Summen im Zeit-Tab, km in CSV und Wochenzettel
 
-### Stufe 3 – Protokoll und Korrektur durch das Büro (löst L4, L7)
-- Migration: `zeiterfassung_aenderungen`, Soft-Delete, Korrekturfrist
-- Office: fremde Einträge bearbeiten und nachtragen, Pflichtfeld Grund,
-  „Timer beenden“ für fremde Timer, Reiter „Verlauf“
-- Team-Zeiten: bearbeitbar, Filter
-
 ### Stufe 4 – Abrechnung und Auswertung (löst L5, L8)
 - Mandanten-Einstellungen `km_satz_netto`, `fahrzeit_abrechnung`
-- Vorschläge „Fahrzeit“ und „Fahrtkosten“, `abgerechnet_rechnung_id` setzen
-  und zurücksetzen
-- Zeit-Summen im Auftrag- und Projekt-Panel, Hinweis „noch nicht abgerechnet“
+- Vorschläge „Fahrzeit“ und „Fahrtkosten“
+- `abgerechnet_rechnung_id` und Status `abgerechnet` beim Übernehmen setzen
+  bzw. beim Entfernen der Position zurücksetzen
+- Zeit-Summen je Status im Auftrag- und Projekt-Panel
 
 ### Später / optional
 - Fahrt-Timer („Fahrt starten“ → beim Stoppen km abfragen)
@@ -359,19 +483,38 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
 
 ## 11. Offene Fragen
 
-1. **km je Fahrt oder je Tag?** Vorschlag: je Fahrt (Hin- und Rückweg sind
-   zwei Einträge oder einer mit „Hin + Rück“). Was passt zu eurem Alltag?
-2. **Wer darf fremde Zeiten korrigieren?** Vorschlag: Recht
-   `mitarbeiterverwaltung.bearbeiten` plus Admin. Reicht das?
-3. **Korrekturfrist für Techniker:** 14 Tage sinnvoll? Oder unbegrenzt bis
-   zur Abrechnung?
-4. **Fahrzeit abrechnen:** gar nicht, nach Zeit, nach km oder beides? Gibt es
+### Bereits abgestimmt
+
+- Zeit ist erst **vermerkt** und wird erst nach aktiver **Buchung**
+  abrechenbar.
+- Der **Techniker merkt vor**, das **Büro bucht**.
+- Gebucht wird per **Auswahl im Vorgang** (plus Sammelseite „Zeiten buchen“,
+  siehe 7.3).
+- Nach dem Buchen ist der Eintrag **gesperrt**. Das **Büro kann die Buchung
+  zurücknehmen** (mit Grund, protokolliert).
+- Vermerkte Zeit **zählt sofort als Arbeitszeit**.
+
+### Noch offen
+
+1. **„Büro“ = Recht `mitarbeiterverwaltung.bearbeiten`?** Oder soll Buchen
+   ein eigenes Recht bekommen, z. B. Bereich `abrechnung`, Aktion
+   `bearbeiten`? Dann könnte die Buchhaltung buchen, ohne die
+   Mitarbeiterverwaltung zu dürfen.
+2. **Darf das Büro direkt buchen,** ohne dass der Techniker vorgemerkt hat?
+   Vorschlag: ja, z. B. wenn der Techniker das Vormerken vergessen hat.
+3. **Tätigkeit Pflicht beim Vormerken** (nicht beim Erfassen) – passt das?
+4. **Korrekturfrist** für eigene, noch nicht vorgemerkte Einträge: Braucht
+   es die neben dem Buchen überhaupt noch? Vorschlag: weglassen, das
+   Vormerken ist die natürliche Grenze.
+5. **Altbestand** bei der Umstellung als `gebucht` übernehmen (5.1), damit
+   laufende Abrechnungen nicht stocken – einverstanden?
+6. **km je Fahrt oder je Tag?** Vorschlag: je Fahrt (Hin- und Rückweg zwei
+   Einträge oder einer mit „Hin + Rück“).
+7. **Fahrzeit abrechnen:** gar nicht, nach Zeit, nach km oder beides? Gibt es
    eine Anfahrtspauschale im Leistungsverzeichnis, die stattdessen greifen
    soll?
-5. **Fahrzeit = Arbeitszeit?** Heute ja (zählt in Wochen- und Monatsstunden).
-   So lassen?
-6. **Tätigkeit Pflicht?** Vorschlag: nicht Pflicht, aber sichtbarer Hinweis
-   und Filter. Oder beim Stoppen erzwingen?
-7. **Fahrzeug erfassen:** nötig, oder reichen km?
-8. **Reihenfolge:** Mit Stufe 1 starten (größter Alltagsnutzen, keine
-   Migration) und Stufe 2 direkt danach?
+8. **Fahrzeit = Arbeitszeit?** Heute ja (zählt in Wochen- und
+   Monatsstunden). So lassen?
+9. **Fahrzeug erfassen:** nötig, oder reichen km?
+10. **Reihenfolge:** Stufe 1 (Bearbeiten, ohne Migration) zuerst und direkt
+    danach Stufe 2 (Buchen)? Oder Buchen zuerst?
