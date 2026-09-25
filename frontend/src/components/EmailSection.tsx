@@ -67,9 +67,9 @@ export function EmailSection({
   });
 
   return (
-    <div className="border border-ind-line bg-ind-bg p-3">
+    <div className="border border-sep bg-card p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ind-ink-3">E-Mail</h2>
+        <h2 className="text-sm font-semibold text-label2">E-Mail</h2>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
@@ -81,38 +81,38 @@ export function EmailSection({
       </div>
 
       {showForm && (
-        <div className="mb-3 space-y-2 border border-ind-line-2 p-2">
-          {hinweis && <p className="text-xs text-ind-ink-3">{hinweis}</p>}
+        <div className="mb-3 space-y-2 border border-sepstrong p-2">
+          {hinweis && <p className="text-xs text-label2">{hinweis}</p>}
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Empfänger
             </label>
             <input
               type="email"
               value={empfaenger}
               onChange={(e) => setEmpfaenger(e.target.value)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Betreff {!betreffPflicht && "(optional)"}
             </label>
             <input
               value={betreff}
               onChange={(e) => setBetreff(e.target.value)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Nachricht {!betreffPflicht && "(optional)"}
             </label>
             <textarea
               value={inhalt}
               onChange={(e) => setInhalt(e.target.value)}
               rows={3}
-              className="w-full resize-none border border-ind-line bg-transparent p-2 text-sm text-ind-ink"
+              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
             />
           </div>
           {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
@@ -124,7 +124,7 @@ export function EmailSection({
                 (betreffPflicht && (!betreff.trim() || !inhalt.trim())) ||
                 sendMutation.isPending
               }
-              className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-1.5 text-sm font-medium disabled:opacity-50"
+              className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Senden
             </button>
@@ -142,13 +142,13 @@ export function EmailSection({
       )}
 
       {showHistory && ((emails ?? []).length === 0 ? (
-        <p className="text-sm text-ind-ink-3">Noch keine E-Mails versendet.</p>
+        <p className="text-sm text-label2">Noch keine E-Mails versendet.</p>
       ) : (
         <div className="space-y-1.5">
           {emails!.map((e) => (
             <div key={e.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
               <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-ind-ink-2">{e.betreff}</span>
+                <span className="font-medium text-label">{e.betreff}</span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     e.status === "gesendet"
@@ -159,7 +159,7 @@ export function EmailSection({
                   {e.status === "gesendet" ? "Gesendet" : "Fehler"}
                 </span>
               </div>
-              <div className="text-xs text-ind-ink-3">
+              <div className="text-xs text-label2">
                 an {e.empfaenger} ·{" "}
                 {new Date(e.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
                 {e.anhang_dateiname && ` · ${e.anhang_dateiname}`}

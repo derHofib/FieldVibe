@@ -236,12 +236,12 @@ export function MapboxFeedMap({
   if (!MAPBOX_TOKEN) {
     return (
       <div
-        className={`flex items-center justify-center border border-dashed border-ind-line-2 text-center text-xs text-ind-ink-3 ${className}`}
+        className={`flex items-center justify-center border border-dashed border-sepstrong text-center text-xs text-label2 ${className}`}
       >
         Karte nicht verfügbar (kein Mapbox-Token konfiguriert)
       </div>
     );
   }
 
-  return <div ref={containerRef} className={`bg-ind-hover ${className}`} />;
+  return <div ref={containerRef} className={`bg-fill ${className}`} />;
 }

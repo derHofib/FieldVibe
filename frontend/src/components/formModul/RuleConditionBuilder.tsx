@@ -12,7 +12,7 @@ import type { Clause, ClauseOperator, Combinator } from "../../utils/ruleConditi
 import { newClause, parseCondition, serializeCondition } from "../../utils/ruleConditionBuilder";
 import type { FormField } from "../../types";
 
-const inputClass = "btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink";
+const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
 function operatorenFuer(feld: FormField | undefined): { operator: ClauseOperator; label: string }[] {
   if (!feld) return [{ operator: "==", label: "ist" }];
@@ -224,17 +224,17 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
 
   return (
     <div className="space-y-1.5">
-      {clauses.length === 0 && <p className="text-xs text-ind-ink-3">Immer aktiv (keine Bedingung).</p>}
+      {clauses.length === 0 && <p className="text-xs text-label2">Immer aktiv (keine Bedingung).</p>}
       {clauses.map((clause, idx) => {
         const feld = rootFelder.find((f) => f.key === clause.field);
         return (
           <div key={idx} className="space-y-1">
             {idx > 0 && (
-              <div className="flex items-center gap-2 text-xs font-medium text-ind-ink-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-label2">
                 <select
                   value={combinator}
                   onChange={(e) => updateClauses(clauses, e.target.value as Combinator)}
-                  className="border border-ind-line bg-transparent px-1 py-0.5"
+                  className="border border-sep bg-transparent px-1 py-0.5"
                 >
                   <option value="and">UND</option>
                   <option value="or">ODER</option>
@@ -292,7 +292,7 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
               <button
                 type="button"
                 onClick={() => updateClauses(clauses.filter((_, i) => i !== idx))}
-                className="btn-touch rounded-md p-1.5 text-ind-ink-3 hover:text-rose-600"
+                className="btn-touch rounded-md p-1.5 text-label2 hover:text-rose-600"
                 aria-label="Bedingung entfernen"
               >
                 <Trash2 size={14} />
@@ -310,7 +310,7 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
         >
           <Plus size={13} /> Bedingung
         </button>
-        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-ind-ink-3">
+        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-label2">
           Erweitert (JSON)
         </button>
       </div>

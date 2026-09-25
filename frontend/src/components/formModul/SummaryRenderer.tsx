@@ -81,16 +81,16 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
           if (feld.feld_typ === "foto_plan") {
             const wert = values[feld.key] as FotoPlanWert | undefined;
             return (
-              <div key={feld.id} className="space-y-1.5 border-b border-ind-line py-1.5">
-                <span className="block text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
-                {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-ind-ink">—</span>}
+              <div key={feld.id} className="space-y-1.5 border-b border-sep py-1.5">
+                <span className="block text-sm text-label2">{feld.label.de ?? feld.key}</span>
+                {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-label">—</span>}
               </div>
             );
           }
           return (
-            <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-ind-line py-1.5">
-              <span className="text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
-              <span className="text-right text-sm font-medium text-ind-ink">{formatWert(feld, values[feld.key])}</span>
+            <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-sep py-1.5">
+              <span className="text-sm text-label2">{feld.label.de ?? feld.key}</span>
+              <span className="text-right text-sm font-medium text-label">{formatWert(feld, values[feld.key])}</span>
             </div>
           );
         })}
@@ -110,21 +110,21 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
           const zeile = zeilen[0] ?? {};
           return (
             <div key={gruppe.id}>
-              <h3 className="mb-1.5 text-base font-semibold text-ind-ink">{gruppe.label.de ?? gruppe.key}</h3>
+              <h3 className="mb-1.5 text-base font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
               {gruppenFelder.map((feld) => {
                 if (feld.feld_typ === "foto_plan") {
                   const wert = zeile[feld.key] as FotoPlanWert | undefined;
                   return (
-                    <div key={feld.id} className="space-y-1.5 border-b border-ind-line py-1.5">
-                      <span className="block text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
-                      {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-ind-ink">—</span>}
+                    <div key={feld.id} className="space-y-1.5 border-b border-sep py-1.5">
+                      <span className="block text-sm text-label2">{feld.label.de ?? feld.key}</span>
+                      {wert?.foto ? <FotoPlanBild wert={wert} /> : <span className="text-sm font-medium text-label">—</span>}
                     </div>
                   );
                 }
                 return (
-                  <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-ind-line py-1.5">
-                    <span className="text-sm text-ind-ink-3">{feld.label.de ?? feld.key}</span>
-                    <span className="text-right text-sm font-medium text-ind-ink">{formatWert(feld, zeile[feld.key])}</span>
+                  <div key={feld.id} className="flex items-baseline justify-between gap-4 border-b border-sep py-1.5">
+                    <span className="text-sm text-label2">{feld.label.de ?? feld.key}</span>
+                    <span className="text-right text-sm font-medium text-label">{formatWert(feld, zeile[feld.key])}</span>
                   </div>
                 );
               })}
@@ -134,14 +134,14 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
 
         return (
           <div key={gruppe.id}>
-            <h3 className="mb-1.5 text-base font-semibold text-ind-ink">{gruppe.label.de ?? gruppe.key}</h3>
+            <h3 className="mb-1.5 text-base font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
             {zeilen.length === 0 ? (
-              <p className="text-sm text-ind-ink-3">Keine Einträge.</p>
+              <p className="text-sm text-label2">Keine Einträge.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-ind-line-2 text-left text-xs font-medium uppercase text-ind-ink-3">
+                    <tr className="border-b border-sepstrong text-left text-xs font-medium uppercase text-label2">
                       {gruppenFelder.map((f) => (
                         <th key={f.id} className="py-1.5 pr-3">
                           {f.label.de ?? f.key}
@@ -151,16 +151,16 @@ export function SummaryRenderer({ fields, groups, rules, values, viewId = null }
                   </thead>
                   <tbody>
                     {zeilen.map((zeile, index) => (
-                      <tr key={index} className="border-b border-ind-line">
+                      <tr key={index} className="border-b border-sep">
                         {gruppenFelder.map((f) => (
-                          <td key={f.id} className="py-1.5 pr-3 text-ind-ink">
+                          <td key={f.id} className="py-1.5 pr-3 text-label">
                             {formatWert(f, zeile[f.key])}
                           </td>
                         ))}
                       </tr>
                     ))}
                     {numerischeSpalten.length > 0 && (
-                      <tr className="font-semibold text-ind-ink">
+                      <tr className="font-semibold text-label">
                         {gruppenFelder.map((f) => {
                           if (!numerischeSpalten.includes(f)) return <td key={f.id} className="py-1.5 pr-3" />;
                           const summe = zeilen.reduce((acc, z) => acc + (Number(z[f.key]) || 0), 0);

@@ -40,22 +40,22 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
   }
 
   return (
-    <div className="border border-ind-line bg-ind-bg p-3">
-      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Formulare</h2>
+    <div className="border border-sep bg-card p-3">
+      <h2 className="mb-2 text-sm font-semibold text-label2">Formulare</h2>
 
       {(ausfuellungen ?? []).length > 0 && (
         <div className="mb-2 space-y-1.5">
           {ausfuellungen!.map((fs) => (
             <div
               key={fs.id}
-              className="flex items-center justify-between gap-2 border border-ind-line-2 p-2"
+              className="flex items-center justify-between gap-2 border border-sepstrong p-2"
             >
               <button
                 onClick={() => navigate(`/form-submissions/${fs.id}`)}
                 className="btn-touch flex min-w-0 flex-1 items-center gap-2 text-left"
               >
-                <ClipboardList size={16} className="shrink-0 text-ind-ink-3" />
-                <span className="truncate text-sm text-ind-ink">{fs.schema_name}</span>
+                <ClipboardList size={16} className="shrink-0 text-label2" />
+                <span className="truncate text-sm text-label">{fs.schema_name}</span>
               </button>
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${

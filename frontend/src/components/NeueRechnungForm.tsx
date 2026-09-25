@@ -39,7 +39,7 @@ export function NeueRechnungForm({
   });
 
   return (
-    <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
+    <div className="space-y-3 border border-sep bg-card p-4">
       <div className="flex rounded-full bg-slate-100 p-1 dark:bg-stone-800">
         {(["pauschal", "einzelposten"] as const).map((m) => (
           <button
@@ -47,8 +47,8 @@ export function NeueRechnungForm({
             onClick={() => setModus(m)}
             className={`flex-1 rounded-full py-1.5 text-xs font-semibold ${
               modus === m
-                ? "btn-industry btn-industry-primary text-white"
-                : "text-ind-ink-3"
+                ? "btn-ap-primary text-white"
+                : "text-label2"
             }`}
           >
             {m === "pauschal" ? "Pauschalbetrag" : "Einzelposten"}
@@ -57,7 +57,7 @@ export function NeueRechnungForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-ind-ink-3">Kunde</label>
+        <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
         <SearchableSelect
           value={kundeId}
           onChange={setKundeId}
@@ -69,7 +69,7 @@ export function NeueRechnungForm({
       {modus === "pauschal" ? (
         <>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Betrag netto (EUR)
             </label>
             <input
@@ -78,20 +78,20 @@ export function NeueRechnungForm({
               min="0"
               value={betragNetto}
               onChange={(e) => setBetragNetto(e.target.value)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Leistungsdatum (optional)
             </label>
             <input
               type="date"
               value={leistungsdatum}
               onChange={(e) => setLeistungsdatum(e.target.value)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
-            <p className="mt-1 text-xs text-ind-ink-3">
+            <p className="mt-1 text-xs text-label2">
               Nur nötig, wenn abweichend vom Rechnungsdatum.
             </p>
           </div>
@@ -109,11 +109,11 @@ export function NeueRechnungForm({
         <button
           disabled={!kundeId || (modus === "pauschal" && !betragNetto) || erstellen.isPending}
           onClick={() => erstellen.mutate()}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           Rechnung anlegen
         </button>
-        <button onClick={onAbbrechen} className="btn-touch px-2 text-sm font-medium text-ind-ink-3">
+        <button onClick={onAbbrechen} className="btn-touch px-2 text-sm font-medium text-label2">
           Abbrechen
         </button>
       </div>

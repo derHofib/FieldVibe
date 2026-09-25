@@ -12,7 +12,7 @@ import type { FormelOperator, FormelTerm } from "../../utils/ruleFormulaBuilder"
 import { neuerTerm, parseFormel, serializeFormel } from "../../utils/ruleFormulaBuilder";
 import type { FormField } from "../../types";
 
-const inputClass = "btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink";
+const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
 const OPERATOR_LABEL: Record<FormelOperator, string> = {
   "+": "+",
@@ -81,7 +81,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
 
   return (
     <div className="space-y-1.5">
-      {terme.length === 0 && <p className="text-xs text-ind-ink-3">Kein Term -- Formel hinzufügen.</p>}
+      {terme.length === 0 && <p className="text-xs text-label2">Kein Term -- Formel hinzufügen.</p>}
       {terme.map((term, idx) => (
         <div key={idx} className="flex items-center gap-1.5">
           {idx > 0 && (
@@ -92,7 +92,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
                 nextOperatoren[idx - 1] = e.target.value as FormelOperator;
                 update(terme, nextOperatoren);
               }}
-              className="w-14 shrink-0 border border-ind-line bg-transparent px-1 py-1.5 text-center text-sm text-ind-ink"
+              className="w-14 shrink-0 border border-sep bg-transparent px-1 py-1.5 text-center text-sm text-label"
             >
               {(Object.keys(OPERATOR_LABEL) as FormelOperator[]).map((op) => (
                 <option key={op} value={op}>
@@ -108,7 +108,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
               next[idx] = { art: e.target.value as "feld" | "zahl", wert: "" };
               update(next, operatoren);
             }}
-            className="w-20 shrink-0 border border-ind-line bg-transparent px-1 py-1.5 text-sm text-ind-ink"
+            className="w-20 shrink-0 border border-sep bg-transparent px-1 py-1.5 text-sm text-label"
           >
             <option value="feld">Feld</option>
             <option value="zahl">Zahl</option>
@@ -153,7 +153,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
               const nextOperatoren = operatoren.filter((_, i) => i !== opIndexZuEntfernen);
               update(nextTerme, nextOperatoren);
             }}
-            className="btn-touch shrink-0 p-1.5 text-ind-ink-3 hover:text-red-600 dark:hover:text-red-400"
+            className="btn-touch shrink-0 p-1.5 text-label2 hover:text-red-600 dark:hover:text-red-400"
             aria-label="Term entfernen"
           >
             <Trash2 size={14} strokeWidth={1.5} />
@@ -168,7 +168,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
         >
           <Plus size={13} strokeWidth={1.5} /> Term
         </button>
-        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-ind-ink-3">
+        <button type="button" onClick={() => setErweitert(true)} className="text-xs text-label2">
           Erweitert (JSON)
         </button>
       </div>

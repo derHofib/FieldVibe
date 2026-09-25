@@ -96,7 +96,7 @@ export function CaptureRenderer({
           if (eintrag.element.type !== "heading") return null;
           const inhalt = eintrag.element.inhalt as { text?: { de?: string } };
           return (
-            <h3 key={eintrag.element.id} className="pt-2 text-base font-semibold text-ind-ink">
+            <h3 key={eintrag.element.id} className="pt-2 text-base font-semibold text-label">
               {inhalt.text?.de ?? ""}
             </h3>
           );
@@ -131,8 +131,8 @@ export function CaptureRenderer({
         if (!eintrag.gruppe.repeatable) {
           const zeile = zeilen[0] ?? {};
           return (
-            <div key={eintrag.gruppe.id} className="space-y-2 border border-ind-line-2 p-2">
-              <h3 className="text-sm font-semibold text-ind-ink">{label}</h3>
+            <div key={eintrag.gruppe.id} className="space-y-2 border border-sepstrong p-2">
+              <h3 className="text-sm font-semibold text-label">{label}</h3>
               {eintrag.felder.map((feld) => {
                 const path = `${eintrag.gruppe.key}[0].${feld.key}`;
                 const state = states.get(path);
@@ -153,17 +153,17 @@ export function CaptureRenderer({
         }
 
         return (
-          <div key={eintrag.gruppe.id} className="space-y-2 border border-ind-line-2 p-2">
-            <h3 className="text-sm font-semibold text-ind-ink">{label}</h3>
+          <div key={eintrag.gruppe.id} className="space-y-2 border border-sepstrong p-2">
+            <h3 className="text-sm font-semibold text-label">{label}</h3>
             {zeilen.map((zeile, index) => (
-              <div key={index} className="space-y-2 border border-ind-line bg-ind-bg-2 p-2">
+              <div key={index} className="space-y-2 border border-sep bg-fill p-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-ind-ink-3">Eintrag {index + 1}</span>
+                  <span className="text-xs font-medium text-label2">Eintrag {index + 1}</span>
                   {!readOnly && (
                     <button
                       type="button"
                       onClick={() => zeileEntfernen(eintrag.gruppe.key, index)}
-                      className="btn-touch rounded-md p-1 text-ind-ink-3 hover:text-rose-600"
+                      className="btn-touch rounded-md p-1 text-label2 hover:text-rose-600"
                       aria-label="Eintrag entfernen"
                     >
                       <Trash2 size={15} />

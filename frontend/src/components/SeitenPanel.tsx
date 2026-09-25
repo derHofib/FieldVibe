@@ -44,15 +44,15 @@ export function SeitenPanel({ onClose, title, children, breit = false, versatzRe
       <div
         onClick={(e) => e.stopPropagation()}
         style={{ marginRight: versatzRechtsPx }}
-        className={`flex h-full w-full ${breit ? "max-w-2xl" : "max-w-md"} flex-col border-l border-ind-line bg-ind-bg shadow-2xl transition-[transform,margin] duration-200 ease-out ${
+        className={`flex h-full w-full ${breit ? "max-w-2xl" : "max-w-md"} flex-col border-l border-sep bg-card shadow-2xl transition-[transform,margin] duration-200 ease-out ${
           eingeblendet ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-ind-line px-5 py-4">
-          <h2 className="min-w-0 truncate text-base font-bold text-ind-ink">{title}</h2>
+        <div className="flex items-center justify-between gap-3 border-b border-sep px-5 py-4">
+          <h2 className="min-w-0 truncate text-base font-bold text-label">{title}</h2>
           <button
             onClick={onClose}
-            className="btn-touch btn-industry btn-industry-secondary btn-industry-icon shrink-0"
+            className="btn-touch btn-ap-toolbar shrink-0"
           >
             <X size={16} strokeWidth={1.5} />
           </button>

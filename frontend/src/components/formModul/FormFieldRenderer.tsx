@@ -32,7 +32,7 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
   }
 
   return (
-    <div className="space-y-2 border border-ind-line-2 p-2">
+    <div className="space-y-2 border border-sepstrong p-2">
       <canvas
         ref={(node) => {
           canvasRef.current = node;
@@ -73,7 +73,7 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
         className="h-36 w-full touch-none rounded-md border border-slate-300 bg-white"
       />
       <div className="flex gap-2">
-        <button type="button" onClick={onCancel} className="btn-touch flex-1 rounded-md text-sm text-ind-ink-3">
+        <button type="button" onClick={onCancel} className="btn-touch flex-1 rounded-md text-sm text-label2">
           Abbrechen
         </button>
         <button
@@ -228,8 +228,8 @@ function FotoPlanFeld({
                   }}
                   className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium ${
                     werkzeug?.art === "symbol" && werkzeug.symbolId === s.id
-                      ? "border-ind-acc bg-ind-acc-soft text-ind-acc-txt"
-                      : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+                      ? "border-tint bg-tintbg text-tint"
+                      : "border-sep text-label hover:bg-fill"
                   }`}
                 >
                   <img src={s.url} alt="" className="h-4 w-4 object-contain" />
@@ -246,7 +246,7 @@ function FotoPlanFeld({
                 setWerkzeug(werkzeug?.art === "linie" ? null : { art: "linie" });
               }}
               className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium ${
-                werkzeug?.art === "linie" ? "border-ind-acc bg-ind-acc-soft text-ind-acc-txt" : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+                werkzeug?.art === "linie" ? "border-tint bg-tintbg text-tint" : "border-sep text-label hover:bg-fill"
               }`}
             >
               <Slash size={13} /> Leitungslinie
@@ -275,7 +275,7 @@ function FotoPlanFeld({
             )}
           </div>
           {werkzeug && (
-            <p className="text-[11px] text-ind-ink-3">
+            <p className="text-[11px] text-label2">
               {werkzeug.art === "symbol" ? "Auf das Foto tippen, um das Symbol zu platzieren." : "Punkte entlang der Leitung antippen, dann „Fertig“."}
             </p>
           )}
@@ -404,14 +404,14 @@ export function FormFieldRenderer({
   const label = field.label.de ?? field.key;
 
   const labelNode = (
-    <label className="mb-1 block text-sm font-medium text-ind-ink">
+    <label className="mb-1 block text-sm font-medium text-label">
       {label}
       {required && <span className="ml-1 text-rose-500">*</span>}
     </label>
   );
-  const wrapperClass = "border border-ind-line bg-ind-bg p-3";
+  const wrapperClass = "border border-sep bg-card p-3";
   const inputClass =
-    "btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500 text-ind-ink dark:disabled:bg-stone-800/50";
+    "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500 text-label dark:disabled:bg-stone-800/50";
 
   switch (field.feld_typ) {
     case "text":
@@ -419,7 +419,7 @@ export function FormFieldRenderer({
         <div className={wrapperClass}>
           {labelNode}
           <input value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} className={inputClass} />
-          {field.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "email":
@@ -433,7 +433,7 @@ export function FormFieldRenderer({
             disabled={readOnly}
             className={inputClass}
           />
-          {field.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "telefon":
@@ -447,7 +447,7 @@ export function FormFieldRenderer({
             disabled={readOnly}
             className={inputClass}
           />
-          {field.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "textarea":
@@ -461,7 +461,7 @@ export function FormFieldRenderer({
             rows={3}
             className={`${inputClass} resize-none`}
           />
-          {field.hilfetext && <p className="mt-1 text-xs text-ind-ink-3">{field.hilfetext}</p>}
+          {field.hilfetext && <p className="mt-1 text-xs text-label2">{field.hilfetext}</p>}
         </div>
       );
     case "zahl":
@@ -484,7 +484,7 @@ export function FormFieldRenderer({
               disabled={readOnly}
               className={inputClass}
             />
-            <span className="shrink-0 text-sm text-ind-ink-3">€</span>
+            <span className="shrink-0 text-sm text-label2">€</span>
           </div>
         </div>
       );
@@ -550,7 +550,7 @@ export function FormFieldRenderer({
           {labelNode}
           <div className="space-y-1.5">
             {werte.map((w) => (
-              <label key={w} className="flex items-center gap-2 text-sm text-ind-ink">
+              <label key={w} className="flex items-center gap-2 text-sm text-label">
                 <input
                   type="checkbox"
                   disabled={readOnly}
@@ -620,11 +620,11 @@ export function FormFieldRenderer({
         <div className={wrapperClass}>
           {labelNode}
           {gps ? (
-            <p className="text-sm text-ind-ink-2">
+            <p className="text-sm text-label">
               {gps.lat.toFixed(6)}, {gps.lng.toFixed(6)}
             </p>
           ) : (
-            <p className="text-sm text-ind-ink-3">Noch kein Standort erfasst.</p>
+            <p className="text-sm text-label2">Noch kein Standort erfasst.</p>
           )}
           {!readOnly && (
             <button
@@ -707,7 +707,7 @@ export function FormFieldRenderer({
                 href={datei.url}
                 target="_blank"
                 rel="noreferrer"
-                className="mb-2 flex items-center gap-2 border border-ind-line bg-ind-bg p-2 text-sm text-ind-acc-txt"
+                className="mb-2 flex items-center gap-2 border border-sep bg-card p-2 text-sm text-tint"
               >
                 <FileText size={16} strokeWidth={1.5} className="shrink-0" />
                 <span className="truncate">{datei.filename || "Datei ansehen"}</span>

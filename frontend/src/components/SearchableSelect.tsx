@@ -66,12 +66,12 @@ export function SearchableSelect({
           }
         }}
         placeholder={placeholder}
-        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       {open && (
         <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-800">
           {gefiltert.length === 0 ? (
-            <p className="px-2 py-1.5 text-sm text-ind-ink-3">Keine Treffer</p>
+            <p className="px-2 py-1.5 text-sm text-label2">Keine Treffer</p>
           ) : (
             gefiltert.map((o) => (
               <button
@@ -88,7 +88,7 @@ export function SearchableSelect({
               >
                 {o.label}
                 {o.sublabel && (
-                  <span className="ml-1.5 text-xs text-ind-ink-3">{o.sublabel}</span>
+                  <span className="ml-1.5 text-xs text-label2">{o.sublabel}</span>
                 )}
               </button>
             ))

@@ -13,7 +13,7 @@ const TONE_PILL: Record<IconTone, string> = {
   emerald: "border-emerald-400 text-emerald-700 dark:border-emerald-600 dark:text-emerald-300",
   indigo: "border-indigo-400 text-indigo-700 dark:border-indigo-600 dark:text-indigo-300",
   cyan: "border-cyan-400 text-cyan-700 dark:border-cyan-600 dark:text-cyan-300",
-  slate: "border-ind-line text-ind-ink-2",
+  slate: "border-sep text-label",
   teal: "border-teal-400 text-teal-700 dark:border-teal-600 dark:text-teal-300",
 };
 
