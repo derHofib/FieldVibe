@@ -1811,46 +1811,96 @@ export function VorgangDetailPage({
           </div>
         )}
 
-        {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-sep pt-2">
-            {[...(zeiterfassungListe ?? [])]
-              .filter((e) => e.ende_at)
-              .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
-              .map((e) => {
-                const dauerSekunden =
-                  (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
-                const techniker = users?.find((u) => u.id === e.techniker_id);
-                return (
-                  <div
-                    key={e.id}
-                    className="flex items-center justify-between text-xs text-label2"
-                  >
-                    <span>
-                      {techniker?.name ?? "—"}
-                      {e.taetigkeit && ` · ${e.taetigkeit}`}
-                      {" · "}
-                      {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
-                      {" · "}
-                      {new Date(e.start_at).toLocaleTimeString("de-DE", {
-                        timeZone: "Europe/Berlin",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      –
-                      {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
-                        timeZone: "Europe/Berlin",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    <span className="shrink-0 font-medium text-label">
-                      {formatSekundenAlsHHMM(dauerSekunden)} Std.
-                    </span>
-                  </div>
-                );
-              })}
-          </div>
-        )}
+        {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 &&
+          (layout === "dicht" ? (
+            <div className="mt-2 overflow-x-auto border-t border-sep pt-2">
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="text-left text-label2">
+                    <th className="px-2 py-1 font-medium">Techniker</th>
+                    <th className="px-2 py-1 font-medium">Tätigkeit</th>
+                    <th className="px-2 py-1 font-medium">Datum</th>
+                    <th className="px-2 py-1 font-medium">Von–Bis</th>
+                    <th className="px-2 py-1 text-right font-medium">Dauer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...(zeiterfassungListe ?? [])]
+                    .filter((e) => e.ende_at)
+                    .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
+                    .map((e) => {
+                      const dauerSekunden =
+                        (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
+                      const techniker = users?.find((u) => u.id === e.techniker_id);
+                      return (
+                        <tr key={e.id} className="border-t border-sep">
+                          <td className="px-2 py-1.5 text-label">{techniker?.name ?? "—"}</td>
+                          <td className="px-2 py-1.5 text-label2">{e.taetigkeit || "—"}</td>
+                          <td className="px-2 py-1.5 tabular-nums text-label2">
+                            {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+                          </td>
+                          <td className="px-2 py-1.5 tabular-nums text-label2">
+                            {new Date(e.start_at).toLocaleTimeString("de-DE", {
+                              timeZone: "Europe/Berlin",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                            –
+                            {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
+                              timeZone: "Europe/Berlin",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+                          <td className="px-2 py-1.5 text-right font-medium tabular-nums text-label">
+                            {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-2 space-y-1 border-t border-sep pt-2">
+              {[...(zeiterfassungListe ?? [])]
+                .filter((e) => e.ende_at)
+                .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
+                .map((e) => {
+                  const dauerSekunden =
+                    (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
+                  const techniker = users?.find((u) => u.id === e.techniker_id);
+                  return (
+                    <div
+                      key={e.id}
+                      className="flex items-center justify-between text-xs text-label2"
+                    >
+                      <span>
+                        {techniker?.name ?? "—"}
+                        {e.taetigkeit && ` · ${e.taetigkeit}`}
+                        {" · "}
+                        {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+                        {" · "}
+                        {new Date(e.start_at).toLocaleTimeString("de-DE", {
+                          timeZone: "Europe/Berlin",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                        –
+                        {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
+                          timeZone: "Europe/Berlin",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <span className="shrink-0 font-medium text-label">
+                        {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          ))}
       </div>
 
       <div
@@ -2272,75 +2322,160 @@ export function VorgangDetailPage({
           </div>
         )}
 
-        {(materialBedarfe ?? []).length > 0 && (
-          <div className="mb-2 space-y-1">
-            {materialBedarfe!.map((b) => (
-              <div
-                key={b.id}
-                className="flex items-center justify-between border border-sepstrong px-2 py-1.5 text-sm"
-              >
-                <span className="text-label">
-                  {b.menge}× {b.material_bezeichnung}
-                  <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
-                    {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
+        {(materialBedarfe ?? []).length > 0 &&
+          (layout === "dicht" ? (
+            <div className="mb-2 overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-label2">
+                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
+                    <th className="px-2 py-1 text-xs font-medium">Material</th>
+                    <th className="px-2 py-1 text-xs font-medium">Zweck</th>
+                    <th className="px-2 py-1 text-xs font-medium">Status</th>
+                    <th className="px-2 py-1"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {materialBedarfe!.map((b) => (
+                    <tr key={b.id} className="border-t border-sep">
+                      <td className="px-2 py-1.5 tabular-nums text-label">{b.menge}×</td>
+                      <td className="px-2 py-1.5 text-label">{b.material_bezeichnung}</td>
+                      <td className="px-2 py-1.5 text-label2">{b.zweck === "angebot" ? "Angebot" : "Bestellung"}</td>
+                      <td className="px-2 py-1.5 text-label2">{b.status}</td>
+                      <td className="px-2 py-1.5 text-right">
+                        {b.status === "offen" && (
+                          <button
+                            onClick={() => bedarfEntfernenMutation.mutate(b.id)}
+                            className="btn-touch text-xs text-st-fehlt"
+                          >
+                            Entfernen
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mb-2 space-y-1">
+              {materialBedarfe!.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between border border-sepstrong px-2 py-1.5 text-sm"
+                >
+                  <span className="text-label">
+                    {b.menge}× {b.material_bezeichnung}
+                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                      {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
+                    </span>
                   </span>
-                </span>
-                {b.status === "offen" && (
+                  {b.status === "offen" && (
+                    <button
+                      onClick={() => bedarfEntfernenMutation.mutate(b.id)}
+                      className="btn-touch text-xs text-st-fehlt"
+                    >
+                      Entfernen
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+
+        {(materialVerwendungen ?? []).length > 0 || (lvVerwendungen ?? []).length > 0 ? (
+          layout === "dicht" ? (
+            <div className="mb-2 overflow-x-auto">
+              <h3 className="px-1 pb-1 text-xs font-medium text-label2">Verwendet</h3>
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-label2">
+                    <th className="px-2 py-1 text-xs font-medium">Typ</th>
+                    <th className="px-2 py-1 text-xs font-medium">Bezeichnung</th>
+                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
+                    <th className="px-2 py-1"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(materialVerwendungen ?? []).map((v) => (
+                    <tr key={`material-${v.id}`} className="border-t border-sep">
+                      <td className="px-2 py-1.5">
+                        <SymbolKachel icon={Package} farbe="orange" groesse={20} />
+                      </td>
+                      <td className="px-2 py-1.5 text-label">{v.material_bezeichnung}</td>
+                      <td className="px-2 py-1.5 tabular-nums text-label2">
+                        {v.menge} {v.material_einheit}
+                      </td>
+                      <td className="px-2 py-1.5"></td>
+                    </tr>
+                  ))}
+                  {(lvVerwendungen ?? []).map((v) => (
+                    <tr key={`lv-${v.id}`} className="border-t border-sep">
+                      <td className="px-2 py-1.5">
+                        <SymbolKachel icon={Clock} farbe="blue" groesse={20} />
+                      </td>
+                      <td className="px-2 py-1.5 text-label">{v.lv_bezeichnung}</td>
+                      <td className="px-2 py-1.5 tabular-nums text-label2">
+                        {v.menge} {v.lv_einheit}
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        <button
+                          onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
+                          disabled={lvVerwendungEntfernenMutation.isPending}
+                          className="btn-touch text-xs text-st-fehlt disabled:opacity-50"
+                        >
+                          Entfernen
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mb-2 space-y-1">
+              <h3 className="px-1 text-xs font-medium text-label2">Verwendet</h3>
+              {(materialVerwendungen ?? []).map((v) => (
+                <div
+                  key={`material-${v.id}`}
+                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-label">
+                    <SymbolKachel icon={Package} farbe="orange" groesse={24} />
+                    <span className="truncate">
+                      {v.menge}× {v.material_bezeichnung}
+                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                        {v.material_einheit}
+                      </span>
+                    </span>
+                  </span>
+                </div>
+              ))}
+              {(lvVerwendungen ?? []).map((v) => (
+                <div
+                  key={`lv-${v.id}`}
+                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-label">
+                    <SymbolKachel icon={Clock} farbe="blue" groesse={24} />
+                    <span className="truncate">
+                      {v.menge}× {v.lv_bezeichnung}
+                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                        {v.lv_einheit}
+                      </span>
+                    </span>
+                  </span>
                   <button
-                    onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                    className="btn-touch text-xs text-st-fehlt"
+                    onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
+                    disabled={lvVerwendungEntfernenMutation.isPending}
+                    className="btn-touch shrink-0 text-xs text-st-fehlt disabled:opacity-50"
                   >
                     Entfernen
                   </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {(materialVerwendungen ?? []).length > 0 || (lvVerwendungen ?? []).length > 0 ? (
-          <div className="mb-2 space-y-1">
-            <h3 className="px-1 text-xs font-medium text-label2">Verwendet</h3>
-            {(materialVerwendungen ?? []).map((v) => (
-              <div
-                key={`material-${v.id}`}
-                className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
-              >
-                <span className="flex min-w-0 items-center gap-2 text-label">
-                  <SymbolKachel icon={Package} farbe="orange" groesse={24} />
-                  <span className="truncate">
-                    {v.menge}× {v.material_bezeichnung}
-                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
-                      {v.material_einheit}
-                    </span>
-                  </span>
-                </span>
-              </div>
-            ))}
-            {(lvVerwendungen ?? []).map((v) => (
-              <div
-                key={`lv-${v.id}`}
-                className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
-              >
-                <span className="flex min-w-0 items-center gap-2 text-label">
-                  <SymbolKachel icon={Clock} farbe="blue" groesse={24} />
-                  <span className="truncate">
-                    {v.menge}× {v.lv_bezeichnung}
-                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
-                      {v.lv_einheit}
-                    </span>
-                  </span>
-                </span>
-                <button
-                  onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
-                  disabled={lvVerwendungEntfernenMutation.isPending}
-                  className="btn-touch shrink-0 text-xs text-st-fehlt disabled:opacity-50"
-                >
-                  Entfernen
-                </button>
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : null}
 
         {kannDisponieren && (
