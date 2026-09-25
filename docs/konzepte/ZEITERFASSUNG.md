@@ -1,6 +1,6 @@
 # Konzept: Arbeitszeiterfassung 2.0
 
-Status: **Entwurf zur Abstimmung** (noch nicht umgesetzt) – Überarbeitung 1: Buchungsablauf
+Status: **Entwurf zur Abstimmung** (noch nicht umgesetzt) – Überarbeitung 2: Recht „Zeiten buchen“
 Stand: 25.09.2026
 
 ## 1. Anlass und Ziel
@@ -17,9 +17,15 @@ Abrechnung und Auswertung (inkl. der neuen Ebene Projekt → Auftrag → Vorgang
 
 **Grundprinzip (abgestimmt):** Erfasste Zeit ist zunächst nur am Vorgang
 **vermerkt**. Abrechenbar wird sie erst, wenn sie **aktiv gebucht** wurde.
-Der Techniker merkt seine Einträge zur Buchung vor, das Büro prüft und bucht.
-Als Arbeitszeit des Mitarbeiters zählt sie trotzdem sofort ab dem Erfassen.
-Die Buchung betrifft nur die Abrechnung beim Kunden.
+Jeder kann seine eigenen Einträge zur Buchung vormerken. **Buchen darf, wer
+das Einzelrecht „Zeiten buchen“ hat.** Das ist an keine Rolle und kein Gerät
+gebunden, auch ein Techniker in der Feld-App kann es haben. Ein gebuchter
+Eintrag ist danach unveränderbar, auch für den, der ihn gebucht hat. Als
+Arbeitszeit des Mitarbeiters zählt die Zeit trotzdem sofort ab dem
+Erfassen. Die Buchung betrifft nur die Abrechnung beim Kunden.
+
+Im Folgenden heißt **„Buchungsberechtigte“**: alle Nutzer mit dem Recht
+„Zeiten buchen“ (5.4). Der Mandanten-Admin hat es immer.
 
 ---
 
@@ -85,7 +91,7 @@ ob er schon auf einer Rechnung steht.
 | L4 | Kein Änderungsprotokoll, hartes Löschen | Nicht nachvollziehbar, wer wann welche Zeit geändert hat (Arbeitszeitrecht, Streitfälle mit Kunden) |
 | L5 | Keine Sperre nach Abrechnung | Zeit, die schon auf einer Rechnung steht, kann noch geändert oder gelöscht werden |
 | L6 | Uneinheitliche Sperrregel | Timer auf geschlossenem Vorgang gesperrt, Nachtragen/Bearbeiten aber nicht, auch nicht bei `abgerechnet` |
-| L7 | Büro kann nicht korrigieren | Vergisst ein Techniker das Stoppen, kann nur er selbst den Eintrag reparieren |
+| L7 | Niemand außer dem Techniker selbst kann korrigieren | Vergisst ein Techniker das Stoppen, kann nur er selbst den Eintrag reparieren |
 | L8 | Keine Summen je Auftrag/Projekt | Neue Ebene Auftrag hat noch keine Zeitauswertung |
 | L9 | Timer-Einträge und nachgetragene Einträge nicht unterscheidbar | Vertrauen in die Daten, Auswertung |
 | L10 | Keine Freigabe vor der Abrechnung | Jede abrechenbare Zeit landet sofort in den Rechnungsvorschlägen, ungeprüft und auch mit leerer Tätigkeit |
@@ -105,19 +111,23 @@ ob er schon auf einer Rechnung steht.
     (vorbelegt mit seinem zugewiesenen Fahrzeug).
   - Trägt Zeit direkt am Vorgang nach („+ Zeit nachtragen“).
   - Markiert seine fertigen Einträge und klickt **„Zur Buchung vormerken“**.
-- **Büro/Dispo (Office)**
-  - Sieht im Vorgang alle Zeiten inkl. km, Summen und Buchungsstatus.
-  - Prüft die vorgemerkten Einträge, markiert sie und klickt **„Buchen“**.
-  - Nimmt eine Buchung bei Bedarf zurück („Buchung stornieren“, mit Grund).
-  - Korrigiert einen fremden Eintrag, gibt dabei einen Grund an, und die
-    Änderung wird protokolliert.
-  - Sieht offene Punkte: „Zur Buchung vorgemerkt“, „Einträge ohne Tätigkeit“
+  - Hat er das Recht „Zeiten buchen“, klickt er direkt **„Buchen“**. Dann
+    sind die Einträge sofort unveränderbar.
+- **Buchungsberechtigte (Feld-App oder Office, egal)**
+  - Sehen im Vorgang alle Zeiten inkl. km, Summen und Buchungsstatus.
+  - Prüfen vorgemerkte oder noch vermerkte Einträge, markieren sie und
+    klicken **„Buchen“**.
+  - Nehmen eine Buchung bei Bedarf zurück („Buchung stornieren“, mit Grund).
+  - Korrigieren vor dem Buchen einen fremden Eintrag, geben dabei einen Grund
+    an, und die Änderung wird protokolliert.
+  - Sehen offene Punkte: „Zur Buchung vorgemerkt“, „Einträge ohne Tätigkeit“
     und „Timer läuft seit über 12 Std“.
 - **Buchhaltung**
   - Sieht in den Rechnungsvorschlägen **nur gebuchte** Zeit.
   - Abgerechnete Einträge sind danach gesperrt.
 - **Admin**
-  - Stellt ein: km-Satz, ob und wie Fahrzeit abgerechnet wird, Korrekturfrist.
+  - Stellt ein: km-Satz, ob und wie Fahrzeit abgerechnet wird.
+  - Vergibt je Account-Typ das Recht „Zeiten buchen“.
 
 ---
 
@@ -180,7 +190,28 @@ oder löschen.
 |---|---|---|
 | `km_satz_netto` | `NULL` (aus) | €/km für Fahrtkosten-Vorschläge |
 | `fahrzeit_abrechnung` | `'keine'` | `'keine' \| 'zeit' \| 'km' \| 'zeit_und_km'` |
-| `zeit_korrekturfrist_tage` | `NULL` (keine) | Optional: so lange darf der Techniker eigene, noch **vermerkte** Einträge ändern. Möglicherweise überflüssig, weil Vormerken/Buchen die Grenze bildet (siehe offene Frage 3) |
+| `zeit_korrekturfrist_tage` | `NULL` (keine) | Optional: so lange darf der Techniker eigene, noch **vermerkte** Einträge ändern. Möglicherweise überflüssig, weil Vormerken/Buchen die Grenze bildet (siehe offene Frage 2) |
+
+### 5.4 Neues Einzelrecht „Zeiten buchen“ (Erweiterung `account_typen`)
+
+| Feld | Default | Zweck |
+|---|---|---|
+| `darf_zeiten_buchen` | `false` | Schalter je Account-Typ, wie die bestehenden Schalter `darf_vorgaenge_selbst_uebernehmen` und `nur_zugewiesene_kunden` |
+
+- Umsetzung nach dem vorhandenen Muster: Spalte in `account_typen`, Feld in
+  den Account-Typ-Schemas, Schalter auf der Seite „Account-Typen“, Flag im
+  `CurrentUser` (Login-Antwort) und eine Hilfsfunktion
+  `darf_zeiten_buchen()` in `app/services/rechte_service.py`.
+- `mandant_admin` und `super_admin` dürfen immer buchen. Für `role =
+  'custom'` entscheidet der Schalter.
+- Bewusst **kein** neuer Bereich in der Rechte-Matrix (sehen / erstellen /
+  bearbeiten / löschen). Buchen ist eine einzelne Ja/Nein-Befugnis, keine
+  Vierer-Kombination.
+- Unabhängig davon bleibt die Einsicht in persönliche Zeitübersichten
+  anderer (Team-Zeiten, fremde Statistik) wie heute an
+  `mitarbeiterverwaltung.bearbeiten` gebunden. Wer bucht, sieht dadurch nur
+  die Einträge am Vorgang, nicht automatisch die Wochen- oder
+  Monatsübersichten der Kollegen.
 
 ---
 
@@ -189,23 +220,28 @@ oder löschen.
 ### 6.1 Buchungsablauf
 
 ```
-vermerkt ──(Techniker: vormerken)──▶ vorgemerkt ──(Büro: buchen)──▶ gebucht ──(Rechnung)──▶ abgerechnet
+vermerkt ──(jeder, eigene: vormerken)──▶ vorgemerkt ──(Recht „Zeiten buchen“)──▶ gebucht ──(Rechnung)──▶ abgerechnet
+vermerkt ──────────────(Recht „Zeiten buchen“: direkt buchen)─────────────────▶ gebucht
 
 Rückwege:
-  vorgemerkt ──(zurückziehen)──────────▶ vermerkt
-  gebucht    ──(Büro: stornieren)──────▶ vermerkt
+  vorgemerkt ──(zurückziehen)─────────────────────▶ vermerkt
+  gebucht    ──(Recht „Zeiten buchen“: stornieren)─▶ vermerkt
   abgerechnet ─(Position entfernt, Rechnung noch Entwurf)─▶ gebucht
 ```
 
 | Übergang | Wer | Voraussetzung |
 |---|---|---|
-| vermerkt → vorgemerkt | Techniker (eigene), Büro (alle) | Timer beendet, **Tätigkeit ausgefüllt**, Vorgang nicht `abgerechnet`/`storniert` |
-| vorgemerkt → vermerkt („zurückziehen“) | Techniker (eigene), Büro | noch nicht gebucht |
-| vorgemerkt → gebucht | Büro | |
-| vermerkt → gebucht (direkt) | Büro | wie beim Vormerken (Timer beendet, Tätigkeit ausgefüllt); Techniker muss nicht vorgemerkt haben |
-| gebucht → vermerkt („Buchung stornieren“) | Büro | noch nicht abgerechnet; **Grund Pflicht** |
+| vermerkt → vorgemerkt | jeder für eigene Einträge; Buchungsberechtigte für alle | Timer beendet, **Tätigkeit ausgefüllt**, Vorgang nicht `abgerechnet`/`storniert` |
+| vorgemerkt → vermerkt („zurückziehen“) | jeder für eigene; Buchungsberechtigte | noch nicht gebucht |
+| vorgemerkt → gebucht | Buchungsberechtigte | |
+| vermerkt → gebucht (direkt) | Buchungsberechtigte | wie beim Vormerken (Timer beendet, Tätigkeit ausgefüllt). Vormerken ist nicht nötig, das gilt auch für eigene Einträge |
+| gebucht → vermerkt („Buchung stornieren“) | Buchungsberechtigte | noch nicht abgerechnet; **Grund Pflicht** |
 | gebucht → abgerechnet | Server | beim Übernehmen in eine Rechnung (Abschnitt 8) |
 | abgerechnet → gebucht | Server | Position wieder entfernt, solange die Rechnung `entwurf` ist |
+
+Buchungsberechtigte buchen jeden Eintrag, den sie am Vorgang sehen, also
+auch Einträge von Kollegen. Die bestehende Einschränkung auf zugewiesene
+Kunden (`nur_zugewiesene_kunden`) gilt weiter.
 
 Alle Übergänge gehen gesammelt über eigene Endpunkte, z. B.
 `POST /api/zeiterfassung/vormerken`, `/buchen`, `/buchung-stornieren` mit
@@ -213,23 +249,23 @@ einer Liste von IDs. Es gilt alles oder nichts: Scheitert die Prüfung bei
 einem Eintrag, bucht der Endpunkt keinen und nennt die betroffenen Einträge.
 Jeder Übergang landet im Protokoll (5.2).
 
-Die Tätigkeit ist **beim Erfassen freiwillig**, **beim Vormerken Pflicht**.
-Das erzwingt keine Unterbrechung im Feld, sorgt aber dafür, dass keine Zeit
-ohne Beschreibung beim Kunden abgerechnet wird.
+Die Tätigkeit ist **beim Erfassen freiwillig**, **beim Vormerken und Buchen
+Pflicht**. Das erzwingt keine Unterbrechung im Feld, sorgt aber dafür, dass
+keine Zeit ohne Beschreibung beim Kunden abgerechnet wird.
 
 ### 6.2 Wer darf was?
 
-„Büro“ heißt: Recht `mitarbeiterverwaltung.bearbeiten`. Dieses Recht steuert
-schon heute die Einsicht in fremde Zeiten, deshalb wird kein neuer
-Rechte-Bereich angelegt. `mandant_admin` darf es immer.
-
 | Aktion | vermerkt | vorgemerkt | gebucht | abgerechnet |
 |---|---|---|---|---|
-| Techniker: eigene bearbeiten/löschen | ja (innerhalb Korrekturfrist) | nein, erst zurückziehen | nein | nein |
-| Techniker: Tätigkeit ergänzen | ja, auch bei laufendem Timer | nein, erst zurückziehen | nein | nein |
-| Büro: bearbeiten/löschen (mit Grund bei fremden) | ja | ja | nein, erst Buchung stornieren | nein |
-| Büro: für einen Techniker nachtragen | ja (neuer Eintrag startet als `vermerkt`) | – | – | – |
-| Büro: fremden laufenden Timer beenden | ja (mit Grund, Ende frei wählbar) | – | – | – |
+| Jeder: eigene bearbeiten/löschen | ja | nein, erst zurückziehen | **nein, auch nicht mit Buchungsrecht** | nein |
+| Jeder: Tätigkeit ergänzen | ja, auch bei laufendem Timer | nein, erst zurückziehen | nein | nein |
+| Buchungsberechtigte: fremde bearbeiten/löschen (Grund Pflicht) | ja | ja | nein, erst Buchung stornieren | nein |
+| Buchungsberechtigte: für einen anderen nachtragen | ja (neuer Eintrag startet als `vermerkt`) | – | – | – |
+| Buchungsberechtigte: fremden laufenden Timer beenden | ja (mit Grund, Ende frei wählbar) | – | – | – |
+
+Gebucht heißt für **alle** unveränderbar. Wer das Buchungsrecht hat und
+einen eigenen gebuchten Eintrag ändern will, muss die Buchung erst mit
+Grund stornieren. Das steht dann im Protokoll.
 
 ### 6.3 Sperren durch den Vorgang
 
@@ -281,10 +317,13 @@ Gestern
 - **Status je Eintrag** als Tag: Vermerkt (grau), Vorgemerkt (blau),
   Gebucht (grün, Schloss), Abgerechnet (Schloss). Farbe steht nie allein,
   immer mit Text (siehe `docs/DESIGN.md`).
-- **Auswahl-Kästchen** nur bei eigenen, vermerkten, fertigen Einträgen.
-  Ohne Tätigkeit ist das Kästchen deaktiviert mit Hinweis „Tätigkeit
-  fehlt“. Die Aktionsleiste „Zur Buchung vormerken“ erscheint, sobald
-  etwas ausgewählt ist.
+- **Auswahl-Kästchen** bei eigenen, vermerkten, fertigen Einträgen. Ohne
+  Tätigkeit ist das Kästchen deaktiviert mit Hinweis „Tätigkeit fehlt“.
+  Die Aktionsleiste erscheint, sobald etwas ausgewählt ist:
+  - ohne Buchungsrecht: **„Zur Buchung vormerken“**
+  - mit Buchungsrecht: zusätzlich **„Buchen“**, und auch fremde Einträge
+    sind auswählbar. Vor dem Buchen kommt ein Hinweis „Gebuchte Einträge
+    kannst du danach nicht mehr ändern“.
 - Vorgemerkte eigene Einträge bieten „Zurückziehen“ an.
 - **Jede Zeile ist antippbar** und öffnet das Bearbeiten-Sheet (bestehende
   `Sheet`-Komponente).
@@ -318,23 +357,29 @@ Summe: Arbeit 6:45 · Fahrt 1:00 · 42 km   │ vermerkt 2:30 · vorgemerkt 3:15
 - Die bestehende Tabelle bekommt die Spalten **Mitarbeiter**, **Art**,
   **km**, **abrechenbar** und **Status**, dazu Auswahl-Kästchen und eine
   Summenzeile nach Art **und** nach Buchungsstatus.
-- **Aktionsleiste fürs Büro:**
-  - „Buchen“ (Auswahl)
-  - „Alle vorgemerkten buchen“ (Abkürzung)
-  - „Buchung stornieren“ (Auswahl gebuchter Einträge, fragt nach dem Grund)
+- **Aktionsleiste**, abhängig vom Recht:
+  - ohne Buchungsrecht: „Zur Buchung vormerken“ (nur eigene)
+  - mit Buchungsrecht: „Buchen“ (Auswahl), „Alle vorgemerkten buchen“
+    (Abkürzung), „Buchung stornieren“ (Auswahl gebuchter Einträge, fragt
+    nach dem Grund)
 - Vor dem Buchen zeigt ein kurzer Bestätigungsdialog Anzahl, Summe Stunden
   und km sowie Warnungen (z. B. Überschneidung, > 12 Std).
 - Ein Klick auf eine Zeile öffnet das **SeitenPanel** (von rechts, ziehbar).
   Darin steht dasselbe Formular wie im Sheet und zusätzlich der Reiter
   **„Verlauf“** mit dem Änderungsprotokoll inkl. Buchungsschritten.
-- Buttons „+ Zeit nachtragen“ und „+ Fahrt erfassen“. Im Office gibt es dabei
-  zusätzlich die Auswahl **„für Mitarbeiter“**.
+- Buttons „+ Zeit nachtragen“ und „+ Fahrt erfassen“. Mit Buchungsrecht gibt
+  es dabei zusätzlich die Auswahl **„für Mitarbeiter“**.
 - Bei fremden Einträgen ist das Feld **Grund** Pflicht.
 
-### 7.3 Neue Office-Seite „Zeiten buchen“
+Feld-App und Office haben dieselben Fähigkeiten. Sie unterscheiden sich nur
+in der Darstellung (Liste mit Sheet gegenüber Tabelle mit SeitenPanel), nicht
+darin, wer was darf. Das Recht entscheidet, nicht das Gerät.
 
-Arbeitsvorrat fürs Büro über **alle** Vorgänge, damit niemand jeden Vorgang
-einzeln öffnen muss:
+### 7.3 Neue Seite „Zeiten buchen“
+
+Nur sichtbar mit Buchungsrecht, in der Office-Seitenleiste und im
+„Mehr“-Tab der Feld-App. Ein Arbeitsvorrat über **alle** Vorgänge, damit
+niemand jeden Vorgang einzeln öffnen muss:
 
 - Standardfilter: Status „vorgemerkt“
 - Gruppiert nach Vorgang (Vorgangsnummer, Kunde, Auftrag/Projekt), darin die
@@ -356,8 +401,10 @@ wird am Vorgang oder auf „Zeiten buchen“.
 
 - Wochen- und Monatsstunden zählen **alle** erfassten Arbeitszeiten,
   unabhängig vom Buchungsstatus (abgestimmt, siehe Abschnitt 1).
-- Die Tagesliste zeigt zusätzlich den Status-Tag je Eintrag. Einträge sind
-  für das Büro bearbeitbar (gleiches SeitenPanel).
+- Die Tagesliste zeigt zusätzlich den Status-Tag je Eintrag. Wer
+  Team-Zeiten sehen darf (`mitarbeiterverwaltung.bearbeiten`) **und** das
+  Buchungsrecht hat, kann die Einträge dort bearbeiten und buchen (gleiches
+  SeitenPanel).
 - Filter „Ohne Tätigkeit“, „Timer läuft > 12 Std“ und „Noch nicht vorgemerkt“.
 - CSV-Export und Wochenzettel-PDF bekommen die Spalten **km**, **Fahrzeug**
   und **Status**.
@@ -444,23 +491,32 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
     (Altbestand wie in 5.1)
   - `zeiterfassung_aenderungen` (Protokoll)
   - Soft-Delete
+  - `account_typen.darf_zeiten_buchen` (5.4)
 - **Backend:**
+  - Einzelrecht „Zeiten buchen“: Schema, `CurrentUser`-Flag,
+    `darf_zeiten_buchen()` im `rechte_service`
   - Endpunkte vormerken, zurückziehen, buchen und stornieren (gesammelt,
     alles oder nichts)
-  - Sperrregeln je Status (6.2), Büro darf fremde Einträge bearbeiten und
-    nachtragen (Grund Pflicht)
+  - Sperrregeln je Status (6.2); Buchungsberechtigte dürfen fremde
+    Einträge bearbeiten und nachtragen (Grund Pflicht)
   - Rechnungsvorschläge nur noch aus **gebuchter** Zeit
 - **Frontend:**
-  - Status-Tags, Auswahl und Aktionsleiste im Zeit-Tab (Feld und Office)
+  - Schalter „Darf Zeiten buchen“ auf der Seite „Account-Typen“
+  - Status-Tags, Auswahl und Aktionsleiste im Zeit-Tab, abhängig vom Recht
+    (Feld-App und Office gleichwertig)
   - Bestätigungsdialog beim Buchen, Reiter „Verlauf“ im SeitenPanel
-  - Neue Office-Seite **„Zeiten buchen“** mit Zähler in der Seitenleiste
+  - Neue Seite **„Zeiten buchen“** (Office-Seitenleiste und
+    Feld-App-„Mehr“) mit Zähler
   - „Timer beenden“ für fremde Timer
 - **Tests:**
-  - Backend: alle Übergänge inkl. verbotener Übergänge,
-    alles-oder-nichts, Protokolleinträge, Rechnungsvorschläge nur aus
-    gebuchter Zeit
-  - Playwright: Techniker merkt vor → Büro bucht → Techniker kann nicht
-    mehr ändern
+  - Backend: alle Übergänge inkl. verbotener Übergänge, mit und ohne
+    Buchungsrecht; eigener gebuchter Eintrag auch mit Buchungsrecht nicht
+    änderbar; alles-oder-nichts; Protokolleinträge; Rechnungsvorschläge nur
+    aus gebuchter Zeit
+  - Playwright:
+    - Techniker merkt vor → Buchungsberechtigter bucht → Techniker kann
+      nicht mehr ändern
+    - Techniker mit Buchungsrecht bucht selbst → Eintrag gesperrt
 
 ### Stufe 3 – Fahrten mit km (löst L3, L9)
 - Migration: `km`, `fahrzeug_id`, `quelle`
@@ -487,26 +543,31 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
 
 - Zeit ist erst **vermerkt** und wird erst nach aktiver **Buchung**
   abrechenbar.
-- Der **Techniker merkt vor**, das **Büro bucht**.
+- Jeder **merkt eigene Einträge vor**. **Buchen darf, wer das Einzelrecht
+  „Zeiten buchen“ hat.** Das hängt nicht an Rolle oder Gerät, auch ein
+  Techniker in der Feld-App kann es haben.
+- Das Recht ist ein **eigener Schalter je Account-Typ** (5.4), kein Teil der
+  Rechte-Matrix.
 - Gebucht wird per **Auswahl im Vorgang** (plus Sammelseite „Zeiten buchen“,
-  siehe 7.3).
-- Nach dem Buchen ist der Eintrag **gesperrt**. Das **Büro kann die Buchung
-  zurücknehmen** (mit Grund, protokolliert).
+  siehe 7.3). Buchungsberechtigte können auch **direkt buchen**, ohne
+  vorheriges Vormerken.
+- Nach dem Buchen ist der Eintrag für **alle unveränderbar**, auch für den,
+  der ihn gebucht hat. Buchungsberechtigte können die Buchung zurücknehmen
+  (mit Grund, protokolliert).
 - Vermerkte Zeit **zählt sofort als Arbeitszeit**.
-- Das **Büro kann auch direkt buchen**, ohne dass der Techniker vorgemerkt
-  hat (Übergang vermerkt → gebucht in 6.1).
 
 ### Noch offen
 
-1. **„Büro“ = Recht `mitarbeiterverwaltung.bearbeiten`?** Oder soll Buchen
-   ein eigenes Recht bekommen, z. B. Bereich `abrechnung`, Aktion
-   `bearbeiten`? Dann könnte die Buchhaltung buchen, ohne die
-   Mitarbeiterverwaltung zu dürfen.
-2. **Tätigkeit Pflicht beim Vormerken und Buchen** (nicht beim Erfassen) –
+1. **Tätigkeit Pflicht beim Vormerken und Buchen** (nicht beim Erfassen) –
    passt das?
-3. **Korrekturfrist** für eigene, noch nicht vorgemerkte Einträge: Braucht
+2. **Korrekturfrist** für eigene, noch nicht vorgemerkte Einträge: Braucht
    es die neben dem Buchen überhaupt noch? Vorschlag: weglassen, das
    Vormerken ist die natürliche Grenze.
+3. **Stornieren:** Soll jeder Buchungsberechtigte eine Buchung zurücknehmen
+   dürfen (Vorschlag, mit Grund und Protokoll)? Oder nur der
+   Mandanten-Admin, damit „gebucht“ härter bindet? Im ersten Fall kann ein
+   Techniker mit Buchungsrecht seine eigene Buchung stornieren und danach
+   ändern; das steht dann aber im Protokoll.
 4. **Altbestand** bei der Umstellung als `gebucht` übernehmen (5.1), damit
    laufende Abrechnungen nicht stocken – einverstanden?
 5. **km je Fahrt oder je Tag?** Vorschlag: je Fahrt (Hin- und Rückweg zwei
