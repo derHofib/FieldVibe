@@ -1,23 +1,24 @@
 ---
 name: fieldvibe-design
 description: >
-  Nachschlagewerk für das visuelle Design-System von FieldVibe ("Industry" --
-  Blaupausen-Optik: Haarlinien statt Schatten, quadratisch statt rund,
-  Barlow/Barlow Condensed, --color-ind-*-Farbtoken). Icons, Farben/Tones,
-  Karten-Rezepte, Buttons, Dark Mode, Layout, Spacing -- ausschließlich für
-  frontend/src in diesem Repo (SocialCRM/FieldVibe). Vor JEDER neuen UI-
-  Komponente, Seite, Karte, Button, Formularfeld oder Statusfarbe in diesem
-  Frontend zuerst hier nachsehen, damit bestehende Muster wiederverwendet
-  statt neu erfunden werden -- auch wenn nicht explizit nach "Design"
-  gefragt wird, sondern nur "baue mir eine Seite für X" oder "füge einen
-  Button/eine Karte für Y hinzu". Auch nützlich bei Fragen nach dem
-  FieldVibe-Styleguide, der Icon-Farbe für einen neuen Bereich, oder ob
-  Industry-Token bzw. Feld-App/Office-Konventionen greifen. Kein Ersatz für
-  den separaten "design"-Skill (der baut Mockup-Canvases) -- dieser Skill
-  ist reine Referenz für existierenden Code.
+  Nachschlagewerk für das visuelle Design-System von FieldVibe (Apple Human
+  Interface Guidelines: Systemschrift, --tint-Akzentfarbe, generöse Radien,
+  Flächen statt Haarlinien als Gliederungsmittel). Icons, Farben/Tones,
+  Karten-/Listen-Rezepte, Buttons, Dark Mode, Layout, Barrierefreiheit --
+  ausschließlich für frontend/src in diesem Repo (SocialCRM/FieldVibe). Vor
+  JEDER neuen UI-Komponente, Seite, Karte, Button, Formularfeld oder
+  Statusfarbe in diesem Frontend zuerst hier nachsehen, damit bestehende
+  Muster wiederverwendet statt neu erfunden werden -- auch wenn nicht
+  explizit nach "Design" gefragt wird, sondern nur "baue mir eine Seite für
+  X" oder "füge einen Button/eine Karte für Y hinzu". Auch nützlich bei
+  Fragen nach dem FieldVibe-Styleguide, der Icon-Farbe für einen neuen
+  Bereich, Kontrast-/Barrierefreiheits-Konventionen, oder ob Apple-HIG-Token
+  bzw. Feld-App/Office-Konventionen greifen. Kein Ersatz für den separaten
+  "design"-Skill (der baut Mockup-Canvases) -- dieser Skill ist reine
+  Referenz für existierenden Code.
 ---
 
-# FieldVibe Design-System (frontend/src) -- "Industry"
+# FieldVibe Design-System (frontend/src) -- Apple HIG
 
 Dieses Dokument fasst zusammen, wie FieldVibe tatsächlich aussieht -- nicht
 wie es aussehen sollte. Alle Angaben sind aus dem Code verifiziert (Datei:Zeile
@@ -26,116 +27,151 @@ zwischen den beiden gilt dieses Dokument, weil es näher am aktuellen Code
 liegt -- im Zweifel trotzdem kurz den Code selbst gegenchecken, Konventionen
 driften.
 
-Die App wurde app-weit von einem pastellfarbenen, abgerundeten Look
-("Claymorphism"/Neumorphismus) auf ein Blaupausen-Design ("Industry")
-umgestellt: Haarlinien-Rahmen statt Schatten, quadratische Kanten statt
-Rundungen, Barlow/Barlow Condensed statt System-Font, `--color-ind-*`-
-Farbtoken statt direkter `slate`/`stone`-Klassen. Diese Migration ist
-inhaltlich abgeschlossen (Feld-App, Office, Super-Admin, Kundenportal),
-vereinzelte seiteneigene Pillen/Chips können noch Restbestände zeigen --
-im Zweifel Code gegenchecken statt dieses Dokument als absolute Wahrheit
-zu nehmen.
-
-**Zweite Überarbeitung ("plastischer", siehe `index.css`)**: die Marken-
-Akzentfarbe wechselte von Stahlblau auf "Graphit" (dunkles, neutrales
-Grau), und Karten/Buttons/Inputs sind nicht mehr komplett flach --
-Karten tragen jetzt `--shadow-ind-card` + eine gegenüber der Seite
-hellere Fläche (`--color-ind-bg-raised`), Buttons einen Bevel-Schatten
-mit Press-State, Inputs einen eingelassenen Innenschatten. Quadratisch
-(kein Radius) und Haarlinien-Rahmen bleiben unverändert Pflicht --
-"plastischer" heißt hier gerichtetes Licht in Graustufen (wie ein
-gefrästes Bauteil), **nicht** die Rückkehr zu Farbverlauf/Pastellton/
-Rundung des alten Claymorphism. Details siehe §2 (Farbe/Schatten-Token)
-und §6 (Buttons).
+Die App wurde app-weit von einem quadratisch-Haarlinien-Design ("Industry",
+Blaupausen-Optik) auf Apple Human Interface Guidelines umgestellt:
+Systemschrift statt Barlow, generöse Radien statt `rounded-none`, eine
+einzige Akzentfarbe `--tint` (Apple `systemBlue`) statt Marken-Grau, Flächen
+(`--cell`/`--card`) statt Haarlinien als primäres Gliederungsmittel. Diese
+Migration ist inhaltlich abgeschlossen für alle vier Frontends (Feld-App,
+Office, Super-Admin, Kundenportal); ein Teil der hartkodierten Tailwind-
+Palettenfarben (kategoriale Icon-Töne, einzelne Randfälle) ist bewusst noch
+nicht auf Design-Token umgestellt -- siehe `docs/ui-redesign/REVIEW.md`
+Abschnitt 5 für den genauen, ehrlichen Stand, bevor etwas davon als neuer
+Bug gemeldet wird.
 
 ## Checkliste, bevor du etwas Neues baust
 
-1. **Tone/Statusfarbe**: Passt einer der 8 IconBadge-Tones oder eine der
-   bestehenden Statusfarben fachlich? Ein Tone deckt eine ganze Bereichs-
-   "Familie" ab, nicht einzelne Seiten -- neue Seite zuerst einer Familie
-   zuordnen, bevor ein neuer Tone erwogen wird.
-2. **Welches Karten-Rezept?** Haarlinien-Karte (Feld-App-Standard),
-   Office-`Karte`, `Blueprint` (Passermarken für Hero-Karten), oder
-   `.card-soft` (nur Feed-Story-Chips, Restbestand)? Siehe §3.
-3. **Welche Button-Variante?** `.btn-industry-primary`/`-secondary`/
-   `-ghost`/`-icon`, siehe §6 -- nicht neu erfinden.
-4. **`.btn-touch` nötig?** Ja in der Feld-App (48×48px-Mindestziel), nein im
+1. **Status oder Kategorie?** Status (Vorgang/Rechnung/Angebot-Zustand) läuft
+   **immer** über die sechs `StatusKey`-Token (§8), nie über eine eigene
+   Farbwahl. Kategorie (Bereichs-Icon, rein illustrativ) läuft über
+   `--tone-*`/`--tile-*` (§1) -- die beiden Systeme nie mischen.
+2. **Welcher Icon-Container?** `SymbolKachel` (gefüllte Kachel, bevorzugt
+   für neue Listenzeilen) oder `IconBadge` (Rahmen-Quadrat, wo eine
+   bestehende Seite das Muster schon konsequent nutzt)? Siehe §1.
+3. **Welches Karten-/Listen-Rezept?** `.card-ap` (Feld-App-Standard),
+   `GroupedList`/`GroupedListRow` (iOS-Einstellungen-Liste), Office-`Karte`
+   (`office/OfficeUi.tsx`), oder `Sheet` (Formular/Dialog)? Siehe §3.
+4. **Welche Button-Variante?** `.btn-ap`/`-primary`/`-toolbar`/
+   `-capsule(-primary|-secondary)`, siehe §6 -- nicht neu erfinden.
+5. **`.btn-touch` nötig?** Ja in der Feld-App (48×48px-Mindestziel), nein im
    Office-Desktop-Layout (dort kein Touch-Ziel, keine PWA).
-5. **Dark-Mode-Gegenstück nicht vergessen**: Bei `--color-ind-*`-Token
-   passiert das automatisch (Werte sind unter `.dark` neu definiert, kein
-   `dark:`-Präfix pro Klasse nötig). Bei echten Semantikfarben (Status,
-   Warnung) weiterhin `dark:border-{farbe}-600 dark:text-{farbe}-300` o.ä.
-   explizit ergänzen.
-6. **Icon**: nur lucide-react, `strokeWidth={1.5}`, i. d. R. über `IconBadge`
-   (Ausnahme: Office-/Super-Admin-Sidebar, siehe §1), nie Emoji, nie frei
-   im Text.
-7. **Quadratisch, nicht rund**: kein `rounded-lg`/`rounded-md`/`rounded-xl`
-   auf Karten/Buttons/Inputs -- `rounded-none` (Standard, meist implizit
-   durch Weglassen der Klasse) oder gar keine Radius-Klasse. Rundungen
-   bleiben nur für echte Kreisformen (Avatare, Zähler-Badges, Bottom-Nav-
-   Insel, FAB) und für Nutzerinhalt (Whiteboard-Sticky-Notes).
+6. **Dark-Mode-Gegenstück nicht vergessen**: Bei `--color-*`-Token passiert
+   das automatisch (Werte sind unter `.dark` neu definiert, kein
+   `dark:`-Präfix pro Klasse nötig).
+7. **Text oder Fläche mit `--tint`?** `tint` selbst nur für Icons/Ränder/
+   Indikatoren. Echter Text: `text-tint-text`. Weißer Text auf Tint-Fläche:
+   `bg-tint-solid`/`.btn-ap-primary`. Sonst unterschreitet es im
+   Dunkel-Modus 4.5:1 Kontrast (axe-core, Phase D) -- siehe §2 und §10.
+8. **Genau ein `<h1>` pro Seite**, innerhalb eines Landmarks (`<main>`).
+   Feld-App-Seiten brauchen dafür i. d. R. nichts Zusätzliches (kommt aus
+   `FeldLayout.tsx`), Office/Super-Admin-Seiten über `SeitenKopf`/den
+   Layout-Header. Siehe §10.
+9. **Icon**: nur lucide-react, i. d. R. `strokeWidth={1.5}` (`IconBadge`)
+   oder `{2}` (`SymbolKachel`), nie Emoji, nie frei im Text.
+10. **Radius ist hier Standard, nicht Ausnahme** -- anders als im alten
+    Industry-System kein `rounded-none` mehr per Default. Radius-Skala
+    siehe §2.
 
 ---
 
 ## 1. Icons
 
-Einzige Icon-Quelle: **lucide-react**. Nie Emoji (im ganzen `frontend/src`
-verifiziert: keine Emoji-Codepoints). `strokeWidth={1.5}` (nicht `2`) --
-Industry-Konvention aus dem Design-Handoff.
+Einzige Icon-Quelle: **lucide-react**. Nie Emoji. Zwei parallele Icon-
+Container -- bewusst nicht vereinheitlicht, siehe Begründung:
 
-Icons stecken normalerweise in `IconBadge` (`frontend/src/components/
-IconBadge.tsx`), nie frei im DOM:
+### SymbolKachel (bevorzugt für neue Listenzeilen)
+
+`frontend/src/components/apple/SymbolKachel.tsx`: die eigentliche
+Apple-HIG-Kachel -- 29×29px, Radius 7 (`rounded-[7px]`), gefüllte Farbfläche,
+weißes Icon:
+
+```tsx
+<SymbolKachel icon={Folder} farbe="indigo" />
+```
+
+Props: `icon: LucideIcon`, `farbe: KachelFarbe`, `groesse?: number` (Default
+29, Icon-Größe skaliert automatisch mit `groesse * 0.57`). Icon fest
+`strokeWidth={2}`, `text-white`.
+
+```ts
+FARB_KLASSE = {
+  blue: "bg-tile-blue",     // #007aff
+  red: "bg-tile-red",       // #ff3b30
+  green: "bg-tile-green",   // #34c759
+  orange: "bg-tile-orange", // #ff9500
+  indigo: "bg-tile-indigo", // #5856d6
+  gray: "bg-tile-gray",     // #8e8e93
+};
+```
+
+Fest in beiden Modi identisch (Ausnahme vom "keine Farbe außer Status/
+Kategorie"-Grundsatz -- Symbol-Kacheln sind rein illustrativ).
+
+### IconBadge / StatusBadge (älteres Muster, noch verbreitet)
+
+`frontend/src/components/IconBadge.tsx`: aus der Industry-Ära übernommenes
+Rahmen-Quadrat -- Rahmenfarbe + Icon in Ton-Farbe, Hintergrund transparent,
+`rounded-none`. **Nicht** auf die Kachel-Form umgebaut (ehrliche
+Einschränkung, siehe REVIEW.md):
 
 ```tsx
 <IconBadge icon={CalendarClock} tone="amber" size="md" active={isActive} />
 ```
 
-Props: `icon: LucideIcon`, `tone: IconTone`, `size?: "sm" | "md"` (default
-`"md"`), `active?: boolean` (default `true`).
-
-**Haarlinien-Quadrat statt Pastell-Fläche**: Rahmenfarbe + Icon in Ton-
-Farbe, Hintergrund transparent, eckige Box (`rounded-none`):
-
-```
-Rahmen/Icon: border-{ton}-300 text-{ton}-600  |  dark: border-{ton}-800 text-{ton}-400
-```
-
-| Tone | Rahmen/Icon-Klassen | Funktionsbereich |
-|---|---|---|
-| `sky` | `border-sky-300 text-sky-600 dark:border-sky-800 dark:text-sky-400` | Feed, Prüfmittel, Kennzahlen |
-| `violet` | `border-violet-300 text-violet-600 dark:border-violet-800 dark:text-violet-400` | Profil, Highlights, Account-Typen & Rechte, Formulare |
-| `amber` | `border-amber-300 text-amber-600 dark:border-amber-800 dark:text-amber-400` | Dispo, Auftragsanfragen, Nutzer verwalten |
-| `emerald` | `border-emerald-300 text-emerald-600 dark:border-emerald-800 dark:text-emerald-400` | Geschäft, Techniker-Zuweisungen |
-| `cyan` | `border-cyan-300 text-cyan-600 dark:border-cyan-800 dark:text-cyan-400` | Zeiterfassung, Rechnungen, Rechnungseingang, Team-Zeiten |
-| `indigo` | `border-indigo-300 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400` | Buchhaltung, Integrationen |
-| `rose` | `border-rose-300 text-rose-600 dark:border-rose-800 dark:text-rose-400` | Meldungen, Anlagen-Zusatzfelder |
-| `slate` | `border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400` | Papierkorb (neutral) |
-
-Single Source of Truth für diese Zuordnung: `frontend/src/config/navSeiten.ts`
-(dieselbe Datei speist Feld-App-Bottom-Nav *und* Office-Sidebar-Gruppierung).
-
-Weitere Bausteine in `IconBadge.tsx`:
+Props: `icon: LucideIcon`, `tone: IconTone`, `size?: "sm" | "md"` (Default
+`"md"`), `active?: boolean` (Default `true`, bei `false` neutral-grau statt
+Farbe -- nur das ausgewählte Element zeigt Farbe).
 
 ```ts
-// weicheres Pendant fuer aktive Listenzeilen (Rahmen+leichte Flaeche statt
-// nur Rahmen) -- z.B. Super-Admin-Sidebar-Zeile
-export const TONE_ROW_ACTIVE = { sky: "border-sky-400 bg-sky-50/60 text-sky-700 dark:border-sky-600 dark:bg-sky-500/10 dark:text-sky-300", /* ... */ };
+export type IconTone = "sky" | "violet" | "amber" | "rose" | "emerald"
+  | "indigo" | "cyan" | "slate" | "teal";
 
-// Box-Groesse -- jetzt eckig (rounded-none), nicht mehr rounded-lg/xl
+TONE_BADGE = {
+  sky: "border-tone-sky text-tone-sky",
+  violet: "border-tone-violet text-tone-violet",
+  amber: "border-tone-amber text-tone-amber",
+  rose: "border-tone-rose text-tone-rose",
+  emerald: "border-tone-emerald text-tone-emerald",
+  indigo: "border-tone-indigo text-tone-indigo",
+  cyan: "border-tone-cyan text-tone-cyan",
+  slate: "border-sep text-label",       // neutral, kein eigener Ton
+  teal: "border-tone-teal text-tone-teal",
+};
 SIZE_BOX = { sm: "h-7 w-7 rounded-none", md: "h-9 w-9 rounded-none" };
-SIZE_ICON = { sm: 15, md: 18 }; // strokeWidth={1.5}
-
-// active=false -> neutral-grau statt Farbe (nur das ausgewaehlte Element zeigt Farbe)
-MUTED = "border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500";
+SIZE_ICON = { sm: 15, md: 18 };  // strokeWidth={1.5}
+MUTED = "border-sep text-label3";  // active=false
 ```
 
-**Ausnahme Office-/Super-Admin-Sidebar**: dort **kein** `IconBadge`, sondern
-bloße 16px-Icons direkt in der NavLink-Zeile + ein 2px breiter Akzent-Strich
-links (`absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-ind-acc`, Opacity über
-`isActive` gesteuert) -- Muster 1:1 aus dem CRM-Shell-Mockup übernommen
-(`office/OfficeLayout.tsx`, `components/Layout.tsx`). Dort wäre ein
-zusätzliches Rahmen-Quadrat pro Icon redundant, weil die ganze Zeile schon
-der Klick-Bereich ist.
+`TONE_ROW_ACTIVE` (gleiche Datei): weicheres Pendant für aktive Listenzeilen
+(Rahmen + leichte 10%-Flächenfarbe statt nur Rahmen), z. B.
+`"border-tone-sky bg-tone-sky/10 text-tone-sky"`.
+
+`StatusBadge.tsx` dupliziert dieselbe Palette lokal als `TONE_PILL`
+(gleiche Klassen wie `TONE_BADGE`, nicht aus `IconBadge.tsx` exportiert) für
+eine Pillen-Variante: `<StatusBadge label="..." tone="cyan" />`.
+
+**Kategorien-Zuordnung** (welcher Ton für welchen Bereich): Single Source of
+Truth bleibt `frontend/src/config/navSeiten.ts` (`NAV_SEITEN`, Feld `tone:
+IconTone` je Eintrag) -- speist sowohl die Office-Seitenleiste
+(`office/OfficeLayout.tsx`) als auch den "Mehr"-Tab der Feld-App
+(`pages/feld/MehrPage.tsx`), unverändert aus der Vorversion übernommen. Für
+Icons **außerhalb** dieser beiden Stellen (Listenzeilen, Detailseiten-
+Header) gibt es keine zentrale Tabelle -- dort zuerst prüfen, welchen Ton
+verwandte/benachbarte Seiten schon nutzen, bevor ein neuer gewählt wird.
+
+**--tone-\* Token** (`index.css`, fest in beiden Modi, Apple System Colors):
+
+| Token | Hex |
+|---|---|
+| `tone-sky` | `#007aff` |
+| `tone-violet` | `#af52de` |
+| `tone-amber` | `#ff9500` |
+| `tone-rose` | `#ff375f` |
+| `tone-emerald` | `#34c759` |
+| `tone-indigo` | `#5856d6` |
+| `tone-cyan` | `#32ade6` |
+| `tone-slate` | `#8e8e93` |
+| `tone-teal` | `#30b0c7` |
 
 ---
 
@@ -144,263 +180,228 @@ der Klick-Bereich ist.
 **Kein** `tailwind.config.js` -- Tailwind v4, komplett CSS-basiert über
 `@theme` in `frontend/src/index.css`.
 
-### Farbtoken: `--color-ind-*`
-
-Eigene, mit `ind-` präfixierte Custom Properties (bewusst nicht die
-Standard-Tailwind-Palette direkt, sondern ein eigener Satz mit halb-
-transparenten Zwischenstufen):
+### Farbtoken
 
 | Token | Rolle |
 |---|---|
-| `ind-bg` | Seiten-Hintergrund |
-| `ind-bg-raised` | Karten-/Panel-Fläche -- bewusst heller als `ind-bg` (Träger der Tiefe, siehe unten), nicht mehr identisch mit der Seite |
-| `ind-ink` | Primärtext, Überschriften |
-| `ind-ink-2` | Sekundärtext |
-| `ind-ink-3` | Meta-/Placeholder-Text, am meisten benutzte Muted-Stufe |
-| `ind-line` | Standard-Rahmen (Karten, Buttons, Inputs) |
-| `ind-line-2` | Kräftigerer Rahmen (verschachtelte Blöcke, Passermarken-Farbe) |
-| `ind-acc` | Akzent für Icons/Rahmen ("Graphit" -- dunkles Grau, vorher Stahlblau) |
-| `ind-acc-txt` | Akzent-Text (im Light-Mode dunkler/kräftiger, im Dark-Mode heller/lesbarer als `ind-acc`) |
-| `ind-acc-soft` | Dezente Akzent-Fläche (z. B. aktiver Filter-Button-Hintergrund) |
-| `ind-hover` | Hover-Zustand neutraler Elemente |
-| `ind-field` / `ind-field-ink` | Gefüllte Aktiv-Fläche (Segmented-Control aktiv, Offline-Banner) |
-| `ind-btn-bg` / `ind-btn-bg-h` / `ind-btn-ink` | Primär-Button: Ruhe / Hover / Text |
-| `ind-warn` | Warnung (Rahmen+Text, keine Fläche) |
-| `ind-bad` | Fehler (Rahmen+Text, keine Fläche) |
-| `shadow-ind-card` | Karten-Schatten (Ruhezustand) |
-| `shadow-ind-raised` | Kräftigerer Schatten für Hero-Karten (`.blueprint`) und schwebende Elemente (Bottom-Nav-Insel, FAB) |
-| `shadow-ind-btn` / `shadow-ind-btn-active` | Bevel-Schatten für gefüllte/umrandete Buttons -- Ruhe / Press-State |
-| `shadow-ind-input` | Eingelassener Innenschatten für Inputs |
+| `gbg` | Äußerster Seitenhintergrund |
+| `cell` | Zeilen-/Listenflächen (`GroupedList`) |
+| `win` | Fenster-/Panel-Fläche (Office-Inspektor-Spalte) |
+| `card` | Karten-/Formularfläche |
+| `insp` | Office-Inspektor-Hintergrund |
+| `side` / `bar` / `menu` | Seitenleiste / Toolbar / Dropdown-Menü (teiltransparent, `backdrop-blur`-tauglich) |
+| `fill` / `fill2` | Neutrale Füllfläche: dezent (12/24% grau) / kräftiger (20/34%) |
+| `thumb` | Aktiver Segmented-Control-Knopf |
+| `label` / `label2` / `label3` | Text: Primär / Sekundär / Tertiär |
+| `sep` / `sepstrong` | Trennlinie: Standard / kräftiger |
+| `tint` | Akzentfarbe (`systemBlue`, hell `#0071e3` / dunkel `#0a84ff`) -- **nur** Icons/Ränder/Indikatoren |
+| `tint-text` | Text-/Link-Variante (hell `#0068cc`, dunkel `#6ab1ff` -- derselbe Ton wie `st-neu-text`) |
+| `tint-solid` | Button-Flächen-Variante für weißen Text (hell = `tint`, dunkel `#0a6ad1`) |
+| `tintbg` | Dezente Akzent-Fläche |
+| `st-{key}` / `-bg` / `-dot` | Status-Token, siehe §8 |
+| `tone-*` | Kategoriale Icon-Töne, siehe §1 |
+| `tile-*` | `SymbolKachel`-Farben, siehe §1 |
+| `mono-grad-1/2` | Monogramm-Verlauf (`Monogramm.tsx`) |
+| `switch-on` | `#34c759`, Aktivfarbe `Switch.tsx` |
 
 Definiert in `index.css`: helle Werte im `@theme`-Block, dunkle Werte in
-einem `.dark { }`-Block direkt darunter. Tailwind v4 löst `@theme`-Werte
-als normale CSS-Variablen auf -- ein Re-Scope unter `.dark` wirkt also
-automatisch auf jede Utility-Klasse, die dieselbe Variable referenziert
-(`bg-ind-bg`, `text-ind-ink-3`, `border-ind-line` usw.) -- **kein**
-`dark:`-Präfix pro Klasse nötig, anders als bei den alten `slate`/`stone`-
-Klassen.
+einem `.dark { }`-Block direkt darunter. Tailwind v4 löst `@theme`-Werte als
+normale CSS-Variablen auf -- ein Re-Scope unter `.dark` wirkt automatisch
+auf jede Utility-Klasse, die dieselbe Variable referenziert -- **kein**
+`dark:`-Präfix pro Klasse nötig.
 
-**Echte Semantikfarben bleiben separat**: Status-Tags (Vorgang/Rechnung/
-Angebot), Warn-/Fehlerzustände mit Bedeutung über die reine Betonung hinaus
-nutzen weiterhin eigenständige Tailwind-Farben (`text-blue-700
-dark:text-blue-300`, `border-red-400 dark:border-red-600` usw.), **nicht**
-die `ind-`-Palette -- Marken-Akzent und Status-Semantik sind bewusst
-getrennt (siehe §8).
+**Warum `tint-text`/`tint-solid` eigene Token sind** (Phase D, axe-core-
+Befund): reines `tint` als Text auf `--card` bzw. als Fläche unter weißem
+Text unterschritt im Dunkel-Modus 4.5:1. Text braucht dort **heller**,
+Fläche-unter-weißem-Text braucht **dunkler** -- gegensätzliche Richtungen,
+deshalb zwei Token statt eines geänderten `tint`. `tint` selbst bleibt für
+Icons/Ränder unverändert (WCAG 1.4.11 verlangt dort nur 3:1). Betroffene
+Rezepte: `.btn-ap-primary`, `.btn-ap-capsule-primary` (`background: var(
+--tint-solid)`), Wortmarke/Links/BottomNav-Label (`text-tint-text`). Bei
+neuem Code mit `bg-tint`/`text-tint` **und** `text-white`/Fließtext in
+derselben Zeile: `bg-tint-solid`/`text-tint-text` verwenden, nicht `tint`
+direkt.
 
 ### Typografie
 
-- **Barlow Condensed** (`font-heading`): Überschriften, Wortmarke, Section-
-  Labels, Buttons -- oft `uppercase tracking-wide` (Sperrung 0.02em) bzw.
-  `tracking-[0.14em]` für sehr kleine Kategorie-Labels (10px)
-- **Barlow** (`font-sans`): Fließtext, Formularfelder, normale UI-Texte --
-  Tailwinds Default-Sans-Fallback bleibt in der `font-sans`-Definition
-  erhalten, Barlow kommt zuerst
-- `font-variant-numeric: tabular-nums` (`tabular-nums`-Klasse) für Zahlen
-  in Tabellen/Kennzahl-Kacheln
+- **Systemschrift** (`--font-sans: -apple-system, BlinkMacSystemFont, 'SF
+  Pro Text', 'SF Pro Display', 'Helvetica Neue', sans-serif`) -- kein
+  eigener Web-Font mehr geladen, kein `<link>` in `index.html`
+- Beobachtete Größen-Stufen: 17px (Listenzeilen, Sheet-Titel,
+  Formularfelder), 15px (`.field-ap`-Text), 13px (Buttons, Segmented-
+  Control), 11–13px (Meta-Text/Badges), 10px (Bottom-Nav-Tab-Label)
+- `tabular-nums` für Zahlen in Tabellen/Kennzahl-Kacheln
 
-Radius: **quadratisch ist der neue Standard** -- `rounded-none` explizit
-oder (häufiger) einfach keine Radius-Klasse. Verbleibende Rundungen sind
-absichtlich, nicht vergessen:
+### Radius-Skala (`index.css`)
 
-| Kontext | Radius |
-|---|---|
-| Karten, Buttons, Inputs, Tags, Segmented-Controls | keiner (`rounded-none`) |
-| Bottom-Nav-Insel, FAB, Avatare/Initialen-Kreise, Zähler-Badges | `rounded-full` |
-| Whiteboard-Sticky-Notes/-Karten (Nutzerinhalt) | wie vom Nutzer/Feature gewählt, unangetastet |
+```
+--radius-ap-sm: 7px      /* .btn-ap-primary, .btn-ap-toolbar */
+--radius-ap-input: 8px   /* .field-ap */
+--radius-ap-md: 10px
+--radius-ap-card: 12px   /* .card-ap, GroupedList, Sheet (Desktop) */
+--radius-ap-tile: 14px
+--radius-ap-pill: 999px  /* .btn-ap-capsule*, StatusPille, FilterChip */
+```
 
-Body: `bg-ind-bg text-ind-ink` (löst automatisch nach Theme auf, kein
-`dark:`-Zusatz mehr nötig).
+Radius ist hier **Standard**, nicht Ausnahme -- anders als das alte
+`rounded-none`-Industry-Prinzip. Echte Kreisformen (Avatare, Zähler-Badges,
+`AbhakKreis`, `Switch`-Knopf) bleiben `rounded-full`, Whiteboard-Sticky-
+Notes (Nutzerinhalt) unangetastet.
 
 ### Custom Utility-Klassen (`index.css`)
 
 ```css
-/* -- aktives Industry-Rezept -- */
-.btn-industry                 /* Basis: Barlow-Condensed, quadratisch, 13px, uppercase, Haarlinie (transparent bis Variante sie faerbt) */
-.btn-industry-primary         /* Fuellung --color-ind-btn-bg, Text --color-ind-btn-ink, Hover --color-ind-btn-bg-h */
-.btn-industry-secondary       /* Rahmen --color-ind-line, Hover-Flaeche --color-ind-hover */
-.btn-industry-ghost           /* transparenter Rahmen, Text --color-ind-acc-txt */
-.btn-industry-icon            /* 36x36px, kein Innenabstand -- fuer Icon-only-Buttons */
-.input-industry               /* Haarlinien-Input/Select/Textarea, transparenter Hintergrund, width:100% */
-.tag-industry(-accent|-neutral|-outline)  /* kleine Chips */
-.seg-industry                 /* zusammenhaengende Quadrat-Reihe fuer Segmented-Controls (Randlinien zwischen Kindern) */
-.blueprint                    /* Haarlinien-Karte mit Platz fuer 4 Passermarken-Spans (siehe Blueprint.tsx) */
-
-/* -- weiterhin gueltig, unabhaengig vom Reskin -- */
-.btn-touch { min-h-[48px] min-w-[48px]; }          /* 48x48px Touch-Ziel, Feld-App -- NICHT im Office noetig */
-.scrollbar-none { scrollbar-width: none; ... }      /* versteckt Scrollbar, fuer die swipebare Bottom-Nav-Rotunde */
-.card-interactive                                   /* zusaetzlich zum Karten-Rezept bei klickbaren Karten-Zeilen (Hover-Anheben) */
-
-/* -- Restbestand aus der Vor-Industry-Aera, nur noch punktuell verwendet -- */
-.card-soft / .card-soft-inner   /* neumorphe Doppelschatten-Karte -- nur noch Feed-Story-Chip-Umgebung, NICHT fuer neue Flaechen verwenden */
-.btn-clay                       /* neumorpher Schatten -- nicht mehr fuer neue Buttons verwenden, siehe §6 */
-.navbar-soft                    /* dasselbe Schatten-Rezept -- durch Haarlinie in BottomNav.tsx ersetzt, Klasse bleibt nur falls noch referenziert */
+.card-ap                 /* bg-card, 0.5px border-sep, radius-ap-card, shadow-card */
+.btn-ap                  /* Basis-Button: border-sepstrong, bg-card, 13px */
+.btn-ap-primary          /* background: tint-solid, color: #fff, radius-ap-sm */
+.btn-ap-toolbar          /* 28x28px Icon-only, transparent, hover: fill */
+.btn-ap-capsule          /* Basis: 44px hoch, radius-ap-pill, 17px */
+.btn-ap-capsule-primary  /* background: tint-solid */
+.btn-ap-capsule-secondary /* background: fill, color: tint-text */
+.field-ap                /* Formularfeld: bg-card, border-sep, radius-ap-input, 15px, width:100% */
 ```
 
-`--klebe-abstand` (CSS-Property, Default `6rem` in `index.css`): Abstand,
-den sticky/klebende Leisten zum unteren Rand halten müssen -- siehe §5.
+**Cascade-Layer-Falle**: `.card-ap`/`.btn-ap` setzen Rand/Schatten als
+plain CSS außerhalb jedes `@layer` -- das gewinnt **immer** gegen Tailwind-
+Utilities (`border-*`/`ring-*`, im `utilities`-Layer). Eine Farb-/Rand-
+Überschreibung auf diesen Klassen **muss** per Inline-`style` erfolgen,
+sonst wird sie stillschweigend ignoriert. Beispiel (`office/vorgaenge/
+VorgaengeRaster.tsx`): Auswahl-/Fokus-Ring auf einer `Karte` geht über
+`style={{ borderColor: ..., boxShadow: ... }}`, nicht über `border-tint`.
 
 ---
 
-## 3. Karten-Rezepte
+## 3. Karten-/Listen-Rezepte
 
-**Feld-App-Standard** (Default für fast alles):
-
+**Feld-App-Karte** (Default für freistehende Boxen):
 ```
-border border-ind-line bg-ind-bg p-3   /* p-3 kompakt, p-4 Formular-/Detailkarten */
+.card-ap
 ```
+Ersetzt das alte `border border-ind-line bg-ind-bg p-3`-Rezept. Trägt
+Fläche + Rand + Radius + Schatten automatisch, kein manuelles Kombinieren
+von Utility-Klassen mehr nötig.
 
-Kein Ring-Split zwischen Hell/Dunkel mehr nötig -- die `ind-line`/
-`ind-bg`-Token lösen pro Theme automatisch auf. Das ist die zentrale
-Vereinfachung gegenüber dem alten Rezept (`rounded-lg bg-white p-3
-shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1
-dark:ring-stone-800`), das noch getrennte Light/Dark-Behandlung brauchte.
-
-Trotz identischer Klassen im JSX bekommt jede so gebaute Karte seit der
-"plastischer"-Überarbeitung automatisch Tiefe: `index.css` definiert
-einen zusammengesetzten Selektor `.border.border-ind-line.bg-ind-bg`,
-der `background-color: var(--color-ind-bg-raised)` und
-`box-shadow: var(--shadow-ind-card)` ergänzt -- ohne dass diese
-Komponenten selbst etwas dafür tun müssten. **Wichtig für neuen Code:**
-genau diese drei Klassen (`border`, `border-ind-line`, `bg-ind-bg`)
-verwenden, egal in welcher Reihenfolge im JSX, sonst greift der
-Selektor nicht und die Karte bleibt flach.
-
-**Hero-Karten mit Passermarken** -- `Blueprint`-Komponente
-(`components/Blueprint.tsx`): für die prominentesten Karten einer Seite
-(Feed-Karten, Übersichtskarte auf Vorgang-Detail, Login-Karte). Trägt
-zusätzlich `--shadow-ind-raised` (kräftiger als der normale Karten-
-Schatten). Rendert automatisch 4 `<i class="corner tl/tr/bl/br">`-Spans:
-
+**Gruppierte Liste** (iOS-Einstellungen-Stil, `components/apple/
+GroupedList.tsx`) -- bevorzugt für Listen mit mehreren gleichartigen
+Zeilen (Profil-Werte, Einstellungen, Mehr-Menü):
 ```tsx
-<Blueprint className="bg-ind-bg p-4">...</Blueprint>
+<GroupedList>
+  <GroupedListRow onClick={...} navigierbar last={i === n - 1}>
+    <SymbolKachel icon={Folder} farbe="indigo" />
+    <div className="min-w-0">
+      <p className="truncate text-[17px] text-label">{titel}</p>
+    </div>
+  </GroupedListRow>
+</GroupedList>
 ```
+`GroupedListValueRow` für einfache Label/Wert-Paare. Trennlinie ist absolut
+positioniert (beginnt bei `left-4`, nicht am Zellenrand) statt per
+`border` -- `last` unterdrückt sie für die letzte Zeile.
 
-Nicht für jede kleine Box verwenden -- bei zu häufigem Einsatz wirkt die
-Passermarken-Deko unruhig statt akzentuierend.
-
-**Office-Desktop** -- `Karte` in `frontend/src/office/OfficeUi.tsx`:
-
+**Sheet** (`components/apple/Sheet.tsx`) -- Formulare/Dialoge statt
+eigener Vollbild-Route:
+```tsx
+<Sheet offen={offen} onClose={...} titel="Neuer Auftrag"
+  rechts={<button type="submit" form={FORM_ID}>Anlegen</button>}>
+  <form id={FORM_ID} ...>...</form>
+</Sheet>
 ```
-border border-ind-line bg-ind-bg
+Mobil: von unten mit Griff (`h-[5px] w-9 rounded-full bg-label3`). Ab
+768px (`md:`): zentrierter 540px-Dialog. Eine Implementierung für beides,
+Umschaltung rein per CSS-Breakpoint. `links`/`rechts` sind die
+Kopfzeilen-Aktionen (z. B. Abbrechen/Weiter) -- das `form`-Attribut auf
+dem Submit-Button verbindet ihn mit dem `<form>` außerhalb, ohne dass der
+Button selbst im DOM-Formular liegen muss.
+
+**Office-Desktop** -- `Karte`/`KennzahlKarte`/`TabellenRahmen`/
+`SeitenKopf`/`AnsichtUmschalter` in `frontend/src/office/OfficeUi.tsx`:
+```tsx
+<SeitenKopf titel="Vorgänge" anzahl={vorgaenge.length}>
+  <AnsichtUmschalter wert={ansicht} optionen={...} onWechsel={...} />
+</SeitenKopf>
+<Karte className="p-4">...</Karte>
 ```
+`SeitenKopf` rendert ein echtes `<h1>` (Pflicht, siehe §10). Änderung an
+`Karte` wirkt auf alle Office-Seiten, die sie verwenden.
 
-Wirkt auf **alle** Office-Seiten, die `Karte`/`KennzahlKarte`/
-`TabellenRahmen` verwenden -- eine Änderung an dieser einen Komponente
-propagiert app-weit im Office.
+**Whiteboard/Board-Feature** (`office/boards/nodes/*`, `pages/feld/
+boards/*`): behält bewusst Rundung/Schatten/frei wählbare Farbe -- das ist
+Nutzerinhalt (Sticky-Notes, Rahmen, Vorgangs-Karten auf einer Leinwand),
+kein Seiten-Chrome. Nur die Bedienelemente drumherum folgen dem
+Apple-Rezept.
 
-**Super-Admin-Shell** (`components/Layout.tsx`): gleiches Sidebar-/Header-
-Rezept wie `OfficeLayout.tsx` (Hexagon-Logo, bare Icons + Akzent-Strich,
-Haarlinien-Header).
-
-**Feed-Story-Chips** (einzige verbleibende Ausnahme mit altem Rezept) --
-`.card-soft`/`.card-soft-inner`, neumorph mit farbigem `--frame-color`-
-Rahmen. Historischer Restbestand, nicht als Vorlage für neue Flächen
-nehmen.
-
-**Whiteboard/Board-Feature** (`office/boards/nodes/*`,
-`pages/feld/boards/*`): behält bewusst Rundung/Schatten/frei wählbare
-Farbe -- das sind Objekte, die der Nutzer auf einer Leinwand platziert
-(Sticky-Notes, Rahmen, Vorgangs-Karten), kein Seiten-Chrome. Nur die
-Bedienelemente drumherum (Toolbar, Segmented-Umschalter Liste/Canvas, FAB)
-folgen dem Industry-Rezept.
-
-**Faustregel:** Feld-App → Haarlinien-Standard. Hero-Karte → `Blueprint`.
-Office → `Karte` aus `OfficeUi.tsx`. Whiteboard-Inhalt → unangetastet.
-Keine fünfte Variante erfinden.
+**Faustregel:** freistehende Box → `.card-ap`. Liste gleichartiger Zeilen
+→ `GroupedList`. Formular/Dialog → `Sheet`. Office → `OfficeUi.tsx`-
+Bausteine. Whiteboard-Inhalt → unangetastet.
 
 ---
 
 ## 4. Dark Mode
 
-Pflicht für **jede** Seite, kein Opt-out. Bei den `--color-ind-*`-Token
-passiert die Umschaltung automatisch über die CSS-Variable (siehe §2) --
-kein `dark:`-Pendant pro Klasse mehr nötig. Bei echten Semantikfarben
-(Status/Warnung/Fehler, die weiterhin auf Tailwinds Standardpalette
-laufen) weiterhin explizit ergänzen: `border-blue-400 text-blue-700
-dark:border-blue-600 dark:text-blue-300`.
+Pflicht für **jede** Seite, kein Opt-out. Umschaltung über `--color-*`-
+Token automatisch (siehe §2) -- kein `dark:`-Pendant pro Klasse nötig.
 
-"Standard im Betrieb": Dark Mode ist der für den Feld-Einsatz gedachte
-Normalfall (Design-Handoff-Vorgabe), technisch bleibt es aber Nutzer-
-Präferenz + OS-Default beim ersten Laden, kein Zwang.
-
-Umsetzung unverändert: Klassen-Strategie, `.dark`-Klasse auf `<html>`
-(`@custom-variant dark (&:is(.dark *))` in `index.css`,
-`frontend/src/context/ThemeContext.tsx`) -- **nicht** über `data-theme`
-oder reines `prefers-color-scheme`. Persistiert in `localStorage` unter
-`fieldvibe-theme`; Default = OS-Präferenz beim ersten Laden. Toggle:
-`ThemeToggle.tsx` (jetzt `.btn-industry-secondary btn-industry-icon`),
-Moon/Sun-Icon, `.btn-touch`.
+**Drei-Wege** statt binär (anders als die Vorversion): hell / dunkel /
+automatisch. `frontend/src/context/ThemeContext.tsx`, `localStorage`-Key
+`ui.appearance`. Im Automatisch-Fall folgt die App live
+`prefers-color-scheme`. `.dark`-Klasse auf `<html>` (`@custom-variant dark
+(&:is(.dark *))` in `index.css`) -- **nicht** über `data-theme`.
+`ThemeToggle.tsx` (`.btn-ap-toolbar`) in allen vier Layout-Shells
+eingebunden.
 
 ---
 
 ## 5. Layout
 
-**Feld-App** (`frontend/src/components/FeldLayout.tsx`, mobil):
-- `min-h-screen bg-ind-bg text-ind-ink`
-- `<main className="mx-auto max-w-2xl px-3 py-4">` -- die schmale mobile Spalte
-- Sticky-Header solide (`bg-ind-bg border-b border-ind-line`), **kein**
-  Frosted-Glass/Backdrop-Blur mehr (war `bg-white/80 backdrop-blur-md`)
-- Wortmarke Barlow Condensed uppercase: `Field<span className="text-ind-acc-txt">Vibe</span>`
-- Bottom-Padding kompensiert die schwebende Bottom-Nav
+**Feld-App** (`frontend/src/components/FeldLayout.tsx`, mobil, PWA):
+- `min-h-screen bg-gbg text-label`
+- `<main className="mx-auto max-w-2xl px-3 py-4">` -- schmale mobile Spalte
+- **Kein persistenter Marken-Header mehr** -- jede Seite trägt ihre eigene
+  `AbschnittskopfA`-Überschrift (`<h2>`). Für Barrierefreiheit trägt der
+  Rahmen zusätzlich einen unsichtbaren `<h1 className="sr-only">`
+  innerhalb von `<main>` (routenabhängiger Text über `useSeitentitel()`,
+  Fallback `"FieldVibe"`) -- **muss** innerhalb eines Landmarks liegen,
+  sonst meldet axe-core zusätzlich "region" (Phase D, siehe §10)
+- Impersonation-Banner, Offline-Hinweis, schmaler Sync-Ausstehend-Streifen
+  vor `<main>`
+- `BottomNav.tsx`: vier feste Tabs (Heute/Aufträge/Projekte/Mehr), deren
+  `TABS`-Liste direkt in der Komponente steht (eigene, kleinere Liste als
+  `navSeiten.ts` -- die speist nur den Inhalt des "Mehr"-Tabs, siehe §1),
+  kein FAB, kein wischbarer Zusatzbereich -- Suche/Darstellung/
+  Einstellungen/Abmelden leben vollständig im "Mehr"-Tab (`MehrPage.tsx`).
+  Aktiver Tab:
+  Icon behält `text-tint` (Icon, 3:1 reicht), das 10px-Label bekommt
+  zusätzlich `text-tint-text` (Text, braucht 4.5:1)
 
 **Office-Desktop** (`frontend/src/office/OfficeLayout.tsx`):
-- gleicher Seitenhintergrund (`bg-ind-bg`), aber feste Sidebar `w-56`
-  (einklappbar auf `w-16`), generiert aus `config/navSeiten.ts` --
-  **dieselbe Quelle** wie die mobile Bottom-Nav, damit eine neue Seite nie
-  nur in einer der beiden Oberflächen auftaucht
-- Sidebar-Kopf: 26×26px Hexagon-Logo-Box (`border border-ind-line-2 text-ind-acc`)
-  + Wortmarke, darunter Kategorie-Labels (`text-[10px] tracking-[0.14em]
-  uppercase text-ind-ink-3`) und Nav-Zeilen mit Akzent-Strich (siehe §1)
-- Content-Spalte `min-w-0 flex-1` mit eigenem Sticky-Header (solide,
-  `border-b border-ind-line`)
+- feste Sidebar `w-64` (einklappbar `w-16` über `eingeklappt`-State)
+- Content-Spalte trägt eigenen `<h1>` über `SeitenKopf` (siehe §3) --
+  **kein** zusätzlicher Landmark-Header nötig, anders als Feld-App
 - Kein `.btn-touch`, keine PWA, kein Service Worker
 
-**Super-Admin-Shell** (`frontend/src/components/Layout.tsx`): identisches
-Muster zur Office-Sidebar (Hexagon-Logo, Akzent-Strich-Nav, solider
-Header) -- eigene Datei, weil eigene Nav-Liste (`NAV_ITEMS`), aber
-visuell 1:1 dasselbe Rezept.
+**Super-Admin-Shell** (`frontend/src/components/Layout.tsx`):
+- eigene Sidebar-Instanz, eigene `NAV_ITEMS`-Liste, Hexagon-Logo +
+  Wortmarke (`Field<span className="text-tint-text">Vibe</span>` --
+  `text-tint-text`, nicht `text-tint`, siehe §2/§10)
+- Header-Titel jetzt als `<h1 className="truncate text-sm font-semibold
+  text-label">{seitentitel}</h1>` (vorher `<span>`, Phase D)
+- Ein echter `super_admin` sieht dieses Dashboard **immer**, auch auf
+  `office.<domain>` (`App.tsx`, `isPlatformAdmin`-Weiche, Zeile ~98/124/
+  128) -- nur beim Impersonieren eines Mandanten-Users fällt er in die
+  Office-Shell. Das ist bestehendes Anwendungsverhalten, **nicht** Teil
+  des UI-Redesigns, und kein Bug, falls ein Super-Admin-Account
+  scheinbar "immer" das Plattform-Menü statt der Office-Oberfläche sieht
 
-**Bottom-Nav "schwebende Insel"** (`frontend/src/components/BottomNav.tsx`):
+**Kundenportal** (`frontend/src/components/PortalLayout.tsx`,
+`/portal/*`): eigener, schlanker Rahmen, folgt denselben Token/Bausteinen.
 
-```
-fixed inset-x-3 bottom-3 z-40 flex items-center gap-1 rounded-full border border-ind-line bg-ind-bg py-1.5
-```
+**Hostname-Weiche** (`office/hostname.ts`, unverändert durch das
+Redesign): `istOfficeHost()` prüft `window.location.hostname.startsWith(
+"office.")`. Lokal ohne Subdomain: `?office=1` schaltet die Office-
+Oberfläche für die Sitzung frei (`sessionStorage`), `?office=0` wieder ab.
 
-Form/Struktur bewusst **nicht** eckig gemacht -- `rounded-full` (Pill),
-floatet 0.75rem von allen unteren Rändern ab, spannt nicht die volle
-Breite. Das ist ein eingespieltes, konfigurierbares Mobil-Pattern
-(Fixzone + zentraler FAB + swipebare "Rotunde"-Zone), keine reine Optik-
-Frage -- die Oberflächenbehandlung wechselte von Neumorphismus-Schatten
-(`.navbar-soft`) auf Haarlinie, trägt seit der "plastischer"-
-Überarbeitung aber wieder einen Schatten (`--shadow-ind-raised`, reine
-Graustufen statt Neumorphismus-Farbverlauf) -- passend zur "schwebenden
-Insel"-Metapher. Technisch greift dafür derselbe zusammengesetzte
-Karten-Selektor aus §3, hier per zusätzlichem `.rounded-full` auf den
-kräftigeren Schatten hochgestuft (siehe `index.css`).
-
-FAB:
-```
--mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-ind-btn-bg text-ind-btn-ink ring-4 ring-ind-bg shadow-ind-raised hover:bg-ind-btn-bg-h
-```
-Solide Fläche in `--color-ind-btn-bg` statt Cyan-Blau-Gradient + Clay-
-Schatten -- der neue Schatten (`shadow-ind-raised`-Utility, aus dem
-gleichnamigen `--shadow-ind-raised`-Token generiert) ist rein grau, kein
-Neumorphismus. Negativer Top-Margin lässt ihn weiterhin aus der Leiste
-herausragen; `ring-4` in Seitenhintergrundfarbe erzeugt weiterhin einen
-"Aussparungs"-Halo.
-
-`--klebe-abstand`: `6rem` Default (Feld-App, Platz für die Bottom-Nav), in
-`OfficeLayout` inline auf `0.75rem` überschrieben (kein Bottom-Nav dort).
-
-Marken-Akzentfarbe: **`--color-ind-acc`/`-acc-txt`** ("Graphit", dunkles
-Grau -- vorher Stahlblau, davor Cyan) -- Wortmarke, FAB, Fokus-Zustände
-etc. nutzen durchgängig diesen einen Akzent statt verschiedener
-Cyan/Blau-Gradients.
-
-> **Erledigt, nicht mehr aktuell**: `docs/DESIGN.md` (ältere Versionen)
-> beschrieb noch ein "Nur Kernaktionen + Mehr-Menü"-Bottom-Nav-Modell.
-> Aktuell ist das freikonfigurierbare Zwei-Zonen-System aus `BottomNav.tsx`
-> + `navSeiten.ts` + `BottomNavSettingsPage.tsx`.
+Alle vier Frontends teilen sich dieselben Token/Bausteine (`index.css`,
+`components/apple/*`) -- eine Änderung wirkt auf alle gleichzeitig.
 
 ---
 
@@ -408,142 +409,125 @@ Cyan/Blau-Gradients.
 
 **Primary**:
 ```
-btn-touch btn-industry btn-industry-primary
+btn-touch btn-ap btn-ap-primary
 ```
-Füllung `--color-ind-btn-bg`, Text `--color-ind-btn-ink`, Hover
-`--color-ind-btn-bg-h`. Ersetzt das alte `btn-clay bg-linear-to-r
-from-cyan-500 to-blue-600 ... text-white` -- **kein** Gradient, **kein**
-Pastellton. `.btn-clay` existiert nur noch als Restklasse in `index.css`,
-nicht mehr für neue Buttons verwenden. Seit der "plastischer"-
-Überarbeitung trägt `.btn-industry-primary` einen Bevel-Schatten
-(`--shadow-ind-btn`, reine Graustufen, kein Farbverlauf) und drückt sich
-im `:active`-Zustand sichtbar 1px nach unten (`--shadow-ind-btn-active`)
--- Tastengefühl über Bewegung statt Neumorphismus.
+Füllung `var(--tint-solid)`, weißer Text, `radius-ap-sm`. **Nicht**
+`background: var(--tint)` direkt verwenden -- siehe §2/§10 (Kontrast).
 
-**Secondary**:
+**Sekundär** (Standard-Button ohne Füllung):
 ```
-btn-touch btn-industry btn-industry-secondary
+btn-touch btn-ap
 ```
-Haarlinien-Rahmen (`--color-ind-line`), Hover-Fläche `--color-ind-hover`.
-Ersetzt `bg-slate-100 ... text-slate-700 dark:bg-stone-800 dark:text-stone-300`.
-Trägt seit der "plastischer"-Überarbeitung ebenfalls einen Karten-
-Schatten + `--color-ind-bg-raised` als Füllung (vorher transparent) und
-denselben Press-State wie Primary.
+`border-sepstrong`, `bg-card`, Hover `bg-fill`.
 
-**Ghost**:
+**Icon-only (Toolbar)**:
 ```
-btn-industry btn-industry-ghost
+btn-ap-toolbar
 ```
-Transparenter Rahmen, Text `--color-ind-acc-txt`, Hover
-`--color-ind-acc-soft`. Für textartige Aktionen ohne eigenen Rahmen im
-Ruhezustand.
+28×28px, transparent, Hover `bg-fill`. Für Office-Toolbars (`AnsichtUmschalter`
+daneben) und Sheet-Kopfzeilen.
 
-**Icon-only**:
+**Capsule (prominente CTA, 44px)**:
 ```
-btn-touch btn-industry btn-industry-secondary btn-industry-icon
+btn-ap-capsule btn-ap-capsule-primary    /* gefüllt, tint-solid */
+btn-ap-capsule btn-ap-capsule-secondary  /* bg-fill, Text tint-text */
 ```
-36×36px, kein Innenabstand. `.btn-touch` sorgt weiterhin für das 48px-
-Zielmaß in der Feld-App (die sichtbare Box bleibt 36px, die Klick-Fläche
-wächst).
 
 **Destructive** -- weiterhin Ausnahme mit echter Semantikfarbe statt
-Marken-Akzent:
-```
-border border-red-400 text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30
-```
-Bei reinen Icon-Löschbuttons weiterhin text-only mit Hover-Rot, Rot nicht
-im Ruhezustand: `text-ind-ink-3 hover:text-red-600 dark:hover:text-red-400`.
+Akzent, über die Status-Token (§8): `text-st-fehlt hover:bg-st-fehlt-bg`.
 
-`disabled:opacity-50` (bzw. `.btn-industry:disabled` mit 0.45 als CSS-
-Fallback) ist der durchgängige Deaktiviert-Zustand.
+**Segmented-Control** (`components/apple/SegmentedControl.tsx`, Office-
+Pendant `AnsichtUmschalter` in `OfficeUi.tsx`):
+```
+Wrapper: inline-flex rounded-[9px] bg-fill p-0.5
+aktiv:   bg-thumb font-semibold text-label shadow-[0_1px_3px_rgba(0,0,0,.14)]
+inaktiv: font-medium text-label   /* NICHT text-label2, siehe §10 */
+```
+Unterscheidung aktiv/inaktiv über Gewicht + Pille, nicht über Textfarbe --
+entspricht echten iOS-Segmented-Controls. `text-label2` im inaktiven
+Zustand unterschritt 4.5:1 Kontrast (axe-core, Phase D) und wurde deshalb
+in beiden Implementierungen auf `text-label` korrigiert.
 
-**Segmented/Toggle-Gruppe** (`.seg-industry`, bzw. das gleiche Muster
-manuell in `FeedPage.tsx`/`OfficeUi.tsx`'s `AnsichtUmschalter`):
-```
-Wrapper: flex border border-ind-line   (Kinder durch border-l border-ind-line getrennt)
-aktiv:   bg-ind-field text-ind-field-ink
-inaktiv: text-ind-ink-2 hover:bg-ind-hover
-```
-Ersetzt das alte `bg-slate-100 p-0.5` + `bg-white shadow-xs`-Aktiv-Rezept.
+`disabled:opacity-50` ist der durchgängige Deaktiviert-Zustand;
+`.btn-ap-primary:disabled`/`.field-ap`-Pendants haben zusätzlich eigene
+CSS-Fallbacks (`background: var(--fill2); color: var(--label3)`).
 
 ---
 
 ## 7. Formulare
 
-Lange Auswahllisten (z. B. Material-Katalog) **immer** als `SearchableSelect`
-(`frontend/src/components/SearchableSelect.tsx`), **nie** natives
-`<select>`: tippbare Combobox mit Live-Filter (Substring, case-insensitiv),
-schließt bei Klick außerhalb oder `Escape`.
+Lange Auswahllisten (z. B. Material-Katalog) weiterhin als
+`SearchableSelect` (`frontend/src/components/SearchableSelect.tsx`), nie
+natives `<select>`.
 
-Input-Rezept (auch generell für normale Formularfelder):
+Input-Rezept:
 ```
-input-industry   /* Haarlinien-Rahmen (--color-ind-line), transparenter Hintergrund, width:100% */
+field-ap   /* bg-card, border-sep, radius-ap-input (8px), 15px, width:100% */
 ```
-Ersetzt `w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm
-dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100`. Trägt seit
-der "plastischer"-Überarbeitung `--shadow-ind-input` (leichter
-Innenschatten) -- Inputs wirken dadurch "eingelassen", im Gegensatz zu
-den "erhabenen" Karten/Buttons. Für Inputs,
-die NICHT die volle Breite haben sollen (z. B. `w-20`, `flex-1` neben
-einem Button), `.input-industry` nicht verwenden (setzt `width:100%`
-unlayered, das gewinnt gegen eine Tailwind-Breiten-Utility) -- statt-
-dessen die Klassen einzeln setzen: `border border-ind-line bg-transparent
-px-2 py-1.5 text-sm text-ind-ink` + die gewünschte Breiten-Klasse.
-
-Dropdown-Panel nutzt weiterhin `shadow-lg` auch im Dark Mode (kein
-Haarlinien-Ersatz) -- weil es ein temporäres Overlay ist, keine ruhende
-Karte, plus `border border-ind-line`.
+Fokus: `outline: 2px solid var(--tint); border-color: var(--tint)`
+(`.field-ap:focus-visible`). Für Felder, die **nicht** die volle Breite
+haben sollen (`w-20`, `flex-1` neben einem Button): `.field-ap` nicht
+verwenden (setzt `width: 100%` unlayered, gewinnt gegen eine Tailwind-
+Breiten-Utility) -- stattdessen Klassen einzeln setzen: `border border-sep
+bg-card px-2.5 py-1.5 text-sm text-label rounded-[var(--radius-ap-input)]`
++ gewünschte Breite.
 
 ---
 
 ## 8. Status-/Semantikfarben
 
-Zentrale Quelle für Vorgang-Status: `frontend/src/config/vorgangDarstellung.ts`
-(`STATUS_BADGE`, `STATUS_LABEL`) -- **jetzt tatsächlich durchgängig
-importiert**. Vorher gab es hier eine Lücke: mehrere Seiten
-(`KundeProfilePage`, `AnlageProfilePage`, `DauerauftragDetailPage`,
-`StandortDetailPage`) hatten eine eigene, unabhängige Kopie mit alten
-Pastell-Werten -- bei einer Änderung an der zentralen Datei liefen diese
-Kopien lautlos auseinander. Beim Industry-Umbau wurden alle bekannten
-Kopien auf denselben Rahmen-Wert gebracht; bei neuem Code **immer aus
-`vorgangDarstellung.ts` importieren**, nie erneut duplizieren -- und falls
-doch eine weitere Kopie auftaucht, sie entfernen statt zu pflegen.
+Zentrale Quelle: `frontend/src/components/apple/status.ts`. **Nie** direkt
+Tailwind-Farben für Status verwenden, **immer** über
+`vorgangStatusZuToken()` + `StatusPille`/`StatusKreis`/`STATUS_PILLE_KLASSE`
+gehen -- lokale Kopien liefen in der Vorversion mehrfach lautlos
+auseinander (`KundeProfilePage`, `AnlageProfilePage`,
+`DauerauftragDetailPage`, `StandortDetailPage` hatten je eine eigene,
+fehlerhafte `STATUS_BADGE`-Kopie, in der `wartet_kunde` versehentlich das
+Token von `in_arbeit` teilte -- beim Redesign gefunden und korrigiert).
 
-Formel (Rahmen-Tag statt gefüllter Pille -- Industry-Rezept):
+```ts
+export type StatusKey = "neu" | "geplant" | "arbeit" | "fehlt" | "erledigt" | "wartet";
 ```
-border border-{farbe}-400 text-{farbe}-700 dark:border-{farbe}-600 dark:text-{farbe}-300
+
+| Vorgang.status | Status-Token | Farbe |
+|---|---|---|
+| `neu` | `neu` | Blau |
+| `geplant` | `geplant` | Grau |
+| `in_arbeit` | `arbeit` | Orange |
+| `wartet_kunde` | `wartet` | Violett |
+| `abgeschlossen` | `erledigt` | Grün |
+| `abgerechnet` | `erledigt` (Label „Abgerechnet") | Grün |
+| `storniert` | `geplant` (Titel durchgestrichen) | Grau |
+| Mangel-Status | `fehlt` | Rot |
+
+Jedes Token hat drei CSS-Varianten (`index.css`, alle mit eigenem, für
+4.5:1 abgestimmtem Text-Ton -- **nicht** Apples reine Systemfarbe, die
+reicht als Fließtext nicht):
 ```
-Aufrufer setzen **kein** zusätzliches `rounded-full`/`bg-*` mehr um den
-Wert (das Rahmen-Rezept bringt schon `border` mit, ein umschließendes
-`rounded-full px-2 py-1 ...` reicht als Wrapper-Padding, ohne eigene
-Farbe/Form).
+st-{key}        /* Text (abgedunkelt/aufgehellt für Kontrast) */
+st-{key}-bg     /* Pillen-Hintergrund, halbtransparent */
+st-{key}-dot    /* kräftigerer Punkt/Indikator-Ton */
+```
 
-Semantische Konvention, durchgängig über alle Status-Maps (Vorgang,
-Rechnung, Angebot, Mandant, Vorgang-Anfrage, ...):
+Verwendung:
+```tsx
+<StatusPille status={vorgangStatusZuToken(v.status)} label={STATUS_LABEL[status]} />
+```
+`StatusPille` (`components/apple/StatusPille.tsx`) rendert **immer** Punkt
+**und** Text -- Farbe transportiert Status nie allein.
 
-| Farbe | Bedeutung |
-|---|---|
-| blue | neu / versendet / informativ |
-| amber / orange | in Arbeit / wartend / teilweise |
-| green | erledigt / bezahlt / aktiv |
-| slate / stone (neutral) | Entwurf oder Endzustand (`entwurf`, `abgerechnet`, `storniert`) |
-| rose / red | abgelehnt / gekündigt |
-| purple | geplant / terminiert |
+`statusDotFarbe(status)` liest den aktuell geltenden Hex-Wert eines Tokens
+zur Laufzeit aus den CSS-Custom-Properties -- für imperative APIs
+(Mapbox-GL-Pins), die keine Tailwind-Klassen lesen können.
 
-Bei jeder neuen Statusart: erst prüfen, ob eine der bestehenden Farben
-passt, bevor eine neue gewählt wird.
-
-Überfällig/Dringlichkeit (steht für sich, kein Teil einer Status-Map):
-`text-red-600 dark:text-red-400`. Warnung/Fehler ohne Status-Semantik
-(z. B. Offline-Hinweis, Formular-Validierung) nutzen dagegen die
-`ind-warn`/`ind-bad`-Token, siehe §2.
+Überfällig/Dringlichkeit (kein Teil einer Status-Map, steht für sich):
+`text-st-fehlt`/`bg-st-fehlt-bg`.
 
 ---
 
 ## 9. Spacing-Rhythmus
 
-Basis-Einheit bewegt sich durchgängig zwischen `1`-`4` (0.25rem-1rem),
-unverändert durch den Industry-Umbau:
+Unverändert durch das Redesign, Basis-Einheit zwischen `1`-`4` (0.25rem–1rem):
 
 | Klasse | Verwendung |
 |---|---|
@@ -551,4 +535,40 @@ unverändert durch den Industry-Umbau:
 | `space-y-4` (1rem) | Standard für eigenständige Abschnitte |
 | `p-3` | Karten-Innenabstand, kompakte Listenkarten |
 | `p-4` | Karten-Innenabstand, Formular-/Detailkarten |
-| `p-6` / `p-8` | praktisch nie, außer bei Leer-/Ladezuständen ganzer Seiten (`py-10`, `space-y-8`) |
+| `p-6` / `p-8` | praktisch nie, außer Leer-/Ladezustände ganzer Seiten |
+
+---
+
+## 10. Barrierefreiheit (Phase D: Playwright + axe-core)
+
+`frontend/playwright.config.ts` + `frontend/e2e/apple-redesign.spec.ts`:
+Login + Screenshot + axe-core-Prüfung für die drei Referenz-Shells
+(Super-Admin, Feld-App, Office) je hell/dunkel, gegen einen echten
+lokalen Dev-Stack (Postgres nativ, `moto_server` als MinIO-Ersatz, echte
+Seed-User). **Nur Chromium** -- kein WebKit in der Entwicklungs-Sandbox
+installiert, siehe `docs/ui-redesign/REVIEW.md`.
+
+Aus den gefundenen und behobenen Befunden verbindlich abgeleitete Regeln
+für neuen Code:
+
+1. **Genau ein `<h1>` pro Seite, innerhalb eines Landmarks.** Ein `<h1>`
+   direkt als Geschwister von `<main>` (statt darin) lässt axe-core
+   zusätzlich "region: All page content should be contained by
+   landmarks" melden.
+2. **`tint` nie für echten Text oder für Flächen unter weißem Text.**
+   `text-tint-text` für Links/Labels, `bg-tint-solid`/`.btn-ap-primary`
+   für gefüllte Buttons mit weißem Text. `tint` bleibt Icons/Rändern/
+   Indikatoren vorbehalten (dort reichen 3:1, WCAG 1.4.11).
+3. **Inaktive Segmented-Control-Beschriftung: `text-label`, nicht
+   `text-label2`.** Siehe §6.
+4. Vor jedem Bulk-Sed über Farbklassen: Zahlen-Alternierungen im Regex
+   **immer** mit `\b` abschließen (`(50|100|200)\b`, nicht `(50|100|200)`)
+   -- ohne Wortgrenze matcht `50` als Präfix von `500` und verstümmelt
+   Klassen. Ein solcher Vorfall ist in dieser Session passiert, wurde
+   vorwärts gefixt (kein History-Rewrite) und ist in REVIEW.md Abschnitt 6
+   vollständig dokumentiert -- als Warnung für künftige Bulk-Ersetzungen,
+   nicht nur als Historie.
+
+Vor dem Committen größerer Farb-/Layout-Änderungen: `cd frontend && npx
+playwright test` laufen lassen (Dev-Server + Backend müssen laufen) und
+auf `0 Verstoesse` in allen sechs Szenarien prüfen.
