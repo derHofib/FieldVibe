@@ -680,6 +680,12 @@ export interface Zeiterfassung {
   vorgemerkt_am: string | null;
   gebucht_von: string | null;
   gebucht_am: string | null;
+  // Fahrten mit km (Stufe 3, docs/konzepte/ZEITERFASSUNG.md Abschnitt 11) --
+  // km/fahrzeug_id sind nur bei kategorie="fahrzeit" gesetzt, quelle wird
+  // ausschliesslich vom Server vergeben.
+  km: string | null;
+  fahrzeug_id: string | null;
+  quelle: "timer" | "manuell";
   created_at: string;
   updated_at: string;
 }

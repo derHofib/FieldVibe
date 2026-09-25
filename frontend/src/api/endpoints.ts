@@ -967,6 +967,9 @@ export const zeiterfassungApi = {
     lv_position_id?: string;
     // Nur mit dem Recht "Zeiten buchen" wirksam ("für andere nachtragen").
     techniker_id?: string;
+    // Nur bei kategorie="fahrzeit" erlaubt (Stufe 3).
+    km?: string;
+    fahrzeug_id?: string;
   }) =>
     apiFetch<Zeiterfassung>("/api/zeiterfassung/manuell", {
       method: "POST",
@@ -982,6 +985,8 @@ export const zeiterfassungApi = {
       taetigkeit: string;
       abrechenbar: boolean;
       lv_position_id: string | null;
+      km: string | null;
+      fahrzeug_id: string | null;
       // Pflicht beim Bearbeiten eines fremden Eintrags (Recht "Zeiten buchen").
       grund: string;
     }>

@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { ApiError } from "../api/client";
-import { zeiterfassungApi } from "../api/endpoints";
+import { anlagenApi, fahrzeugZuweisungenApi, zeiterfassungApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import type { Zeiterfassung, ZeiterfassungKategorie } from "../types";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusGesperrt, buchungsstatusZuToken } from "../utils/zeiterfassung";
@@ -51,6 +51,10 @@ const AKTION_LABEL: Record<string, string> = {
 
 const FORM_ID = "zeiteintrag-formular";
 
+// Nicht-blockierender Hinweis (Konzept Abschnitt 11) -- keine harte Grenze,
+// nur ein Hinweis auf einen vermutlichen Tippfehler bei sehr hohen km.
+const KM_HINWEIS_SCHWELLE = 1500;
+
 /** Sheet zum Anlegen ("+ Zeit nachtragen") oder Bearbeiten eines bereits
  * beendeten Zeiterfassungs-Eintrags an einem Vorgang (Stufe 1+2, siehe
  * docs/konzepte/ZEITERFASSUNG.md). Laufende Timer laufen nie hier durch --
@@ -62,12 +66,17 @@ export function ZeiteintragSheet({
   onClose,
   vorgangId,
   eintrag,
+  initialKategorie,
   onGespeichert,
 }: {
   offen: boolean;
   onClose: () => void;
   vorgangId: string;
   eintrag?: Zeiterfassung | null;
+  // Vorbelegung beim Neuanlegen, z.B. "+ Fahrt erfassen" startet direkt mit
+  // kategorie="fahrzeit". Ohne Wirkung beim Bearbeiten eines bestehenden
+  // Eintrags (dessen Kategorie hat Vorrang).
+  initialKategorie?: ZeiterfassungKategorie;
   onGespeichert: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -80,7 +89,9 @@ export function ZeiteintragSheet({
   const jetzt = new Date();
   const vorEinerStunde = new Date(jetzt.getTime() - 60 * 60 * 1000);
 
-  const [kategorie, setKategorie] = useState<ZeiterfassungKategorie>(eintrag?.kategorie ?? "auftrag");
+  const [kategorie, setKategorie] = useState<ZeiterfassungKategorie>(
+    eintrag?.kategorie ?? initialKategorie ?? "auftrag",
+  );
   const [taetigkeit, setTaetigkeit] = useState(eintrag?.taetigkeit ?? "");
   const [startAt, setStartAt] = useState(
     toLocalInputValue(eintrag ? new Date(eintrag.start_at) : vorEinerStunde),
@@ -91,14 +102,38 @@ export function ZeiteintragSheet({
   const [abrechenbar, setAbrechenbar] = useState(
     eintrag?.abrechenbar ?? kategorie === "auftrag",
   );
+  const [km, setKm] = useState(eintrag?.km ?? "");
+  const [fahrzeugId, setFahrzeugId] = useState(eintrag?.fahrzeug_id ?? "");
   const [grund, setGrund] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const istFahrt = kategorie === "fahrzeit";
 
   const { data: verlauf } = useQuery({
     queryKey: ["zeiterfassung-verlauf", eintrag?.id],
     queryFn: () => zeiterfassungApi.verlauf(eintrag!.id),
     enabled: !!eintrag && reiter === "verlauf",
   });
+
+  const { data: fahrzeuge } = useQuery({
+    queryKey: ["anlagen-fahrzeuge"],
+    queryFn: () => anlagenApi.list(undefined, "fahrzeug"),
+    enabled: istFahrt,
+  });
+
+  // Vorbelegung mit dem zugewiesenen Fahrzeug -- nur beim Neuanlegen, nicht
+  // wenn bereits ein (ggf. bewusst leeres) Fahrzeug am Eintrag haengt.
+  const { data: zugewiesenesFahrzeug } = useQuery({
+    queryKey: ["fahrzeug-zuweisung-mir"],
+    queryFn: fahrzeugZuweisungenApi.mir,
+    enabled: istFahrt && !istBearbeiten,
+  });
+  useEffect(() => {
+    if (zugewiesenesFahrzeug && !fahrzeugId) {
+      setFahrzeugId(zugewiesenesFahrzeug.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zugewiesenesFahrzeug]);
 
   function invalidateUndSchliessen() {
     queryClient.invalidateQueries({ queryKey: ["zeiterfassung", vorgangId] });
@@ -116,6 +151,7 @@ export function ZeiteintragSheet({
         ende_at: new Date(endeAt).toISOString(),
         taetigkeit,
         abrechenbar,
+        ...(istFahrt ? { km: km || undefined, fahrzeug_id: fahrzeugId || undefined } : {}),
       }),
     onSuccess: invalidateUndSchliessen,
     onError: (err) =>
@@ -130,6 +166,10 @@ export function ZeiteintragSheet({
         ende_at: new Date(endeAt).toISOString(),
         taetigkeit,
         abrechenbar,
+        // Beim Wechsel weg von "fahrzeit" werden km/Fahrzeug explizit
+        // geloescht statt stillschweigend stehen zu bleiben.
+        km: istFahrt ? km || null : null,
+        fahrzeug_id: istFahrt ? fahrzeugId || null : null,
         ...(istFremd ? { grund } : {}),
       }),
     onSuccess: invalidateUndSchliessen,
@@ -253,6 +293,16 @@ export function ZeiteintragSheet({
                 {formatZeitpunkt(eintrag.start_at)} – {eintrag.ende_at ? formatZeitpunkt(eintrag.ende_at) : "—"}
               </dd>
             </div>
+            {eintrag.kategorie === "fahrzeit" && eintrag.km && (
+              <div className="flex justify-between">
+                <dt className="text-label2">km</dt>
+                <dd className="text-label">
+                  {eintrag.km} km
+                  {eintrag.fahrzeug_id &&
+                    ` · ${fahrzeuge?.find((f) => f.id === eintrag.fahrzeug_id)?.bezeichnung ?? "—"}`}
+                </dd>
+              </div>
+            )}
             {eintrag.gebucht_am && (
               <div className="flex justify-between">
                 <dt className="text-label2">Gebucht am</dt>
@@ -337,6 +387,42 @@ export function ZeiteintragSheet({
               />
             </div>
           </div>
+
+          {istFahrt && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-label2">km</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  inputMode="decimal"
+                  value={km}
+                  onChange={(e) => setKm(e.target.value)}
+                  placeholder="0,0"
+                  className="field-ap"
+                />
+                {Number(km) > KM_HINWEIS_SCHWELLE && (
+                  <p className="mt-1 text-xs text-st-fehlt">Ungewöhnlich viele km — bitte prüfen.</p>
+                )}
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-label2">Fahrzeug</label>
+                <select
+                  value={fahrzeugId}
+                  onChange={(e) => setFahrzeugId(e.target.value)}
+                  className="field-ap"
+                >
+                  <option value="">—</option>
+                  {fahrzeuge?.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.bezeichnung}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
 
           <label className="flex items-center gap-2 text-sm text-label">
             <input

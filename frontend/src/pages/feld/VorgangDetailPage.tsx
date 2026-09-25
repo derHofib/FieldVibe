@@ -451,9 +451,10 @@ export function VorgangDetailPage({
   const [taetigkeit, setTaetigkeit] = useState("");
   // Zeit-Tab: Sheet zum Anlegen/Bearbeiten eines Eintrags (Stufe 1, siehe
   // docs/konzepte/ZEITERFASSUNG.md) -- offen, wenn zeitSheetModus gesetzt ist.
-  // "neu" oeffnet leer (vorbelegt mit diesem Vorgang), ein Eintrag oeffnet
+  // "neu" oeffnet leer (vorbelegt mit diesem Vorgang), "neu-fahrt" oeffnet
+  // leer mit kategorie="fahrzeit" vorbelegt (Stufe 3), ein Eintrag oeffnet
   // zum Bearbeiten.
-  const [zeitSheetModus, setZeitSheetModus] = useState<"neu" | Zeiterfassung | null>(null);
+  const [zeitSheetModus, setZeitSheetModus] = useState<"neu" | "neu-fahrt" | Zeiterfassung | null>(null);
   // Kleines Taetigkeits-Sheet, das automatisch nach "Stoppen" erscheint --
   // der gerade beendete Eintrag, oder null wenn keins offen ist.
   const [nachStoppenEintrag, setNachStoppenEintrag] = useState<Zeiterfassung | null>(null);
@@ -1237,6 +1238,7 @@ export function VorgangDetailPage({
     return summe + (new Date(e.ende_at).getTime() - new Date(e.start_at).getTime()) / 1000;
   }, 0);
   const gesamtStunden = formatSekundenAlsHHMM(gesamtSekunden);
+  const gesamtKm = (zeiterfassungListe ?? []).reduce((summe, e) => summe + (Number(e.km) || 0), 0);
 
   const timerLaeuftHier = laufenderTimer && laufenderTimer.vorgang_id === id;
   const timerLaeuftAnderswo = laufenderTimer && laufenderTimer.vorgang_id !== id;
@@ -1916,15 +1918,23 @@ export function VorgangDetailPage({
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-label">
-              Bisher {gesamtStunden} Std.
+              Bisher {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
             </span>
             {!VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) && (
-              <button
-                onClick={() => setZeitSheetModus("neu")}
-                className="btn-touch text-xs font-medium text-tint"
-              >
-                + Zeit nachtragen
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setZeitSheetModus("neu-fahrt")}
+                  className="btn-touch text-xs font-medium text-tint"
+                >
+                  + Fahrt erfassen
+                </button>
+                <button
+                  onClick={() => setZeitSheetModus("neu")}
+                  className="btn-touch text-xs font-medium text-tint"
+                >
+                  + Zeit nachtragen
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -2033,6 +2043,7 @@ export function VorgangDetailPage({
                             onClick={() => setZeitSheetModus(e)}
                           >
                             {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                            {e.km && <span className="ml-1 font-normal text-label2">· {e.km} km</span>}
                           </td>
                           <td className="cursor-pointer px-2 py-1.5" onClick={() => setZeitSheetModus(e)}>
                             <StatusPille
@@ -2095,6 +2106,7 @@ export function VorgangDetailPage({
                         <span className="flex shrink-0 items-center gap-2">
                           <span className="font-medium text-label">
                             {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                            {e.km && <span className="ml-1 font-normal text-label2">· {e.km} km</span>}
                           </span>
                           <StatusPille
                             status={buchungsstatusZuToken(e.buchungsstatus)}
@@ -3309,7 +3321,8 @@ export function VorgangDetailPage({
           offen
           onClose={() => setZeitSheetModus(null)}
           vorgangId={id!}
-          eintrag={zeitSheetModus === "neu" ? null : zeitSheetModus}
+          eintrag={zeitSheetModus === "neu" || zeitSheetModus === "neu-fahrt" ? null : zeitSheetModus}
+          initialKategorie={zeitSheetModus === "neu-fahrt" ? "fahrzeit" : undefined}
           onGespeichert={() => setZeitSheetModus(null)}
         />
       )}
