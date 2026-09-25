@@ -133,6 +133,12 @@ class ZeiterfassungRead(BaseModel):
     # die ORM-Instanz gesetzt, siehe _mit_vorgangsnummer in
     # app/api/routes/zeiterfassung.py. None, wenn kein Vorgang verknuepft ist.
     vorgangsnummer: str | None = None
+    # Transient wie vorgangsnummer -- fuer die Seite "Zeiten buchen"
+    # (Gruppierung/Filter nach Kunde/Auftrag/Projekt, siehe _mit_vorgang_kontext
+    # in app/api/routes/zeiterfassung.py). None, wenn kein Vorgang verknuepft ist.
+    vorgang_kunde_id: UUID | None = None
+    vorgang_auftrag_id: UUID | None = None
+    vorgang_projekt_id: UUID | None = None
     techniker_id: UUID
     start_at: datetime
     ende_at: datetime | None

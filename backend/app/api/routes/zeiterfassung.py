@@ -71,12 +71,17 @@ def _tagesbeginn(d: date) -> datetime:
     return datetime.combine(d, time.min, tzinfo=timezone.utc)
 
 
-async def _mit_vorgangsnummern(
+async def _mit_vorgang_kontext(
     session: AsyncSession, eintraege: list[Zeiterfassung]
 ) -> list[Zeiterfassung]:
-    """Setzt das transiente ZeiterfassungRead.vorgangsnummer-Feld -- ein
-    einzelner Batch-Lookup statt N+1, siehe gleiches Muster bei
-    VorgangRead.zugewiesener_name in app/api/routes/vorgaenge.py."""
+    """Setzt die transienten ZeiterfassungRead-Felder vorgangsnummer sowie
+    vorgang_kunde_id/_auftrag_id/_projekt_id -- ein einzelner Batch-Lookup
+    statt N+1, siehe gleiches Muster bei VorgangRead.zugewiesener_name in
+    app/api/routes/vorgaenge.py. Die drei zusaetzlichen IDs sind fuer die
+    Seite "Zeiten buchen" (Konzept Abschnitt 7.3): Gruppierung/Filter nach
+    Kunde/Auftrag/Projekt, ohne dass das Frontend fuer jeden Eintrag den
+    Vorgang einzeln nachladen muesste -- kostet hier nichts extra, der
+    Vorgang ist ohnehin schon geladen."""
     vorgang_ids = {e.vorgang_id for e in eintraege if e.vorgang_id is not None}
     vorgaenge_by_id: dict[UUID, Vorgang] = {}
     for vorgang_id in vorgang_ids:
@@ -86,6 +91,9 @@ async def _mit_vorgangsnummern(
     for eintrag in eintraege:
         vorgang = vorgaenge_by_id.get(eintrag.vorgang_id) if eintrag.vorgang_id else None
         eintrag.vorgangsnummer = vorgang.vorgangsnummer if vorgang else None
+        eintrag.vorgang_kunde_id = vorgang.kunde_id if vorgang else None
+        eintrag.vorgang_auftrag_id = vorgang.auftrag_id if vorgang else None
+        eintrag.vorgang_projekt_id = vorgang.projekt_id if vorgang else None
     return eintraege
 
 
@@ -134,6 +142,13 @@ async def list_zeiterfassung(
     von: date | None = Query(default=None),
     bis: date | None = Query(default=None),
     buchungsstatus: str | None = Query(default=None),
+    # Ab hier fuer die Seite "Zeiten buchen" (Konzept Abschnitt 7.3) --
+    # Filter ueber ALLE Vorgaenge statt nur einen.
+    kunde_id: UUID | None = Query(default=None),
+    auftrag_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
+    laufend: bool | None = Query(default=None),
+    vermerkt_aelter_als_tage: int | None = Query(default=None, ge=0),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Zeiterfassung]:
@@ -150,6 +165,20 @@ async def list_zeiterfassung(
         stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
     if bis:
         stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
+    if laufend is not None:
+        stmt = stmt.where(Zeiterfassung.ende_at.is_(None) if laufend else Zeiterfassung.ende_at.is_not(None))
+    if vermerkt_aelter_als_tage is not None:
+        grenze = datetime.now(timezone.utc) - timedelta(days=vermerkt_aelter_als_tage)
+        stmt = stmt.where(Zeiterfassung.buchungsstatus == "vermerkt", Zeiterfassung.start_at < grenze)
+    if kunde_id or auftrag_id or projekt_id:
+        vorgang_filter_stmt = select(Vorgang.id)
+        if kunde_id:
+            vorgang_filter_stmt = vorgang_filter_stmt.where(Vorgang.kunde_id == kunde_id)
+        if auftrag_id:
+            vorgang_filter_stmt = vorgang_filter_stmt.where(Vorgang.auftrag_id == auftrag_id)
+        if projekt_id:
+            vorgang_filter_stmt = vorgang_filter_stmt.where(Vorgang.projekt_id == projekt_id)
+        stmt = stmt.where(Zeiterfassung.vorgang_id.in_(vorgang_filter_stmt))
 
     if techniker_id:
         # Ausdruecklich nach einem Techniker gefiltert (z.B. die eigene
@@ -176,7 +205,7 @@ async def list_zeiterfassung(
             )
         )
     result = await session.execute(stmt)
-    return await _mit_vorgangsnummern(session, list(result.scalars().all()))
+    return await _mit_vorgang_kontext(session, list(result.scalars().all()))
 
 
 @router.get(
@@ -427,7 +456,7 @@ async def get_laufender_timer(
     )
     eintrag = result.scalar_one_or_none()
     if eintrag is not None:
-        await _mit_vorgangsnummern(session, [eintrag])
+        await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
@@ -501,7 +530,7 @@ async def start_timer(
         "timer",
         {"vorgang_id": str(body.vorgang_id), "techniker_id": str(auth.user_id), "laeuft": True},
     )
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
@@ -583,7 +612,7 @@ async def stop_timer(
         "timer",
         {"vorgang_id": str(eintrag.vorgang_id), "techniker_id": str(eintrag.techniker_id), "laeuft": False},
     )
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
@@ -758,7 +787,7 @@ async def manuellen_eintrag_anlegen(
     )
     await session.flush()
     await session.refresh(eintrag)
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
@@ -832,7 +861,7 @@ async def zeiterfassung_aktualisieren(
             eintrag.taetigkeit = daten["taetigkeit"]
         await session.flush()
         await session.refresh(eintrag)
-        await _mit_vorgangsnummern(session, [eintrag])
+        await _mit_vorgang_kontext(session, [eintrag])
         return eintrag
 
     _pruefe_buchungsstatus_bearbeitbar(eintrag)
@@ -893,7 +922,7 @@ async def zeiterfassung_aktualisieren(
         setattr(eintrag, feld, wert)
     await session.flush()
     await session.refresh(eintrag)
-    await _mit_vorgangsnummern(session, [eintrag])
+    await _mit_vorgang_kontext(session, [eintrag])
     return eintrag
 
 
@@ -1007,7 +1036,7 @@ async def zeiterfassung_vormerken(
     await session.flush()
     for e in ergebnis:
         await session.refresh(e)
-    await _mit_vorgangsnummern(session, ergebnis)
+    await _mit_vorgang_kontext(session, ergebnis)
     return ergebnis
 
 
@@ -1053,7 +1082,7 @@ async def zeiterfassung_vormerkung_zurueckziehen(
     await session.flush()
     for e in ergebnis:
         await session.refresh(e)
-    await _mit_vorgangsnummern(session, ergebnis)
+    await _mit_vorgang_kontext(session, ergebnis)
     return ergebnis
 
 
@@ -1109,7 +1138,7 @@ async def zeiterfassung_buchen(
     await session.flush()
     for e in ergebnis:
         await session.refresh(e)
-    await _mit_vorgangsnummern(session, ergebnis)
+    await _mit_vorgang_kontext(session, ergebnis)
     return ergebnis
 
 
@@ -1162,7 +1191,7 @@ async def zeiterfassung_buchung_stornieren(
     await session.flush()
     for e in ergebnis:
         await session.refresh(e)
-    await _mit_vorgangsnummern(session, ergebnis)
+    await _mit_vorgang_kontext(session, ergebnis)
     return ergebnis
 
 
