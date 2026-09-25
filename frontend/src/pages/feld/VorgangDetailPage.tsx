@@ -208,7 +208,7 @@ function EventBubble({
   }
 
   return (
-    <div className="mb-3 border border-sep bg-card p-3">
+    <div className="mb-3 card-ap p-3">
       <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
         <div className="flex items-center gap-1.5">
           <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
@@ -277,7 +277,7 @@ function EventBubble({
 // nur mit Betreff/Empfaenger statt Freitext-Body.
 function EmailBubble({ email }: { email: EmailLog }) {
   return (
-    <div className="mb-3 border border-sep bg-card p-3">
+    <div className="mb-3 card-ap p-3">
       <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
         <div className="flex items-center gap-1.5">
           <span>{new Date(email.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
@@ -1183,7 +1183,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
-      <div id="abschnitt-uebersicht" className="scroll-mt-4 border border-sep bg-card p-4">
+      <div id="abschnitt-uebersicht" className="scroll-mt-4 card-ap p-4">
         <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
         <h1 className="font-heading text-lg font-semibold uppercase tracking-wide text-label">{vorgang.titel}</h1>
         {parentVorgang && (
@@ -1676,7 +1676,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         ))}
       </nav>
 
-      <div id="abschnitt-zeit" className="scroll-mt-4 border border-sep bg-card p-3">
+      <div id="abschnitt-zeit" className="scroll-mt-4 card-ap p-3">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
           <span className="text-sm font-medium text-label">
@@ -1763,7 +1763,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div id="abschnitt-termine" className="scroll-mt-4 border border-sep bg-card p-3">
+      <div id="abschnitt-termine" className="scroll-mt-4 card-ap p-3">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Termine</h2>
           {kannDisponieren && (
@@ -1895,7 +1895,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
       {vorgang && <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
 
-      <div id="abschnitt-maengel" className="scroll-mt-4 border border-sep bg-card p-3">
+      <div id="abschnitt-maengel" className="scroll-mt-4 card-ap p-3">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Mängel</h2>
           <div className="flex items-center gap-3">
@@ -2012,7 +2012,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {(verknuepfteAufgaben ?? []).length > 0 && (
-        <div className="scroll-mt-4 border border-sep bg-card p-3">
+        <div className="scroll-mt-4 card-ap p-3">
           <h2 className="font-heading mb-2 text-sm font-semibold uppercase tracking-wide text-label">Verknüpfte Aufgaben</h2>
           {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der
               Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
@@ -2039,7 +2039,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
-      <div id="abschnitt-material" className="scroll-mt-4 border border-sep bg-card p-3">
+      <div id="abschnitt-material" className="scroll-mt-4 card-ap p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Positionen</h2>
           <div className="flex flex-wrap gap-3">
@@ -2377,7 +2377,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {kannPartnerVerwalten && (
-        <div className="border border-sep bg-card p-3">
+        <div className="card-ap p-3">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Nachunternehmer</h2>
             {!vorgang.partner_id && (
@@ -2539,7 +2539,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {!kundenansicht && (
-        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 border border-sep bg-card p-3">
+        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 card-ap p-3">
           <div className="relative">
             <textarea
               value={comment}
@@ -2548,8 +2548,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               rows={2}
               className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
             />
+            {/* .card-ap bringt schon eine eigene box-shadow mit (siehe
+             * Cascade-Layer-Falle in DESIGN.md) -- shadow-lg hier waere
+             * tot, deshalb nicht ergaenzt. */}
             {showMentionPicker && (
-              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto border border-sep bg-card shadow-lg">
+              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto card-ap">
                 {users?.map((u) => (
                   <button
                     key={u.id}
