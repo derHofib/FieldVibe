@@ -79,6 +79,21 @@
   --mono-grad-1: #a5abb8;
   --mono-grad-2: #858994;
 
+  /* Bereichs-Toene (IconBadge/StatusBadge) -- rein illustrative
+     Kategorie-Unterscheidung zwischen fachlich unabhaengigen Bereichen
+     (Kunden/Partner/Material/...), kein Status/keine Herkunft, deshalb wie
+     die Symbol-Kachel-Farben in beiden Modi identisch. Apple-Systemfarben,
+     damit sie sich klar von den Status-Token (Abschnitt 3.2) unterscheiden. */
+  --tone-sky: #007aff;
+  --tone-violet: #af52de;
+  --tone-amber: #ff9500;
+  --tone-rose: #ff375f;
+  --tone-emerald: #34c759;
+  --tone-indigo: #5856d6;
+  --tone-cyan: #32ade6;
+  --tone-slate: #8e8e93;
+  --tone-teal: #30b0c7;
+
   /* Schalter (Switch, Abschnitt 4.2) -- an-Zustand ist Apple systemGreen,
      in beiden Modi identisch (kein Statustoken, eigene Bedeutung). */
   --switch-on: #34c759;
@@ -146,6 +161,16 @@
   --color-tile-orange: var(--tile-orange);
   --color-tile-indigo: var(--tile-indigo);
   --color-tile-gray: var(--tile-gray);
+
+  --color-tone-sky: var(--tone-sky);
+  --color-tone-violet: var(--tone-violet);
+  --color-tone-amber: var(--tone-amber);
+  --color-tone-rose: var(--tone-rose);
+  --color-tone-emerald: var(--tone-emerald);
+  --color-tone-indigo: var(--tone-indigo);
+  --color-tone-cyan: var(--tone-cyan);
+  --color-tone-slate: var(--tone-slate);
+  --color-tone-teal: var(--tone-teal);
 
   --shadow-card: var(--shadow-card-value);
 
