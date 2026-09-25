@@ -79,9 +79,9 @@ function Stammdaten({
       .filter(Boolean)
       .join(", ");
     return (
-      <div className="border border-ind-line bg-ind-bg p-4">
+      <div className="border border-sep bg-card p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-ind-ink-3">Stammdaten</h2>
+          <h2 className="text-sm font-semibold text-label2">Stammdaten</h2>
           {kannVerwalten && (
             <button
               onClick={() => {
@@ -95,15 +95,15 @@ function Stammdaten({
           )}
         </div>
         {adressZeile ? (
-          <p className="text-sm text-ind-ink-2">{adressZeile}</p>
+          <p className="text-sm text-label">{adressZeile}</p>
         ) : (
-          <p className="text-sm text-ind-ink-3">Keine Adresse hinterlegt.</p>
+          <p className="text-sm text-label2">Keine Adresse hinterlegt.</p>
         )}
-        {notiz && <p className="mt-1 text-sm text-ind-ink-3">{notiz}</p>}
+        {notiz && <p className="mt-1 text-sm text-label2">{notiz}</p>}
         {brauchtUstIdnr && (
-          <p className="mt-1 text-sm text-ind-ink-3">
+          <p className="mt-1 text-sm text-label2">
             USt-IdNr.:{" "}
-            {ustIdnr || <span className="text-ind-ink-3">nicht hinterlegt</span>}
+            {ustIdnr || <span className="text-label2">nicht hinterlegt</span>}
           </p>
         )}
       </div>
@@ -111,26 +111,26 @@ function Stammdaten({
   }
 
   return (
-    <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
-      <h2 className="text-sm font-semibold text-ind-ink-3">Stammdaten bearbeiten</h2>
+    <div className="space-y-2 border border-sep bg-card p-4">
+      <h2 className="text-sm font-semibold text-label2">Stammdaten bearbeiten</h2>
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       {brauchtUstIdnr && (
@@ -138,7 +138,7 @@ function Stammdaten({
           value={form.ustIdnr}
           onChange={(e) => setForm({ ...form, ustIdnr: e.target.value })}
           placeholder="USt-IdNr."
-          className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       )}
       <textarea
@@ -146,13 +146,13 @@ function Stammdaten({
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
         placeholder="Notiz"
         rows={2}
-        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -206,13 +206,13 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
   if (!bearbeiten) {
     return (
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Zugewiesene Techniker</h2>
+        <h2 className="mb-2 text-sm font-semibold text-label2">Zugewiesene Techniker</h2>
         {zugewiesen.length === 0 ? (
-          <p className="text-sm text-ind-ink-3">Kein Techniker zugewiesen.</p>
+          <p className="text-sm text-label2">Kein Techniker zugewiesen.</p>
         ) : (
           <div className="flex flex-wrap gap-1">
             {zugewiesen.map((t) => (
-              <span key={t.id} className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
+              <span key={t.id} className="border border-sep px-2 py-0.5 text-xs text-label">
                 {t.name}
               </span>
             ))}
@@ -232,14 +232,14 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
   }
 
   return (
-    <div className="border border-ind-line-2 p-3">
-      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Zugewiesene Techniker</h2>
+    <div className="border border-sepstrong p-3">
+      <h2 className="mb-2 text-sm font-semibold text-label2">Zugewiesene Techniker</h2>
       {techniker.length === 0 ? (
-        <p className="text-sm text-ind-ink-3">Keine Techniker in diesem Mandanten angelegt.</p>
+        <p className="text-sm text-label2">Keine Techniker in diesem Mandanten angelegt.</p>
       ) : (
         <div className="space-y-1">
           {techniker.map((u) => (
-            <label key={u.id} className="btn-touch flex items-center gap-2 text-sm text-ind-ink-2">
+            <label key={u.id} className="btn-touch flex items-center gap-2 text-sm text-label">
               <input
                 type="checkbox"
                 checked={auswahl.includes(u.id)}
@@ -254,7 +254,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -328,28 +328,28 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-ind-line-2 p-3">
+    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
       <div>
-        <label className="mb-1 block text-sm font-medium text-ind-ink-2">Bezeichnung</label>
+        <label className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium text-ind-ink-2">Typ (optional)</label>
+        <label className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
         <input
           value={anlagentyp}
           onChange={(e) => setAnlagentyp(e.target.value)}
           placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
       </div>
       <div>
         <div className="mb-1 flex items-center justify-between">
-          <label className="block text-sm font-medium text-ind-ink-2">
+          <label className="block text-sm font-medium text-label">
             Standort (optional)
           </label>
           <button
@@ -367,13 +367,13 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
               value={neuerStandortName}
               onChange={(e) => setNeuerStandortName(e.target.value)}
               placeholder="Bezeichnung (z.B. Filiale Nord)"
-              className="btn-touch flex-1 border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-label"
             />
             <button
               type="button"
               disabled={!neuerStandortName.trim() || neuerStandortMutation.isPending}
               onClick={() => neuerStandortMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md btn-industry btn-industry-primary px-3 text-sm font-medium disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 text-sm font-medium disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -382,7 +382,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
           <select
             value={standortId}
             onChange={(e) => setStandortId(e.target.value)}
-            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Kein Standort</option>
             {standorte.map((s) => (
@@ -398,7 +398,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -464,32 +464,32 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-ind-line-2 p-3">
+    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
       <input
         autoFocus
         value={bezeichnung}
         onChange={(e) => setBezeichnung(e.target.value)}
         placeholder="Bezeichnung (z.B. Filiale Nord)"
-        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
       <input
         value={strasse}
         onChange={(e) => setStrasse(e.target.value)}
         placeholder="Straße + Hausnr."
-        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={plz}
           onChange={(e) => setPlz(e.target.value)}
           placeholder="PLZ"
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
         <input
           value={ort}
           onChange={(e) => setOrt(e.target.value)}
           placeholder="Ort"
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
       </div>
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
@@ -497,7 +497,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -528,7 +528,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Standorte</h2>
+      <h2 className="mb-2 text-sm font-semibold text-label2">Standorte</h2>
       {!standorte || standorte.length === 0 ? (
         <EmptyState icon={MapPin} text="Keine Standorte." className="py-4" />
       ) : (
@@ -536,7 +536,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
           {standorte.map((s) => (
             <div
               key={s.id}
-              className={`flex items-center justify-between border border-ind-line bg-ind-bg p-3 ${
+              className={`flex items-center justify-between border border-sep bg-card p-3 ${
                 s.aktiv ? "" : "opacity-60"
               }`}
             >
@@ -544,11 +544,11 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
                 onClick={() => navigate(`/standorte/${s.id}`)}
                 className="btn-touch flex-1 text-left"
               >
-                <div className="text-sm font-medium text-ind-ink hover:underline">
+                <div className="text-sm font-medium text-label hover:underline">
                   {s.bezeichnung}
                 </div>
                 {s.adresse?.ort && (
-                  <div className="text-xs text-ind-ink-3">
+                  <div className="text-xs text-label2">
                     {[s.adresse.strasse, [s.adresse.plz, s.adresse.ort].filter(Boolean).join(" ")]
                       .filter(Boolean)
                       .join(", ")}
@@ -558,7 +558,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
               {kannVerwalten && (
                 <button
                   onClick={() => toggleAktivMutation.mutate({ id: s.id, aktiv: !s.aktiv })}
-                  className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
+                  className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-xs font-semibold"
                 >
                   {s.aktiv ? "Deaktivieren" : "Aktivieren"}
                 </button>
@@ -640,28 +640,28 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-ind-line-2 p-3">
+    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
       <div>
-        <label className="mb-1 block text-sm font-medium text-ind-ink-2">Bezeichnung</label>
+        <label className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
         <input
           autoFocus
           value={bezeichnung}
           onChange={(e) => setBezeichnung(e.target.value)}
           placeholder="z.B. Stundensatz Monteur, Anfahrtspauschale"
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Einheit</label>
+          <label className="mb-1 block text-sm font-medium text-label">Einheit</label>
           <input
             value={einheit}
             onChange={(e) => setEinheit(e.target.value)}
-            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label className="mb-1 block text-sm font-medium text-label">
             Einzelpreis (€)
           </label>
           <input
@@ -669,11 +669,11 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
             step="0.01"
             value={einzelpreis}
             onChange={(e) => setEinzelpreis(e.target.value)}
-            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
       </div>
-      <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+      <label className="flex items-center gap-2 text-sm text-label">
         <input
           type="checkbox"
           checked={istStundensatz}
@@ -687,7 +687,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -711,9 +711,9 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
   });
 
   return (
-    <div className="flex items-center justify-between border border-ind-line bg-ind-bg p-3">
+    <div className="flex items-center justify-between border border-sep bg-card p-3">
       <div>
-        <div className="text-sm font-medium text-ind-ink">
+        <div className="text-sm font-medium text-label">
           {position.bezeichnung}
           {position.ist_stundensatz && (
             <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
@@ -721,7 +721,7 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
             </span>
           )}
         </div>
-        <div className="text-xs text-ind-ink-3">
+        <div className="text-xs text-label2">
           {position.einzelpreis} € / {position.einheit}
         </div>
       </div>
@@ -766,9 +766,9 @@ function LeistungsverzeichnisVerwaltung({
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">
+      <h2 className="mb-2 text-sm font-semibold text-label2">
         Leistungsverzeichnis
-        <span className="ml-2 font-normal text-ind-ink-3">(optional, kundenspezifisch)</span>
+        <span className="ml-2 font-normal text-label2">(optional, kundenspezifisch)</span>
       </h2>
       {!positionen || positionen.length === 0 ? (
         <EmptyState
@@ -803,7 +803,7 @@ function AnlageAktivToggle({ anlage, kundeId }: { anlage: Anlage; kundeId: strin
     <button
       onClick={() => toggleMutation.mutate()}
       disabled={toggleMutation.isPending}
-      className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
+      className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-xs font-semibold"
     >
       {anlage.aktiv ? "Deaktivieren" : "Aktivieren"}
     </button>
@@ -820,17 +820,17 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
 
   return (
     <div
-      className={`flex items-start justify-between border border-ind-line bg-ind-bg p-3 ${
+      className={`flex items-start justify-between border border-sep bg-card p-3 ${
         zugang.aktiv ? "" : "opacity-60"
       }`}
     >
       <div>
-        <div className="text-sm font-medium text-ind-ink">{zugang.name}</div>
-        <div className="text-xs text-ind-ink-3">{zugang.email}</div>
+        <div className="text-sm font-medium text-label">{zugang.name}</div>
+        <div className="text-xs text-label2">{zugang.email}</div>
       </div>
       <button
         onClick={() => toggleMutation.mutate()}
-        className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
+        className="btn-touch shrink-0 btn-ap px-3 py-1.5 text-xs font-semibold"
       >
         {zugang.aktiv ? "Deaktivieren" : "Aktivieren"}
       </button>
@@ -875,16 +875,16 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
   }
 
   return (
-    <div className="border border-ind-line bg-ind-bg p-4">
-      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">
+    <div className="border border-sep bg-card p-4">
+      <h2 className="mb-2 text-sm font-semibold text-label2">
         Portal-Link für {kunde.name}
       </h2>
-      <p className="mb-2 text-xs text-ind-ink-3">
+      <p className="mb-2 text-xs text-label2">
         Ein Link für den ganzen Kunden -- jeder Mitarbeiter mit eigenem Kundenportal-Zugang meldet
         sich darüber mit seiner eigenen E-Mail und seinem eigenen Passwort an.
       </p>
       <div className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-stone-800/60">
-        <span className="flex-1 truncate text-xs text-ind-ink-3">{link}</span>
+        <span className="flex-1 truncate text-xs text-label2">{link}</span>
         <button
           onClick={kopieren}
           className="btn-touch shrink-0 text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -895,7 +895,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
 
       {istMandantAdmin && (
         <div className="mt-3 border-t border-slate-100 pt-3 dark:border-stone-800">
-          <h3 className="mb-2 text-xs font-semibold text-ind-ink-3">
+          <h3 className="mb-2 text-xs font-semibold text-label2">
             Logo für die Portal-Login-Seite
           </h3>
           <div className="flex items-center gap-3">
@@ -906,7 +906,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
                 className="h-12 w-12 rounded-md object-contain ring-1 ring-slate-200 dark:ring-stone-700"
               />
             )}
-            <label className="btn-touch cursor-pointer btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold">
+            <label className="btn-touch cursor-pointer btn-ap px-3 py-1.5 text-xs font-semibold">
               {kunde.logo_object_key ? "Logo ersetzen" : "Logo hochladen"}
               <input
                 type="file"
@@ -980,34 +980,34 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2 border border-ind-line-2 p-3">
+    <form onSubmit={handleSubmit} className="space-y-2 border border-sepstrong p-3">
       <input
         autoFocus
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Name des Ansprechpartners"
-        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
       <input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="E-Mail"
-        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
       <input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         placeholder="Passwort (mind. 10 Zeichen)"
-        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Anlegen
         </button>
@@ -1031,9 +1031,9 @@ function PortalZugaengeVerwaltung({ kundeId }: { kundeId: string }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Kundenportal-Zugänge</h2>
+      <h2 className="mb-2 text-sm font-semibold text-label2">Kundenportal-Zugänge</h2>
       {!zugaenge || zugaenge.length === 0 ? (
-        <p className="text-sm text-ind-ink-3">Noch kein Zugang angelegt.</p>
+        <p className="text-sm text-label2">Noch kein Zugang angelegt.</p>
       ) : (
         <div className="space-y-2">
           {zugaenge.map((z) => (
@@ -1057,7 +1057,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Dauer-Aufträge</h2>
+      <h2 className="mb-2 text-sm font-semibold text-label2">Dauer-Aufträge</h2>
       {!dauerauftraege || dauerauftraege.length === 0 ? (
         <EmptyState icon={Repeat} text="Keine Dauer-Aufträge." className="py-4" />
       ) : (
@@ -1066,24 +1066,24 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
             <button
               key={d.id}
               onClick={() => navigate(`/dauerauftraege/${d.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
+              className="card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
             >
               <div>
-                <div className="text-sm font-medium text-ind-ink">
+                <div className="text-sm font-medium text-label">
                   {d.titel}
                   {d.anzahl_ziele > 1 && (
-                    <span className="ml-2 border border-ind-line px-2 py-0.5 text-xs font-normal text-ind-ink-2">
+                    <span className="ml-2 border border-sep px-2 py-0.5 text-xs font-normal text-label">
                       {d.anzahl_ziele} Anlagen
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-ind-ink-3">
+                <div className="text-xs text-label2">
                   alle {d.intervall_tage} Tage
                   {d.naechste_faelligkeit_am && ` · nächste Fälligkeit ${d.naechste_faelligkeit_am}`}
                 </div>
               </div>
               {!d.aktiv && (
-                <span className="border border-ind-line px-2 py-1 text-xs text-ind-ink-2">
+                <span className="border border-sep px-2 py-1 text-xs text-label">
                   pausiert
                 </span>
               )}
@@ -1153,37 +1153,37 @@ export function KundeProfilePage() {
   });
 
   if (!kundenverwaltungAktiv) {
-    if (kundeLoading || !kunde) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+    if (kundeLoading || !kunde) return <p className="text-center text-label2">Lädt…</p>;
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
-        <div className="border border-ind-line bg-ind-bg p-4">
-          <div className="text-xs text-ind-ink-3">{kunde.kundennummer}</div>
-          <h1 className="text-lg font-bold text-ind-ink">{kunde.name}</h1>
-          {kunde.typ && <span className="text-sm text-ind-ink-3">{kunde.typ}</span>}
+        <div className="border border-sep bg-card p-4">
+          <div className="text-xs text-label2">{kunde.kundennummer}</div>
+          <h1 className="text-lg font-bold text-label">{kunde.name}</h1>
+          {kunde.typ && <span className="text-sm text-label2">{kunde.typ}</span>}
         </div>
       </div>
     );
   }
 
-  if (profilLoading || !profil) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+  if (profilLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
 
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
 
-      <div className="border border-ind-line bg-ind-bg p-4">
+      <div className="border border-sep bg-card p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-ind-ink-3">{profil.kundennummer}</div>
-            <h1 className="text-lg font-bold text-ind-ink">{profil.name}</h1>
-            {profil.typ && <span className="text-sm text-ind-ink-3">{profil.typ}</span>}
+            <div className="text-xs text-label2">{profil.kundennummer}</div>
+            <h1 className="text-lg font-bold text-label">{profil.name}</h1>
+            {profil.typ && <span className="text-sm text-label2">{profil.typ}</span>}
           </div>
           {kannVerwalten && (
             <div className="flex shrink-0 gap-2">
@@ -1216,7 +1216,7 @@ export function KundeProfilePage() {
         {profil.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {profil.tags.map((t) => (
-              <span key={t.id} className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
+              <span key={t.id} className="border border-sep px-2 py-0.5 text-xs text-label">
                 #{t.label}
               </span>
             ))}
@@ -1271,7 +1271,7 @@ export function KundeProfilePage() {
       )}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Anlagen</h2>
+        <h2 className="mb-2 text-sm font-semibold text-label2">Anlagen</h2>
         {profil.anlagen.length === 0 ? (
           <EmptyState icon={Boxes} text="Keine Anlagen." className="py-4" />
         ) : (
@@ -1279,13 +1279,13 @@ export function KundeProfilePage() {
             {profil.anlagen.map((a) => (
               <div
                 key={a.id}
-                className={`flex items-center justify-between border border-ind-line bg-ind-bg p-3 ${
+                className={`flex items-center justify-between border border-sep bg-card p-3 ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
                 <button onClick={() => navigate(`/anlagen/${a.id}`)} className="btn-touch flex-1 text-left">
-                  <div className="text-sm font-medium text-ind-ink">{a.bezeichnung}</div>
-                  {a.anlagentyp && <div className="text-xs text-ind-ink-3">{a.anlagentyp}</div>}
+                  <div className="text-sm font-medium text-label">{a.bezeichnung}</div>
+                  {a.anlagentyp && <div className="text-xs text-label2">{a.anlagentyp}</div>}
                 </button>
                 {kannVerwalten && (
                   <AnlageAktivToggle anlage={a} kundeId={id!} />
@@ -1308,12 +1308,12 @@ export function KundeProfilePage() {
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-ind-ink-3">Vorgänge</h2>
+          <h2 className="text-sm font-semibold text-label2">Vorgänge</h2>
           {profil.anlagen.length > 0 && (
             <select
               value={anlageFilter}
               onChange={(e) => setAnlageFilter(e.target.value)}
-              className="btn-touch border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-2 py-1 text-xs text-label"
             >
               <option value="">Alle Anlagen</option>
               {profil.anlagen.map((a) => (
@@ -1332,12 +1332,12 @@ export function KundeProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >
                 <div>
-                  <div className="text-xs text-ind-ink-3">
+                  <div className="text-xs text-label2">
                     {v.vorgangsnummer}
                     {v.anlage_id && anlageNameById.get(v.anlage_id) && ` · ${anlageNameById.get(v.anlage_id)}`}
                     {v.dauerauftrag_id && (
@@ -1347,7 +1347,7 @@ export function KundeProfilePage() {
                       </>
                     )}
                   </div>
-                  <div className="text-sm font-medium text-ind-ink">{v.titel}</div>
+                  <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
                   {v.status}

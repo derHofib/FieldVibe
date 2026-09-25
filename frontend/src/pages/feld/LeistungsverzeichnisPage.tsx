@@ -22,7 +22,7 @@ export function KundenZuweisung({ kundenIds, onChange }: { kundenIds: string[]; 
       <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
         Kunden-Zuweisung
       </label>
-      <p className="mb-1.5 text-xs text-ind-ink-3">Leer = gilt für alle Kunden</p>
+      <p className="mb-1.5 text-xs text-label2">Leer = gilt für alle Kunden</p>
       {kundenIds.length > 0 && (
         <div className="mb-1.5 flex flex-wrap gap-1.5">
           {kundenIds.map((id) => (
@@ -79,7 +79,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
         className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900"
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-stone-800">
-          <h2 className="text-base font-bold text-ind-ink">Neues Leistungsverzeichnis</h2>
+          <h2 className="text-base font-bold text-label">Neues Leistungsverzeichnis</h2>
           <button
             onClick={onClose}
             className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
@@ -97,7 +97,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="z. B. Wartungsvertraege, Standardleistungen"
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
@@ -108,20 +108,20 @@ function LvFormular({ onClose }: { onClose: () => void }) {
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={2}
-              className="w-full resize-none border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />
           {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4 dark:border-stone-800">
-          <button onClick={onClose} className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-semibold">
+          <button onClick={onClose} className="btn-touch btn-ap px-4 py-2 text-sm font-semibold">
             Abbrechen
           </button>
           <button
             onClick={() => erstellen.mutate()}
             disabled={!name.trim() || erstellen.isPending}
-            className="btn-touch btn-industry btn-industry-primary px-4 py-2 text-sm"
+            className="btn-touch btn-ap-primary px-4 py-2 text-sm"
           >
             Anlegen
           </button>
@@ -154,13 +154,13 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
   return (
     <div className="card-interactive flex items-center gap-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
       <button onClick={() => navigate(`/leistungsverzeichnis/${lv.id}`)} className="min-w-0 flex-1 text-left">
-        <p className="truncate text-sm font-semibold text-ind-ink">{lv.name}</p>
-        <p className="truncate text-xs text-ind-ink-3">
+        <p className="truncate text-sm font-semibold text-label">{lv.name}</p>
+        <p className="truncate text-xs text-label2">
           {lv.beschreibung && <span>{lv.beschreibung} · </span>}
           <span
             className={
               lv.kunden_ids.length === 0
-                ? "text-ind-ink-3"
+                ? "text-label2"
                 : "font-medium text-violet-700 dark:text-violet-300"
             }
           >
@@ -223,23 +223,23 @@ function StandardKalkulation() {
         className="btn-touch flex w-full items-center gap-2 px-3 py-2.5 text-left"
       >
         <Settings2 size={15} strokeWidth={2} className="shrink-0 text-slate-400 dark:text-stone-500" />
-        <span className="flex-1 text-xs font-semibold text-ind-ink-2">
+        <span className="flex-1 text-xs font-semibold text-label">
           Standard-Kalkulation für neue Positionen
         </span>
-        <span className="text-xs text-ind-ink-3">
+        <span className="text-xs text-label2">
           Gemeinkosten {einstellungen.standard_lohn_gemeinkosten_prozent}% · Gewinn/Wagnis{" "}
           {einstellungen.standard_gewinn_wagnis_prozent}%
         </span>
       </button>
       {offen && (
         <div className="space-y-3 border-t border-slate-100 px-3 py-3 dark:border-stone-800">
-          <p className="text-xs text-ind-ink-3">
+          <p className="text-xs text-label2">
             Vorbelegung für neu angelegte Positionen im Modus "Berechnet". Gilt nicht rückwirkend für bereits
             angelegte Positionen.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+              <label className="mb-1 block text-[10.5px] font-medium text-label2">
                 Lohn-Gemeinkosten (%)
               </label>
               <input
@@ -247,24 +247,24 @@ function StandardKalkulation() {
                 step="0.1"
                 value={gemeinkosten}
                 onChange={(e) => setGemeinkosten(e.target.value)}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">Gewinn/Wagnis (%)</label>
+              <label className="mb-1 block text-[10.5px] font-medium text-label2">Gewinn/Wagnis (%)</label>
               <input
                 type="number"
                 step="0.1"
                 value={gewinnWagnis}
                 onChange={(e) => setGewinnWagnis(e.target.value)}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           </div>
           <button
             onClick={() => speichern.mutate()}
             disabled={speichern.isPending}
-            className="btn-touch btn-industry btn-industry-primary px-4 py-1.5 text-xs"
+            className="btn-touch btn-ap-primary px-4 py-1.5 text-xs"
           >
             Speichern
           </button>
@@ -292,11 +292,11 @@ export function LeistungsverzeichnisPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-ind-ink">Leistungsverzeichnisse</h1>
+        <h1 className="text-lg font-bold text-label">Leistungsverzeichnisse</h1>
         {kannVerwalten && (
           <button
             onClick={() => setNeuesLv(true)}
-            className="btn-touch flex items-center gap-1.5 rounded-lg btn-industry btn-industry-primary px-3 py-2 text-xs font-semibold"
+            className="btn-touch flex items-center gap-1.5 rounded-lg btn-ap-primary px-3 py-2 text-xs font-semibold"
           >
             <Plus size={14} strokeWidth={2.5} />
             Neues Leistungsverzeichnis
@@ -307,7 +307,7 @@ export function LeistungsverzeichnisPage() {
       {kannVerwalten && <StandardKalkulation />}
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
       ) : !lvs || lvs.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Leistungsverzeichnisse angelegt." />
       ) : (

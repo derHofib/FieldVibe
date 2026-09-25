@@ -56,22 +56,22 @@ export function PostfachNachrichtPage() {
   }
 
   if (!detail) {
-    return <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>;
+    return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
   }
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate("/postfach")} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate("/postfach")} className="text-sm text-label2">
         ← Zurück
       </button>
 
       <div>
-        <h1 className="text-lg font-bold text-ind-ink">
+        <h1 className="text-lg font-bold text-label">
           {detail.betreff || "(kein Betreff)"}
         </h1>
-        <p className="mt-1 text-xs text-ind-ink-3">
+        <p className="mt-1 text-xs text-label2">
           Von{" "}
-          <span className="font-medium text-ind-ink">
+          <span className="font-medium text-label">
             {detail.von_name || detail.von_adresse}
           </span>
         </p>
@@ -94,7 +94,7 @@ export function PostfachNachrichtPage() {
         </div>
       )}
 
-      <p className="text-sm whitespace-pre-wrap break-words text-ind-ink">{detail.body_text}</p>
+      <p className="text-sm whitespace-pre-wrap break-words text-label">{detail.body_text}</p>
 
       {antwortenOffen ? (
         <div className="-mx-4 border-t border-slate-100 pt-3 dark:border-stone-800">
@@ -112,7 +112,7 @@ export function PostfachNachrichtPage() {
       ) : (
         <button
           onClick={() => setAntwortenOffen(true)}
-          className="btn-touch btn-industry btn-industry-primary flex items-center gap-1.5 px-4 py-2 text-xs"
+          className="btn-touch btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-xs"
         >
           <Reply size={13} strokeWidth={2} /> Antworten
         </button>

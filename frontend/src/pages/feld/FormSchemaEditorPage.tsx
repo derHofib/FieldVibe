@@ -34,8 +34,8 @@ import { describeCondition } from "../../utils/ruleConditionBuilder";
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
 
-const inputClass = "btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink";
-const sectionClass = "space-y-3 border border-ind-line bg-ind-bg p-4";
+const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
+const sectionClass = "space-y-3 border border-sep bg-card p-4";
 
 const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {
   show: "Anzeigen, wenn",
@@ -96,7 +96,7 @@ function RegelForm({
   const istZielNumerisch = zielFeld?.feld_typ === "zahl" || zielFeld?.feld_typ === "betrag";
 
   return (
-    <div className="space-y-2 border border-ind-line-2 p-3">
+    <div className="space-y-2 border border-sepstrong p-3">
       <select value={effect} onChange={(e) => setEffect(e.target.value as FormLogicEffekt)} className={inputClass}>
         {(Object.keys(EFFEKT_LABEL) as FormLogicEffekt[]).map((e) => (
           <option key={e} value={e}>
@@ -110,16 +110,16 @@ function RegelForm({
       {effect === "set_value" && (
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="block text-xs font-medium text-ind-ink-2">Zu setzender Wert</label>
+            <label className="block text-xs font-medium text-label">Zu setzender Wert</label>
             {istZielNumerisch && (
-              <div className="flex border border-ind-line text-[11px] font-medium">
+              <div className="flex border border-sep text-[11px] font-medium">
                 <button
                   type="button"
                   onClick={() => {
                     setWertModus("fest");
                     setValue("");
                   }}
-                  className={`px-2 py-0.5 ${wertModus === "fest" ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-3 hover:bg-ind-hover"}`}
+                  className={`px-2 py-0.5 ${wertModus === "fest" ? "bg-tint text-white" : "text-label2 hover:bg-fill"}`}
                 >
                   Fester Wert
                 </button>
@@ -129,7 +129,7 @@ function RegelForm({
                     setWertModus("formel");
                     setValue(null);
                   }}
-                  className={`px-2 py-0.5 ${wertModus === "formel" ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-3 hover:bg-ind-hover"}`}
+                  className={`px-2 py-0.5 ${wertModus === "formel" ? "bg-tint text-white" : "text-label2 hover:bg-fill"}`}
                 >
                   Formel
                 </button>
@@ -145,7 +145,7 @@ function RegelForm({
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-ind-ink-2">Gültig in</label>
+        <label className="mb-1 block text-xs font-medium text-label">Gültig in</label>
         <select value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
           <option value="">Global (alle Views)</option>
           {views.map((v) => (
@@ -160,7 +160,7 @@ function RegelForm({
 
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
-          <button type="button" onClick={onCancel} className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-sm">
+          <button type="button" onClick={onCancel} className="btn-touch btn-ap px-3 py-1.5 text-sm">
             Abbrechen
           </button>
         )}
@@ -177,7 +177,7 @@ function RegelForm({
             })
           }
           disabled={submitting}
-          className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex items-center gap-1.5 btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           <Plus size={15} /> {initial ? "Speichern" : "Regel hinzufügen"}
         </button>
@@ -217,7 +217,7 @@ function RegelnPanelInhalt({
   return (
     <div className="space-y-3">
       {zielRegeln.length === 0 && (
-        <p className="text-sm text-ind-ink-3">Noch keine Regeln für dieses Ziel.</p>
+        <p className="text-sm text-label2">Noch keine Regeln für dieses Ziel.</p>
       )}
       {zielRegeln.map((r) =>
         editingRuleId === r.id ? (
@@ -241,19 +241,19 @@ function RegelnPanelInhalt({
             }
           />
         ) : (
-          <div key={r.id} className="flex items-center justify-between gap-2 border-b border-ind-line py-1.5 text-sm">
-            <span className="min-w-0 text-ind-ink">
+          <div key={r.id} className="flex items-center justify-between gap-2 border-b border-sep py-1.5 text-sm">
+            <span className="min-w-0 text-label">
               {EFFEKT_LABEL[r.effect]}{" "}
-              <span className="text-ind-ink-3">
+              <span className="text-label2">
                 {describeCondition(r.condition, (k) => schema.fields.find((f) => f.key === k)?.label.de ?? k)}
               </span>
-              {r.effect === "set_value" && <span className="text-ind-ink-3"> = {JSON.stringify(r.value)}</span>}
+              {r.effect === "set_value" && <span className="text-label2"> = {JSON.stringify(r.value)}</span>}
             </span>
             <div className="flex shrink-0 items-center gap-2">
               <button onClick={() => setEditingRuleId(r.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
                 Bearbeiten
               </button>
-              <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-ind-ink-3 hover:text-rose-600">
+              <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-label2 hover:text-rose-600">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -399,35 +399,35 @@ export function FormSchemaEditorPage() {
     onSuccess: invalidate,
   });
 
-  if (isLoading) return <p className="text-center text-sm text-ind-ink-3">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-sm text-label2">Lädt…</p>;
   if (!schema) return <EmptyState icon={FileText} text="Schema nicht gefunden." />;
 
   return (
     <div className="space-y-4 pb-8">
-      <button onClick={() => navigate("/form-schemas")} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate("/form-schemas")} className="text-sm text-label2">
         ← Zurück
       </button>
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-ind-ink">{schema.name}</h1>
-          <p className="text-xs text-ind-ink-3">Version {schema.version} · {schema.status}</p>
+          <h1 className="text-lg font-bold text-label">{schema.name}</h1>
+          <p className="text-xs text-label2">Version {schema.version} · {schema.status}</p>
         </div>
         {schema.status === "draft" && (
-          <button onClick={() => publishMutation.mutate()} disabled={publishMutation.isPending} className="btn-touch rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50">
+          <button onClick={() => publishMutation.mutate()} disabled={publishMutation.isPending} className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50">
             Veröffentlichen
           </button>
         )}
       </div>
       {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
 
-      <div className="seg-industry flex border border-ind-line">
+      <div className="flex overflow-hidden rounded-[var(--radius-ap-sm)] border border-sep">
         {(Object.keys(TAB_LABEL) as EditorTab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`flex-1 px-3 py-2 text-xs font-semibold ${
-              tab === t ? "bg-ind-field text-ind-field-ink" : "text-ind-ink-2 hover:bg-ind-hover"
+              tab === t ? "bg-tint text-white" : "text-label hover:bg-fill"
             }`}
           >
             {TAB_LABEL[t]}
@@ -449,17 +449,17 @@ export function FormSchemaEditorPage() {
 
       {tab === "visualisierung" && (
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-ind-ink">Views</h2>
+          <h2 className="text-sm font-semibold text-label">Views</h2>
           {(views ?? []).map((v) => (
-            <div key={v.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-              <span className="text-ind-ink">{v.name} <span className="text-ind-ink-3">({v.type})</span></span>
+            <div key={v.id} className="flex items-center justify-between border-b border-sep py-1.5 text-sm">
+              <span className="text-label">{v.name} <span className="text-label2">({v.type})</span></span>
               <div className="flex items-center gap-2">
                 {v.type !== "capture" ? null : (
                   <button onClick={() => autoLayoutMutation.mutate(v.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
                     Layout aus Feldern übernehmen
                   </button>
                 )}
-                <button onClick={() => deleteViewMutation.mutate(v.id)} className="text-ind-ink-3 hover:text-rose-600">
+                <button onClick={() => deleteViewMutation.mutate(v.id)} className="text-label2 hover:text-rose-600">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -474,7 +474,7 @@ export function FormSchemaEditorPage() {
               ))}
             </select>
             <input value={viewName} onChange={(e) => setViewName(e.target.value)} placeholder="Name (z.B. Erfassung)" className={inputClass} />
-            <button onClick={() => createViewMutation.mutate()} disabled={!viewName.trim() || createViewMutation.isPending} className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3 disabled:opacity-50">
+            <button onClick={() => createViewMutation.mutate()} disabled={!viewName.trim() || createViewMutation.isPending} className="btn-touch shrink-0 btn-ap px-3 disabled:opacity-50">
               <Plus size={16} />
             </button>
           </div>
@@ -483,13 +483,13 @@ export function FormSchemaEditorPage() {
 
       {tab === "zuordnungen" && (
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-ind-ink">Auftragstyp-Zuordnungen</h2>
+          <h2 className="text-sm font-semibold text-label">Auftragstyp-Zuordnungen</h2>
           {schema.zuordnungen.map((z) => (
-            <div key={z.id} className="flex items-center justify-between border-b border-ind-line py-1.5 text-sm">
-              <span className="text-ind-ink">
-                {LEISTUNGSTYP_LABEL[z.leistungstyp]} {z.pflicht_vor_abschluss && <span className="text-ind-ink-3">(Pflicht vor Abschluss)</span>}
+            <div key={z.id} className="flex items-center justify-between border-b border-sep py-1.5 text-sm">
+              <span className="text-label">
+                {LEISTUNGSTYP_LABEL[z.leistungstyp]} {z.pflicht_vor_abschluss && <span className="text-label2">(Pflicht vor Abschluss)</span>}
               </span>
-              <button onClick={() => deleteZuordnungMutation.mutate(z.id)} className="text-ind-ink-3 hover:text-rose-600">
+              <button onClick={() => deleteZuordnungMutation.mutate(z.id)} className="text-label2 hover:text-rose-600">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -502,10 +502,10 @@ export function FormSchemaEditorPage() {
                 </option>
               ))}
             </select>
-            <label className="flex shrink-0 items-center gap-1.5 text-xs text-ind-ink-2">
+            <label className="flex shrink-0 items-center gap-1.5 text-xs text-label">
               <input type="checkbox" checked={zuPflicht} onChange={(e) => setZuPflicht(e.target.checked)} /> Pflicht
             </label>
-            <button onClick={() => createZuordnungMutation.mutate()} className="btn-touch shrink-0 btn-industry btn-industry-secondary px-3">
+            <button onClick={() => createZuordnungMutation.mutate()} className="btn-touch shrink-0 btn-ap px-3">
               <Plus size={16} />
             </button>
           </div>

@@ -77,11 +77,11 @@ export function KundenPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-ind-ink">Kundenverwaltung</h1>
+        <h1 className="text-lg font-bold text-label">Kundenverwaltung</h1>
         {istModulAktiv(currentUser, "kundenportal") && (
           <button
             onClick={() => navigate("/anfragen")}
-            className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-semibold"
+            className="btn-touch btn-ap px-3 py-1.5 text-xs font-semibold"
           >
             Auftragsanfragen
           </button>
@@ -90,40 +90,40 @@ export function KundenPage() {
 
       <button
         onClick={() => setShowForm((v) => !v)}
-        className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-medium"
+        className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
       >
         {showForm ? "Abbrechen" : "+ Neuer Kunde"}
       </button>
 
       {showForm && (
-        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
+        <div className="space-y-3 border border-sep bg-card p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Name *</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Name *</label>
             <input
               autoFocus
               value={neuerKunde.name}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, name: e.target.value })}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">
+              <label className="mb-1 block text-xs text-label2">
                 Kundennummer (optional)
               </label>
               <input
                 value={neuerKunde.kundennummer}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, kundennummer: e.target.value })}
                 placeholder="wird sonst vergeben"
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">Typ</label>
+              <label className="mb-1 block text-xs text-label2">Typ</label>
               <select
                 value={neuerKunde.typ}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, typ: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Bitte wählen…</option>
                 <option value="privat">Privat</option>
@@ -135,58 +135,58 @@ export function KundenPage() {
           </div>
           {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">USt-IdNr.</label>
+              <label className="mb-1 block text-xs text-label2">USt-IdNr.</label>
               <input
                 value={neuerKunde.ustIdnr}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ustIdnr: e.target.value })}
                 placeholder="DE123456789"
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-xs text-ind-ink-3">Straße + Hausnr.</label>
+            <label className="mb-1 block text-xs text-label2">Straße + Hausnr.</label>
             <input
               value={neuerKunde.strasse}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, strasse: e.target.value })}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">PLZ</label>
+              <label className="mb-1 block text-xs text-label2">PLZ</label>
               <input
                 value={neuerKunde.plz}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, plz: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">Ort</label>
+              <label className="mb-1 block text-xs text-label2">Ort</label>
               <input
                 value={neuerKunde.ort}
                 onChange={(e) => setNeuerKunde({ ...neuerKunde, ort: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-ind-ink-3">Notiz</label>
+            <label className="mb-1 block text-xs text-label2">Notiz</label>
             <textarea
               value={neuerKunde.notiz}
               onChange={(e) => setNeuerKunde({ ...neuerKunde, notiz: e.target.value })}
               rows={2}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
-          <p className="text-xs text-ind-ink-3">
+          <p className="text-xs text-label2">
             Ansprechpartner können anschließend auf der Kunden-Detailseite angelegt werden.
           </p>
           {kundeFehler && <p className="text-sm text-red-700 dark:text-red-400">{kundeFehler}</p>}
           <button
             disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
             onClick={() => createKundeMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -199,7 +199,7 @@ export function KundenPage() {
             value={kundenSuche}
             onChange={(e) => setKundenSuche(e.target.value)}
             placeholder="Suche nach Name oder Kundennummer…"
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         )}
         {kundenLoading ? (
@@ -207,7 +207,7 @@ export function KundenPage() {
         ) : (kunden ?? []).length === 0 ? (
           <EmptyState icon={Users} text="Keine Kunden vorhanden." />
         ) : kundenGefiltert.length === 0 ? (
-          <p className="text-center text-sm text-ind-ink-3">
+          <p className="text-center text-sm text-label2">
             Keine Kunden gefunden für „{kundenSuche}".
           </p>
         ) : (
@@ -215,14 +215,14 @@ export function KundenPage() {
             <button
               key={k.id}
               onClick={() => navigate(`/kunden/${k.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
+              className="card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
             >
               <div>
-                <div className="text-xs text-ind-ink-3">{k.kundennummer}</div>
-                <div className="text-sm font-medium text-ind-ink">{k.name}</div>
+                <div className="text-xs text-label2">{k.kundennummer}</div>
+                <div className="text-sm font-medium text-label">{k.name}</div>
               </div>
               {k.typ && (
-                <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
+                <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
                   {k.typ}
                 </span>
               )}

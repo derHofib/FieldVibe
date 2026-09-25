@@ -49,16 +49,16 @@ export function TeamZeitenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-ind-ink">Team-Zeiten</h1>
+      <h1 className="text-lg font-bold text-label">Team-Zeiten</h1>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+        <label className="mb-1 block text-sm font-medium text-label">
           Techniker
         </label>
         <select
           value={technikerId}
           onChange={(e) => setTechnikerId(e.target.value)}
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           <option value="">Bitte wählen…</option>
           {techniker.map((t) => (
@@ -70,7 +70,7 @@ export function TeamZeitenPage() {
       </div>
 
       {technikerId && (
-        <div className="border border-ind-line bg-ind-bg p-3">
+        <div className="border border-sep bg-card p-3">
           <div className="mb-2 flex items-center justify-between">
             <button
               onClick={() => {
@@ -82,7 +82,7 @@ export function TeamZeitenPage() {
             >
               ← Woche
             </button>
-            <span className="text-sm font-medium text-ind-ink-2">
+            <span className="text-sm font-medium text-label">
               {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
             </span>
             <button
@@ -110,7 +110,7 @@ export function TeamZeitenPage() {
             <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
               <button
                 onClick={exportieren}
-                className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium"
+                className="btn-touch flex items-center gap-1.5 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
               >
                 <FileText size={15} strokeWidth={2} /> Als PDF exportieren
               </button>

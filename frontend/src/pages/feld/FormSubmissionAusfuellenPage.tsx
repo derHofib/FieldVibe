@@ -117,19 +117,19 @@ export function FormSubmissionAusfuellenPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "PDF konnte nicht erzeugt werden"),
   });
 
-  if (submissionLoading || schemaLoading) return <p className="text-center text-sm text-ind-ink-3">Lädt…</p>;
+  if (submissionLoading || schemaLoading) return <p className="text-center text-sm text-label2">Lädt…</p>;
   if (!submission || !schema) return <EmptyState icon={FileText} text="Formular nicht gefunden." />;
 
   const readOnly = submission.status === "abgeschlossen";
 
   return (
     <div className="space-y-3 pb-24">
-      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-ind-ink">{schema.name}</h1>
+        <h1 className="text-lg font-bold text-label">{schema.name}</h1>
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
             readOnly ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
@@ -193,7 +193,7 @@ export function FormSubmissionAusfuellenPage() {
               }
             }}
             disabled={abschliessenMutation.isPending}
-            className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium shadow-md disabled:opacity-50"
+            className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium shadow-md disabled:opacity-50"
           >
             Abschließen
           </button>

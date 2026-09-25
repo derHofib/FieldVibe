@@ -18,14 +18,14 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <div className="border border-ind-line bg-ind-bg p-4">
+      <div className="border border-sep bg-card p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center border border-ind-line text-lg font-bold text-ind-ink-2">
+          <div className="flex h-12 w-12 items-center justify-center border border-sep text-lg font-bold text-label">
             {currentUser?.name?.slice(0, 1)}
           </div>
           <div>
-            <div className="font-semibold text-ind-ink">{currentUser?.name}</div>
-            <div className="text-sm text-ind-ink-3">
+            <div className="font-semibold text-label">{currentUser?.name}</div>
+            <div className="text-sm text-label2">
               {currentUser &&
                 (currentUser.role === "custom"
                   ? (currentUser.account_typ_name ?? "Account")
@@ -35,12 +35,12 @@ export function ProfilePage() {
         </div>
         <dl className="mt-4 space-y-1 text-sm">
           <div className="flex justify-between">
-            <dt className="text-ind-ink-3">E-Mail</dt>
-            <dd className="text-ind-ink">{currentUser?.email}</dd>
+            <dt className="text-label2">E-Mail</dt>
+            <dd className="text-label">{currentUser?.email}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-ind-ink-3">Mandant</dt>
-            <dd className="text-ind-ink">{currentUser?.mandant_name}</dd>
+            <dt className="text-label2">Mandant</dt>
+            <dd className="text-label">{currentUser?.mandant_name}</dd>
           </div>
         </dl>
       </div>
@@ -48,30 +48,30 @@ export function ProfilePage() {
       {kannDisponieren && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}
-          className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
+          className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
         >
           <IconBadge icon={Wrench} tone="emerald" size="sm" />
-          <span className="font-medium text-ind-ink">Techniker-Zuweisungen</span>
+          <span className="font-medium text-label">Techniker-Zuweisungen</span>
         </button>
       )}
 
       {kannDisponieren && istModulAktiv(currentUser, "dauerauftrag") && (
         <button
           onClick={() => navigate("/dauerauftraege")}
-          className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
+          className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
         >
           <IconBadge icon={Repeat} tone="amber" size="sm" />
-          <span className="font-medium text-ind-ink">Dauer-Aufträge</span>
+          <span className="font-medium text-label">Dauer-Aufträge</span>
         </button>
       )}
 
       {istModulAktiv(currentUser, "zeiterfassung") && (
         <button
           onClick={() => navigate("/statistik")}
-          className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
+          className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
         >
           <IconBadge icon={Timer} tone="cyan" size="sm" />
-          <span className="font-medium text-ind-ink">
+          <span className="font-medium text-label">
             {currentUser?.nur_zugewiesene_kunden ? "Meine Zeiterfassung" : "Zeiterfassung"}
           </span>
         </button>
@@ -79,7 +79,7 @@ export function ProfilePage() {
 
       <button
         onClick={logout}
-        className="btn-touch btn-industry btn-industry-secondary flex w-full items-center justify-center gap-2"
+        className="btn-touch btn-ap flex w-full items-center justify-center gap-2"
       >
         <LogOut size={16} strokeWidth={1.5} /> Abmelden
       </button>

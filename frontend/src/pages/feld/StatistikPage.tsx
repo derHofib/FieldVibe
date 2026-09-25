@@ -20,11 +20,11 @@ function TechnikerBalken({ name, anzahl, max }: { name: string; anzahl: number; 
   const breite = max > 0 ? Math.max(4, (anzahl / max) * 100) : 0;
   return (
     <div className="flex items-center gap-2">
-      <span className="w-28 shrink-0 truncate text-xs text-ind-ink-2">{name}</span>
+      <span className="w-28 shrink-0 truncate text-xs text-label">{name}</span>
       <div className="h-4 flex-1 bg-slate-100 dark:bg-stone-800">
         <div className="h-full bg-cyan-600 dark:bg-cyan-500" style={{ width: `${breite}%` }} />
       </div>
-      <span className="w-6 shrink-0 text-right text-xs font-semibold text-ind-ink">{anzahl}</span>
+      <span className="w-6 shrink-0 text-right text-xs font-semibold text-label">{anzahl}</span>
     </div>
   );
 }
@@ -40,15 +40,15 @@ function TeamKennzahlen() {
   const maxOffen = Math.max(1, ...(kennzahlen?.offene_vorgaenge_je_techniker.map((t) => t.anzahl_offen) ?? [1]));
 
   return (
-    <div className="space-y-3 border border-ind-line bg-ind-bg p-3">
+    <div className="space-y-3 border border-sep bg-card p-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-1.5 text-sm font-bold text-ind-ink">
+        <h2 className="flex items-center gap-1.5 text-sm font-bold text-label">
           <Users size={15} strokeWidth={2} /> Team-Kennzahlen
         </h2>
         <select
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
-          className="border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
         >
           <option value="">Alle Projekte</option>
           {(projekte ?? []).map((p) => (
@@ -60,31 +60,31 @@ function TeamKennzahlen() {
       </div>
 
       {isLoading || !kennzahlen ? (
-        <p className="py-4 text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="py-4 text-center text-sm text-label2">Lädt…</p>
       ) : (
         <>
           <div className="grid grid-cols-3 gap-2">
-            <div className="border border-ind-line bg-ind-hover p-3 text-center">
-              <div className="text-xl font-bold text-ind-ink">{kennzahlen.offene_vorgaenge_gesamt}</div>
-              <div className="text-xs text-ind-ink-3">Offene Vorgänge</div>
+            <div className="border border-sep bg-fill p-3 text-center">
+              <div className="text-xl font-bold text-label">{kennzahlen.offene_vorgaenge_gesamt}</div>
+              <div className="text-xs text-label2">Offene Vorgänge</div>
             </div>
-            <div className="border border-ind-line bg-ind-hover p-3 text-center">
-              <div className="text-xl font-bold text-ind-ink">{kennzahlen.abgeschlossene_vorgaenge_zeitraum}</div>
-              <div className="text-xs text-ind-ink-3">Abgeschlossen</div>
+            <div className="border border-sep bg-fill p-3 text-center">
+              <div className="text-xl font-bold text-label">{kennzahlen.abgeschlossene_vorgaenge_zeitraum}</div>
+              <div className="text-xs text-label2">Abgeschlossen</div>
             </div>
-            <div className="border border-ind-line bg-ind-hover p-3 text-center">
-              <div className="text-xl font-bold text-ind-ink">
+            <div className="border border-sep bg-fill p-3 text-center">
+              <div className="text-xl font-bold text-label">
                 {kennzahlen.durchschnittliche_durchlaufzeit_tage !== null
                   ? `${kennzahlen.durchschnittliche_durchlaufzeit_tage} T.`
                   : "—"}
               </div>
-              <div className="text-xs text-ind-ink-3">Ø Durchlaufzeit</div>
+              <div className="text-xs text-label2">Ø Durchlaufzeit</div>
             </div>
           </div>
 
           {kennzahlen.offene_vorgaenge_je_techniker.length > 0 && (
             <div className="space-y-1.5 border-t border-slate-100 pt-2 dark:border-stone-800">
-              <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Offen je Techniker</p>
+              <p className="text-[11px] font-bold tracking-wide text-label2 uppercase">Offen je Techniker</p>
               {kennzahlen.offene_vorgaenge_je_techniker.map((t) => (
                 <TechnikerBalken key={t.techniker_id} name={t.techniker_name} anzahl={t.anzahl_offen} max={maxOffen} />
               ))}
@@ -143,11 +143,11 @@ export function StatistikPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-ind-ink">Meine Arbeitszeit</h1>
+        <h1 className="text-lg font-bold text-label">Meine Arbeitszeit</h1>
         {kannErfassen && (
           <button
             onClick={() => setFormularOffen(true)}
-            className="btn-touch btn-industry btn-industry-primary px-3 py-1.5 text-sm"
+            className="btn-touch btn-ap-primary px-3 py-1.5 text-sm"
           >
             + Zeit erfassen
           </button>
@@ -169,29 +169,29 @@ export function StatistikPage() {
 
       {kannAuswerten && statistik && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="border border-ind-line bg-ind-bg p-3 text-center">
-            <div className="text-xl font-bold text-ind-ink">
+          <div className="border border-sep bg-card p-3 text-center">
+            <div className="text-xl font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.wochenstunden))}
             </div>
-            <div className="text-xs text-ind-ink-3">Std. diese Woche</div>
+            <div className="text-xs text-label2">Std. diese Woche</div>
           </div>
-          <div className="border border-ind-line bg-ind-bg p-3 text-center">
-            <div className="text-xl font-bold text-ind-ink">
+          <div className="border border-sep bg-card p-3 text-center">
+            <div className="text-xl font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.monatsstunden))}
             </div>
-            <div className="text-xs text-ind-ink-3">Std. dieser Monat</div>
+            <div className="text-xs text-label2">Std. dieser Monat</div>
           </div>
-          <div className="border border-ind-line bg-ind-bg p-3 text-center">
-            <div className="text-xl font-bold text-ind-ink">
+          <div className="border border-sep bg-card p-3 text-center">
+            <div className="text-xl font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.jahresstunden))}
             </div>
-            <div className="text-xs text-ind-ink-3">Std. dieses Jahr</div>
+            <div className="text-xs text-label2">Std. dieses Jahr</div>
           </div>
         </div>
       )}
 
       {kannErfassen && (
-        <div className="border border-ind-line bg-ind-bg p-3">
+        <div className="border border-sep bg-card p-3">
           <div className="mb-2 flex items-center justify-between">
             <button
               onClick={() => {
@@ -203,7 +203,7 @@ export function StatistikPage() {
             >
               ← Woche
             </button>
-            <span className="text-sm font-medium text-ind-ink-2">
+            <span className="text-sm font-medium text-label">
               {wocheMontag.toLocaleDateString("de-DE")} – {wocheEnde.toLocaleDateString("de-DE")}
             </span>
             <button
@@ -231,7 +231,7 @@ export function StatistikPage() {
             <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
               <button
                 onClick={exportieren}
-                className="btn-touch flex items-center gap-1.5 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium"
+                className="btn-touch flex items-center gap-1.5 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
               >
                 <FileText size={15} strokeWidth={2} /> Als PDF exportieren
               </button>

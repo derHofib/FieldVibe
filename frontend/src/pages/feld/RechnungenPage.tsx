@@ -47,15 +47,15 @@ function AngeboteListe() {
     <div className="space-y-4">
       <button
         onClick={() => setShowForm((v) => !v)}
-        className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-medium"
+        className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
       >
         {showForm ? "Abbrechen" : "+ Neues Angebot"}
       </button>
 
       {showForm && (
-        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
+        <div className="space-y-3 border border-sep bg-card p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Kunde</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
             <SearchableSelect
               value={kundeId}
               onChange={setKundeId}
@@ -66,7 +66,7 @@ function AngeboteListe() {
           <button
             disabled={!kundeId || erstellen.isPending}
             onClick={() => erstellen.mutate()}
-            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Angebot anlegen
           </button>
@@ -83,14 +83,14 @@ function AngeboteListe() {
             <button
               key={a.id}
               onClick={() => navigate(`/angebote/${a.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
+              className="card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
             >
               <div>
-                <div className="text-xs text-ind-ink-3">{a.angebotsnummer}</div>
-                <div className="text-sm font-medium text-ind-ink">{nameFuer(a.kunde_id)}</div>
-                <div className="text-xs text-ind-ink-3">{formatEuro(a.gesamt_brutto)}</div>
+                <div className="text-xs text-label2">{a.angebotsnummer}</div>
+                <div className="text-sm font-medium text-label">{nameFuer(a.kunde_id)}</div>
+                <div className="text-xs text-label2">{formatEuro(a.gesamt_brutto)}</div>
               </div>
-              <span className="border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2">
+              <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
                 {ANGEBOT_STATUS_LABEL[a.status]}
               </span>
             </button>
@@ -154,20 +154,20 @@ export function RechnungenPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-ind-ink">
+        <h1 className="text-lg font-bold text-label">
           {bereich === "rechnungen" ? "Rechnungen" : "Angebote"}
         </h1>
         {bereich === "rechnungen" && (
           <button
             onClick={exportieren}
-            className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-sm font-medium"
+            className="btn-touch btn-ap px-3 py-1.5 text-sm font-medium"
           >
             CSV-Export
           </button>
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto border border-ind-line bg-ind-bg p-1">
+      <div className="flex gap-2 overflow-x-auto border border-sep bg-card p-1">
         {([
           { wert: "rechnungen" as const, label: "Rechnungen" },
           { wert: "angebote" as const, label: "Angebote" },
@@ -180,8 +180,8 @@ export function RechnungenPage() {
             }}
             className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ${
               bereich === o.wert
-                ? "btn-industry btn-industry-primary text-white"
-                : "text-ind-ink-2"
+                ? "btn-ap-primary text-white"
+                : "text-label"
             }`}
           >
             {o.label}
@@ -195,7 +195,7 @@ export function RechnungenPage() {
         <>
           <button
             onClick={() => setZeigeNeu((v) => !v)}
-            className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-medium"
+            className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
           >
             {zeigeNeu ? "Abbrechen" : "+ Neue Rechnung"}
           </button>
@@ -214,7 +214,7 @@ export function RechnungenPage() {
               setSeiten(1);
             }}
             placeholder="Rechnungsnummer oder Kunde suchen…"
-            className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
           />
 
           <div className="flex flex-wrap gap-2 text-xs">
@@ -260,21 +260,21 @@ export function RechnungenPage() {
           </div>
 
           {data && (
-            <div className="grid grid-cols-3 gap-2 border border-ind-line bg-ind-bg p-3 text-center">
+            <div className="grid grid-cols-3 gap-2 border border-sep bg-card p-3 text-center">
               <div>
-                <div className="text-xs text-ind-ink-3">Treffer</div>
-                <div className="text-sm font-semibold tabular-nums text-ind-ink">
+                <div className="text-xs text-label2">Treffer</div>
+                <div className="text-sm font-semibold tabular-nums text-label">
                   {data.gesamt_anzahl}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-ind-ink-3">Brutto gesamt</div>
-                <div className="text-sm font-semibold tabular-nums text-ind-ink">
+                <div className="text-xs text-label2">Brutto gesamt</div>
+                <div className="text-sm font-semibold tabular-nums text-label">
                   {formatEuro(data.summe_brutto)}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-ind-ink-3">Offen</div>
+                <div className="text-xs text-label2">Offen</div>
                 <div className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">
                   {formatEuro(data.summe_offen)}
                 </div>
@@ -299,8 +299,8 @@ export function RechnungenPage() {
                   }`}
                 >
                   <div className="min-w-0">
-                    <div className="text-xs text-ind-ink-3">{r.rechnungsnummer}</div>
-                    <div className="truncate text-sm font-medium text-ind-ink">
+                    <div className="text-xs text-label2">{r.rechnungsnummer}</div>
+                    <div className="truncate text-sm font-medium text-label">
                       Fällig: {formatDatum(r.faellig_am)}
                       {r.ist_ueberfaellig && (
                         <span className="ml-1 text-rose-600 dark:text-rose-400">
@@ -315,7 +315,7 @@ export function RechnungenPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="tabular-nums text-sm font-medium text-ind-ink-2">
+                    <span className="tabular-nums text-sm font-medium text-label">
                       {formatEuro(r.betrag_brutto)}
                     </span>
                     <StatusBadge label={RECHNUNG_STATUS_LABEL[r.status]} tone={RECHNUNG_STATUS_TONE[r.status]} />
@@ -328,7 +328,7 @@ export function RechnungenPage() {
           {gibtMehr && (
             <button
               onClick={() => setSeiten((v) => v + 1)}
-              className="btn-touch w-full btn-industry btn-industry-secondary px-3 py-2 text-sm font-medium"
+              className="btn-touch w-full btn-ap px-3 py-2 text-sm font-medium"
             >
               Mehr laden
             </button>

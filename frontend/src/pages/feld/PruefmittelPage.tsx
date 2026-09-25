@@ -18,7 +18,7 @@ function faelligkeitsFarbe(datum: string): string {
   const in7Tagen = new Date();
   in7Tagen.setDate(in7Tagen.getDate() + 7);
   if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600 dark:text-amber-400";
-  return "text-ind-ink-3";
+  return "text-label2";
 }
 
 function formatDatum(datum: string): string {
@@ -91,51 +91,51 @@ export function PruefmittelPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-ind-ink">Prüfmittelverwaltung</h1>
+        <h1 className="text-lg font-bold text-label">Prüfmittelverwaltung</h1>
         <span />
       </div>
 
       <button
         onClick={() => setShowForm((v) => !v)}
-        className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium"
+        className="btn-touch rounded-md btn-ap-primary px-4 py-2 text-sm font-medium"
       >
         {showForm ? "Abbrechen" : "+ Neues Prüfmittel"}
       </button>
 
       {showForm && (
-        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
+        <div className="space-y-3 border border-sep bg-card p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Bezeichnung
             </label>
             <input
               value={form.bezeichnung}
               onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               placeholder="z.B. Installationstester Gossen Metrahit"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Seriennummer
             </label>
             <input
               value={form.seriennummer}
               onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Zugewiesen an
             </label>
             <select
               value={form.zugewiesenAn}
               onChange={(e) => setForm({ ...form, zugewiesenAn: e.target.value })}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               <option value="">Niemand</option>
               {zuweisbareNutzer.map((t) => (
@@ -146,7 +146,7 @@ export function PruefmittelPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 block text-xs font-medium text-label2">
               Kalibrierintervall (Monate)
             </label>
             <input
@@ -154,7 +154,7 @@ export function PruefmittelPage() {
               min={1}
               value={form.intervallMonate}
               onChange={(e) => setForm({ ...form, intervallMonate: e.target.value })}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <button
@@ -167,7 +167,7 @@ export function PruefmittelPage() {
                 kalibrierintervall_monate: Number(form.intervallMonate),
               })
             }
-            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -176,26 +176,26 @@ export function PruefmittelPage() {
 
       <div className="space-y-2">
         {sortiert.length === 0 ? (
-          <p className="text-center text-sm text-ind-ink-3">Keine Prüfmittel erfasst.</p>
+          <p className="text-center text-sm text-label2">Keine Prüfmittel erfasst.</p>
         ) : (
           sortiert.map((mittel) => (
             <div
               key={mittel.id}
-              className="border border-ind-line bg-ind-bg p-3"
+              className="border border-sep bg-card p-3"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-ind-ink">
+                  <div className="text-sm font-medium text-label">
                     {mittel.bezeichnung}
                   </div>
                   {mittel.seriennummer && (
-                    <div className="text-xs text-ind-ink-3">SN {mittel.seriennummer}</div>
+                    <div className="text-xs text-label2">SN {mittel.seriennummer}</div>
                   )}
-                  <div className="text-xs text-ind-ink-3">
+                  <div className="text-xs text-label2">
                     Zugewiesen: {nameFuer(mittel.zugewiesen_an)}
                   </div>
                 </div>
-                <span className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
+                <span className="border border-sep px-2 py-0.5 text-xs text-label">
                   {STATUS_LABEL[mittel.status]}
                 </span>
               </div>

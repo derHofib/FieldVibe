@@ -69,15 +69,15 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const inputClass =
-    "border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink";
+    "border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
   return (
-    <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
+    <div className="space-y-3 border border-sep bg-card p-4">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ind-ink-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
           <Building2 size={15} strokeWidth={2} className="text-violet-500" /> Firmenprofil
         </h2>
-        <p className="mt-1 text-xs text-ind-ink-3">
+        <p className="mt-1 text-xs text-label2">
           Diese Angaben erscheinen im Briefkopf und in der Fußzeile eurer Angebots-PDFs.
         </p>
       </div>
@@ -86,9 +86,9 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         {logoUrl?.url ? (
           <img src={logoUrl.url} alt="Firmenlogo" className="h-12 max-w-[160px] object-contain" />
         ) : (
-          <span className="text-xs text-ind-ink-3">Kein Logo hinterlegt</span>
+          <span className="text-xs text-label2">Kein Logo hinterlegt</span>
         )}
-        <label className="btn-touch cursor-pointer btn-industry btn-industry-secondary px-3 py-1.5 text-xs font-medium">
+        <label className="btn-touch cursor-pointer btn-ap px-3 py-1.5 text-xs font-medium">
           Logo hochladen
           <input
             type="file"
@@ -169,7 +169,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+      <label className="flex items-center gap-2 text-sm text-label">
         <input
           type="checkbox"
           checked={istKleinunternehmer}
@@ -178,7 +178,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         Kleinunternehmer nach § 19 UStG (keine Umsatzsteuer auf Rechnungen)
       </label>
 
-      <label className="flex items-start gap-2 text-sm text-ind-ink-2">
+      <label className="flex items-start gap-2 text-sm text-label">
         <input
           type="checkbox"
           className="mt-0.5"
@@ -187,7 +187,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         />
         <span>
           E-Rechnung (ZUGFeRD) aktivieren
-          <span className="mt-0.5 block text-xs text-ind-ink-3">
+          <span className="mt-0.5 block text-xs text-label2">
             Rechnungen werden beim Versand als ZUGFeRD-Hybrid-PDF mit eingebetteter E-Rechnungs-XML
             erzeugt, sobald alle Pflichtangaben (u.a. USt-IdNr. des Kunden bei gewerblichen/öffentlichen
             Kunden) vorhanden sind -- sonst automatisch normales PDF.
@@ -199,7 +199,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -229,25 +229,25 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   });
 
   return (
-    <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+    <div className="space-y-2 border border-sep bg-card p-4">
       <div>
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-ind-ink-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
           <Mail size={15} strokeWidth={2} className="text-rose-500" /> Mahnwesen
         </h2>
-        <p className="mt-1 text-xs text-ind-ink-3">
+        <p className="mt-1 text-xs text-label2">
           Standard ist ein reiner interner Hinweis. Aktiviere hier je Mahnstufe, dass die Mahnung
           automatisch per E-Mail an den Kunden geschickt wird (inkl. Verzugszinsen).
         </p>
       </div>
-      <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+      <label className="flex items-center gap-2 text-sm text-label">
         <input type="checkbox" checked={mahnung1} onChange={(e) => setMahnung1(e.target.checked)} />
         1. Mahnung automatisch versenden
       </label>
-      <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+      <label className="flex items-center gap-2 text-sm text-label">
         <input type="checkbox" checked={mahnung2} onChange={(e) => setMahnung2(e.target.checked)} />
         2. Mahnung automatisch versenden
       </label>
-      <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+      <label className="flex items-center gap-2 text-sm text-label">
         <input type="checkbox" checked={mahnung3} onChange={(e) => setMahnung3(e.target.checked)} />
         3. Mahnung automatisch versenden
       </label>
@@ -255,7 +255,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -280,11 +280,11 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
   });
 
   return (
-    <div className="border border-ind-line bg-ind-bg p-4">
-      <h2 className="mb-1 text-sm font-semibold text-ind-ink-2">
+    <div className="border border-sep bg-card p-4">
+      <h2 className="mb-1 text-sm font-semibold text-label">
         Wiedervorlage-Standardfrist
       </h2>
-      <p className="mb-2 text-xs text-ind-ink-3">
+      <p className="mb-2 text-xs text-label2">
         Vorschlag (in Tagen), wenn ein Vorgang auf "Wartet auf Kunde" gesetzt wird -- pro Vorgang
         beim Setzen weiterhin änderbar.
       </p>
@@ -295,13 +295,13 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
           placeholder={einstellungen.effektive_wiedervorlage_standard_tage.toString()}
           value={tage}
           onChange={(e) => setTage(e.target.value)}
-          className="btn-touch w-24 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="btn-touch w-24 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
-        <span className="text-sm text-ind-ink-3">Tage</span>
+        <span className="text-sm text-label2">Tage</span>
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -333,9 +333,9 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+    <div className="space-y-2 border border-sep bg-card p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-ind-ink-2">SMTP (E-Mail-Versand)</span>
+        <span className="text-sm font-semibold text-label">SMTP (E-Mail-Versand)</span>
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
@@ -352,25 +352,25 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Benutzername"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={fromAddress}
           onChange={(e) => setFromAddress(e.target.value)}
           placeholder="Absender-Adresse"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <input
@@ -378,7 +378,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
 
       <div className="flex gap-2">
@@ -390,7 +390,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -435,9 +435,9 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+    <div className="space-y-2 border border-sep bg-card p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-ind-ink-2">
+        <span className="text-sm font-semibold text-label">
           IMAP (Rechnungseingang-Import)
         </span>
         <span
@@ -456,25 +456,25 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Postfach-Adresse"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={mailbox}
           onChange={(e) => setMailbox(e.target.value)}
           placeholder="Ordner (z.B. INBOX)"
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <input
@@ -482,7 +482,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
 
       <div className="flex gap-2">
@@ -494,7 +494,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
@@ -590,17 +590,17 @@ export function IntegrationenPage() {
 
   if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
     return <Navigate to="/feed" replace />;
-  if (isLoading) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-label2">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
   const imap = integrationen?.find((i) => i.typ === "imap");
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-ind-ink">
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
         <Plug size={19} strokeWidth={2} className="text-indigo-500" /> Integrationen
       </h1>
 
@@ -608,11 +608,11 @@ export function IntegrationenPage() {
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 
       {einstellungen && (
-        <div className="border border-ind-line bg-ind-bg p-4">
-          <h2 className="mb-1 text-sm font-semibold text-ind-ink-2">
+        <div className="border border-sep bg-card p-4">
+          <h2 className="mb-1 text-sm font-semibold text-label">
             Prüfzyklen-/Mahnwesen-Uhrzeit
           </h2>
-          <p className="mb-2 text-xs text-ind-ink-3">
+          <p className="mb-2 text-xs text-label2">
             Uhrzeit (UTC), zu der der tägliche Hintergrund-Lauf für diesen Betrieb
             geprüfte/überfällige Vorgänge und Rechnungen bearbeitet.
           </p>
@@ -622,7 +622,7 @@ export function IntegrationenPage() {
               onChange={(e) =>
                 schedulerMutation.mutate(e.target.value === "" ? null : Number(e.target.value))
               }
-              className="btn-touch border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               <option value="">Standard ({einstellungen.effektive_scheduler_stunde_utc.toString().padStart(2, "0")}:00 UTC)</option>
               {Array.from({ length: 24 }, (_, h) => (
@@ -632,7 +632,7 @@ export function IntegrationenPage() {
               ))}
             </select>
             {schedulerMutation.isPending && (
-              <span className="text-xs text-ind-ink-3">Speichert…</span>
+              <span className="text-xs text-label2">Speichert…</span>
             )}
           </div>
         </div>
@@ -640,7 +640,7 @@ export function IntegrationenPage() {
 
       {einstellungen && <WiedervorlageSection einstellungen={einstellungen} />}
 
-      <p className="text-sm text-ind-ink-3">
+      <p className="text-sm text-label2">
         SMTP wird für den "Passwort vergessen"-Link im Kundenportal genutzt. Ohne
         konfiguriertes SMTP kann ein Mitarbeiter das Passwort eines Kunden weiterhin
         direkt über den Kunden setzen.
@@ -649,31 +649,31 @@ export function IntegrationenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+        <div className="space-y-2 border border-sep bg-card p-4">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="Host"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
               placeholder="Port"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={user}
               onChange={(e) => setUser(e.target.value)}
               placeholder="Benutzername"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={fromAddress}
               onChange={(e) => setFromAddress(e.target.value)}
               placeholder="Absender-Adresse"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <input
@@ -681,12 +681,12 @@ export function IntegrationenPage() {
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             SMTP einrichten
           </button>
@@ -700,7 +700,7 @@ export function IntegrationenPage() {
         </button>
       )}
 
-      <p className="text-sm text-ind-ink-3">
+      <p className="text-sm text-label2">
         Mit einem IMAP-Postfach (z.B. rechnung@deine-domain.de) werden Rechnungs-E-Mails automatisch
         abgeholt: jeder PDF-Anhang landet als Entwurf im Rechnungseingang, den ein Mitarbeiter dort
         gegen den Beleg prüft und bestätigt.
@@ -709,31 +709,31 @@ export function IntegrationenPage() {
       {imap ? (
         <ImapZeile integration={imap} />
       ) : showImapForm ? (
-        <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+        <div className="space-y-2 border border-sep bg-card p-4">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={imapHost}
               onChange={(e) => setImapHost(e.target.value)}
               placeholder="Host"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={imapPort}
               onChange={(e) => setImapPort(e.target.value)}
               placeholder="Port"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={imapUser}
               onChange={(e) => setImapUser(e.target.value)}
               placeholder="Postfach-Adresse"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <input
               value={imapMailbox}
               onChange={(e) => setImapMailbox(e.target.value)}
               placeholder="Ordner (z.B. INBOX)"
-              className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <input
@@ -741,12 +741,12 @@ export function IntegrationenPage() {
             value={imapSecret}
             onChange={(e) => setImapSecret(e.target.value)}
             placeholder="Passwort"
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <button
             disabled={!imapHost || !imapUser || createImapMutation.isPending}
             onClick={() => createImapMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             IMAP einrichten
           </button>

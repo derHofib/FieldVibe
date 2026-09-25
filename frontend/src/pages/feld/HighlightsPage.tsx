@@ -24,13 +24,13 @@ export function HighlightsPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-ind-ink">
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
         <Star size={19} strokeWidth={2} className="text-amber-500" /> Highlights
       </h1>
-      <p className="text-sm text-ind-ink-3">
+      <p className="text-sm text-label2">
         Markierte Fotos aus abgeschlossenen und laufenden Vorgängen – eine kleine Werkschau.
       </p>
 
@@ -69,10 +69,10 @@ export function HighlightsPage() {
                   />
                 )}
                 <div className="p-2">
-                  <div className="line-clamp-1 text-xs font-medium text-ind-ink-2">
+                  <div className="line-clamp-1 text-xs font-medium text-label">
                     {h.titel ?? h.vorgang_titel}
                   </div>
-                  <div className="text-xs text-ind-ink-3">{h.vorgangsnummer}</div>
+                  <div className="text-xs text-label2">{h.vorgangsnummer}</div>
                 </div>
               </button>
               {/* Spiegelt app/api/routes/highlights.py:delete_highlight -- nur

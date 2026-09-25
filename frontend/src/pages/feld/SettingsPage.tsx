@@ -31,14 +31,14 @@ function SettingsLink({
   return (
     <button
       onClick={onClick}
-      className="card-interactive btn-touch flex w-full items-center gap-3 border border-ind-line bg-ind-bg p-4 text-left"
+      className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
     >
       <IconBadge icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">
-        <span className="block font-medium text-ind-ink">{label}</span>
-        <span className="block text-xs text-ind-ink-3">{beschreibung}</span>
+        <span className="block font-medium text-label">{label}</span>
+        <span className="block text-xs text-label2">{beschreibung}</span>
       </span>
-      <span className="text-ind-ink-3">›</span>
+      <span className="text-label2">›</span>
     </button>
   );
 }
@@ -50,14 +50,14 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-ind-ink">Einstellungen</h1>
-        <p className="mt-1 text-sm text-ind-ink-3">
+        <h1 className="text-lg font-bold text-label">Einstellungen</h1>
+        <p className="mt-1 text-sm text-label2">
           Verwaltung für {currentUser?.mandant_name ?? "diesen Mandanten"}.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Team
         </h2>
         <SettingsLink
@@ -93,7 +93,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Betrieb
         </h2>
         <SettingsLink
@@ -124,7 +124,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Unternehmen
         </h2>
         <SettingsLink

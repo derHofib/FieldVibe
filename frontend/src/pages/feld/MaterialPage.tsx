@@ -75,7 +75,7 @@ function MaterialZeile({
   });
 
   return (
-    <div className="card-interactive border border-ind-line bg-ind-bg p-3">
+    <div className="card-interactive border border-sep bg-card p-3">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(`/material/${material.id}`)}
@@ -88,28 +88,28 @@ function MaterialZeile({
             className={`text-xs ${
               istUnterbestand(material)
                 ? "font-semibold text-red-600 dark:text-red-400"
-                : "text-ind-ink-3"
+                : "text-label2"
             }`}
           >
             Gesamt: {material.bestand_gesamt} {material.einheit} (Mindestbestand {material.mindestbestand})
           </div>
           {material.artikelnummer && (
-            <div className="text-xs text-ind-ink-3">Art.-Nr. {material.artikelnummer}</div>
+            <div className="text-xs text-label2">Art.-Nr. {material.artikelnummer}</div>
           )}
           {material.einzelpreis && (
-            <div className="text-xs text-ind-ink-3">
+            <div className="text-xs text-label2">
               {material.einzelpreis} EUR/Einheit{lieferantName ? ` · ${lieferantName}` : ""}
             </div>
           )}
           {!material.einzelpreis && lieferantName && (
-            <div className="text-xs text-ind-ink-3">{lieferantName}</div>
+            <div className="text-xs text-label2">{lieferantName}</div>
           )}
           {tags.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
               {tags.map((t) => (
                 <span
                   key={t.id}
-                  className="border border-ind-line px-1.5 py-0.5 text-xs text-ind-ink-2"
+                  className="border border-sep px-1.5 py-0.5 text-xs text-label"
                 >
                   #{t.label}
                 </span>
@@ -130,7 +130,7 @@ function MaterialZeile({
       <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-stone-800">
         {material.bestaende.map((b) => (
           <div key={b.lager_id} className="flex items-center justify-between text-xs">
-            <span className="text-ind-ink-2">{b.lager_bezeichnung}</span>
+            <span className="text-label">{b.lager_bezeichnung}</span>
             {editingLagerId === b.lager_id ? (
               <span className="flex items-center gap-1">
                 <input
@@ -143,13 +143,13 @@ function MaterialZeile({
                 <button
                   onClick={() => bestandSetzenMutation.mutate(b.lager_id)}
                   disabled={bestandSetzenMutation.isPending}
-                  className="btn-touch rounded-xs btn-industry btn-industry-primary px-2 py-0.5"
+                  className="btn-touch rounded-xs btn-ap-primary px-2 py-0.5"
                 >
                   ✓
                 </button>
                 <button
                   onClick={() => setEditingLagerId(null)}
-                  className="btn-touch text-ind-ink-3"
+                  className="btn-touch text-label2"
                 >
                   ✕
                 </button>
@@ -170,12 +170,12 @@ function MaterialZeile({
       </div>
 
       {zeigeUmlagern && (
-        <div className="mt-2 space-y-2 border border-ind-line-2 p-2">
+        <div className="mt-2 space-y-2 border border-sepstrong p-2">
           <div className="grid grid-cols-2 gap-2">
             <select
               value={umlagernVon}
               onChange={(e) => setUmlagernVon(e.target.value)}
-              className="border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
             >
               <option value="">Von…</option>
               {lagerorte.map((l) => (
@@ -187,7 +187,7 @@ function MaterialZeile({
             <select
               value={umlagernNach}
               onChange={(e) => setUmlagernNach(e.target.value)}
-              className="border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+              className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
             >
               <option value="">Nach…</option>
               {lagerorte.map((l) => (
@@ -204,14 +204,14 @@ function MaterialZeile({
               placeholder="Menge"
               value={umlagernMenge}
               onChange={(e) => setUmlagernMenge(e.target.value)}
-              className="flex-1 border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+              className="flex-1 border border-sep bg-transparent px-2 py-1 text-xs text-label"
             />
             <button
               disabled={
                 !umlagernVon || !umlagernNach || umlagernVon === umlagernNach || !umlagernMenge || umlagernMutation.isPending
               }
               onClick={() => umlagernMutation.mutate()}
-              className="btn-touch shrink-0 rounded-md btn-industry btn-industry-primary px-3 py-1 text-xs font-medium disabled:opacity-50"
+              className="btn-touch shrink-0 rounded-md btn-ap-primary px-3 py-1 text-xs font-medium disabled:opacity-50"
             >
               Umlagern
             </button>
@@ -246,9 +246,9 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   });
 
   return (
-    <div className="border border-ind-line bg-ind-bg p-3">
+    <div className="border border-sep bg-card p-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ind-ink-3">Fahrzeuge & Lagerorte</h2>
+        <h2 className="text-sm font-semibold text-label2">Fahrzeuge & Lagerorte</h2>
         <button
           onClick={() => setShowForm((v) => !v)}
           className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -258,7 +258,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
       </div>
 
       {lagerorte.length === 0 ? (
-        <p className="mt-2 text-sm text-ind-ink-3">Noch keine weiteren Lagerorte.</p>
+        <p className="mt-2 text-sm text-label2">Noch keine weiteren Lagerorte.</p>
       ) : (
         <div className="mt-2 space-y-1">
           {lagerorte.map((l) => (
@@ -267,8 +267,8 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
               onClick={() => navigate(`/anlagen/${l.id}`)}
               className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
             >
-              <span className="text-ind-ink">{l.bezeichnung}</span>
-              <span className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
+              <span className="text-label">{l.bezeichnung}</span>
+              <span className="border border-sep px-2 py-0.5 text-xs text-label">
                 {OBJEKTTYP_LABEL[l.objekttyp]}
               </span>
             </button>
@@ -282,25 +282,25 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
             placeholder="Bezeichnung (z.B. Transporter VW)"
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <select
             value={objekttyp}
             onChange={(e) => setObjekttyp(e.target.value as AnlagenObjekttyp)}
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             <option value="fahrzeug">Fahrzeug</option>
             <option value="lager">Lager</option>
             <option value="baustelle">Baustelle</option>
           </select>
-          <p className="text-xs text-ind-ink-3">
+          <p className="text-xs text-label2">
             Jedes Fahrzeug/Lager ist automatisch ein eigener Lagerort für Material -- keine Kunde-
             Zuordnung nötig.
           </p>
           <button
             disabled={!bezeichnung || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -469,9 +469,9 @@ export function MaterialPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-ind-ink">Material</h1>
+      <h1 className="text-lg font-bold text-label">Material</h1>
 
-      <div className="flex gap-2 overflow-x-auto border border-ind-line bg-ind-bg p-1">
+      <div className="flex gap-2 overflow-x-auto border border-sep bg-card p-1">
         {(["material", "bestellwesen"] as const).map((t) => (
           <button
             key={t}
@@ -481,8 +481,8 @@ export function MaterialPage() {
             }}
             className={`btn-touch shrink-0 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium capitalize ${
               tab === t
-                ? "btn-industry btn-industry-primary text-white"
-                : "text-ind-ink-2"
+                ? "btn-ap-primary text-white"
+                : "text-label"
             }`}
           >
             {t}
@@ -493,31 +493,31 @@ export function MaterialPage() {
       {tab === "material" && (
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-medium"
+          className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
         >
           {showForm ? "Abbrechen" : "+ Neues Material"}
         </button>
       )}
 
       {showForm && tab === "material" && (
-        <div className="space-y-3 border border-ind-line bg-ind-bg p-4">
+        <div className="space-y-3 border border-sep bg-card p-4">
           <input
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
             placeholder="Bezeichnung"
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">Einheit</label>
+              <label className="mb-1 block text-xs text-label2">Einheit</label>
               <input
                 value={materialForm.einheit}
                 onChange={(e) => setMaterialForm({ ...materialForm, einheit: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">
+              <label className="mb-1 block text-xs text-label2">
                 Einzelpreis (EUR, optional)
               </label>
               <input
@@ -525,37 +525,37 @@ export function MaterialPage() {
                 step="0.01"
                 value={materialForm.einzelpreis}
                 onChange={(e) => setMaterialForm({ ...materialForm, einzelpreis: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">Anfangsbestand</label>
+              <label className="mb-1 block text-xs text-label2">Anfangsbestand</label>
               <input
                 type="number"
                 step="0.01"
                 value={materialForm.menge}
                 onChange={(e) => setMaterialForm({ ...materialForm, menge: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-ind-ink-3">Mindestbestand</label>
+              <label className="mb-1 block text-xs text-label2">Mindestbestand</label>
               <input
                 type="number"
                 step="0.01"
                 value={materialForm.mindestbestand}
                 onChange={(e) => setMaterialForm({ ...materialForm, mindestbestand: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-ind-ink-3">
+              <label className="mb-1 block text-xs text-label2">
                 Standard-Lieferant (optional)
               </label>
               <select
                 value={materialForm.lieferantId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lieferantId: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Kein Lieferant hinterlegt</option>
                 {(lieferanten ?? []).map((l) => (
@@ -566,13 +566,13 @@ export function MaterialPage() {
               </select>
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-ind-ink-3">
+              <label className="mb-1 block text-xs text-label2">
                 Lagerort für Anfangsbestand
               </label>
               <select
                 value={materialForm.lagerId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lagerId: e.target.value })}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Zentrallager (Standard)</option>
                 {lagerorte
@@ -588,7 +588,7 @@ export function MaterialPage() {
           <button
             disabled={!materialForm.bezeichnung || createMaterialMutation.isPending}
             onClick={() => createMaterialMutation.mutate()}
-            className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+            className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Anlegen
           </button>
@@ -600,18 +600,18 @@ export function MaterialPage() {
           <LagerorteVerwaltung lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")} />
 
           {(material ?? []).length > 0 && (
-            <div className="space-y-2 border border-ind-line bg-ind-bg p-3">
+            <div className="space-y-2 border border-sep bg-card p-3">
               <input
                 value={matSuche}
                 onChange={(e) => setMatSuche(e.target.value)}
                 placeholder="Suche nach Bezeichnung oder Artikelnummer…"
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <div className="grid grid-cols-2 gap-2">
                 <select
                   value={matFilterLieferantId}
                   onChange={(e) => setMatFilterLieferantId(e.target.value)}
-                  className="border border-ind-line bg-transparent px-2 py-1.5 text-xs text-ind-ink"
+                  className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
                 >
                   <option value="">Alle Lieferanten</option>
                   {(lieferanten ?? []).map((l) => (
@@ -623,7 +623,7 @@ export function MaterialPage() {
                 <select
                   value={matFilterTagId}
                   onChange={(e) => setMatFilterTagId(e.target.value)}
-                  className="border border-ind-line bg-transparent px-2 py-1.5 text-xs text-ind-ink"
+                  className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
                 >
                   <option value="">Alle Tags</option>
                   {(materialTags ?? []).map((t) => (
@@ -633,7 +633,7 @@ export function MaterialPage() {
                   ))}
                 </select>
               </div>
-              <label className="flex items-center gap-1.5 text-xs text-ind-ink-2">
+              <label className="flex items-center gap-1.5 text-xs text-label">
                 <input
                   type="checkbox"
                   checked={matFilterUnterbestand}
@@ -650,7 +650,7 @@ export function MaterialPage() {
           ) : (material ?? []).length === 0 ? (
             <EmptyState icon={Package} text="Kein Material erfasst." />
           ) : materialGefiltert.length === 0 ? (
-            <p className="text-center text-sm text-ind-ink-3">Kein Material entspricht dem Filter.</p>
+            <p className="text-center text-sm text-label2">Kein Material entspricht dem Filter.</p>
           ) : (
             materialGefiltert.map((m) => (
               <MaterialZeile
@@ -667,9 +667,9 @@ export function MaterialPage() {
 
       {tab === "bestellwesen" && (
         <div className="space-y-4">
-          <div className="border border-ind-line bg-ind-bg p-3">
+          <div className="border border-sep bg-card p-3">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ind-ink-3">Lieferanten</h2>
+              <h2 className="text-sm font-semibold text-label2">Lieferanten</h2>
               <button
                 onClick={() => setShowLieferantForm((v) => !v)}
                 className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
@@ -678,30 +678,30 @@ export function MaterialPage() {
               </button>
             </div>
             {showLieferantForm && (
-              <div className="mb-2 space-y-2 border border-ind-line-2 p-2">
+              <div className="mb-2 space-y-2 border border-sepstrong p-2">
                 <input
                   value={lieferantName}
                   onChange={(e) => setLieferantName(e.target.value)}
                   placeholder="Name"
-                  className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
                 <input
                   value={lieferantEmail}
                   onChange={(e) => setLieferantEmail(e.target.value)}
                   placeholder="E-Mail (optional)"
-                  className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
                 <button
                   disabled={!lieferantName.trim() || createLieferantMutation.isPending}
                   onClick={() => createLieferantMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                 >
                   Anlegen
                 </button>
               </div>
             )}
             {(lieferanten ?? []).length === 0 ? (
-              <p className="text-sm text-ind-ink-3">Noch keine Lieferanten angelegt.</p>
+              <p className="text-sm text-label2">Noch keine Lieferanten angelegt.</p>
             ) : (
               <div className="space-y-1">
                 {lieferanten!.map((l) => (
@@ -710,8 +710,8 @@ export function MaterialPage() {
                     className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
                   >
                     <div>
-                      <span className="text-ind-ink">{l.name}</span>
-                      {l.email && <span className="ml-2 text-xs text-ind-ink-3">{l.email}</span>}
+                      <span className="text-label">{l.name}</span>
+                      {l.email && <span className="ml-2 text-xs text-label2">{l.email}</span>}
                     </div>
                     {kannLieferantenLoeschen && (
                       <button
@@ -732,15 +732,15 @@ export function MaterialPage() {
             )}
           </div>
 
-          <div className="border border-ind-line bg-ind-bg p-3">
-            <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Offene Materialbedarfe</h2>
+          <div className="border border-sep bg-card p-3">
+            <h2 className="mb-2 text-sm font-semibold text-label2">Offene Materialbedarfe</h2>
             <div className="mb-2 flex gap-2 rounded-md bg-slate-100 p-1 dark:bg-stone-800">
               <button
                 onClick={() => setBedarfZweck("bestellung")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "bestellung"
                     ? "bg-white text-slate-800 shadow-xs dark:bg-stone-700 dark:text-stone-100"
-                    : "text-ind-ink-3"
+                    : "text-label2"
                 }`}
               >
                 Zur Bestellung
@@ -750,7 +750,7 @@ export function MaterialPage() {
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "angebot"
                     ? "bg-white text-slate-800 shadow-xs dark:bg-stone-700 dark:text-stone-100"
-                    : "text-ind-ink-3"
+                    : "text-label2"
                 }`}
               >
                 Für Angebot
@@ -758,7 +758,7 @@ export function MaterialPage() {
             </div>
 
             {(offeneBedarfe ?? []).length === 0 ? (
-              <p className="text-sm text-ind-ink-3">Keine offenen Materialbedarfe.</p>
+              <p className="text-sm text-label2">Keine offenen Materialbedarfe.</p>
             ) : (
               <div className="space-y-1">
                 {offeneBedarfe!.map((b) => (
@@ -772,9 +772,9 @@ export function MaterialPage() {
                       onChange={() => toggleBedarf(b.id)}
                       className="h-4 w-4"
                     />
-                    <span className="flex-1 text-ind-ink">
+                    <span className="flex-1 text-label">
                       {b.menge} {b.material_einheit} {b.material_bezeichnung}
-                      <span className="ml-1.5 text-xs text-ind-ink-3">
+                      <span className="ml-1.5 text-xs text-label2">
                         {b.vorgang_vorgangsnummer} · {b.kunde_name}
                       </span>
                     </span>
@@ -788,7 +788,7 @@ export function MaterialPage() {
                 <select
                   value={bestellLieferantId}
                   onChange={(e) => setBestellLieferantId(e.target.value)}
-                  className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 >
                   <option value="">Kein Lieferant hinterlegt</option>
                   {(lieferanten ?? []).map((l) => (
@@ -800,7 +800,7 @@ export function MaterialPage() {
                 <button
                   disabled={bestellungErstellenMutation.isPending}
                   onClick={() => bestellungErstellenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                 >
                   Bestellung aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>
@@ -811,7 +811,7 @@ export function MaterialPage() {
                 <button
                   disabled={angebotAusBedarfenMutation.isPending}
                   onClick={() => angebotAusBedarfenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                 >
                   Angebot aus {ausgewaehlteBedarfe.size} Position(en) erstellen
                 </button>
@@ -819,10 +819,10 @@ export function MaterialPage() {
             )}
           </div>
 
-          <div className="border border-ind-line bg-ind-bg p-3">
-            <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Bestellungen</h2>
+          <div className="border border-sep bg-card p-3">
+            <h2 className="mb-2 text-sm font-semibold text-label2">Bestellungen</h2>
             {(bestellungen ?? []).length === 0 ? (
-              <p className="text-sm text-ind-ink-3">Noch keine Bestellungen vorhanden.</p>
+              <p className="text-sm text-label2">Noch keine Bestellungen vorhanden.</p>
             ) : (
               <div className="space-y-1">
                 {bestellungen!.map((b) => (
@@ -831,8 +831,8 @@ export function MaterialPage() {
                     onClick={() => navigate(`/bestellungen/${b.id}`)}
                     className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
                   >
-                    <span className="text-ind-ink">{b.bestellnummer}</span>
-                    <span className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
+                    <span className="text-label">{b.bestellnummer}</span>
+                    <span className="border border-sep px-2 py-0.5 text-xs text-label">
                       {BESTELLUNG_STATUS_LABEL[b.status]}
                     </span>
                   </button>

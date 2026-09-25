@@ -32,9 +32,9 @@ function MaterialPostenZeile({
   const { data: material } = useQuery({ queryKey: ["material-alle"], queryFn: () => materialApi.list() });
 
   return (
-    <div className="flex flex-wrap items-end gap-2 border border-ind-line-2 p-2">
+    <div className="flex flex-wrap items-end gap-2 border border-sepstrong p-2">
       <div className="min-w-[160px] flex-1">
-        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+        <label className="mb-1 block text-[10.5px] font-medium text-label2">
           Bezeichnung
         </label>
         <SearchableSelect
@@ -57,22 +57,22 @@ function MaterialPostenZeile({
           <input
             value={posten.bezeichnung}
             onChange={(e) => onChange({ ...posten, bezeichnung: e.target.value, material_id: null })}
-            className="mt-1 w-full border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+            className="mt-1 w-full border border-sep bg-transparent px-2 py-1 text-xs text-label"
           />
         )}
       </div>
       <div className="w-20">
-        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">Menge</label>
+        <label className="mb-1 block text-[10.5px] font-medium text-label2">Menge</label>
         <input
           type="number"
           step="0.01"
           value={posten.menge}
           onChange={(e) => onChange({ ...posten, menge: e.target.value })}
-          className="w-full border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+          className="w-full border border-sep bg-transparent px-2 py-1 text-xs text-label"
         />
       </div>
       <div className="w-24">
-        <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+        <label className="mb-1 block text-[10.5px] font-medium text-label2">
           Einzelpreis
         </label>
         <input
@@ -80,12 +80,12 @@ function MaterialPostenZeile({
           step="0.01"
           value={posten.einzelpreis}
           onChange={(e) => onChange({ ...posten, einzelpreis: e.target.value })}
-          className="w-full border border-ind-line bg-transparent px-2 py-1 text-xs text-ind-ink"
+          className="w-full border border-sep bg-transparent px-2 py-1 text-xs text-label"
         />
       </div>
       <button
         onClick={onEntfernen}
-        className="mb-0.5 shrink-0 p-1.5 text-ind-ink-3 hover:text-red-600 dark:hover:text-red-400"
+        className="mb-0.5 shrink-0 p-1.5 text-label2 hover:text-red-600 dark:hover:text-red-400"
       >
         <X size={14} strokeWidth={1.5} />
       </button>
@@ -215,7 +215,7 @@ function LvPositionFelder({
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-2">
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
             Bezeichnung
           </label>
           <input
@@ -223,53 +223,53 @@ function LvPositionFelder({
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
             placeholder={istUnterpunkt ? "z. B. Liefern und Montieren" : "z. B. Installation Wallbox"}
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
             Einheit
           </label>
           <input
             value={einheit}
             onChange={(e) => setEinheit(e.target.value)}
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
       </div>
 
       {!istUnterpunkt && (
-        <label className="flex items-center gap-2 text-sm text-ind-ink-2">
+        <label className="flex items-center gap-2 text-sm text-label">
           <input
             type="checkbox"
             checked={istStundensatz}
             onChange={(e) => setIstStundensatz(e.target.checked)}
-            className="h-4 w-4 border-ind-line"
+            className="h-4 w-4 border-sep"
           />
           Als Stundenverrechnungssatz in der Zeiterfassung wählbar
         </label>
       )}
 
       {hatUnterpunkte ? (
-        <p className="border border-ind-line-2 bg-ind-hover/40 p-3 text-sm text-ind-ink-3">
+        <p className="border border-sepstrong bg-fill/40 p-3 text-sm text-label2">
           Diese Position hat Unterpositionen -- ihr Preis ergibt sich automatisch aus deren Summe (siehe
           Summen-Rechnung unten). Um die Kalkulation zu ändern, bitte die Unterpositionen bearbeiten.
         </p>
       ) : (
         <>
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
               Preisermittlung
             </label>
-            <div className="seg-industry flex border border-ind-line">
+            <div className="flex overflow-hidden rounded-[var(--radius-ap-sm)] border border-sep">
               {(["festpreis", "berechnet"] as LvKalkulationsmodus[]).map((modus) => (
                 <button
                   key={modus}
                   onClick={() => setKalkulationsmodus(modus)}
                   className={`flex-1 px-3 py-1.5 text-xs font-semibold ${
                     kalkulationsmodus === modus
-                      ? "bg-ind-field text-ind-field-ink"
-                      : "text-ind-ink-2 hover:bg-ind-hover"
+                      ? "bg-tint text-white"
+                      : "text-label hover:bg-fill"
                   }`}
                 >
                   {modus === "festpreis" ? "Festpreis" : "Berechnet (Lohn + Material)"}
@@ -280,7 +280,7 @@ function LvPositionFelder({
 
           {kalkulationsmodus === "festpreis" ? (
             <div>
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
                 Einzelpreis (€)
               </label>
               <input
@@ -288,27 +288,27 @@ function LvPositionFelder({
                 step="0.01"
                 value={einzelpreis}
                 onChange={(e) => setEinzelpreis(e.target.value)}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="border border-ind-line-2 p-3">
-                <p className="mb-2 text-xs font-bold text-ind-ink-2">Lohn</p>
+              <div className="border border-sepstrong p-3">
+                <p className="mb-2 text-xs font-bold text-label">Lohn</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                    <label className="mb-1 block text-[10.5px] font-medium text-label2">
                       Zeit (Minuten)
                     </label>
                     <input
                       type="number"
                       value={lohnMinuten}
                       onChange={(e) => setLohnMinuten(e.target.value)}
-                      className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                      className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                    <label className="mb-1 block text-[10.5px] font-medium text-label2">
                       Stundensatz (€)
                     </label>
                     <input
@@ -316,7 +316,7 @@ function LvPositionFelder({
                       step="0.01"
                       value={lohnStundensatz}
                       onChange={(e) => setLohnStundensatz(e.target.value)}
-                      className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                      className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                     />
                   </div>
                 </div>
@@ -337,7 +337,7 @@ function LvPositionFelder({
                   </div>
                 )}
                 <div className="mt-2">
-                  <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                  <label className="mb-1 block text-[10.5px] font-medium text-label2">
                     Gemeinkosten (%)
                   </label>
                   <input
@@ -345,13 +345,13 @@ function LvPositionFelder({
                     step="0.1"
                     value={lohnGemeinkosten}
                     onChange={(e) => setLohnGemeinkosten(e.target.value)}
-                    className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                    className="w-28 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                 </div>
               </div>
 
-              <div className="border border-ind-line-2 p-3">
-                <p className="mb-2 text-xs font-bold text-ind-ink-2">Material</p>
+              <div className="border border-sepstrong p-3">
+                <p className="mb-2 text-xs font-bold text-label">Material</p>
                 <div className="space-y-1.5">
                   {materialPosten.map((p, i) => (
                     <MaterialPostenZeile
@@ -370,13 +370,13 @@ function LvPositionFelder({
                         { bezeichnung: "", menge: "1", einzelpreis: "0", material_id: null },
                       ])
                     }
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-ind-ink-3 hover:bg-ind-hover"
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-label2 hover:bg-fill"
                   >
                     <Plus size={13} strokeWidth={1.5} /> Materialposten hinzufügen
                   </button>
                 </div>
                 <div className="mt-2">
-                  <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+                  <label className="mb-1 block text-[10.5px] font-medium text-label2">
                     Materialaufschlag (%)
                   </label>
                   <input
@@ -384,13 +384,13 @@ function LvPositionFelder({
                     step="0.1"
                     value={materialAufschlag}
                     onChange={(e) => setMaterialAufschlag(e.target.value)}
-                    className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                    className="w-28 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                 </div>
               </div>
 
-              <div className="border border-ind-line-2 p-3">
-                <label className="mb-1 block text-[10.5px] font-medium text-ind-ink-3">
+              <div className="border border-sepstrong p-3">
+                <label className="mb-1 block text-[10.5px] font-medium text-label2">
                   Gewinn/Wagnis (%)
                 </label>
                 <input
@@ -398,7 +398,7 @@ function LvPositionFelder({
                   step="0.1"
                   value={gewinnWagnis}
                   onChange={(e) => setGewinnWagnis(e.target.value)}
-                  className="w-28 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="w-28 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
               </div>
             </div>
@@ -407,20 +407,20 @@ function LvPositionFelder({
       )}
 
       <div>
-        <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">
+        <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
           Notiz
         </label>
         <textarea
           value={notiz}
           onChange={(e) => setNotiz(e.target.value)}
           rows={2}
-          className="w-full resize-none border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
 
       {!istNeu && !istUnterpunkt && (
-        <div className="space-y-2 border-t border-ind-line pt-4">
-          <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Unterpositionen</p>
+        <div className="space-y-2 border-t border-sep pt-4">
+          <p className="text-[11px] font-bold tracking-wide text-label2 uppercase">Unterpositionen</p>
           {(unterpunkte ?? []).map((u) => (
             <UnterpunktZeileAufklappbar
               key={u.id}
@@ -430,7 +430,7 @@ function LvPositionFelder({
             />
           ))}
           {neuerUnterpunktOffen ? (
-            <div className="border border-ind-line-2 p-3">
+            <div className="border border-sepstrong p-3">
               <LvPositionFelder
                 leistungsverzeichnisId={leistungsverzeichnisId}
                 position={null}
@@ -441,7 +441,7 @@ function LvPositionFelder({
           ) : (
             <button
               onClick={() => setNeuerUnterpunktOffen(true)}
-              className="flex w-full items-center gap-1.5 border border-dashed border-ind-line px-2 py-2 text-xs font-medium text-ind-ink-3 hover:bg-ind-hover"
+              className="flex w-full items-center gap-1.5 border border-dashed border-sep px-2 py-2 text-xs font-medium text-label2 hover:bg-fill"
             >
               <Plus size={13} strokeWidth={1.5} /> Unterpunkt hinzufügen
             </button>
@@ -454,18 +454,18 @@ function LvPositionFelder({
        * Aufschluesselung. Bewusst als letzter Block vor den
        * Aktions-Buttons, siehe Komponenten-Docstring. */}
       {hatUnterpunkte ? (
-        <div className="border-t border-ind-line pt-4">
-          <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Summe</p>
-          <div className="flex items-center justify-between border border-ind-line-2 bg-ind-hover/40 p-3 text-sm font-bold text-ind-ink">
+        <div className="border-t border-sep pt-4">
+          <p className="mb-1.5 text-[11px] font-bold tracking-wide text-label2 uppercase">Summe</p>
+          <div className="flex items-center justify-between border border-sepstrong bg-fill/40 p-3 text-sm font-bold text-label">
             <span>Gesamt (Summe der Unterpositionen)</span>
             <span>{euro(position!.einzelpreis)}</span>
           </div>
         </div>
       ) : (
         kalkulationsmodus === "berechnet" && (
-          <div className="border-t border-ind-line pt-4">
-            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Summe</p>
-            <div className="space-y-1 border border-ind-line-2 p-3 text-xs text-ind-ink-3">
+          <div className="border-t border-sep pt-4">
+            <p className="mb-1.5 text-[11px] font-bold tracking-wide text-label2 uppercase">Summe</p>
+            <div className="space-y-1 border border-sepstrong p-3 text-xs text-label2">
               <div className="flex justify-between">
                 <span>Lohn-Basis</span>
                 <span>{euro(lohnBasis)}</span>
@@ -482,7 +482,7 @@ function LvPositionFelder({
                 <span>+ Aufschlag ({materialAufschlag || 0}%)</span>
                 <span>{euro(materialGesamtVorGewinn)}</span>
               </div>
-              <div className="flex justify-between border-t border-ind-line-2 pt-1 font-medium text-ind-ink-2">
+              <div className="flex justify-between border-t border-sepstrong pt-1 font-medium text-label">
                 <span>Zwischensumme</span>
                 <span>{euro(zwischensumme)}</span>
               </div>
@@ -490,7 +490,7 @@ function LvPositionFelder({
                 <span>+ Gewinn/Wagnis ({gewinnWagnis || 0}%)</span>
                 <span>{euro(gesamt)}</span>
               </div>
-              <div className="flex justify-between border-t border-ind-line-2 pt-1.5 text-sm font-bold text-ind-ink">
+              <div className="flex justify-between border-t border-sepstrong pt-1.5 text-sm font-bold text-label">
                 <span>Gesamt</span>
                 <span>{euro(gesamt)}</span>
               </div>
@@ -501,7 +501,7 @@ function LvPositionFelder({
 
       {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
 
-      <div className="flex items-center justify-between gap-3 border-t border-ind-line pt-4">
+      <div className="flex items-center justify-between gap-3 border-t border-sep pt-4">
         {istNeu ? (
           <span />
         ) : (
@@ -510,19 +510,19 @@ function LvPositionFelder({
               if (window.confirm(`"${position!.bezeichnung}" wirklich löschen?`)) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
-            className="btn-touch text-xs font-medium text-ind-ink-3 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+            className="btn-touch text-xs font-medium text-label2 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
           >
             Löschen
           </button>
         )}
         <div className="flex gap-2">
-          <button onClick={onFertig} className="btn-touch btn-industry btn-industry-secondary px-4 py-2 text-sm font-semibold">
+          <button onClick={onFertig} className="btn-touch btn-ap px-4 py-2 text-sm font-semibold">
             Abbrechen
           </button>
           <button
             onClick={() => speichern.mutate()}
             disabled={!bezeichnung.trim() || speichern.isPending}
-            className="btn-touch btn-industry btn-industry-primary px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            className="btn-touch btn-ap-primary px-4 py-2 text-sm font-semibold disabled:opacity-50"
           >
             Speichern
           </button>
@@ -546,18 +546,18 @@ function UnterpunktZeileAufklappbar({
 }) {
   const [offen, setOffen] = useState(false);
   return (
-    <div className="border border-ind-line-2">
+    <div className="border border-sepstrong">
       <button onClick={() => setOffen((v) => !v)} className="flex w-full items-center gap-2 p-2.5 text-left">
         {offen ? (
-          <ChevronDown size={14} strokeWidth={1.5} className="shrink-0 text-ind-ink-3" />
+          <ChevronDown size={14} strokeWidth={1.5} className="shrink-0 text-label2" />
         ) : (
-          <ChevronRight size={14} strokeWidth={1.5} className="shrink-0 text-ind-ink-3" />
+          <ChevronRight size={14} strokeWidth={1.5} className="shrink-0 text-label2" />
         )}
-        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ind-ink">{position.bezeichnung}</span>
-        <span className="shrink-0 text-sm font-semibold text-ind-ink">{euro(position.einzelpreis)}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-label">{position.bezeichnung}</span>
+        <span className="shrink-0 text-sm font-semibold text-label">{euro(position.einzelpreis)}</span>
       </button>
       {offen && (
-        <div className="border-t border-ind-line-2 p-3">
+        <div className="border-t border-sepstrong p-3">
           <LvPositionFelder
             leistungsverzeichnisId={leistungsverzeichnisId}
             position={position}
@@ -581,10 +581,10 @@ function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverz
     <>
       <button
         onClick={() => setOffen(true)}
-        className="card-interactive flex w-full items-center gap-2 border border-ind-line bg-ind-bg p-3 text-left"
+        className="card-interactive flex w-full items-center gap-2 border border-sep bg-card p-3 text-left"
       >
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ind-ink">
+          <p className="truncate text-sm font-semibold text-label">
             {position.bezeichnung}
             {position.ist_stundensatz && (
               <span className="ml-2 rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-normal text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-400">
@@ -593,15 +593,15 @@ function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverz
             )}
           </p>
           {position.kalkulationsmodus === "berechnet" && (
-            <p className="text-[11.5px] text-ind-ink-3">
+            <p className="text-[11.5px] text-label2">
               Lohn {euro(position.lohn_gesamt)} · Material {euro(position.material_gesamt)}
             </p>
           )}
         </div>
-        <span className="shrink-0 text-sm font-bold text-ind-ink">
+        <span className="shrink-0 text-sm font-bold text-label">
           {euro(position.einzelpreis)} / {position.einheit}
         </span>
-        <ChevronRight size={16} strokeWidth={1.5} className="shrink-0 text-ind-ink-3" />
+        <ChevronRight size={16} strokeWidth={1.5} className="shrink-0 text-label2" />
       </button>
 
       {offen && (
@@ -659,7 +659,7 @@ export function LeistungsverzeichnisDetailPage() {
     },
   });
 
-  if (lvLaedt) return <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>;
+  if (lvLaedt) return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
   if (!lv) return <EmptyState icon={ClipboardList} text="Leistungsverzeichnis nicht gefunden." />;
 
   return (
@@ -667,20 +667,20 @@ export function LeistungsverzeichnisDetailPage() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate("/leistungsverzeichnis")}
-          className="btn-touch btn-industry btn-industry-secondary btn-industry-icon"
+          className="btn-touch btn-ap-toolbar"
         >
           <ArrowLeft size={16} strokeWidth={1.5} />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold text-ind-ink">{lv.name}</h1>
-          {lv.beschreibung && <p className="truncate text-xs text-ind-ink-3">{lv.beschreibung}</p>}
+          <h1 className="truncate text-lg font-bold text-label">{lv.name}</h1>
+          {lv.beschreibung && <p className="truncate text-xs text-label2">{lv.beschreibung}</p>}
         </div>
         {kannVerwalten && (
           <>
             <button
               onClick={() => duplizieren.mutate()}
               disabled={duplizieren.isPending}
-              className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-secondary px-3 py-2 text-xs font-semibold disabled:opacity-50"
+              className="btn-touch flex items-center gap-1.5 btn-ap px-3 py-2 text-xs font-semibold disabled:opacity-50"
             >
               <Copy size={13} strokeWidth={1.5} /> Duplizieren
             </button>
@@ -689,7 +689,7 @@ export function LeistungsverzeichnisDetailPage() {
                 if (window.confirm(`"${lv.name}" samt aller Positionen wirklich löschen?`)) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
-              className="btn-touch btn-industry btn-industry-secondary btn-industry-icon text-ind-ink-3 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+              className="btn-touch btn-ap-toolbar text-label2 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
             >
               <Trash2 size={15} strokeWidth={1.5} />
             </button>
@@ -698,21 +698,21 @@ export function LeistungsverzeichnisDetailPage() {
       </div>
 
       {kannVerwalten ? (
-        <div className="border border-ind-line bg-ind-bg p-3">
+        <div className="border border-sep bg-card p-3">
           <KundenZuweisung kundenIds={lv.kunden_ids} onChange={(ids) => kundenSpeichern.mutate(ids)} />
         </div>
       ) : (
         lv.kunden_ids.length > 0 && (
-          <p className="text-xs text-ind-ink-3">{lv.kunden_ids.length} Kunde(n) zugewiesen</p>
+          <p className="text-xs text-label2">{lv.kunden_ids.length} Kunde(n) zugewiesen</p>
         )
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-ind-ink-3">Positionen</h2>
+        <h2 className="text-sm font-semibold text-label2">Positionen</h2>
         {kannVerwalten && (
           <button
             onClick={() => setNeuePosition(true)}
-            className="btn-touch flex items-center gap-1.5 btn-industry btn-industry-primary px-3 py-2 text-xs font-semibold"
+            className="btn-touch flex items-center gap-1.5 btn-ap-primary px-3 py-2 text-xs font-semibold"
           >
             <Plus size={14} strokeWidth={1.5} />
             Neue Position
@@ -721,7 +721,7 @@ export function LeistungsverzeichnisDetailPage() {
       </div>
 
       {positionenLaden ? (
-        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
       ) : !positionen || positionen.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Positionen in diesem Leistungsverzeichnis." />
       ) : (

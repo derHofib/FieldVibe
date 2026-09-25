@@ -14,40 +14,40 @@ export function DauerauftraegePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-ind-ink">Dauer-Aufträge</h1>
-      <p className="text-sm text-ind-ink-3">
+      <h1 className="text-lg font-bold text-label">Dauer-Aufträge</h1>
+      <p className="text-sm text-label2">
         Wiederkehrende Aufträge im Überblick -- die daraus erzeugten Vorgänge erscheinen zusätzlich
         ganz normal im Feed.
       </p>
 
       {isLoading ? (
-        <p className="text-center text-ind-ink-3">Lädt…</p>
+        <p className="text-center text-label2">Lädt…</p>
       ) : !dauerauftraege || dauerauftraege.length === 0 ? (
-        <p className="text-sm text-ind-ink-3">Noch keine Dauer-Aufträge angelegt.</p>
+        <p className="text-sm text-label2">Noch keine Dauer-Aufträge angelegt.</p>
       ) : (
         <div className="space-y-2">
           {dauerauftraege.map((d) => (
             <button
               key={d.id}
               onClick={() => navigate(`/dauerauftraege/${d.id}`)}
-              className="btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
+              className="btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
             >
               <div>
-                <div className="text-sm font-medium text-ind-ink">
+                <div className="text-sm font-medium text-label">
                   {d.titel}
                   {d.anzahl_ziele > 1 && (
-                    <span className="ml-2 border border-ind-line px-2 py-0.5 text-xs font-normal text-ind-ink-2">
+                    <span className="ml-2 border border-sep px-2 py-0.5 text-xs font-normal text-label">
                       {d.anzahl_ziele} Anlagen
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-ind-ink-3">
+                <div className="text-xs text-label2">
                   {kundeNameById.get(d.kunde_id) ?? "–"} · alle {d.intervall_tage} Tage
                   {d.naechste_faelligkeit_am && ` · nächste Fälligkeit ${d.naechste_faelligkeit_am}`}
                 </div>
               </div>
               {!d.aktiv && (
-                <span className="border border-ind-line px-2 py-1 text-xs text-ind-ink-2">
+                <span className="border border-sep px-2 py-1 text-xs text-label">
                   pausiert
                 </span>
               )}
@@ -58,7 +58,7 @@ export function DauerauftraegePage() {
 
       <button
         onClick={() => navigate("/dauerauftraege/neu")}
-        className="btn-touch w-full rounded-md btn-industry btn-industry-primary py-2 font-medium"
+        className="btn-touch w-full rounded-md btn-ap-primary py-2 font-medium"
       >
         + Neuer Dauer-Auftrag
       </button>

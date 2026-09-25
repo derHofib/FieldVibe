@@ -14,7 +14,7 @@ import { planSymboleApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import type { PlanSymbol } from "../../types";
 
-const inputClass = "btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink";
+const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
 function SymbolKarte({
   symbol,
@@ -31,8 +31,8 @@ function SymbolKarte({
   const [name, setName] = useState(symbol.name);
 
   return (
-    <div className="flex flex-col items-center gap-2 border border-ind-line bg-ind-bg p-3">
-      <div className="flex h-16 w-16 items-center justify-center border border-ind-line-2 bg-ind-hover">
+    <div className="flex flex-col items-center gap-2 border border-sep bg-card p-3">
+      <div className="flex h-16 w-16 items-center justify-center border border-sepstrong bg-fill">
         <img src={symbol.url} alt={symbol.name} className="max-h-12 max-w-12 object-contain" />
       </div>
       {bearbeiten ? (
@@ -41,7 +41,7 @@ function SymbolKarte({
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
-            className="min-w-0 flex-1 border border-ind-line bg-transparent px-1.5 py-1 text-xs text-ind-ink"
+            className="min-w-0 flex-1 border border-sep bg-transparent px-1.5 py-1 text-xs text-label"
           />
           <button
             onClick={() => {
@@ -50,22 +50,22 @@ function SymbolKarte({
             }}
             disabled={umbenennenPending}
             aria-label="Speichern"
-            className="shrink-0 text-ind-acc-txt"
+            className="shrink-0 text-tint"
           >
             <Pencil size={13} strokeWidth={1.5} />
           </button>
-          <button onClick={() => setBearbeiten(false)} aria-label="Abbrechen" className="shrink-0 text-ind-ink-3">
+          <button onClick={() => setBearbeiten(false)} aria-label="Abbrechen" className="shrink-0 text-label2">
             <X size={13} strokeWidth={1.5} />
           </button>
         </div>
       ) : (
-        <button onClick={() => setBearbeiten(true)} className="w-full truncate text-center text-xs font-medium text-ind-ink hover:text-ind-acc-txt">
+        <button onClick={() => setBearbeiten(true)} className="w-full truncate text-center text-xs font-medium text-label hover:text-tint">
           {symbol.name}
         </button>
       )}
       <button
         onClick={onLoeschen}
-        className="flex items-center gap-1 text-[11px] text-ind-ink-3 hover:text-rose-600"
+        className="flex items-center gap-1 text-[11px] text-label2 hover:text-rose-600"
       >
         <Trash2 size={12} strokeWidth={1.5} /> Löschen
       </button>
@@ -112,22 +112,22 @@ export function PlanSymbolePage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate("/form-schemas")} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate("/form-schemas")} className="text-sm text-label2">
         ← Zurück
       </button>
 
       <div>
-        <h1 className="text-lg font-bold text-ind-ink">Plan-Symbole</h1>
-        <p className="mt-1 text-sm text-ind-ink-3">
+        <h1 className="text-lg font-bold text-label">Plan-Symbole</h1>
+        <p className="mt-1 text-sm text-label2">
           Eigene Symbol-Bibliothek für den Feldtyp „Foto (Plan)" — z. B. Wallbox, Leitungsschutzschalter, Zähler.
           Beim Anlegen eines solchen Feldes wählt man aus, welche dieser Symbole dort zur Verfügung stehen.
         </p>
       </div>
 
-      <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
-        <p className="text-[11px] font-bold tracking-wide text-ind-ink-3 uppercase">Neues Symbol</p>
+      <div className="space-y-2 border border-sep bg-card p-4">
+        <p className="text-[11px] font-bold tracking-wide text-label2 uppercase">Neues Symbol</p>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="btn-touch flex flex-1 cursor-pointer items-center justify-center gap-1.5 border border-dashed border-ind-line-2 px-3 py-2 text-sm text-ind-ink-2 hover:bg-ind-hover">
+          <label className="btn-touch flex flex-1 cursor-pointer items-center justify-center gap-1.5 border border-dashed border-sepstrong px-3 py-2 text-sm text-label hover:bg-fill">
             <Upload size={15} strokeWidth={1.5} />
             {ausgewaehlteDatei ? ausgewaehlteDatei.name : "Bild wählen (PNG/JPEG/WebP/SVG)"}
             <input
@@ -151,7 +151,7 @@ export function PlanSymbolePage() {
           <button
             onClick={() => uploadMutation.mutate()}
             disabled={!ausgewaehlteDatei || !neuerName.trim() || uploadMutation.isPending}
-            className="btn-touch flex shrink-0 items-center justify-center gap-1.5 btn-industry btn-industry-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch flex shrink-0 items-center justify-center gap-1.5 btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             <Plus size={15} strokeWidth={1.5} /> Hochladen
           </button>
@@ -160,7 +160,7 @@ export function PlanSymbolePage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="text-center text-sm text-label2">Lädt…</p>
       ) : !symbole || symbole.length === 0 ? (
         <EmptyState icon={Shapes} text="Noch keine Plan-Symbole angelegt." />
       ) : (

@@ -69,7 +69,7 @@ export function NeueNotizSheet({
 
   return (
     <SheetGeruest onClose={onAbbrechen}>
-      <h2 className="mb-3 text-base font-bold text-ind-ink">Neue Notiz</h2>
+      <h2 className="mb-3 text-base font-bold text-label">Neue Notiz</h2>
       <textarea
         autoFocus
         value={text}
@@ -94,11 +94,11 @@ export function NeueNotizSheet({
         <button
           onClick={() => onErstellen({ text: text.trim(), farbe })}
           disabled={!text.trim()}
-          className="btn-industry btn-industry-primary flex-1 py-2.5 text-sm"
+          className="btn-ap-primary flex-1 py-2.5 text-sm"
         >
           Auf Board setzen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
           Abbrechen
         </button>
       </div>
@@ -131,7 +131,7 @@ export function NotizAktionSheet({
   if (modus === "bearbeiten") {
     return (
       <SheetGeruest onClose={onAbbrechen}>
-        <h2 className="mb-3 text-base font-bold text-ind-ink">Notiz bearbeiten</h2>
+        <h2 className="mb-3 text-base font-bold text-label">Notiz bearbeiten</h2>
         <textarea
           autoFocus
           value={text}
@@ -154,11 +154,11 @@ export function NotizAktionSheet({
         <div className="mt-4 flex gap-3">
           <button
             onClick={() => onSpeichern({ text: text.trim(), farbe })}
-            className="btn-industry btn-industry-primary flex-1 py-2.5 text-sm"
+            className="btn-ap-primary flex-1 py-2.5 text-sm"
           >
             Speichern
           </button>
-          <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
+          <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
             Abbrechen
           </button>
         </div>
@@ -194,7 +194,7 @@ export function NotizAktionSheet({
               onClick={onDuplizieren}
               aria-label="Duplizieren"
               title="Duplizieren"
-              className="btn-touch flex h-7 w-7 items-center justify-center border border-ind-line text-ind-ink-2"
+              className="btn-touch flex h-7 w-7 items-center justify-center border border-sep text-label"
             >
               <Copy size={13} strokeWidth={2.25} />
             </button>
@@ -202,7 +202,7 @@ export function NotizAktionSheet({
           <button
             onClick={onAbbrechen}
             aria-label="Schließen"
-            className="btn-touch flex h-7 w-7 items-center justify-center border border-ind-line text-ind-ink-2"
+            className="btn-touch flex h-7 w-7 items-center justify-center border border-sep text-label"
           >
             <X size={13} strokeWidth={2.5} />
           </button>
@@ -220,8 +220,8 @@ export function NotizAktionSheet({
           <Link2 size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
-          <span className="block text-sm font-bold text-ind-ink">Neuer Vorgang</span>
-          <span className="block text-xs text-ind-ink-3">Kunde, Leistungsart und Abrechnung wählen</span>
+          <span className="block text-sm font-bold text-label">Neuer Vorgang</span>
+          <span className="block text-xs text-label2">Kunde, Leistungsart und Abrechnung wählen</span>
         </span>
       </button>
       <button
@@ -232,8 +232,8 @@ export function NotizAktionSheet({
           <AlertTriangle size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
-          <span className="block text-sm font-bold text-ind-ink">Mangel melden</span>
-          <span className="block text-xs text-ind-ink-3">An bestehenden Vorgang hängen</span>
+          <span className="block text-sm font-bold text-label">Mangel melden</span>
+          <span className="block text-xs text-label2">An bestehenden Vorgang hängen</span>
         </span>
       </button>
 
@@ -282,7 +282,7 @@ function NeuerVorgangForm({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-bold text-ind-ink">Neuer Vorgang</h2>
+      <h2 className="text-base font-bold text-label">Neuer Vorgang</h2>
       <SearchableSelect
         value={kundeId}
         onChange={setKundeId}
@@ -292,7 +292,7 @@ function NeuerVorgangForm({
       <select
         value={leistungstyp}
         onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-        className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
+        className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
       >
         {LEISTUNGSTYP_OPTIONEN.map((o) => (
           <option key={o.value} value={o.value}>
@@ -303,7 +303,7 @@ function NeuerVorgangForm({
       <select
         value={abrechnungsart}
         onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-        className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
+        className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
       >
         {ABRECHNUNGSART_OPTIONEN.map((o) => (
           <option key={o.value} value={o.value}>
@@ -316,11 +316,11 @@ function NeuerVorgangForm({
         <button
           onClick={() => erstellen.mutate()}
           disabled={!kundeId || erstellen.isPending}
-          className="btn-industry btn-industry-primary flex-1 py-2.5 text-sm"
+          className="btn-ap-primary flex-1 py-2.5 text-sm"
         >
           Vorgang anlegen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
           Zurück
         </button>
       </div>
@@ -346,7 +346,7 @@ function MangelMeldenForm({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-base font-bold text-ind-ink">Mangel melden</h2>
+      <h2 className="text-base font-bold text-label">Mangel melden</h2>
       <SearchableSelect
         value={vorgangId}
         onChange={setVorgangId}
@@ -369,7 +369,7 @@ function MangelMeldenForm({
         >
           Mangel melden
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
           Zurück
         </button>
       </div>

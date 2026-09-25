@@ -46,12 +46,12 @@ export function SearchPage() {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Kunde, Anlage, Vorgangsnummer, #Tag…"
-        className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+        className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
 
       {!q && tags && tags.length > 0 && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Tags</h2>
+          <h2 className="mb-2 text-sm font-semibold text-label2">Tags</h2>
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
               <button
@@ -75,15 +75,15 @@ export function SearchPage() {
               <button
                 key={`${hit.kategorie}-${hit.id}`}
                 onClick={() => navigate(hitPath(hit))}
-                className="card-interactive btn-touch flex w-full items-center justify-between border border-ind-line bg-ind-bg p-3 text-left"
+                className="card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
               >
                 <div>
-                  <div className="text-sm font-medium text-ind-ink">{hit.titel}</div>
+                  <div className="text-sm font-medium text-label">{hit.titel}</div>
                   {hit.subtitel && (
-                    <div className="text-xs text-ind-ink-3">{hit.subtitel}</div>
+                    <div className="text-xs text-label2">{hit.subtitel}</div>
                   )}
                 </div>
-                <span className="border border-ind-line px-2 py-0.5 text-xs text-ind-ink-2">
+                <span className="border border-sep px-2 py-0.5 text-xs text-label">
                   {KATEGORIE_LABEL[hit.kategorie]}
                 </span>
               </button>
