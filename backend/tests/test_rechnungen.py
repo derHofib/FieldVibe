@@ -475,6 +475,10 @@ async def test_positionsvorschlaege_aus_material_und_zeit(
                 ende_at=start + timedelta(hours=3, minutes=30),
                 kategorie="auftrag",
                 abrechenbar=True,
+                # Rechnungsvorschlaege beruecksichtigen seit Stufe 2 nur noch
+                # aktiv gebuchte Zeit (docs/konzepte/ZEITERFASSUNG.md,
+                # Abschnitt 8) -- der ORM-Default waere sonst 'vermerkt'.
+                buchungsstatus="gebucht",
             )
         )
         # Nicht abrechenbare Zeit darf nicht in den Vorschlag einfliessen.
@@ -487,6 +491,7 @@ async def test_positionsvorschlaege_aus_material_und_zeit(
                 ende_at=start + timedelta(hours=1),
                 kategorie="auftrag",
                 abrechenbar=False,
+                buchungsstatus="gebucht",
             )
         )
         await session.flush()
@@ -570,6 +575,10 @@ async def test_positionsvorschlaege_aus_leistungsverzeichnis(
                 kategorie="auftrag",
                 abrechenbar=True,
                 lv_position_id=svs.id,
+                # Rechnungsvorschlaege beruecksichtigen seit Stufe 2 nur noch
+                # aktiv gebuchte Zeit (docs/konzepte/ZEITERFASSUNG.md,
+                # Abschnitt 8) -- der ORM-Default waere sonst 'vermerkt'.
+                buchungsstatus="gebucht",
             )
         )
         # Unbepreiste Zeit ohne SVS bleibt separat.
@@ -582,6 +591,7 @@ async def test_positionsvorschlaege_aus_leistungsverzeichnis(
                 ende_at=start + timedelta(hours=1),
                 kategorie="auftrag",
                 abrechenbar=True,
+                buchungsstatus="gebucht",
             )
         )
         session.add(

@@ -39,6 +39,25 @@ async def darf_vorgang_selbst_uebernehmen(
     return account_typ is not None and account_typ.darf_vorgaenge_selbst_uebernehmen
 
 
+async def darf_zeiten_buchen(
+    session: AsyncSession, *, role: str, account_typ_id: UUID | None
+) -> bool:
+    """Einzelrecht "Zeiten buchen" (docs/konzepte/ZEITERFASSUNG.md,
+    Abschnitt 5.4) -- steuert den gesamten Buchungsablauf in
+    app/api/routes/zeiterfassung.py (vormerken/buchen/stornieren, fremde
+    Eintraege bearbeiten, fremden Timer beenden). mandant_admin/super_admin
+    duerfen immer buchen; fuer role='custom' ist es ein Schalter je
+    Account-Typ (AccountTyp.darf_zeiten_buchen), unabhaengig von Rolle oder
+    Geraet -- auch ein Techniker in der Feld-App kann es haben. Gleiches
+    Muster wie darf_vorgang_selbst_uebernehmen oben."""
+    if role != "custom":
+        return True
+    if account_typ_id is None:
+        return False
+    account_typ = await session.get(AccountTyp, account_typ_id)
+    return account_typ is not None and account_typ.darf_zeiten_buchen
+
+
 async def darf_fremde_mitarbeiterdaten_einsehen(
     session: AsyncSession, *, role: str, account_typ_id: UUID | None
 ) -> bool:

@@ -20,7 +20,11 @@ from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, Registri
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 from app.services.auth_service import authenticate
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
-from app.services.rechte_service import darf_vorgang_selbst_uebernehmen, rechte_matrix_fuer_account_typ
+from app.services.rechte_service import (
+    darf_vorgang_selbst_uebernehmen,
+    darf_zeiten_buchen,
+    rechte_matrix_fuer_account_typ,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -147,6 +151,9 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
         selbst_uebernehmen = await darf_vorgang_selbst_uebernehmen(
             session, role=auth.role, account_typ_id=auth.account_typ_id
         )
+        zeiten_buchen = await darf_zeiten_buchen(
+            session, role=auth.role, account_typ_id=auth.account_typ_id
+        )
 
         if auth.role == "custom" and auth.account_typ_id is not None:
             matrix = await rechte_matrix_fuer_account_typ(session, auth.account_typ_id)
@@ -186,6 +193,7 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             account_typ_name=account_typ_name,
             nur_zugewiesene_kunden=nur_zugewiesene_kunden,
             darf_vorgaenge_selbst_uebernehmen=selbst_uebernehmen,
+            darf_zeiten_buchen=zeiten_buchen,
             name=user.name,
             email=user.email,
             impersonated_by=auth.impersonated_by,

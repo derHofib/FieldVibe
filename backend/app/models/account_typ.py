@@ -60,6 +60,14 @@ class AccountTyp(TimestampMixin, Base):
     darf_vorgaenge_selbst_uebernehmen: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    # Einzelrecht "Zeiten buchen" (docs/konzepte/ZEITERFASSUNG.md, Abschnitt
+    # 5.4) -- bewusst kein Teil der (bereich, aktion)-Rechte-Matrix, sondern
+    # ein einzelner Ja/Nein-Schalter wie darf_vorgaenge_selbst_uebernehmen.
+    # An keine Rolle und kein Geraet gebunden: auch ein Techniker in der
+    # Feld-App kann buchen duerfen (siehe app/services/rechte_service.py:
+    # darf_zeiten_buchen). mandant_admin/super_admin duerfen immer buchen,
+    # unabhaengig von diesem Schalter.
+    darf_zeiten_buchen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class AccountTypRecht(Base):

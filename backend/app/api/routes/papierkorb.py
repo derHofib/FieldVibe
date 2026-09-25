@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.user import User
 from app.schemas.papierkorb import PapierkorbEintragRead
+from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.services import papierkorb_service
 from app.services.audit_service import log_action
 
@@ -78,6 +79,18 @@ async def wiederherstellen(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Datensatz nicht im Papierkorb gefunden",
+        )
+    # Zeiterfassung hat als einzige Entitaet ein eigenes Aenderungsprotokoll
+    # (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 5.2) -- der generische
+    # Papierkorb-Service kennt es bewusst nicht, deshalb der Sonderfall hier.
+    if entity_typ == "zeiterfassung":
+        session.add(
+            ZeiterfassungAenderung(
+                mandant_id=auth.mandant_id,
+                zeiterfassung_id=entity_id,
+                aktion="wiederhergestellt",
+                geaendert_von=auth.user_id,
+            )
         )
     await log_action(
         session,

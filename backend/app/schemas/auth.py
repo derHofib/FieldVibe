@@ -55,6 +55,11 @@ class CurrentUser(BaseModel):
     # app/services/rechte_service.py) -- steuert, ob das Frontend den
     # "Ticket übernehmen"-Button auf der Vorgang-Detailseite anzeigt.
     darf_vorgaenge_selbst_uebernehmen: bool = False
+    # Gespiegelt aus AccountTyp.darf_zeiten_buchen (siehe
+    # app/services/rechte_service.py:darf_zeiten_buchen) -- steuert im
+    # Frontend die gesamte Buchungs-Oberflaeche (Auswahl/Aktionsleiste im
+    # Zeit-Tab, Seite "Zeiten buchen", fremden Timer beenden).
+    darf_zeiten_buchen: bool = False
     name: str
     email: str
     impersonated_by: UUID | None = None

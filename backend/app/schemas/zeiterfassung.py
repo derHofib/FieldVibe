@@ -16,6 +16,10 @@ ZeiterfassungKategorie = Literal[
     "auftrag", "verwaltung", "fahrzeit", "schulung", "pause", "urlaub", "krankheit", "sonstiges"
 ]
 
+# Muss mit ZEITERFASSUNG_BUCHUNGSSTATUS in app/models/zeiterfassung.py
+# uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 6.1).
+ZeiterfassungBuchungsstatus = Literal["vermerkt", "vorgemerkt", "gebucht", "abgerechnet"]
+
 # Kategorien, die nicht als geleistete Arbeitszeit zaehlen (siehe
 # get_statistik in app/api/routes/zeiterfassung.py) -- Pause/Urlaub/
 # Krankheit sind Abwesenheit von der eigentlichen Arbeit.
@@ -58,6 +62,10 @@ class ZeiterfassungManuellCreate(BaseModel):
     # nur sinnvoll bei kategorie="auftrag" (Praefung erfolgt in der Route,
     # nicht hier, analog zur vorgang_id-Pflichtpruefung).
     lv_position_id: UUID | None = None
+    # Nur mit dem Recht "Zeiten buchen" erlaubt (Konzept 6.2, "fuer einen
+    # anderen nachtragen") -- ohne das Recht lehnt die Route ein abweichendes
+    # techniker_id ab, statt es stillschweigend zu ignorieren.
+    techniker_id: UUID | None = None
 
     @model_validator(mode="after")
     def _ende_nach_start(self) -> "ZeiterfassungManuellCreate":
@@ -80,6 +88,9 @@ class ZeiterfassungUpdate(BaseModel):
     taetigkeit: str | None = None
     abrechenbar: bool | None = None
     lv_position_id: UUID | None = None
+    # Pflicht, wenn Buchungsberechtigte einen fremden Eintrag aendern
+    # (Konzept 6.2) -- landet im Protokoll, wird selbst nicht gespeichert.
+    grund: str | None = None
 
 
 class ZeiterfassungRead(BaseModel):
@@ -98,5 +109,46 @@ class ZeiterfassungRead(BaseModel):
     abrechenbar: bool
     kategorie: ZeiterfassungKategorie
     lv_position_id: UUID | None
+    buchungsstatus: ZeiterfassungBuchungsstatus
+    vorgemerkt_von: UUID | None
+    vorgemerkt_am: datetime | None
+    gebucht_von: UUID | None
+    gebucht_am: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class ZeiterfassungIdsBody(BaseModel):
+    """Gemeinsamer Body fuer die gesammelten Buchungs-Endpunkte (vormerken/
+    zurueckziehen/buchen) -- alles oder nichts, siehe Konzept 6.1."""
+
+    ids: list[UUID]
+
+
+class ZeiterfassungBuchungStornierenBody(BaseModel):
+    ids: list[UUID]
+    # Pflicht (Konzept 6.1: "gebucht -> vermerkt: Grund Pflicht").
+    grund: str
+
+
+class ZeiterfassungStopBody(BaseModel):
+    """Body fuer POST /{id}/stop -- alle Felder optional und nur wirksam,
+    wenn ein Buchungsberechtigter den Timer eines ANDEREN beendet (Konzept
+    7.1/6.2: "Ende frei waehlbar", Grund Pflicht). Beim eigenen Timer werden
+    beide Felder ignoriert (Ende ist immer "jetzt")."""
+
+    ende_at: datetime | None = None
+    grund: str | None = None
+
+
+class ZeiterfassungAenderungRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    aktion: str
+    feld: str | None
+    alter_wert: object | None
+    neuer_wert: object | None
+    grund: str | None
+    geaendert_von: UUID | None
+    geaendert_am: datetime

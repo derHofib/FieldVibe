@@ -83,6 +83,12 @@ async def positionen_vorschlaege_fuer_vorgang(
         Zeiterfassung.abrechenbar.is_(True),
         Zeiterfassung.ende_at.is_not(None),
         Zeiterfassung.lv_position_id.is_(None),
+        # Stufe 2 (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 8): nur noch
+        # aktiv gebuchte Zeit erscheint in Rechnungsvorschlaegen, vermerkte
+        # und vorgemerkte Zeit nicht. Bereits abgerechnete Zeit ist ohnehin
+        # keine offene Zeit mehr.
+        Zeiterfassung.buchungsstatus == "gebucht",
+        Zeiterfassung.geloescht_am.is_(None),
     )
     sekunden = (await session.execute(zeit_ohne_lv_stmt)).scalar_one_or_none()
     if sekunden:
@@ -113,6 +119,8 @@ async def positionen_vorschlaege_fuer_vorgang(
             Zeiterfassung.abrechenbar.is_(True),
             Zeiterfassung.ende_at.is_not(None),
             Zeiterfassung.lv_position_id.is_not(None),
+            Zeiterfassung.buchungsstatus == "gebucht",
+            Zeiterfassung.geloescht_am.is_(None),
         )
         .group_by(Zeiterfassung.lv_position_id)
     )

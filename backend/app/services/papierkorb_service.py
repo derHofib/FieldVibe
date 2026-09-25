@@ -46,6 +46,7 @@ from app.models.termin import Termin
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
+from app.models.zeiterfassung import Zeiterfassung
 
 
 @dataclass(frozen=True)
@@ -152,6 +153,9 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     "fahrzeug_zuweisung": EntityKind(FahrzeugZuweisung, None),
     "tag": EntityKind(Tag, "label"),
     "vorgang_anfrage": EntityKind(VorgangAnfrage, "titel"),
+    # Kein titel_feld -- ein Zeiterfassungs-Eintrag hat kein einzelnes gut
+    # lesbares Feld (siehe material_bedarf oben fuer dasselbe Muster).
+    "zeiterfassung": EntityKind(Zeiterfassung, None),
 }
 
 
