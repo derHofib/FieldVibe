@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app.db.session import system_session
+from app.models.vorgang import Vorgang
 from tests.conftest import auth_headers, login
 
 
@@ -245,14 +247,18 @@ async def test_pause_urlaub_krankheit_zaehlen_nicht_in_stunden_summe(
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     token = await login(client, techniker.email, "pw-123456")
 
-    heute = datetime.now(timezone.utc).replace(hour=8, minute=0, second=0, microsecond=0)
+    # Anker deutlich in der Vergangenheit (unabhaengig von der Tageszeit des
+    # Testlaufs): der Start darf laut Validierung nicht in der Zukunft
+    # liegen, ein fester "heute 8 Uhr"-Anker waere je nach Uhrzeit selbst
+    # schon in der Zukunft.
+    anker = datetime.now(timezone.utc) - timedelta(hours=20)
     for kategorie, start_offset, dauer_stunden in (
         ("urlaub", 0, 8),
         ("pause", 9, 0.5),
         ("krankheit", 10, 1),
         ("verwaltung", 12, 2),
     ):
-        start = heute + timedelta(hours=start_offset)
+        start = anker + timedelta(hours=start_offset)
         await client.post(
             "/api/zeiterfassung/manuell",
             headers=auth_headers(token),
@@ -267,3 +273,178 @@ async def test_pause_urlaub_krankheit_zaehlen_nicht_in_stunden_summe(
     assert resp.status_code == 200
     # Nur die 2 Stunden "verwaltung" zaehlen als Arbeitszeit.
     assert resp.json()["wochenstunden"] == "2.0"
+
+
+@pytest.mark.asyncio
+async def test_start_in_der_zukunft_wird_abgelehnt(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, techniker.email, "pw-123456")
+
+    start = datetime.now(timezone.utc) + timedelta(hours=1)
+    resp = await client.post(
+        "/api/zeiterfassung/manuell",
+        headers=auth_headers(token),
+        json={
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(hours=1)).isoformat(),
+            "kategorie": "sonstiges",
+        },
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_ende_in_naher_zukunft_bei_start_jetzt_ist_erlaubt(client, make_mandant, make_user):
+    """Ganztaegiger Eintrag 'ab jetzt' -- das Ende liegt legitim in der
+    Zukunft, nur der Start darf nicht in der Zukunft liegen."""
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, techniker.email, "pw-123456")
+
+    start = datetime.now(timezone.utc)
+    resp = await client.post(
+        "/api/zeiterfassung/manuell",
+        headers=auth_headers(token),
+        json={
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(hours=8)).isoformat(),
+            "kategorie": "urlaub",
+        },
+    )
+    assert resp.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_laufender_timer_nur_taetigkeit_per_patch_aenderbar(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
+    token = await login(client, techniker.email, "pw-123456")
+
+    start_resp = await client.post(
+        "/api/zeiterfassung/start",
+        headers=auth_headers(token),
+        json={"vorgang_id": str(vorgang.id)},
+    )
+    assert start_resp.status_code == 201
+    eintrag_id = start_resp.json()["id"]
+
+    # Taetigkeit darf auch bei laufendem Timer nachgetragen werden.
+    patch = await client.patch(
+        f"/api/zeiterfassung/{eintrag_id}",
+        headers=auth_headers(token),
+        json={"taetigkeit": "Wartung an Anlage"},
+    )
+    assert patch.status_code == 200
+    assert patch.json()["taetigkeit"] == "Wartung an Anlage"
+    assert patch.json()["ende_at"] is None
+
+    # Andere Felder (z.B. start_at) sind bei laufendem Timer weiterhin
+    # gesperrt -- ein Timer wird ausschliesslich ueber "stop" beendet.
+    patch_start = await client.patch(
+        f"/api/zeiterfassung/{eintrag_id}",
+        headers=auth_headers(token),
+        json={"start_at": datetime.now(timezone.utc).isoformat()},
+    )
+    assert patch_start.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_manueller_eintrag_bei_abgerechnetem_vorgang_gesperrt(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde, status="abgerechnet")
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
+    token = await login(client, techniker.email, "pw-123456")
+
+    start = datetime.now(timezone.utc) - timedelta(hours=1)
+    resp = await client.post(
+        "/api/zeiterfassung/manuell",
+        headers=auth_headers(token),
+        json={
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(minutes=30)).isoformat(),
+            "kategorie": "auftrag",
+            "vorgang_id": str(vorgang.id),
+        },
+    )
+    assert resp.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_bearbeiten_und_loeschen_bei_stornierten_vorgang_gesperrt(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
+    token = await login(client, techniker.email, "pw-123456")
+
+    start = datetime.now(timezone.utc) - timedelta(hours=1)
+    create = await client.post(
+        "/api/zeiterfassung/manuell",
+        headers=auth_headers(token),
+        json={
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(minutes=30)).isoformat(),
+            "kategorie": "auftrag",
+            "vorgang_id": str(vorgang.id),
+        },
+    )
+    assert create.status_code == 201
+    eintrag_id = create.json()["id"]
+
+    async with system_session() as session:
+        db_vorgang = await session.get(Vorgang, vorgang.id)
+        db_vorgang.status = "storniert"
+        await session.flush()
+
+    patch = await client.patch(
+        f"/api/zeiterfassung/{eintrag_id}",
+        headers=auth_headers(token),
+        json={"taetigkeit": "nachtraeglich"},
+    )
+    assert patch.status_code == 409
+
+    delete = await client.delete(f"/api/zeiterfassung/{eintrag_id}", headers=auth_headers(token))
+    assert delete.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_eintrag_ohne_vorgang_bleibt_bearbeitbar_trotz_gesperrtem_vorgang_anderswo(
+    client, make_mandant, make_user
+):
+    """Die Sperre haengt am verknuepften Vorgang -- ein Eintrag ganz ohne
+    Vorgangsbezug (z.B. Urlaub) ist davon nie betroffen."""
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, techniker.email, "pw-123456")
+
+    start = datetime.now(timezone.utc) - timedelta(hours=2)
+    create = await client.post(
+        "/api/zeiterfassung/manuell",
+        headers=auth_headers(token),
+        json={
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(hours=1)).isoformat(),
+            "kategorie": "urlaub",
+        },
+    )
+    eintrag_id = create.json()["id"]
+
+    patch = await client.patch(
+        f"/api/zeiterfassung/{eintrag_id}",
+        headers=auth_headers(token),
+        json={"taetigkeit": "Urlaubstag"},
+    )
+    assert patch.status_code == 200

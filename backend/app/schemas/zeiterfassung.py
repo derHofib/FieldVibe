@@ -1,9 +1,14 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, model_validator
+
+# Toleranz gegen Uhrzeit-Abweichungen zwischen Client und Server -- ohne
+# das wuerde ein "jetzt" vom Handy knapp nach dem Server-"jetzt" faelschlich
+# als Zukunft abgelehnt.
+_ZUKUNFT_TOLERANZ = timedelta(minutes=2)
 
 # Muss mit ZEITERFASSUNG_KATEGORIEN in app/models/zeiterfassung.py
 # uebereinstimmen.
@@ -58,6 +63,12 @@ class ZeiterfassungManuellCreate(BaseModel):
     def _ende_nach_start(self) -> "ZeiterfassungManuellCreate":
         if self.ende_at <= self.start_at:
             raise ValueError("Ende muss nach dem Start liegen")
+        # Nur der Start wird geprueft: ein bereits begonnener Eintrag (z.B.
+        # "Urlaub ab jetzt, ganzer Tag") endet legitim erst spaeter am selben
+        # Tag -- das Ende darf also in der (nahen) Zukunft liegen.
+        grenze = datetime.now(UTC) + _ZUKUNFT_TOLERANZ
+        if self.start_at > grenze:
+            raise ValueError("Start darf nicht in der Zukunft liegen")
         return self
 
 

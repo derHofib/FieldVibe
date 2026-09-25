@@ -448,6 +448,39 @@ async def _lv_position_pruefen(
             )
 
 
+# Enger als VORGANG_STATUS_GESCHLOSSEN (das zusaetzlich "abgeschlossen"
+# enthaelt): Nachtragen/Bearbeiten von Zeit soll nach Abschluss eines
+# Vorgangs weiterhin moeglich sein (genau der Anwendungsfall "Tätigkeit
+# nachtragen"), nur nicht mehr nach Abrechnung/Stornierung. Der Timer
+# selbst bleibt ueber VORGANG_STATUS_GESCHLOSSEN bei "abgeschlossen" schon
+# gesperrt (siehe start_timer oben).
+_VORGANG_STATUS_ZEIT_GESPERRT = frozenset({"abgerechnet", "storniert"})
+
+_ZUKUNFT_TOLERANZ = timedelta(minutes=2)
+
+
+def _pruefe_start_nicht_in_zukunft(start_at: datetime | None) -> None:
+    # Nur der Start wird geprueft, nicht das Ende: ein bereits begonnener
+    # Eintrag (z.B. "Urlaub ab jetzt, ganzer Tag") endet legitim erst
+    # spaeter am selben Tag -- das Ende darf also in der (nahen) Zukunft
+    # liegen, nur der Start nicht (siehe test_zeiterfassung_manuell.py:
+    # test_manueller_eintrag_ohne_vorgang).
+    grenze = datetime.now(timezone.utc) + _ZUKUNFT_TOLERANZ
+    if start_at is not None and start_at > grenze:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Start darf nicht in der Zukunft liegen",
+        )
+
+
+def _pruefe_vorgang_nicht_gesperrt(vorgang: Vorgang) -> None:
+    if vorgang.status in _VORGANG_STATUS_ZEIT_GESPERRT:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Vorgang ist abgerechnet oder storniert und kann nicht mehr bebucht werden",
+        )
+
+
 async def _vorgang_pruefen_fuer_manuellen_eintrag(
     session: AsyncSession, auth: AuthContext, vorgang_id: UUID
 ) -> Vorgang:
@@ -463,6 +496,7 @@ async def _vorgang_pruefen_fuer_manuellen_eintrag(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
         )
+    _pruefe_vorgang_nicht_gesperrt(vorgang)
     return vorgang
 
 
@@ -520,13 +554,26 @@ async def zeiterfassung_aktualisieren(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
-    if eintrag.ende_at is None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Ein laufender Timer wird über 'stop' beendet, nicht über diese Route",
-        )
 
     daten = body.model_dump(exclude_unset=True)
+
+    if eintrag.ende_at is None:
+        # Laufender Timer: nur die Taetigkeit darf nachgetragen werden
+        # (siehe docs/konzepte/ZEITERFASSUNG.md, Stufe 1) -- Start/Ende
+        # weiterhin ausschliesslich ueber "stop", damit kein Timer per PATCH
+        # unbemerkt "beendet" wird.
+        if set(daten) - {"taetigkeit"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ein laufender Timer wird über 'stop' beendet, nicht über diese Route",
+            )
+        if "taetigkeit" in daten:
+            eintrag.taetigkeit = daten["taetigkeit"]
+        await session.flush()
+        await session.refresh(eintrag)
+        await _mit_vorgangsnummern(session, [eintrag])
+        return eintrag
+
     neue_kategorie = daten.get("kategorie", eintrag.kategorie)
     neuer_vorgang_id = daten.get("vorgang_id", eintrag.vorgang_id)
     if neue_kategorie == "auftrag" and neuer_vorgang_id is None:
@@ -537,6 +584,10 @@ async def zeiterfassung_aktualisieren(
     neuer_vorgang = None
     if "vorgang_id" in daten and daten["vorgang_id"] is not None:
         neuer_vorgang = await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, daten["vorgang_id"])
+    elif eintrag.vorgang_id is not None:
+        bestehender_vorgang = await session.get(Vorgang, eintrag.vorgang_id)
+        if bestehender_vorgang is not None:
+            _pruefe_vorgang_nicht_gesperrt(bestehender_vorgang)
     if "lv_position_id" in daten and daten["lv_position_id"] is not None:
         if neuer_vorgang is None and eintrag.vorgang_id is not None:
             neuer_vorgang = await session.get(Vorgang, eintrag.vorgang_id)
@@ -548,6 +599,7 @@ async def zeiterfassung_aktualisieren(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Ende muss nach dem Start liegen"
         )
+    _pruefe_start_nicht_in_zukunft(neuer_start)
 
     for feld, wert in daten.items():
         setattr(eintrag, feld, wert)
@@ -568,5 +620,9 @@ async def zeiterfassung_loeschen(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
+    if eintrag.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, eintrag.vorgang_id)
+        if vorgang is not None:
+            _pruefe_vorgang_nicht_gesperrt(vorgang)
     await session.delete(eintrag)
     await session.flush()
