@@ -89,7 +89,7 @@ export function AuditLogPage() {
               setVon("");
               setBis("");
             }}
-            className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+            className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
           >
             Filter zurücksetzen
           </button>

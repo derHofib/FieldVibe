@@ -340,7 +340,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
-              : "bg-slate-100 text-label30 dark:bg-stone-800 "
+              : "bg-slate-100 text-label2 dark:bg-stone-800 "
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -444,7 +444,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
-              : "bg-slate-100 text-label30 dark:bg-stone-800 "
+              : "bg-slate-100 text-label2 dark:bg-stone-800 "
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}

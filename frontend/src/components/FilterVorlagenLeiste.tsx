@@ -119,7 +119,7 @@ export function FilterVorlagenLeiste({
         {hatAktivenFilter && (
           <button
             onClick={() => onApply({})}
-            className="btn-touch text-xs text-label30 underline "
+            className="btn-touch text-xs text-label2 underline "
           >
             Filter zurücksetzen
           </button>

@@ -133,7 +133,7 @@ export function MeineAufgabenPage() {
             }
           }}
           placeholder="Neue private Aufgabe…"
-          className="flex-1 border-none bg-transparent p-1.5 text-sm outline-none placeholder:text-label2 dark:placeholder:text-label30"
+          className="flex-1 border-none bg-transparent p-1.5 text-sm outline-none placeholder:text-label2 dark:placeholder:text-label2"
         />
         <button
           onClick={() => neueAufgabe.trim() && erstellen.mutate(neueAufgabe.trim())}
@@ -253,7 +253,7 @@ export function MeineAufgabenPage() {
                   >
                     <CheckCircle2 size={13} strokeWidth={2.5} />
                   </button>
-                  <p className="flex-1 text-[13.5px] text-label2 line-through 0">{a.titel}</p>
+                  <p className="flex-1 text-[13.5px] text-label2 line-through">{a.titel}</p>
                 </div>
               ))}
             </div>

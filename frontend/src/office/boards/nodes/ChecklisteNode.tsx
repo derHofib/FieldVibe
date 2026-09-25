@@ -38,7 +38,7 @@ export function ChecklisteNode({ id, data, selected }: NodeProps<BoardNode>) {
               onChange={(e) => punkteSetzen(punkte.map((p, pi) => (pi === i ? { ...p, text: e.target.value } : p)))}
               placeholder="Punkt…"
               className={`min-w-0 flex-1 bg-transparent text-[11.5px] outline-none placeholder:text-label3 dark:placeholder:text-label ${
-                punkt.erledigt ? "text-label2 line-through 0" : "text-label"
+                punkt.erledigt ? "text-label2 line-through" : "text-label"
               }`}
             />
             <button

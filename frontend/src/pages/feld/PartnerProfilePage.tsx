@@ -351,7 +351,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
                   </button>
                 )}
                 {kannVerwalten && (
-                  <label className="btn-touch cursor-pointer text-xs text-label30 hover:text-label dark:hover:text-label3">
+                  <label className="btn-touch cursor-pointer text-xs text-label2 hover:text-label dark:hover:text-label3">
                     {n.dokument_s3_key ? "Ersetzen" : "Hochladen"}
                     <input
                       type="file"

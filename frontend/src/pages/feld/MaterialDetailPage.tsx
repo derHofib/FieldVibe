@@ -254,7 +254,7 @@ export function MaterialDetailPage() {
               #{t.label}
               <button
                 onClick={() => tagEntfernenMutation.mutate(t.id)}
-                className="btn-touch text-label2 hover:text-st-fehlt 0 dark:hover:text-st-fehlt"
+                className="btn-touch text-label2 hover:text-st-fehlt dark:hover:text-st-fehlt"
                 aria-label={`Tag ${t.label} entfernen`}
               >
                 ✕

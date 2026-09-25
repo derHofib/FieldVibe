@@ -285,7 +285,7 @@ export function OfficeDispoPage() {
             <span className="text-xs font-bold text-label2">
               Nicht disponiert
             </span>
-            <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-label2 dark:bg-stone-800 0">
+            <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-label2 dark:bg-stone-800">
               {backlog.length}
             </span>
           </div>
@@ -341,7 +341,7 @@ export function OfficeDispoPage() {
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                               ueberfaellig
                                 ? "bg-rose-100 text-st-fehlt dark:bg-rose-500/15 "
-                                : "bg-slate-100 text-label30 dark:bg-stone-800 "
+                                : "bg-slate-100 text-label2 dark:bg-stone-800 "
                             }`}
                           >
                             {ueberfaellig
@@ -362,7 +362,7 @@ export function OfficeDispoPage() {
           <div className="flex items-center justify-between border-b border-sep p-3 ">
             <button
               onClick={() => setTag((d) => addTage(d, -1))}
-              className="btn-touch rounded-md p-1.5 text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
               aria-label="Vorheriger Tag"
             >
               <ChevronLeft size={16} />
@@ -374,7 +374,7 @@ export function OfficeDispoPage() {
               {!heute && (
                 <button
                   onClick={() => setTag(new Date())}
-                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-label30 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-700"
+                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-label2 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-700"
                 >
                   Heute
                 </button>
@@ -382,7 +382,7 @@ export function OfficeDispoPage() {
             </div>
             <button
               onClick={() => setTag((d) => addTage(d, 1))}
-              className="btn-touch rounded-md p-1.5 text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
               aria-label="Nächster Tag"
             >
               <ChevronRight size={16} />
@@ -402,7 +402,7 @@ export function OfficeDispoPage() {
                   {STUNDEN.map((h) => (
                     <div
                       key={h}
-                      className="shrink-0 border-l border-sep py-1.5 pl-1.5 text-[11px] font-medium text-label2 0"
+                      className="shrink-0 border-l border-sep py-1.5 pl-1.5 text-[11px] font-medium text-label2"
                       style={{ width: PX_PRO_STUNDE }}
                     >
                       {h}:00
@@ -471,7 +471,7 @@ export function OfficeDispoPage() {
                           {!!termin.fahrzeit_minuten && (
                             <div
                               title={`${termin.fahrzeit_minuten} Min. Fahrzeit`}
-                              className="absolute flex items-center justify-center rounded-l-md bg-slate-100 text-label2 dark:bg-stone-800 0"
+                              className="absolute flex items-center justify-center rounded-l-md bg-slate-100 text-label2 dark:bg-stone-800"
                               style={{
                                 left: (startMin - termin.fahrzeit_minuten) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -485,7 +485,7 @@ export function OfficeDispoPage() {
                           {!!termin.pause_minuten && (
                             <div
                               title={`${termin.pause_minuten} Min. Pause`}
-                              className="absolute flex items-center justify-center rounded-r-md bg-slate-100 text-label2 dark:bg-stone-800 0"
+                              className="absolute flex items-center justify-center rounded-r-md bg-slate-100 text-label2 dark:bg-stone-800"
                               style={{
                                 left: (startMin + dauerMin) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -627,7 +627,7 @@ function TerminBearbeitenPanel({
           <h2 className="text-sm font-bold text-label">Termin bearbeiten</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
+            className="rounded-md p-1 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
           >
             <X size={16} />
           </button>
@@ -790,7 +790,7 @@ function BacklogPlanenPanel({
           <h2 className="text-sm font-bold text-label">Termin planen</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
+            className="rounded-md p-1 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
           >
             <X size={16} />
           </button>

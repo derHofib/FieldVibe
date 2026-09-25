@@ -22,7 +22,7 @@ export function ProzessSchrittNode({ id, data, selected }: NodeProps<BoardNode>)
         value={sub ?? ""}
         onChange={(e) => updateNodeData(id, { sub: e.target.value })}
         placeholder="Zusatz…"
-        className="nodrag mt-0.5 w-full bg-transparent text-[10.5px] text-label2 outline-none placeholder:text-label3 0"
+        className="nodrag mt-0.5 w-full bg-transparent text-[10.5px] text-label2 outline-none placeholder:text-label3"
       />
       <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
     </div>

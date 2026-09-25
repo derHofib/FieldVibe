@@ -79,7 +79,7 @@ export function BoardsUebersichtPage() {
         <button
           onClick={() => setZeigeNeu((v) => !v)}
           aria-label="Neues Board"
-          className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+          className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
         >
           <Plus size={19} strokeWidth={2.25} />
         </button>

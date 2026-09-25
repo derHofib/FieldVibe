@@ -31,7 +31,7 @@ const STATUS_BADGE: Record<string, string> = {
   wartet_kunde: "border border-st-wartet text-st-wartet",
   abgeschlossen: "border border-st-erledigt text-st-erledigt ",
   abgerechnet: "border border-sep text-label ",
-  storniert: "border border-sep text-label2 0",
+  storniert: "border border-sep text-label2",
 };
 
 function faelligkeitsFarbe(datum: string): string {

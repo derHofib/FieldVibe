@@ -165,7 +165,7 @@ export function OfficeNavKategorienPage() {
                 onClick={() => kategorieVerschieben(i, -1)}
                 disabled={i === 0}
                 aria-label="Nach oben"
-                className="btn-touch rounded-md p-1.5 text-label2 disabled:opacity-30 0"
+                className="btn-touch rounded-md p-1.5 text-label2 disabled:opacity-30"
               >
                 <ArrowUp size={16} />
               </button>
@@ -173,7 +173,7 @@ export function OfficeNavKategorienPage() {
                 onClick={() => kategorieVerschieben(i, 1)}
                 disabled={i === kategorien.length - 1}
                 aria-label="Nach unten"
-                className="btn-touch rounded-md p-1.5 text-label2 disabled:opacity-30 0"
+                className="btn-touch rounded-md p-1.5 text-label2 disabled:opacity-30"
               >
                 <ArrowDown size={16} />
               </button>

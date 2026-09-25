@@ -139,7 +139,7 @@ export function MandantDetailPage() {
               disabled
               value={mandant.slug}
               title="Der Slug ist mit dem Kundenportal-Link verknuepft und kann nachtraeglich nicht geaendert werden."
-              className="btn-touch w-full rounded-md border border-sep bg-slate-100 px-3 py-2 text-label30 dark:bg-stone-950 0"
+              className="btn-touch w-full rounded-md border border-sep bg-slate-100 px-3 py-2 text-label2 dark:bg-stone-950"
             />
           </div>
           <div>
@@ -215,7 +215,7 @@ export function MandantDetailPage() {
 
       <button
         onClick={() => navigate("/mandanten")}
-        className="btn-touch text-sm font-medium text-label30 hover:underline "
+        className="btn-touch text-sm font-medium text-label2 hover:underline "
       >
         ← Zurück zu Mandanten
       </button>

@@ -72,14 +72,14 @@ export function ExportPanel({
           </p>
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 flex h-7 w-7 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
+            className="absolute top-5 right-5 flex h-7 w-7 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
           >
             <X size={15} strokeWidth={2} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase 0">
+          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase">
             Format
           </p>
           <div className="mb-6 grid grid-cols-3 gap-2.5">
@@ -114,7 +114,7 @@ export function ExportPanel({
             {format.toUpperCase()} herunterladen
           </button>
 
-          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase 0">
+          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase">
             In FieldVibe übernehmen
           </p>
           {notizen.length === 0 ? (

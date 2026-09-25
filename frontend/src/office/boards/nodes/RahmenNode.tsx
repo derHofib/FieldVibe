@@ -17,7 +17,7 @@ export function RahmenNode({ id, data, selected }: NodeProps<BoardNode>) {
         value={label}
         onChange={(e) => updateNodeData(id, { label: e.target.value })}
         placeholder="Rahmen-Beschriftung…"
-        className="nodrag m-2 rounded-md bg-transparent px-1 text-xs font-bold tracking-wide text-label30 uppercase outline-none placeholder:text-label3 "
+        className="nodrag m-2 rounded-md bg-transparent px-1 text-xs font-bold tracking-wide text-label2 uppercase outline-none placeholder:text-label3 "
       />
     </div>
   );

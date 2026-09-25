@@ -315,7 +315,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
       <div className="flex h-14 shrink-0 items-center gap-3 border-b border-sep bg-white px-5 dark:bg-stone-900">
         <button
           onClick={() => navigate("/boards")}
-          className="text-xs font-semibold text-label30 hover:text-label dark:hover:text-label3"
+          className="text-xs font-semibold text-label2 hover:text-label dark:hover:text-label3"
         >
           ← Boards
         </button>
@@ -419,7 +419,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
                 key={w.typ}
                 title={w.label}
                 onClick={() => werkzeugPlatzieren(w.typ)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
               >
                 <w.icon size={17} strokeWidth={2} />
               </button>
@@ -428,7 +428,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
               <button
                 title="Anlagen-Pin"
                 onClick={() => werkzeugPlatzieren("anlagen_pin")}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
               >
                 <MapPin size={17} strokeWidth={2} />
               </button>
@@ -438,14 +438,14 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
                 <button
                   title="Prozessschritt"
                   onClick={() => werkzeugPlatzieren("prozess_schritt")}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
                 >
                   <Workflow size={17} strokeWidth={2} />
                 </button>
                 <button
                   title="Entscheidung"
                   onClick={() => werkzeugPlatzieren("prozess_entscheidung")}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
                 >
                   <Compass size={17} strokeWidth={2} />
                 </button>

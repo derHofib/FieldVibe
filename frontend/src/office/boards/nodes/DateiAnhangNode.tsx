@@ -65,7 +65,7 @@ export function DateiAnhangNode({ id, data, selected }: NodeProps<BoardNode>) {
             </button>
             <button
               onClick={() => entfernen.mutate()}
-              className="mt-0.5 text-[10px] font-medium text-label2 hover:text-st-fehlt 0"
+              className="mt-0.5 text-[10px] font-medium text-label2 hover:text-st-fehlt"
             >
               Entfernen
             </button>
@@ -75,7 +75,7 @@ export function DateiAnhangNode({ id, data, selected }: NodeProps<BoardNode>) {
         <button
           onClick={() => inputRef.current?.click()}
           disabled={hochladen.isPending}
-          className="nodrag flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-sep py-3 text-label2 disabled:opacity-50 0"
+          className="nodrag flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-sep py-3 text-label2 disabled:opacity-50"
         >
           {hochladen.isPending ? (
             <Upload size={16} strokeWidth={2} className="animate-pulse" />

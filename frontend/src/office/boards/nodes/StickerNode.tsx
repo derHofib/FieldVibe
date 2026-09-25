@@ -52,7 +52,7 @@ function IconAuswahl({ onWaehlen }: { onWaehlen: (icon: string) => void }) {
           key={name}
           onClick={() => onWaehlen(name)}
           title={name}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
         >
           <Icon size={16} strokeWidth={2} />
         </button>

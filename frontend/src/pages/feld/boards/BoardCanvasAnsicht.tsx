@@ -114,7 +114,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { label } = data as RahmenDaten;
       return (
         <div className="h-full w-full rounded-xl border-2 border-dashed border-sep bg-slate-50/40 dark:bg-stone-800/20">
-          <p className="m-2 text-xs font-bold tracking-wide text-label30 uppercase ">{label}</p>
+          <p className="m-2 text-xs font-bold tracking-wide text-label2 uppercase ">{label}</p>
         </div>
       );
     }
@@ -125,7 +125,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
           {url ? (
             <img src={url} alt="" className="block w-full" draggable={false} />
           ) : (
-            <div className="flex h-24 items-center justify-center bg-slate-100 text-xs text-label2 dark:bg-stone-800 0">
+            <div className="flex h-24 items-center justify-center bg-slate-100 text-xs text-label2 dark:bg-stone-800">
               Kein Bild
             </div>
           )}

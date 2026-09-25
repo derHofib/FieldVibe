@@ -20,11 +20,11 @@ const UMSCHALTER = [
 ];
 
 const RECHNUNG_STATUS_BADGE: Record<RechnungStatus, string> = {
-  entwurf: "border border-sep text-label30 ",
+  entwurf: "border border-sep text-label2 ",
   versendet: "border border-tint text-tint ",
   teilweise_bezahlt: "border border-st-arbeit text-st-arbeit ",
   bezahlt: "border border-st-erledigt text-st-erledigt ",
-  storniert: "border border-sep text-label2 0",
+  storniert: "border border-sep text-label2",
 };
 
 const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
@@ -36,7 +36,7 @@ const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
 };
 
 const ANGEBOT_STATUS_BADGE: Record<AngebotStatus, string> = {
-  entwurf: "border border-sep text-label30 ",
+  entwurf: "border border-sep text-label2 ",
   versendet: "border border-tint text-tint ",
   angenommen: "border border-st-erledigt text-st-erledigt ",
   abgelehnt: "border border-st-fehlt text-st-fehlt ",
@@ -244,7 +244,7 @@ export function OfficeRechnungenPage() {
                         bereich === "rechnungen" ? `/rechnungen/${aktiv}` : `/angebote/${aktiv}`,
                       )
                     }
-                    className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label30 hover:text-label dark:hover:text-label3"
+                    className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label2 hover:text-label dark:hover:text-label3"
                   >
                     <ExternalLink size={13} strokeWidth={2} />
                     Ganze Seite

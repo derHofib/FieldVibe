@@ -186,7 +186,7 @@ function FotoPlanFeld({
     return (
       <div className={wrapperClass}>
         {labelNode}
-        <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
+        <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2">
           <PenTool size={24} strokeWidth={1.3} />
         </div>
         {!readOnly && onUpload && (
@@ -411,7 +411,7 @@ export function FormFieldRenderer({
   );
   const wrapperClass = "border border-sep bg-card p-3";
   const inputClass =
-    "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-label30 text-label dark:disabled:bg-stone-800/50";
+    "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-label2 text-label dark:disabled:bg-stone-800/50";
 
   switch (field.feld_typ) {
     case "text":
@@ -669,7 +669,7 @@ export function FormFieldRenderer({
           {foto ? (
             <img src={foto.url} alt={label} className="mb-2 max-h-48 rounded-md object-contain" />
           ) : (
-            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
+            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2">
               <Camera size={24} strokeWidth={1.3} />
             </div>
           )}
@@ -714,7 +714,7 @@ export function FormFieldRenderer({
               </a>
             )
           ) : (
-            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
+            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2">
               <Paperclip size={24} strokeWidth={1.3} />
             </div>
           )}
@@ -759,7 +759,7 @@ export function FormFieldRenderer({
           {unterschrift ? (
             <img src={unterschrift.url} alt="Unterschrift" className="mb-2 max-h-32 rounded-md border border-sep bg-white object-contain " />
           ) : (
-            <div className="mb-2 flex h-20 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
+            <div className="mb-2 flex h-20 items-center justify-center rounded-md border border-dashed border-sep text-label2">
               <PenLine size={22} strokeWidth={1.3} />
             </div>
           )}

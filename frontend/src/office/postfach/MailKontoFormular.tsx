@@ -141,7 +141,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase 0">
+        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase">
           Posteingang (IMAP)
         </p>
         <label className="text-xs font-medium text-label2">
@@ -185,7 +185,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase 0">
+        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase">
           Postausgang (SMTP)
         </p>
         <label className="text-xs font-medium text-label2">

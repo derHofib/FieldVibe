@@ -129,7 +129,7 @@ export function PapierkorbPage() {
       {isLoading ? (
         <p className="text-label2">Lädt…</p>
       ) : !eintraege || eintraege.length === 0 ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-label30 shadow-xs dark:bg-stone-900 ">
+        <p className="rounded-lg bg-white p-4 text-sm text-label2 shadow-xs dark:bg-stone-900 ">
           Der Papierkorb ist leer.
         </p>
       ) : (

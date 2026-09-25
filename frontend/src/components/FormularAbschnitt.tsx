@@ -69,7 +69,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               {fs.status === "abgeschlossen" && (
                 <button
                   onClick={() => pdfMutation.mutate(fs.id)}
-                  className="btn-touch shrink-0 p-1 text-label2 hover:text-label 0 dark:hover:text-label3"
+                  className="btn-touch shrink-0 p-1 text-label2 hover:text-label dark:hover:text-label3"
                   aria-label="Als PDF öffnen"
                 >
                   <FileText size={16} />

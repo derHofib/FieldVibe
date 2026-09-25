@@ -217,7 +217,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="w-full py-2.5 text-center text-xs font-medium text-label30 hover:bg-slate-50 dark:hover:bg-stone-800/50"
+              className="w-full py-2.5 text-center text-xs font-medium text-label2 hover:bg-slate-50 dark:hover:bg-stone-800/50"
             >
               {isFetchingNextPage ? "Lädt…" : "Weitere laden"}
             </button>

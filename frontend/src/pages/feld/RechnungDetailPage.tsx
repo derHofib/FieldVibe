@@ -549,7 +549,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                             if (window.confirm("Diese Zahlung stornieren?")) stornoZahlungMutation.mutate(z.id);
                           }}
                           disabled={stornoZahlungMutation.isPending}
-                          className="btn-touch text-xs text-label2 underline-offset-2 hover:underline disabled:opacity-50 0"
+                          className="btn-touch text-xs text-label2 underline-offset-2 hover:underline disabled:opacity-50"
                         >
                           Storno
                         </button>

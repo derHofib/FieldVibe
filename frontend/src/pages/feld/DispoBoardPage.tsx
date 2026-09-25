@@ -347,7 +347,7 @@ export function DispoBoardPage() {
                           title={t.titel}
                           className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-xs ${
                             t.status === "abgesagt"
-                              ? "bg-slate-100 text-label2 line-through dark:bg-stone-800 0"
+                              ? "bg-slate-100 text-label2 line-through dark:bg-stone-800"
                               : "bg-blue-50 text-tint dark:bg-blue-500/15 "
                           }`}
                         >

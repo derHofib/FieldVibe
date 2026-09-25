@@ -74,14 +74,14 @@ export function OfficePostfachPage() {
         <button
           onClick={() => setAnsicht({ art: "konto-bearbeiten" })}
           title="Postfach-Einstellungen"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label30 hover:bg-slate-50 dark:hover:bg-stone-800"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label2 hover:bg-slate-50 dark:hover:bg-stone-800"
         >
           <Settings size={15} strokeWidth={2} />
         </button>
         <button
           onClick={() => setAnsicht({ art: "konto-neu" })}
           title="Weiteres Postfach verbinden"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label30 hover:bg-slate-50 dark:hover:bg-stone-800"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label2 hover:bg-slate-50 dark:hover:bg-stone-800"
         >
           <Plus size={15} strokeWidth={2} />
         </button>
