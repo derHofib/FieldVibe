@@ -96,7 +96,7 @@ export function VorgaengeListe({
                 Ganze Seite
               </button>
             </div>
-            <VorgangDetailPage id={aktiv} />
+            <VorgangDetailPage id={aktiv} layout="dicht" />
           </div>
         ) : (
           <p className="py-10 text-center text-sm text-label2">Links einen Vorgang auswählen.</p>

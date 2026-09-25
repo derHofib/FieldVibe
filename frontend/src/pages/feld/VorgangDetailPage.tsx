@@ -367,12 +367,22 @@ function adresseAlsZeile(adresse: Adresse | null | undefined): string {
 // id optional als Prop, damit die Office-Oberflaeche diese Seite in ihrem
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
-export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
+export function VorgangDetailPage({
+  id: idProp,
+  layout = "kompakt",
+}: { id?: string; layout?: "kompakt" | "dicht" } = {}) {
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  // Nur im "dicht"-Layout (Office-Inspektor-Spalte, siehe VorgaengeListe.tsx)
+  // werden die Abschnitte zu echten Tabs (ein Panel sichtbar) statt der
+  // mobilen Anker-Scroll-Liste (alle Abschnitte untereinander).
+  const [desktopTab, setDesktopTab] = useState(ANCHOR_ABSCHNITTE[0].ziel);
+  const istAktiverTab = (ziel: string) => layout !== "dicht" || desktopTab === ziel;
+  const tabPanelProps = (ziel: string) =>
+    layout === "dicht" ? { role: "tabpanel" as const, "aria-labelledby": `tab-${ziel}` } : {};
   const { currentUser, hatRecht } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dokumentInputRef = useRef<HTMLInputElement>(null);
@@ -1183,7 +1193,53 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
-      <div id="abschnitt-uebersicht" className="scroll-mt-4 card-ap p-4">
+      {/* Kompakt (Feld-App, Office-SchmaleSpalte): Anker-Nav, springt zu den
+       * Abschnitten weiter unten -- reine <a href="#..."> statt
+       * scrollIntoView, bleibt so auch ohne JS-Handler funktionsfaehig.
+       * Dicht (Office-Inspektor-Spalte): echte Tabs, ein Panel sichtbar,
+       * role="tablist"/"tab" fuer Screenreader. */}
+      {layout === "dicht" ? (
+        <div
+          role="tablist"
+          aria-label="Auftrags-Abschnitte"
+          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-sm"
+        >
+          {ANCHOR_ABSCHNITTE.map((a) => (
+            <button
+              key={a.ziel}
+              type="button"
+              role="tab"
+              id={`tab-${a.ziel}`}
+              aria-selected={desktopTab === a.ziel}
+              aria-controls={a.ziel}
+              onClick={() => setDesktopTab(a.ziel)}
+              className={`shrink-0 rounded-[7px] px-2.5 py-1 font-medium whitespace-nowrap ${
+                desktopTab === a.ziel ? "bg-fill text-label" : "text-label2 hover:text-label"
+              }`}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <nav aria-label="Auftrags-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
+          {ANCHOR_ABSCHNITTE.map((a) => (
+            <a
+              key={a.ziel}
+              href={`#${a.ziel}`}
+              className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
+            >
+              {a.label}
+            </a>
+          ))}
+        </nav>
+      )}
+
+      <div
+        id="abschnitt-uebersicht"
+        className={`scroll-mt-4 card-ap p-4 ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
+        {...tabPanelProps("abschnitt-uebersicht")}
+      >
         <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
         <h1 className="font-heading text-lg font-semibold uppercase tracking-wide text-label">{vorgang.titel}</h1>
         {parentVorgang && (
@@ -1663,23 +1719,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      {/* Anchor-Nav: springt per Ankerlink zu den Abschnitten weiter unten,
-          statt dass man sich alles herunterscrollen muss (siehe
-          Design-Vorschlag). Reine <a href="#..."> statt scrollIntoView, das
-          bleibt auch ohne JS-Handler funktionsfaehig. */}
-      <nav aria-label="Auftrags-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
-        {ANCHOR_ABSCHNITTE.map((a) => (
-          <a
-            key={a.ziel}
-            href={`#${a.ziel}`}
-            className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
-          >
-            {a.label}
-          </a>
-        ))}
-      </nav>
-
-      <div id="abschnitt-zeit" className="scroll-mt-4 card-ap p-3">
+      <div id="abschnitt-zeit" className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-zeit") ? "" : "hidden"}`} {...tabPanelProps("abschnitt-zeit")}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
           <span className="text-sm font-medium text-label">
@@ -1766,7 +1806,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div id="abschnitt-termine" className="scroll-mt-4 card-ap p-3">
+      <div
+        id="abschnitt-termine"
+        className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-termine") ? "" : "hidden"}`}
+        {...tabPanelProps("abschnitt-termine")}
+      >
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Termine</h2>
           {kannDisponieren && (
@@ -1896,9 +1940,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      {vorgang && <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
+      {vorgang && (
+        <div className={istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"} {...tabPanelProps("abschnitt-uebersicht")}>
+          <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />
+        </div>
+      )}
 
-      <div id="abschnitt-maengel" className="scroll-mt-4 card-ap p-3">
+      <div
+        id="abschnitt-maengel"
+        className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-maengel") ? "" : "hidden"}`}
+        {...tabPanelProps("abschnitt-maengel")}
+      >
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Mängel</h2>
           <div className="flex items-center gap-3">
@@ -2042,7 +2094,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
-      <div id="abschnitt-material" className="scroll-mt-4 card-ap p-3">
+      <div
+        id="abschnitt-material"
+        className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-material") ? "" : "hidden"}`}
+        {...tabPanelProps("abschnitt-material")}
+      >
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Positionen</h2>
           <div className="flex flex-wrap gap-3">
@@ -2380,7 +2436,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {kannPartnerVerwalten && (
-        <div className="card-ap p-3">
+        <div
+          className={`card-ap p-3 ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
+          {...tabPanelProps("abschnitt-uebersicht")}
+        >
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Nachunternehmer</h2>
             {!vorgang.partner_id && (
@@ -2476,6 +2535,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
+      {/* Verlauf-Tab-Inhalt (EmailSection + gemischter Kommentar-/E-Mail-Feed
+       * + Kommentar-Composer) hat keinen einzelnen umschliessenden Container
+       * im Quelltext -- deshalb hier als ein Wrapper-Div fuer das
+       * Tab-Ausblenden im "dicht"-Layout ergaenzt, statt jede einzelne
+       * Stelle separat zu gaten. */}
+      <div className={istAktiverTab("abschnitt-verlauf") ? "" : "hidden"} {...tabPanelProps("abschnitt-verlauf")}>
       <EmailSection
         queryKey={["vorgang-emails", id]}
         listEmails={() => vorgaengeApi.emails(id!)}
@@ -2672,6 +2737,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
