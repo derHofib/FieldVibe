@@ -220,7 +220,7 @@ export function BoardMobilePage() {
         <button
           onClick={() => setAnsicht("liste")}
           className={`btn-touch px-4 py-1.5 text-xs font-semibold ${
-            ansicht === "liste" ? "bg-tint text-white" : "text-label2 hover:bg-fill"
+            ansicht === "liste" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"
           }`}
         >
           Liste
@@ -228,7 +228,7 @@ export function BoardMobilePage() {
         <button
           onClick={() => setAnsicht("canvas")}
           className={`btn-touch border-l border-sep px-4 py-1.5 text-xs font-semibold ${
-            ansicht === "canvas" ? "bg-tint text-white" : "text-label2 hover:bg-fill"
+            ansicht === "canvas" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"
           }`}
         >
           Canvas
@@ -279,7 +279,7 @@ export function BoardMobilePage() {
         className="fixed right-4 bottom-24 z-30 flex items-center gap-2 border border-sep bg-card py-2 pr-4 pl-2.5 shadow-lg"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
-        <span className="flex h-9 w-9 items-center justify-center bg-tint text-white">
+        <span className="flex h-9 w-9 items-center justify-center bg-tint-solid text-white">
           <Plus size={18} strokeWidth={1.5} />
         </span>
         <span className="flex items-center gap-1.5 text-sm font-bold text-label">

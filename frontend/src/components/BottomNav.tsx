@@ -89,7 +89,9 @@ export function BottomNav() {
                 </span>
               )}
             </span>
-            <span className="text-[10px] font-medium">{tab.label}</span>
+            {/* eigene Textfarbe statt vom Link geerbt: text-tint faellt bei
+             * 10px unter 4.5:1 (axe-core, Phase D), text-tint-text nicht. */}
+            <span className={`text-[10px] font-medium ${isActive ? "text-tint-text" : ""}`}>{tab.label}</span>
           </Link>
         );
       })}

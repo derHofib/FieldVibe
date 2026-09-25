@@ -115,7 +115,7 @@ export function MandantDetailPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
-      <Link to="/mandanten" className="text-sm font-medium text-tint hover:underline">
+      <Link to="/mandanten" className="text-sm font-medium text-tint-text hover:underline">
         ← Zurück zu Mandanten
       </Link>
 

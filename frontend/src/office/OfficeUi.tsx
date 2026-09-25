@@ -54,7 +54,10 @@ export function AnsichtUmschalter<T extends string>({
             aria-pressed={aktiv}
             title={option.label}
             className={`flex h-6 items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-semibold transition-colors ${
-              aktiv ? "bg-thumb text-label shadow-[0_1px_3px_rgba(0,0,0,.14)]" : "text-label2"
+              // text-label statt text-label2: dasselbe Kontrast-Argument
+              // wie in components/apple/SegmentedControl.tsx (axe-core,
+              // Phase D, < 4.5:1 im dunklen Modus).
+              aktiv ? "bg-thumb text-label shadow-[0_1px_3px_rgba(0,0,0,.14)]" : "text-label"
             }`}
           >
             <Icon size={13} strokeWidth={2} aria-hidden="true" />

@@ -249,7 +249,7 @@ export function UsersPage() {
               ) : (
                 <Link
                   to="/account-typen"
-                  className="text-sm font-medium text-tint hover:underline"
+                  className="text-sm font-medium text-tint-text hover:underline"
                 >
                   Noch keine Account-Typen — jetzt anlegen →
                 </Link>

@@ -34,7 +34,7 @@ export function Layout() {
               <Hexagon size={15} strokeWidth={1.5} />
             </div>
             <span className="font-heading text-lg font-semibold uppercase tracking-wide text-label">
-              Field<span className="text-tint">Vibe</span>
+              Field<span className="text-tint-text">Vibe</span>
             </span>
           </div>
           <nav className="flex flex-col gap-1">
@@ -64,7 +64,7 @@ export function Layout() {
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between gap-2 border-b border-sep px-3 py-3 sm:px-6">
-            <span className="truncate text-sm font-semibold text-label">{seitentitel}</span>
+            <h1 className="truncate text-sm font-semibold text-label">{seitentitel}</h1>
             <div className="flex items-center gap-3">
               <span className="hidden text-sm text-label sm:inline">
                 Angemeldet als <strong>{currentUser?.name}</strong> ({currentUser?.role})

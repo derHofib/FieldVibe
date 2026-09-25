@@ -392,7 +392,7 @@ export function FeedPage() {
           >
             <Filter size={14} strokeWidth={2} aria-hidden="true" />
             {aktiveFilterAnzahl > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint text-[9px] font-bold text-white">
+              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-solid text-[9px] font-bold text-white">
                 {aktiveFilterAnzahl}
               </span>
             )}

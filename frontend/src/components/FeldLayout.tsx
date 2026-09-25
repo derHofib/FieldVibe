@@ -1,9 +1,24 @@
 import { Clock } from "lucide-react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { BottomNav } from "./BottomNav";
 import { ImpersonationBanner } from "./ImpersonationBanner";
+
+// Deckt sich mit den vier Tabs in BottomNav.tsx -- hier nur fuer den
+// unsichtbaren Seiten-h1 gebraucht (siehe unten), deshalb nicht von dort
+// importiert, um BottomNav nicht wegen einer reinen a11y-Kleinigkeit
+// veroeffentlichen zu muessen.
+const TAB_TITEL: { praefix: string; titel: string }[] = [
+  { praefix: "/projekte", titel: "Projekte" },
+  { praefix: "/mehr", titel: "Mehr" },
+  { praefix: "/feed", titel: "Aufträge" },
+];
+
+function useSeitentitel(): string {
+  const { pathname } = useLocation();
+  return TAB_TITEL.find((t) => pathname.startsWith(t.praefix))?.titel ?? "FieldVibe";
+}
 
 /** Feld-App-Rahmen (Abschnitt 5.3): kein persistenter Marken-Header mehr --
  * jede Seite traegt ihre eigene Ueberschrift (AbschnittskopfA), und Suche/
@@ -15,6 +30,7 @@ import { ImpersonationBanner } from "./ImpersonationBanner";
  * frueheren outboxCount-Badge im Header) und die Tab-Bar. */
 export function FeldLayout() {
   const { outboxCount, isOnline } = useAppLiveDaten();
+  const seitentitel = useSeitentitel();
 
   return (
     <div className="min-h-screen bg-gbg text-label" style={{ paddingBottom: "calc(61px + env(safe-area-inset-bottom))" }}>
@@ -31,6 +47,11 @@ export function FeldLayout() {
         </div>
       )}
       <main className="mx-auto max-w-2xl px-3 py-4">
+        {/* Visuell kein Marken-Header mehr (s.o.), aber axe-core verlangt zu
+         * Recht genau eine h1 pro Seite -- muss innerhalb eines Landmarks
+         * (hier <main>) liegen, sonst meldet axe "region". AbschnittskopfA
+         * (h2) darunter bleibt die eigentliche, sichtbare Seitenueberschrift. */}
+        <h1 className="sr-only">{seitentitel}</h1>
         <Outlet />
       </main>
       <BottomNav />

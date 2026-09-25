@@ -161,7 +161,7 @@ export function AccountTypenPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/einstellungen" className="text-sm font-medium text-tint hover:underline">
+        <Link to="/einstellungen" className="text-sm font-medium text-tint-text hover:underline">
           ← Zurück zu Einstellungen
         </Link>
         <h1 className="mt-2 text-lg font-bold text-label">Account-Typen & Rechte</h1>

@@ -152,7 +152,7 @@ export function OfficeVorgaengePage() {
           onClick={() => setZeigeFilter((v) => !v)}
           aria-pressed={zeigeFilter || aktiveFilterAnzahl > 0}
           className={`inline-flex h-[26px] items-center gap-1.5 rounded-[13px] px-2.5 text-xs font-medium ${
-            zeigeFilter || aktiveFilterAnzahl > 0 ? "bg-tint text-white" : "bg-fill text-label"
+            zeigeFilter || aktiveFilterAnzahl > 0 ? "bg-tint-solid text-white" : "bg-fill text-label"
           }`}
         >
           <Filter size={13} strokeWidth={2} aria-hidden="true" />

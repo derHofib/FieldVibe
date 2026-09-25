@@ -138,7 +138,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                       aria-label={gewaehlt ? "Abwählen" : "Auswählen"}
                       aria-pressed={gewaehlt}
                       className={`absolute top-2.5 right-2.5 flex h-4 w-4 items-center justify-center rounded border ${
-                        gewaehlt ? "border-tint bg-tint text-white" : "border-sepstrong"
+                        gewaehlt ? "border-tint bg-tint-solid text-white" : "border-sepstrong"
                       }`}
                     >
                       {gewaehlt && <Check size={11} strokeWidth={3} aria-hidden="true" />}

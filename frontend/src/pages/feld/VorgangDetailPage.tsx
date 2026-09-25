@@ -2497,7 +2497,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           onClick={() => setKundenansicht((v) => !v)}
           className={`btn-touch border px-3 py-1 text-xs font-semibold ${
             kundenansicht
-              ? "border-tint bg-tint text-white"
+              ? "border-tint bg-tint-solid text-white"
               : "border-sep text-label hover:bg-fill"
           }`}
         >

@@ -34,6 +34,17 @@
   --sepstrong: rgba(60, 60, 67, 0.29);
   --tint: #0071e3;
   --tintbg: rgba(0, 113, 227, 0.12);
+  /* --tint-text/-solid (Phase D, axe-core-Befund): --tint selbst bleibt fuer
+     Icons/Ränder/Indikatoren unveraendert (die brauchen nur 3:1, WCAG
+     1.4.11). Fuer echten Text auf --bar (#f8f8fb, z. B. aktives BottomNav-
+     Label) reicht --tint knapp NICHT (4.43 statt 4.5) -- --tint-text
+     deshalb leicht abgedunkelt. --tint-solid (weisser Text auf Tint-
+     Flaeche) ist im Hell-Modus dagegen unveraendert ausreichend (4.69),
+     im Dunkel-Modus nicht (siehe .dark unten, dort in die jeweils
+     GEGENSAETZLICHE Richtung verschoben -- heller fuer Text, dunkler fuer
+     Flaeche). */
+  --tint-text: #0068cc;
+  --tint-solid: var(--tint);
   --shadow-card-value: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 14px rgba(0, 0, 0, 0.05);
 
   /* Status (Abschnitt 3.2). "wartet"/"fehlt" (Vorgang-Status "wartet_kunde"
@@ -132,6 +143,8 @@
   --color-sepstrong: var(--sepstrong);
   --color-tint: var(--tint);
   --color-tintbg: var(--tintbg);
+  --color-tint-text: var(--tint-text);
+  --color-tint-solid: var(--tint-solid);
 
   --color-st-neu: var(--st-neu-text);
   --color-st-neu-bg: var(--st-neu-bg);
@@ -288,6 +301,15 @@ body {
   --sepstrong: rgba(84, 84, 88, 0.7);
   --tint: #0a84ff;
   --tintbg: rgba(10, 132, 255, 0.22);
+  /* Siehe Begruendung im @theme-Block oben (Phase D, axe-core). Text:
+     derselbe aufgehellte Ton wie --st-neu-text (schon im System vorhanden,
+     6.37:1 gegen --card, statt einen weiteren Blauton zu erfinden). Solid:
+     abgedunkelte Flaeche, damit weisser Text darauf 4.5:1 erreicht
+     (5.25:1), nur fuer .btn-ap-primary/.btn-ap-capsule-primary und die
+     entsprechenden bg-tint-solid-Stellen -- NICHT fuer Icons/Raender, die
+     bleiben bei --tint. */
+  --tint-text: #6ab1ff;
+  --tint-solid: #0a6ad1;
   --shadow-card-value: none;
 
   --st-neu-text: #6ab1ff;
@@ -426,7 +448,7 @@ body {
   padding: 0 14px;
   border-radius: var(--radius-ap-sm);
   border: none;
-  background: var(--tint);
+  background: var(--tint-solid);
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
@@ -477,12 +499,12 @@ body {
   cursor: pointer;
 }
 .btn-ap-capsule-primary {
-  background: var(--tint);
+  background: var(--tint-solid);
   color: #ffffff;
 }
 .btn-ap-capsule-secondary {
   background: var(--fill);
-  color: var(--tint);
+  color: var(--tint-text);
 }
 .btn-ap-capsule:disabled {
   opacity: 0.45;

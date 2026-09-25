@@ -268,7 +268,7 @@ function LvPositionFelder({
                   onClick={() => setKalkulationsmodus(modus)}
                   className={`flex-1 px-3 py-1.5 text-xs font-semibold ${
                     kalkulationsmodus === modus
-                      ? "bg-tint text-white"
+                      ? "bg-tint-solid text-white"
                       : "text-label hover:bg-fill"
                   }`}
                 >

@@ -395,7 +395,7 @@ function InspectorFeld({
           {planSymbole.length === 0 ? (
             <p className="text-xs text-label2">
               Noch keine Plan-Symbole angelegt —{" "}
-              <Link to="/plan-symbole" className="text-tint hover:underline">
+              <Link to="/plan-symbole" className="text-tint-text hover:underline">
                 Symbol-Bibliothek öffnen
               </Link>
               .

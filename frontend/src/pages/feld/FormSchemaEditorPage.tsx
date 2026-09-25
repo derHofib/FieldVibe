@@ -119,7 +119,7 @@ function RegelForm({
                     setWertModus("fest");
                     setValue("");
                   }}
-                  className={`px-2 py-0.5 ${wertModus === "fest" ? "bg-tint text-white" : "text-label2 hover:bg-fill"}`}
+                  className={`px-2 py-0.5 ${wertModus === "fest" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"}`}
                 >
                   Fester Wert
                 </button>
@@ -129,7 +129,7 @@ function RegelForm({
                     setWertModus("formel");
                     setValue(null);
                   }}
-                  className={`px-2 py-0.5 ${wertModus === "formel" ? "bg-tint text-white" : "text-label2 hover:bg-fill"}`}
+                  className={`px-2 py-0.5 ${wertModus === "formel" ? "bg-tint-solid text-white" : "text-label2 hover:bg-fill"}`}
                 >
                   Formel
                 </button>
@@ -427,7 +427,7 @@ export function FormSchemaEditorPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`flex-1 px-3 py-2 text-xs font-semibold ${
-              tab === t ? "bg-tint text-white" : "text-label hover:bg-fill"
+              tab === t ? "bg-tint-solid text-white" : "text-label hover:bg-fill"
             }`}
           >
             {TAB_LABEL[t]}

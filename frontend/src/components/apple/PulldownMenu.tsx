@@ -108,7 +108,7 @@ export function PulldownMenu({
                     item.onSelect();
                     schliessen(true);
                   }}
-                  className="group flex h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-label hover:bg-tint hover:text-white focus-visible:bg-tint focus-visible:text-white focus-visible:outline-none"
+                  className="group flex h-[30px] w-full items-center gap-2 rounded-[6px] px-2 text-left text-label hover:bg-tint-solid hover:text-white focus-visible:bg-tint-solid focus-visible:text-white focus-visible:outline-none"
                 >
                   {Icon && <Icon size={15} strokeWidth={2} className="shrink-0" />}
                   <span className="flex-1 text-[13px]">{item.label}</span>
