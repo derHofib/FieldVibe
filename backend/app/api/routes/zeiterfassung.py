@@ -907,6 +907,8 @@ async def zeiterfassung_vormerken(
         )
         ergebnis.append(e)
     await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
     await _mit_vorgangsnummern(session, ergebnis)
     return ergebnis
 
@@ -951,6 +953,8 @@ async def zeiterfassung_vormerkung_zurueckziehen(
         )
         ergebnis.append(e)
     await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
     await _mit_vorgangsnummern(session, ergebnis)
     return ergebnis
 
@@ -1005,6 +1009,8 @@ async def zeiterfassung_buchen(
         )
         ergebnis.append(e)
     await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
     await _mit_vorgangsnummern(session, ergebnis)
     return ergebnis
 
@@ -1056,6 +1062,8 @@ async def zeiterfassung_buchung_stornieren(
         )
         ergebnis.append(e)
     await session.flush()
+    for e in ergebnis:
+        await session.refresh(e)
     await _mit_vorgangsnummern(session, ergebnis)
     return ergebnis
 
