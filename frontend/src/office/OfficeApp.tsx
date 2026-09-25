@@ -45,6 +45,7 @@ import { OfficeLayout } from "./OfficeLayout";
 import { OfficeNavKategorienPage } from "./OfficeNavKategorienPage";
 import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
 import { OfficeBoardPage } from "./boards/OfficeBoardPage";
+import { OfficeAuftraegePage } from "./auftraege/OfficeAuftraegePage";
 import { OfficeBoardsPage } from "./boards/OfficeBoardsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
@@ -79,6 +80,7 @@ export function OfficeApp() {
         <Route path="/boards" element={<OfficeBoardsPage />} />
         <Route path="/boards/:id" element={<OfficeBoardPage />} />
         <Route path="/projekte" element={<OfficeProjektePage />} />
+        <Route path="/auftraege" element={<OfficeAuftraegePage />} />
 
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>

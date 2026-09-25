@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 /**
  * Ergaenzung zu apple-redesign.spec.ts (das nur eine Office-Seite bei
- * 1440x900 prueft): alle acht eigenstaendigen Desktop-Ansichten
+ * 1440x900 prueft): alle eigenstaendigen Desktop-Ansichten
  * (office/OfficeApp.tsx, "Eigenstaendige Desktop-Ansichten"-Block) bei
  * einem echten Grossbildschirm (1920x1080) -- horizontaler Overflow und
  * axe-core-Befunde. Die restlichen Office-Routen sind bewusst schmale,
@@ -22,6 +22,7 @@ const PAGES = [
   { path: "/postfach", name: "postfach" },
   { path: "/boards", name: "boards" },
   { path: "/projekte", name: "projekte" },
+  { path: "/auftraege", name: "auftraege" },
 ];
 
 async function login(page: Page) {

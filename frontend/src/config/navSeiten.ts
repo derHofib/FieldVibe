@@ -8,6 +8,7 @@ import {
   HardHat,
   Inbox,
   KanbanSquare,
+  Layers,
   ListChecks,
   type LucideIcon,
   Mail,
@@ -112,6 +113,18 @@ export const NAV_SEITEN: NavSeite[] = [
     kategorie: "Arbeit",
     // Kanban mit Drag&Drop ist am Desktop gebaut, nicht fuer die schmale
     // Feld-App-Spalte -- siehe office/OfficeProjektePage.tsx.
+    nurOffice: true,
+    sichtbar: ({ hatRecht }) => hatRecht("projekte", "sehen"),
+  },
+  {
+    key: "auftraege",
+    label: "Aufträge",
+    icon: Layers,
+    tone: "teal",
+    route: "/auftraege",
+    kategorie: "Arbeit",
+    // Tabellen-Ansicht mit Sortierung -- wie "projekte" am Desktop gebaut,
+    // nutzt denselben Rechte-Bereich (siehe app/models/auftrag.py).
     nurOffice: true,
     sichtbar: ({ hatRecht }) => hatRecht("projekte", "sehen"),
   },

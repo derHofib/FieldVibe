@@ -1820,6 +1820,23 @@ export interface Projekt {
   updated_at: string;
 }
 
+export type AuftragStatus = "offen" | "in_arbeit" | "abgeschlossen" | "storniert";
+
+export interface Auftrag {
+  id: string;
+  projekt_id: string | null;
+  kunde_id: string | null;
+  titel: string;
+  beschreibung: string | null;
+  status: AuftragStatus;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+  // Transient vom Backend angereichert (siehe app/api/routes/auftraege.py).
+  kunde_name: string | null;
+  vorgaenge_gesamt: number;
+}
+
 export interface ProjektSpalte {
   id: string;
   projekt_id: string;

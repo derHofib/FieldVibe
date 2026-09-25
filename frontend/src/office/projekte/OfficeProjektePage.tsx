@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, X } from "lucide-react";
+import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, Table2, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { ApiError } from "../../api/client";
@@ -7,9 +7,11 @@ import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
 import { Monogramm } from "../../components/apple/Monogramm";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
-import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
+import type { Projekt, ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { ProjektAufgabeDetailPanel } from "./ProjektAufgabeDetailPanel";
+import { ProjektDetailPanel } from "./ProjektDetailPanel";
+import { ProjekteTabelle } from "./ProjekteTabelle";
 import { ProjektUebersicht } from "./ProjektUebersicht";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
@@ -31,14 +33,18 @@ const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
  * innerhalb einer Spalte ist bewusst nicht manuell sortierbar -- neue Karten
  * haengen sich unten an, wie im bestehenden VorgaengeKanban auch. */
 const ANSICHT_UMSCHALTER = [
+  { wert: "tabelle" as const, label: "Tabelle", icon: Table2 },
   { wert: "uebersicht" as const, label: "Übersicht", icon: LayoutList },
   { wert: "kanban" as const, label: "Kanban", icon: KanbanSquare },
 ];
 
 export function OfficeProjektePage() {
   const queryClient = useQueryClient();
-  const [ansicht, setAnsicht] = useState<"uebersicht" | "kanban">("uebersicht");
+  // "Tabelle" (alle Projekte) ist der neue Standard-Einstieg -- Uebersicht/
+  // Kanban bleiben fuer die Detailarbeit an einem einzelnen Projekt.
+  const [ansicht, setAnsicht] = useState<"tabelle" | "uebersicht" | "kanban">("tabelle");
   const [projektId, setProjektId] = useState<string | null>(null);
+  const [projektPanel, setProjektPanel] = useState<Projekt | null>(null);
   const [zeigeNeuesProjekt, setZeigeNeuesProjekt] = useState(false);
   const [neuerProjektName, setNeuerProjektName] = useState("");
   const [neueSpalteName, setNeueSpalteName] = useState<string | null>(null);
@@ -136,8 +142,10 @@ export function OfficeProjektePage() {
   return (
     <div>
       <SeitenKopf titel="Projekte">
-        {aktivesProjekt && <AnsichtUmschalter wert={ansicht} optionen={ANSICHT_UMSCHALTER} onWechsel={setAnsicht} />}
-        {projekte && projekte.length > 0 && (
+        {(ansicht === "tabelle" || aktivesProjekt) && (
+          <AnsichtUmschalter wert={ansicht} optionen={ANSICHT_UMSCHALTER} onWechsel={setAnsicht} />
+        )}
+        {ansicht !== "tabelle" && projekte && projekte.length > 0 && (
           <select
             value={aktivesProjekt ?? ""}
             onChange={(e) => setProjektId(e.target.value)}
@@ -196,7 +204,13 @@ export function OfficeProjektePage() {
         </div>
       )}
 
-      {!aktivesProjekt ? (
+      {ansicht === "tabelle" ? (
+        !projekte || projekte.length === 0 ? (
+          <EmptyState icon={KanbanSquare} text="Noch kein Projekt angelegt." />
+        ) : (
+          <ProjekteTabelle projekte={projekte} onZeileKlick={setProjektPanel} />
+        )
+      ) : !aktivesProjekt ? (
         <EmptyState icon={KanbanSquare} text="Noch kein Projekt angelegt." />
       ) : ansicht === "uebersicht" ? (
         <ProjektUebersicht projektId={aktivesProjekt} />
@@ -356,6 +370,18 @@ export function OfficeProjektePage() {
           aufgabe={panel.aufgabe}
           vorbelegteSpalteId={panel.spalteId}
           onClose={() => setPanel(null)}
+        />
+      )}
+
+      {projektPanel && (
+        <ProjektDetailPanel
+          projekt={projektPanel}
+          onClose={() => setProjektPanel(null)}
+          onKanbanOeffnen={() => {
+            setProjektId(projektPanel.id);
+            setAnsicht("kanban");
+            setProjektPanel(null);
+          }}
         />
       )}
     </div>

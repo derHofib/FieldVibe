@@ -15,6 +15,8 @@ import type {
   AnlageProfil,
   Ansprechpartner,
   AuditLogEntry,
+  Auftrag,
+  AuftragStatus,
   Bestellung,
   Board,
   BoardAnhangUpload,
@@ -1595,6 +1597,31 @@ export const projekteApi = {
     }),
   removeSpalte: (projektId: string, spalteId: string) =>
     apiFetch<void>(`/api/projekte/${projektId}/spalten/${spalteId}`, { method: "DELETE" }),
+};
+
+export const auftraegeApi = {
+  list: (filter?: { projekt_id?: string; kunde_id?: string; status?: string }) => {
+    const params = new URLSearchParams();
+    if (filter?.projekt_id) params.set("projekt_id", filter.projekt_id);
+    if (filter?.kunde_id) params.set("kunde_id", filter.kunde_id);
+    if (filter?.status) params.set("status", filter.status);
+    const qs = params.toString();
+    return apiFetch<Auftrag[]>(`/api/auftraege${qs ? `?${qs}` : ""}`);
+  },
+  get: (id: string) => apiFetch<Auftrag>(`/api/auftraege/${id}`),
+  create: (body: { titel: string; beschreibung?: string; projekt_id?: string | null; kunde_id?: string | null }) =>
+    apiFetch<Auftrag>("/api/auftraege", { method: "POST", body: JSON.stringify(body) }),
+  update: (
+    id: string,
+    body: {
+      titel?: string;
+      beschreibung?: string;
+      projekt_id?: string | null;
+      kunde_id?: string | null;
+      status?: AuftragStatus;
+    },
+  ) => apiFetch<Auftrag>(`/api/auftraege/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/auftraege/${id}`, { method: "DELETE" }),
 };
 
 export const projektAufgabenApi = {
