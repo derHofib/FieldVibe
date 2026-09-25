@@ -1247,7 +1247,7 @@ export function VorgangDetailPage({
       {layout === "dicht" ? (
         <div
           role="tablist"
-          aria-label="Auftrags-Abschnitte"
+          aria-label="Vorgangs-Abschnitte"
           className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-sm"
         >
           {ANCHOR_ABSCHNITTE.map((a) => (
@@ -1268,7 +1268,7 @@ export function VorgangDetailPage({
           ))}
         </div>
       ) : (
-        <nav aria-label="Auftrags-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
+        <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
           {ANCHOR_ABSCHNITTE.map((a) => (
             <a
               key={a.ziel}
@@ -1620,7 +1620,7 @@ export function VorgangDetailPage({
             }}
             className="btn-touch border border-sepstrong px-3 py-1 text-xs font-medium text-label hover:bg-fill"
           >
-            + Folge-Auftrag
+            + Folge-Vorgang
           </button>
         </div>
 
@@ -1703,7 +1703,7 @@ export function VorgangDetailPage({
         {showFolgeAuftragDialog && (
           <div className="mt-2 space-y-2 border border-sepstrong p-2">
             <p className="text-sm text-label">
-              Folge-Auftrag anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
+              Folge-Vorgang anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
               Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
             </p>
             <select
@@ -1752,7 +1752,7 @@ export function VorgangDetailPage({
 
         {folgeAuftraege && folgeAuftraege.length > 0 && (
           <div className="mt-2 space-y-1">
-            <span className="text-xs font-medium text-label2">Folge-Aufträge:</span>
+            <span className="text-xs font-medium text-label2">Folge-Vorgänge:</span>
             {folgeAuftraege.map((fa) => (
               <button
                 key={fa.id}

@@ -14,7 +14,7 @@ const KATEGORIE_OPTIONEN: { value: ZeiterfassungKategorie; label: string }[] = [
   { value: "urlaub", label: "Urlaub" },
   { value: "krankheit", label: "Krankheit" },
   { value: "sonstiges", label: "Sonstiges" },
-  { value: "auftrag", label: "Auftrag (nachgetragen)" },
+  { value: "auftrag", label: "Vorgang (nachgetragen)" },
 ];
 
 function heuteAlsInput(): string {

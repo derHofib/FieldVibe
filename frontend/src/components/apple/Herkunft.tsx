@@ -1,7 +1,7 @@
 import { File, Folder } from "lucide-react";
 
 /** Herkunft-Kennzeichnung (Abschnitt 3.3): Projekt immer Indigo + Ordner-
- * Symbol, Einzelauftrag --label2 + Dokument-Symbol. Farbe steht nie allein
+ * Symbol, Einzelvorgang --label2 + Dokument-Symbol. Farbe steht nie allein
  * -- immer mit Symbol + Text (Abschnitt 6). Kompakte Inline-Variante fuer
  * Listenzeilen/Karten; fuer die groessere Kachel-Darstellung (Inspektor/
  * Detailseite) siehe SymbolKachel mit farbe="indigo"/"gray". */
@@ -24,7 +24,7 @@ export function HerkunftZeile({
   return (
     <span className="inline-flex items-center gap-1 text-[13px] text-label2">
       <File size={13} strokeWidth={2} aria-hidden="true" />
-      Einzelauftrag
+      Einzelvorgang
     </span>
   );
 }

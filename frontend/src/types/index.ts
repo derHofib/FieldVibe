@@ -78,7 +78,7 @@ export type Role =
   | "loesch_operativ";
 
 // Muss mit MANDANT_MODULE in backend/app/models/mandant.py uebereinstimmen.
-// "vorgaenge" (Auftrag + Chat/Foto/Status/Unterschrift + Zeit start/stopp,
+// "vorgaenge" (Vorgang + Chat/Foto/Status/Unterschrift + Zeit start/stopp,
 // Kunde per Dropdown waehlen oder inline anlegen) ist bewusst NICHT Teil
 // dieser Liste -- das ist der nicht abschaltbare Boden.
 export type MandantModul =

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /** Abschnittskopf Variante A (Abschnitt 4.2): grosse Listen-Übersichts-
- * Überschrift, z. B. "Heute"/"Diese Woche" in der Auftragsliste. */
+ * Überschrift, z. B. "Heute"/"Diese Woche" in der Vorgangsliste. */
 export function AbschnittskopfA({ titel, anzahl }: { titel: string; anzahl?: number }) {
   return (
     <div className="flex items-baseline justify-between px-5 pt-[18px] pb-2">

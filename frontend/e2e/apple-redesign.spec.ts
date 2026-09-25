@@ -88,7 +88,7 @@ for (const theme of ["light", "dark"] as const) {
   test.describe(`Office (${theme})`, () => {
     test.use({ viewport: { width: 1440, height: 900 } });
 
-    test(`Auftragsliste (${theme})`, async ({ page }) => {
+    test(`Vorgangsliste (${theme})`, async ({ page }) => {
       await setTheme(page, theme);
       await page.goto("/login?office=1");
       await page.locator('input[type="email"]').fill(TECHNIKER.email);
