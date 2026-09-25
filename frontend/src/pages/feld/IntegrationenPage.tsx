@@ -313,6 +313,77 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
   );
 }
 
+const FAHRZEIT_ABRECHNUNG_LABEL: Record<MandantEinstellungen["fahrzeit_abrechnung"], string> = {
+  keine: "Nicht abrechnen",
+  zeit: "Nach Zeit (Std.)",
+  km: "Nach km",
+  zeit_und_km: "Zeit und km",
+};
+
+// Fahrzeit-Abrechnung (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt
+// 5.3/8) -- steuert die "Fahrzeit"/"Fahrtkosten"-Rechnungsvorschläge am
+// Vorgang. km_satz_netto bleibt wirkungslos, solange fahrzeit_abrechnung
+// "keine" oder "zeit" ist, wird aber unabhängig davon gespeichert.
+function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
+  const queryClient = useQueryClient();
+  const [modus, setModus] = useState(einstellungen.fahrzeit_abrechnung);
+  const [kmSatz, setKmSatz] = useState(einstellungen.km_satz_netto ?? "");
+
+  const speichernMutation = useMutation({
+    mutationFn: () =>
+      mandantEinstellungenApi.update({
+        fahrzeit_abrechnung: modus,
+        km_satz_netto: kmSatz === "" ? null : kmSatz,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
+  });
+
+  return (
+    <div className="card-ap p-4">
+      <h2 className="mb-1 text-sm font-semibold text-label">Fahrzeit-Abrechnung</h2>
+      <p className="mb-2 text-xs text-label2">
+        Steuert, ob und wie Fahrzeit-Einträge (Kategorie "Fahrzeit") als zusätzliche
+        Rechnungsvorschläge "Fahrzeit"/"Fahrtkosten" am Vorgang erscheinen.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={modus}
+          onChange={(e) => setModus(e.target.value as MandantEinstellungen["fahrzeit_abrechnung"])}
+          className="btn-touch border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        >
+          {Object.entries(FAHRZEIT_ABRECHNUNG_LABEL).map(([wert, label]) => (
+            <option key={wert} value={wert}>
+              {label}
+            </option>
+          ))}
+        </select>
+        {(modus === "km" || modus === "zeit_und_km") && (
+          <label className="flex items-center gap-1.5 text-sm text-label2">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0,30"
+              value={kmSatz}
+              onChange={(e) => setKmSatz(e.target.value)}
+              className="btn-touch w-24 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+            € netto / km
+          </label>
+        )}
+        <button
+          onClick={() => speichernMutation.mutate()}
+          disabled={speichernMutation.isPending}
+          className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+        >
+          Speichern
+        </button>
+        {speichernMutation.isSuccess && <span className="text-xs text-st-erledigt">Gespeichert.</span>}
+      </div>
+    </div>
+  );
+}
+
 function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
@@ -639,6 +710,7 @@ export function IntegrationenPage() {
       )}
 
       {einstellungen && <WiedervorlageSection einstellungen={einstellungen} />}
+      {einstellungen && <FahrzeitAbrechnungSection einstellungen={einstellungen} />}
 
       <p className="text-sm text-label2">
         SMTP wird für den "Passwort vergessen"-Link im Kundenportal genutzt. Ohne

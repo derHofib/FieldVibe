@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { auftraegeApi, projekteApi, vorgaengeApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
 import { SeitenPanel } from "../../components/apple/SeitenPanel";
 import { AUFTRAG_STATUS_LABEL } from "../auftraege/AuftraegeTabelle";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
@@ -129,6 +130,8 @@ export function ProjektDetailPanel({
             </div>
           )}
         </div>
+
+        <ZeitSummenBlock filter={{ projekt_id: projekt.id }} />
       </div>
     </SeitenPanel>
   );

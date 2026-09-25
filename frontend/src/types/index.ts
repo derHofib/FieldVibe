@@ -696,6 +696,21 @@ export interface ZeiterfassungStatistik {
   jahresstunden: string;
 }
 
+export interface ZeiterfassungStatusSumme {
+  arbeitszeit_stunden: string;
+  fahrzeit_stunden: string;
+  km: string;
+}
+
+// "Zeit"-Block im Auftrag-/Projekt-Panel (Stufe 4, docs/konzepte/
+// ZEITERFASSUNG.md Abschnitt 7.4).
+export interface ZeiterfassungSummenNachStatus {
+  vermerkt: ZeiterfassungStatusSumme;
+  vorgemerkt: ZeiterfassungStatusSumme;
+  gebucht: ZeiterfassungStatusSumme;
+  abgerechnet: ZeiterfassungStatusSumme;
+}
+
 export interface ZeiterfassungAenderung {
   id: string;
   aktion: string;
@@ -842,6 +857,12 @@ export interface Angebot {
 export type RechnungStatus = "entwurf" | "versendet" | "teilweise_bezahlt" | "bezahlt" | "storniert";
 export type RechnungZahlungsart = "ueberweisung" | "bar" | "karte" | "lastschrift" | "sonstiges";
 
+// Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher eine Position
+// stammt -- steuert beim Entfernen, ob/welche Zeiterfassung-Eintraege
+// wieder auf "gebucht" zurueckgesetzt werden. undefined/null bei manuell
+// eingetragenen Positionen.
+export type RechnungPositionQuelle = "material" | "zeit" | "fahrzeit" | "fahrtkosten" | "leistung";
+
 export interface RechnungPosition {
   id: string;
   position: number;
@@ -850,13 +871,14 @@ export interface RechnungPosition {
   einheit: string;
   einzelpreis: string;
   gesamt: string;
+  quelle: RechnungPositionQuelle | null;
 }
 
 // Vom Backend bei jedem Aufruf frisch aus Material-Verwendungen und
 // Zeiterfassung des verknuepften Vorgangs berechnet -- kein persistiertes
 // Objekt, daher keine id.
 export interface RechnungPositionVorschlag {
-  quelle: "material" | "zeit" | "leistung";
+  quelle: RechnungPositionQuelle;
   beschreibung: string;
   menge: string;
   einheit: string;
@@ -1372,7 +1394,14 @@ export interface MandantEinstellungen {
   // "berechnet" -- wirkt nicht rueckwirkend auf bereits angelegte Positionen.
   standard_lohn_gemeinkosten_prozent: string;
   standard_gewinn_wagnis_prozent: string;
+  // Fahrzeit-Abrechnung (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt
+  // 5.3/8) -- km_satz_netto=null heisst "aus", auch wenn fahrzeit_abrechnung
+  // km/zeit_und_km waehlt.
+  km_satz_netto: string | null;
+  fahrzeit_abrechnung: FahrzeitAbrechnung;
 }
+
+export type FahrzeitAbrechnung = "keine" | "zeit" | "km" | "zeit_und_km";
 
 export interface MandantLogoUrl {
   url: string | null;

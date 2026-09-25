@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, FileText, ListChecks } from "lucide-react";
+import { Ban, FileText, ListChecks, X } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi, leistungsverzeichnisApi, rechnungenApi } from "../../api/endpoints";
-import type { RechnungPositionVorschlag } from "../../types";
+import type { RechnungPositionQuelle, RechnungPositionVorschlag } from "../../types";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -15,6 +15,14 @@ import { downloadBlob } from "../../utils/download";
 import { heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import type { RechnungZahlungsart } from "../../types";
+
+const VORSCHLAG_QUELLE_LABEL: Record<RechnungPositionQuelle, string> = {
+  material: "Material",
+  leistung: "Leistungsverzeichnis",
+  zeit: "Zeiterfassung",
+  fahrzeit: "Fahrzeit",
+  fahrtkosten: "Fahrtkosten",
+};
 
 /** Vorschlagsbox fuer Rechnungen mit Vorgangsbezug -- fasst bereits am
  * Vorgang erfasstes Material und abrechenbare Zeiterfassung zusammen, die
@@ -40,6 +48,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
           menge: v.menge,
           einheit: v.einheit,
           einzelpreis: v.einzelpreis,
+          quelle: v.quelle,
         });
       }
     },
@@ -78,7 +87,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
               {v.beschreibung}, {v.menge} {v.einheit} × {v.einzelpreis} EUR
             </span>
             <span className="border border-sep px-2 py-0.5 text-[10px] font-semibold text-label2">
-              {v.quelle === "material" ? "Material" : v.quelle === "leistung" ? "Leistungsverzeichnis" : "Zeiterfassung"}
+              {VORSCHLAG_QUELLE_LABEL[v.quelle]}
             </span>
           </label>
         ))}
@@ -181,6 +190,11 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       setLvAuswahl("");
       queryClient.invalidateQueries({ queryKey: ["rechnung", id] });
     },
+  });
+
+  const removePositionMutation = useMutation({
+    mutationFn: (positionId: string) => rechnungenApi.removePosition(id!, positionId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
   });
 
   const pdfMutation = useMutation({
@@ -444,7 +458,19 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
-                <div className="font-medium text-label">{p.gesamt} EUR</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-medium text-label">{p.gesamt} EUR</div>
+                  {rechnung.status === "entwurf" && (
+                    <button
+                      onClick={() => removePositionMutation.mutate(p.id)}
+                      disabled={removePositionMutation.isPending}
+                      title="Position entfernen"
+                      className="btn-touch p-1 text-label2 hover:text-st-fehlt disabled:opacity-50"
+                    >
+                      <X size={14} strokeWidth={2} />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

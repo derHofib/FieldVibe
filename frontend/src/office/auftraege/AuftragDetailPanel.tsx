@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { auftraegeApi, kundenApi, projekteApi, vorgaengeApi } from "../../api/endpoints";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { EmptyState } from "../../components/EmptyState";
+import { ZeitSummenBlock } from "../../components/ZeitSummenBlock";
 import { SeitenPanel } from "../../components/apple/SeitenPanel";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { Auftrag, AuftragStatus } from "../../types";
@@ -130,6 +131,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
             </div>
           )}
         </div>
+
+        <ZeitSummenBlock filter={{ auftrag_id: auftrag.id }} />
 
         <div className="border-t border-sep pt-4">
           <button

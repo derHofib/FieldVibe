@@ -83,6 +83,7 @@ import type {
   MailMessageDetail,
   MailMessageListResponse,
   Mandant,
+  FahrzeitAbrechnung,
   MandantEinstellungen,
   MandantFirmendaten,
   MandantIntegration,
@@ -116,6 +117,7 @@ import type {
   RechnungenFilter,
   RechnungListe,
   RechnungPosition,
+  RechnungPositionQuelle,
   RechnungPositionVorschlag,
   RechnungZahlungCreate,
   RechteAktion,
@@ -149,6 +151,7 @@ import type {
   ZeiterfassungAenderung,
   ZeiterfassungKategorie,
   ZeiterfassungStatistik,
+  ZeiterfassungSummenNachStatus,
 } from "../types";
 
 export const authApi = {
@@ -951,6 +954,12 @@ export const zeiterfassungApi = {
     apiFetch<ZeiterfassungStatistik>(
       `/api/zeiterfassung/statistik${technikerId ? `?techniker_id=${technikerId}` : ""}`
     ),
+  // "Zeit"-Block im Auftrag-/Projekt-Panel (Stufe 4) -- genau eines der
+  // beiden Felder angeben.
+  summen: (filter: { auftrag_id: string } | { projekt_id: string }) =>
+    apiFetch<ZeiterfassungSummenNachStatus>(
+      `/api/zeiterfassung/summen?${new URLSearchParams(filter).toString()}`
+    ),
   wochenzettelPdf: (wocheStart: string, technikerId?: string) =>
     apiFetchBlob(
       `/api/zeiterfassung/wochenzettel-pdf?woche_start=${wocheStart}${
@@ -1219,8 +1228,12 @@ export const rechnungenApi = {
   }) => apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
   addPosition: (
     id: string,
-    body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">,
+    body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
+      quelle?: RechnungPositionQuelle;
+    },
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
+  removePosition: (id: string, positionId: string) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen/${positionId}`, { method: "DELETE" }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   storno: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}/storno`, { method: "POST" }),
@@ -1579,6 +1592,8 @@ export const mandantEinstellungenApi = {
     wiedervorlage_standard_tage?: number | null;
     standard_lohn_gemeinkosten_prozent?: string;
     standard_gewinn_wagnis_prozent?: string;
+    km_satz_netto?: string | null;
+    fahrzeit_abrechnung?: FahrzeitAbrechnung;
   }) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {
       method: "PATCH",
