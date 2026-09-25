@@ -10,7 +10,7 @@ export function BildNode({ data, selected }: NodeProps<BoardNode>) {
       {url ? (
         <img src={url} alt="" className="block w-full" draggable={false} />
       ) : (
-        <div className="flex h-24 items-center justify-center bg-slate-100 text-xs text-slate-400 dark:bg-stone-800 dark:text-stone-500">
+        <div className="flex h-24 items-center justify-center bg-slate-100 text-xs text-label2 dark:bg-stone-800 0">
           Kein Bild
         </div>
       )}

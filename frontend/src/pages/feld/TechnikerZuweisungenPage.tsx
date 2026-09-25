@@ -82,7 +82,7 @@ export function TechnikerZuweisungenPage() {
                   ))}
                 </div>
               )}
-              <div className="mt-2 border-t border-slate-100 pt-2 dark:border-stone-800">
+              <div className="mt-2 border-t border-sep pt-2 ">
                 <label className="mb-1 block text-xs text-label2">Fahrzeug</label>
                 <FahrzeugAuswahl
                   userId={row.techniker.id}

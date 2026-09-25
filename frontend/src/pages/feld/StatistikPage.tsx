@@ -83,7 +83,7 @@ function TeamKennzahlen() {
           </div>
 
           {kennzahlen.offene_vorgaenge_je_techniker.length > 0 && (
-            <div className="space-y-1.5 border-t border-slate-100 pt-2 dark:border-stone-800">
+            <div className="space-y-1.5 border-t border-sep pt-2 ">
               <p className="text-[11px] font-bold tracking-wide text-label2 uppercase">Offen je Techniker</p>
               {kennzahlen.offene_vorgaenge_je_techniker.map((t) => (
                 <TechnikerBalken key={t.techniker_id} name={t.techniker_name} anzahl={t.anzahl_offen} max={maxOffen} />
@@ -199,7 +199,7 @@ export function StatistikPage() {
                 vorherigeWoche.setDate(wocheMontag.getDate() - 7);
                 setWocheMontag(vorherigeWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
             >
               ← Woche
             </button>
@@ -212,7 +212,7 @@ export function StatistikPage() {
                 naechsteWoche.setDate(wocheMontag.getDate() + 7);
                 setWocheMontag(naechsteWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
             >
               Woche →
             </button>
@@ -228,7 +228,7 @@ export function StatistikPage() {
           )}
 
           {kannAuswerten && (
-            <div className="mt-2 flex items-center justify-end border-t border-slate-100 pt-2 dark:border-stone-800">
+            <div className="mt-2 flex items-center justify-end border-t border-sep pt-2 ">
               <button
                 onClick={exportieren}
                 className="btn-touch flex items-center gap-1.5 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"

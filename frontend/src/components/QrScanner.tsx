@@ -83,7 +83,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
 
       <div className="mt-4 flex flex-1 items-center justify-center overflow-hidden rounded-lg bg-black">
         {cameraError ? (
-          <p className="p-4 text-center text-sm text-slate-300">{cameraError}</p>
+          <p className="p-4 text-center text-sm text-label3">{cameraError}</p>
         ) : (
           <video ref={videoRef} className="max-h-full max-w-full" muted playsInline />
         )}
@@ -101,11 +101,11 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
           value={manualCode}
           onChange={(e) => setManualCode(e.target.value)}
           placeholder="QR-Code manuell eingeben"
-          className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-2"
+          className="btn-touch flex-1 rounded-md border border-sep px-3 py-2"
         />
         <button
           type="submit"
-          className="btn-touch rounded-md bg-white px-4 py-2 text-sm font-medium text-slate-900"
+          className="btn-touch rounded-md bg-white px-4 py-2 text-sm font-medium text-label"
         >
           OK
         </button>

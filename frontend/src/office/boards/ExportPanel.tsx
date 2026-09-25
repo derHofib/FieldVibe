@@ -65,21 +65,21 @@ export function ExportPanel({
         onClick={(e) => e.stopPropagation()}
         className="flex h-full w-[420px] flex-col bg-white shadow-2xl dark:bg-stone-900"
       >
-        <div className="relative border-b border-slate-100 px-6 py-5 dark:border-stone-800">
+        <div className="relative border-b border-sep px-6 py-5 ">
           <h2 className="text-base font-bold text-label">Board exportieren</h2>
           <p className="mt-1 text-xs text-label2">
             „{board.name}“ · {notizen.length} {notizen.length === 1 ? "Notiz" : "Notizen"}
           </p>
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+            className="absolute top-5 right-5 flex h-7 w-7 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
           >
             <X size={15} strokeWidth={2} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase 0">
             Format
           </p>
           <div className="mb-6 grid grid-cols-3 gap-2.5">
@@ -96,7 +96,7 @@ export function ExportPanel({
                 className={`rounded-xl p-3.5 text-center ${
                   format === f.key
                     ? "btn-ap-primary text-white"
-                    : "border border-slate-200 text-slate-600 dark:border-stone-700 dark:text-stone-300"
+                    : "border border-sep text-label "
                 }`}
               >
                 <f.icon size={20} strokeWidth={2} className="mx-auto" />
@@ -114,7 +114,7 @@ export function ExportPanel({
             {format.toUpperCase()} herunterladen
           </button>
 
-          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+          <p className="mb-2.5 text-[11px] font-bold tracking-wide text-label2 uppercase 0">
             In FieldVibe übernehmen
           </p>
           {notizen.length === 0 ? (
@@ -157,7 +157,7 @@ function NotizUebernahme({
 }) {
   const text = notizText(node) ?? "";
   return (
-    <div className="rounded-xl border border-slate-200 p-3 dark:border-stone-700">
+    <div className="rounded-xl border border-sep p-3 ">
       <p className="line-clamp-2 text-xs font-medium text-label">{text || "(leer)"}</p>
       {offen === null && (
         <div className="mt-2 flex items-center gap-3">
@@ -203,7 +203,7 @@ function NeuerVorgangMiniform({
   });
 
   return (
-    <div className="mt-2.5 space-y-2 border-t border-slate-100 pt-2.5 dark:border-stone-800">
+    <div className="mt-2.5 space-y-2 border-t border-sep pt-2.5 ">
       <SearchableSelect
         value={kundeId}
         onChange={setKundeId}
@@ -274,7 +274,7 @@ function MangelMeldenMiniform({
   });
 
   return (
-    <div className="mt-2.5 space-y-2 border-t border-slate-100 pt-2.5 dark:border-stone-800">
+    <div className="mt-2.5 space-y-2 border-t border-sep pt-2.5 ">
       <SearchableSelect
         value={vorgangId}
         onChange={setVorgangId}

@@ -88,7 +88,7 @@ function AnsprechpartnerForm({
         </button>
         <button
           onClick={onAbbrechen}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>

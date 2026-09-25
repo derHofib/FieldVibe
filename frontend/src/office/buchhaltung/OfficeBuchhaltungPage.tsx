@@ -119,7 +119,7 @@ function PostenTabelle({
                 <tr
                   key={e.id}
                   onClick={() => onOeffnen(e.id)}
-                  className="cursor-pointer border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-stone-800 dark:hover:bg-stone-800/50"
+                  className="cursor-pointer border-b border-sep last:border-b-0 hover:bg-slate-50 dark:hover:bg-stone-800/50"
                 >
                   <td className="px-3.5 py-2.5 font-semibold text-label">
                     {e.nummer}
@@ -155,7 +155,7 @@ function PostenTabelle({
 function Th({ children, rechts = false }: { children: React.ReactNode; rechts?: boolean }) {
   return (
     <th
-      className={`border-b border-slate-200 px-3.5 py-2 text-[10.5px] font-bold tracking-wider text-slate-400 uppercase dark:border-stone-700 dark:text-stone-500 ${
+      className={`border-b border-sep px-3.5 py-2 text-[10.5px] font-bold tracking-wider text-label2 uppercase 0 ${
         rechts ? "text-right" : "text-left"
       }`}
     >

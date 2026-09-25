@@ -86,7 +86,7 @@ export function FormSchemasPage() {
           </div>
           {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
           <div className="flex items-center justify-end gap-2">
-            <button type="button" onClick={() => setFormOffen(false)} className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+            <button type="button" onClick={() => setFormOffen(false)} className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 ">
               Abbrechen
             </button>
             <button type="submit" disabled={createMutation.isPending} className="btn-touch btn-ap-primary px-3 py-1.5 text-sm">

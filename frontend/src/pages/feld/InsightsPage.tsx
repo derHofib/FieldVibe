@@ -131,28 +131,28 @@ export function InsightsPage() {
           <button
             onClick={() => vorgaengeExportMutation.mutate()}
             disabled={vorgaengeExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Vorgänge (CSV)
           </button>
           <button
             onClick={() => zeiterfassungExportMutation.mutate()}
             disabled={zeiterfassungExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Zeiterfassung (CSV)
           </button>
           <button
             onClick={() => materialExportMutation.mutate()}
             disabled={materialExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Material-Bestand (CSV)
           </button>
           <button
             onClick={() => eingangsrechnungenExportMutation.mutate()}
             disabled={eingangsrechnungenExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Eingangsrechnungen (CSV)
           </button>

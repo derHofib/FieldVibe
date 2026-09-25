@@ -89,7 +89,7 @@ export function AuditLogPage() {
               setVon("");
               setBis("");
             }}
-            className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+            className="btn-touch rounded-md px-3 py-2 text-sm font-medium text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
           >
             Filter zurücksetzen
           </button>
@@ -99,8 +99,8 @@ export function AuditLogPage() {
       {isLoading ? (
         <p className="text-label2">Lädt…</p>
       ) : (
-        <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-          <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
+        <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+          <thead className="bg-slate-50 text-sm text-label dark:bg-stone-800/60 ">
             <tr>
               <th className="px-4 py-3">Zeitpunkt</th>
               <th className="px-4 py-3">Mandant</th>
@@ -109,7 +109,7 @@ export function AuditLogPage() {
               <th className="px-4 py-3">Details</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
+          <tbody className="divide-y divide-sep text-sm ">
             {entries?.map((e) => (
               <tr key={e.id}>
                 <td className="whitespace-nowrap px-4 py-3 text-label2">

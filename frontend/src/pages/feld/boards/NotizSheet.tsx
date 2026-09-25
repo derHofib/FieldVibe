@@ -76,7 +76,7 @@ export function NeueNotizSheet({
         onChange={(e) => setText(e.target.value)}
         rows={3}
         placeholder="Was gibt's zu notieren?"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full rounded-lg border border-sep px-3 py-2.5 text-sm dark:bg-stone-800 "
       />
       <div className="mt-3 flex items-center gap-2.5">
         {KLEBEZETTEL_FARBEN.map((f) => (
@@ -85,7 +85,7 @@ export function NeueNotizSheet({
             onClick={() => setFarbe(f)}
             aria-label={FARB_LABEL[f]}
             className={`btn-touch h-8 w-8 rounded-full ${FARB_SWATCH[f]} ${
-              farbe === f ? "ring-2 ring-offset-2 ring-slate-800 dark:ring-offset-stone-900 dark:ring-stone-100" : ""
+              farbe === f ? "ring-2 ring-offset-2 ring-sep dark:ring-offset-stone-900 " : ""
             }`}
           />
         ))}
@@ -137,7 +137,7 @@ export function NotizAktionSheet({
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={3}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full rounded-lg border border-sep px-3 py-2.5 text-sm dark:bg-stone-800 "
         />
         <div className="mt-3 flex items-center gap-2.5">
           {KLEBEZETTEL_FARBEN.map((f) => (
@@ -146,7 +146,7 @@ export function NotizAktionSheet({
               onClick={() => setFarbe(f)}
               aria-label={FARB_LABEL[f]}
               className={`btn-touch h-8 w-8 rounded-full ${FARB_SWATCH[f]} ${
-                farbe === f ? "ring-2 ring-offset-2 ring-slate-800 dark:ring-offset-stone-900 dark:ring-stone-100" : ""
+                farbe === f ? "ring-2 ring-offset-2 ring-sep dark:ring-offset-stone-900 " : ""
               }`}
             />
           ))}
@@ -209,12 +209,12 @@ export function NotizAktionSheet({
         </div>
       </div>
 
-      <p className="mt-4 mb-1.5 text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+      <p className="mt-4 mb-1.5 text-[11px] font-bold tracking-wide text-label2 uppercase 0">
         In FieldVibe übernehmen
       </p>
       <button
         onClick={() => setModus("vorgang")}
-        className="btn-touch flex w-full items-center gap-3 border-b border-slate-100 py-3 text-left dark:border-stone-800"
+        className="btn-touch flex w-full items-center gap-3 border-b border-sep py-3 text-left "
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-tint dark:bg-blue-500/15 ">
           <Link2 size={16} strokeWidth={2} />
@@ -226,7 +226,7 @@ export function NotizAktionSheet({
       </button>
       <button
         onClick={() => setModus("mangel")}
-        className="btn-touch flex w-full items-center gap-3 border-b border-slate-100 py-3 text-left dark:border-stone-800"
+        className="btn-touch flex w-full items-center gap-3 border-b border-sep py-3 text-left "
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ">
           <AlertTriangle size={16} strokeWidth={2} />
@@ -240,7 +240,7 @@ export function NotizAktionSheet({
       <div className="mt-4 flex gap-3">
         <button
           onClick={() => setModus("bearbeiten")}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-label dark:bg-stone-800 "
         >
           <Pencil size={14} strokeWidth={2} /> Bearbeiten
         </button>
@@ -358,7 +358,7 @@ function MangelMeldenForm({
         onChange={(e) => setBeschreibung(e.target.value)}
         rows={3}
         placeholder="Beschreibung des Mangels…"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full rounded-lg border border-sep px-3 py-2.5 text-sm dark:bg-stone-800 "
       />
       {melden.isError && <p className="text-xs text-st-fehlt ">Melden fehlgeschlagen.</p>}
       <div className="flex gap-3 pt-1">

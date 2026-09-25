@@ -324,7 +324,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             <FileText size={14} strokeWidth={2} /> PDF anzeigen
           </button>
@@ -332,7 +332,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             <button
               onClick={() => xmlMutation.mutate()}
               disabled={xmlMutation.isPending}
-              className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
             >
               <FileText size={14} strokeWidth={2} /> XML herunterladen
             </button>
@@ -549,7 +549,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                             if (window.confirm("Diese Zahlung stornieren?")) stornoZahlungMutation.mutate(z.id);
                           }}
                           disabled={stornoZahlungMutation.isPending}
-                          className="btn-touch text-xs text-slate-400 underline-offset-2 hover:underline disabled:opacity-50 dark:text-stone-500"
+                          className="btn-touch text-xs text-label2 underline-offset-2 hover:underline disabled:opacity-50 0"
                         >
                           Storno
                         </button>
@@ -584,7 +584,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => statusMutation.mutate("storniert")}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             Stornieren
           </button>
@@ -605,7 +605,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             Stornieren
           </button>
@@ -618,7 +618,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               stornoMutation.mutate();
           }}
           disabled={stornoMutation.isPending}
-          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
         >
           Stornieren
         </button>

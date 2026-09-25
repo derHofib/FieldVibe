@@ -18,7 +18,7 @@ export function FotoPlanBild({ wert }: { wert: FotoPlanWert }) {
   if (!wert.foto) return null;
 
   return (
-    <div className="relative w-full overflow-hidden rounded-md border border-slate-200 bg-white dark:border-stone-700">
+    <div className="relative w-full overflow-hidden rounded-md border border-sep bg-white ">
       <img src={wert.foto.url} alt="" className="block w-full" />
       <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
         {wert.markierungen.map((m, i) =>

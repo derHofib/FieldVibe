@@ -70,7 +70,7 @@ function UnterschriftCanvas({ onSave, onCancel }: { onSave: (blob: Blob) => void
         }}
         onPointerUp={() => (zeichnetRef.current = false)}
         onPointerLeave={() => (zeichnetRef.current = false)}
-        className="h-36 w-full touch-none rounded-md border border-slate-300 bg-white"
+        className="h-36 w-full touch-none rounded-md border border-sep bg-white"
       />
       <div className="flex gap-2">
         <button type="button" onClick={onCancel} className="btn-touch flex-1 rounded-md text-sm text-label2">
@@ -186,11 +186,11 @@ function FotoPlanFeld({
     return (
       <div className={wrapperClass}>
         {labelNode}
-        <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+        <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
           <PenTool size={24} strokeWidth={1.3} />
         </div>
         {!readOnly && onUpload && (
-          <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+          <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
             <Camera size={16} />
             {hochladenPending ? "Lädt hoch…" : "Foto aufnehmen"}
             <input
@@ -267,7 +267,7 @@ function FotoPlanFeld({
                     setLinienPunkte([]);
                     setWerkzeug(null);
                   }}
-                  className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                  className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-label dark:bg-stone-800 "
                 >
                   Abbrechen
                 </button>
@@ -287,7 +287,7 @@ function FotoPlanFeld({
         onClick={bildKlick}
         onPointerMove={symbolBewegen}
         onPointerUp={() => setZiehIndex(null)}
-        className={`relative mb-2 w-full overflow-hidden rounded-md border border-slate-200 bg-white dark:border-stone-700 ${
+        className={`relative mb-2 w-full overflow-hidden rounded-md border border-sep bg-white ${
           werkzeug ? "cursor-crosshair" : ""
         }`}
       >
@@ -347,10 +347,10 @@ function FotoPlanFeld({
         <div className="mb-2 flex flex-wrap gap-1.5">
           {markierungen.map((m, i) =>
             m.art === "linie" ? (
-              <span key={i} className="flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+              <span key={i} className="flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-label dark:bg-stone-800 ">
                 Leitung {i + 1}
                 {!readOnly && (
-                  <button type="button" onClick={() => markierungLoeschen(i)} aria-label="Leitung löschen" className="text-slate-400 hover:text-st-fehlt">
+                  <button type="button" onClick={() => markierungLoeschen(i)} aria-label="Leitung löschen" className="text-label2 hover:text-st-fehlt">
                     <X size={11} />
                   </button>
                 )}
@@ -361,7 +361,7 @@ function FotoPlanFeld({
       )}
 
       {!readOnly && onUpload && (
-        <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+        <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
           <Camera size={16} />
           {hochladenPending ? "Lädt hoch…" : "Foto ersetzen"}
           <input
@@ -411,7 +411,7 @@ export function FormFieldRenderer({
   );
   const wrapperClass = "border border-sep bg-card p-3";
   const inputClass =
-    "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500 text-label dark:disabled:bg-stone-800/50";
+    "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-label30 text-label dark:disabled:bg-stone-800/50";
 
   switch (field.feld_typ) {
     case "text":
@@ -556,7 +556,7 @@ export function FormFieldRenderer({
                   disabled={readOnly}
                   checked={ausgewaehlt.includes(w)}
                   onChange={(e) => onChange(e.target.checked ? [...ausgewaehlt, w] : ausgewaehlt.filter((x) => x !== w))}
-                  className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
+                  className="h-4 w-4 rounded-xs border-sep "
                 />
                 {w}
               </label>
@@ -580,7 +580,7 @@ export function FormFieldRenderer({
                 disabled={readOnly}
                 onClick={() => onChange(opt.wert)}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-sm font-medium disabled:opacity-60 ${
-                  value === opt.wert ? "bg-cyan-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                  value === opt.wert ? "bg-cyan-600 text-white" : "bg-slate-100 text-label dark:bg-stone-800 "
                 }`}
               >
                 {opt.text}
@@ -604,7 +604,7 @@ export function FormFieldRenderer({
                 disabled={readOnly}
                 onClick={() => onChange(n)}
                 className={`btn-touch flex-1 rounded-md text-sm font-semibold disabled:opacity-60 ${
-                  value === n ? "bg-cyan-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                  value === n ? "bg-cyan-600 text-white" : "bg-slate-100 text-label dark:bg-stone-800 "
                 }`}
               >
                 {n}
@@ -630,7 +630,7 @@ export function FormFieldRenderer({
             <button
               type="button"
               onClick={() => navigator.geolocation.getCurrentPosition((pos) => onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude }))}
-              className="btn-touch mt-2 flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch mt-2 flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label dark:bg-stone-800 "
             >
               <MapPin size={15} /> Standort erfassen
             </button>
@@ -645,7 +645,7 @@ export function FormFieldRenderer({
           <div className="flex gap-2">
             <input value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} placeholder="Gescannter Code" className={inputClass} />
             {!readOnly && (
-              <button type="button" onClick={() => setQrOffen(true)} className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 text-slate-600 dark:bg-stone-800 dark:text-stone-300" aria-label="Scannen">
+              <button type="button" onClick={() => setQrOffen(true)} className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 text-label dark:bg-stone-800 " aria-label="Scannen">
                 <ScanLine size={18} />
               </button>
             )}
@@ -669,12 +669,12 @@ export function FormFieldRenderer({
           {foto ? (
             <img src={foto.url} alt={label} className="mb-2 max-h-48 rounded-md object-contain" />
           ) : (
-            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
               <Camera size={24} strokeWidth={1.3} />
             </div>
           )}
           {!readOnly && onUpload && (
-            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
               <Camera size={16} />
               {hochladenPending ? "Lädt hoch…" : foto ? "Foto ersetzen" : "Foto aufnehmen"}
               <input
@@ -714,12 +714,12 @@ export function FormFieldRenderer({
               </a>
             )
           ) : (
-            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+            <div className="mb-2 flex h-24 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
               <Paperclip size={24} strokeWidth={1.3} />
             </div>
           )}
           {!readOnly && onUpload && (
-            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
               <Paperclip size={16} />
               {hochladenPending ? "Lädt hoch…" : datei ? "Datei ersetzen" : "Datei anhängen"}
               <input
@@ -757,9 +757,9 @@ export function FormFieldRenderer({
         <div className={wrapperClass}>
           {labelNode}
           {unterschrift ? (
-            <img src={unterschrift.url} alt="Unterschrift" className="mb-2 max-h-32 rounded-md border border-slate-200 bg-white object-contain dark:border-stone-700" />
+            <img src={unterschrift.url} alt="Unterschrift" className="mb-2 max-h-32 rounded-md border border-sep bg-white object-contain " />
           ) : (
-            <div className="mb-2 flex h-20 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500">
+            <div className="mb-2 flex h-20 items-center justify-center rounded-md border border-dashed border-sep text-label2 0">
               <PenLine size={22} strokeWidth={1.3} />
             </div>
           )}
@@ -773,7 +773,7 @@ export function FormFieldRenderer({
                 }}
               />
             ) : (
-              <button type="button" onClick={() => setUnterschriftOffen(true)} className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+              <button type="button" onClick={() => setUnterschriftOffen(true)} className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
                 <PenLine size={16} /> {unterschrift ? "Neu unterschreiben" : "Unterschreiben"}
               </button>
             ))}

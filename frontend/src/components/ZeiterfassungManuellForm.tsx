@@ -171,7 +171,7 @@ export function ZeiterfassungManuellForm({
               type="checkbox"
               checked={abrechenbar}
               onChange={(e) => setAbrechenbar(e.target.checked)}
-              className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
+              className="h-4 w-4 rounded-xs border-sep "
             />
             Abrechenbar
           </label>
@@ -213,7 +213,7 @@ export function ZeiterfassungManuellForm({
         <button
           type="button"
           onClick={onClose}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
         >
           Abbrechen
         </button>

@@ -127,7 +127,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z. B. Mein Geschäftspostfach"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
         <label className="sm:col-span-2 text-xs font-medium text-label2">
@@ -137,11 +137,11 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             value={emailAdresse}
             onChange={(e) => setEmailAdresse(e.target.value)}
             placeholder="technik@meinbetrieb.de"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
+        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase 0">
           Posteingang (IMAP)
         </p>
         <label className="text-xs font-medium text-label2">
@@ -150,7 +150,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             value={imapHost}
             onChange={(e) => setImapHost(e.target.value)}
             placeholder="imap.provider.de"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
         <label className="text-xs font-medium text-label2">
@@ -159,7 +159,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             type="number"
             value={imapPort}
             onChange={(e) => setImapPort(Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
         <label className="text-xs font-medium text-label2">
@@ -167,7 +167,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           <select
             value={imapVerschluesselung}
             onChange={(e) => setImapVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
             {VERSCHLUESSELUNG_OPTIONEN.map((o) => (
               <option key={o.wert} value={o.wert}>
@@ -181,11 +181,11 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           <input
             value={imapBenutzername}
             onChange={(e) => setImapBenutzername(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
 
-        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase dark:text-stone-500">
+        <p className="sm:col-span-2 mt-1 text-[11px] font-bold tracking-wider text-label2 uppercase 0">
           Postausgang (SMTP)
         </p>
         <label className="text-xs font-medium text-label2">
@@ -194,7 +194,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             value={smtpHost}
             onChange={(e) => setSmtpHost(e.target.value)}
             placeholder="smtp.provider.de"
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
         <label className="text-xs font-medium text-label2">
@@ -203,7 +203,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             type="number"
             value={smtpPort}
             onChange={(e) => setSmtpPort(Number(e.target.value))}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
         <label className="text-xs font-medium text-label2">
@@ -211,7 +211,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           <select
             value={smtpVerschluesselung}
             onChange={(e) => setSmtpVerschluesselung(e.target.value as MailVerschluesselung)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
             {VERSCHLUESSELUNG_OPTIONEN.map((o) => (
               <option key={o.wert} value={o.wert}>
@@ -225,7 +225,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           <input
             value={smtpBenutzername}
             onChange={(e) => setSmtpBenutzername(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
 
@@ -236,7 +236,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             value={passwort}
             onChange={(e) => setPasswort(e.target.value)}
             placeholder={bearbeiten ? "••••••••" : ""}
-            className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
           {imapHost.toLowerCase().includes("gmail") || smtpHost.toLowerCase().includes("gmail") ? (
             <span className="mt-1 block text-[11px] text-st-arbeit ">
@@ -251,7 +251,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             value={signatur}
             onChange={(e) => setSignatur(e.target.value)}
             rows={3}
-            className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="mt-1 w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         </label>
       </div>
@@ -277,7 +277,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
           type="button"
           disabled={!imapHost || !smtpHost || !imapBenutzername || !smtpBenutzername || !passwort || testMutation.isPending}
           onClick={() => testMutation.mutate()}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 disabled:opacity-40 dark:border-stone-700 dark:text-stone-300"
+          className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-2 text-xs font-semibold text-label disabled:opacity-40 "
         >
           {testMutation.isPending && <Loader2 size={13} className="animate-spin" />}
           Verbindung testen

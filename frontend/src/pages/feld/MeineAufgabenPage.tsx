@@ -19,7 +19,7 @@ import { ProjektAufgabeDetailPanel } from "../../office/projekte/ProjektAufgabeD
 import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
-  niedrig: "bg-slate-100 text-slate-800 dark:bg-stone-500/15 dark:text-stone-300",
+  niedrig: "bg-slate-100 text-label dark:bg-stone-500/15 ",
   mittel: "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ",
   hoch: "bg-rose-100 text-st-fehlt dark:bg-rose-500/15 ",
 };
@@ -122,7 +122,7 @@ export function MeineAufgabenPage() {
         <span className="text-sm font-medium text-label2">{offen.length} offen</span>
       </div>
 
-      <div className="flex items-center gap-2 rounded-lg bg-white p-1 pl-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="flex items-center gap-2 rounded-lg bg-white p-1 pl-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
         <input
           value={neueAufgabe}
           onChange={(e) => setNeueAufgabe(e.target.value)}
@@ -133,7 +133,7 @@ export function MeineAufgabenPage() {
             }
           }}
           placeholder="Neue private Aufgabe…"
-          className="flex-1 border-none bg-transparent p-1.5 text-sm outline-none placeholder:text-slate-400 dark:text-stone-100 dark:placeholder:text-stone-500"
+          className="flex-1 border-none bg-transparent p-1.5 text-sm outline-none placeholder:text-label2 dark:placeholder:text-label30"
         />
         <button
           onClick={() => neueAufgabe.trim() && erstellen.mutate(neueAufgabe.trim())}
@@ -175,7 +175,7 @@ export function MeineAufgabenPage() {
                       e.stopPropagation();
                       umschalten.mutate({ id: a.id, erledigt: true });
                     }}
-                    className="relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-slate-300 before:absolute before:-inset-3.5 dark:border-stone-600"
+                    className="relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-sep before:absolute before:-inset-3.5 "
                     title="Als erledigt markieren"
                     aria-label="Als erledigt markieren"
                   />
@@ -253,7 +253,7 @@ export function MeineAufgabenPage() {
                   >
                     <CheckCircle2 size={13} strokeWidth={2.5} />
                   </button>
-                  <p className="flex-1 text-[13.5px] text-slate-400 line-through dark:text-stone-500">{a.titel}</p>
+                  <p className="flex-1 text-[13.5px] text-label2 line-through 0">{a.titel}</p>
                 </div>
               ))}
             </div>

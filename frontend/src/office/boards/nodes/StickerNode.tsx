@@ -46,13 +46,13 @@ export const STICKER_ICONS: Record<string, LucideIcon> = {
 
 function IconAuswahl({ onWaehlen }: { onWaehlen: (icon: string) => void }) {
   return (
-    <div className="nodrag grid grid-cols-4 gap-1 rounded-xl border border-slate-100 bg-white p-2 shadow-xl dark:border-stone-800 dark:bg-stone-900">
+    <div className="nodrag grid grid-cols-4 gap-1 rounded-xl border border-sep bg-white p-2 shadow-xl dark:bg-stone-900">
       {Object.entries(STICKER_ICONS).map(([name, Icon]) => (
         <button
           key={name}
           onClick={() => onWaehlen(name)}
           title={name}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
         >
           <Icon size={16} strokeWidth={2} />
         </button>
@@ -72,7 +72,7 @@ export function StickerNode({ id, data, selected }: NodeProps<BoardNode>) {
     <div className="relative">
       <button
         onClick={() => setZeigeAuswahl((v) => !v)}
-        className={`flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-white bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-lg dark:border-stone-900 ${
+        className={`flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-white bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-lg ${
           selected ? "ring-2 ring-tint ring-offset-2" : ""
         }`}
       >

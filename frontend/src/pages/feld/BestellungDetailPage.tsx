@@ -127,14 +127,14 @@ export function BestellungDetailPage() {
           <button
             onClick={() => csvMutation.mutate()}
             disabled={csvMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             <Download size={14} strokeWidth={2} /> CSV
           </button>
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             <FileText size={14} strokeWidth={2} /> PDF
           </button>
@@ -201,7 +201,7 @@ export function BestellungDetailPage() {
                     inputMode="decimal"
                     value={preise[p.id] ?? p.einzelpreis}
                     onChange={(e) => setPreise((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                    className="w-20 rounded-md border border-slate-200 px-2 py-1 text-right text-sm dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    className="w-20 rounded-md border border-sep px-2 py-1 text-right text-sm dark:bg-stone-900 "
                   />
                   <span className="text-xs text-label2">EUR</span>
                 </div>
@@ -212,7 +212,7 @@ export function BestellungDetailPage() {
             <button
               onClick={() => setWareneingangOffen(false)}
               disabled={statusMutation.isPending}
-              className="btn-touch flex-1 rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch flex-1 rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
             >
               Abbrechen
             </button>
@@ -238,7 +238,7 @@ export function BestellungDetailPage() {
           <button
             onClick={wareneingangOeffnen}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             Wareneingang buchen
           </button>

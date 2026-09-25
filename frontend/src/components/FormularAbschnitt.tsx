@@ -69,7 +69,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               {fs.status === "abgeschlossen" && (
                 <button
                   onClick={() => pdfMutation.mutate(fs.id)}
-                  className="btn-touch shrink-0 p-1 text-slate-400 hover:text-slate-600 dark:text-stone-500 dark:hover:text-stone-300"
+                  className="btn-touch shrink-0 p-1 text-label2 hover:text-label 0 dark:hover:text-label3"
                   aria-label="Als PDF öffnen"
                 >
                   <FileText size={16} />
@@ -87,7 +87,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               key={s.id}
               onClick={() => startMutation.mutate(s.id)}
               disabled={startMutation.isPending}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
             >
               + {s.name} ausfüllen
               {s.pflicht_vor_abschluss && <span className="ml-1 text-st-fehlt">*</span>}

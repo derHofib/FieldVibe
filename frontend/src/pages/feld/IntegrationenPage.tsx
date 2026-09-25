@@ -340,7 +340,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
-              : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+              : "bg-slate-100 text-label30 dark:bg-stone-800 "
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -397,7 +397,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -444,7 +444,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
-              : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+              : "bg-slate-100 text-label30 dark:bg-stone-800 "
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -501,7 +501,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -694,7 +694,7 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
         >
           + SMTP einrichten
         </button>
@@ -754,7 +754,7 @@ export function IntegrationenPage() {
       ) : (
         <button
           onClick={() => setShowImapForm(true)}
-          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch w-full rounded-md bg-white py-2.5 text-sm font-medium text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
         >
           + IMAP einrichten
         </button>

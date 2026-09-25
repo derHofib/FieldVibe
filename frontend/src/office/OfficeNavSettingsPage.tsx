@@ -90,7 +90,7 @@ export function OfficeNavSettingsPage() {
           <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
             {kategorie}
           </h2>
-          <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="divide-y divide-sep rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
             {seiten.map((seite) => (
               <label
                 key={seite.key}
@@ -100,7 +100,7 @@ export function OfficeNavSettingsPage() {
                   type="checkbox"
                   checked={auswahl.has(seite.key)}
                   onChange={() => toggle(seite.key)}
-                  className="size-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-stone-600 dark:bg-stone-800"
+                  className="size-4 rounded border-sep text-cyan-600 focus:ring-cyan-500 dark:bg-stone-800"
                 />
                 <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
                 <span className="min-w-0 flex-1 truncate font-medium text-label">
@@ -122,7 +122,7 @@ export function OfficeNavSettingsPage() {
         </button>
         <button
           onClick={zuruecksetzen}
-          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
         >
           <RotateCcw size={16} /> Alle anzeigen
         </button>

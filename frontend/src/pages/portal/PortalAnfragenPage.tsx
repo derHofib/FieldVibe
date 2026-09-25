@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<VorgangAnfrageStatus, string> = {
 const STATUS_BADGE: Record<VorgangAnfrageStatus, string> = {
   offen: "border border-st-arbeit text-st-arbeit ",
   angenommen: "border border-st-erledigt text-st-erledigt ",
-  abgelehnt: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
+  abgelehnt: "border border-sep text-label30 ",
 };
 
 function NeueAnfrage() {
@@ -250,7 +250,7 @@ function NeueAnfrage() {
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>

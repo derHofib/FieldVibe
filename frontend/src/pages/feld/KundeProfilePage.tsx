@@ -158,7 +158,7 @@ function Stammdaten({
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -173,8 +173,8 @@ const STATUS_BADGE: Record<string, string> = {
   in_arbeit: "border border-st-arbeit text-st-arbeit ",
   wartet_kunde: "border border-st-wartet text-st-wartet",
   abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  abgerechnet: "border border-sep text-label ",
+  storniert: "border border-sep text-label2 0",
 };
 
 function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewiesen: User[] }) {
@@ -260,7 +260,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -405,7 +405,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -504,7 +504,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -678,7 +678,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
           type="checkbox"
           checked={istStundensatz}
           onChange={(e) => setIstStundensatz(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300 dark:border-stone-600"
+          className="h-4 w-4 rounded border-sep "
         />
         Als Stundenverrechnungssatz in der Zeiterfassung wählbar
       </label>
@@ -694,7 +694,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -894,7 +894,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
       </div>
 
       {istMandantAdmin && (
-        <div className="mt-3 border-t border-slate-100 pt-3 dark:border-stone-800">
+        <div className="mt-3 border-t border-sep pt-3 ">
           <h3 className="mb-2 text-xs font-semibold text-label2">
             Logo für die Portal-Login-Seite
           </h3>
@@ -903,7 +903,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
               <img
                 src={logoUrl.url}
                 alt={`Logo ${kunde.name}`}
-                className="h-12 w-12 rounded-md object-contain ring-1 ring-slate-200 dark:ring-stone-700"
+                className="h-12 w-12 rounded-md object-contain ring-1 ring-sep "
               />
             )}
             <label className="btn-touch cursor-pointer btn-ap px-3 py-1.5 text-xs font-semibold">
@@ -1014,7 +1014,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -1191,7 +1191,7 @@ export function KundeProfilePage() {
                 onClick={() => datenexportMutation.mutate()}
                 disabled={datenexportMutation.isPending}
                 title="Alle personenbezogenen Daten zu diesem Kunden herunterladen (Art. 15/20 DSGVO)"
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-label hover:bg-slate-200 disabled:opacity-50 dark:bg-stone-800 dark:hover:bg-stone-700"
               >
                 Datenexport
               </button>

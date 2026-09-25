@@ -53,7 +53,7 @@ function VorgangKarteAnsicht({ data }: { data: VorgangKarteDaten }) {
   if (!vorgang_id) return null;
   return (
     <div className="relative w-[190px] overflow-hidden rounded-xl bg-white shadow-lg dark:bg-stone-900">
-      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-indigo-100 text-indigo-600 dark:border-stone-900 dark:bg-indigo-500/20 dark:text-indigo-300">
+      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
         <Link2 size={11} strokeWidth={2.5} />
       </span>
       <div className="h-1 bg-linear-to-r from-cyan-500 to-blue-600" />
@@ -113,8 +113,8 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "rahmen": {
       const { label } = data as RahmenDaten;
       return (
-        <div className="h-full w-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/40 dark:border-stone-700 dark:bg-stone-800/20">
-          <p className="m-2 text-xs font-bold tracking-wide text-slate-500 uppercase dark:text-stone-400">{label}</p>
+        <div className="h-full w-full rounded-xl border-2 border-dashed border-sep bg-slate-50/40 dark:bg-stone-800/20">
+          <p className="m-2 text-xs font-bold tracking-wide text-label30 uppercase ">{label}</p>
         </div>
       );
     }
@@ -125,7 +125,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
           {url ? (
             <img src={url} alt="" className="block w-full" draggable={false} />
           ) : (
-            <div className="flex h-24 items-center justify-center bg-slate-100 text-xs text-slate-400 dark:bg-stone-800 dark:text-stone-500">
+            <div className="flex h-24 items-center justify-center bg-slate-100 text-xs text-label2 dark:bg-stone-800 0">
               Kein Bild
             </div>
           )}
@@ -137,7 +137,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "anlagen_pin": {
       const { nummer } = data as AnlagenPinDaten;
       return (
-        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-linear-to-r from-cyan-500 to-blue-600 text-xs font-extrabold text-white shadow-lg dark:border-stone-900">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-linear-to-r from-cyan-500 to-blue-600 text-xs font-extrabold text-white shadow-lg ">
           {nummer}
         </div>
       );
@@ -145,7 +145,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "prozess_schritt": {
       const { label, sub } = data as ProzessSchrittDaten;
       return (
-        <div className="w-[150px] rounded-xl border-[1.5px] border-slate-200 bg-white p-2.5 shadow-sm dark:border-stone-700 dark:bg-stone-900">
+        <div className="w-[150px] rounded-xl border-[1.5px] border-sep bg-white p-2.5 shadow-sm dark:bg-stone-900">
           <p className="text-[12px] font-bold text-label">{label}</p>
           {sub && <p className="mt-0.5 text-[10px] text-label2">{sub}</p>}
         </div>
@@ -194,7 +194,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { icon } = data as StickerDaten;
       const Icon = STICKER_ICONS[icon];
       return (
-        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-white bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-lg dark:border-stone-900">
+        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border-2 border-white bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-lg ">
           {Icon && <Icon size={16} strokeWidth={2} />}
         </div>
       );

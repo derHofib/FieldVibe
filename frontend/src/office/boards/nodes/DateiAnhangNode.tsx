@@ -58,14 +58,14 @@ export function DateiAnhangNode({ id, data, selected }: NodeProps<BoardNode>) {
           <div className="min-w-0 flex-1">
             <button
               onClick={() => oeffnen.mutate()}
-              className="block truncate text-left text-[11.5px] font-semibold text-slate-700 hover:underline dark:text-stone-200"
+              className="block truncate text-left text-[11.5px] font-semibold text-label hover:underline "
               title={dateiname}
             >
               {dateiname}
             </button>
             <button
               onClick={() => entfernen.mutate()}
-              className="mt-0.5 text-[10px] font-medium text-slate-400 hover:text-st-fehlt dark:text-stone-500"
+              className="mt-0.5 text-[10px] font-medium text-label2 hover:text-st-fehlt 0"
             >
               Entfernen
             </button>
@@ -75,7 +75,7 @@ export function DateiAnhangNode({ id, data, selected }: NodeProps<BoardNode>) {
         <button
           onClick={() => inputRef.current?.click()}
           disabled={hochladen.isPending}
-          className="nodrag flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-slate-200 py-3 text-slate-400 disabled:opacity-50 dark:border-stone-700 dark:text-stone-500"
+          className="nodrag flex w-full flex-col items-center gap-1.5 rounded-lg border-2 border-dashed border-sep py-3 text-label2 disabled:opacity-50 0"
         >
           {hochladen.isPending ? (
             <Upload size={16} strokeWidth={2} className="animate-pulse" />

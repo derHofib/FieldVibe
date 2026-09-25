@@ -225,7 +225,7 @@ export function RechnungenPage() {
                 className={`btn-touch rounded-full px-3 py-1 font-medium ${
                   statusAktiv.has(s)
                     ? "bg-cyan-600 text-white"
-                    : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                    : "bg-slate-100 text-label dark:bg-stone-800 "
                 }`}
               >
                 {RECHNUNG_STATUS_LABEL[s]}
@@ -295,7 +295,7 @@ export function RechnungenPage() {
                   className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ${
                     r.ist_ueberfaellig
                       ? "ring-st-fehlt "
-                      : "dark:ring-stone-800"
+                      : ""
                   }`}
                 >
                   <div className="min-w-0">

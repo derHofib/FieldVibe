@@ -87,7 +87,7 @@ export function FilterVorlagenLeiste({
                 className={`flex shrink-0 items-center gap-1 rounded-full py-1.5 pl-3 pr-1.5 text-xs font-medium ${
                   aktiv
                     ? "btn-ap-primary text-white"
-                    : "bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                    : "bg-white text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
                 }`}
               >
                 <button onClick={() => onApply(v.filter_json)} className="btn-touch whitespace-nowrap">
@@ -119,7 +119,7 @@ export function FilterVorlagenLeiste({
         {hatAktivenFilter && (
           <button
             onClick={() => onApply({})}
-            className="btn-touch text-xs text-slate-500 underline dark:text-stone-400"
+            className="btn-touch text-xs text-label30 underline "
           >
             Filter zurücksetzen
           </button>

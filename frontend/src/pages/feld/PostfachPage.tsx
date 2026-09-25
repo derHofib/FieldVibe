@@ -116,7 +116,7 @@ export function PostfachPage() {
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p
-                  className={`truncate text-sm ${n.gelesen ? "font-medium text-label" : "font-bold text-slate-900 dark:text-white"}`}
+                  className={`truncate text-sm ${n.gelesen ? "font-medium text-label" : "font-bold text-label dark:text-white"}`}
                 >
                   {n.von_name || n.von_adresse || "Unbekannt"}
                 </p>

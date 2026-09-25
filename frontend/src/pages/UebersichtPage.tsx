@@ -109,7 +109,7 @@ function ServerAuslastung() {
   return (
     <section>
       <h2 className="mb-3 text-lg font-bold text-label">Server-Auslastung</h2>
-      <div className="grid grid-cols-1 gap-5 rounded-lg bg-white p-4 shadow-xs sm:grid-cols-3 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="grid grid-cols-1 gap-5 rounded-lg bg-white p-4 shadow-xs sm:grid-cols-3 dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
         <ResourceRow label="CPU" percent={aktuell.cpu_percent} detail="aktuelle Auslastung" verlauf={reihe("cpu_percent")} />
         <ResourceRow
           label="RAM"
@@ -194,7 +194,7 @@ export function UebersichtPage() {
           </Link>
         </div>
         {letzteEintraege && letzteEintraege.length > 0 ? (
-          <ul className="divide-y divide-slate-100 rounded-lg bg-white text-sm shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <ul className="divide-y divide-sep rounded-lg bg-white text-sm shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
                 <span className="font-medium text-label">{e.aktion}</span>

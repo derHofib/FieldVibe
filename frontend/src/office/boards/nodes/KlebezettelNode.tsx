@@ -38,7 +38,7 @@ export function KlebezettelNode({ id, data, selected }: NodeProps<BoardNode>) {
               onClick={() => updateNodeData(id, { farbe: f })}
               aria-label={`Farbe ${f}`}
               className={`h-4 w-4 rounded-full ${FARB_SWATCH[f]} ${
-                farbe === f ? "ring-2 ring-offset-1 ring-slate-600 dark:ring-stone-300" : ""
+                farbe === f ? "ring-2 ring-offset-1 ring-sep " : ""
               }`}
             />
           ))}

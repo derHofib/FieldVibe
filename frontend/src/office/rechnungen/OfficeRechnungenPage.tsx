@@ -20,11 +20,11 @@ const UMSCHALTER = [
 ];
 
 const RECHNUNG_STATUS_BADGE: Record<RechnungStatus, string> = {
-  entwurf: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
+  entwurf: "border border-sep text-label30 ",
   versendet: "border border-tint text-tint ",
   teilweise_bezahlt: "border border-st-arbeit text-st-arbeit ",
   bezahlt: "border border-st-erledigt text-st-erledigt ",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  storniert: "border border-sep text-label2 0",
 };
 
 const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
@@ -36,7 +36,7 @@ const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
 };
 
 const ANGEBOT_STATUS_BADGE: Record<AngebotStatus, string> = {
-  entwurf: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
+  entwurf: "border border-sep text-label30 ",
   versendet: "border border-tint text-tint ",
   angenommen: "border border-st-erledigt text-st-erledigt ",
   abgelehnt: "border border-st-fehlt text-st-fehlt ",
@@ -158,7 +158,7 @@ export function OfficeRechnungenPage() {
         <AnsichtUmschalter wert={bereich} optionen={UMSCHALTER} onWechsel={wechsle} />
         <button
           onClick={() => setZeigeNeu((v) => !v)}
-          className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:border-stone-700 dark:text-stone-300 dark:hover:text-stone-100"
+          className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-semibold text-label hover:text-label dark:hover:text-label3"
         >
           <Plus size={13} strokeWidth={2.5} />
           {bereich === "rechnungen" ? "Neue Rechnung" : "Neues Angebot"}
@@ -205,7 +205,7 @@ export function OfficeRechnungenPage() {
               <button
                 key={e.id}
                 onClick={() => setGewaehlt(e.id)}
-                className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left last:border-b-0 dark:border-stone-800 ${
+                className={`block w-full border-b border-sep px-3 py-2.5 text-left last:border-b-0 ${
                   e.id === aktiv
                     ? "border-l-2 border-l-blue-500 bg-blue-50/60 pl-[10px] dark:bg-blue-500/10"
                     : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
@@ -244,7 +244,7 @@ export function OfficeRechnungenPage() {
                         bereich === "rechnungen" ? `/rechnungen/${aktiv}` : `/angebote/${aktiv}`,
                       )
                     }
-                    className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 dark:border-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+                    className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label30 hover:text-label dark:hover:text-label3"
                   >
                     <ExternalLink size={13} strokeWidth={2} />
                     Ganze Seite

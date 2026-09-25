@@ -153,7 +153,7 @@ export function OfficeNavKategorienPage() {
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Kategorien
         </h2>
-        <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="divide-y divide-sep rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
           {kategorien.map((k, i) => (
             <div key={k.localId} className="flex items-center gap-2 p-3">
               <input
@@ -165,7 +165,7 @@ export function OfficeNavKategorienPage() {
                 onClick={() => kategorieVerschieben(i, -1)}
                 disabled={i === 0}
                 aria-label="Nach oben"
-                className="btn-touch rounded-md p-1.5 text-slate-400 disabled:opacity-30 dark:text-stone-500"
+                className="btn-touch rounded-md p-1.5 text-label2 disabled:opacity-30 0"
               >
                 <ArrowUp size={16} />
               </button>
@@ -173,7 +173,7 @@ export function OfficeNavKategorienPage() {
                 onClick={() => kategorieVerschieben(i, 1)}
                 disabled={i === kategorien.length - 1}
                 aria-label="Nach unten"
-                className="btn-touch rounded-md p-1.5 text-slate-400 disabled:opacity-30 dark:text-stone-500"
+                className="btn-touch rounded-md p-1.5 text-label2 disabled:opacity-30 0"
               >
                 <ArrowDown size={16} />
               </button>
@@ -199,7 +199,7 @@ export function OfficeNavKategorienPage() {
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Zuordnung
         </h2>
-        <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="divide-y divide-sep rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
           {NAV_SEITEN.map((seite) => (
             <div key={seite.key} className="flex items-center gap-3 p-3">
               <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />

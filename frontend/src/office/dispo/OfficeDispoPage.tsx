@@ -285,7 +285,7 @@ export function OfficeDispoPage() {
             <span className="text-xs font-bold text-label2">
               Nicht disponiert
             </span>
-            <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
+            <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-label2 dark:bg-stone-800 0">
               {backlog.length}
             </span>
           </div>
@@ -341,7 +341,7 @@ export function OfficeDispoPage() {
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                               ueberfaellig
                                 ? "bg-rose-100 text-st-fehlt dark:bg-rose-500/15 "
-                                : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+                                : "bg-slate-100 text-label30 dark:bg-stone-800 "
                             }`}
                           >
                             {ueberfaellig
@@ -359,10 +359,10 @@ export function OfficeDispoPage() {
         </div>
 
         <Karte className="min-w-0 flex-1 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-200 p-3 dark:border-stone-800">
+          <div className="flex items-center justify-between border-b border-sep p-3 ">
             <button
               onClick={() => setTag((d) => addTage(d, -1))}
-              className="btn-touch rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
               aria-label="Vorheriger Tag"
             >
               <ChevronLeft size={16} />
@@ -374,7 +374,7 @@ export function OfficeDispoPage() {
               {!heute && (
                 <button
                   onClick={() => setTag(new Date())}
-                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"
+                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-label30 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-700"
                 >
                   Heute
                 </button>
@@ -382,7 +382,7 @@ export function OfficeDispoPage() {
             </div>
             <button
               onClick={() => setTag((d) => addTage(d, 1))}
-              className="btn-touch rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
               aria-label="Nächster Tag"
             >
               <ChevronRight size={16} />
@@ -402,7 +402,7 @@ export function OfficeDispoPage() {
                   {STUNDEN.map((h) => (
                     <div
                       key={h}
-                      className="shrink-0 border-l border-slate-100 py-1.5 pl-1.5 text-[11px] font-medium text-slate-400 dark:border-stone-800 dark:text-stone-500"
+                      className="shrink-0 border-l border-sep py-1.5 pl-1.5 text-[11px] font-medium text-label2 0"
                       style={{ width: PX_PRO_STUNDE }}
                     >
                       {h}:00
@@ -418,7 +418,7 @@ export function OfficeDispoPage() {
                     {technikers.map((t, i) => (
                       <div
                         key={t.id}
-                        className="absolute inset-x-0 flex items-center border-b border-slate-100 px-2 text-[13px] font-medium text-slate-700 dark:border-stone-800 dark:text-stone-300"
+                        className="absolute inset-x-0 flex items-center border-b border-sep px-2 text-[13px] font-medium text-label "
                         style={{ top: i * ROW_HOEHE, height: ROW_HOEHE }}
                       >
                         <span className="truncate">{t.name}</span>
@@ -440,14 +440,14 @@ export function OfficeDispoPage() {
                     {technikers.map((_, i) => (
                       <div
                         key={i}
-                        className="absolute inset-x-0 border-b border-slate-100 dark:border-stone-800"
+                        className="absolute inset-x-0 border-b border-sep "
                         style={{ top: (i + 1) * ROW_HOEHE - 1 }}
                       />
                     ))}
                     {STUNDEN.map((h, i) => (
                       <div
                         key={h}
-                        className="absolute inset-y-0 border-l border-slate-100 dark:border-stone-800"
+                        className="absolute inset-y-0 border-l border-sep "
                         style={{ left: i * PX_PRO_STUNDE }}
                       />
                     ))}
@@ -471,7 +471,7 @@ export function OfficeDispoPage() {
                           {!!termin.fahrzeit_minuten && (
                             <div
                               title={`${termin.fahrzeit_minuten} Min. Fahrzeit`}
-                              className="absolute flex items-center justify-center rounded-l-md bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500"
+                              className="absolute flex items-center justify-center rounded-l-md bg-slate-100 text-label2 dark:bg-stone-800 0"
                               style={{
                                 left: (startMin - termin.fahrzeit_minuten) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -485,7 +485,7 @@ export function OfficeDispoPage() {
                           {!!termin.pause_minuten && (
                             <div
                               title={`${termin.pause_minuten} Min. Pause`}
-                              className="absolute flex items-center justify-center rounded-r-md bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500"
+                              className="absolute flex items-center justify-center rounded-r-md bg-slate-100 text-label2 dark:bg-stone-800 0"
                               style={{
                                 left: (startMin + dauerMin) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -627,7 +627,7 @@ function TerminBearbeitenPanel({
           <h2 className="text-sm font-bold text-label">Termin bearbeiten</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+            className="rounded-md p-1 text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
           >
             <X size={16} />
           </button>
@@ -790,7 +790,7 @@ function BacklogPlanenPanel({
           <h2 className="text-sm font-bold text-label">Termin planen</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+            className="rounded-md p-1 text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
           >
             <X size={16} />
           </button>

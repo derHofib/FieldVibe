@@ -30,8 +30,8 @@ const STATUS_BADGE: Record<string, string> = {
   in_arbeit: "border border-st-arbeit text-st-arbeit ",
   wartet_kunde: "border border-st-wartet text-st-wartet",
   abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  abgerechnet: "border border-sep text-label ",
+  storniert: "border border-sep text-label2 0",
 };
 
 function faelligkeitsFarbe(datum: string): string {
@@ -130,7 +130,7 @@ function AdresseBearbeiten({
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -190,7 +190,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
   if (!bearbeiten) {
     const hatDetails = universelleZeilen.length > 0 || zusatzZeilen.length > 0 || profil.notiz;
     return (
-      <div className="mt-3 border-t border-slate-100 pt-3 dark:border-stone-800">
+      <div className="mt-3 border-t border-sep pt-3 ">
         <div className="mb-1 flex items-center justify-between">
           <h3 className="text-xs font-semibold text-label2">Details</h3>
           {kannVerwalten && (
@@ -225,7 +225,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-md border-t border-slate-100 bg-slate-50 p-3 dark:border-stone-800 dark:bg-stone-800/60">
+    <div className="mt-3 space-y-2 rounded-md border-t border-sep bg-slate-50 p-3 dark:bg-stone-800/60">
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.hersteller}
@@ -261,7 +261,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       {(felder ?? []).length > 0 && (
-        <div className="space-y-2 border-t border-slate-200 pt-2 dark:border-stone-700">
+        <div className="space-y-2 border-t border-sep pt-2 ">
           <p className="text-xs font-medium text-label2">
             Zusatzfelder für „{profil.anlagentyp}"
           </p>
@@ -288,7 +288,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -628,7 +628,7 @@ export function AnlageProfilePage() {
                     <button
                       onClick={() => markiereGeprueftMutation.mutate(z.id)}
                       disabled={markiereGeprueftMutation.isPending}
-                      className="btn-touch rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+                      className="btn-touch rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
                     >
                       Prüfung erfolgt (heute)
                     </button>
@@ -706,14 +706,14 @@ export function AnlageProfilePage() {
                   <button
                     onClick={() => inventurDurchgefuehrtMutation.mutate()}
                     disabled={inventurDurchgefuehrtMutation.isPending || !inventurzyklus.aktiv}
-                    className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+                    className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
                   >
                     Inventur durchgeführt (heute)
                   </button>
                   <button
                     onClick={() => inventurAktivMutation.mutate()}
                     disabled={inventurAktivMutation.isPending}
-                    className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300"
+                    className="btn-touch flex-1 rounded-md border border-sep px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 "
                   >
                     {inventurzyklus.aktiv ? "Deaktivieren" : "Reaktivieren"}
                   </button>

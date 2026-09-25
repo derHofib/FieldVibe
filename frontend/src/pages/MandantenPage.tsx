@@ -103,8 +103,8 @@ export function MandantenPage() {
         {isLoading ? (
           <p className="text-label2">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
+          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+            <thead className="bg-slate-50 text-sm text-label dark:bg-stone-800/60 ">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Slug</th>
@@ -113,7 +113,7 @@ export function MandantenPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
+            <tbody className="divide-y divide-sep text-sm ">
               {mandanten?.map((m) => (
                 <tr key={m.id}>
                   <td className="px-4 py-3 font-medium text-label">{m.name}</td>
@@ -127,7 +127,7 @@ export function MandantenPage() {
                   <td className="px-4 py-3">
                     <Link
                       to={`/mandanten/${m.id}`}
-                      className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                      className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-label hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-700"
                     >
                       Bearbeiten →
                     </Link>

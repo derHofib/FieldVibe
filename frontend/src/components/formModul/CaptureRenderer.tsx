@@ -191,7 +191,7 @@ export function CaptureRenderer({
               <button
                 type="button"
                 onClick={() => zeileHinzufuegen(eintrag.gruppe.key)}
-                className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-1.5 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-1.5 text-sm font-medium text-label dark:bg-stone-800 "
               >
                 <Plus size={15} /> Eintrag hinzufügen
               </button>

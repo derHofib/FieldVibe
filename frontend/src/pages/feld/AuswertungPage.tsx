@@ -199,7 +199,7 @@ export function AuswertungPage() {
             </div>
           )}
 
-          <div className="mt-4 space-y-1 border-t border-slate-100 pt-3 text-sm dark:border-stone-800">
+          <div className="mt-4 space-y-1 border-t border-sep pt-3 text-sm ">
             <div className="flex justify-between text-label2">
               <span>Summe Umsatzsteuer</span>
               <span>{bericht.summe_umsatzsteuer} EUR</span>
@@ -225,7 +225,7 @@ export function AuswertungPage() {
         <button
           onClick={() => datevMutation.mutate()}
           disabled={datevMutation.isPending}
-          className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
         >
           <Download size={15} strokeWidth={2} /> DATEV-Export (CSV)
         </button>

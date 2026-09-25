@@ -80,7 +80,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
             <>
               <button
                 onClick={handleDownload}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+                className="btn-touch rounded-md border border-sep px-3 py-2 text-sm font-medium text-label hover:bg-slate-50 dark:hover:bg-stone-800"
               >
                 Herunterladen
               </button>

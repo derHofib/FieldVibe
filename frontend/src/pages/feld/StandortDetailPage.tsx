@@ -15,8 +15,8 @@ const STATUS_BADGE: Record<string, string> = {
   in_arbeit: "border border-st-arbeit text-st-arbeit ",
   wartet_kunde: "border border-st-wartet text-st-wartet",
   abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  abgerechnet: "border border-sep text-label ",
+  storniert: "border border-sep text-label2 0",
 };
 
 function AdresseBearbeiten({
@@ -106,7 +106,7 @@ function AdresseBearbeiten({
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -226,7 +226,7 @@ function AnlagenVerwaltung({
           <button
             type="button"
             onClick={reset}
-            className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+            className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
           >
             Abbrechen
           </button>
@@ -267,7 +267,7 @@ function AnlagenVerwaltung({
         <button
           type="button"
           onClick={reset}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -333,7 +333,7 @@ export function StandortDetailPage() {
             <button
               onClick={() => toggleAktivMutation.mutate()}
               disabled={toggleAktivMutation.isPending}
-              className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-label disabled:opacity-50 dark:bg-stone-800 "
             >
               {profil.aktiv ? "Deaktivieren" : "Aktivieren"}
             </button>

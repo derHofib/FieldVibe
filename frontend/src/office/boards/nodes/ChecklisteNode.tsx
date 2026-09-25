@@ -20,7 +20,7 @@ export function ChecklisteNode({ id, data, selected }: NodeProps<BoardNode>) {
         value={titel}
         onChange={(e) => updateNodeData(id, { titel: e.target.value })}
         placeholder="Checkliste…"
-        className="nodrag w-full bg-transparent text-xs font-bold text-slate-700 outline-none placeholder:text-slate-300 dark:text-stone-200 dark:placeholder:text-stone-600"
+        className="nodrag w-full bg-transparent text-xs font-bold text-label outline-none placeholder:text-label3 dark:placeholder:text-label"
       />
       <div className="mt-2 space-y-1.5">
         {punkte.map((punkt, i) => (
@@ -37,14 +37,14 @@ export function ChecklisteNode({ id, data, selected }: NodeProps<BoardNode>) {
               value={punkt.text}
               onChange={(e) => punkteSetzen(punkte.map((p, pi) => (pi === i ? { ...p, text: e.target.value } : p)))}
               placeholder="Punkt…"
-              className={`min-w-0 flex-1 bg-transparent text-[11.5px] outline-none placeholder:text-slate-300 dark:placeholder:text-stone-600 ${
-                punkt.erledigt ? "text-slate-400 line-through dark:text-stone-500" : "text-label"
+              className={`min-w-0 flex-1 bg-transparent text-[11.5px] outline-none placeholder:text-label3 dark:placeholder:text-label ${
+                punkt.erledigt ? "text-label2 line-through 0" : "text-label"
               }`}
             />
             <button
               onClick={() => punkteSetzen(punkte.filter((_, pi) => pi !== i))}
               aria-label="Punkt entfernen"
-              className="shrink-0 text-slate-300 hover:text-st-fehlt dark:text-stone-600"
+              className="shrink-0 text-label3 hover:text-st-fehlt "
             >
               <X size={11} strokeWidth={2.5} />
             </button>

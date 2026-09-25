@@ -127,7 +127,7 @@ export function MaterialDetailPage() {
           Gesamtbestand: {material.bestand_gesamt} {material.einheit}
         </p>
         {material.bestaende.length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-xs dark:border-stone-800">
+          <div className="mt-2 space-y-1 border-t border-sep pt-2 text-xs ">
             {material.bestaende.map((b) => (
               <div key={b.lager_id} className="flex items-center justify-between text-label2">
                 <span>{b.lager_bezeichnung}</span>
@@ -254,7 +254,7 @@ export function MaterialDetailPage() {
               #{t.label}
               <button
                 onClick={() => tagEntfernenMutation.mutate(t.id)}
-                className="btn-touch text-slate-400 hover:text-st-fehlt dark:text-stone-500 dark:hover:text-st-fehlt"
+                className="btn-touch text-label2 hover:text-st-fehlt 0 dark:hover:text-st-fehlt"
                 aria-label={`Tag ${t.label} entfernen`}
               >
                 ✕
@@ -278,7 +278,7 @@ export function MaterialDetailPage() {
           <button
             disabled={!neuerTag.trim() || tagHinzufuegenMutation.isPending}
             onClick={() => tagHinzufuegenMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
           >
             + Hinzufügen
           </button>

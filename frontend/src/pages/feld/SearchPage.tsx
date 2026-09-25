@@ -57,7 +57,7 @@ export function SearchPage() {
               <button
                 key={tag.id}
                 onClick={() => setQ(`#${tag.label}`)}
-                className="btn-touch rounded-full bg-white px-3 py-1.5 text-sm text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="btn-touch rounded-full bg-white px-3 py-1.5 text-sm text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
               >
                 #{tag.label}
               </button>

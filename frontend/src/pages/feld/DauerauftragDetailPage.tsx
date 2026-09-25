@@ -11,8 +11,8 @@ const STATUS_BADGE: Record<string, string> = {
   in_arbeit: "border border-st-arbeit text-st-arbeit ",
   wartet_kunde: "border border-st-wartet text-st-wartet",
   abgeschlossen: "border border-st-erledigt text-st-erledigt ",
-  abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
-  storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
+  abgerechnet: "border border-sep text-label ",
+  storniert: "border border-sep text-label2 0",
 };
 
 export function DauerauftragDetailPage() {
@@ -150,7 +150,7 @@ export function DauerauftragDetailPage() {
                   </button>
                   <button
                     onClick={() => setEditIntervall(null)}
-                    className="btn-touch text-xs text-slate-500 underline dark:text-stone-400"
+                    className="btn-touch text-xs text-label30 underline "
                   >
                     Abbrechen
                   </button>
@@ -233,7 +233,7 @@ export function DauerauftragDetailPage() {
               ))}
             </div>
           ) : (
-            <div className="space-y-2 rounded-md border border-slate-200 p-2 dark:border-stone-800">
+            <div className="space-y-2 rounded-md border border-sep p-2 ">
               {!anlagenListe || anlagenListe.length === 0 ? (
                 <p className="text-sm text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
               ) : (
@@ -278,7 +278,7 @@ export function DauerauftragDetailPage() {
                 </button>
                 <button
                   onClick={() => setAnlagenBearbeiten(false)}
-                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm text-slate-600 dark:border-stone-700 dark:text-stone-400"
+                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm text-label "
                 >
                   Abbrechen
                 </button>
@@ -292,7 +292,7 @@ export function DauerauftragDetailPage() {
             <button
               onClick={() => toggleAktivMutation.mutate()}
               disabled={toggleAktivMutation.isPending}
-              className="btn-touch w-full rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300"
+              className="btn-touch w-full rounded-md border border-sep py-2 text-sm font-medium text-label disabled:opacity-50 "
             >
               {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
             </button>

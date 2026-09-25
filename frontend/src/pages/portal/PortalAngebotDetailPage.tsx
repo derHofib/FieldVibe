@@ -63,7 +63,7 @@ export function PortalAngebotDetailPage() {
         <button
           onClick={() => pdfMutation.mutate()}
           disabled={pdfMutation.isPending}
-          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
         >
           <FileText size={14} strokeWidth={2} /> {pdfMutation.isPending ? "PDF wird geladen…" : "PDF anzeigen"}
         </button>
@@ -93,7 +93,7 @@ export function PortalAngebotDetailPage() {
             ))}
           </div>
         )}
-        <div className="mt-3 border-t border-slate-100 pt-2 text-right text-sm dark:border-stone-800">
+        <div className="mt-3 border-t border-sep pt-2 text-right text-sm ">
           <div className="text-label2">Netto: {angebot.gesamt_netto} EUR</div>
           <div className="font-semibold text-label">
             Brutto: {angebot.gesamt_brutto} EUR

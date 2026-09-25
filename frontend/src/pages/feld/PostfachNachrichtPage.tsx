@@ -86,7 +86,7 @@ export function PostfachNachrichtPage() {
                 const { url } = await mailApi.attachmentUrl(detail.id, a.id);
                 window.open(url, "_blank", "noopener,noreferrer");
               }}
-              className="btn-touch rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:border-stone-700 dark:text-stone-300"
+              className="btn-touch rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label "
             >
               {a.dateiname}
             </button>
@@ -97,7 +97,7 @@ export function PostfachNachrichtPage() {
       <p className="text-sm whitespace-pre-wrap break-words text-label">{detail.body_text}</p>
 
       {antwortenOffen ? (
-        <div className="-mx-4 border-t border-slate-100 pt-3 dark:border-stone-800">
+        <div className="-mx-4 border-t border-sep pt-3 ">
           <ComposePanel
             modus={{
               art: "antworten",

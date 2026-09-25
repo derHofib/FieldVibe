@@ -79,14 +79,14 @@ export function BoardsUebersichtPage() {
         <button
           onClick={() => setZeigeNeu((v) => !v)}
           aria-label="Neues Board"
-          className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label30 hover:bg-slate-100 dark:hover:bg-stone-800"
         >
           <Plus size={19} strokeWidth={2.25} />
         </button>
       </div>
 
       {zeigeNeu && (
-        <div className="space-y-2.5 rounded-xl bg-white p-3.5 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-2.5 rounded-xl bg-white p-3.5 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
           <input
             autoFocus
             value={name}
@@ -130,8 +130,8 @@ export function BoardsUebersichtPage() {
             onClick={() => setFilter(o.key)}
             className={`btn-touch shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap ${
               filter === o.key
-                ? "bg-slate-800 text-white dark:bg-stone-100 dark:text-stone-900"
-                : "bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                ? "bg-slate-800 text-white dark:bg-stone-100 "
+                : "bg-white text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
             }`}
           >
             {o.label}
@@ -151,7 +151,7 @@ export function BoardsUebersichtPage() {
               <button
                 key={b.id}
                 onClick={() => navigate(`/boards/${b.id}`)}
-                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
               >
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${TYP_TON[b.board_typ]}`}>
                   <Icon size={19} strokeWidth={2} />
@@ -170,7 +170,7 @@ export function BoardsUebersichtPage() {
                     e.stopPropagation();
                     if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
                   }}
-                  className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:text-st-fehlt dark:text-stone-600 dark:hover:text-st-fehlt"
+                  className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-label3 hover:text-st-fehlt dark:hover:text-st-fehlt"
                 >
                   <Trash2 size={16} strokeWidth={2} />
                 </span>

@@ -19,7 +19,7 @@ export function KundenZuweisung({ kundenIds, onChange }: { kundenIds: string[]; 
 
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+      <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase 0">
         Kunden-Zuweisung
       </label>
       <p className="mb-1.5 text-xs text-label2">Leer = gilt für alle Kunden</p>
@@ -76,20 +76,20 @@ function LvFormular({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900"
+        className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-sep bg-white dark:bg-stone-900"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-stone-800">
+        <div className="flex items-center justify-between gap-3 border-b border-sep px-5 py-4 ">
           <h2 className="text-base font-bold text-label">Neues Leistungsverzeichnis</h2>
           <button
             onClick={onClose}
-            className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+            className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
           >
             <X size={16} strokeWidth={2} />
           </button>
         </div>
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase 0">
               Name
             </label>
             <input
@@ -101,7 +101,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-slate-400 uppercase dark:text-stone-500">
+            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase 0">
               Beschreibung
             </label>
             <textarea
@@ -114,7 +114,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
           <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />
           {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         </div>
-        <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4 dark:border-stone-800">
+        <div className="flex justify-end gap-2 border-t border-sep px-5 py-4 ">
           <button onClick={onClose} className="btn-touch btn-ap px-4 py-2 text-sm font-semibold">
             Abbrechen
           </button>
@@ -152,7 +152,7 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
   });
 
   return (
-    <div className="card-interactive flex items-center gap-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="card-interactive flex items-center gap-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
       <button onClick={() => navigate(`/leistungsverzeichnis/${lv.id}`)} className="min-w-0 flex-1 text-left">
         <p className="truncate text-sm font-semibold text-label">{lv.name}</p>
         <p className="truncate text-xs text-label2">
@@ -173,14 +173,14 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
           onClick={() => duplizieren.mutate()}
           disabled={duplizieren.isPending}
           title="Duplizieren"
-          className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 disabled:opacity-50 dark:text-stone-500 dark:hover:bg-stone-800"
+          className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-slate-100 disabled:opacity-50 0 dark:hover:bg-stone-800"
         >
           <Copy size={15} strokeWidth={2} />
         </button>
       )}
       <button
         onClick={() => navigate(`/leistungsverzeichnis/${lv.id}`)}
-        className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 dark:text-stone-500"
+        className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 0"
       >
         <ChevronRight size={16} strokeWidth={2} />
       </button>
@@ -213,7 +213,7 @@ function StandardKalkulation() {
   if (!einstellungen) return null;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white dark:border-stone-800 dark:bg-stone-900">
+    <div className="rounded-lg border border-sep bg-white dark:bg-stone-900">
       <button
         onClick={() => {
           setGemeinkosten(einstellungen.standard_lohn_gemeinkosten_prozent);
@@ -222,7 +222,7 @@ function StandardKalkulation() {
         }}
         className="btn-touch flex w-full items-center gap-2 px-3 py-2.5 text-left"
       >
-        <Settings2 size={15} strokeWidth={2} className="shrink-0 text-slate-400 dark:text-stone-500" />
+        <Settings2 size={15} strokeWidth={2} className="shrink-0 text-label2 0" />
         <span className="flex-1 text-xs font-semibold text-label">
           Standard-Kalkulation für neue Positionen
         </span>
@@ -232,7 +232,7 @@ function StandardKalkulation() {
         </span>
       </button>
       {offen && (
-        <div className="space-y-3 border-t border-slate-100 px-3 py-3 dark:border-stone-800">
+        <div className="space-y-3 border-t border-sep px-3 py-3 ">
           <p className="text-xs text-label2">
             Vorbelegung für neu angelegte Positionen im Modus "Berechnet". Gilt nicht rückwirkend für bereits
             angelegte Positionen.

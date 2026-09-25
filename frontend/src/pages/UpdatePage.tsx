@@ -41,12 +41,12 @@ export function UpdatePage() {
             </div>
           )}
           {data.update_available === false && (
-            <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
+            <div className="flex items-center gap-1.5 rounded-md border border-sep bg-slate-50 p-3 text-sm text-label dark:bg-stone-800 ">
               <CheckCircle2 size={15} strokeWidth={2} /> Aktuellste Version deployt
             </div>
           )}
 
-          <div className="rounded-md border border-slate-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+          <div className="rounded-md border border-sep bg-white p-4 dark:bg-stone-900">
             <h2 className="mb-2 text-sm font-semibold text-label">
               Aktuell deployt
             </h2>
@@ -58,7 +58,7 @@ export function UpdatePage() {
             </dl>
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+          <div className="rounded-md border border-sep bg-white p-4 dark:bg-stone-900">
             <h2 className="mb-2 text-sm font-semibold text-label">
               Neuester Commit auf GitHub
             </h2>
@@ -91,14 +91,14 @@ export function UpdatePage() {
             )}
           </div>
 
-          <div className="rounded-md border border-slate-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+          <div className="rounded-md border border-sep bg-white p-4 dark:bg-stone-900">
             <h2 className="mb-2 text-sm font-semibold text-label">
               Manuell aktualisieren
             </h2>
             <p className="mb-2 text-sm text-label">
               Auf dem Server im Repo-Verzeichnis ausführen (siehe docs/DEPLOYMENT.md, Abschnitt 6):
             </p>
-            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-slate-100">
+            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-label3">
 {`git pull
 export GIT_COMMIT="$(git rev-parse --short HEAD)"
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build

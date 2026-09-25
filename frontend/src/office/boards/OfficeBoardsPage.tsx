@@ -137,7 +137,7 @@ export function OfficeBoardsPage() {
                         e.stopPropagation();
                         if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
                       }}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-400 hover:text-st-fehlt dark:bg-stone-900/80 dark:text-stone-500 dark:hover:text-st-fehlt"
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-label2 hover:text-st-fehlt dark:bg-stone-900/80 0 dark:hover:text-st-fehlt"
                     >
                       <Trash2 size={14} strokeWidth={2} />
                     </span>

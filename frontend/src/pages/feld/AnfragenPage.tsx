@@ -77,7 +77,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
             className={`rounded-full px-2 py-1 text-xs font-semibold ${
               anfrage.status === "angenommen"
                 ? "bg-green-100 text-st-erledigt dark:bg-green-500/15 "
-                : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-300"
+                : "bg-slate-200 text-label dark:bg-stone-700 "
             }`}
           >
             {anfrage.status === "angenommen" ? "Angenommen" : "Abgelehnt"}
@@ -105,7 +105,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
               </button>
               <button
                 onClick={() => setZeigeAblehnen(true)}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
               >
                 Ablehnen
               </button>
@@ -136,7 +136,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 </button>
                 <button
                   onClick={() => setZeigeAnnehmen(false)}
-                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
                 >
                   Abbrechen
                 </button>
@@ -163,7 +163,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
                 </button>
                 <button
                   onClick={() => setZeigeAblehnen(false)}
-                  className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                  className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
                 >
                   Abbrechen
                 </button>

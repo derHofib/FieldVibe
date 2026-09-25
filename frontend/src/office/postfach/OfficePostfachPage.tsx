@@ -62,7 +62,7 @@ export function OfficePostfachPage() {
           <select
             value={aktivesKonto.id}
             onChange={(e) => setAktivesKontoId(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
+            className="rounded-lg border border-sep bg-white px-2.5 py-1.5 text-xs text-label dark:bg-stone-800 "
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
@@ -74,14 +74,14 @@ export function OfficePostfachPage() {
         <button
           onClick={() => setAnsicht({ art: "konto-bearbeiten" })}
           title="Postfach-Einstellungen"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label30 hover:bg-slate-50 dark:hover:bg-stone-800"
         >
           <Settings size={15} strokeWidth={2} />
         </button>
         <button
           onClick={() => setAnsicht({ art: "konto-neu" })}
           title="Weiteres Postfach verbinden"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label30 hover:bg-slate-50 dark:hover:bg-stone-800"
         >
           <Plus size={15} strokeWidth={2} />
         </button>

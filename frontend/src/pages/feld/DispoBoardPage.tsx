@@ -165,7 +165,7 @@ export function DispoBoardPage() {
       <div className="flex items-center justify-between border border-sep bg-card p-3">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 "
         >
           ← Vorherige Woche
         </button>
@@ -174,7 +174,7 @@ export function DispoBoardPage() {
         </span>
         <button
           onClick={() => setWeekOffset((w) => w + 1)}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 "
         >
           Nächste Woche →
         </button>
@@ -279,7 +279,7 @@ export function DispoBoardPage() {
                 setShowForm(false);
                 setForm(null);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 "
             >
               Abbrechen
             </button>
@@ -302,7 +302,7 @@ export function DispoBoardPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="overflow-x-auto rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-sep">
@@ -321,7 +321,7 @@ export function DispoBoardPage() {
           </thead>
           <tbody>
             {technikers.map((tech) => (
-              <tr key={tech.id} className="border-b border-slate-100 dark:border-stone-800">
+              <tr key={tech.id} className="border-b border-sep ">
                 <td className="p-2 align-top text-sm font-medium text-label">
                   {tech.name}
                 </td>
@@ -347,7 +347,7 @@ export function DispoBoardPage() {
                           title={t.titel}
                           className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-xs ${
                             t.status === "abgesagt"
-                              ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
+                              ? "bg-slate-100 text-label2 line-through dark:bg-stone-800 0"
                               : "bg-blue-50 text-tint dark:bg-blue-500/15 "
                           }`}
                         >

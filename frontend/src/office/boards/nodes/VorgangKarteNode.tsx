@@ -63,7 +63,7 @@ export function VorgangKarteNode({ id, data, selected }: NodeProps<BoardNode>) {
       }`}
     >
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
-      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-indigo-100 text-indigo-600 dark:border-stone-900 dark:bg-indigo-500/20 dark:text-indigo-300">
+      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
         <Link2 size={11} strokeWidth={2.5} />
       </span>
       <div className="h-1 bg-linear-to-r from-cyan-500 to-blue-600" />

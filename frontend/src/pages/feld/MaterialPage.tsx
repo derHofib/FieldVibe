@@ -81,7 +81,7 @@ function MaterialZeile({
           onClick={() => navigate(`/material/${material.id}`)}
           className="btn-touch text-left"
         >
-          <div className="text-sm font-medium text-slate-800 underline-offset-2 hover:underline dark:text-stone-100">
+          <div className="text-sm font-medium text-label underline-offset-2 hover:underline ">
             {material.bezeichnung}
           </div>
           <div
@@ -127,7 +127,7 @@ function MaterialZeile({
         )}
       </div>
 
-      <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 dark:border-stone-800">
+      <div className="mt-2 space-y-1 border-t border-sep pt-2 ">
         {material.bestaende.map((b) => (
           <div key={b.lager_id} className="flex items-center justify-between text-xs">
             <span className="text-label">{b.lager_bezeichnung}</span>
@@ -138,7 +138,7 @@ function MaterialZeile({
                   step="0.01"
                   value={neueMenge}
                   onChange={(e) => setNeueMenge(e.target.value)}
-                  className="w-16 rounded-xs border border-slate-300 px-1 py-0.5 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  className="w-16 rounded-xs border border-sep px-1 py-0.5 dark:bg-stone-800 "
                 />
                 <button
                   onClick={() => bestandSetzenMutation.mutate(b.lager_id)}
@@ -160,7 +160,7 @@ function MaterialZeile({
                   setEditingLagerId(b.lager_id);
                   setNeueMenge(b.menge);
                 }}
-                className="btn-touch font-medium text-slate-700 underline-offset-2 hover:underline dark:text-stone-300"
+                className="btn-touch font-medium text-label underline-offset-2 hover:underline "
               >
                 {b.menge} {material.einheit}
               </button>
@@ -277,7 +277,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
       )}
 
       {showForm && (
-        <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-stone-800">
+        <div className="mt-2 space-y-2 border-t border-sep pt-2 ">
           <input
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
@@ -739,7 +739,7 @@ export function MaterialPage() {
                 onClick={() => setBedarfZweck("bestellung")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "bestellung"
-                    ? "bg-white text-slate-800 shadow-xs dark:bg-stone-700 dark:text-stone-100"
+                    ? "bg-white text-label shadow-xs dark:bg-stone-700 "
                     : "text-label2"
                 }`}
               >
@@ -749,7 +749,7 @@ export function MaterialPage() {
                 onClick={() => setBedarfZweck("angebot")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
                   bedarfZweck === "angebot"
-                    ? "bg-white text-slate-800 shadow-xs dark:bg-stone-700 dark:text-stone-100"
+                    ? "bg-white text-label shadow-xs dark:bg-stone-700 "
                     : "text-label2"
                 }`}
               >
@@ -784,7 +784,7 @@ export function MaterialPage() {
             )}
 
             {ausgewaehlteBedarfe.size > 0 && bedarfZweck === "bestellung" && (
-              <div className="mt-2 space-y-2 border-t border-slate-100 pt-2 dark:border-stone-800">
+              <div className="mt-2 space-y-2 border-t border-sep pt-2 ">
                 <select
                   value={bestellLieferantId}
                   onChange={(e) => setBestellLieferantId(e.target.value)}
@@ -807,7 +807,7 @@ export function MaterialPage() {
               </div>
             )}
             {ausgewaehlteBedarfe.size > 0 && bedarfZweck === "angebot" && (
-              <div className="mt-2 border-t border-slate-100 pt-2 dark:border-stone-800">
+              <div className="mt-2 border-t border-sep pt-2 ">
                 <button
                   disabled={angebotAusBedarfenMutation.isPending}
                   onClick={() => angebotAusBedarfenMutation.mutate()}

@@ -135,7 +135,7 @@ export function DauerauftragNeuPage() {
             {!anlagenListe || anlagenListe.length === 0 ? (
               <p className="text-sm text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
             ) : (
-              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2 dark:border-stone-800">
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-sep p-2 ">
                 {anlagenListe.map((a) => (
                   <label
                     key={a.id}

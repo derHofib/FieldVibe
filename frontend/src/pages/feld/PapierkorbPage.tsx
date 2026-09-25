@@ -115,7 +115,7 @@ export function PapierkorbPage() {
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as PapierkorbEntityTyp | "")}
-          className="btn-touch border border-sep bg-transparent px-3 py-2 text-slate-800 text-label"
+          className="btn-touch border border-sep bg-transparent px-3 py-2 text-label text-label"
         >
           <option value="">Alle Typen</option>
           {Object.entries(ENTITY_TYP_LABEL).map(([value, label]) => (
@@ -129,7 +129,7 @@ export function PapierkorbPage() {
       {isLoading ? (
         <p className="text-label2">Lädt…</p>
       ) : !eintraege || eintraege.length === 0 ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow-xs dark:bg-stone-900 dark:text-stone-400">
+        <p className="rounded-lg bg-white p-4 text-sm text-label30 shadow-xs dark:bg-stone-900 ">
           Der Papierkorb ist leer.
         </p>
       ) : (

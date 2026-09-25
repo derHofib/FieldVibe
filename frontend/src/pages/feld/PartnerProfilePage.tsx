@@ -189,7 +189,7 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -277,7 +277,7 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
         <button
           type="button"
           onClick={() => setZeigen(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -351,7 +351,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
                   </button>
                 )}
                 {kannVerwalten && (
-                  <label className="btn-touch cursor-pointer text-xs text-slate-500 hover:text-label dark:hover:text-stone-200">
+                  <label className="btn-touch cursor-pointer text-xs text-label30 hover:text-label dark:hover:text-label3">
                     {n.dokument_s3_key ? "Ersetzen" : "Hochladen"}
                     <input
                       type="file"

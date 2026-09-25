@@ -203,7 +203,7 @@ export function BoardMobilePage() {
             }}
             disabled={boardLoeschen.isPending}
             aria-label="Board löschen"
-            className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:text-st-fehlt disabled:opacity-50 dark:text-stone-500 dark:hover:text-st-fehlt"
+            className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:text-st-fehlt disabled:opacity-50 0 dark:hover:text-st-fehlt"
           >
             <Trash2 size={17} strokeWidth={2} />
           </button>

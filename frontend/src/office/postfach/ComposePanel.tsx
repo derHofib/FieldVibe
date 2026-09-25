@@ -64,12 +64,12 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 dark:border-stone-800">
+      <div className="flex items-center justify-between border-b border-sep px-4 py-2.5 ">
         <p className="text-sm font-semibold text-label">{titel}</p>
         <button
           onClick={onAbbrechen}
           aria-label="Schließen"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-label2 hover:bg-slate-100 0 dark:hover:bg-stone-800"
         >
           <X size={15} strokeWidth={2} />
         </button>
@@ -80,14 +80,14 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
           value={an}
           onChange={(e) => setAn(e.target.value)}
           placeholder="An (mehrere durch Komma trennen)"
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
         />
         {modus.art !== "weiterleiten" && (
           <input
             value={cc}
             onChange={(e) => setCc(e.target.value)}
             placeholder="Cc (optional)"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         )}
         {modus.art === "neu" && (
@@ -95,7 +95,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             value={bcc}
             onChange={(e) => setBcc(e.target.value)}
             placeholder="Bcc (optional)"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         )}
         {modus.art === "neu" && (
@@ -103,7 +103,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             value={betreff}
             onChange={(e) => setBetreff(e.target.value)}
             placeholder="Betreff"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         )}
         <textarea
@@ -111,7 +111,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
           onChange={(e) => setText(e.target.value)}
           placeholder="Nachricht…"
           rows={12}
-          className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
         />
         {fehler && (
           <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-st-fehlt dark:bg-rose-500/10 ">
@@ -120,7 +120,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
         )}
       </div>
 
-      <div className="flex justify-end border-t border-slate-200 p-3 dark:border-stone-800">
+      <div className="flex justify-end border-t border-sep p-3 ">
         <button
           onClick={() => {
             setFehler(null);

@@ -219,7 +219,7 @@ function GruppenKarte({
           <GripVertical size={15} strokeWidth={1.5} />
         </button>
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-label">{gruppe.label.de ?? gruppe.key}</h3>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
+        <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-label dark:bg-stone-800 ">
           {gruppe.repeatable ? "Unterformular" : "Abschnitt"}
         </span>
       </div>

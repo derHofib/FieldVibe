@@ -69,7 +69,7 @@ export function SearchableSelect({
         className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       {open && (
-        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-800">
+        <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-sep bg-white shadow-lg dark:bg-stone-800">
           {gefiltert.length === 0 ? (
             <p className="px-2 py-1.5 text-sm text-label2">Keine Treffer</p>
           ) : (
