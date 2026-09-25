@@ -122,7 +122,7 @@ export function MeineAufgabenPage() {
         <span className="text-sm font-medium text-label2">{offen.length} offen</span>
       </div>
 
-      <div className="flex items-center gap-2 rounded-lg bg-white p-1 pl-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+      <div className="flex items-center gap-2 rounded-lg bg-card p-1 pl-3 shadow-xs dark:shadow-none dark:ring-1 ">
         <input
           value={neueAufgabe}
           onChange={(e) => setNeueAufgabe(e.target.value)}

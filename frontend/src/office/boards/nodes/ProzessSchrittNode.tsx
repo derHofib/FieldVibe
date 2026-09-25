@@ -7,7 +7,7 @@ export function ProzessSchrittNode({ id, data, selected }: NodeProps<BoardNode>)
   const { label, sub } = data as ProzessSchrittDaten;
   return (
     <div
-      className={`w-[160px] rounded-xl border-[1.5px] border-sep bg-white p-3 shadow-sm dark:bg-stone-900 ${
+      className={`w-[160px] rounded-xl border-[1.5px] border-sep bg-card p-3 shadow-sm ${
         selected ? "ring-2 ring-tint" : ""
       }`}
     >

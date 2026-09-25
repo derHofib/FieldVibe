@@ -52,7 +52,7 @@ function VorgangKarteAnsicht({ data }: { data: VorgangKarteDaten }) {
 
   if (!vorgang_id) return null;
   return (
-    <div className="relative w-[190px] overflow-hidden rounded-xl bg-white shadow-lg dark:bg-stone-900">
+    <div className="relative w-[190px] overflow-hidden rounded-xl bg-card shadow-lg">
       <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">
         <Link2 size={11} strokeWidth={2.5} />
       </span>
@@ -113,7 +113,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "rahmen": {
       const { label } = data as RahmenDaten;
       return (
-        <div className="h-full w-full rounded-xl border-2 border-dashed border-sep bg-slate-50/40 dark:bg-stone-800/20">
+        <div className="h-full w-full rounded-xl border-2 border-dashed border-sep bg-fill">
           <p className="m-2 text-xs font-bold tracking-wide text-label2 uppercase ">{label}</p>
         </div>
       );
@@ -125,7 +125,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
           {url ? (
             <img src={url} alt="" className="block w-full" draggable={false} />
           ) : (
-            <div className="flex h-24 items-center justify-center bg-slate-100 text-xs text-label2 dark:bg-stone-800">
+            <div className="flex h-24 items-center justify-center bg-fill text-xs text-label2">
               Kein Bild
             </div>
           )}
@@ -145,7 +145,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "prozess_schritt": {
       const { label, sub } = data as ProzessSchrittDaten;
       return (
-        <div className="w-[150px] rounded-xl border-[1.5px] border-sep bg-white p-2.5 shadow-sm dark:bg-stone-900">
+        <div className="w-[150px] rounded-xl border-[1.5px] border-sep bg-card p-2.5 shadow-sm">
           <p className="text-[12px] font-bold text-label">{label}</p>
           {sub && <p className="mt-0.5 text-[10px] text-label2">{sub}</p>}
         </div>
@@ -171,7 +171,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
       const { titel, punkte } = data as ChecklisteDaten;
       const erledigt = punkte.filter((p) => p.erledigt).length;
       return (
-        <div className="w-[170px] rounded-xl bg-white p-2.5 shadow-md dark:bg-stone-900">
+        <div className="w-[170px] rounded-xl bg-card p-2.5 shadow-md">
           <p className="truncate text-[11px] font-bold text-label">{titel || "Checkliste"}</p>
           <p className="mt-0.5 text-[10px] text-label2">
             {erledigt}/{punkte.length} erledigt
@@ -182,7 +182,7 @@ function MobileNodeAnsicht(props: NodeProps<BoardNode>) {
     case "datei_anhang": {
       const { dateiname } = data as DateiAnhangDaten;
       return (
-        <div className="flex w-[150px] items-center gap-1.5 rounded-xl bg-white p-2.5 shadow-md dark:bg-stone-900">
+        <div className="flex w-[150px] items-center gap-1.5 rounded-xl bg-card p-2.5 shadow-md">
           <Paperclip size={13} strokeWidth={2} className="shrink-0 text-cyan-600 dark:text-cyan-400" />
           <span className="truncate text-[11px] font-medium text-label">
             {dateiname || "Kein Anhang"}

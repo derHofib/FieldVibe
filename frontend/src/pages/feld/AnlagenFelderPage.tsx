@@ -152,7 +152,7 @@ export function AnlagenFelderPage() {
                 {felder!.map((f) => (
                   <div
                     key={f.id}
-                    className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 dark:bg-stone-800/60"
+                    className="flex items-center justify-between rounded-md bg-fill px-3 py-2"
                   >
                     <span className="text-sm text-label">{f.feld_name}</span>
                     <div className="flex items-center gap-2">

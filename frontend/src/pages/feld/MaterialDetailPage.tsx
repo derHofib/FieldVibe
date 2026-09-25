@@ -278,7 +278,7 @@ export function MaterialDetailPage() {
           <button
             disabled={!neuerTag.trim() || tagHinzufuegenMutation.isPending}
             onClick={() => tagHinzufuegenMutation.mutate()}
-            className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch shrink-0 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
           >
             + Hinzufügen
           </button>

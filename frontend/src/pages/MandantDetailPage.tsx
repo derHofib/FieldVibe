@@ -198,7 +198,7 @@ export function MandantDetailPage() {
           "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
           abwählbar.
         </p>
-        <div className="space-y-1.5 rounded-md bg-slate-50 p-3 dark:bg-stone-800">
+        <div className="space-y-1.5 rounded-md bg-fill p-3">
           {ALLE_MODULE.map((modul) => (
             <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-label">
               <input

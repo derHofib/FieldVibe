@@ -73,7 +73,7 @@ function ResourceRow({
         <span className="text-sm font-medium text-label">{label}</span>
         <span className={`text-sm font-bold ${farbe.text}`}>{Math.round(percent)}%</span>
       </div>
-      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-stone-800">
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-fill">
         <div
           className={`h-full rounded-full transition-all ${farbe.bar}`}
           style={{ width: `${Math.min(percent, 100)}%` }}
@@ -109,7 +109,7 @@ function ServerAuslastung() {
   return (
     <section>
       <h2 className="mb-3 text-lg font-bold text-label">Server-Auslastung</h2>
-      <div className="grid grid-cols-1 gap-5 rounded-lg bg-white p-4 shadow-xs sm:grid-cols-3 dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+      <div className="grid grid-cols-1 gap-5 rounded-lg bg-card p-4 shadow-xs sm:grid-cols-3 dark:shadow-none dark:ring-1 ">
         <ResourceRow label="CPU" percent={aktuell.cpu_percent} detail="aktuelle Auslastung" verlauf={reihe("cpu_percent")} />
         <ResourceRow
           label="RAM"
@@ -194,7 +194,7 @@ export function UebersichtPage() {
           </Link>
         </div>
         {letzteEintraege && letzteEintraege.length > 0 ? (
-          <ul className="divide-y divide-sep rounded-lg bg-white text-sm shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+          <ul className="divide-y divide-sep rounded-lg bg-card text-sm shadow-xs dark:shadow-none dark:ring-1 ">
             {letzteEintraege.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-3">
                 <span className="font-medium text-label">{e.aktion}</span>

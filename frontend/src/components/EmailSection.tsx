@@ -146,7 +146,7 @@ export function EmailSection({
       ) : (
         <div className="space-y-1.5">
           {emails!.map((e) => (
-            <div key={e.id} className="rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
+            <div key={e.id} className="rounded-md bg-fill p-2 text-sm">
               <div className="flex items-start justify-between gap-2">
                 <span className="font-medium text-label">{e.betreff}</span>
                 <span

@@ -39,7 +39,7 @@ function AnhangZeile({ messageId, anhang }: { messageId: string; anhang: MailAtt
             setLaedt(false);
           }
         }}
-        className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-slate-50 disabled:opacity-50 dark:hover:bg-stone-800"
+        className="flex items-center gap-1.5 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-fill disabled:opacity-50"
       >
         {laedt ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} strokeWidth={2} />}
         {anhang.dateiname}
@@ -117,7 +117,7 @@ export function MailClient({ account }: { account: MailAccount }) {
 
   return (
     <div className="grid h-[calc(100vh-7.5rem)] grid-cols-[minmax(120px,160px)_minmax(220px,300px)_minmax(280px,1fr)] gap-3">
-      <div className="overflow-y-auto rounded-xl border border-sep bg-white py-2 dark:bg-stone-900">
+      <div className="overflow-y-auto rounded-xl border border-sep bg-card py-2">
         {(ordner ?? []).map((o) => (
           <button
             key={o.id}
@@ -129,7 +129,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             className={`block w-full truncate px-3 py-1.5 text-left text-[13px] font-medium ${
               o.id === aktiverOrdner
                 ? "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-300"
-                : "text-label hover:bg-slate-50 dark:hover:bg-stone-800/60"
+                : "text-label hover:bg-fill"
             }`}
           >
             {o.anzeigename}
@@ -146,7 +146,7 @@ export function MailClient({ account }: { account: MailAccount }) {
         </button>
       </div>
 
-      <div className="flex flex-col overflow-hidden rounded-xl border border-sep bg-white dark:bg-stone-900">
+      <div className="flex flex-col overflow-hidden rounded-xl border border-sep bg-card">
         <div className="relative border-b border-sep p-2 ">
           <Search
             size={13}
@@ -157,7 +157,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
             placeholder="Suchen…"
-            className="w-full rounded-lg border border-sep bg-slate-100 py-1.5 pr-2 pl-7 text-xs text-label dark:bg-stone-800 "
+            className="w-full rounded-lg border border-sep bg-fill py-1.5 pr-2 pl-7 text-xs text-label "
           />
         </div>
         {gesendetHinweis && (
@@ -188,7 +188,7 @@ export function MailClient({ account }: { account: MailAccount }) {
                 className={`block w-full border-b border-sep px-3 py-2.5 text-left last:border-b-0 ${
                   n.id === aktiveNachricht
                     ? "border-l-2 border-l-blue-500 bg-tintbg pl-[10px] "
-                    : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
+                    : "hover:bg-fill"
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-2">
@@ -217,7 +217,7 @@ export function MailClient({ account }: { account: MailAccount }) {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="w-full py-2.5 text-center text-xs font-medium text-label2 hover:bg-slate-50 dark:hover:bg-stone-800/50"
+              className="w-full py-2.5 text-center text-xs font-medium text-label2 hover:bg-fill"
             >
               {isFetchingNextPage ? "Lädt…" : "Weitere laden"}
             </button>
@@ -225,7 +225,7 @@ export function MailClient({ account }: { account: MailAccount }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-sep bg-white dark:bg-stone-900">
+      <div className="overflow-hidden rounded-xl border border-sep bg-card">
         {compose ? (
           <ComposePanel
             modus={compose}
@@ -255,13 +255,13 @@ export function MailClient({ account }: { account: MailAccount }) {
                         betreff: detail.betreff,
                       })
                     }
-                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-slate-50 dark:hover:bg-stone-800"
+                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-fill"
                   >
                     <Reply size={13} strokeWidth={2} /> Antworten
                   </button>
                   <button
                     onClick={() => setCompose({ art: "weiterleiten", messageId: detail.id, betreff: detail.betreff })}
-                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-slate-50 dark:hover:bg-stone-800"
+                    className="flex items-center gap-1 rounded-lg border border-sep px-2.5 py-1.5 text-xs font-medium text-label hover:bg-fill"
                   >
                     <Forward size={13} strokeWidth={2} /> Weiterleiten
                   </button>

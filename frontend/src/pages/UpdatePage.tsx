@@ -41,12 +41,12 @@ export function UpdatePage() {
             </div>
           )}
           {data.update_available === false && (
-            <div className="flex items-center gap-1.5 rounded-md border border-sep bg-slate-50 p-3 text-sm text-label dark:bg-stone-800 ">
+            <div className="flex items-center gap-1.5 rounded-md border border-sep bg-fill p-3 text-sm text-label ">
               <CheckCircle2 size={15} strokeWidth={2} /> Aktuellste Version deployt
             </div>
           )}
 
-          <div className="rounded-md border border-sep bg-white p-4 dark:bg-stone-900">
+          <div className="rounded-md border border-sep bg-card p-4">
             <h2 className="mb-2 text-sm font-semibold text-label">
               Aktuell deployt
             </h2>
@@ -58,7 +58,7 @@ export function UpdatePage() {
             </dl>
           </div>
 
-          <div className="rounded-md border border-sep bg-white p-4 dark:bg-stone-900">
+          <div className="rounded-md border border-sep bg-card p-4">
             <h2 className="mb-2 text-sm font-semibold text-label">
               Neuester Commit auf GitHub
             </h2>
@@ -91,7 +91,7 @@ export function UpdatePage() {
             )}
           </div>
 
-          <div className="rounded-md border border-sep bg-white p-4 dark:bg-stone-900">
+          <div className="rounded-md border border-sep bg-card p-4">
             <h2 className="mb-2 text-sm font-semibold text-label">
               Manuell aktualisieren
             </h2>

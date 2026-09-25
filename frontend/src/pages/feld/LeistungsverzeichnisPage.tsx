@@ -76,13 +76,13 @@ function LvFormular({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-sep bg-white dark:bg-stone-900"
+        className="max-h-full w-full max-w-md overflow-y-auto rounded-xl border border-sep bg-card"
       >
         <div className="flex items-center justify-between gap-3 border-b border-sep px-5 py-4 ">
           <h2 className="text-base font-bold text-label">Neues Leistungsverzeichnis</h2>
           <button
             onClick={onClose}
-            className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+            className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-fill"
           >
             <X size={16} strokeWidth={2} />
           </button>
@@ -152,7 +152,7 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
   });
 
   return (
-    <div className="card-interactive flex items-center gap-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+    <div className="card-interactive flex items-center gap-2 rounded-lg bg-card p-3 shadow-xs dark:shadow-none dark:ring-1 ">
       <button onClick={() => navigate(`/leistungsverzeichnis/${lv.id}`)} className="min-w-0 flex-1 text-left">
         <p className="truncate text-sm font-semibold text-label">{lv.name}</p>
         <p className="truncate text-xs text-label2">
@@ -173,7 +173,7 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
           onClick={() => duplizieren.mutate()}
           disabled={duplizieren.isPending}
           title="Duplizieren"
-          className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-stone-800"
+          className="btn-touch flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-label2 hover:bg-fill disabled:opacity-50"
         >
           <Copy size={15} strokeWidth={2} />
         </button>
@@ -213,7 +213,7 @@ function StandardKalkulation() {
   if (!einstellungen) return null;
 
   return (
-    <div className="rounded-lg border border-sep bg-white dark:bg-stone-900">
+    <div className="rounded-lg border border-sep bg-card">
       <button
         onClick={() => {
           setGemeinkosten(einstellungen.standard_lohn_gemeinkosten_prozent);

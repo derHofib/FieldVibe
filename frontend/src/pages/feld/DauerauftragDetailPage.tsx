@@ -212,7 +212,7 @@ export function DauerauftragDetailPage() {
               {dauerauftrag.ziele.map((z) => (
                 <div
                   key={z.id}
-                  className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+                  className="flex items-center justify-between rounded-md bg-fill px-2 py-1.5 text-sm"
                 >
                   <span className="text-label">
                     {z.anlage_id ? anlageNameById.get(z.anlage_id) ?? "Anlage" : "Ohne Anlagenbezug"}

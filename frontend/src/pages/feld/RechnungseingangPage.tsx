@@ -221,7 +221,7 @@ export function RechnungseingangPage() {
             className={`btn-touch rounded-full px-3 py-1 font-medium ${
               statusFilter === s
                 ? "bg-cyan-600 text-white"
-                : "bg-slate-100 text-label dark:bg-stone-800 "
+                : "bg-fill text-label "
             }`}
           >
             {s === "" ? "Alle" : STATUS_LABEL[s]}

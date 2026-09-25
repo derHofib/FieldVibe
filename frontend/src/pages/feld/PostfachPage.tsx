@@ -112,7 +112,7 @@ export function PostfachPage() {
             <button
               key={n.id}
               onClick={() => navigate(`/postfach/${n.id}`)}
-              className="card-interactive block w-full rounded-xl bg-white p-3 text-left shadow-sm dark:bg-stone-900"
+              className="card-interactive block w-full rounded-xl bg-card p-3 text-left shadow-sm"
             >
               <div className="flex items-baseline justify-between gap-2">
                 <p

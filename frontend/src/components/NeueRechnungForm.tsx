@@ -40,7 +40,7 @@ export function NeueRechnungForm({
 
   return (
     <div className="space-y-3 border border-sep bg-card p-4">
-      <div className="flex rounded-full bg-slate-100 p-1 dark:bg-stone-800">
+      <div className="flex rounded-full bg-fill p-1">
         {(["pauschal", "einzelposten"] as const).map((m) => (
           <button
             key={m}

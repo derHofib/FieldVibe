@@ -106,7 +106,7 @@ function PostenTabelle({
         <TabellenRahmen>
           <table className="w-full border-collapse text-[12.5px]">
             <thead>
-              <tr className="bg-slate-50 dark:bg-stone-800/60">
+              <tr className="bg-fill">
                 <Th>Nummer</Th>
                 <Th>Partner</Th>
                 <Th rechts>Offener Betrag</Th>
@@ -119,7 +119,7 @@ function PostenTabelle({
                 <tr
                   key={e.id}
                   onClick={() => onOeffnen(e.id)}
-                  className="cursor-pointer border-b border-sep last:border-b-0 hover:bg-slate-50 dark:hover:bg-stone-800/50"
+                  className="cursor-pointer border-b border-sep last:border-b-0 hover:bg-fill"
                 >
                   <td className="px-3.5 py-2.5 font-semibold text-label">
                     {e.nummer}

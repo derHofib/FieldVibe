@@ -213,7 +213,7 @@ export function ZeiterfassungManuellForm({
         <button
           type="button"
           onClick={onClose}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
+          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
         >
           Abbrechen
         </button>

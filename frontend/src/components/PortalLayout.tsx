@@ -16,7 +16,7 @@ export function PortalLayout() {
 
   return (
     <div className="min-h-screen bg-slate-100 pb-16 dark:bg-stone-950">
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sep bg-white/80 px-4 py-3 backdrop-blur-md dark:bg-stone-900/70">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sep bg-card/80 px-4 py-3 backdrop-blur-md">
         <button
           onClick={() => navigate("/portal/vorgaenge")}
           className="flex items-center gap-1.5 text-lg font-bold text-label"
@@ -30,7 +30,7 @@ export function PortalLayout() {
           <ThemeToggle />
           <button
             onClick={logout}
-            className="btn-touch rounded-md px-2 text-sm font-medium text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+            className="btn-touch rounded-md px-2 text-sm font-medium text-label2 hover:bg-fill"
           >
             Abmelden
           </button>
@@ -39,7 +39,7 @@ export function PortalLayout() {
       <main className="mx-auto max-w-2xl px-3 py-4">
         <Outlet />
       </main>
-      <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-sep bg-white/90 backdrop-blur-md dark:bg-stone-900/80">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-sep bg-card/90 backdrop-blur-md">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}

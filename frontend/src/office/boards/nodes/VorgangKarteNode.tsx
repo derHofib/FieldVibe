@@ -58,7 +58,7 @@ export function VorgangKarteNode({ id, data, selected }: NodeProps<BoardNode>) {
   return (
     <div
       onClick={() => navigate(`/vorgaenge/${vorgang_id}`)}
-      className={`relative w-[210px] cursor-pointer overflow-hidden rounded-xl bg-white shadow-lg dark:bg-stone-900 ${
+      className={`relative w-[210px] cursor-pointer overflow-hidden rounded-xl bg-card shadow-lg ${
         selected ? "ring-2 ring-tint" : ""
       }`}
     >

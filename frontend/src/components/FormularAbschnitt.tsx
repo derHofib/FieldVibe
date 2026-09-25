@@ -87,7 +87,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               key={s.id}
               onClick={() => startMutation.mutate(s.id)}
               disabled={startMutation.isPending}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 "
             >
               + {s.name} ausfüllen
               {s.pflicht_vor_abschluss && <span className="ml-1 text-st-fehlt">*</span>}

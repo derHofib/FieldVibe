@@ -83,7 +83,7 @@ export function AuswertungPage() {
               </div>
               <div className="space-y-1">
                 {offenePosten.debitoren.map((d) => (
-                  <div key={d.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
+                  <div key={d.id} className="flex items-center justify-between rounded-md bg-fill p-2 text-sm">
                     <div>
                       <div className="text-label">{d.nummer} · {d.partner_name}</div>
                       <div className="text-xs text-label2">
@@ -113,7 +113,7 @@ export function AuswertungPage() {
               </div>
               <div className="space-y-1">
                 {offenePosten.kreditoren.map((k) => (
-                  <div key={k.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60">
+                  <div key={k.id} className="flex items-center justify-between rounded-md bg-fill p-2 text-sm">
                     <div>
                       <div className="text-label">{k.nummer} · {k.partner_name}</div>
                       <div className="text-xs text-label2">
@@ -225,7 +225,7 @@ export function AuswertungPage() {
         <button
           onClick={() => datevMutation.mutate()}
           disabled={datevMutation.isPending}
-          className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+          className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
         >
           <Download size={15} strokeWidth={2} /> DATEV-Export (CSV)
         </button>

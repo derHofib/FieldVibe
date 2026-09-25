@@ -78,7 +78,7 @@ export function TeamZeitenPage() {
                 vorherigeWoche.setDate(wocheMontag.getDate() - 7);
                 setWocheMontag(vorherigeWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
             >
               ← Woche
             </button>
@@ -91,7 +91,7 @@ export function TeamZeitenPage() {
                 naechsteWoche.setDate(wocheMontag.getDate() + 7);
                 setWocheMontag(naechsteWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
             >
               Woche →
             </button>

@@ -21,7 +21,7 @@ function TechnikerBalken({ name, anzahl, max }: { name: string; anzahl: number; 
   return (
     <div className="flex items-center gap-2">
       <span className="w-28 shrink-0 truncate text-xs text-label">{name}</span>
-      <div className="h-4 flex-1 bg-slate-100 dark:bg-stone-800">
+      <div className="h-4 flex-1 bg-fill">
         <div className="h-full bg-cyan-600 dark:bg-cyan-500" style={{ width: `${breite}%` }} />
       </div>
       <span className="w-6 shrink-0 text-right text-xs font-semibold text-label">{anzahl}</span>
@@ -199,7 +199,7 @@ export function StatistikPage() {
                 vorherigeWoche.setDate(wocheMontag.getDate() - 7);
                 setWocheMontag(vorherigeWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
             >
               ← Woche
             </button>
@@ -212,7 +212,7 @@ export function StatistikPage() {
                 naechsteWoche.setDate(wocheMontag.getDate() + 7);
                 setWocheMontag(naechsteWoche);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-label dark:bg-stone-800 "
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
             >
               Woche →
             </button>

@@ -79,14 +79,14 @@ export function BoardsUebersichtPage() {
         <button
           onClick={() => setZeigeNeu((v) => !v)}
           aria-label="Neues Board"
-          className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+          className="btn-touch flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-fill"
         >
           <Plus size={19} strokeWidth={2.25} />
         </button>
       </div>
 
       {zeigeNeu && (
-        <div className="space-y-2.5 rounded-xl bg-white p-3.5 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+        <div className="space-y-2.5 rounded-xl bg-card p-3.5 shadow-xs dark:shadow-none dark:ring-1 ">
           <input
             autoFocus
             value={name}
@@ -131,7 +131,7 @@ export function BoardsUebersichtPage() {
             className={`btn-touch shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap ${
               filter === o.key
                 ? "bg-slate-800 text-white dark:bg-stone-100 "
-                : "bg-white text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
+                : "bg-card text-label shadow-xs dark:shadow-none dark:ring-1 "
             }`}
           >
             {o.label}
@@ -151,7 +151,7 @@ export function BoardsUebersichtPage() {
               <button
                 key={b.id}
                 onClick={() => navigate(`/boards/${b.id}`)}
-                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
+                className="card-interactive btn-touch flex w-full items-center gap-3 rounded-2xl bg-card p-3 text-left shadow-xs dark:shadow-none dark:ring-1 "
               >
                 <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${TYP_TON[b.board_typ]}`}>
                   <Icon size={19} strokeWidth={2} />

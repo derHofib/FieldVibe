@@ -46,13 +46,13 @@ export const STICKER_ICONS: Record<string, LucideIcon> = {
 
 function IconAuswahl({ onWaehlen }: { onWaehlen: (icon: string) => void }) {
   return (
-    <div className="nodrag grid grid-cols-4 gap-1 rounded-xl border border-sep bg-white p-2 shadow-xl dark:bg-stone-900">
+    <div className="nodrag grid grid-cols-4 gap-1 rounded-xl border border-sep bg-card p-2 shadow-xl">
       {Object.entries(STICKER_ICONS).map(([name, Icon]) => (
         <button
           key={name}
           onClick={() => onWaehlen(name)}
           title={name}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-label2 hover:bg-fill"
         >
           <Icon size={16} strokeWidth={2} />
         </button>

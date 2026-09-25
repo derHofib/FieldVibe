@@ -77,7 +77,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
             className={`rounded-full px-2 py-1 text-xs font-semibold ${
               anfrage.status === "angenommen"
                 ? "bg-st-erledigt-bg text-st-erledigt  "
-                : "bg-slate-200 text-label dark:bg-stone-700 "
+                : "bg-fill2 text-label "
             }`}
           >
             {anfrage.status === "angenommen" ? "Angenommen" : "Abgelehnt"}

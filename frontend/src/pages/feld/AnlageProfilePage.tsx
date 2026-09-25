@@ -225,7 +225,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-md border-t border-sep bg-slate-50 p-3 dark:bg-stone-800/60">
+    <div className="mt-3 space-y-2 rounded-md border-t border-sep bg-fill p-3">
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.hersteller}
@@ -628,7 +628,7 @@ export function AnlageProfilePage() {
                     <button
                       onClick={() => markiereGeprueftMutation.mutate(z.id)}
                       disabled={markiereGeprueftMutation.isPending}
-                      className="btn-touch rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+                      className="btn-touch rounded-md bg-fill px-3 py-1 text-xs font-medium text-label disabled:opacity-50 "
                     >
                       Prüfung erfolgt (heute)
                     </button>
@@ -706,7 +706,7 @@ export function AnlageProfilePage() {
                   <button
                     onClick={() => inventurDurchgefuehrtMutation.mutate()}
                     disabled={inventurDurchgefuehrtMutation.isPending || !inventurzyklus.aktiv}
-                    className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+                    className="btn-touch flex-1 rounded-md bg-fill px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 "
                   >
                     Inventur durchgeführt (heute)
                   </button>

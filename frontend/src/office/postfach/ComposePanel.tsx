@@ -69,7 +69,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
         <button
           onClick={onAbbrechen}
           aria-label="Schließen"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-label2 hover:bg-fill"
         >
           <X size={15} strokeWidth={2} />
         </button>

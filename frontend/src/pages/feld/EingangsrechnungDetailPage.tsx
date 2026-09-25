@@ -173,7 +173,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
                 }
               }}
               disabled={verwerfenMutation.isPending}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-stone-800 "
+              className="btn-touch rounded-md bg-fill px-3 py-2 text-sm font-medium text-st-fehlt disabled:opacity-50 "
             >
               Verwerfen
             </button>
@@ -340,7 +340,7 @@ export function EingangsrechnungDetailPage() {
             <button
               onClick={() => belegAnzeigenMutation.mutate()}
               disabled={belegAnzeigenMutation.isPending}
-              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+              className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
             >
               <FileText size={14} strokeWidth={2} /> Beleg anzeigen
             </button>
@@ -348,7 +348,7 @@ export function EingangsrechnungDetailPage() {
               <button
                 onClick={() => belegRemoveMutation.mutate()}
                 disabled={belegRemoveMutation.isPending}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-stone-800 "
+                className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
               >
                 Entfernen
               </button>
@@ -369,7 +369,7 @@ export function EingangsrechnungDetailPage() {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={belegUploadMutation.isPending}
-              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
             >
               <Paperclip size={14} strokeWidth={2} /> Beleg hochladen
             </button>
@@ -441,7 +441,7 @@ export function EingangsrechnungDetailPage() {
             {eingangsrechnung.positionen.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
+                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
               >
                 <div>
                   <div className="text-label">{p.beschreibung}</div>
@@ -504,7 +504,7 @@ export function EingangsrechnungDetailPage() {
             {eingangsrechnung.zahlungen.map((z) => (
               <div
                 key={z.id}
-                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
+                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
               >
                 <span className="text-label2">
                   {new Date(z.datum).toLocaleDateString("de-DE")}
@@ -522,7 +522,7 @@ export function EingangsrechnungDetailPage() {
             if (window.confirm("Diese Eingangsrechnung stornieren?")) statusMutation.mutate("storniert");
           }}
           disabled={statusMutation.isPending}
-          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+          className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
         >
           Stornieren
         </button>

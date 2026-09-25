@@ -54,7 +54,7 @@ export function ZeiterfassungTagesliste({
         );
         const offen = offeneTage.has(tag);
         return (
-          <div key={tag} className="overflow-hidden rounded-md bg-slate-50 dark:bg-stone-800/60">
+          <div key={tag} className="overflow-hidden rounded-md bg-fill">
             <button
               onClick={() => toggle(tag)}
               className="btn-touch flex w-full items-center justify-between px-2 py-2 text-left text-sm"
@@ -85,7 +85,7 @@ export function ZeiterfassungTagesliste({
                       key={e.id}
                       onClick={() => e.vorgang_id && onEintragKlick?.(e.vorgang_id)}
                       disabled={!e.vorgang_id}
-                      className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-white px-2 py-1.5 text-left text-sm disabled:cursor-default dark:bg-stone-900"
+                      className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-card px-2 py-1.5 text-left text-sm disabled:cursor-default"
                     >
                       <span className="min-w-0 truncate text-label">
                         {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}

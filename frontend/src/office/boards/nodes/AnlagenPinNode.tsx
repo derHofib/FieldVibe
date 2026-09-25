@@ -38,7 +38,7 @@ export function AnlagenPinNode({ id, data, selected }: NodeProps<BoardNode>) {
         {nummer}
       </button>
       {zeigePopover && (
-        <div className="nodrag absolute top-9 left-1/2 z-10 w-60 -translate-x-1/2 rounded-xl border border-sep bg-white p-3 shadow-xl dark:bg-stone-900">
+        <div className="nodrag absolute top-9 left-1/2 z-10 w-60 -translate-x-1/2 rounded-xl border border-sep bg-card p-3 shadow-xl">
           {anlage ? (
             <>
               <p className="text-[10px] font-bold tracking-wide text-label2 uppercase">Anlage</p>

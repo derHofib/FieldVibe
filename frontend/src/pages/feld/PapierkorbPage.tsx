@@ -129,7 +129,7 @@ export function PapierkorbPage() {
       {isLoading ? (
         <p className="text-label2">Lädt…</p>
       ) : !eintraege || eintraege.length === 0 ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-label2 shadow-xs dark:bg-stone-900 ">
+        <p className="rounded-lg bg-card p-4 text-sm text-label2 shadow-xs ">
           Der Papierkorb ist leer.
         </p>
       ) : (
@@ -137,7 +137,7 @@ export function PapierkorbPage() {
           {eintraege.map((eintrag) => (
             <li
               key={`${eintrag.entity_typ}-${eintrag.id}`}
-              className="flex items-center justify-between gap-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900"
+              className="flex items-center justify-between gap-3 rounded-lg bg-card p-3 shadow-xs"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">

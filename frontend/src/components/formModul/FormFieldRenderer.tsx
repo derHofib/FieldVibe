@@ -190,7 +190,7 @@ function FotoPlanFeld({
           <PenTool size={24} strokeWidth={1.3} />
         </div>
         {!readOnly && onUpload && (
-          <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
+          <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
             <Camera size={16} />
             {hochladenPending ? "Lädt hoch…" : "Foto aufnehmen"}
             <input
@@ -267,7 +267,7 @@ function FotoPlanFeld({
                     setLinienPunkte([]);
                     setWerkzeug(null);
                   }}
-                  className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-label dark:bg-stone-800 "
+                  className="rounded-md bg-fill px-2 py-1 text-xs font-medium text-label "
                 >
                   Abbrechen
                 </button>
@@ -347,7 +347,7 @@ function FotoPlanFeld({
         <div className="mb-2 flex flex-wrap gap-1.5">
           {markierungen.map((m, i) =>
             m.art === "linie" ? (
-              <span key={i} className="flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-label dark:bg-stone-800 ">
+              <span key={i} className="flex items-center gap-1 rounded-md bg-fill px-2 py-1 text-xs text-label ">
                 Leitung {i + 1}
                 {!readOnly && (
                   <button type="button" onClick={() => markierungLoeschen(i)} aria-label="Leitung löschen" className="text-label2 hover:text-st-fehlt">
@@ -361,7 +361,7 @@ function FotoPlanFeld({
       )}
 
       {!readOnly && onUpload && (
-        <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
+        <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
           <Camera size={16} />
           {hochladenPending ? "Lädt hoch…" : "Foto ersetzen"}
           <input
@@ -580,7 +580,7 @@ export function FormFieldRenderer({
                 disabled={readOnly}
                 onClick={() => onChange(opt.wert)}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-sm font-medium disabled:opacity-60 ${
-                  value === opt.wert ? "bg-cyan-600 text-white" : "bg-slate-100 text-label dark:bg-stone-800 "
+                  value === opt.wert ? "bg-cyan-600 text-white" : "bg-fill text-label "
                 }`}
               >
                 {opt.text}
@@ -604,7 +604,7 @@ export function FormFieldRenderer({
                 disabled={readOnly}
                 onClick={() => onChange(n)}
                 className={`btn-touch flex-1 rounded-md text-sm font-semibold disabled:opacity-60 ${
-                  value === n ? "bg-cyan-600 text-white" : "bg-slate-100 text-label dark:bg-stone-800 "
+                  value === n ? "bg-cyan-600 text-white" : "bg-fill text-label "
                 }`}
               >
                 {n}
@@ -630,7 +630,7 @@ export function FormFieldRenderer({
             <button
               type="button"
               onClick={() => navigator.geolocation.getCurrentPosition((pos) => onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude }))}
-              className="btn-touch mt-2 flex items-center gap-1.5 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label dark:bg-stone-800 "
+              className="btn-touch mt-2 flex items-center gap-1.5 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label "
             >
               <MapPin size={15} /> Standort erfassen
             </button>
@@ -645,7 +645,7 @@ export function FormFieldRenderer({
           <div className="flex gap-2">
             <input value={(value as string) ?? ""} onChange={(e) => onChange(e.target.value)} disabled={readOnly} placeholder="Gescannter Code" className={inputClass} />
             {!readOnly && (
-              <button type="button" onClick={() => setQrOffen(true)} className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 text-label dark:bg-stone-800 " aria-label="Scannen">
+              <button type="button" onClick={() => setQrOffen(true)} className="btn-touch shrink-0 rounded-md bg-fill px-3 text-label " aria-label="Scannen">
                 <ScanLine size={18} />
               </button>
             )}
@@ -674,7 +674,7 @@ export function FormFieldRenderer({
             </div>
           )}
           {!readOnly && onUpload && (
-            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
+            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
               <Camera size={16} />
               {hochladenPending ? "Lädt hoch…" : foto ? "Foto ersetzen" : "Foto aufnehmen"}
               <input
@@ -719,7 +719,7 @@ export function FormFieldRenderer({
             </div>
           )}
           {!readOnly && onUpload && (
-            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
+            <label className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
               <Paperclip size={16} />
               {hochladenPending ? "Lädt hoch…" : datei ? "Datei ersetzen" : "Datei anhängen"}
               <input
@@ -773,7 +773,7 @@ export function FormFieldRenderer({
                 }}
               />
             ) : (
-              <button type="button" onClick={() => setUnterschriftOffen(true)} className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label dark:bg-stone-800 ">
+              <button type="button" onClick={() => setUnterschriftOffen(true)} className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label ">
                 <PenLine size={16} /> {unterschrift ? "Neu unterschreiben" : "Unterschreiben"}
               </button>
             ))}

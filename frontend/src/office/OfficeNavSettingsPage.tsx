@@ -90,7 +90,7 @@ export function OfficeNavSettingsPage() {
           <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
             {kategorie}
           </h2>
-          <div className="divide-y divide-sep rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+          <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
             {seiten.map((seite) => (
               <label
                 key={seite.key}
@@ -122,7 +122,7 @@ export function OfficeNavSettingsPage() {
         </button>
         <button
           onClick={zuruecksetzen}
-          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-label shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 "
+          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-card px-4 py-2.5 text-sm font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
         >
           <RotateCcw size={16} /> Alle anzeigen
         </button>

@@ -333,7 +333,7 @@ export function StandortDetailPage() {
             <button
               onClick={() => toggleAktivMutation.mutate()}
               disabled={toggleAktivMutation.isPending}
-              className="btn-touch shrink-0 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-label disabled:opacity-50 dark:bg-stone-800 "
+              className="btn-touch shrink-0 rounded-md bg-fill px-3 py-1.5 text-xs font-semibold text-label disabled:opacity-50 "
             >
               {profil.aktiv ? "Deaktivieren" : "Aktivieren"}
             </button>

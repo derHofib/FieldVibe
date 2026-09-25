@@ -225,7 +225,7 @@ export function RechnungenPage() {
                 className={`btn-touch rounded-full px-3 py-1 font-medium ${
                   statusAktiv.has(s)
                     ? "bg-cyan-600 text-white"
-                    : "bg-slate-100 text-label dark:bg-stone-800 "
+                    : "bg-fill text-label "
                 }`}
               >
                 {RECHNUNG_STATUS_LABEL[s]}
@@ -292,7 +292,7 @@ export function RechnungenPage() {
                 <button
                   key={r.id}
                   onClick={() => navigate(`/rechnungen/${r.id}`)}
-                  className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ${
+                  className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-card p-3 text-left shadow-xs dark:shadow-none dark:ring-1 ${
                     r.ist_ueberfaellig
                       ? "ring-st-fehlt "
                       : ""

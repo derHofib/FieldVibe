@@ -49,7 +49,7 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
           pdfMutation.mutate();
         }}
         disabled={pdfMutation.isPending}
-        className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+        className="btn-touch mt-3 flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
       >
         <FileText size={14} strokeWidth={2} /> {pdfMutation.isPending ? "PDF wird geladen…" : "PDF anzeigen"}
       </button>

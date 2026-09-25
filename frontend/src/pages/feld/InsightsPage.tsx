@@ -91,7 +91,7 @@ export function InsightsPage() {
               <span className="w-32 shrink-0 text-sm text-label">
                 {STATUS_LABEL[status as VorgangStatus] ?? status}
               </span>
-              <div className="h-4 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-stone-800">
+              <div className="h-4 flex-1 overflow-hidden rounded-full bg-fill">
                 <div
                   className="h-full rounded-full bg-tint"
                   style={{ width: `${gesamtVorgaenge > 0 ? (count / gesamtVorgaenge) * 100 : 0}%` }}
@@ -131,28 +131,28 @@ export function InsightsPage() {
           <button
             onClick={() => vorgaengeExportMutation.mutate()}
             disabled={vorgaengeExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Vorgänge (CSV)
           </button>
           <button
             onClick={() => zeiterfassungExportMutation.mutate()}
             disabled={zeiterfassungExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Zeiterfassung (CSV)
           </button>
           <button
             onClick={() => materialExportMutation.mutate()}
             disabled={materialExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Material-Bestand (CSV)
           </button>
           <button
             onClick={() => eingangsrechnungenExportMutation.mutate()}
             disabled={eingangsrechnungenExportMutation.isPending}
-            className="btn-touch w-full rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={15} strokeWidth={2} className="inline mr-1" /> Eingangsrechnungen (CSV)
           </button>

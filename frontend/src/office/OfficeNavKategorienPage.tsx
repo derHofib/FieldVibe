@@ -153,7 +153,7 @@ export function OfficeNavKategorienPage() {
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Kategorien
         </h2>
-        <div className="divide-y divide-sep rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+        <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
           {kategorien.map((k, i) => (
             <div key={k.localId} className="flex items-center gap-2 p-3">
               <input
@@ -199,7 +199,7 @@ export function OfficeNavKategorienPage() {
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Zuordnung
         </h2>
-        <div className="divide-y divide-sep rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ">
+        <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
           {NAV_SEITEN.map((seite) => (
             <div key={seite.key} className="flex items-center gap-3 p-3">
               <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />

@@ -124,7 +124,7 @@ export function OfficeBoardsPage() {
               <button key={b.id} onClick={() => navigate(`/boards/${b.id}`)} className="text-left">
                 <Karte className="overflow-hidden transition-shadow hover:shadow-md">
                   <div
-                    className="relative flex h-24 items-center justify-center bg-slate-50 dark:bg-stone-800/40"
+                    className="relative flex h-24 items-center justify-center bg-fill"
                     style={{ backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)", backgroundSize: "16px 16px" }}
                   >
                     <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${TYP_TON[b.board_typ]}`}>
@@ -137,7 +137,7 @@ export function OfficeBoardsPage() {
                         e.stopPropagation();
                         if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
                       }}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-label2 hover:text-st-fehlt dark:bg-stone-900/80 dark:hover:text-st-fehlt"
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-label2 hover:text-st-fehlt dark:hover:text-st-fehlt"
                     >
                       <Trash2 size={14} strokeWidth={2} />
                     </span>

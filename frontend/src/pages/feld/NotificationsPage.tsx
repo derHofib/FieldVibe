@@ -64,7 +64,7 @@ export function NotificationsPage() {
               key={n.id}
               onClick={() => handleClick(n)}
               className={`card-interactive btn-touch flex w-full items-start justify-between rounded-lg p-3 text-left shadow-xs dark:shadow-none dark:ring-1 ${
-                n.gelesen_am ? "bg-white dark:bg-stone-900" : "bg-tintbg "
+                n.gelesen_am ? "bg-card" : "bg-tintbg "
               }`}
             >
               <div>

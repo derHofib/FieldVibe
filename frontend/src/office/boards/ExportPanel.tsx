@@ -63,7 +63,7 @@ export function ExportPanel({
     <div className="absolute inset-0 z-20 flex justify-end bg-slate-900/40" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-[420px] flex-col bg-white shadow-2xl dark:bg-stone-900"
+        className="flex h-full w-[420px] flex-col bg-card shadow-2xl"
       >
         <div className="relative border-b border-sep px-6 py-5 ">
           <h2 className="text-base font-bold text-label">Board exportieren</h2>
@@ -72,7 +72,7 @@ export function ExportPanel({
           </p>
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 flex h-7 w-7 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+            className="absolute top-5 right-5 flex h-7 w-7 items-center justify-center rounded-lg text-label2 hover:bg-fill"
           >
             <X size={15} strokeWidth={2} />
           </button>

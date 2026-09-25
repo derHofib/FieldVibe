@@ -285,7 +285,7 @@ export function OfficeDispoPage() {
             <span className="text-xs font-bold text-label2">
               Nicht disponiert
             </span>
-            <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-label2 dark:bg-stone-800">
+            <span className="rounded-full bg-fill px-1.5 text-[10px] font-bold text-label2">
               {backlog.length}
             </span>
           </div>
@@ -306,7 +306,7 @@ export function OfficeDispoPage() {
                       e.dataTransfer.setData("application/x-vorgang-titel", v.titel);
                       e.dataTransfer.effectAllowed = "copy";
                     }}
-                    className={`card-interactive cursor-grab rounded-xl border bg-white p-2.5 dark:bg-stone-900 ${
+                    className={`card-interactive cursor-grab rounded-xl border bg-card p-2.5 ${
                       ueberfaellig
                         ? "border-st-fehlt "
                         : "border-sep"
@@ -341,7 +341,7 @@ export function OfficeDispoPage() {
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                               ueberfaellig
                                 ? "bg-st-fehlt-bg text-st-fehlt  "
-                                : "bg-slate-100 text-label2 dark:bg-stone-800 "
+                                : "bg-fill text-label2 "
                             }`}
                           >
                             {ueberfaellig
@@ -362,7 +362,7 @@ export function OfficeDispoPage() {
           <div className="flex items-center justify-between border-b border-sep p-3 ">
             <button
               onClick={() => setTag((d) => addTage(d, -1))}
-              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-fill"
               aria-label="Vorheriger Tag"
             >
               <ChevronLeft size={16} />
@@ -374,7 +374,7 @@ export function OfficeDispoPage() {
               {!heute && (
                 <button
                   onClick={() => setTag(new Date())}
-                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-label2 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-700"
+                  className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-medium text-label2 hover:bg-fill2"
                 >
                   Heute
                 </button>
@@ -382,7 +382,7 @@ export function OfficeDispoPage() {
             </div>
             <button
               onClick={() => setTag((d) => addTage(d, 1))}
-              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-fill"
               aria-label="Nächster Tag"
             >
               <ChevronRight size={16} />
@@ -396,7 +396,7 @@ export function OfficeDispoPage() {
               <div style={{ width: LABEL_BREITE + GESAMT_BREITE }}>
                 <div className="flex border-b border-sep">
                   <div
-                    className="sticky left-0 z-10 shrink-0 bg-white dark:bg-stone-900"
+                    className="sticky left-0 z-10 shrink-0 bg-card"
                     style={{ width: LABEL_BREITE }}
                   />
                   {STUNDEN.map((h) => (
@@ -412,7 +412,7 @@ export function OfficeDispoPage() {
 
                 <div className="relative" style={{ height: technikers.length * ROW_HOEHE }}>
                   <div
-                    className="sticky left-0 z-10 shrink-0 bg-white dark:bg-stone-900"
+                    className="sticky left-0 z-10 shrink-0 bg-card"
                     style={{ width: LABEL_BREITE }}
                   >
                     {technikers.map((t, i) => (
@@ -471,7 +471,7 @@ export function OfficeDispoPage() {
                           {!!termin.fahrzeit_minuten && (
                             <div
                               title={`${termin.fahrzeit_minuten} Min. Fahrzeit`}
-                              className="absolute flex items-center justify-center rounded-l-md bg-slate-100 text-label2 dark:bg-stone-800"
+                              className="absolute flex items-center justify-center rounded-l-md bg-fill text-label2"
                               style={{
                                 left: (startMin - termin.fahrzeit_minuten) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -485,7 +485,7 @@ export function OfficeDispoPage() {
                           {!!termin.pause_minuten && (
                             <div
                               title={`${termin.pause_minuten} Min. Pause`}
-                              className="absolute flex items-center justify-center rounded-r-md bg-slate-100 text-label2 dark:bg-stone-800"
+                              className="absolute flex items-center justify-center rounded-r-md bg-fill text-label2"
                               style={{
                                 left: (startMin + dauerMin) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -621,13 +621,13 @@ function TerminBearbeitenPanel({
         aria-modal="true"
         aria-label="Termin bearbeiten"
         onClick={(e) => e.stopPropagation()}
-        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
+        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-card p-4 shadow-xl"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-label">Termin bearbeiten</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+            className="rounded-md p-1 text-label2 hover:bg-fill"
           >
             <X size={16} />
           </button>
@@ -784,13 +784,13 @@ function BacklogPlanenPanel({
         aria-modal="true"
         aria-label={`Termin für ${vorgang.titel} planen`}
         onClick={(e) => e.stopPropagation()}
-        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
+        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-card p-4 shadow-xl"
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-label">Termin planen</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+            className="rounded-md p-1 text-label2 hover:bg-fill"
           >
             <X size={16} />
           </button>

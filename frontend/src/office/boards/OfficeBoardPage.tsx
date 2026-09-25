@@ -312,14 +312,14 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
 
   return (
     <div className="flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-sep">
-      <div className="flex h-14 shrink-0 items-center gap-3 border-b border-sep bg-white px-5 dark:bg-stone-900">
+      <div className="flex h-14 shrink-0 items-center gap-3 border-b border-sep bg-card px-5">
         <button
           onClick={() => navigate("/boards")}
           className="text-xs font-semibold text-label2 hover:text-label dark:hover:text-label3"
         >
           ← Boards
         </button>
-        <div className="h-5 w-px bg-slate-200 dark:bg-stone-700" />
+        <div className="h-5 w-px bg-fill2" />
         <p className="text-sm font-bold text-label">{board.name}</p>
         <span className="text-xs text-label2">
           {speichern.isPending ? "Speichert…" : "Gespeichert"}
@@ -395,7 +395,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
 
         {kontextMenu && (
           <div
-            className="fixed z-30 w-44 rounded-lg border border-sep bg-white py-1 text-sm shadow-xl dark:bg-stone-900"
+            className="fixed z-30 w-44 rounded-lg border border-sep bg-card py-1 text-sm shadow-xl"
             style={{ left: kontextMenu.x, top: kontextMenu.y }}
             onMouseLeave={() => setKontextMenu(null)}
           >
@@ -405,7 +405,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
                 setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), kopie]);
                 setKontextMenu(null);
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-label hover:bg-slate-50 dark:hover:bg-stone-800"
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-label hover:bg-fill"
             >
               <Copy size={13} strokeWidth={2} /> Duplizieren
             </button>
@@ -413,13 +413,13 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
         )}
 
         <div className="pointer-events-none absolute inset-y-0 left-5 z-10 flex items-center">
-          <div className="pointer-events-auto flex flex-col gap-1 rounded-2xl border border-sep bg-white p-2 shadow-xl dark:bg-stone-900">
+          <div className="pointer-events-auto flex flex-col gap-1 rounded-2xl border border-sep bg-card p-2 shadow-xl">
             {HINZUFUEGEN_WERKZEUGE.map((w) => (
               <button
                 key={w.typ}
                 title={w.label}
                 onClick={() => werkzeugPlatzieren(w.typ)}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-fill"
               >
                 <w.icon size={17} strokeWidth={2} />
               </button>
@@ -428,7 +428,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
               <button
                 title="Anlagen-Pin"
                 onClick={() => werkzeugPlatzieren("anlagen_pin")}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-fill"
               >
                 <MapPin size={17} strokeWidth={2} />
               </button>
@@ -438,20 +438,20 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
                 <button
                   title="Prozessschritt"
                   onClick={() => werkzeugPlatzieren("prozess_schritt")}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-fill"
                 >
                   <Workflow size={17} strokeWidth={2} />
                 </button>
                 <button
                   title="Entscheidung"
                   onClick={() => werkzeugPlatzieren("prozess_entscheidung")}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-slate-100 dark:hover:bg-stone-800"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-label2 hover:bg-fill"
                 >
                   <Compass size={17} strokeWidth={2} />
                 </button>
               </>
             )}
-            <div className="my-1 h-px bg-slate-100 dark:bg-stone-800" />
+            <div className="my-1 h-px bg-fill" />
             <span title="Verbinden: von einem Punkt am Rand einer Karte zur naechsten ziehen" className="flex h-9 w-9 items-center justify-center text-label2">
               <ArrowUpRight size={17} strokeWidth={2} />
             </span>

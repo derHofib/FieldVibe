@@ -208,7 +208,7 @@ export function OfficeRechnungenPage() {
                 className={`block w-full border-b border-sep px-3 py-2.5 text-left last:border-b-0 ${
                   e.id === aktiv
                     ? "border-l-2 border-l-blue-500 bg-tintbg pl-[10px] "
-                    : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
+                    : "hover:bg-fill"
                 }`}
               >
                 <p className="truncate text-[13px] font-semibold text-label">

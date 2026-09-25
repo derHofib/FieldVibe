@@ -45,10 +45,10 @@ function SheetGeruest({ onClose, children }: { onClose: () => void; children: Re
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl bg-white px-5 pt-2.5 pb-6 shadow-2xl dark:bg-stone-900"
+        className="w-full max-w-md rounded-t-2xl bg-card px-5 pt-2.5 pb-6 shadow-2xl"
         style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto mb-3.5 h-1 w-9 rounded-full bg-slate-200 dark:bg-stone-700" />
+        <div className="mx-auto mb-3.5 h-1 w-9 rounded-full bg-fill2" />
         {children}
       </div>
     </div>
@@ -240,7 +240,7 @@ export function NotizAktionSheet({
       <div className="mt-4 flex gap-3">
         <button
           onClick={() => setModus("bearbeiten")}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-label dark:bg-stone-800 "
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-fill py-2.5 text-sm font-semibold text-label "
         >
           <Pencil size={14} strokeWidth={2} /> Bearbeiten
         </button>

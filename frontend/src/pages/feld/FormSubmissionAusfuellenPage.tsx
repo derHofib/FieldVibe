@@ -172,7 +172,7 @@ export function FormSubmissionAusfuellenPage() {
       <button
         onClick={() => pdfMutation.mutate()}
         disabled={pdfMutation.isPending}
-        className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-slate-100 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+        className="btn-touch flex w-full items-center justify-center gap-1.5 rounded-md bg-fill py-2 text-sm font-medium text-label disabled:opacity-50 "
       >
         <FileText size={16} /> {readOnly ? "Als PDF öffnen" : "PDF-Vorschau ansehen"}
       </button>

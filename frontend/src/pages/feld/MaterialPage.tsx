@@ -265,7 +265,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             <button
               key={l.id}
               onClick={() => navigate(`/anlagen/${l.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
+              className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sm"
             >
               <span className="text-label">{l.bezeichnung}</span>
               <span className="border border-sep px-2 py-0.5 text-xs text-label">
@@ -707,7 +707,7 @@ export function MaterialPage() {
                 {lieferanten!.map((l) => (
                   <div
                     key={l.id}
-                    className="flex items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+                    className="flex items-center justify-between rounded-md bg-fill px-2 py-1.5 text-sm"
                   >
                     <div>
                       <span className="text-label">{l.name}</span>
@@ -734,7 +734,7 @@ export function MaterialPage() {
 
           <div className="border border-sep bg-card p-3">
             <h2 className="mb-2 text-sm font-semibold text-label2">Offene Materialbedarfe</h2>
-            <div className="mb-2 flex gap-2 rounded-md bg-slate-100 p-1 dark:bg-stone-800">
+            <div className="mb-2 flex gap-2 rounded-md bg-fill p-1">
               <button
                 onClick={() => setBedarfZweck("bestellung")}
                 className={`btn-touch flex-1 rounded-md py-1.5 text-xs font-medium ${
@@ -764,7 +764,7 @@ export function MaterialPage() {
                 {offeneBedarfe!.map((b) => (
                   <label
                     key={b.id}
-                    className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm dark:bg-stone-800/60"
+                    className="flex items-center gap-2 rounded-md bg-fill px-2 py-1.5 text-sm"
                   >
                     <input
                       type="checkbox"
@@ -829,7 +829,7 @@ export function MaterialPage() {
                   <button
                     key={b.id}
                     onClick={() => navigate(`/bestellungen/${b.id}`)}
-                    className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-slate-50 px-2 py-1.5 text-left text-sm dark:bg-stone-800"
+                    className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sm"
                   >
                     <span className="text-label">{b.bestellnummer}</span>
                     <span className="border border-sep px-2 py-0.5 text-xs text-label">

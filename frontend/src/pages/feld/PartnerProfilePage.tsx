@@ -328,7 +328,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
           {nachweise!.map((n) => (
             <div
               key={n.id}
-              className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm dark:bg-stone-800/60"
+              className="flex items-center justify-between gap-2 rounded-md bg-fill px-3 py-2 text-sm"
             >
               <div className="min-w-0">
                 <div className="font-medium text-label">{NACHWEIS_TYP_LABEL[n.typ]}</div>
@@ -401,7 +401,7 @@ function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
           <button
             key={v.id}
             onClick={() => navigate(`/vorgaenge/${v.id}`)}
-            className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-slate-50 p-3 text-left dark:bg-stone-800/60"
+            className="card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-fill p-3 text-left"
           >
             <div>
               <div className="text-xs text-label2">{v.vorgangsnummer}</div>

@@ -11,7 +11,7 @@ export function ChecklisteNode({ id, data, selected }: NodeProps<BoardNode>) {
 
   return (
     <div
-      className={`w-[210px] rounded-xl bg-white p-3 shadow-lg dark:bg-stone-900 ${
+      className={`w-[210px] rounded-xl bg-card p-3 shadow-lg ${
         selected ? "ring-2 ring-tint" : ""
       }`}
     >

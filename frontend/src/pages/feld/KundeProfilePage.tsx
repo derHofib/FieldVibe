@@ -883,7 +883,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
         Ein Link für den ganzen Kunden -- jeder Mitarbeiter mit eigenem Kundenportal-Zugang meldet
         sich darüber mit seiner eigenen E-Mail und seinem eigenen Passwort an.
       </p>
-      <div className="flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-stone-800/60">
+      <div className="flex items-center gap-2 rounded-md bg-fill px-2 py-1.5">
         <span className="flex-1 truncate text-xs text-label2">{link}</span>
         <button
           onClick={kopieren}
@@ -1191,7 +1191,7 @@ export function KundeProfilePage() {
                 onClick={() => datenexportMutation.mutate()}
                 disabled={datenexportMutation.isPending}
                 title="Alle personenbezogenen Daten zu diesem Kunden herunterladen (Art. 15/20 DSGVO)"
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-label hover:bg-slate-200 disabled:opacity-50 dark:bg-stone-800 dark:hover:bg-stone-700"
+                className="btn-touch rounded-md bg-fill px-3 py-1.5 text-xs font-semibold text-label hover:bg-fill2 disabled:opacity-50"
               >
                 Datenexport
               </button>

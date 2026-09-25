@@ -67,7 +67,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
       </div>
       <div className="space-y-1.5">
         {(vorschlaege ?? []).map((v: RechnungPositionVorschlag, i) => (
-          <label key={i} className="flex items-center gap-2 rounded-md bg-white px-2 py-1.5 text-sm dark:bg-stone-900">
+          <label key={i} className="flex items-center gap-2 rounded-md bg-card px-2 py-1.5 text-sm">
             <input
               type="checkbox"
               checked={ausgewaehlt.has(i)}
@@ -324,7 +324,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
           >
             <FileText size={14} strokeWidth={2} /> PDF anzeigen
           </button>
@@ -332,7 +332,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             <button
               onClick={() => xmlMutation.mutate()}
               disabled={xmlMutation.isPending}
-              className="btn-touch flex items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+              className="btn-touch flex items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
             >
               <FileText size={14} strokeWidth={2} /> XML herunterladen
             </button>
@@ -436,7 +436,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             {rechnung.positionen.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
+                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
               >
                 <div>
                   <div className="text-label">{p.beschreibung}</div>
@@ -527,7 +527,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 return rechnung.zahlungen.map((z) => (
                   <div
                     key={z.id}
-                    className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
+                    className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
                   >
                     <span className="text-label2">
                       {new Date(z.datum).toLocaleDateString("de-DE")}
@@ -584,7 +584,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => statusMutation.mutate("storniert")}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             Stornieren
           </button>
@@ -605,7 +605,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             Stornieren
           </button>
@@ -618,7 +618,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               stornoMutation.mutate();
           }}
           disabled={stornoMutation.isPending}
-          className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+          className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
         >
           Stornieren
         </button>

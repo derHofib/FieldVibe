@@ -206,7 +206,7 @@ export function PruefmittelPage() {
                 <button
                   onClick={() => markiereKalibriert(mittel)}
                   disabled={updateMutation.isPending}
-                  className="btn-touch rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+                  className="btn-touch rounded-md bg-fill px-3 py-1 text-xs font-medium text-label disabled:opacity-50 "
                 >
                   Kalibrierung erfolgt (heute)
                 </button>

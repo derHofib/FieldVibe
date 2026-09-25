@@ -127,14 +127,14 @@ export function BestellungDetailPage() {
           <button
             onClick={() => csvMutation.mutate()}
             disabled={csvMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
           >
             <Download size={14} strokeWidth={2} /> CSV
           </button>
           <button
             onClick={() => pdfMutation.mutate()}
             disabled={pdfMutation.isPending}
-            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch flex flex-1 items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50 "
           >
             <FileText size={14} strokeWidth={2} /> PDF
           </button>
@@ -147,7 +147,7 @@ export function BestellungDetailPage() {
           {bestellung.positionen.map((p) => (
             <div
               key={p.id}
-              className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
+              className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
             >
               <div>
                 <div className="text-label">{p.beschreibung}</div>
@@ -212,7 +212,7 @@ export function BestellungDetailPage() {
             <button
               onClick={() => setWareneingangOffen(false)}
               disabled={statusMutation.isPending}
-              className="btn-touch flex-1 rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+              className="btn-touch flex-1 rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
             >
               Abbrechen
             </button>
@@ -238,7 +238,7 @@ export function BestellungDetailPage() {
           <button
             onClick={wareneingangOeffnen}
             disabled={statusMutation.isPending}
-            className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-label disabled:opacity-50 dark:bg-stone-800 "
+            className="btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
           >
             Wareneingang buchen
           </button>
