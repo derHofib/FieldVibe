@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, kundenApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
+import { Sheet } from "../../components/apple/Sheet";
 import { QrScanner } from "../../components/QrScanner";
 import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, KundeTyp, Leistungstyp, VorgangAbrechnungsart } from "../../types";
@@ -41,6 +42,17 @@ const PRIORITAET_OPTIONEN = [
   { value: 5, label: "5 – Hoch" },
 ];
 
+// Sheet-DOM-Wurzel liegt ausserhalb des <form> (Sheet.tsx portalt die Kopf-
+// zeile mit den Aktionen als Geschwister statt als Vorfahre des Inhalts) --
+// das HTML-Attribut form="..." verknuepft den Kopfzeilen-Button trotzdem
+// mit dem Formular, ganz ohne eigenen State fuer den Submit-Klick.
+const FORM_ID = "neuer-vorgang-formular";
+
+/** "Neuer Vorgang" (Abschnitt 5.3): frueher eigene Vollbild-Route, jetzt ein
+ * Sheet (mobil von unten, Desktop/Office als 540px-Dialog) -- Inhalt/
+ * Funktionsumfang unveraendert, nur die Praesentation. Abbrechen fuehrt
+ * zurueck zur aufrufenden Seite (Feed oder Office-Vorgangsliste) statt zu
+ * einer fest verdrahteten Route. */
 export function NewVorgangPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -67,6 +79,10 @@ export function NewVorgangPage() {
   const [adrStrasse, setAdrStrasse] = useState("");
   const [adrPlz, setAdrPlz] = useState("");
   const [adrOrt, setAdrOrt] = useState("");
+
+  function schliessen() {
+    navigate(-1);
+  }
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
   const { data: anlagenListe } = useQuery({
@@ -211,54 +227,61 @@ export function NewVorgangPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-bold text-ind-ink">Neuer Vorgang</h1>
+    <Sheet
+      offen
+      onClose={schliessen}
+      titel="Neuer Vorgang"
+      links={
+        <button type="button" onClick={schliessen} className="text-[17px] text-tint">
+          Abbrechen
+        </button>
+      }
+      rechts={
+        <button
+          type="submit"
+          form={FORM_ID}
+          disabled={createMutation.isPending}
+          className="text-[17px] font-semibold text-tint disabled:opacity-40"
+        >
+          Anlegen
+        </button>
+      }
+    >
+      <form id={FORM_ID} onSubmit={handleSubmit} className="space-y-4 p-4">
+        <button
+          type="button"
+          onClick={() => setShowScanner(true)}
+          className="btn-ap-capsule btn-ap-capsule-secondary w-full"
+        >
+          <ScanLine size={16} strokeWidth={2} aria-hidden="true" /> QR-Code an Anlage scannen
+        </button>
+        {scanError && <p className="text-sm text-st-fehlt">{scanError}</p>}
+        {anlage && (
+          <div className="flex items-center justify-between rounded-[var(--radius-ap-input)] bg-tintbg p-3 text-sm text-tint">
+            <span>
+              Anlage erkannt: <strong>{anlage.bezeichnung}</strong>
+            </span>
+            <span className="flex gap-3">
+              <button type="button" onClick={() => navigate(`/anlagen/${anlage.id}`)} className="text-xs underline">
+                ansehen
+              </button>
+              <button type="button" onClick={() => setAnlage(null)} className="text-xs underline">
+                entfernen
+              </button>
+            </span>
+          </div>
+        )}
 
-      <button
-        onClick={() => setShowScanner(true)}
-        className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-3 text-sm font-medium text-slate-700 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
-      >
-        <ScanLine size={16} strokeWidth={2} /> QR-Code an Anlage scannen
-      </button>
-      {scanError && <p className="text-sm text-red-700 dark:text-red-400">{scanError}</p>}
-      {anlage && (
-        <div className="flex items-center justify-between rounded-lg bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-500/10 dark:text-blue-200">
-          <span>
-            Anlage erkannt: <strong>{anlage.bezeichnung}</strong>
-          </span>
-          <span className="flex gap-3">
-            <button
-              onClick={() => navigate(`/anlagen/${anlage.id}`)}
-              className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
-            >
-              ansehen
-            </button>
-            <button
-              onClick={() => setAnlage(null)}
-              className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
-            >
-              entfernen
-            </button>
-          </span>
-        </div>
-      )}
+        {showScanner && <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
 
-      {showScanner && (
-        <QrScanner onScan={handleScan} onClose={() => setShowScanner(false)} />
-      )}
+        <p className="text-sm text-label2">
+          Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
+          Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
+          sich automatisch, sobald wieder eine Verbindung besteht.
+        </p>
 
-      <p className="text-sm text-ind-ink-3">
-        Zeiterfassung startest du direkt im Vorgang; Foto-Uploads laufen ebenfalls über den
-        Vorgangs-Chat. Ohne Netzverbindung wird der Vorgang zwischengespeichert und synchronisiert
-        sich automatisch, sobald wieder eine Verbindung besteht.
-      </p>
-
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-3 border border-ind-line bg-ind-bg p-4"
-      >
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Kunde</label>
+          <label className="mb-1 block text-sm font-medium text-label">Kunde</label>
           <select
             value={kundeId}
             onChange={(e) => {
@@ -266,7 +289,7 @@ export function NewVorgangPage() {
               setAnlage(null);
               setStandortId("");
             }}
-            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+            className="field-ap"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -276,33 +299,29 @@ export function NewVorgangPage() {
             ))}
           </select>
           {!showNewKunde && (
-            <button
-              type="button"
-              onClick={() => setShowNewKunde(true)}
-              className="btn-touch mt-1 text-xs text-blue-700 underline dark:text-blue-400"
-            >
+            <button type="button" onClick={() => setShowNewKunde(true)} className="mt-1 text-xs text-tint underline">
               + Neuen Kunden anlegen
             </button>
           )}
         </div>
 
         {showNewKunde && (
-          <div className="space-y-2 border border-ind-line-2 p-3">
+          <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
+              <label className="mb-1 block text-sm font-medium text-label">Name</label>
               <input
                 autoFocus
                 value={newKundeName}
                 onChange={(e) => setNewKundeName(e.target.value)}
-                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                className="field-ap"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Typ (optional)</label>
+              <label className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
               <select
                 value={newKundeTyp}
                 onChange={(e) => setNewKundeTyp(e.target.value as KundeTyp | "")}
-                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                className="field-ap"
               >
                 <option value="">Keine Angabe</option>
                 {KUNDE_TYPEN.map((t) => (
@@ -312,13 +331,13 @@ export function NewVorgangPage() {
                 ))}
               </select>
             </div>
-            {newKundeError && <p className="text-sm text-red-700 dark:text-red-400">{newKundeError}</p>}
+            {newKundeError && <p className="text-sm text-st-fehlt">{newKundeError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleCreateKunde}
                 disabled={createKundeMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+                className="btn-ap-primary flex-1"
               >
                 Kunde anlegen
               </button>
@@ -328,7 +347,7 @@ export function NewVorgangPage() {
                   setShowNewKunde(false);
                   setNewKundeError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                className="btn-ap flex-1"
               >
                 Abbrechen
               </button>
@@ -338,14 +357,8 @@ export function NewVorgangPage() {
 
         {kundeId && standorteListe && standorteListe.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
-              Standort (optional)
-            </label>
-            <select
-              value={standortId}
-              onChange={(e) => setStandortId(e.target.value)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
-            >
+            <label className="mb-1 block text-sm font-medium text-label">Standort (optional)</label>
+            <select value={standortId} onChange={(e) => setStandortId(e.target.value)} className="field-ap">
               <option value="">Kein Standort</option>
               {standorteListe.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -358,12 +371,10 @@ export function NewVorgangPage() {
 
         {standortId && standortAnlagen && standortAnlagen.length > 0 && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
-              Anlagen an diesem Standort
-            </label>
-            <div className="space-y-1 rounded-md border border-slate-200 p-2 dark:border-stone-700">
+            <label className="mb-1 block text-sm font-medium text-label">Anlagen an diesem Standort</label>
+            <div className="space-y-1 rounded-[var(--radius-ap-input)] bg-fill p-2">
               {standortAnlagen.map((a) => (
-                <label key={a.id} className="flex items-center gap-2 text-sm text-ind-ink-2">
+                <label key={a.id} className="flex items-center gap-2 text-sm text-label">
                   <input
                     type="checkbox"
                     checked={weitereAnlagenIds.has(a.id)}
@@ -380,7 +391,7 @@ export function NewVorgangPage() {
                 </label>
               ))}
             </div>
-            <p className="mt-1 text-xs text-ind-ink-3">
+            <p className="mt-1 text-xs text-label2">
               Alle angehakten Anlagen werden mit in den Vorgang aufgenommen.
             </p>
           </div>
@@ -388,13 +399,11 @@ export function NewVorgangPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Anlage (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-label">Anlage (optional)</label>
             <select
               value={anlage?.id ?? ""}
-              onChange={(e) =>
-                setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)
-              }
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              onChange={(e) => setAnlage(anlagenListe?.find((a) => a.id === e.target.value) ?? null)}
+              className="field-ap"
             >
               <option value="">Keine Anlage</option>
               {anlagenListe?.map((a) => (
@@ -404,11 +413,7 @@ export function NewVorgangPage() {
               ))}
             </select>
             {!showNewAnlage && (
-              <button
-                type="button"
-                onClick={() => setShowNewAnlage(true)}
-                className="btn-touch mt-1 text-xs text-blue-700 underline dark:text-blue-400"
-              >
+              <button type="button" onClick={() => setShowNewAnlage(true)} className="mt-1 text-xs text-tint underline">
                 + Neue Anlage anlegen
               </button>
             )}
@@ -416,32 +421,32 @@ export function NewVorgangPage() {
         )}
 
         {showNewAnlage && (
-          <div className="space-y-2 border border-ind-line-2 p-3">
+          <div className="space-y-2 rounded-[var(--radius-ap-input)] bg-fill p-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Bezeichnung</label>
+              <label className="mb-1 block text-sm font-medium text-label">Bezeichnung</label>
               <input
                 autoFocus
                 value={newAnlageBezeichnung}
                 onChange={(e) => setNewAnlageBezeichnung(e.target.value)}
-                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                className="field-ap"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Typ (optional)</label>
+              <label className="mb-1 block text-sm font-medium text-label">Typ (optional)</label>
               <input
                 value={newAnlageTyp}
                 onChange={(e) => setNewAnlageTyp(e.target.value)}
                 placeholder="z.B. Hauptverteilung, PV-Anlage, Wallbox"
-                className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                className="field-ap"
               />
             </div>
-            {newAnlageError && <p className="text-sm text-red-700 dark:text-red-400">{newAnlageError}</p>}
+            {newAnlageError && <p className="text-sm text-st-fehlt">{newAnlageError}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={handleCreateAnlage}
                 disabled={createAnlageMutation.isPending}
-                className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+                className="btn-ap-primary flex-1"
               >
                 Anlage anlegen
               </button>
@@ -451,7 +456,7 @@ export function NewVorgangPage() {
                   setShowNewAnlage(false);
                   setNewAnlageError(null);
                 }}
-                className="btn-touch flex-1 rounded-md border border-slate-300 py-2 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+                className="btn-ap flex-1"
               >
                 Abbrechen
               </button>
@@ -460,61 +465,39 @@ export function NewVorgangPage() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Titel</label>
-          <input
-            required
-            value={titel}
-            onChange={(e) => setTitel(e.target.value)}
-            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
-          />
+          <label className="mb-1 block text-sm font-medium text-label">Titel</label>
+          <input required value={titel} onChange={(e) => setTitel(e.target.value)} className="field-ap" />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">Beschreibung</label>
-          <textarea
-            value={beschreibung}
-            onChange={(e) => setBeschreibung(e.target.value)}
-            rows={3}
-            className="w-full resize-none border border-ind-line bg-transparent p-2 text-ind-ink"
-          />
+          <label className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
+          <textarea value={beschreibung} onChange={(e) => setBeschreibung(e.target.value)} rows={3} className="field-ap" />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-ind-ink-2">
-            Adresse (optional)
-          </label>
-          <p className="mb-1 text-xs text-ind-ink-3">
+          <label className="mb-1 block text-sm font-medium text-label">Adresse (optional)</label>
+          <p className="mb-1 text-xs text-label2">
             Nur nötig, wenn kein Standort ausgewählt ist -- damit weiß der Ausführende, wo er hin muss.
           </p>
           <input
             value={adrStrasse}
             onChange={(e) => setAdrStrasse(e.target.value)}
             placeholder="Straße + Hausnr."
-            className="btn-touch mb-2 w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+            className="field-ap mb-2"
           />
           <div className="grid grid-cols-2 gap-2">
-            <input
-              value={adrPlz}
-              onChange={(e) => setAdrPlz(e.target.value)}
-              placeholder="PLZ"
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
-            />
-            <input
-              value={adrOrt}
-              onChange={(e) => setAdrOrt(e.target.value)}
-              placeholder="Ort"
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
-            />
+            <input value={adrPlz} onChange={(e) => setAdrPlz(e.target.value)} placeholder="PLZ" className="field-ap" />
+            <input value={adrOrt} onChange={(e) => setAdrOrt(e.target.value)} placeholder="Ort" className="field-ap" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Leistungstyp</label>
+            <label className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
             <select
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="field-ap"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -524,11 +507,11 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Abrechnungsart</label>
+            <label className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
             <select
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="field-ap"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
@@ -538,12 +521,8 @@ export function NewVorgangPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Priorität</label>
-            <select
-              value={prioritaet}
-              onChange={(e) => setPrioritaet(Number(e.target.value))}
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
-            >
+            <label className="mb-1 block text-sm font-medium text-label">Priorität</label>
+            <select value={prioritaet} onChange={(e) => setPrioritaet(Number(e.target.value))} className="field-ap">
               {PRIORITAET_OPTIONEN.map((p) => (
                 <option key={p.value} value={p.value}>
                   {p.label}
@@ -553,16 +532,16 @@ export function NewVorgangPage() {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-industry btn-industry-primary py-2 font-medium disabled:opacity-50"
-        >
+        {/* Primäraktion liegt in der Kopfzeile (rechts="Anlegen"); dieser
+            Button bleibt als zweite, gut sichtbare Erreichbarkeit am Ende
+            des langen Formulars -- sonst müsste nach dem Ausfüllen wieder
+            ganz nach oben gescrollt werden. */}
+        <button type="submit" disabled={createMutation.isPending} className="btn-ap-primary w-full">
           Vorgang anlegen
         </button>
       </form>
-    </div>
+    </Sheet>
   );
 }
