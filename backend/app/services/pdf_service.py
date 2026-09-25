@@ -530,18 +530,29 @@ def generate_wochenzettel_pdf(
     pdf.ln(6)
 
     pdf.set_font("Helvetica", "B", 10)
-    spalten = (("Datum", 25), ("Vorgang", 30), ("Tätigkeit", 75), ("Von", 20), ("Bis", 20), ("Dauer", 20))
+    spalten = (
+        ("Datum", 25),
+        ("Vorgang", 30),
+        ("Tätigkeit", 60),
+        ("Von", 20),
+        ("Bis", 20),
+        ("Dauer", 20),
+        ("km", 15),
+    )
     for label, breite in spalten:
         pdf.cell(breite, 8, label, border=1)
     pdf.ln()
 
     pdf.set_font("Helvetica", "", 9)
     gesamt_sekunden = 0.0
+    gesamt_km = Decimal("0")
     for eintrag, vorgang in sorted(eintraege, key=lambda x: x[0].start_at):
         dauer_sekunden = (
             ((eintrag.ende_at - eintrag.start_at).total_seconds()) if eintrag.ende_at else 0.0
         )
         gesamt_sekunden += dauer_sekunden
+        if eintrag.km is not None:
+            gesamt_km += eintrag.km
         pdf.cell(25, 8, _fmt_datum(eintrag.start_at), border=1)
         vorgang_spalte = (
             vorgang.vorgangsnummer
@@ -549,7 +560,7 @@ def generate_wochenzettel_pdf(
             else ZEITERFASSUNG_KATEGORIE_LABEL.get(eintrag.kategorie, "-")
         )
         pdf.cell(30, 8, vorgang_spalte, border=1)
-        pdf.cell(75, 8, (eintrag.taetigkeit or "-")[:45], border=1)
+        pdf.cell(60, 8, (eintrag.taetigkeit or "-")[:36], border=1)
         pdf.cell(20, 8, eintrag.start_at.strftime("%H:%M"), border=1, align="R")
         pdf.cell(
             20,
@@ -559,6 +570,7 @@ def generate_wochenzettel_pdf(
             align="R",
         )
         pdf.cell(20, 8, f"{dauer_sekunden / 3600:.2f} h", border=1, align="R")
+        pdf.cell(15, 8, f"{eintrag.km:.1f}" if eintrag.km is not None else "-", border=1, align="R")
         pdf.ln()
 
     if not eintraege:
@@ -566,7 +578,10 @@ def generate_wochenzettel_pdf(
 
     pdf.ln(4)
     pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 8, f"Gesamt: {gesamt_sekunden / 3600:.2f} Stunden", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    gesamt_text = f"Gesamt: {gesamt_sekunden / 3600:.2f} Stunden"
+    if gesamt_km:
+        gesamt_text += f" · {gesamt_km:.1f} km"
+    pdf.cell(0, 8, gesamt_text, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     return bytes(pdf.output())
 

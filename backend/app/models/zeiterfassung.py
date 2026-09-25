@@ -1,7 +1,8 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Text
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Numeric, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,6 +13,10 @@ from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 # relevant -- Urlaub/Krankheit/etc. ohne Vorgang bleiben dauerhaft
 # 'vermerkt' (siehe docs/konzepte/ZEITERFASSUNG.md, Abschnitt 5.1).
 ZEITERFASSUNG_BUCHUNGSSTATUS = ("vermerkt", "vorgemerkt", "gebucht", "abgerechnet")
+
+# Migration 0085 -- ausschliesslich vom Server gesetzt (start_timer="timer",
+# manuelle Erfassung="manuell"), nie per API veraenderbar.
+ZEITERFASSUNG_QUELLEN = ("timer", "manuell")
 
 # "auftrag" ist die einzige Kategorie, die der Start/Stop-Timer selbst
 # vergibt (siehe start_timer in app/api/routes/zeiterfassung.py) -- alle
@@ -38,6 +43,10 @@ class Zeiterfassung(TimestampMixin, SoftDeleteMixin, Base):
         CheckConstraint(
             f"buchungsstatus IN {ZEITERFASSUNG_BUCHUNGSSTATUS}",
             name="ck_zeiterfassung_buchungsstatus_valid",
+        ),
+        CheckConstraint("km IS NULL OR km >= 0", name="ck_zeiterfassung_km_nicht_negativ"),
+        CheckConstraint(
+            f"quelle IN {ZEITERFASSUNG_QUELLEN}", name="ck_zeiterfassung_quelle_valid"
         ),
     )
 
@@ -83,3 +92,12 @@ class Zeiterfassung(TimestampMixin, SoftDeleteMixin, Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     gebucht_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Fahrten mit km (Stufe 3, docs/konzepte/ZEITERFASSUNG.md Abschnitt 11):
+    # km/fahrzeug_id sind nur bei kategorie="fahrzeit" sinnvoll befuellt --
+    # die Pruefung sitzt in der Route, nicht als CHECK (Kategorie kann sich
+    # per PATCH aendern). quelle wird ausschliesslich vom Server gesetzt.
+    km: Mapped[Decimal | None] = mapped_column(Numeric(7, 1), nullable=True)
+    fahrzeug_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=True
+    )
+    quelle: Mapped[str] = mapped_column(Text, nullable=False, default="manuell")

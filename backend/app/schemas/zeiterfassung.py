@@ -38,6 +38,15 @@ ZEITERFASSUNG_KATEGORIE_LABEL: dict[str, str] = {
     "sonstiges": "Sonstiges",
 }
 
+# Fuer CSV-Export (app/api/routes/zeiterfassung.py) -- muss mit
+# BUCHUNGSSTATUS_LABEL in frontend/src/utils/zeiterfassung.ts uebereinstimmen.
+ZEITERFASSUNG_BUCHUNGSSTATUS_LABEL: dict[str, str] = {
+    "vermerkt": "Vermerkt",
+    "vorgemerkt": "Vorgemerkt",
+    "gebucht": "Gebucht",
+    "abgerechnet": "Abgerechnet",
+}
+
 
 class ZeiterfassungStatistik(BaseModel):
     wochenstunden: Decimal
@@ -66,6 +75,10 @@ class ZeiterfassungManuellCreate(BaseModel):
     # anderen nachtragen") -- ohne das Recht lehnt die Route ein abweichendes
     # techniker_id ab, statt es stillschweigend zu ignorieren.
     techniker_id: UUID | None = None
+    # Fahrten mit km (Stufe 3) -- nur bei kategorie="fahrzeit" erlaubt,
+    # Pruefung in der Route (siehe app/models/zeiterfassung.py).
+    km: Decimal | None = None
+    fahrzeug_id: UUID | None = None
 
     @model_validator(mode="after")
     def _ende_nach_start(self) -> "ZeiterfassungManuellCreate":
@@ -88,6 +101,8 @@ class ZeiterfassungUpdate(BaseModel):
     taetigkeit: str | None = None
     abrechenbar: bool | None = None
     lv_position_id: UUID | None = None
+    km: Decimal | None = None
+    fahrzeug_id: UUID | None = None
     # Pflicht, wenn Buchungsberechtigte einen fremden Eintrag aendern
     # (Konzept 6.2) -- landet im Protokoll, wird selbst nicht gespeichert.
     grund: str | None = None
@@ -114,6 +129,9 @@ class ZeiterfassungRead(BaseModel):
     vorgemerkt_am: datetime | None
     gebucht_von: UUID | None
     gebucht_am: datetime | None
+    km: Decimal | None
+    fahrzeug_id: UUID | None
+    quelle: Literal["timer", "manuell"]
     created_at: datetime
     updated_at: datetime
 

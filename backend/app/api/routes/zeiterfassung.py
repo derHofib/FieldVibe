@@ -15,6 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.models.anlage import Anlage
 from app.models.leistungsverzeichnis import LeistungsverzeichnisKunde, LeistungsverzeichnisPosition
 from app.models.mandant import Mandant
 from app.models.user import User
@@ -23,6 +24,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.schemas.zeiterfassung import (
+    ZEITERFASSUNG_BUCHUNGSSTATUS_LABEL,
     ZEITERFASSUNG_KATEGORIE_LABEL,
     ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT,
     ZeiterfassungAenderungRead,
@@ -86,11 +88,13 @@ async def _mit_vorgangsnummern(
 
 
 def _jsonbar(wert: object) -> object:
-    """JSONB-Spalten (alter_wert/neuer_wert) akzeptieren kein datetime/UUID
-    direkt -- der asyncpg-JSON-Codec kennt nur JSON-native Typen."""
+    """JSONB-Spalten (alter_wert/neuer_wert) akzeptieren kein datetime/UUID/
+    Decimal direkt -- der asyncpg-JSON-Codec kennt nur JSON-native Typen."""
     if isinstance(wert, datetime):
         return wert.isoformat()
     if isinstance(wert, UUID):
+        return str(wert)
+    if isinstance(wert, Decimal):
         return str(wert)
     return wert
 
@@ -203,6 +207,7 @@ async def export_zeiterfassung_csv(
 
     technikers_by_id: dict[UUID, User | None] = {}
     vorgaenge_by_id: dict[UUID, Vorgang | None] = {}
+    fahrzeuge_by_id: dict[UUID, Anlage | None] = {}
     rows = []
     for e in eintraege:
         if e.techniker_id not in technikers_by_id:
@@ -216,6 +221,11 @@ async def export_zeiterfassung_csv(
         dauer_stunden = (
             (e.ende_at - e.start_at).total_seconds() / 3600 if e.ende_at else None
         )
+        fahrzeug = None
+        if e.fahrzeug_id is not None:
+            if e.fahrzeug_id not in fahrzeuge_by_id:
+                fahrzeuge_by_id[e.fahrzeug_id] = await session.get(Anlage, e.fahrzeug_id)
+            fahrzeug = fahrzeuge_by_id[e.fahrzeug_id]
         rows.append(
             [
                 e.start_at.strftime("%d.%m.%Y"),
@@ -227,6 +237,9 @@ async def export_zeiterfassung_csv(
                 e.ende_at.strftime("%H:%M") if e.ende_at else "",
                 f"{dauer_stunden:.2f}".replace(".", ",") if dauer_stunden is not None else "",
                 "Ja" if e.abrechenbar else "Nein",
+                f"{e.km:.1f}".replace(".", ",") if e.km is not None else "",
+                fahrzeug.bezeichnung if fahrzeug else "",
+                ZEITERFASSUNG_BUCHUNGSSTATUS_LABEL.get(e.buchungsstatus, e.buchungsstatus),
             ]
         )
 
@@ -241,6 +254,9 @@ async def export_zeiterfassung_csv(
             "Bis",
             "Dauer (Std.)",
             "Abrechenbar",
+            "km",
+            "Fahrzeug",
+            "Status",
         ],
         rows,
         "Zeiterfassung.csv",
@@ -399,6 +415,7 @@ async def start_timer(
         start_at=datetime.now(timezone.utc),
         taetigkeit=body.taetigkeit,
         abrechenbar=body.abrechenbar,
+        quelle="timer",
     )
     session.add(eintrag)
     try:
@@ -586,6 +603,23 @@ def _pruefe_vorgang_nicht_gesperrt(vorgang: Vorgang) -> None:
         )
 
 
+def _pruefe_fahrt_felder(kategorie: str, km: Decimal | None, fahrzeug_id: UUID | None) -> None:
+    """km/fahrzeug_id sind nur bei kategorie='fahrzeit' sinnvoll (Konzept
+    Abschnitt 11) -- die Pruefung sitzt hier statt als DB-CHECK, weil sich
+    die Kategorie per PATCH aendern kann (siehe Migration 0085)."""
+    if kategorie != "fahrzeit" and (km is not None or fahrzeug_id is not None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="km/Fahrzeug sind nur bei Kategorie 'fahrzeit' erlaubt",
+        )
+
+
+async def _fahrzeug_pruefen(session: AsyncSession, fahrzeug_id: UUID) -> None:
+    anlage = await session.get(Anlage, fahrzeug_id)
+    if anlage is None or anlage.geloescht_am is not None or anlage.objekttyp != "fahrzeug":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fahrzeug nicht gefunden")
+
+
 async def _vorgang_pruefen_fuer_manuellen_eintrag(
     session: AsyncSession, auth: AuthContext, vorgang_id: UUID
 ) -> Vorgang:
@@ -643,6 +677,9 @@ async def manuellen_eintrag_anlegen(
         vorgang = await _vorgang_pruefen_fuer_manuellen_eintrag(session, auth, body.vorgang_id)
     if body.lv_position_id is not None:
         await _lv_position_pruefen(session, body.lv_position_id, vorgang)
+    _pruefe_fahrt_felder(body.kategorie, body.km, body.fahrzeug_id)
+    if body.fahrzeug_id is not None:
+        await _fahrzeug_pruefen(session, body.fahrzeug_id)
 
     eintrag = Zeiterfassung(
         mandant_id=auth.mandant_id,
@@ -654,6 +691,9 @@ async def manuellen_eintrag_anlegen(
         abrechenbar=body.abrechenbar,
         kategorie=body.kategorie,
         lv_position_id=body.lv_position_id,
+        km=body.km,
+        fahrzeug_id=body.fahrzeug_id,
+        quelle="manuell",
     )
     session.add(eintrag)
     await session.flush()
@@ -768,6 +808,12 @@ async def zeiterfassung_aktualisieren(
         if neuer_vorgang is None and eintrag.vorgang_id is not None:
             neuer_vorgang = await session.get(Vorgang, eintrag.vorgang_id)
         await _lv_position_pruefen(session, daten["lv_position_id"], neuer_vorgang)
+
+    neue_km = daten.get("km", eintrag.km)
+    neuer_fahrzeug_id = daten.get("fahrzeug_id", eintrag.fahrzeug_id)
+    _pruefe_fahrt_felder(neue_kategorie, neue_km, neuer_fahrzeug_id)
+    if "fahrzeug_id" in daten and daten["fahrzeug_id"] is not None:
+        await _fahrzeug_pruefen(session, daten["fahrzeug_id"])
 
     neuer_start = daten.get("start_at", eintrag.start_at)
     neues_ende = daten.get("ende_at", eintrag.ende_at)
