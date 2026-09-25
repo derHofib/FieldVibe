@@ -16,6 +16,7 @@ from app.api.deps import (
 )
 from app.core.config import get_settings
 from app.models.anlage import Anlage
+from app.models.auftrag import Auftrag
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
@@ -88,6 +89,7 @@ async def list_vorgaenge(
     standort_id: UUID | None = Query(default=None),
     parent_vorgang_id: UUID | None = Query(default=None),
     projekt_id: UUID | None = Query(default=None),
+    auftrag_id: UUID | None = Query(default=None),
     partner_id: UUID | None = Query(default=None),
     faellig_von: date | None = Query(default=None),
     faellig_bis: date | None = Query(default=None),
@@ -113,6 +115,8 @@ async def list_vorgaenge(
         stmt = stmt.where(Vorgang.parent_vorgang_id == parent_vorgang_id)
     if projekt_id:
         stmt = stmt.where(Vorgang.projekt_id == projekt_id)
+    if auftrag_id:
+        stmt = stmt.where(Vorgang.auftrag_id == auftrag_id)
     if partner_id:
         stmt = stmt.where(Vorgang.partner_id == partner_id)
     if leistungstyp:
@@ -216,6 +220,11 @@ async def _validate_references(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    if body.auftrag_id is not None and await session.get(Auftrag, body.auftrag_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Auftrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
 
 
 @router.post(
@@ -260,6 +269,7 @@ async def create_vorgang(
         vertrag_id=body.vertrag_id,
         parent_vorgang_id=body.parent_vorgang_id,
         projekt_id=body.projekt_id,
+        auftrag_id=body.auftrag_id,
         titel=body.titel,
         beschreibung=body.beschreibung,
         abrechnungsart=body.abrechnungsart,
@@ -639,6 +649,12 @@ async def update_vorgang(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+
+    if changes.get("auftrag_id") is not None and await session.get(Auftrag, changes["auftrag_id"]) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Auftrag nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
 
     if changes.get("zugewiesener_user_id") is not None:

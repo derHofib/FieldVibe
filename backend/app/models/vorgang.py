@@ -95,6 +95,12 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     projekt_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projekte.id"), nullable=True
     )
+    # Optionale Zwischenebene Projekt->Auftrag->Vorgang (app/models/
+    # auftrag.py) -- unabhaengig von projekt_id oben: ein Vorgang kann
+    # weiterhin direkt an einem Projekt haengen, ganz ohne Auftrag.
+    auftrag_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("auftraege.id"), nullable=True
+    )
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text)
     abrechnungsart: Mapped[str] = mapped_column(Text, nullable=False)

@@ -3,6 +3,7 @@ from app.models.angebot import Angebot, AngebotPosition
 from app.models.anlage import Anlage
 from app.models.anlagen_feld_definition import AnlagenFeldDefinition
 from app.models.audit_log import AuditLog
+from app.models.auftrag import Auftrag
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.board import Board
 from app.models.dauerauftrag import Dauerauftrag
@@ -74,6 +75,7 @@ __all__ = [
     "Anlage",
     "AnlagenFeldDefinition",
     "AuditLog",
+    "Auftrag",
     "Bestellung",
     "BestellungPosition",
     "Board",

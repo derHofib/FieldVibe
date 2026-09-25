@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.angebot import Angebot
 from app.models.anlage import Anlage
+from app.models.auftrag import Auftrag
 from app.models.bestellung import Bestellung
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
@@ -70,6 +71,7 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
             ("anlage", "kunde_id"),
             ("vorgang_anfrage", "kunde_id"),
             ("vorgang", "kunde_id"),
+            ("auftrag", "kunde_id"),
             # KEIN Cascade-Eintrag fuer leistungsverzeichnis(_position) mehr:
             # ein Leistungsverzeichnis kann mehreren Kunden zugewiesen sein
             # (siehe leistungsverzeichnis_kunden), das Loeschen eines Kunden
@@ -119,6 +121,10 @@ ENTITY_REGISTRY: dict[str, EntityKind] = {
     "pruefmittel": EntityKind(Pruefmittel, "bezeichnung"),
     "projekt": EntityKind(Projekt, "name", (("projekt_aufgabe", "projekt_id"),)),
     "projekt_aufgabe": EntityKind(ProjektAufgabe, "titel", (("projekt_aufgabe", "eltern_aufgabe_id"),)),
+    # KEIN Cascade-Eintrag fuer vorgang: Vorgang.auftrag_id ist rein
+    # referenziell, gleiches Prinzip wie projekt oben (Vorgang.projekt_id
+    # wird beim Loeschen eines Projekts ebenfalls nicht mitgerissen).
+    "auftrag": EntityKind(Auftrag, "titel"),
     "lieferant": EntityKind(
         Lieferant, "name", (("bestellung", "lieferant_id"), ("eingangsrechnung", "lieferant_id"))
     ),

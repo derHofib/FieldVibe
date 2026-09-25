@@ -11,6 +11,7 @@ from app.api.routes import (
     anlagen,
     anlagen_feld_definitionen,
     audit_log,
+    auftraege,
     auswertung,
     auth,
     bestellungen,
@@ -120,6 +121,7 @@ app.include_router(standorte.router)
 app.include_router(dauerauftraege.router)
 app.include_router(vertraege.router)
 app.include_router(vorgaenge.router)
+app.include_router(auftraege.router)
 app.include_router(vorgang_anfragen.router)
 app.include_router(vorgang_events.router)
 app.include_router(form_modul.router)
