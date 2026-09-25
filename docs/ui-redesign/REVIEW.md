@@ -54,9 +54,15 @@ Dokument bewertet ausschließlich Präsentationsschicht + Barrierefreiheit.
 
 ## 3. Screenshot-Ergebnis + Befunde (axe-core)
 
+**Update (selber Tag, Commit `42a359b`)**: Alle in 3.1/3.2 beschriebenen
+Befunde sind inzwischen behoben — alle 6 Szenarien liefen erneut komplett
+sauber (`0 Verstoesse`). Die ursprüngliche Befundliste bleibt unten stehen
+(Begründung + exakte Werte, für die Nachvollziehbarkeit der Entscheidungen),
+mit dem jeweiligen Fix vermerkt.
+
 Alle 6 Szenarien bestehen (kein `critical`-Befund), aber axe-core hat reale,
-handlungsrelevante Befunde gefunden — nicht Teil dieses Redesign-Auftrags
-behoben, hier dokumentiert für einen gezielten Folge-Task:
+handlungsrelevante Befunde gefunden — ursprünglich nicht behoben, dann auf
+expliziten Nutzerwunsch nachträglich gefixt (siehe Update oben):
 
 ### 3.1 Fehlendes `<h1>` (moderate, alle 6 Szenarien)
 
@@ -65,10 +71,13 @@ sichtbare „Seitentitel" (z. B. „Übersicht", „Vorgänge") ist überall ein
 `<p>`/`<div>` oder `<h2>` ohne übergeordnetes `<h1>`. Betrifft alle Themes
 gleichermaßen, ist also kein Redesign-Regressionsfehler, sondern ein
 vorbestehender struktureller Gap, der beim Redesign nicht behoben wurde.
-**Vorschlag** (nicht umgesetzt, Presentation-Layer-only, kein Rechte-/API-
-Bezug): den jeweiligen Seitentitel in `Layout.tsx`/`FeldLayout.tsx`/
-`OfficeLayout.tsx` als `<h1>` rendern statt als `<p>`/`<span>`, visuell
-unverändert (Tailwind macht das rein per Tag-Austausch möglich).
+**Behoben** (`42a359b`): Super-Admin-Header-Titel (`Layout.tsx`) von `<span>`
+auf `<h1>` umgestellt. Feld-App hat laut Abschnitt 5.3 bewusst keinen
+persistenten Marken-Header — dort einen unsichtbaren, routenabhängigen
+`<h1>` in `FeldLayout.tsx` ergänzt, **innerhalb** von `<main>` (ein `<h1>`
+außerhalb eines Landmarks löste zusätzlich einen "region"-Befund aus, im
+zweiten Anlauf korrigiert). Office hatte über `SeitenKopf` bereits ein
+echtes `<h1>`, keine Änderung nötig.
 
 ### 3.2 Farbkontrast unterhalb WCAG-AA-Schwelle (serious, 4 von 6 Szenarien)
 
@@ -89,14 +98,25 @@ bei kleiner Schrift und auf hellem/dunklem Grund regelmäßig 4.5:1 — bekannte
 Spannung zwischen „Apple-HIG-Optik" und WCAG-AA, nicht spezifisch für diese
 Umsetzung. `text-label2`/`text-label3` auf `bg-fill2` sind grenzwertig, weil
 die Token bewusst subtil/sekundär gehalten sind (Apple-typische Tertiär-Text-
-Hierarchie). **Vorschlag** (nicht umgesetzt): `--tint`/`--tint-dark` für
-Fließtext unter 14px um ca. 5–8% abdunkeln (dunkler Blauton, nicht heller,
-da auf hellem UND dunklem Grund verwendet), oder für Buttons mit weißem
-Text auf `--tint` eine dedizierte, dunklere `--tint-on-fill`-Variante nur
-für diesen Anwendungsfall einführen. Bewusst nicht in dieser Session
-umgesetzt, weil das eine Grundfarb-Entscheidung (Phase B) mit App-weiter
-Reichweite ist, keine lokale Korrektur — sollte separat mit dem Auftraggeber
-abgestimmt werden, bevor der ganze Blauton verschoben wird.
+Hierarchie).
+
+**Behoben** (`42a359b`, auf expliziten Nutzerwunsch — ursprünglich als
+Grundfarb-Entscheidung mit App-weiter Reichweite zurückgestellt): `--tint`
+selbst bleibt für Icons/Ränder/Indikatoren unverändert (WCAG 1.4.11
+verlangt dort nur 3:1). Zwei neue Token für die Fälle, die 4.5:1 brauchten:
+`--tint-text` (echter Text auf neutralem Grund — Hell-Modus `#0068cc`,
+Dunkel-Modus `#6ab1ff`, derselbe aufgehellte Ton wie das schon vorhandene
+`--st-neu-text`, statt einen weiteren Blauton zu erfinden) und
+`--tint-solid` (weißer Text auf Tint-Fläche, u. a. `.btn-ap-primary` — Hell-
+Modus unverändert `tint`, Dunkel-Modus `#0a6ad1`). Text-auf-Grund und
+Weiß-auf-Fläche brauchten im Dunkel-Modus **gegensätzliche** Anpassungen
+(heller vs. dunkler), deshalb zwei Token statt eines geänderten `tint`.
+Zusätzlich: inaktive Segmented-Control-Beschriftung
+(`SegmentedControl.tsx`, `OfficeUi.tsx` `AnsichtUmschalter`) von
+`text-label2` auf `text-label` — entspricht auch echten iOS-Segmented-
+Controls (Unterscheidung über Gewicht + Pille, nicht Textfarbe). Details
+und alle betroffenen Stellen: Commit-Nachricht `42a359b`,
+`docs/DESIGN.md`/`fieldvibe-design`-Skill (Abschnitt Barrierefreiheit).
 
 ### 3.3 Sichtprüfung Screenshots
 
@@ -207,20 +227,26 @@ möglich auf die tatsächlich von der Ursache betroffene Dateiliste scopen,
 nie auf den gesamten Baum; Sicherheits-Checks vor Whitespace-Bereinigung,
 vor Build, vor Commit — in dieser Reihenfolge.
 
-## 7. Dokumentations-Lücke (noch offen)
+## 7. Dokumentations-Lücke — behoben (`21c2e78`)
 
 `docs/DESIGN.md` und der `fieldvibe-design`-Skill (`.claude/skills/
-fieldvibe-design/SKILL.md`) beschreiben weiterhin vollständig das alte
-„Industry"-Design (Blaupausen-Optik, `--color-ind-*`, `.btn-industry*`) —
-**nicht aktualisiert** im Zuge dieses Redesigns. Das ist die verbindliche
-Referenz laut `CLAUDE.md` („Vor neuen UI-Elementen dort prüfen, ob ein
-bestehendes Pattern passt") und zeigt aktuell auf ein Design-System, das
-nicht mehr existiert. Absichtlich **nicht** in dieser Session überschrieben:
-`CLAUDE.md` verlangt für Doku-/Konfig-Änderungen dieser Art erst einen
-Entwurf zur kurzen Rückmeldung, bevor geschrieben/committet wird. Vorschlag:
-in einem eigenen, kurzen Folge-Schritt einen Entwurf für die Apple-Fassung
-von `DESIGN.md` vorlegen (Token-Referenz, Bausteine aus Phase C, Icon-Badge-
-System, Statusfarben-Mapping aus `AUDIT.md` Abschnitt „Statusfarben-Mapping").
+fieldvibe-design/SKILL.md`) beschrieben bis zu diesem Commit noch
+vollständig das alte „Industry"-Design (Blaupausen-Optik, `--color-ind-*`,
+`.btn-industry*`) — die verbindliche Referenz laut `CLAUDE.md` zeigte damit
+auf ein Design-System, das nicht mehr existiert. Vorher wurde dem Nutzer
+per `AskUserQuestion`-artiger Rückmeldung ein Gliederungs-Entwurf gezeigt
+(`CLAUDE.md`-Vorgabe für Doku-Änderungen dieser Art), nach dessen
+Bestätigung ("Passt das so an") beide Dokumente komplett neu geschrieben:
+Farbtoken (inkl. `tint-text`/`tint-solid`), Statusfarben-Mapping, Icons
+(`SymbolKachel` vs. `IconBadge` — ehrlich als zwei parallele, nicht
+vereinheitlichte Muster beschrieben statt eine Vereinheitlichung zu
+behaupten, die es nicht gibt), Karten-/Listen-Bausteine, Buttons, Dark
+Mode, Layout je Oberfläche (inkl. Klarstellung zur Super-Admin/Office-
+Routing-Weiche in `App.tsx`, die unabhängig vom Redesign besteht), sowie
+ein neuer Abschnitt zu den Barrierefreiheits-Konventionen aus Phase D.
+Beide Dokumente benennen am Ende explizit, was noch offen ist (kategoriale
+Restfarben, `IconBadge`-Form, WebKit-Tests) — keine falsche
+Vollständigkeit behauptet.
 
 ## 8. Manuelle Checkliste (Auftrag Abschnitt 8)
 
@@ -232,10 +258,10 @@ System, Statusfarben-Mapping aus `AUDIT.md` Abschnitt „Statusfarben-Mapping").
 | Kleine, nachvollziehbare Commits, sofort gepusht | ✅ durchgehend, inkl. Fix-Commit für den Regex-Vorfall |
 | Keine verlorene Funktionalität | ✅ keine Route/Aktion entfernt; `NewVorgangPage` von Vollbild-Route auf Sheet umgestellt (Abschnitt 5.3 des Auftrags verlangt das explizit) |
 | Dark-Mode durchgängig | ✅ alle 6 Testszenarien inkl. Dark-Mode-Screenshot bestanden |
-| Barrierefreiheit (axe-core) | ⚠️ keine `critical`-Befunde, aber reale `serious`/`moderate`-Befunde dokumentiert (Abschnitt 3), nicht behoben |
+| Barrierefreiheit (axe-core) | ✅ alle 6 Szenarien bei `0 Verstoessen` (Abschnitt 3, behoben in `42a359b`) |
 | Cross-Browser (WebKit) | ❌ nicht möglich in dieser Sandbox (kein WebKit installiert) |
 | Screenshot-Abdeckung „jede Route" | ⚠️ bewusst auf 3 Referenz-Shells begrenzt (Begründung Abschnitt 2) |
-| `docs/DESIGN.md` aktualisiert | ❌ offen, Entwurf ausstehend (Abschnitt 7) |
+| `docs/DESIGN.md` aktualisiert | ✅ neu geschrieben, siehe Abschnitt 7 (`21c2e78`) |
 
 ## 9. Fazit
 
@@ -243,8 +269,10 @@ Die Kernumstellung (Token-Fundament, Basis-Komponenten, Layout-Rahmen, die
 fünf im Auftrag benannten Referenz-Screens, sowie die repo-weite Ablösung
 des toten „Industry"-Systems über alle vier Frontends) ist abgeschlossen
 und funktional verifiziert (tsc/build/vitest/Playwright grün, echte
-Screenshots gegen echten Stack). Drei ehrliche Lücken bleiben für
-gezielte Folge-Schritte: die Feinarbeit an kategorialen/restlichen
-Hartkodierungen (Abschnitt 5), zwei axe-core-Befunde mit App-weiter
-Reichweite, die bewusst nicht ad hoc gefixt wurden (Abschnitt 3), und die
-veraltete `DESIGN.md`/Skill-Dokumentation (Abschnitt 7).
+Screenshots gegen echten Stack). Die ursprünglich offenen axe-core-Befunde
+und die veraltete `DESIGN.md`/Skill-Dokumentation wurden auf expliziten
+Nutzerwunsch noch am selben Tag nachgezogen (Abschnitte 3 und 7). Eine
+ehrliche Lücke bleibt: die Feinarbeit an kategorialen/restlichen
+Hartkodierungen (Abschnitt 5) sowie die in Abschnitt 1 des Icons-Kapitels
+von `docs/DESIGN.md` benannte, noch nicht auf die `SymbolKachel`-Form
+umgebaute `IconBadge`-Komponente.
