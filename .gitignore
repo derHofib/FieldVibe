@@ -15,6 +15,11 @@ frontend/dist/
 frontend/dev-dist/
 *.tsbuildinfo
 
+# Playwright (Phase D, siehe docs/ui-redesign/REVIEW.md)
+frontend/e2e-report/
+frontend/e2e-screenshots/
+frontend/test-results/
+
 # Env / secrets
 .env
 .env.*
