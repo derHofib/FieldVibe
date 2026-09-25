@@ -163,7 +163,7 @@ export function CaptureRenderer({
                     <button
                       type="button"
                       onClick={() => zeileEntfernen(eintrag.gruppe.key, index)}
-                      className="btn-touch rounded-md p-1 text-label2 hover:text-rose-600"
+                      className="btn-touch rounded-md p-1 text-label2 hover:text-st-fehlt"
                       aria-label="Eintrag entfernen"
                     >
                       <Trash2 size={15} />

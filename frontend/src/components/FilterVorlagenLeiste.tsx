@@ -127,7 +127,7 @@ export function FilterVorlagenLeiste({
         <button
           onClick={() => setZeigeSpeichern((v) => !v)}
           disabled={!hatAktivenFilter}
-          className="btn-touch text-xs text-blue-700 underline disabled:opacity-40 dark:text-blue-400"
+          className="btn-touch text-xs text-tint underline disabled:opacity-40 "
         >
           {zeigeSpeichern ? "Abbrechen" : "Aktuellen Filter als Vorlage speichern…"}
         </button>
@@ -155,7 +155,7 @@ export function FilterVorlagenLeiste({
           </button>
         </div>
       )}
-      {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-st-fehlt ">{error}</p>}
     </div>
   );
 }

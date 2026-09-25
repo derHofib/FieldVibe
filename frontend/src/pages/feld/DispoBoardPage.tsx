@@ -153,7 +153,7 @@ export function DispoBoardPage() {
         {istModulAktiv(currentUser, "pruefzyklen") ? (
           <button
             onClick={() => navigate("/pruefmittel")}
-            className="text-sm text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+            className="text-sm text-tint underline-offset-2 hover:underline "
           >
             Prüfmittel →
           </button>
@@ -181,7 +181,7 @@ export function DispoBoardPage() {
       </div>
 
       {warnungen.length > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+        <div className="rounded-lg border border-st-arbeit bg-amber-50 p-3 text-sm text-st-arbeit dark:bg-amber-500/10 ">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -348,7 +348,7 @@ export function DispoBoardPage() {
                           className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-xs ${
                             t.status === "abgesagt"
                               ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
-                              : "bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300"
+                              : "bg-blue-50 text-tint dark:bg-blue-500/15 "
                           }`}
                         >
                           <div className="font-semibold">

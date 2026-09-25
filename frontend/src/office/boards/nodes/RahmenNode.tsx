@@ -12,7 +12,7 @@ export function RahmenNode({ id, data, selected }: NodeProps<BoardNode>) {
   const { label } = data as RahmenDaten;
   return (
     <div className="h-full w-full rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/40 dark:border-stone-700 dark:bg-stone-800/20">
-      <NodeResizer isVisible={selected} minWidth={160} minHeight={120} lineClassName="!border-blue-500" handleClassName="!bg-blue-500" />
+      <NodeResizer isVisible={selected} minWidth={160} minHeight={120} lineClassName="!border-tint" handleClassName="!bg-blue-500" />
       <input
         value={label}
         onChange={(e) => updateNodeData(id, { label: e.target.value })}

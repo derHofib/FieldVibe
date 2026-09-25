@@ -105,7 +105,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
           <button
             onClick={() => logoRemoveMutation.mutate()}
             disabled={logoRemoveMutation.isPending}
-            className="btn-touch text-xs font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-xs font-medium text-st-fehlt disabled:opacity-50 "
           >
             Entfernen
           </button>
@@ -204,7 +204,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <span className="text-xs text-green-700 dark:text-green-400">Gespeichert.</span>
+          <span className="text-xs text-st-erledigt ">Gespeichert.</span>
         )}
       </div>
     </div>
@@ -232,7 +232,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
     <div className="space-y-2 border border-sep bg-card p-4">
       <div>
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
-          <Mail size={15} strokeWidth={2} className="text-rose-500" /> Mahnwesen
+          <Mail size={15} strokeWidth={2} className="text-st-fehlt" /> Mahnwesen
         </h2>
         <p className="mt-1 text-xs text-label2">
           Standard ist ein reiner interner Hinweis. Aktiviere hier je Mahnstufe, dass die Mahnung
@@ -260,7 +260,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <span className="text-xs text-green-700 dark:text-green-400">Gespeichert.</span>
+          <span className="text-xs text-st-erledigt ">Gespeichert.</span>
         )}
       </div>
     </div>
@@ -306,7 +306,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <span className="text-xs text-green-700 dark:text-green-400">Gespeichert.</span>
+          <span className="text-xs text-st-erledigt ">Gespeichert.</span>
         )}
       </div>
     </div>
@@ -339,7 +339,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
-              ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
+              ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
               : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
           }`}
         >
@@ -406,7 +406,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
             if (window.confirm("SMTP-Integration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400"
+          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-red-500/10 "
         >
           Löschen
         </button>
@@ -443,7 +443,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
-              ? "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400"
+              ? "bg-green-50 text-st-erledigt dark:bg-green-500/10 "
               : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
           }`}
         >
@@ -510,7 +510,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
             if (window.confirm("IMAP-Integration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400"
+          className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-red-500/10 "
         >
           Löschen
         </button>

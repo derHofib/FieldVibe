@@ -308,7 +308,7 @@ export function OfficeDispoPage() {
                     }}
                     className={`card-interactive cursor-grab rounded-xl border bg-white p-2.5 dark:bg-stone-900 ${
                       ueberfaellig
-                        ? "border-rose-300 dark:border-rose-500/40"
+                        ? "border-st-fehlt "
                         : "border-sep"
                     }`}
                   >
@@ -340,7 +340,7 @@ export function OfficeDispoPage() {
                           <span
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                               ueberfaellig
-                                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                                ? "bg-rose-100 text-st-fehlt dark:bg-rose-500/15 "
                                 : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
                             }`}
                           >
@@ -730,7 +730,7 @@ function TerminBearbeitenPanel({
             onClick={() => {
               if (window.confirm("Termin wirklich löschen?")) onDelete();
             }}
-            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-st-fehlt hover:bg-rose-50 dark:hover:bg-rose-500/10"
           >
             <Trash2 size={14} /> Löschen
           </button>

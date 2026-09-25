@@ -34,7 +34,7 @@ export function PortalForgotPasswordPage() {
         </p>
 
         {done ? (
-          <p className="border border-green-500/40 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+          <p className="border border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
             Falls ein Konto mit dieser E-Mail existiert, wurde eine Nachricht mit
             weiteren Schritten verschickt.
           </p>

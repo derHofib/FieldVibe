@@ -12,7 +12,7 @@ export function ChecklisteNode({ id, data, selected }: NodeProps<BoardNode>) {
   return (
     <div
       className={`w-[210px] rounded-xl bg-white p-3 shadow-lg dark:bg-stone-900 ${
-        selected ? "ring-2 ring-blue-500" : ""
+        selected ? "ring-2 ring-tint" : ""
       }`}
     >
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
@@ -44,7 +44,7 @@ export function ChecklisteNode({ id, data, selected }: NodeProps<BoardNode>) {
             <button
               onClick={() => punkteSetzen(punkte.filter((_, pi) => pi !== i))}
               aria-label="Punkt entfernen"
-              className="shrink-0 text-slate-300 hover:text-red-500 dark:text-stone-600"
+              className="shrink-0 text-slate-300 hover:text-st-fehlt dark:text-stone-600"
             >
               <X size={11} strokeWidth={2.5} />
             </button>
@@ -53,7 +53,7 @@ export function ChecklisteNode({ id, data, selected }: NodeProps<BoardNode>) {
       </div>
       <button
         onClick={() => punkteSetzen([...punkte, { text: "", erledigt: false }])}
-        className="nodrag mt-2 flex items-center gap-1 text-[11px] font-semibold text-blue-700 dark:text-blue-400"
+        className="nodrag mt-2 flex items-center gap-1 text-[11px] font-semibold text-tint "
       >
         <Plus size={12} strokeWidth={2.5} /> Punkt
       </button>

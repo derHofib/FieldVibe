@@ -30,7 +30,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
         <span
           className={`border px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
-              ? "border-green-400 text-green-700 dark:border-green-600 dark:text-green-300"
+              ? "border-st-erledigt text-st-erledigt "
               : "border-sep text-label2"
           }`}
         >
@@ -97,7 +97,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
             if (window.confirm("Globale SMTP-Konfiguration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
-          className="btn-touch border border-red-400 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
+          className="btn-touch border border-st-fehlt px-3 py-1.5 text-sm font-medium text-st-fehlt hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-950/30"
         >
           Löschen
         </button>

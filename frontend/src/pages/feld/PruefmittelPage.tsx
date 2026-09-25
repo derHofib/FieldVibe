@@ -14,10 +14,10 @@ const STATUS_LABEL: Record<PruefmittelStatus, string> = {
 
 function faelligkeitsFarbe(datum: string): string {
   const heute = new Date().toISOString().slice(0, 10);
-  if (datum < heute) return "text-red-600 dark:text-red-400";
+  if (datum < heute) return "text-st-fehlt ";
   const in7Tagen = new Date();
   in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600 dark:text-amber-400";
+  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
   return "text-label2";
 }
 
@@ -219,7 +219,7 @@ export function PruefmittelPage() {
                     }
                   }}
                   disabled={deleteMutation.isPending}
-                  className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                  className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1 text-xs font-medium text-st-fehlt disabled:opacity-50 "
                 >
                   Löschen
                 </button>

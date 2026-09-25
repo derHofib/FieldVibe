@@ -106,7 +106,7 @@ export function PapierkorbPage() {
           : "Nur-Ansicht: Wiederherstellen und endgültiges Löschen sind der Rolle „Papierkorb (operativ)“ vorbehalten."}
       </p>
 
-      {fehler && <p className="text-sm text-red-700 dark:text-red-400">{fehler}</p>}
+      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
       <div>
         <label className="mb-1 block text-sm font-medium text-label">
@@ -173,7 +173,7 @@ export function PapierkorbPage() {
                       }
                     }}
                     disabled={purgeMutation.isPending}
-                    className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-300"
+                    className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-st-fehlt hover:bg-red-100 disabled:opacity-50 dark:bg-red-500/10 "
                   >
                     Endgültig löschen
                   </button>

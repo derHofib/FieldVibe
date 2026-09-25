@@ -46,7 +46,7 @@ export function NotificationsPage() {
         {notifications && notifications.some((n) => !n.gelesen_am) && (
           <button
             onClick={() => markAllReadMutation.mutate()}
-            className="btn-touch text-sm font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-sm font-medium text-tint "
           >
             Alle als gelesen markieren
           </button>

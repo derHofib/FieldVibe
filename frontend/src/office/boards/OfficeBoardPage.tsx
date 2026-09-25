@@ -363,7 +363,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
               if (window.confirm(`Board "${board.name}" wirklich löschen?`)) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-50 dark:border-stone-700 dark:text-red-400"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-st-fehlt disabled:opacity-50 dark:border-stone-700 "
           >
             <Trash2 size={13} strokeWidth={2} /> Löschen
           </button>

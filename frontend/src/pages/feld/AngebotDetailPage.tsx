@@ -190,7 +190,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Angebot löschen
           </button>
@@ -227,7 +227,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           {angebot.status === "entwurf" && (
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint "
             >
               {showForm ? "Abbrechen" : "+ Position"}
             </button>
@@ -386,7 +386,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                 <div>
                   <div className="text-label">
                     {p.positionstyp === "arbeitszeit" && (
-                      <span className="mr-1.5 border border-amber-400 px-1.5 py-0.5 text-xs text-amber-700 dark:border-amber-600 dark:text-amber-300">
+                      <span className="mr-1.5 border border-st-arbeit px-1.5 py-0.5 text-xs text-st-arbeit ">
                         {POSITIONSTYP_LABEL.arbeitszeit}
                       </span>
                     )}
@@ -450,7 +450,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
       {angebot.status === "angenommen" && (
-        <p className="text-center text-sm text-green-700 dark:text-green-400">
+        <p className="text-center text-sm text-st-erledigt ">
           Angebot angenommen – ein Reparatur-Vorgang wurde automatisch angelegt (siehe verknüpfte Mängel).
         </p>
       )}

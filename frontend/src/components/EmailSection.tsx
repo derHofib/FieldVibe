@@ -73,7 +73,7 @@ export function EmailSection({
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             + E-Mail senden
           </button>
@@ -115,7 +115,7 @@ export function EmailSection({
               className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
             />
           </div>
-          {error && <p className="text-xs text-red-700 dark:text-red-400">{error}</p>}
+          {error && <p className="text-xs text-st-fehlt ">{error}</p>}
           <div className="flex gap-2">
             <button
               onClick={() => sendMutation.mutate()}
@@ -152,8 +152,8 @@ export function EmailSection({
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     e.status === "gesendet"
-                      ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
-                      : "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300"
+                      ? "bg-green-100 text-st-erledigt dark:bg-green-500/15 "
+                      : "bg-red-100 text-st-fehlt dark:bg-red-500/15 "
                   }`}
                 >
                   {e.status === "gesendet" ? "Gesendet" : "Fehler"}
@@ -165,7 +165,7 @@ export function EmailSection({
                 {e.anhang_dateiname && ` · ${e.anhang_dateiname}`}
               </div>
               {e.status === "fehler" && e.fehlermeldung && (
-                <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">{e.fehlermeldung}</p>
+                <p className="mt-0.5 text-xs text-st-fehlt ">{e.fehlermeldung}</p>
               )}
             </div>
           ))}

@@ -239,7 +239,7 @@ export function RechnungenPage() {
               className={`btn-touch rounded-full px-3 py-1 font-medium ${
                 nurUeberfaellig
                   ? "bg-rose-600 text-white"
-                  : "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300"
+                  : "bg-rose-50 text-st-fehlt dark:bg-rose-500/10 "
               }`}
             >
               Überfällig
@@ -252,7 +252,7 @@ export function RechnungenPage() {
               className={`btn-touch rounded-full px-3 py-1 font-medium ${
                 faelligBis7Tage
                   ? "bg-amber-600 text-white"
-                  : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                  : "bg-amber-50 text-st-arbeit dark:bg-amber-500/10 "
               }`}
             >
               Diese Woche fällig
@@ -275,7 +275,7 @@ export function RechnungenPage() {
               </div>
               <div>
                 <div className="text-xs text-label2">Offen</div>
-                <div className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+                <div className="text-sm font-semibold tabular-nums text-st-arbeit ">
                   {formatEuro(data.summe_offen)}
                 </div>
               </div>
@@ -294,7 +294,7 @@ export function RechnungenPage() {
                   onClick={() => navigate(`/rechnungen/${r.id}`)}
                   className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 ${
                     r.ist_ueberfaellig
-                      ? "ring-rose-300 dark:ring-rose-500/40"
+                      ? "ring-st-fehlt "
                       : "dark:ring-stone-800"
                   }`}
                 >
@@ -303,13 +303,13 @@ export function RechnungenPage() {
                     <div className="truncate text-sm font-medium text-label">
                       Fällig: {formatDatum(r.faellig_am)}
                       {r.ist_ueberfaellig && (
-                        <span className="ml-1 text-rose-600 dark:text-rose-400">
+                        <span className="ml-1 text-st-fehlt ">
                           ({r.tage_ueberfaellig} Tage überfällig)
                         </span>
                       )}
                     </div>
                     {r.mahnstufe > 0 && (
-                      <div className="text-xs text-amber-600 dark:text-amber-400">
+                      <div className="text-xs text-st-arbeit ">
                         Mahnstufe {r.mahnstufe}
                       </div>
                     )}

@@ -284,9 +284,9 @@ export function UsersPage() {
             {kannEingeladenWerden ? "Einladen" : "Anlegen"}
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
+        {formError && <p className="mt-2 text-sm text-st-fehlt ">{formError}</p>}
         {letzteEinladung && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 border border-green-400 px-4 py-3 text-sm text-green-700 dark:border-green-600 dark:text-green-300">
+          <div className="mt-3 flex flex-wrap items-center gap-3 border border-st-erledigt px-4 py-3 text-sm text-st-erledigt ">
             <span>
               Einladung an <strong>{letzteEinladung.email}</strong> verschickt.
             </span>
@@ -320,7 +320,7 @@ export function UsersPage() {
                       <span
                         className={`border px-2 py-0.5 text-xs font-semibold ${
                           e.abgelaufen
-                            ? "border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300"
+                            ? "border-st-arbeit text-st-arbeit "
                             : "border-sep text-label2"
                         }`}
                       >
@@ -342,7 +342,7 @@ export function UsersPage() {
                               revokeMutation.mutate(e.id);
                             }
                           }}
-                          className="btn-touch border border-red-400 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
+                          className="btn-touch border border-st-fehlt px-3 py-2 text-xs font-semibold text-st-fehlt hover:bg-red-50 dark:hover:bg-red-950/30"
                         >
                           Widerrufen
                         </button>
@@ -357,7 +357,7 @@ export function UsersPage() {
 
       <section>
         <h2 className="mb-4 text-lg font-bold text-label">Accounts</h2>
-        {deleteError && <p className="mb-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
+        {deleteError && <p className="mb-2 text-sm text-st-fehlt ">{deleteError}</p>}
         {isLoading ? (
           <p className="text-label2">Lädt…</p>
         ) : (
@@ -389,7 +389,7 @@ export function UsersPage() {
                     <span
                       className={`border px-2 py-0.5 text-xs font-semibold ${
                         u.aktiv
-                          ? "border-green-400 text-green-700 dark:border-green-600 dark:text-green-300"
+                          ? "border-st-erledigt text-st-erledigt "
                           : "border-sep text-label2"
                       }`}
                     >
@@ -415,7 +415,7 @@ export function UsersPage() {
                         }}
                         disabled={u.id === currentUser?.id}
                         title={u.id === currentUser?.id ? "Eigener Account kann nicht gelöscht werden" : undefined}
-                        className="btn-touch border border-red-400 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
+                        className="btn-touch border border-st-fehlt px-3 py-2 text-xs font-semibold text-st-fehlt hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-red-950/30"
                       >
                         Löschen
                       </button>

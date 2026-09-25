@@ -197,7 +197,7 @@ export function RechnungseingangPage() {
               className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
-          {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
+          {fehler && <p className="text-xs text-st-fehlt ">{fehler}</p>}
           <button
             disabled={
               !form.rechnungsnummerLieferant ||

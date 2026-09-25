@@ -42,14 +42,14 @@ export function PortalRegistrierenPage() {
         </p>
 
         {!token && (
-          <p className="mb-4 border border-red-500/40 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+          <p className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
             Der Link ist unvollständig. Bitte den Einladungslink erneut vom Betrieb anfordern.
           </p>
         )}
 
         <form onSubmit={handleSubmit}>
           {error && (
-            <div className="mb-4 border border-red-500/40 px-3 py-2 text-sm text-red-600 dark:text-red-400">
+            <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
               {error}
             </div>
           )}

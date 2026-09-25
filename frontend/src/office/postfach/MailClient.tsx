@@ -44,7 +44,7 @@ function AnhangZeile({ messageId, anhang }: { messageId: string; anhang: MailAtt
         {laedt ? <Loader2 size={13} className="animate-spin" /> : <Paperclip size={13} strokeWidth={2} />}
         {anhang.dateiname}
       </button>
-      {fehler && <span className="text-xs text-red-600 dark:text-red-400">Anhang konnte nicht geöffnet werden.</span>}
+      {fehler && <span className="text-xs text-st-fehlt ">Anhang konnte nicht geöffnet werden.</span>}
     </div>
   );
 }
@@ -161,7 +161,7 @@ export function MailClient({ account }: { account: MailAccount }) {
           />
         </div>
         {gesendetHinweis && (
-          <p className="border-b border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <p className="border-b border-st-erledigt bg-emerald-50 px-3 py-1.5 text-xs font-medium text-st-erledigt dark:bg-emerald-500/10 ">
             Nachricht gesendet.
           </p>
         )}
@@ -174,7 +174,7 @@ export function MailClient({ account }: { account: MailAccount }) {
               text={suche ? `Keine Treffer für „${suche}“.` : "Keine Nachrichten."}
               action={
                 suche && (
-                  <button onClick={() => setSuche("")} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+                  <button onClick={() => setSuche("")} className="btn-touch text-xs font-medium text-tint ">
                     Suche zurücksetzen
                   </button>
                 )

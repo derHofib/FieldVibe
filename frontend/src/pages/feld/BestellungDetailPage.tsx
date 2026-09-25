@@ -97,7 +97,7 @@ export function BestellungDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Bestellung löschen
           </button>

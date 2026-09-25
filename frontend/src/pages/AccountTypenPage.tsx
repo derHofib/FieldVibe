@@ -222,11 +222,11 @@ export function AccountTypenPage() {
             Anlegen
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
+        {formError && <p className="mt-2 text-sm text-st-fehlt ">{formError}</p>}
       </section>
 
       <section className="space-y-3">
-        {deleteError && <p className="text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
+        {deleteError && <p className="text-sm text-st-fehlt ">{deleteError}</p>}
         {isLoading ? (
           <p className="text-label2">Lädt…</p>
         ) : typen && typen.length > 0 ? (
@@ -266,7 +266,7 @@ export function AccountTypenPage() {
                       ? "Diesem Account-Typ sind noch Nutzer zugeordnet"
                       : undefined
                   }
-                  className="btn-touch border border-red-400 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-950/30"
+                  className="btn-touch border border-st-fehlt px-3 py-2 text-xs font-semibold text-st-fehlt hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-red-950/30"
                 >
                   Löschen
                 </button>

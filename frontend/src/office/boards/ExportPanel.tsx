@@ -161,10 +161,10 @@ function NotizUebernahme({
       <p className="line-clamp-2 text-xs font-medium text-label">{text || "(leer)"}</p>
       {offen === null && (
         <div className="mt-2 flex items-center gap-3">
-          <button onClick={() => onOeffnen("vorgang")} className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+          <button onClick={() => onOeffnen("vorgang")} className="text-xs font-semibold text-tint ">
             → Neuer Vorgang
           </button>
-          <button onClick={() => onOeffnen("mangel")} className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+          <button onClick={() => onOeffnen("mangel")} className="text-xs font-semibold text-st-arbeit ">
             → Mangel melden
           </button>
         </div>
@@ -234,7 +234,7 @@ function NeuerVorgangMiniform({
           ))}
         </select>
       </div>
-      {erstellen.isError && <p className="text-[11px] text-red-600 dark:text-red-400">Anlegen fehlgeschlagen.</p>}
+      {erstellen.isError && <p className="text-[11px] text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
       <div className="flex items-center gap-2">
         <button
           onClick={() => erstellen.mutate()}
@@ -288,7 +288,7 @@ function MangelMeldenMiniform({
         placeholder="Beschreibung des Mangels…"
         className="w-full border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
       />
-      {melden.isError && <p className="text-[11px] text-red-600 dark:text-red-400">Melden fehlgeschlagen.</p>}
+      {melden.isError && <p className="text-[11px] text-st-fehlt ">Melden fehlgeschlagen.</p>}
       <div className="flex items-center gap-2">
         <button
           onClick={() => melden.mutate()}

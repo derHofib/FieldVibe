@@ -128,7 +128,7 @@ export function AnlagenFelderPage() {
             ))}
           </select>
         </div>
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         <button
           type="submit"
           disabled={createMutation.isPending}
@@ -161,7 +161,7 @@ export function AnlagenFelderPage() {
                       </span>
                       <button
                         onClick={() => deleteMutation.mutate(f.id)}
-                        className="btn-touch text-xs text-red-600 dark:text-red-400"
+                        className="btn-touch text-xs text-st-fehlt "
                       >
                         Entfernen
                       </button>

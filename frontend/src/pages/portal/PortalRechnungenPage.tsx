@@ -53,7 +53,7 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
       >
         <FileText size={14} strokeWidth={2} /> {pdfMutation.isPending ? "PDF wird geladen…" : "PDF anzeigen"}
       </button>
-      {fehler && <p className="mt-1 text-xs text-red-700 dark:text-red-400">{fehler}</p>}
+      {fehler && <p className="mt-1 text-xs text-st-fehlt ">{fehler}</p>}
     </div>
   );
 }

@@ -85,7 +85,7 @@ function MaterialPostenZeile({
       </div>
       <button
         onClick={onEntfernen}
-        className="mb-0.5 shrink-0 p-1.5 text-label2 hover:text-red-600 dark:hover:text-red-400"
+        className="mb-0.5 shrink-0 p-1.5 text-label2 hover:text-st-fehlt dark:hover:text-st-fehlt"
       >
         <X size={14} strokeWidth={1.5} />
       </button>
@@ -499,7 +499,7 @@ function LvPositionFelder({
         )
       )}
 
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
 
       <div className="flex items-center justify-between gap-3 border-t border-sep pt-4">
         {istNeu ? (
@@ -510,7 +510,7 @@ function LvPositionFelder({
               if (window.confirm(`"${position!.bezeichnung}" wirklich löschen?`)) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
-            className="btn-touch text-xs font-medium text-label2 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+            className="btn-touch text-xs font-medium text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
           >
             Löschen
           </button>
@@ -689,7 +689,7 @@ export function LeistungsverzeichnisDetailPage() {
                 if (window.confirm(`"${lv.name}" samt aller Positionen wirklich löschen?`)) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
-              className="btn-touch btn-ap-toolbar text-label2 hover:text-red-600 disabled:opacity-50 dark:hover:text-red-400"
+              className="btn-touch btn-ap-toolbar text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
             >
               <Trash2 size={15} strokeWidth={1.5} />
             </button>

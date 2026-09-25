@@ -239,7 +239,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
           {imapHost.toLowerCase().includes("gmail") || smtpHost.toLowerCase().includes("gmail") ? (
-            <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">
+            <span className="mt-1 block text-[11px] text-st-arbeit ">
               Bei Gmail mit Zwei-Faktor-Anmeldung ein App-Passwort statt des normalen Passworts verwenden.
             </span>
           ) : null}
@@ -257,17 +257,17 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
       </div>
 
       {testStatus === "ok" && (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-st-erledigt dark:bg-emerald-500/10 ">
           Verbindung erfolgreich.
         </p>
       )}
       {testStatus === "fehler" && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-st-fehlt dark:bg-rose-500/10 ">
           {testFehler}
         </p>
       )}
       {speicherFehler && (
-        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-st-fehlt dark:bg-rose-500/10 ">
           {speicherFehler}
         </p>
       )}

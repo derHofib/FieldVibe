@@ -87,7 +87,7 @@ function MaterialZeile({
           <div
             className={`text-xs ${
               istUnterbestand(material)
-                ? "font-semibold text-red-600 dark:text-red-400"
+                ? "font-semibold text-st-fehlt "
                 : "text-label2"
             }`}
           >
@@ -120,7 +120,7 @@ function MaterialZeile({
         {lagerorte.length > 1 && (
           <button
             onClick={() => setZeigeUmlagern((v) => !v)}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             {zeigeUmlagern ? "Abbrechen" : "Umlagern"}
           </button>
@@ -217,7 +217,7 @@ function MaterialZeile({
             </button>
           </div>
           {umlagernMutation.isError && (
-            <p className="text-xs text-red-700 dark:text-red-400">
+            <p className="text-xs text-st-fehlt ">
               {umlagernMutation.error instanceof ApiError
                 ? umlagernMutation.error.message
                 : "Verbindung fehlgeschlagen — bitte erneut versuchen."}
@@ -251,7 +251,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
         <h2 className="text-sm font-semibold text-label2">Fahrzeuge & Lagerorte</h2>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+          className="btn-touch text-xs font-medium text-tint "
         >
           {showForm ? "Abbrechen" : "+ Neu"}
         </button>
@@ -672,7 +672,7 @@ export function MaterialPage() {
               <h2 className="text-sm font-semibold text-label2">Lieferanten</h2>
               <button
                 onClick={() => setShowLieferantForm((v) => !v)}
-                className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+                className="btn-touch text-xs font-medium text-tint "
               >
                 {showLieferantForm ? "Abbrechen" : "+ Neu"}
               </button>
@@ -721,7 +721,7 @@ export function MaterialPage() {
                           }
                         }}
                         disabled={deleteLieferantMutation.isPending}
-                        className="btn-touch text-xs font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+                        className="btn-touch text-xs font-medium text-st-fehlt disabled:opacity-50 "
                       >
                         Löschen
                       </button>

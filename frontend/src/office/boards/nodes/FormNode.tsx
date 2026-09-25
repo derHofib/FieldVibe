@@ -9,7 +9,7 @@ export function FormNode({ id, data, selected }: NodeProps<BoardNode>) {
     <div
       className={`flex h-[76px] w-[150px] items-center justify-center bg-violet-100 p-2 text-center text-xs font-semibold text-violet-800 shadow-md ${
         form === "kreis" ? "rounded-full" : "rounded-xl"
-      } ${selected ? "ring-2 ring-blue-500" : ""}`}
+      } ${selected ? "ring-2 ring-tint" : ""}`}
     >
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
       <input

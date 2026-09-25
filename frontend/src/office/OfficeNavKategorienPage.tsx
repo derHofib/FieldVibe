@@ -180,7 +180,7 @@ export function OfficeNavKategorienPage() {
               <button
                 onClick={() => kategorieLoeschen(k.localId)}
                 aria-label="Kategorie löschen"
-                className="btn-touch rounded-md p-1.5 text-red-600 dark:text-red-400"
+                className="btn-touch rounded-md p-1.5 text-st-fehlt "
               >
                 <Trash2 size={16} />
               </button>
@@ -189,7 +189,7 @@ export function OfficeNavKategorienPage() {
         </div>
         <button
           onClick={kategorieHinzufuegen}
-          className="btn-touch flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-400"
+          className="btn-touch flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-tint "
         >
           <Plus size={16} /> Kategorie hinzufügen
         </button>
@@ -232,7 +232,7 @@ export function OfficeNavKategorienPage() {
         </div>
       </section>
 
-      {fehler && <p className="text-sm text-red-700 dark:text-red-400">{fehler}</p>}
+      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
       <button
         onClick={speichern}

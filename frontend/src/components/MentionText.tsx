@@ -21,7 +21,7 @@ export function MentionText({ text }: { text: string }) {
         typeof part === "string" ? (
           <span key={i}>{part}</span>
         ) : (
-          <span key={part.key} className="font-semibold text-blue-700">
+          <span key={part.key} className="font-semibold text-tint">
             @{part.name}
           </span>
         ),

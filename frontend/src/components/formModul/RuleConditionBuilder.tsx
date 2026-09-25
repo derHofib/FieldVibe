@@ -212,7 +212,7 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
           rows={3}
           className={`${inputClass} font-mono text-xs`}
         />
-        {rawFehler && <p className="text-xs text-red-600 dark:text-red-400">{rawFehler}</p>}
+        {rawFehler && <p className="text-xs text-st-fehlt ">{rawFehler}</p>}
         {parsed !== null && (
           <button type="button" onClick={() => setErweitert(false)} className="text-xs text-cyan-700 dark:text-cyan-400">
             Zurück zum Regel-Baukasten
@@ -292,7 +292,7 @@ export function RuleConditionBuilder({ fields, condition, onChange }: RuleCondit
               <button
                 type="button"
                 onClick={() => updateClauses(clauses.filter((_, i) => i !== idx))}
-                className="btn-touch rounded-md p-1.5 text-label2 hover:text-rose-600"
+                className="btn-touch rounded-md p-1.5 text-label2 hover:text-st-fehlt"
                 aria-label="Bedingung entfernen"
               >
                 <Trash2 size={14} />

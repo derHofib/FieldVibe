@@ -25,21 +25,21 @@ const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  neu: "border border-tint text-tint ",
   geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  wartet_kunde: "border border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
-  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  in_arbeit: "border border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border border-st-wartet text-st-wartet",
+  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
   abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
   storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
 function faelligkeitsFarbe(datum: string): string {
   const heute = new Date().toISOString().slice(0, 10);
-  if (datum < heute) return "text-red-600 dark:text-red-400";
+  if (datum < heute) return "text-st-fehlt ";
   const in7Tagen = new Date();
   in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600 dark:text-amber-400";
+  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
   return "text-label2";
 }
 
@@ -89,7 +89,7 @@ function AdresseBearbeiten({
               setForm({ strasse: adresse.strasse ?? "", plz: adresse.plz ?? "", ort: adresse.ort ?? "" });
               setBearbeiten(true);
             }}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             Bearbeiten
           </button>
@@ -194,7 +194,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         <div className="mb-1 flex items-center justify-between">
           <h3 className="text-xs font-semibold text-label2">Details</h3>
           {kannVerwalten && (
-            <button onClick={() => setBearbeiten(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+            <button onClick={() => setBearbeiten(true)} className="btn-touch text-xs font-medium text-tint ">
               Bearbeiten
             </button>
           )}
@@ -321,7 +321,7 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
                 <span className="text-sm font-medium text-label">{m.bezeichnung}</span>
                 <span
                   className={`text-sm font-medium ${
-                    unterbestand ? "text-red-600 dark:text-red-400" : "text-label"
+                    unterbestand ? "text-st-fehlt " : "text-label"
                   }`}
                 >
                   {bestand?.menge ?? "0"} {m.einheit}
@@ -448,17 +448,17 @@ export function AnlageProfilePage() {
                   deleteMutation.mutate();
                 }
               }}
-              className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+              className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
             >
               Löschen
             </button>
           )}
         </div>
-        {deleteError && <p className="mt-1 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
+        {deleteError && <p className="mt-1 text-sm text-st-fehlt ">{deleteError}</p>}
         {profil.kunde ? (
           <button
             onClick={() => navigate(`/kunden/${profil.kunde!.id}`)}
-            className="text-sm text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+            className="text-sm text-tint underline-offset-2 hover:underline "
           >
             {profil.kunde.name}
           </button>
@@ -529,7 +529,7 @@ export function AnlageProfilePage() {
                     {v.dauerauftrag_id && (
                       <>
                         {" · "}
-                        <Repeat size={11} strokeWidth={2} className="inline text-amber-500" />
+                        <Repeat size={11} strokeWidth={2} className="inline text-st-arbeit" />
                       </>
                     )}
                   </div>
@@ -551,7 +551,7 @@ export function AnlageProfilePage() {
           {kannVerwalten && (
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint "
             >
               {showForm ? "Abbrechen" : "+ Neuer Zyklus"}
             </button>
@@ -642,7 +642,7 @@ export function AnlageProfilePage() {
                       }
                     }}
                     disabled={deletePruefzyklusMutation.isPending}
-                    className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                    className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1 text-xs font-medium text-st-fehlt disabled:opacity-50 "
                   >
                     Löschen
                   </button>
@@ -727,7 +727,7 @@ export function AnlageProfilePage() {
                     }
                   }}
                   disabled={deleteInventurzyklusMutation.isPending}
-                  className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1.5 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                  className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1.5 text-xs font-medium text-st-fehlt disabled:opacity-50 "
                 >
                   Löschen
                 </button>

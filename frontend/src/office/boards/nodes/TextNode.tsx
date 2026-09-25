@@ -6,7 +6,7 @@ export function TextNode({ id, data, selected }: NodeProps<BoardNode>) {
   const { updateNodeData } = useReactFlow();
   const { text } = data as TextDaten;
   return (
-    <div className={`w-[180px] ${selected ? "ring-2 ring-blue-500" : ""}`}>
+    <div className={`w-[180px] ${selected ? "ring-2 ring-tint" : ""}`}>
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
       <textarea
         value={text}

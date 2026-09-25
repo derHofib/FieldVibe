@@ -10,11 +10,11 @@ import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  neu: "border border-tint text-tint ",
   geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  wartet_kunde: "border border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
-  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  in_arbeit: "border border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border border-st-wartet text-st-wartet",
+  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
   abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
   storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
@@ -65,7 +65,7 @@ function AdresseBearbeiten({
               setForm({ strasse: adresse.strasse ?? "", plz: adresse.plz ?? "", ort: adresse.ort ?? "" });
               setBearbeiten(true);
             }}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             Bearbeiten
           </button>
@@ -185,12 +185,12 @@ function AnlagenVerwaltung({
   if (modus === "keine") {
     return (
       <div className="flex gap-3">
-        <button onClick={() => setModus("neu")} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+        <button onClick={() => setModus("neu")} className="btn-touch text-xs text-tint underline ">
           + Neue Anlage anlegen
         </button>
         <button
           onClick={() => setModus("zuordnen")}
-          className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+          className="btn-touch text-xs text-tint underline "
         >
           Bestehende Anlage zuordnen
         </button>
@@ -214,7 +214,7 @@ function AnlagenVerwaltung({
           placeholder="Typ (optional)"
           className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         <div className="flex gap-2">
           <button
             type="submit"
@@ -255,7 +255,7 @@ function AnlagenVerwaltung({
           ))}
         </select>
       )}
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           disabled={!zuordnenId || zuordnenMutation.isPending}
@@ -319,7 +319,7 @@ export function StandortDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Standort löschen
           </button>
@@ -347,7 +347,7 @@ export function StandortDetailPage() {
         {profil.kunde && (
           <button
             onClick={() => navigate(`/kunden/${profil.kunde!.id}`)}
-            className="mt-1 block text-sm text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+            className="mt-1 block text-sm text-tint underline-offset-2 hover:underline "
           >
             {profil.kunde.name}
           </button>
@@ -430,7 +430,7 @@ export function StandortDetailPage() {
                     {v.dauerauftrag_id && (
                       <>
                         {" · "}
-                        <Repeat size={11} strokeWidth={2} className="inline text-amber-500" />
+                        <Repeat size={11} strokeWidth={2} className="inline text-st-arbeit" />
                       </>
                     )}
                   </div>

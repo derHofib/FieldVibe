@@ -21,8 +21,8 @@ const TYP_LABEL: Record<BoardTyp, string> = {
 
 const TYP_TON: Record<BoardTyp, string> = {
   frei: "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
-  bauplanung: "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
-  prozess: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+  bauplanung: "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ",
+  prozess: "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/15 ",
 };
 
 const FILTER_OPTIONEN: { key: "alle" | BoardTyp; label: string }[] = [
@@ -170,7 +170,7 @@ export function BoardsUebersichtPage() {
                     e.stopPropagation();
                     if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
                   }}
-                  className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:text-red-600 dark:text-stone-600 dark:hover:text-red-400"
+                  className="btn-touch flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:text-st-fehlt dark:text-stone-600 dark:hover:text-st-fehlt"
                 >
                   <Trash2 size={16} strokeWidth={2} />
                 </span>

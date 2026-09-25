@@ -22,8 +22,8 @@ const TYP_LABEL: Record<BoardTyp, string> = {
 
 const TYP_TON: Record<BoardTyp, string> = {
   frei: "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300",
-  bauplanung: "bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
-  prozess: "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+  bauplanung: "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ",
+  prozess: "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/15 ",
 };
 
 function relativeZeit(iso: string): string {
@@ -137,7 +137,7 @@ export function OfficeBoardsPage() {
                         e.stopPropagation();
                         if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
                       }}
-                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-400 hover:text-red-600 dark:bg-stone-900/80 dark:text-stone-500 dark:hover:text-red-400"
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-slate-400 hover:text-st-fehlt dark:bg-stone-900/80 dark:text-stone-500 dark:hover:text-st-fehlt"
                     >
                       <Trash2 size={14} strokeWidth={2} />
                     </span>

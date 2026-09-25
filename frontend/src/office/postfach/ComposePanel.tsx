@@ -114,7 +114,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
           className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
         />
         {fehler && (
-          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-st-fehlt dark:bg-rose-500/10 ">
             {fehler}
           </p>
         )}

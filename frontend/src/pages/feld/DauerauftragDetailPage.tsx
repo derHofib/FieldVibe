@@ -6,11 +6,11 @@ import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  neu: "border border-tint text-tint ",
   geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  wartet_kunde: "border border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
-  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  in_arbeit: "border border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border border-st-wartet text-st-wartet",
+  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
   abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
   storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
@@ -99,7 +99,7 @@ export function DauerauftragDetailPage() {
             {kunde && (
               <button
                 onClick={() => navigate(`/kunden/${kunde.id}`)}
-                className="text-sm text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+                className="text-sm text-tint underline-offset-2 hover:underline "
               >
                 {kunde.name}
               </button>
@@ -125,7 +125,7 @@ export function DauerauftragDetailPage() {
                   {kannVerwalten && (
                     <button
                       onClick={() => setEditIntervall(String(dauerauftrag.intervall_tage))}
-                      className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+                      className="btn-touch text-xs text-tint underline "
                     >
                       ändern
                     </button>
@@ -200,7 +200,7 @@ export function DauerauftragDetailPage() {
             {kannVerwalten && !anlagenBearbeiten && (
               <button
                 onClick={anlagenBearbeitenStarten}
-                className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+                className="btn-touch text-xs text-tint underline "
               >
                 Anlagen verwalten
               </button>
@@ -221,7 +221,7 @@ export function DauerauftragDetailPage() {
                     {z.offener_vorgang_id ? (
                       <button
                         onClick={() => navigate(`/vorgaenge/${z.offener_vorgang_id}`)}
-                        className="text-blue-700 underline dark:text-blue-400"
+                        className="text-tint underline "
                       >
                         Vorgang offen
                       </button>
@@ -303,7 +303,7 @@ export function DauerauftragDetailPage() {
                 }
               }}
               disabled={deleteMutation.isPending}
-              className="btn-touch w-full rounded-md border border-red-300 py-2 text-sm font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+              className="btn-touch w-full rounded-md border border-st-fehlt py-2 text-sm font-medium text-st-fehlt disabled:opacity-50 "
             >
               Dauer-Auftrag löschen
             </button>

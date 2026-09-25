@@ -88,7 +88,7 @@ export function OfficePostfachPage() {
       </SeitenKopf>
 
       {aktivesKonto.letzter_sync_fehler && (
-        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-st-arbeit dark:bg-amber-500/10 ">
           <Mail size={13} strokeWidth={2} /> Letzter Abgleich fehlgeschlagen: {aktivesKonto.letzter_sync_fehler}
         </p>
       )}

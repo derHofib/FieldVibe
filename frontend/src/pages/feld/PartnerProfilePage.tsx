@@ -26,9 +26,9 @@ const FREIGABE_LABEL: Record<PartnerFreigabeStatus, string> = {
 };
 
 const FREIGABE_FARBE: Record<PartnerFreigabeStatus, string> = {
-  vorgeschlagen: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
-  angenommen: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
-  abgelehnt: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+  vorgeschlagen: "bg-amber-100 text-st-arbeit dark:bg-amber-500/10 ",
+  angenommen: "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/10 ",
+  abgelehnt: "bg-red-100 text-st-fehlt dark:bg-red-500/10 ",
 };
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
@@ -96,7 +96,7 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
               });
               setBearbeiten(true);
             }}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             Bearbeiten
           </button>
@@ -231,7 +231,7 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
         + Nachweis hinterlegen
       </button>
     );
@@ -265,7 +265,7 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
         placeholder="Notiz (optional)"
         className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
       />
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
@@ -316,7 +316,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
       <div className="mb-2 flex items-center gap-2">
         <h2 className="text-sm font-semibold text-label2">Nachweise</h2>
         {abgelaufeneAnzahl > 0 && (
-          <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-500/10 dark:text-red-400">
+          <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-st-fehlt dark:bg-red-500/10 ">
             <ShieldAlert size={12} strokeWidth={2} /> {abgelaufeneAnzahl} abgelaufen
           </span>
         )}
@@ -337,7 +337,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
                     ? `Gültig bis ${new Date(n.gueltig_bis).toLocaleDateString("de-DE")}`
                     : "Ohne Ablaufdatum"}
                   {n.abgelaufen && (
-                    <span className="ml-1.5 font-semibold text-red-600 dark:text-red-400">· abgelaufen</span>
+                    <span className="ml-1.5 font-semibold text-st-fehlt ">· abgelaufen</span>
                   )}
                 </div>
               </div>
@@ -369,7 +369,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
                   <button
                     onClick={() => removeMutation.mutate(n.id)}
                     disabled={removeMutation.isPending}
-                    className="btn-touch text-xs text-red-700 dark:text-red-400"
+                    className="btn-touch text-xs text-st-fehlt "
                   >
                     Entfernen
                   </button>
@@ -465,12 +465,12 @@ export function PartnerProfilePage() {
             onClick={() => {
               if (window.confirm(`${partner.name} wirklich löschen?`)) deleteMutation.mutate();
             }}
-            className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+            className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
           >
             Löschen
           </button>
         </div>
-        {deleteError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
+        {deleteError && <p className="mt-2 text-sm text-st-fehlt ">{deleteError}</p>}
       </div>
 
       <Stammdaten partnerId={id!} />

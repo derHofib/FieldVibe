@@ -32,7 +32,7 @@ export function AnlagenPinNode({ id, data, selected }: NodeProps<BoardNode>) {
       <button
         onClick={() => setZeigePopover((v) => !v)}
         className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-linear-to-r from-cyan-500 to-blue-600 text-xs font-extrabold text-white shadow-lg dark:border-stone-900 ${
-          selected ? "ring-2 ring-blue-500 ring-offset-2" : ""
+          selected ? "ring-2 ring-tint ring-offset-2" : ""
         }`}
       >
         {nummer}
@@ -46,7 +46,7 @@ export function AnlagenPinNode({ id, data, selected }: NodeProps<BoardNode>) {
               <div className="mt-2 flex items-center gap-3">
                 <button
                   onClick={() => navigate(`/anlagen/${anlage.id}`)}
-                  className="text-xs font-semibold text-blue-700 dark:text-blue-400"
+                  className="text-xs font-semibold text-tint "
                 >
                   Anlage öffnen →
                 </button>

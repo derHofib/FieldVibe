@@ -78,7 +78,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
         ← Zurück
       </button>
 
-      <div className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+      <div className="flex items-start gap-1.5 rounded-lg bg-amber-50 px-4 py-3 text-sm text-st-arbeit dark:bg-amber-500/10 ">
         <Inbox size={15} strokeWidth={2} className="mt-0.5 shrink-0" />
         Per E-Mail importiert{eingangsrechnung.email_absender && ` von ${eingangsrechnung.email_absender}`}
         {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} -- bitte Angaben gegen den
@@ -156,7 +156,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             </select>
           </div>
 
-          {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
+          {fehler && <p className="text-xs text-st-fehlt ">{fehler}</p>}
 
           <div className="flex gap-2 pt-2">
             <button
@@ -173,7 +173,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
                 }
               }}
               disabled={verwerfenMutation.isPending}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-stone-800 dark:text-red-400"
+              className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-stone-800 "
             >
               Verwerfen
             </button>
@@ -276,7 +276,7 @@ export function EingangsrechnungDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Löschen
           </button>
@@ -348,7 +348,7 @@ export function EingangsrechnungDetailPage() {
               <button
                 onClick={() => belegRemoveMutation.mutate()}
                 disabled={belegRemoveMutation.isPending}
-                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-stone-800 dark:text-red-400"
+                className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 dark:bg-stone-800 "
               >
                 Entfernen
               </button>
@@ -383,7 +383,7 @@ export function EingangsrechnungDetailPage() {
           {eingangsrechnung.status === "offen" && (
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint "
             >
               {showForm ? "Abbrechen" : "+ Position"}
             </button>
@@ -465,7 +465,7 @@ export function EingangsrechnungDetailPage() {
                 setZahlungBetrag(eingangsrechnung.offener_betrag);
                 setShowZahlungForm((v) => !v);
               }}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint "
             >
               {showZahlungForm ? "Abbrechen" : "+ Zahlung"}
             </button>
@@ -483,7 +483,7 @@ export function EingangsrechnungDetailPage() {
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             {addZahlungMutation.isError && (
-              <p className="text-xs text-red-600 dark:text-red-400">
+              <p className="text-xs text-st-fehlt ">
                 Zahlung übersteigt den offenen Betrag oder ist ungültig.
               </p>
             )}

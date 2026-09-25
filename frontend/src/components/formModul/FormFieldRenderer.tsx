@@ -350,7 +350,7 @@ function FotoPlanFeld({
               <span key={i} className="flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300">
                 Leitung {i + 1}
                 {!readOnly && (
-                  <button type="button" onClick={() => markierungLoeschen(i)} aria-label="Leitung löschen" className="text-slate-400 hover:text-rose-600">
+                  <button type="button" onClick={() => markierungLoeschen(i)} aria-label="Leitung löschen" className="text-slate-400 hover:text-st-fehlt">
                     <X size={11} />
                   </button>
                 )}
@@ -406,7 +406,7 @@ export function FormFieldRenderer({
   const labelNode = (
     <label className="mb-1 block text-sm font-medium text-label">
       {label}
-      {required && <span className="ml-1 text-rose-500">*</span>}
+      {required && <span className="ml-1 text-st-fehlt">*</span>}
     </label>
   );
   const wrapperClass = "border border-sep bg-card p-3";

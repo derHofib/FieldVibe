@@ -182,7 +182,7 @@ export function KundenPage() {
           <p className="text-xs text-label2">
             Ansprechpartner können anschließend auf der Kunden-Detailseite angelegt werden.
           </p>
-          {kundeFehler && <p className="text-sm text-red-700 dark:text-red-400">{kundeFehler}</p>}
+          {kundeFehler && <p className="text-sm text-st-fehlt ">{kundeFehler}</p>}
           <button
             disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
             onClick={() => createKundeMutation.mutate()}

@@ -73,7 +73,7 @@ export function StickerNode({ id, data, selected }: NodeProps<BoardNode>) {
       <button
         onClick={() => setZeigeAuswahl((v) => !v)}
         className={`flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-white bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-lg dark:border-stone-900 ${
-          selected ? "ring-2 ring-blue-500 ring-offset-2" : ""
+          selected ? "ring-2 ring-tint ring-offset-2" : ""
         }`}
       >
         {Icon ? <Icon size={20} strokeWidth={2} /> : <span className="text-[10px] font-bold">?</span>}

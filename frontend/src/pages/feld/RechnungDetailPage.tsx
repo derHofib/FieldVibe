@@ -250,7 +250,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Rechnung löschen
           </button>
@@ -258,7 +258,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {rechnung.ist_storno && (
-        <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <div className="rounded-lg bg-amber-50 p-3 text-sm text-st-arbeit dark:bg-amber-500/10 ">
           Diese Rechnung storniert{" "}
           {storniertRechnung ? (
             <button
@@ -275,7 +275,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       )}
 
       {rechnung.xml_object_key && (
-        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-st-erledigt dark:bg-emerald-500/10 ">
           ZUGFeRD-Rechnung — diese PDF enthält eine eingebettete E-Rechnungs-XML.
         </div>
       )}
@@ -301,7 +301,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </p>
         )}
         {rechnung.mahnstufe > 0 && (
-          <p className="mt-1 text-xs font-semibold text-red-600 dark:text-red-400">
+          <p className="mt-1 text-xs font-semibold text-st-fehlt ">
             {rechnung.mahnstufe}. Mahnung
             {rechnung.letzte_mahnung_am &&
               ` am ${new Date(rechnung.letzte_mahnung_am).toLocaleDateString("de-DE")}`}
@@ -346,7 +346,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           {rechnung.status === "entwurf" && (
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint "
             >
               {showForm ? "Abbrechen" : "+ Position"}
             </button>
@@ -463,7 +463,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   setZahlungBetrag(rechnung.offener_betrag);
                   setShowZahlungForm((v) => !v);
                 }}
-                className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+                className="btn-touch text-xs font-medium text-tint "
               >
                 {showZahlungForm ? "Abbrechen" : "+ Zahlung"}
               </button>
@@ -502,7 +502,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 ))}
               </select>
               {addZahlungMutation.isError && (
-                <p className="text-xs text-red-600 dark:text-red-400">
+                <p className="text-xs text-st-fehlt ">
                   Zahlung übersteigt den offenen Betrag oder ist ungültig.
                 </p>
               )}
@@ -537,7 +537,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       <span
                         className={`font-medium ${
                           Number(z.betrag) < 0
-                            ? "text-red-600 dark:text-red-400"
+                            ? "text-st-fehlt "
                             : "text-label"
                         }`}
                       >

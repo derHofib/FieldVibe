@@ -60,8 +60,8 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               <span
                 className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                   fs.status === "abgeschlossen"
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                    : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                    ? "bg-emerald-100 text-st-erledigt dark:bg-emerald-500/15 "
+                    : "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 "
                 }`}
               >
                 {fs.status === "abgeschlossen" ? "Abgeschlossen" : "Offen"}
@@ -90,7 +90,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
               className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
             >
               + {s.name} ausfüllen
-              {s.pflicht_vor_abschluss && <span className="ml-1 text-rose-500">*</span>}
+              {s.pflicht_vor_abschluss && <span className="ml-1 text-st-fehlt">*</span>}
             </button>
           ))}
         </div>

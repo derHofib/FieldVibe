@@ -76,7 +76,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
           <span
             className={`rounded-full px-2 py-1 text-xs font-semibold ${
               anfrage.status === "angenommen"
-                ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
+                ? "bg-green-100 text-st-erledigt dark:bg-green-500/15 "
                 : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-300"
             }`}
           >
@@ -93,7 +93,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
 
       {anfrage.status === "offen" && (
         <div className="mt-3 space-y-2">
-          {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm text-st-fehlt ">{error}</p>}
 
           {!zeigeAnnehmen && !zeigeAblehnen && (
             <div className="flex gap-2">

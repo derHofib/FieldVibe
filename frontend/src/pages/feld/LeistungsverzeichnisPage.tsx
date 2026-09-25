@@ -112,7 +112,7 @@ function LvFormular({ onClose }: { onClose: () => void }) {
             />
           </div>
           <KundenZuweisung kundenIds={kundenIds} onChange={setKundenIds} />
-          {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm text-st-fehlt ">{error}</p>}
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4 dark:border-stone-800">
           <button onClick={onClose} className="btn-touch btn-ap px-4 py-2 text-sm font-semibold">

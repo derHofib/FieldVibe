@@ -69,7 +69,7 @@ export function PortalAngebotDetailPage() {
         </button>
       </div>
 
-      {fehler && <p className="text-sm text-red-700 dark:text-red-400">{fehler}</p>}
+      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
       <div className="border border-sep bg-card p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Positionen</h2>
@@ -124,12 +124,12 @@ export function PortalAngebotDetailPage() {
         </div>
       )}
       {angebot.status === "angenommen" && (
-        <p className="text-center text-sm text-green-700 dark:text-green-400">
+        <p className="text-center text-sm text-st-erledigt ">
           Sie haben dieses Angebot angenommen.
         </p>
       )}
       {angebot.status === "abgelehnt" && (
-        <p className="text-center text-sm text-red-700 dark:text-red-400">
+        <p className="text-center text-sm text-st-fehlt ">
           Sie haben dieses Angebot abgelehnt.
         </p>
       )}

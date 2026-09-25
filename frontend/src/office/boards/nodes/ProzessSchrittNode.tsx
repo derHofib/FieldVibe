@@ -8,7 +8,7 @@ export function ProzessSchrittNode({ id, data, selected }: NodeProps<BoardNode>)
   return (
     <div
       className={`w-[160px] rounded-xl border-[1.5px] border-slate-200 bg-white p-3 shadow-sm dark:border-stone-700 dark:bg-stone-900 ${
-        selected ? "ring-2 ring-blue-500" : ""
+        selected ? "ring-2 ring-tint" : ""
       }`}
     >
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />

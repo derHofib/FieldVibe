@@ -156,7 +156,7 @@ function RegelForm({
         </select>
       </div>
 
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-st-fehlt ">{error}</p>}
 
       <div className="flex items-center justify-end gap-2">
         {onCancel && (
@@ -253,7 +253,7 @@ function RegelnPanelInhalt({
               <button onClick={() => setEditingRuleId(r.id)} className="text-xs text-cyan-700 dark:text-cyan-400">
                 Bearbeiten
               </button>
-              <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-label2 hover:text-rose-600">
+              <button onClick={() => deleteRuleMutation.mutate(r.id)} className="text-label2 hover:text-st-fehlt">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -419,7 +419,7 @@ export function FormSchemaEditorPage() {
           </button>
         )}
       </div>
-      {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
       <div className="flex overflow-hidden rounded-[var(--radius-ap-sm)] border border-sep">
         {(Object.keys(TAB_LABEL) as EditorTab[]).map((t) => (
@@ -459,7 +459,7 @@ export function FormSchemaEditorPage() {
                     Layout aus Feldern übernehmen
                   </button>
                 )}
-                <button onClick={() => deleteViewMutation.mutate(v.id)} className="text-label2 hover:text-rose-600">
+                <button onClick={() => deleteViewMutation.mutate(v.id)} className="text-label2 hover:text-st-fehlt">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -489,7 +489,7 @@ export function FormSchemaEditorPage() {
               <span className="text-label">
                 {LEISTUNGSTYP_LABEL[z.leistungstyp]} {z.pflicht_vor_abschluss && <span className="text-label2">(Pflicht vor Abschluss)</span>}
               </span>
-              <button onClick={() => deleteZuordnungMutation.mutate(z.id)} className="text-label2 hover:text-rose-600">
+              <button onClick={() => deleteZuordnungMutation.mutate(z.id)} className="text-label2 hover:text-st-fehlt">
                 <Trash2 size={14} />
               </button>
             </div>

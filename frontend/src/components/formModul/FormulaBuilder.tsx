@@ -69,7 +69,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
           rows={3}
           className={`${inputClass} font-mono text-xs`}
         />
-        {rawFehler && <p className="text-xs text-red-600 dark:text-red-400">{rawFehler}</p>}
+        {rawFehler && <p className="text-xs text-st-fehlt ">{rawFehler}</p>}
         {parsed !== null && (
           <button type="button" onClick={() => setErweitert(false)} className="text-xs text-cyan-700 dark:text-cyan-400">
             Zurück zum Formel-Baukasten
@@ -153,7 +153,7 @@ export function FormulaBuilder({ fields, value, onChange }: FormulaBuilderProps)
               const nextOperatoren = operatoren.filter((_, i) => i !== opIndexZuEntfernen);
               update(nextTerme, nextOperatoren);
             }}
-            className="btn-touch shrink-0 p-1.5 text-label2 hover:text-red-600 dark:hover:text-red-400"
+            className="btn-touch shrink-0 p-1.5 text-label2 hover:text-st-fehlt dark:hover:text-st-fehlt"
             aria-label="Term entfernen"
           >
             <Trash2 size={14} strokeWidth={1.5} />

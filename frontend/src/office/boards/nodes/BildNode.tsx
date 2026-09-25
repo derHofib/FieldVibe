@@ -5,7 +5,7 @@ import type { BildDaten, BoardNode } from "../types";
 export function BildNode({ data, selected }: NodeProps<BoardNode>) {
   const { url } = data as BildDaten;
   return (
-    <div className={`w-[200px] overflow-hidden rounded-lg shadow-md ${selected ? "ring-2 ring-blue-500" : ""}`}>
+    <div className={`w-[200px] overflow-hidden rounded-lg shadow-md ${selected ? "ring-2 ring-tint" : ""}`}>
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
       {url ? (
         <img src={url} alt="" className="block w-full" draggable={false} />

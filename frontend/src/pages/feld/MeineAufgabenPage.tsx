@@ -20,8 +20,8 @@ import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-slate-100 text-slate-800 dark:bg-stone-500/15 dark:text-stone-300",
-  mittel: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  hoch: "bg-rose-100 text-rose-800 dark:bg-rose-500/15 dark:text-rose-300",
+  mittel: "bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ",
+  hoch: "bg-rose-100 text-st-fehlt dark:bg-rose-500/15 ",
 };
 
 const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
@@ -154,7 +154,7 @@ export function MeineAufgabenPage() {
             <span
               className={`block text-[11px] font-bold tracking-wide uppercase ${
                 g === "ueberfaellig"
-                  ? "text-rose-600 dark:text-rose-400"
+                  ? "text-st-fehlt "
                   : "text-label2"
               }`}
             >
@@ -167,7 +167,7 @@ export function MeineAufgabenPage() {
                   key={a.id}
                   onClick={() => setPanelAufgabe(a)}
                   className={`card-interactive flex cursor-pointer gap-2.5 border border-sep bg-card p-3 ${
-                    ueberfaellig ? "ring-1 ring-rose-300 dark:ring-rose-500/40" : ""
+                    ueberfaellig ? "ring-1 ring-st-fehlt " : ""
                   }`}
                 >
                   <button
@@ -185,7 +185,7 @@ export function MeineAufgabenPage() {
                       {a.faelligkeit_am && (
                         <span
                           className={`shrink-0 text-[11px] font-semibold ${
-                            ueberfaellig ? "text-red-600 dark:text-red-400" : "text-label2"
+                            ueberfaellig ? "text-st-fehlt " : "text-label2"
                           }`}
                         >
                           {ueberfaellig ? `vor ${tageSeit(a.faelligkeit_am)} Tagen` : a.faelligkeit_am}
@@ -194,7 +194,7 @@ export function MeineAufgabenPage() {
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       {a.projekt_id ? (
-                        <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                        <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-st-arbeit dark:bg-amber-500/15 ">
                           <KanbanSquare size={11} strokeWidth={2} /> Projekt
                         </span>
                       ) : (
@@ -208,9 +208,9 @@ export function MeineAufgabenPage() {
                       {a.vorgang_id && (
                         <Link2 size={13} strokeWidth={2} className="text-sky-500 dark:text-sky-400" />
                       )}
-                      {a.kunde_id && <Users size={13} strokeWidth={2} className="text-emerald-500 dark:text-emerald-400" />}
-                      {a.anlage_id && <Building2 size={13} strokeWidth={2} className="text-amber-500 dark:text-amber-400" />}
-                      {a.standort_id && <MapPin size={13} strokeWidth={2} className="text-rose-500 dark:text-rose-400" />}
+                      {a.kunde_id && <Users size={13} strokeWidth={2} className="text-st-erledigt " />}
+                      {a.anlage_id && <Building2 size={13} strokeWidth={2} className="text-st-arbeit " />}
+                      {a.standort_id && <MapPin size={13} strokeWidth={2} className="text-st-fehlt " />}
                       {!!a.unteraufgaben_gesamt && (
                         <span className="text-[10px] font-medium text-label2">
                           {a.unteraufgaben_erledigt}/{a.unteraufgaben_gesamt} Unteraufgaben
@@ -231,7 +231,7 @@ export function MeineAufgabenPage() {
             onClick={() => setZeigeErledigt((v) => !v)}
             className="flex items-center gap-1.5 py-1 text-xs font-medium text-label2"
           >
-            <CheckCircle2 size={14} strokeWidth={2} className="text-green-600 dark:text-green-400" />
+            <CheckCircle2 size={14} strokeWidth={2} className="text-st-erledigt " />
             {erledigt.length} erledigt
           </button>
           {zeigeErledigt && (

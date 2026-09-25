@@ -292,7 +292,7 @@ export function DauerauftragNeuPage() {
           Vorgangs-Chat -- der Abschluss selbst wird nie blockiert.
         </p>
 
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
 
         <button
           type="submit"

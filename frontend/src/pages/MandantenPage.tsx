@@ -14,9 +14,9 @@ const STATUS_LABEL: Record<MandantStatus, string> = {
 };
 
 const STATUS_BADGE: Record<MandantStatus, string> = {
-  aktiv: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
-  pausiert: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  gekuendigt: "border border-red-400 text-red-700 dark:border-red-600 dark:text-red-300",
+  aktiv: "border border-st-erledigt text-st-erledigt ",
+  pausiert: "border border-st-arbeit text-st-arbeit ",
+  gekuendigt: "border border-st-fehlt text-st-fehlt ",
 };
 
 export function MandantenPage() {
@@ -95,7 +95,7 @@ export function MandantenPage() {
             Anlegen
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
+        {formError && <p className="mt-2 text-sm text-st-fehlt ">{formError}</p>}
       </section>
 
       <section>

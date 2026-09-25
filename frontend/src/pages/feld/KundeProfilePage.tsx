@@ -88,7 +88,7 @@ function Stammdaten({
                 setForm({ ...leereAdresse(adresse), notiz: notiz ?? "", ustIdnr: ustIdnr ?? "" });
                 setBearbeiten(true);
               }}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint "
             >
               Bearbeiten
             </button>
@@ -168,11 +168,11 @@ function Stammdaten({
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
+  neu: "border border-tint text-tint ",
   geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
-  in_arbeit: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  wartet_kunde: "border border-orange-400 text-orange-700 dark:border-orange-600 dark:text-orange-300",
-  abgeschlossen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  in_arbeit: "border border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border border-st-wartet text-st-wartet",
+  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
   abgerechnet: "border border-slate-400 text-slate-600 dark:border-stone-600 dark:text-stone-300",
   storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
@@ -223,7 +223,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
             setAuswahl(zugewiesen.map((t) => t.id));
             setBearbeiten(true);
           }}
-          className="btn-touch mt-2 text-xs text-blue-700 underline dark:text-blue-400"
+          className="btn-touch mt-2 text-xs text-tint underline "
         >
           Bearbeiten
         </button>
@@ -321,7 +321,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
         + Neue Anlage anlegen
       </button>
     );
@@ -355,7 +355,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
           <button
             type="button"
             onClick={() => setZeigeNeuerStandort((v) => !v)}
-            className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+            className="btn-touch text-xs text-tint underline "
           >
             {zeigeNeuerStandort ? "Abbrechen" : "+ Neuer Standort"}
           </button>
@@ -393,7 +393,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
           </select>
         )}
       </div>
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
@@ -457,7 +457,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
         + Neuen Standort anlegen
       </button>
     );
@@ -492,7 +492,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
           className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
       </div>
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
@@ -633,7 +633,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
         + Neue Position anlegen
       </button>
     );
@@ -682,7 +682,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
         />
         Als Stundenverrechnungssatz in der Zeiterfassung wählbar
       </label>
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
@@ -730,7 +730,7 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
           if (window.confirm(`"${position.bezeichnung}" wirklich löschen?`)) removeMutation.mutate();
         }}
         disabled={removeMutation.isPending}
-        className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+        className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
       >
         Löschen
       </button>
@@ -887,7 +887,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
         <span className="flex-1 truncate text-xs text-label2">{link}</span>
         <button
           onClick={kopieren}
-          className="btn-touch shrink-0 text-xs font-medium text-blue-700 dark:text-blue-400"
+          className="btn-touch shrink-0 text-xs font-medium text-tint "
         >
           {kopiert ? "Kopiert ✓" : "Link kopieren"}
         </button>
@@ -923,14 +923,14 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
               <button
                 onClick={() => removeMutation.mutate()}
                 disabled={removeMutation.isPending}
-                className="btn-touch text-xs text-red-700 underline disabled:opacity-50 dark:text-red-400"
+                className="btn-touch text-xs text-st-fehlt underline disabled:opacity-50 "
               >
                 Entfernen
               </button>
             )}
           </div>
           {uploadMutation.isError && (
-            <p className="mt-1 text-xs text-red-700 dark:text-red-400">
+            <p className="mt-1 text-xs text-st-fehlt ">
               {uploadMutation.error instanceof ApiError ? uploadMutation.error.message : "Fehler beim Hochladen"}
             </p>
           )}
@@ -973,7 +973,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
 
   if (!zeigen) {
     return (
-      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-blue-700 underline dark:text-blue-400">
+      <button onClick={() => setZeigen(true)} className="btn-touch text-xs text-tint underline ">
         + Neuen Zugang anlegen
       </button>
     );
@@ -1002,7 +1002,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
         placeholder="Passwort (mind. 10 Zeichen)"
         className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
       />
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"
@@ -1093,7 +1093,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
       )}
       <button
         onClick={() => navigate(`/dauerauftraege/neu?kunde_id=${kundeId}`)}
-        className="btn-touch mt-2 text-xs text-blue-700 underline dark:text-blue-400"
+        className="btn-touch mt-2 text-xs text-tint underline "
       >
         + Neuen Dauer-Auftrag anlegen
       </button>
@@ -1205,14 +1205,14 @@ export function KundeProfilePage() {
                     deleteMutation.mutate();
                   }
                 }}
-                className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20"
               >
                 Löschen
               </button>
             </div>
           )}
         </div>
-        {deleteError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
+        {deleteError && <p className="mt-2 text-sm text-st-fehlt ">{deleteError}</p>}
         {profil.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {profil.tags.map((t) => (
@@ -1343,7 +1343,7 @@ export function KundeProfilePage() {
                     {v.dauerauftrag_id && (
                       <>
                         {" · "}
-                        <Repeat size={11} strokeWidth={2} className="inline text-amber-500" />
+                        <Repeat size={11} strokeWidth={2} className="inline text-st-arbeit" />
                       </>
                     )}
                   </div>

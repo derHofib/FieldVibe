@@ -216,7 +216,7 @@ export function NotizAktionSheet({
         onClick={() => setModus("vorgang")}
         className="btn-touch flex w-full items-center gap-3 border-b border-slate-100 py-3 text-left dark:border-stone-800"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-tint dark:bg-blue-500/15 ">
           <Link2 size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
@@ -228,7 +228,7 @@ export function NotizAktionSheet({
         onClick={() => setModus("mangel")}
         className="btn-touch flex w-full items-center gap-3 border-b border-slate-100 py-3 text-left dark:border-stone-800"
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-st-arbeit dark:bg-amber-500/15 ">
           <AlertTriangle size={16} strokeWidth={2} />
         </span>
         <span className="flex-1">
@@ -246,7 +246,7 @@ export function NotizAktionSheet({
         </button>
         <button
           onClick={onLoeschen}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-rose-50 py-2.5 text-sm font-semibold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-rose-50 py-2.5 text-sm font-semibold text-st-fehlt dark:bg-rose-500/10 "
         >
           <Trash2 size={14} strokeWidth={2} /> Löschen
         </button>
@@ -311,7 +311,7 @@ function NeuerVorgangForm({
           </option>
         ))}
       </select>
-      {erstellen.isError && <p className="text-xs text-red-600 dark:text-red-400">Anlegen fehlgeschlagen.</p>}
+      {erstellen.isError && <p className="text-xs text-st-fehlt ">Anlegen fehlgeschlagen.</p>}
       <div className="flex gap-3 pt-1">
         <button
           onClick={() => erstellen.mutate()}
@@ -360,7 +360,7 @@ function MangelMeldenForm({
         placeholder="Beschreibung des Mangels…"
         className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
       />
-      {melden.isError && <p className="text-xs text-red-600 dark:text-red-400">Melden fehlgeschlagen.</p>}
+      {melden.isError && <p className="text-xs text-st-fehlt ">Melden fehlgeschlagen.</p>}
       <div className="flex gap-3 pt-1">
         <button
           onClick={() => melden.mutate()}

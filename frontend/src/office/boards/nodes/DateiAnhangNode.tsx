@@ -36,7 +36,7 @@ export function DateiAnhangNode({ id, data, selected }: NodeProps<BoardNode>) {
   return (
     <div
       className={`w-[190px] rounded-xl bg-white p-3 shadow-lg dark:bg-stone-900 ${
-        selected ? "ring-2 ring-blue-500" : ""
+        selected ? "ring-2 ring-tint" : ""
       }`}
     >
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
@@ -65,7 +65,7 @@ export function DateiAnhangNode({ id, data, selected }: NodeProps<BoardNode>) {
             </button>
             <button
               onClick={() => entfernen.mutate()}
-              className="mt-0.5 text-[10px] font-medium text-slate-400 hover:text-red-500 dark:text-stone-500"
+              className="mt-0.5 text-[10px] font-medium text-slate-400 hover:text-st-fehlt dark:text-stone-500"
             >
               Entfernen
             </button>
@@ -86,7 +86,7 @@ export function DateiAnhangNode({ id, data, selected }: NodeProps<BoardNode>) {
         </button>
       )}
       {hochladen.isError && (
-        <p className="nodrag mt-1.5 flex items-center gap-1 text-[10px] text-red-600 dark:text-red-400">
+        <p className="nodrag mt-1.5 flex items-center gap-1 text-[10px] text-st-fehlt ">
           <X size={10} strokeWidth={2.5} /> Upload fehlgeschlagen
         </p>
       )}

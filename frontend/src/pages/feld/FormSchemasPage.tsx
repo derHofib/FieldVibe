@@ -84,7 +84,7 @@ export function FormSchemasPage() {
               className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
             />
           </div>
-          {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+          {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
           <div className="flex items-center justify-end gap-2">
             <button type="button" onClick={() => setFormOffen(false)} className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
               Abbrechen

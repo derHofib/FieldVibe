@@ -21,9 +21,9 @@ const UMSCHALTER = [
 
 const RECHNUNG_STATUS_BADGE: Record<RechnungStatus, string> = {
   entwurf: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
-  versendet: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
-  teilweise_bezahlt: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  bezahlt: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  versendet: "border border-tint text-tint ",
+  teilweise_bezahlt: "border border-st-arbeit text-st-arbeit ",
+  bezahlt: "border border-st-erledigt text-st-erledigt ",
   storniert: "border border-slate-300 text-slate-400 dark:border-stone-700 dark:text-stone-500",
 };
 
@@ -37,9 +37,9 @@ const RECHNUNG_STATUS_LABEL: Record<RechnungStatus, string> = {
 
 const ANGEBOT_STATUS_BADGE: Record<AngebotStatus, string> = {
   entwurf: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
-  versendet: "border border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300",
-  angenommen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
-  abgelehnt: "border border-rose-400 text-rose-700 dark:border-rose-600 dark:text-rose-300",
+  versendet: "border border-tint text-tint ",
+  angenommen: "border border-st-erledigt text-st-erledigt ",
+  abgelehnt: "border border-st-fehlt text-st-fehlt ",
 };
 
 const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
@@ -218,7 +218,7 @@ export function OfficeRechnungenPage() {
                   <p
                     className={`mt-0.5 truncate text-[11.5px] ${
                       e.warnung
-                        ? "font-bold text-rose-600 dark:text-rose-300"
+                        ? "font-bold text-st-fehlt "
                         : "text-label2"
                     }`}
                   >

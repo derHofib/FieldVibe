@@ -207,7 +207,7 @@ export function ZeiterfassungManuellForm({
         />
       </div>
 
-      {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
       <div className="flex items-center justify-end gap-2">
         <button

@@ -56,8 +56,8 @@ export function AuswertungPage() {
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-md bg-amber-50 p-2 dark:bg-amber-500/10">
-              <div className="text-xs text-amber-700 dark:text-amber-400">Debitoren (Kunden schulden)</div>
-              <div className="font-semibold text-amber-900 dark:text-amber-300">
+              <div className="text-xs text-st-arbeit ">Debitoren (Kunden schulden)</div>
+              <div className="font-semibold text-st-arbeit ">
                 {offenePosten.summe_debitoren} EUR
               </div>
             </div>
@@ -75,7 +75,7 @@ export function AuswertungPage() {
                 {offenePosten.debitoren_buckets.map((b) => (
                   <span
                     key={b.label}
-                    className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+                    className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-st-arbeit dark:bg-amber-500/10 "
                   >
                     {b.label}: {b.summe} EUR ({b.anzahl})
                   </span>

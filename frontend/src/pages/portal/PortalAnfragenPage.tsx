@@ -24,8 +24,8 @@ const STATUS_LABEL: Record<VorgangAnfrageStatus, string> = {
 };
 
 const STATUS_BADGE: Record<VorgangAnfrageStatus, string> = {
-  offen: "border border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300",
-  angenommen: "border border-green-400 text-green-700 dark:border-green-600 dark:text-green-300",
+  offen: "border border-st-arbeit text-st-arbeit ",
+  angenommen: "border border-st-erledigt text-st-erledigt ",
   abgelehnt: "border border-slate-300 text-slate-500 dark:border-stone-700 dark:text-stone-400",
 };
 
@@ -101,7 +101,7 @@ function NeueAnfrage() {
     return (
       <div className="space-y-2">
         {gesendet && (
-          <p className="border border-green-400 px-3 py-2 text-sm text-green-700 dark:border-green-600 dark:text-green-300">
+          <p className="border border-st-erledigt px-3 py-2 text-sm text-st-erledigt ">
             Ihre Anfrage wurde gesendet.
           </p>
         )}
@@ -193,7 +193,7 @@ function NeueAnfrage() {
         <button
           type="button"
           onClick={() => setZeigeNeuerStandort(true)}
-          className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+          className="btn-touch text-xs text-tint underline "
         >
           + Neuen Standort anlegen
         </button>
@@ -237,7 +237,7 @@ function NeueAnfrage() {
         </div>
       )}
 
-      {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-st-fehlt ">{error}</p>}
 
       <div className="flex gap-2">
         <button

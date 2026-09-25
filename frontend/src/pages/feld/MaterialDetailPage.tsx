@@ -114,7 +114,7 @@ export function MaterialDetailPage() {
               }
             }}
             disabled={deleteMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50 "
           >
             Material löschen
           </button>
@@ -221,7 +221,7 @@ export function MaterialDetailPage() {
                 href={material.bestell_url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 inline-block text-xs text-blue-700 underline dark:text-blue-400"
+                className="mt-1 inline-block text-xs text-tint underline "
               >
                 Zum Bestell-Link →
               </a>
@@ -236,7 +236,7 @@ export function MaterialDetailPage() {
           Speichern
         </button>
         {speichernMutation.isSuccess && (
-          <p className="text-center text-xs text-green-600 dark:text-green-400">Gespeichert.</p>
+          <p className="text-center text-xs text-st-erledigt ">Gespeichert.</p>
         )}
       </div>
 
@@ -254,7 +254,7 @@ export function MaterialDetailPage() {
               #{t.label}
               <button
                 onClick={() => tagEntfernenMutation.mutate(t.id)}
-                className="btn-touch text-slate-400 hover:text-red-600 dark:text-stone-500 dark:hover:text-red-400"
+                className="btn-touch text-slate-400 hover:text-st-fehlt dark:text-stone-500 dark:hover:text-st-fehlt"
                 aria-label={`Tag ${t.label} entfernen`}
               >
                 ✕

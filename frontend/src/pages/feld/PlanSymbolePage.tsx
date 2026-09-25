@@ -65,7 +65,7 @@ function SymbolKarte({
       )}
       <button
         onClick={onLoeschen}
-        className="flex items-center gap-1 text-[11px] text-label2 hover:text-rose-600"
+        className="flex items-center gap-1 text-[11px] text-label2 hover:text-st-fehlt"
       >
         <Trash2 size={12} strokeWidth={1.5} /> Löschen
       </button>
@@ -156,7 +156,7 @@ export function PlanSymbolePage() {
             <Plus size={15} strokeWidth={1.5} /> Hochladen
           </button>
         </div>
-        {fehler && <p className="text-xs text-red-600 dark:text-red-400">{fehler}</p>}
+        {fehler && <p className="text-xs text-st-fehlt ">{fehler}</p>}
       </div>
 
       {isLoading ? (

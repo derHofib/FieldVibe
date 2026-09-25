@@ -30,13 +30,13 @@ export function UpdatePage() {
       {data && (
         <div className="space-y-4">
           {data.fehler && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+            <div className="rounded-md border border-st-arbeit bg-amber-50 p-3 text-sm text-st-arbeit dark:bg-amber-950 ">
               Der neueste Stand auf GitHub konnte nicht ermittelt werden: {data.fehler}
             </div>
           )}
 
           {data.update_available === true && (
-            <div className="flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-200">
+            <div className="flex items-center gap-1.5 rounded-md border border-st-erledigt bg-emerald-50 p-3 text-sm font-medium text-st-erledigt dark:bg-emerald-950 ">
               <ArrowUpCircle size={15} strokeWidth={2} /> Update verfügbar
             </div>
           )}
@@ -71,7 +71,7 @@ export function UpdatePage() {
                       href={data.latest_commit_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-blue-600 underline dark:text-blue-400"
+                      className="text-tint underline "
                     >
                       {data.latest_commit_sha}
                     </a>

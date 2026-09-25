@@ -435,7 +435,7 @@ function InspectorFeld({
       </div>
       <button
         onClick={onLoeschen}
-        className="flex w-full items-center justify-center gap-1.5 border border-sep py-1.5 text-sm text-label2 hover:border-rose-400 hover:text-rose-600"
+        className="flex w-full items-center justify-center gap-1.5 border border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
       >
         <Trash2 size={14} strokeWidth={1.5} /> Feld löschen
       </button>
@@ -527,7 +527,7 @@ function InspectorGruppe({
       </div>
       <button
         onClick={onLoeschen}
-        className="flex w-full items-center justify-center gap-1.5 border border-sep py-1.5 text-sm text-label2 hover:border-rose-400 hover:text-rose-600"
+        className="flex w-full items-center justify-center gap-1.5 border border-sep py-1.5 text-sm text-label2 hover:border-st-fehlt hover:text-st-fehlt"
       >
         <Trash2 size={14} strokeWidth={1.5} /> Gruppe löschen
       </button>
@@ -588,7 +588,7 @@ function UnterformularFeldZeile({
             onClick={onLoeschen}
             aria-label="Feld löschen"
             title="Feld löschen"
-            className="btn-ap-toolbar h-7 w-7 hover:border-rose-400 hover:text-rose-600"
+            className="btn-ap-toolbar h-7 w-7 hover:border-st-fehlt hover:text-st-fehlt"
           >
             <Trash2 size={13} strokeWidth={1.5} />
           </button>

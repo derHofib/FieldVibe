@@ -28,7 +28,7 @@ export function HighlightsPage() {
         ← Zurück
       </button>
       <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
-        <Star size={19} strokeWidth={2} className="text-amber-500" /> Highlights
+        <Star size={19} strokeWidth={2} className="text-st-arbeit" /> Highlights
       </h1>
       <p className="text-sm text-label2">
         Markierte Fotos aus abgeschlossenen und laufenden Vorgängen – eine kleine Werkschau.
@@ -46,7 +46,7 @@ export function HighlightsPage() {
           text={
             <>
               Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit{" "}
-              <Star size={12} strokeWidth={2} className="inline text-amber-500" /> markieren.
+              <Star size={12} strokeWidth={2} className="inline text-st-arbeit" /> markieren.
             </>
           }
         />

@@ -141,7 +141,7 @@ export function AnsprechpartnerVerwaltung({
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-label2">Ansprechpartner</h2>
         {kannVerwalten && !neuAnlegen && (
-          <button onClick={() => setNeuAnlegen(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+          <button onClick={() => setNeuAnlegen(true)} className="btn-touch text-xs font-medium text-tint ">
             + Neu
           </button>
         )}
@@ -173,12 +173,12 @@ export function AnsprechpartnerVerwaltung({
                 </div>
                 <div className="flex gap-1">
                   {a.operativ && (
-                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-500/15 dark:text-blue-300">
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-tint dark:bg-blue-500/15 ">
                       Operativ
                     </span>
                   )}
                   {a.eskalationsstufe && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-st-arbeit dark:bg-amber-500/15 ">
                       Stufe {a.eskalationsstufe}
                     </span>
                   )}
@@ -194,14 +194,14 @@ export function AnsprechpartnerVerwaltung({
                 <div className="mt-2 flex gap-3">
                   <button
                     onClick={() => setBearbeitenId(a.id)}
-                    className="btn-touch text-xs text-blue-700 underline dark:text-blue-400"
+                    className="btn-touch text-xs text-tint underline "
                   >
                     Bearbeiten
                   </button>
                   <button
                     onClick={() => entfernen(a.id)}
                     disabled={speichernMutation.isPending}
-                    className="btn-touch text-xs text-red-700 underline disabled:opacity-50 dark:text-red-400"
+                    className="btn-touch text-xs text-st-fehlt underline disabled:opacity-50 "
                   >
                     Entfernen
                   </button>

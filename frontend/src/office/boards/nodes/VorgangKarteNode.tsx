@@ -39,7 +39,7 @@ export function VorgangKarteNode({ id, data, selected }: NodeProps<BoardNode>) {
     return (
       <div
         className={`w-[210px] rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/60 p-3 dark:border-indigo-500/40 dark:bg-indigo-500/10 ${
-          selected ? "ring-2 ring-blue-500" : ""
+          selected ? "ring-2 ring-tint" : ""
         }`}
       >
         <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
@@ -59,7 +59,7 @@ export function VorgangKarteNode({ id, data, selected }: NodeProps<BoardNode>) {
     <div
       onClick={() => navigate(`/vorgaenge/${vorgang_id}`)}
       className={`relative w-[210px] cursor-pointer overflow-hidden rounded-xl bg-white shadow-lg dark:bg-stone-900 ${
-        selected ? "ring-2 ring-blue-500" : ""
+        selected ? "ring-2 ring-tint" : ""
       }`}
     >
       <Handle type="target" position={Position.Top} className="!h-2 !w-2 !border-none !bg-slate-300 dark:!bg-stone-600" />
