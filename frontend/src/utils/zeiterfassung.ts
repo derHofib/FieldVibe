@@ -1,4 +1,5 @@
-import type { ZeiterfassungKategorie } from "../types";
+import type { StatusKey } from "../components/apple/status";
+import type { ZeiterfassungBuchungsstatus, ZeiterfassungKategorie } from "../types";
 
 // Muss mit ZEITERFASSUNG_KATEGORIE_LABEL in backend/app/schemas/zeiterfassung.py
 // uebereinstimmen ("auftrag" hat bewusst kein Label -- dort steht die
@@ -49,4 +50,36 @@ export function montagDerWoche(datum: Date): Date {
 
 export function toDateInput(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+// --- Buchungsablauf (Stufe 2, docs/konzepte/ZEITERFASSUNG.md) -----------
+
+export const BUCHUNGSSTATUS_LABEL: Record<ZeiterfassungBuchungsstatus, string> = {
+  vermerkt: "Vermerkt",
+  vorgemerkt: "Vorgemerkt",
+  gebucht: "Gebucht",
+  abgerechnet: "Abgerechnet",
+};
+
+// Wiederverwendet die bestehenden sechs Status-Token statt eigener Farben
+// (siehe fieldvibe-design-Skill, Checkliste Punkt 1: Status laeuft immer
+// ueber StatusKey). vorgemerkt->neu (blau), gebucht/abgerechnet->erledigt
+// (gruen, zusaetzlich mit Schloss-Icon in der UI), vermerkt->geplant (grau).
+export function buchungsstatusZuToken(status: ZeiterfassungBuchungsstatus): StatusKey {
+  switch (status) {
+    case "vermerkt":
+      return "geplant";
+    case "vorgemerkt":
+      return "neu";
+    case "gebucht":
+    case "abgerechnet":
+      return "erledigt";
+  }
+}
+
+// Ab hier ist ein Eintrag ueber PATCH/DELETE nicht mehr direkt bearbeitbar
+// (muss erst zurueckgezogen bzw. storniert werden) -- spiegelt
+// _BUCHUNGSSTATUS_BEARBEITBAR in backend/app/api/routes/zeiterfassung.py.
+export function buchungsstatusGesperrt(status: ZeiterfassungBuchungsstatus): boolean {
+  return status !== "vermerkt";
 }

@@ -117,6 +117,7 @@ export function AccountTypenPage() {
   const [icon, setIcon] = useState("");
   const [nurZugewieseneKunden, setNurZugewieseneKunden] = useState(false);
   const [darfSelbstUebernehmen, setDarfSelbstUebernehmen] = useState(false);
+  const [darfZeitenBuchen, setDarfZeitenBuchen] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: accountTypenApi.create,
@@ -126,14 +127,21 @@ export function AccountTypenPage() {
       setIcon("");
       setNurZugewieseneKunden(false);
       setDarfSelbstUebernehmen(false);
+      setDarfZeitenBuchen(false);
       setExpandedId(typ.id);
     },
     onError: (err) => setFormError(err instanceof ApiError ? err.message : "Fehler"),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: { id: string; darf_vorgaenge_selbst_uebernehmen: boolean }) =>
-      accountTypenApi.update(id, body),
+    mutationFn: ({
+      id,
+      ...body
+    }: {
+      id: string;
+      darf_vorgaenge_selbst_uebernehmen?: boolean;
+      darf_zeiten_buchen?: boolean;
+    }) => accountTypenApi.update(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["account-typen"] }),
   });
 
@@ -155,6 +163,7 @@ export function AccountTypenPage() {
       icon: icon.trim() || null,
       nur_zugewiesene_kunden: nurZugewieseneKunden,
       darf_vorgaenge_selbst_uebernehmen: darfSelbstUebernehmen,
+      darf_zeiten_buchen: darfZeitenBuchen,
     });
   }
 
@@ -214,6 +223,15 @@ export function AccountTypenPage() {
             />
             Darf Aufträge selbst übernehmen
           </label>
+          <label className="flex items-center gap-2 pb-2 text-sm text-label">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-ind-acc"
+              checked={darfZeitenBuchen}
+              onChange={(e) => setDarfZeitenBuchen(e.target.checked)}
+            />
+            Darf Zeiten buchen
+          </label>
           <button
             type="submit"
             disabled={createMutation.isPending}
@@ -246,6 +264,7 @@ export function AccountTypenPage() {
                     {typ.anzahl_nutzer} {typ.anzahl_nutzer === 1 ? "Nutzer" : "Nutzer"}
                     {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
                     {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Aufträge selbst übernehmen"}
+                    {typ.darf_zeiten_buchen && " · darf Zeiten buchen"}
                   </span>
                 </span>
                 <button
@@ -289,6 +308,20 @@ export function AccountTypenPage() {
                       }
                     />
                     Darf Aufträge selbst übernehmen ("Ticket übernehmen"-Button)
+                  </label>
+                  <label className="flex items-center gap-2 border-t border-sep px-4 py-3 text-sm text-label">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-ind-acc"
+                      checked={typ.darf_zeiten_buchen}
+                      onChange={(e) =>
+                        updateMutation.mutate({
+                          id: typ.id,
+                          darf_zeiten_buchen: e.target.checked,
+                        })
+                      }
+                    />
+                    Darf Zeiten buchen (Vormerken/Buchen im Zeit-Tab, unabhängig von Rolle/Gerät)
                   </label>
                   <RechteMatrixEditor accountTypId={typ.id} />
                 </>

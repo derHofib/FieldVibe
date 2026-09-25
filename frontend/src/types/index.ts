@@ -228,6 +228,10 @@ export interface CurrentUser {
   // Steuert den "Ticket übernehmen"-Button auf der Vorgang-Detailseite
   // (siehe app/services/rechte_service.py:darf_vorgang_selbst_uebernehmen).
   darf_vorgaenge_selbst_uebernehmen: boolean;
+  // Steuert die Buchungs-Oberfläche in der Zeiterfassung (siehe
+  // app/services/rechte_service.py:darf_zeiten_buchen) -- Auswahl/
+  // Aktionsleiste im Zeit-Tab, Seite "Zeiten buchen", fremden Timer beenden.
+  darf_zeiten_buchen: boolean;
   name: string;
   email: string;
   impersonated_by: string | null;
@@ -654,6 +658,10 @@ export type ZeiterfassungKategorie =
   | "krankheit"
   | "sonstiges";
 
+// Muss mit ZeiterfassungBuchungsstatus in backend/app/schemas/zeiterfassung.py
+// uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 6.1).
+export type ZeiterfassungBuchungsstatus = "vermerkt" | "vorgemerkt" | "gebucht" | "abgerechnet";
+
 export interface Zeiterfassung {
   id: string;
   vorgang_id: string | null;
@@ -667,6 +675,11 @@ export interface Zeiterfassung {
   abrechenbar: boolean;
   kategorie: ZeiterfassungKategorie;
   lv_position_id: string | null;
+  buchungsstatus: ZeiterfassungBuchungsstatus;
+  vorgemerkt_von: string | null;
+  vorgemerkt_am: string | null;
+  gebucht_von: string | null;
+  gebucht_am: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -675,6 +688,17 @@ export interface ZeiterfassungStatistik {
   wochenstunden: string;
   monatsstunden: string;
   jahresstunden: string;
+}
+
+export interface ZeiterfassungAenderung {
+  id: string;
+  aktion: string;
+  feld: string | null;
+  alter_wert: unknown;
+  neuer_wert: unknown;
+  grund: string | null;
+  geaendert_von: string | null;
+  geaendert_am: string;
 }
 
 // --- Steuerung (Phase 5) --------------------------------------------------
@@ -1279,6 +1303,7 @@ export interface AccountTyp {
   farbe: string | null;
   nur_zugewiesene_kunden: boolean;
   darf_vorgaenge_selbst_uebernehmen: boolean;
+  darf_zeiten_buchen: boolean;
   reihenfolge: number;
   anzahl_nutzer: number;
 }
@@ -1289,6 +1314,7 @@ export interface AccountTypCreate {
   farbe?: string | null;
   nur_zugewiesene_kunden?: boolean;
   darf_vorgaenge_selbst_uebernehmen?: boolean;
+  darf_zeiten_buchen?: boolean;
 }
 
 export interface AccountTypUpdate {
@@ -1297,6 +1323,7 @@ export interface AccountTypUpdate {
   farbe?: string | null;
   nur_zugewiesene_kunden?: boolean;
   darf_vorgaenge_selbst_uebernehmen?: boolean;
+  darf_zeiten_buchen?: boolean;
   reihenfolge?: number;
 }
 

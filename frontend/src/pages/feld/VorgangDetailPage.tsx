@@ -34,6 +34,7 @@ import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
 import { Sheet } from "../../components/apple/Sheet";
+import { StatusPille } from "../../components/apple/StatusPille";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
@@ -47,6 +48,7 @@ import {
 } from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
+import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../utils/zeiterfassung";
 import { openPdfBlob } from "../../utils/pdf";
 import type { OutboxItem } from "../../offline/db";
 import type {
@@ -456,6 +458,12 @@ export function VorgangDetailPage({
   // der gerade beendete Eintrag, oder null wenn keins offen ist.
   const [nachStoppenEintrag, setNachStoppenEintrag] = useState<Zeiterfassung | null>(null);
   const [nachStoppenTaetigkeit, setNachStoppenTaetigkeit] = useState("");
+  // Buchungsablauf (Stufe 2, siehe docs/konzepte/ZEITERFASSUNG.md
+  // Abschnitt 6.1) -- Auswahl im Zeit-Tab, alle ausgewaehlten Eintraege
+  // muessen denselben Buchungsstatus haben (siehe kannZeitAuswaehlen unten).
+  const [ausgewaehlteZeitIds, setAusgewaehlteZeitIds] = useState<Set<string>>(new Set());
+  const [stornierenModus, setStornierenModus] = useState(false);
+  const [stornierenGrund, setStornierenGrund] = useState("");
   const [showTerminForm, setShowTerminForm] = useState(false);
   const [terminWarnungen, setTerminWarnungen] = useState<TerminWarnung[]>([]);
   const [terminTechnikerId, setTerminTechnikerId] = useState("");
@@ -1143,6 +1151,34 @@ export function VorgangDetailPage({
     onError: meldeAktionsFehler,
   });
 
+  function nachBuchungsaktionAufraeumen() {
+    queryClient.invalidateQueries({ queryKey: ["zeiterfassung", id] });
+    setAusgewaehlteZeitIds(new Set());
+    setStornierenModus(false);
+    setStornierenGrund("");
+  }
+
+  const vormerkenMutation = useMutation({
+    mutationFn: (ids: string[]) => zeiterfassungApi.vormerken(ids),
+    onSuccess: nachBuchungsaktionAufraeumen,
+    onError: meldeAktionsFehler,
+  });
+  const zurueckziehenMutation = useMutation({
+    mutationFn: (ids: string[]) => zeiterfassungApi.vormerkungZurueckziehen(ids),
+    onSuccess: nachBuchungsaktionAufraeumen,
+    onError: meldeAktionsFehler,
+  });
+  const buchenMutation = useMutation({
+    mutationFn: (ids: string[]) => zeiterfassungApi.buchen(ids),
+    onSuccess: nachBuchungsaktionAufraeumen,
+    onError: meldeAktionsFehler,
+  });
+  const stornierenMutation = useMutation({
+    mutationFn: () => zeiterfassungApi.buchungStornieren([...ausgewaehlteZeitIds], stornierenGrund),
+    onSuccess: nachBuchungsaktionAufraeumen,
+    onError: meldeAktionsFehler,
+  });
+
   if (vorgangIstFehler) {
     return (
       <div className="space-y-4">
@@ -1204,6 +1240,54 @@ export function VorgangDetailPage({
 
   const timerLaeuftHier = laufenderTimer && laufenderTimer.vorgang_id === id;
   const timerLaeuftAnderswo = laufenderTimer && laufenderTimer.vorgang_id !== id;
+
+  // Buchungsablauf (Stufe 2, siehe docs/konzepte/ZEITERFASSUNG.md
+  // Abschnitt 6.1/6.2) -- eine Zeile ist auswaehlbar, wenn sie zu einem der
+  // Sammel-Endpunkte passt: vermerkt/vorgemerkt fuer eigene Eintraege oder
+  // mit Buchungsrecht fuer beliebige, gebucht nur mit Buchungsrecht (fuer
+  // "Buchung stornieren"). Alle ausgewaehlten Eintraege muessen denselben
+  // Status haben, sonst waere unklar, welche Aktion gemeint ist.
+  const darfZeitenBuchen = !!currentUser?.darf_zeiten_buchen;
+  function kannZeitAuswaehlen(e: Zeiterfassung): boolean {
+    const eigene = e.techniker_id === currentUser?.id;
+    if (e.buchungsstatus === "vermerkt" || e.buchungsstatus === "vorgemerkt") {
+      return eigene || darfZeitenBuchen;
+    }
+    if (e.buchungsstatus === "gebucht") {
+      return darfZeitenBuchen;
+    }
+    return false;
+  }
+  const ausgewaehlteEintraege = (zeiterfassungListe ?? []).filter((e) => ausgewaehlteZeitIds.has(e.id));
+  const ausgewaehlterStatus = ausgewaehlteEintraege[0]?.buchungsstatus ?? null;
+  function zeitCheckboxToggeln(e: Zeiterfassung) {
+    setAusgewaehlteZeitIds((bisherige) => {
+      const neu = new Set(bisherige);
+      if (neu.has(e.id)) {
+        neu.delete(e.id);
+      } else {
+        // Nur Eintraege desselben Status gleichzeitig auswaehlbar.
+        if (ausgewaehlterStatus && e.buchungsstatus !== ausgewaehlterStatus) neu.clear();
+        neu.add(e.id);
+      }
+      return neu;
+    });
+  }
+  function handleBuchen() {
+    const stunden = formatSekundenAlsHHMM(
+      ausgewaehlteEintraege.reduce(
+        (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
+        0,
+      ),
+    );
+    if (
+      window.confirm(
+        `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen? Gebuchte Einträge kannst du danach nicht mehr ändern.`,
+      )
+    ) {
+      buchenMutation.mutate([...ausgewaehlteZeitIds]);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -1888,11 +1972,13 @@ export function VorgangDetailPage({
               <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr className="text-left text-label2">
+                    <th className="w-6 px-2 py-1" />
                     <th className="px-2 py-1 font-medium">Techniker</th>
                     <th className="px-2 py-1 font-medium">Tätigkeit</th>
                     <th className="px-2 py-1 font-medium">Datum</th>
                     <th className="px-2 py-1 font-medium">Von–Bis</th>
                     <th className="px-2 py-1 text-right font-medium">Dauer</th>
+                    <th className="px-2 py-1 font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1904,23 +1990,32 @@ export function VorgangDetailPage({
                         (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
                       const techniker = users?.find((u) => u.id === e.techniker_id);
                       return (
-                        <tr
-                          key={e.id}
-                          onClick={() => setZeitSheetModus(e)}
-                          className="cursor-pointer border-t border-sep hover:bg-fill"
-                        >
-                          <td className="px-2 py-1.5 text-label">{techniker?.name ?? "—"}</td>
-                          <td className="px-2 py-1.5 text-label2">
+                        <tr key={e.id} className="border-t border-sep hover:bg-fill">
+                          <td className="px-2 py-1.5">
+                            {kannZeitAuswaehlen(e) && (
+                              <input
+                                type="checkbox"
+                                checked={ausgewaehlteZeitIds.has(e.id)}
+                                onChange={() => zeitCheckboxToggeln(e)}
+                                onClick={(ev) => ev.stopPropagation()}
+                                className="h-4 w-4"
+                              />
+                            )}
+                          </td>
+                          <td className="cursor-pointer px-2 py-1.5 text-label" onClick={() => setZeitSheetModus(e)}>
+                            {techniker?.name ?? "—"}
+                          </td>
+                          <td className="cursor-pointer px-2 py-1.5 text-label2" onClick={() => setZeitSheetModus(e)}>
                             {e.taetigkeit || (
                               <span className="flex items-center gap-1 text-st-arbeit">
                                 <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
                               </span>
                             )}
                           </td>
-                          <td className="px-2 py-1.5 tabular-nums text-label2">
+                          <td className="cursor-pointer px-2 py-1.5 tabular-nums text-label2" onClick={() => setZeitSheetModus(e)}>
                             {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
                           </td>
-                          <td className="px-2 py-1.5 tabular-nums text-label2">
+                          <td className="cursor-pointer px-2 py-1.5 tabular-nums text-label2" onClick={() => setZeitSheetModus(e)}>
                             {new Date(e.start_at).toLocaleTimeString("de-DE", {
                               timeZone: "Europe/Berlin",
                               hour: "2-digit",
@@ -1933,8 +2028,17 @@ export function VorgangDetailPage({
                               minute: "2-digit",
                             })}
                           </td>
-                          <td className="px-2 py-1.5 text-right font-medium tabular-nums text-label">
+                          <td
+                            className="cursor-pointer px-2 py-1.5 text-right font-medium tabular-nums text-label"
+                            onClick={() => setZeitSheetModus(e)}
+                          >
                             {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                          </td>
+                          <td className="cursor-pointer px-2 py-1.5" onClick={() => setZeitSheetModus(e)}>
+                            <StatusPille
+                              status={buchungsstatusZuToken(e.buchungsstatus)}
+                              label={BUCHUNGSSTATUS_LABEL[e.buchungsstatus]}
+                            />
                           </td>
                         </tr>
                       );
@@ -1952,42 +2056,132 @@ export function VorgangDetailPage({
                     (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
                   const techniker = users?.find((u) => u.id === e.techniker_id);
                   return (
-                    <button
-                      key={e.id}
-                      onClick={() => setZeitSheetModus(e)}
-                      className="btn-touch flex w-full items-center justify-between text-left text-xs text-label2 hover:bg-fill"
-                    >
-                      <span>
-                        {techniker?.name ?? "—"}
-                        {" · "}
-                        {e.taetigkeit || (
-                          <span className="inline-flex items-center gap-1 text-st-arbeit">
-                            <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
+                    <div key={e.id} className="flex items-center gap-2">
+                      {kannZeitAuswaehlen(e) && (
+                        <input
+                          type="checkbox"
+                          checked={ausgewaehlteZeitIds.has(e.id)}
+                          onChange={() => zeitCheckboxToggeln(e)}
+                          className="btn-touch h-4 w-4 shrink-0"
+                        />
+                      )}
+                      <button
+                        onClick={() => setZeitSheetModus(e)}
+                        className="btn-touch flex min-w-0 flex-1 items-center justify-between gap-2 text-left text-xs text-label2 hover:bg-fill"
+                      >
+                        <span className="min-w-0">
+                          {techniker?.name ?? "—"}
+                          {" · "}
+                          {e.taetigkeit || (
+                            <span className="inline-flex items-center gap-1 text-st-arbeit">
+                              <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
+                            </span>
+                          )}
+                          {" · "}
+                          {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+                          {" · "}
+                          {new Date(e.start_at).toLocaleTimeString("de-DE", {
+                            timeZone: "Europe/Berlin",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          –
+                          {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
+                            timeZone: "Europe/Berlin",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="font-medium text-label">
+                            {formatSekundenAlsHHMM(dauerSekunden)} Std.
                           </span>
-                        )}
-                        {" · "}
-                        {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
-                        {" · "}
-                        {new Date(e.start_at).toLocaleTimeString("de-DE", {
-                          timeZone: "Europe/Berlin",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                        –
-                        {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
-                          timeZone: "Europe/Berlin",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      <span className="shrink-0 font-medium text-label">
-                        {formatSekundenAlsHHMM(dauerSekunden)} Std.
-                      </span>
-                    </button>
+                          <StatusPille
+                            status={buchungsstatusZuToken(e.buchungsstatus)}
+                            label={BUCHUNGSSTATUS_LABEL[e.buchungsstatus]}
+                          />
+                        </span>
+                      </button>
+                    </div>
                   );
                 })}
             </div>
           ))}
+
+        {ausgewaehlteZeitIds.size > 0 && (
+          <div className="mt-2 border-t border-sep pt-2">
+            {stornierenModus ? (
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={stornierenGrund}
+                  onChange={(e) => setStornierenGrund(e.target.value)}
+                  placeholder="Grund für die Stornierung"
+                  className="field-ap flex-1 text-sm"
+                />
+                <button
+                  onClick={() => stornierenMutation.mutate()}
+                  disabled={!stornierenGrund.trim() || stornierenMutation.isPending}
+                  className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-xs disabled:opacity-40"
+                >
+                  Bestätigen
+                </button>
+                <button
+                  onClick={() => setStornierenModus(false)}
+                  className="btn-touch shrink-0 px-2 py-1.5 text-xs text-label2"
+                >
+                  Abbrechen
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-label2">{ausgewaehlteZeitIds.size} ausgewählt</span>
+                {ausgewaehlterStatus === "vermerkt" && (
+                  <button
+                    onClick={() => vormerkenMutation.mutate([...ausgewaehlteZeitIds])}
+                    disabled={vormerkenMutation.isPending}
+                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  >
+                    Zur Buchung vormerken
+                  </button>
+                )}
+                {(ausgewaehlterStatus === "vermerkt" || ausgewaehlterStatus === "vorgemerkt") &&
+                  darfZeitenBuchen && (
+                    <button
+                      onClick={handleBuchen}
+                      disabled={buchenMutation.isPending}
+                      className="btn-touch btn-ap-primary px-3 py-1.5 text-xs"
+                    >
+                      Buchen
+                    </button>
+                  )}
+                {ausgewaehlterStatus === "vorgemerkt" && (
+                  <button
+                    onClick={() => zurueckziehenMutation.mutate([...ausgewaehlteZeitIds])}
+                    disabled={zurueckziehenMutation.isPending}
+                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  >
+                    Zurückziehen
+                  </button>
+                )}
+                {ausgewaehlterStatus === "gebucht" && darfZeitenBuchen && (
+                  <button
+                    onClick={() => setStornierenModus(true)}
+                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                  >
+                    Buchung stornieren
+                  </button>
+                )}
+                <button
+                  onClick={() => setAusgewaehlteZeitIds(new Set())}
+                  className="btn-touch px-2 py-1.5 text-xs text-label2"
+                >
+                  Auswahl aufheben
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div

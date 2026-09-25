@@ -146,6 +146,7 @@ import type {
   VorgangKennzahlen,
   VorgangPartnerZuweisungResponse,
   Zeiterfassung,
+  ZeiterfassungAenderung,
   ZeiterfassungKategorie,
   ZeiterfassungStatistik,
 } from "../types";
@@ -931,11 +932,16 @@ export const zeiterfassungApi = {
       method: "POST",
       body: JSON.stringify({ vorgang_id: vorgangId, taetigkeit }),
     }),
-  stop: (id: string) =>
-    apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/stop`, { method: "POST" }),
+  // ende_at/grund nur wirksam beim Beenden EINES FREMDEN Timers (Recht
+  // "Zeiten buchen" nötig) -- beim eigenen Timer werden beide ignoriert.
+  stop: (id: string, body?: { ende_at?: string; grund?: string }) =>
+    apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}/stop`, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
   list: (vorgangId: string) =>
     apiFetch<Zeiterfassung[]>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
-  listFuerZeitraum: (params: { techniker_id?: string; von?: string; bis?: string }) => {
+  listFuerZeitraum: (params: { techniker_id?: string; von?: string; bis?: string; buchungsstatus?: string }) => {
     const qs = new URLSearchParams(
       Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
     ).toString();
@@ -959,6 +965,8 @@ export const zeiterfassungApi = {
     taetigkeit?: string;
     abrechenbar?: boolean;
     lv_position_id?: string;
+    // Nur mit dem Recht "Zeiten buchen" wirksam ("für andere nachtragen").
+    techniker_id?: string;
   }) =>
     apiFetch<Zeiterfassung>("/api/zeiterfassung/manuell", {
       method: "POST",
@@ -974,9 +982,31 @@ export const zeiterfassungApi = {
       taetigkeit: string;
       abrechenbar: boolean;
       lv_position_id: string | null;
+      // Pflicht beim Bearbeiten eines fremden Eintrags (Recht "Zeiten buchen").
+      grund: string;
     }>
   ) => apiFetch<Zeiterfassung>(`/api/zeiterfassung/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  loeschen: (id: string) => apiFetch<void>(`/api/zeiterfassung/${id}`, { method: "DELETE" }),
+  loeschen: (id: string, grund?: string) =>
+    apiFetch<void>(`/api/zeiterfassung/${id}${grund ? `?grund=${encodeURIComponent(grund)}` : ""}`, {
+      method: "DELETE",
+    }),
+  // Buchungsablauf (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 6.1) -- jeweils
+  // alles oder nichts über die übergebene ID-Liste.
+  vormerken: (ids: string[]) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/vormerken", { method: "POST", body: JSON.stringify({ ids }) }),
+  vormerkungZurueckziehen: (ids: string[]) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/vormerkung-zurueckziehen", {
+      method: "POST",
+      body: JSON.stringify({ ids }),
+    }),
+  buchen: (ids: string[]) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/buchen", { method: "POST", body: JSON.stringify({ ids }) }),
+  buchungStornieren: (ids: string[], grund: string) =>
+    apiFetch<Zeiterfassung[]>("/api/zeiterfassung/buchung-stornieren", {
+      method: "POST",
+      body: JSON.stringify({ ids, grund }),
+    }),
+  verlauf: (id: string) => apiFetch<ZeiterfassungAenderung[]>(`/api/zeiterfassung/${id}/verlauf`),
 };
 
 export const termineApi = {
