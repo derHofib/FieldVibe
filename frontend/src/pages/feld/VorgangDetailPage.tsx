@@ -4,7 +4,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { IconBadge } from "../../components/IconBadge";
+import { SymbolKachel } from "../../components/apple/SymbolKachel";
 import {
   angeboteApi,
   rechnungenApi,
@@ -77,14 +77,14 @@ const SCHWEREGRAD_LABEL: Record<MangelSchweregrad, string> = Object.fromEntries(
   SCHWEREGRAD_OPTIONEN.map((o) => [o.value, o.label]),
 ) as Record<MangelSchweregrad, string>;
 
-// Hervorhebung bei kritisch/hoch statt neutralem border-ind-line -- sonst
+// Hervorhebung bei kritisch/hoch statt neutralem border-sep -- sonst
 // sieht ein kritischer Mangel unter Zeitdruck optisch identisch zu einem
-// niedrigen aus (siehe ind-warn/ind-bad in docs/DESIGN.md).
+// niedrigen aus (Status-Token st-arbeit/st-fehlt statt eigener Farben).
 const SCHWEREGRAD_BADGE: Record<MangelSchweregrad, string> = {
-  niedrig: "border-ind-line text-ind-ink-2",
-  mittel: "border-ind-line text-ind-ink-2",
-  hoch: "border-ind-warn text-ind-warn",
-  kritisch: "border-ind-bad text-ind-bad",
+  niedrig: "border-sep text-label",
+  mittel: "border-sep text-label",
+  hoch: "border-st-arbeit text-st-arbeit",
+  kritisch: "border-st-fehlt text-st-fehlt",
 };
 
 const MANGEL_STATUS_LABEL: Record<MangelStatus, string> = {
@@ -145,9 +145,9 @@ const FREIGABE_LABEL: Record<PartnerFreigabeStatus, string> = {
 };
 
 const FREIGABE_FARBE: Record<PartnerFreigabeStatus, string> = {
-  vorgeschlagen: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
-  angenommen: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
-  abgelehnt: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+  vorgeschlagen: "bg-st-arbeit-bg text-st-arbeit",
+  angenommen: "bg-st-erledigt-bg text-st-erledigt",
+  abgelehnt: "bg-st-fehlt-bg text-st-fehlt",
 };
 
 const EVENT_LABEL: Partial<Record<string, string>> = {
@@ -182,7 +182,7 @@ const ANCHOR_ABSCHNITTE: { ziel: string; label: string }[] = [
 // Design-Vorschlag "Feed und Detail neu gedacht".
 function VerlaufTypTag({ children }: { children: string }) {
   return (
-    <span className="border border-ind-line px-1.5 py-0.5 text-[10px] font-medium text-ind-ink-3">
+    <span className="border border-sep px-1.5 py-0.5 text-[10px] font-medium text-label2">
       {children}
     </span>
   );
@@ -201,21 +201,21 @@ function EventBubble({
         ? `Status: ${(event.payload as { von?: string }).von ?? "?"} → ${(event.payload as { nach?: string }).nach ?? "?"}`
         : event.body ?? EVENT_LABEL[event.event_type] ?? event.event_type;
     return (
-      <div className="my-2 text-center text-xs text-ind-ink-3">
+      <div className="my-2 text-center text-xs text-label2">
         {label} · {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
     );
   }
 
   return (
-    <div className="mb-3 border border-ind-line bg-ind-bg p-3">
-      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-ind-ink-3">
+    <div className="mb-3 border border-sep bg-card p-3">
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
         <div className="flex items-center gap-1.5">
           <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
           {event.event_type === "kommentar" && <VerlaufTypTag>Kommentar</VerlaufTypTag>}
         </div>
         {event.kundensichtbar && (
-          <span className="border border-blue-400 px-2 py-0.5 text-blue-700 dark:border-blue-600 dark:text-blue-300">
+          <span className="border border-tint px-2 py-0.5 text-tint">
             Kundensichtbar
           </span>
         )}
@@ -231,7 +231,7 @@ function EventBubble({
           </a>
           <button
             onClick={() => onHighlight(event.id)}
-            className="btn-touch mb-2 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+            className="btn-touch mb-2 flex items-center gap-1 text-xs font-medium text-st-arbeit"
           >
             <Star size={13} strokeWidth={2} /> Als Highlight markieren
           </button>
@@ -242,10 +242,10 @@ function EventBubble({
           <img
             src={event.unterschrift_url}
             alt="Unterschrift"
-            className="max-h-32 border border-ind-line bg-white"
+            className="max-h-32 border border-sep bg-white"
           />
           {typeof event.payload.unterzeichner_name === "string" && (
-            <p className="mt-1 text-xs text-ind-ink-3">
+            <p className="mt-1 text-xs text-label2">
               Unterschrieben von: {event.payload.unterzeichner_name}
             </p>
           )}
@@ -256,14 +256,14 @@ function EventBubble({
           href={event.dokument_url}
           target="_blank"
           rel="noreferrer"
-          className="btn-touch mb-2 flex items-center gap-2 border border-ind-line px-3 py-2 text-sm text-ind-ink hover:bg-ind-hover"
+          className="btn-touch mb-2 flex items-center gap-2 border border-sep px-3 py-2 text-sm text-label hover:bg-fill"
         >
           <Paperclip size={15} strokeWidth={2} />
           {event.dokument_dateiname ?? "Dokument"}
         </a>
       )}
       {event.body && (
-        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink">
+        <p className="whitespace-pre-wrap break-words text-sm text-label">
           <MentionText text={event.body} />
         </p>
       )}
@@ -277,27 +277,27 @@ function EventBubble({
 // nur mit Betreff/Empfaenger statt Freitext-Body.
 function EmailBubble({ email }: { email: EmailLog }) {
   return (
-    <div className="mb-3 border border-ind-line bg-ind-bg p-3">
-      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-ind-ink-3">
+    <div className="mb-3 border border-sep bg-card p-3">
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs text-label2">
         <div className="flex items-center gap-1.5">
           <span>{new Date(email.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
           <VerlaufTypTag>E-Mail</VerlaufTypTag>
         </div>
         {email.status === "fehler" && (
-          <span className="border border-red-400 px-2 py-0.5 text-red-700 dark:border-red-600 dark:text-red-400">
+          <span className="border border-st-fehlt px-2 py-0.5 text-st-fehlt">
             Fehler
           </span>
         )}
       </div>
-      <div className="mb-1 flex items-start gap-1.5 text-sm text-ind-ink">
-        <Mail size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-ind-ink-3" />
+      <div className="mb-1 flex items-start gap-1.5 text-sm text-label">
+        <Mail size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-label2" />
         <div>
           <span className="font-medium">{email.betreff || "(ohne Betreff)"}</span>
-          <span className="text-ind-ink-3"> · an {email.empfaenger}</span>
+          <span className="text-label2"> · an {email.empfaenger}</span>
         </div>
       </div>
       {email.status === "fehler" && email.fehlermeldung && (
-        <p className="text-xs text-red-600 dark:text-red-400">{email.fehlermeldung}</p>
+        <p className="text-xs text-st-fehlt">{email.fehlermeldung}</p>
       )}
     </div>
   );
@@ -308,17 +308,17 @@ function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clien
     <div
       className={`mb-3 rounded-lg border border-dashed p-3 ${
         item.failed
-          ? "border-red-300 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
-          : "border-ind-line-2"
+          ? "border-st-fehlt bg-st-fehlt-bg"
+          : "border-sepstrong"
       }`}
     >
       <div className="mb-1 flex items-center justify-between gap-1 text-xs">
         {item.failed ? (
-          <span className="flex items-center gap-1 text-red-500 dark:text-red-400">
+          <span className="flex items-center gap-1 text-st-fehlt">
             <AlertTriangle size={13} strokeWidth={2} /> Vom Server abgelehnt{item.errorMessage ? `: ${item.errorMessage}` : ""}
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-ind-ink-3">
+          <span className="flex items-center gap-1 text-label2">
             <Clock size={13} strokeWidth={2} />
             <span>Nicht synchronisiert</span>
           </span>
@@ -326,24 +326,24 @@ function OutboxBubble({ item, onDiscard }: { item: OutboxItem; onDiscard: (clien
         {item.failed && (
           <button
             onClick={() => onDiscard(item.client_uuid)}
-            className="btn-touch text-red-500 underline dark:text-red-400"
+            className="btn-touch text-st-fehlt underline"
           >
             Verwerfen
           </button>
         )}
       </div>
       {item.kind === "foto" ? (
-        <p className="flex items-center gap-1 text-sm text-ind-ink-2">
+        <p className="flex items-center gap-1 text-sm text-label">
           <Camera size={14} strokeWidth={2} /> Foto wartet auf Synchronisierung
         </p>
       ) : item.kind === "dokument" ? (
-        <p className="flex items-center gap-1 text-sm text-ind-ink-2">
+        <p className="flex items-center gap-1 text-sm text-label">
           <FileText size={14} strokeWidth={2} /> {item.dokumentName ?? "Dokument"} wartet auf Synchronisierung
         </p>
       ) : item.kind === "status" ? (
-        <p className="text-sm text-ind-ink-2">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
+        <p className="text-sm text-label">Statusänderung zu „{item.statusValue}“ wartet auf Synchronisierung</p>
       ) : (
-        <p className="whitespace-pre-wrap break-words text-sm text-ind-ink-2">{item.body}</p>
+        <p className="whitespace-pre-wrap break-words text-sm text-label">{item.body}</p>
       )}
     </div>
   );
@@ -1055,7 +1055,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   if (vorgangIstFehler) {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
         <EmptyState
@@ -1069,7 +1069,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
     );
   }
-  if (!vorgang) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+  if (!vorgang) return <p className="text-center text-label2">Lädt…</p>;
 
   // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
   // des zugeordneten Standorts bzw. ersatzweise der Anlage, damit die Karte
@@ -1117,7 +1117,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
         {kannLoeschen && (
@@ -1128,7 +1128,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               }
             }}
             disabled={deleteVorgangMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50"
           >
             Vorgang löschen
           </button>
@@ -1136,7 +1136,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {aktionsFehler && (
-        <div className="flex items-center justify-between gap-2 border border-ind-bad px-3 py-2 text-sm text-ind-bad">
+        <div className="flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
           </span>
@@ -1152,7 +1152,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
         <div className="flex flex-wrap gap-1.5">
           {(anlage?.bezeichnung || standort?.bezeichnung) && (
-            <span className="flex items-center gap-1.5 border border-ind-line px-2.5 py-1 text-xs font-medium text-ind-ink-2">
+            <span className="flex items-center gap-1.5 border border-sep px-2.5 py-1 text-xs font-medium text-label">
               <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
             </span>
           )}
@@ -1161,8 +1161,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
                 vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
                 !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                  ? "border-red-400 text-red-700 dark:border-red-600 dark:text-red-400"
-                  : "border-ind-line text-ind-ink-2"
+                  ? "border-st-fehlt text-st-fehlt"
+                  : "border-sep text-label"
               }`}
             >
               <Clock size={13} strokeWidth={1.5} />
@@ -1176,20 +1176,20 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             </span>
           )}
           {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
-            <span className="flex items-center gap-1.5 border border-dashed border-ind-warn px-2.5 py-1 text-xs font-medium text-ind-warn">
+            <span className="flex items-center gap-1.5 border border-dashed border-st-arbeit px-2.5 py-1 text-xs font-medium text-st-arbeit">
               <UserPlus size={13} strokeWidth={1.5} /> Nicht zugewiesen
             </span>
           )}
         </div>
       )}
 
-      <div id="abschnitt-uebersicht" className="scroll-mt-4 border border-ind-line bg-ind-bg p-4">
-        <div className="text-xs text-ind-ink-3">{vorgang.vorgangsnummer}</div>
-        <h1 className="font-heading text-lg font-semibold uppercase tracking-wide text-ind-ink">{vorgang.titel}</h1>
+      <div id="abschnitt-uebersicht" className="scroll-mt-4 border border-sep bg-card p-4">
+        <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
+        <h1 className="font-heading text-lg font-semibold uppercase tracking-wide text-label">{vorgang.titel}</h1>
         {parentVorgang && (
           <button
             onClick={() => navigate(`/vorgaenge/${parentVorgang.id}`)}
-            className="mt-0.5 block text-xs text-ind-ink-3 underline-offset-2 hover:underline"
+            className="mt-0.5 block text-xs text-label2 underline-offset-2 hover:underline"
           >
             Entstanden aus Vorgang {parentVorgang.vorgangsnummer}
           </button>
@@ -1200,17 +1200,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             {kunde && (
               <button
                 onClick={() => navigate(`/kunden/${kunde.id}`)}
-                className="text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+                className="text-tint underline-offset-2 hover:underline"
               >
                 {kunde.name}
               </button>
             )}
             {anlage && (
               <>
-                <span className="text-ind-ink-3">·</span>
+                <span className="text-label2">·</span>
                 <button
                   onClick={() => navigate(`/anlagen/${anlage.id}`)}
-                  className="text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+                  className="text-tint underline-offset-2 hover:underline"
                 >
                   {anlage.bezeichnung}
                 </button>
@@ -1225,7 +1225,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 setZuordnungError(null);
                 setEditingZuordnung(true);
               }}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint"
             >
               Bearbeiten
             </button>
@@ -1233,16 +1233,16 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
 
         {editingZuordnung && (
-          <div className="mt-2 space-y-2 border border-ind-line-2 p-3">
+          <div className="mt-2 space-y-2 border border-sepstrong p-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Kunde</label>
+              <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
               <select
                 value={editKundeId}
                 onChange={(e) => {
                   setEditKundeId(e.target.value);
                   setEditAnlageId("");
                 }}
-                className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 {alleKunden?.map((k) => (
                   <option key={k.id} value={k.id}>
@@ -1252,13 +1252,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ind-ink-3">
+              <label className="mb-1 block text-xs font-medium text-label2">
                 Anlage (optional)
               </label>
               <select
                 value={editAnlageId}
                 onChange={(e) => setEditAnlageId(e.target.value)}
-                className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Keine Anlage</option>
                 {anlagenFuerEditKunde?.map((a) => (
@@ -1268,12 +1268,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 ))}
               </select>
             </div>
-            {zuordnungError && <p className="text-xs text-red-700 dark:text-red-400">{zuordnungError}</p>}
+            {zuordnungError && <p className="text-xs text-st-fehlt">{zuordnungError}</p>}
             <div className="flex gap-2">
               <button
                 onClick={() => zuordnungMutation.mutate()}
                 disabled={!editKundeId || zuordnungMutation.isPending}
-                className="btn-touch btn-industry btn-industry-primary flex-1 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
               >
                 Speichern
               </button>
@@ -1282,7 +1282,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   setEditingZuordnung(false);
                   setZuordnungError(null);
                 }}
-                className="btn-touch flex-1 btn-industry btn-industry-secondary py-1.5 text-sm"
+                className="btn-touch flex-1 btn-ap py-1.5 text-sm"
               >
                 Abbrechen
               </button>
@@ -1292,7 +1292,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
         <div className="mt-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-ind-ink-3">Adresse</span>
+            <span className="text-xs font-medium text-label2">Adresse</span>
             {kannDisponieren && !editingAdresse && (
               <button
                 onClick={() => {
@@ -1300,7 +1300,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   setAdresseError(null);
                   setEditingAdresse(true);
                 }}
-                className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+                className="btn-touch text-xs font-medium text-tint"
               >
                 Bearbeiten
               </button>
@@ -1309,17 +1309,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           {!editingAdresse &&
             (adresseAlsZeile(anzeigeAdresse) ? (
               <>
-                <p className="mt-1 text-sm text-ind-ink-2">
+                <p className="mt-1 text-sm text-label">
                   {adresseAlsZeile(anzeigeAdresse)}
                   {!vorgang.adresse && (standort || anlage) && (
-                    <span className="ml-1 text-xs text-ind-ink-3">
+                    <span className="ml-1 text-xs text-label2">
                       ({standort ? "Standort" : "Anlage"})
                     </span>
                   )}
                 </p>
                 {kartenKoordinaten ? (
                   <Suspense
-                    fallback={<div className="mt-2 h-40 w-full animate-pulse rounded-lg bg-slate-200 dark:bg-stone-700/60" />}
+                    fallback={<div className="mt-2 h-40 w-full animate-pulse rounded-lg bg-fill" />}
                   >
                     <MapboxMap
                       lng={kartenKoordinaten.lng}
@@ -1328,42 +1328,42 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                     />
                   </Suspense>
                 ) : (
-                  <div className="mt-2 flex h-40 w-full items-center justify-center border border-dashed border-ind-line-2 text-center text-xs text-ind-ink-3">
+                  <div className="mt-2 flex h-40 w-full items-center justify-center border border-dashed border-sepstrong text-center text-xs text-label2">
                     Keine Kartenposition verfügbar
                   </div>
                 )}
               </>
             ) : (
-              <p className="mt-1 text-sm text-ind-ink-3">Keine Adresse hinterlegt.</p>
+              <p className="mt-1 text-sm text-label2">Keine Adresse hinterlegt.</p>
             ))}
           {editingAdresse && (
-            <div className="mt-2 space-y-2 border border-ind-line-2 p-3">
+            <div className="mt-2 space-y-2 border border-sepstrong p-3">
               <input
                 value={adresseForm.strasse}
                 onChange={(e) => setAdresseForm({ ...adresseForm, strasse: e.target.value })}
                 placeholder="Straße + Hausnr."
-                className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <div className="grid grid-cols-2 gap-2">
                 <input
                   value={adresseForm.plz}
                   onChange={(e) => setAdresseForm({ ...adresseForm, plz: e.target.value })}
                   placeholder="PLZ"
-                  className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
                 <input
                   value={adresseForm.ort}
                   onChange={(e) => setAdresseForm({ ...adresseForm, ort: e.target.value })}
                   placeholder="Ort"
-                  className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
               </div>
-              {adresseError && <p className="text-xs text-red-700 dark:text-red-400">{adresseError}</p>}
+              {adresseError && <p className="text-xs text-st-fehlt">{adresseError}</p>}
               <div className="flex gap-2">
                 <button
                   onClick={() => adresseMutation.mutate()}
                   disabled={adresseMutation.isPending}
-                  className="btn-touch btn-industry btn-industry-primary flex-1 py-1.5 text-sm"
+                  className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
                 >
                   Speichern
                 </button>
@@ -1372,7 +1372,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                     setEditingAdresse(false);
                     setAdresseError(null);
                   }}
-                  className="btn-touch flex-1 btn-industry btn-industry-secondary py-1.5 text-sm"
+                  className="btn-touch flex-1 btn-ap py-1.5 text-sm"
                 >
                   Abbrechen
                 </button>
@@ -1384,11 +1384,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         {((weitereAnlagen && weitereAnlagen.length > 0) || kannDisponieren) && (
           <div className="mt-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-ind-ink-3">Weitere Anlagen</span>
+              <span className="text-xs font-medium text-label2">Weitere Anlagen</span>
               {kannDisponieren && !showAnlageHinzufuegen && (
                 <button
                   onClick={() => setShowAnlageHinzufuegen(true)}
-                  className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+                  className="btn-touch text-xs font-medium text-tint"
                 >
                   + Hinzufügen
                 </button>
@@ -1399,7 +1399,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 {weitereAnlagen!.map((a) => (
                   <span
                     key={a.id}
-                    className="flex items-center gap-1 border border-ind-line px-2 py-1 text-xs text-ind-ink-2"
+                    className="flex items-center gap-1 border border-sep px-2 py-1 text-xs text-label"
                   >
                     <button
                       onClick={() => navigate(`/anlagen/${a.id}`)}
@@ -1411,7 +1411,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                       <button
                         onClick={() => anlageEntfernenMutation.mutate(a.id)}
                         disabled={anlageEntfernenMutation.isPending}
-                        className="relative text-ind-ink-3 before:absolute before:-inset-2.5 hover:text-red-600 dark:hover:text-red-400"
+                        className="relative text-label2 before:absolute before:-inset-2.5 hover:text-st-fehlt"
                         aria-label={`${a.bezeichnung} entfernen`}
                       >
                         ✕
@@ -1426,7 +1426,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 <select
                   value={neueAnlageId}
                   onChange={(e) => setNeueAnlageId(e.target.value)}
-                  className="btn-touch flex-1 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="btn-touch flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 >
                   <option value="">Anlage wählen…</option>
                   {(anlagenFuerVorgangKunde ?? [])
@@ -1440,7 +1440,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 <button
                   onClick={() => anlageHinzufuegenMutation.mutate(neueAnlageId)}
                   disabled={!neueAnlageId || anlageHinzufuegenMutation.isPending}
-                  className="btn-touch btn-industry btn-industry-primary px-3 py-1.5 text-sm"
+                  className="btn-touch btn-ap-primary px-3 py-1.5 text-sm"
                 >
                   OK
                 </button>
@@ -1449,7 +1449,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                     setShowAnlageHinzufuegen(false);
                     setNeueAnlageId("");
                   }}
-                  className="btn-touch btn-industry btn-industry-secondary px-3 py-1.5 text-sm"
+                  className="btn-touch btn-ap px-3 py-1.5 text-sm"
                 >
                   Abbrechen
                 </button>
@@ -1459,11 +1459,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {vorgang.beschreibung && (
-          <p className="mt-2 text-sm text-ind-ink-2">{vorgang.beschreibung}</p>
+          <p className="mt-2 text-sm text-label">{vorgang.beschreibung}</p>
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="text-sm text-ind-ink-3">Status:</label>
+          <label className="text-sm text-label2">Status:</label>
           <select
             value={vorgang.status}
             onChange={(e) => {
@@ -1475,7 +1475,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               }
               statusMutation.mutate({ status });
             }}
-            className="btn-touch border border-ind-line bg-transparent px-2 py-1 text-sm text-ind-ink"
+            className="btn-touch border border-sep bg-transparent px-2 py-1 text-sm text-label"
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
@@ -1486,18 +1486,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           {vorgang.dauerauftrag_id ? (
             <span
               title="Wird beim Dauerauftrag automatisch anhand der Fälligkeit berechnet"
-              className="border border-ind-line px-2 py-1 text-xs text-ind-ink-2"
+              className="border border-sep px-2 py-1 text-xs text-label"
             >
               Priorität {vorgang.prioritaet} (automatisch)
             </span>
           ) : (
-            <label className="flex items-center gap-1 text-sm text-ind-ink-3">
+            <label className="flex items-center gap-1 text-sm text-label2">
               Priorität
               <select
                 value={vorgang.prioritaet}
                 disabled={VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) || prioritaetMutation.isPending}
                 onChange={(e) => prioritaetMutation.mutate(Number(e.target.value))}
-                className="btn-touch border border-ind-line bg-transparent px-2 py-1 text-sm text-ind-ink"
+                className="btn-touch border border-sep bg-transparent px-2 py-1 text-sm text-label"
               >
                 {PRIORITAET_OPTIONEN.map((p) => (
                   <option key={p} value={p}>
@@ -1512,7 +1512,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               setFolgeAuftragLeistungstyp("stoerung");
               setShowFolgeAuftragDialog(true);
             }}
-            className="btn-touch border border-ind-line-2 px-3 py-1 text-xs font-medium text-ind-ink-2 hover:bg-ind-hover"
+            className="btn-touch border border-sepstrong px-3 py-1 text-xs font-medium text-label hover:bg-fill"
           >
             + Folge-Auftrag
           </button>
@@ -1520,10 +1520,10 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
         {!VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-ind-ink-3">
+            <span className="text-label2">
               {vorgang.zugewiesener_name ? (
                 <>
-                  Zugewiesen an: <span className="font-medium text-ind-ink">{vorgang.zugewiesener_name}</span>
+                  Zugewiesen an: <span className="font-medium text-label">{vorgang.zugewiesener_name}</span>
                 </>
               ) : (
                 "Nicht zugewiesen"
@@ -1544,7 +1544,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   uebernehmenMutation.mutate();
                 }}
                 disabled={uebernehmenMutation.isPending || vorgang.zugewiesener_user_id === currentUser.id}
-                className="btn-touch btn-industry btn-industry-primary flex items-center gap-1 px-3 py-1.5 text-xs disabled:cursor-not-allowed"
+                className="btn-touch btn-ap-primary flex items-center gap-1 px-3 py-1.5 text-xs disabled:cursor-not-allowed"
               >
                 <UserCheck size={13} strokeWidth={2} />
                 {vorgang.zugewiesener_user_id === currentUser.id ? "Von mir übernommen" : "Ticket übernehmen"}
@@ -1554,8 +1554,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showWartetKundeDialog && (
-          <div className="mt-2 space-y-2 border border-ind-line-2 p-2">
-            <p className="text-sm text-ind-ink-2">
+          <div className="mt-2 space-y-2 border border-sepstrong p-2">
+            <p className="text-sm text-label">
               Wartet auf Kunde: Nach wie vielen Tagen soll FieldVibe dich erinnern, nachzufragen?
             </p>
             <input
@@ -1568,7 +1568,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               }
               value={wiedervorlageTage}
               onChange={(e) => setWiedervorlageTage(e.target.value)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <div className="flex gap-2">
               <button
@@ -1580,13 +1580,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   setShowWartetKundeDialog(false);
                 }}
                 disabled={statusMutation.isPending}
-                className="btn-touch btn-industry btn-industry-primary flex-1 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
               >
                 Übernehmen
               </button>
               <button
                 onClick={() => setShowWartetKundeDialog(false)}
-                className="btn-touch flex-1 btn-industry btn-industry-secondary py-1.5 text-sm"
+                className="btn-touch flex-1 btn-ap py-1.5 text-sm"
               >
                 Abbrechen
               </button>
@@ -1595,15 +1595,15 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showFolgeAuftragDialog && (
-          <div className="mt-2 space-y-2 border border-ind-line-2 p-2">
-            <p className="text-sm text-ind-ink-2">
+          <div className="mt-2 space-y-2 border border-sepstrong p-2">
+            <p className="text-sm text-label">
               Folge-Auftrag anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots-
               Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
             </p>
             <select
               value={folgeAuftragLeistungstyp}
               onChange={(e) => setFolgeAuftragLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -1618,13 +1618,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   setShowFolgeAuftragDialog(false);
                 }}
                 disabled={folgeAuftragMutation.isPending}
-                className="btn-touch btn-industry btn-industry-primary flex-1 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm"
               >
                 Anlegen
               </button>
               <button
                 onClick={() => setShowFolgeAuftragDialog(false)}
-                className="btn-touch flex-1 btn-industry btn-industry-secondary py-1.5 text-sm"
+                className="btn-touch flex-1 btn-ap py-1.5 text-sm"
               >
                 Abbrechen
               </button>
@@ -1633,7 +1633,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {folgeVorgangId && (
-          <div className="mt-2 flex items-center justify-between rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300">
+          <div className="mt-2 flex items-center justify-between rounded-md bg-st-erledigt-bg px-3 py-2 text-sm text-st-erledigt">
             <span>Folge-Vorgang wurde angelegt.</span>
             <button
               onClick={() => navigate(`/vorgaenge/${folgeVorgangId}`)}
@@ -1646,12 +1646,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
         {folgeAuftraege && folgeAuftraege.length > 0 && (
           <div className="mt-2 space-y-1">
-            <span className="text-xs font-medium text-ind-ink-3">Folge-Aufträge:</span>
+            <span className="text-xs font-medium text-label2">Folge-Aufträge:</span>
             {folgeAuftraege.map((fa) => (
               <button
                 key={fa.id}
                 onClick={() => navigate(`/vorgaenge/${fa.id}`)}
-                className="btn-touch block w-full border border-ind-line px-2 py-1.5 text-left text-sm text-ind-ink-2 hover:bg-ind-hover"
+                className="btn-touch block w-full border border-sep px-2 py-1.5 text-left text-sm text-label hover:bg-fill"
               >
                 {fa.vorgangsnummer} · {fa.titel} · {STATUS_LABEL[fa.status]}
               </button>
@@ -1664,29 +1664,29 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           statt dass man sich alles herunterscrollen muss (siehe
           Design-Vorschlag). Reine <a href="#..."> statt scrollIntoView, das
           bleibt auch ohne JS-Handler funktionsfaehig. */}
-      <nav className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-ind-line px-3 pb-2 text-sm">
+      <nav className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
         {ANCHOR_ABSCHNITTE.map((a) => (
           <a
             key={a.ziel}
             href={`#${a.ziel}`}
-            className="shrink-0 whitespace-nowrap font-medium text-ind-ink-3 hover:text-ind-ink"
+            className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
           >
             {a.label}
           </a>
         ))}
       </nav>
 
-      <div id="abschnitt-zeit" className="scroll-mt-4 border border-ind-line bg-ind-bg p-3">
+      <div id="abschnitt-zeit" className="scroll-mt-4 border border-sep bg-card p-3">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-ind-ink">Arbeitszeit</h2>
-          <span className="text-sm font-medium text-ind-ink-2">
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
+          <span className="text-sm font-medium text-label">
             Bisher {gesamtStunden} Std.
           </span>
         </div>
         {timerLaeuftHier ? (
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm font-medium text-ind-ink-2">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
+            <span className="flex items-center gap-2 text-sm font-medium text-label">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" />
               Zeit läuft seit{" "}
               {new Date(laufenderTimer.start_at).toLocaleTimeString("de-DE", {
                 timeZone: "Europe/Berlin",
@@ -1697,7 +1697,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             <button
               onClick={() => stopTimerMutation.mutate(laufenderTimer.id)}
               disabled={stopTimerMutation.isPending}
-              className="btn-touch rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch rounded-md bg-st-fehlt-dot px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
             >
               Stoppen
             </button>
@@ -1708,13 +1708,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               value={taetigkeit}
               onChange={(e) => setTaetigkeit(e.target.value)}
               placeholder="Tätigkeit (optional)"
-              className="btn-touch flex-1 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="btn-touch flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <button
               onClick={() => startTimerMutation.mutate()}
               disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
               title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
-              className="btn-touch btn-industry btn-industry-primary shrink-0 px-3 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
             >
               Zeit starten
             </button>
@@ -1722,7 +1722,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 && (
-          <div className="mt-2 space-y-1 border-t border-ind-line pt-2">
+          <div className="mt-2 space-y-1 border-t border-sep pt-2">
             {[...(zeiterfassungListe ?? [])]
               .filter((e) => e.ende_at)
               .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
@@ -1733,7 +1733,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 return (
                   <div
                     key={e.id}
-                    className="flex items-center justify-between text-xs text-ind-ink-3"
+                    className="flex items-center justify-between text-xs text-label2"
                   >
                     <span>
                       {techniker?.name ?? "—"}
@@ -1753,7 +1753,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                         minute: "2-digit",
                       })}
                     </span>
-                    <span className="shrink-0 font-medium text-ind-ink-2">
+                    <span className="shrink-0 font-medium text-label">
                       {formatSekundenAlsHHMM(dauerSekunden)} Std.
                     </span>
                   </div>
@@ -1763,9 +1763,9 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div id="abschnitt-termine" className="scroll-mt-4 border border-ind-line bg-ind-bg p-3">
+      <div id="abschnitt-termine" className="scroll-mt-4 border border-sep bg-card p-3">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-ind-ink">Termine</h2>
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Termine</h2>
           {kannDisponieren && (
             <button
               onClick={() => {
@@ -1782,7 +1782,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   );
                 }
               }}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint"
             >
               {showTerminForm ? "Abbrechen" : "+ Termin planen"}
             </button>
@@ -1790,7 +1790,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
 
         {terminWarnungen.length > 0 && (
-          <div className="mb-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+          <div className="mb-2 rounded-md border border-st-arbeit bg-st-arbeit-bg p-2 text-xs text-st-arbeit">
             {terminWarnungen.map((w, i) => (
               <p key={i} className="flex items-center gap-1">
                 <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -1800,17 +1800,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showTerminForm && (
-          <div className="mb-2 space-y-2 border border-ind-line-2 p-2">
+          <div className="mb-2 space-y-2 border border-sepstrong p-2">
             <input
               value={terminTitel}
               onChange={(e) => setTerminTitel(e.target.value)}
               placeholder="Titel"
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <select
               value={terminTechnikerId}
               onChange={(e) => setTerminTechnikerId(e.target.value)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               {(users ?? [])
                 .filter((u) => u.role === "mandant_admin" || u.role === "custom")
@@ -1825,19 +1825,19 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 type="datetime-local"
                 value={terminStart}
                 onChange={(e) => setTerminStart(e.target.value)}
-                className="w-1/2 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-1/2 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <input
                 type="datetime-local"
                 value={terminEnde}
                 onChange={(e) => setTerminEnde(e.target.value)}
-                className="w-1/2 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-1/2 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <button
               disabled={!terminTitel || !terminTechnikerId || terminMutation.isPending}
               onClick={() => terminMutation.mutate()}
-              className="btn-touch btn-industry btn-industry-primary w-full px-3 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
             >
               Anlegen
             </button>
@@ -1845,17 +1845,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {(termine ?? []).length === 0 ? (
-          <p className="text-sm text-ind-ink-3">Keine Termine geplant.</p>
+          <p className="text-sm text-label2">Keine Termine geplant.</p>
         ) : (
           <div className="space-y-1.5">
             {termine!.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between border border-ind-line-2 p-2 text-sm"
+                className="flex items-center justify-between border border-sepstrong p-2 text-sm"
               >
                 <div>
-                  <div className="font-medium text-ind-ink-2">{t.titel}</div>
-                  <div className="text-xs text-ind-ink-3">
+                  <div className="font-medium text-label">{t.titel}</div>
+                  <div className="text-xs text-label2">
                     {new Date(t.start_at).toLocaleString("de-DE", {
                       timeZone: "Europe/Berlin",
                       dateStyle: "short",
@@ -1867,8 +1867,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   <span
                     className={`border px-2 py-0.5 text-xs font-medium ${
                       t.status === "abgesagt"
-                        ? "border-ind-line text-ind-ink-3"
-                        : "border-blue-400 text-blue-700 dark:border-blue-600 dark:text-blue-300"
+                        ? "border-sep text-label2"
+                        : "border-tint text-tint"
                     }`}
                   >
                     {TERMIN_STATUS_LABEL[t.status]}
@@ -1881,7 +1881,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                         }
                       }}
                       disabled={deleteTerminMutation.isPending}
-                      className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
+                      className="btn-touch text-xs font-medium text-st-fehlt"
                     >
                       Löschen
                     </button>
@@ -1895,22 +1895,22 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
       {vorgang && <FormularAbschnitt vorgangId={vorgang.id} vorgangStatus={vorgang.status} />}
 
-      <div id="abschnitt-maengel" className="scroll-mt-4 border border-ind-line bg-ind-bg p-3">
+      <div id="abschnitt-maengel" className="scroll-mt-4 border border-sep bg-card p-3">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-ind-ink">Mängel</h2>
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Mängel</h2>
           <div className="flex items-center gap-3">
             {(maengel ?? []).length > 0 && (
               <button
                 onClick={() => maengelProtokollMutation.mutate()}
                 disabled={maengelProtokollMutation.isPending}
-                className="btn-touch flex items-center gap-1 text-xs font-medium text-ind-ink-3"
+                className="btn-touch flex items-center gap-1 text-xs font-medium text-label2"
               >
                 <FileText size={13} strokeWidth={2} /> Protokoll
               </button>
             )}
             <button
               onClick={() => setShowMangelForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint"
             >
               {showMangelForm ? "Abbrechen" : "+ Mangel melden"}
             </button>
@@ -1918,18 +1918,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
 
         {showMangelForm && (
-          <div className="mb-2 space-y-2 border border-ind-line-2 p-2">
+          <div className="mb-2 space-y-2 border border-sepstrong p-2">
             <textarea
               value={mangelBeschreibung}
               onChange={(e) => setMangelBeschreibung(e.target.value)}
               placeholder="Was ist defekt?"
               rows={2}
-              className="w-full resize-none border border-ind-line bg-transparent p-2 text-sm text-ind-ink"
+              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
             />
             <select
               value={mangelSchweregrad}
               onChange={(e) => setMangelSchweregrad(e.target.value as MangelSchweregrad)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               {SCHWEREGRAD_OPTIONEN.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -1940,7 +1940,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             <button
               disabled={!mangelBeschreibung.trim() || mangelMutation.isPending}
               onClick={mangelErfassen}
-              className="btn-touch btn-industry btn-industry-primary w-full px-3 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
             >
               Erfassen
             </button>
@@ -1948,31 +1948,31 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {(maengel ?? []).length === 0 ? (
-          <p className="text-sm text-ind-ink-3">Keine Mängel erfasst.</p>
+          <p className="text-sm text-label2">Keine Mängel erfasst.</p>
         ) : (
           <div className="space-y-1.5">
             {maengel!.map((m) => (
-              <div key={m.id} className="border border-ind-line-2 p-2 text-sm">
+              <div key={m.id} className="border border-sepstrong p-2 text-sm">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-ind-ink-2">{m.beschreibung}</p>
+                  <p className="text-label">{m.beschreibung}</p>
                   <span className={`shrink-0 border px-2 py-0.5 text-xs font-medium ${SCHWEREGRAD_BADGE[m.schweregrad]}`}>
                     {SCHWEREGRAD_LABEL[m.schweregrad]}
                   </span>
                 </div>
                 <div className="mt-1 flex items-center justify-between">
-                  <span className="text-xs text-ind-ink-3">{MANGEL_STATUS_LABEL[m.status]}</span>
+                  <span className="text-xs text-label2">{MANGEL_STATUS_LABEL[m.status]}</span>
                   <div className="flex gap-2">
                     {m.status === "offen" && (
                       <>
                         <button
                           onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "behoben" })}
-                          className="btn-touch text-xs font-medium text-green-700 dark:text-green-400"
+                          className="btn-touch text-xs font-medium text-st-erledigt"
                         >
                           Behoben
                         </button>
                         <button
                           onClick={() => mangelStatusMutation.mutate({ mangelId: m.id, status: "abgelehnt" })}
-                          className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
+                          className="btn-touch text-xs font-medium text-st-fehlt"
                         >
                           Verwerfen
                         </button>
@@ -1986,7 +1986,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                           }
                         }}
                         disabled={deleteMangelMutation.isPending}
-                        className="btn-touch text-xs font-medium text-red-700 dark:text-red-400"
+                        className="btn-touch text-xs font-medium text-st-fehlt"
                       >
                         Löschen
                       </button>
@@ -2004,7 +2004,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               angebotAusMaengelnMutation.mutate(maengel!.filter((m) => m.status === "offen").map((m) => m.id))
             }
             disabled={angebotAusMaengelnMutation.isPending}
-            className="btn-touch mt-2 btn-industry btn-industry-secondary w-full px-3 py-1.5 text-sm"
+            className="btn-touch mt-2 btn-ap w-full px-3 py-1.5 text-sm"
           >
             Angebot aus offenen Mängeln erstellen
           </button>
@@ -2012,20 +2012,20 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {(verknuepfteAufgaben ?? []).length > 0 && (
-        <div className="scroll-mt-4 border border-ind-line bg-ind-bg p-3">
-          <h2 className="font-heading mb-2 text-sm font-semibold uppercase tracking-wide text-ind-ink">Verknüpfte Aufgaben</h2>
+        <div className="scroll-mt-4 border border-sep bg-card p-3">
+          <h2 className="font-heading mb-2 text-sm font-semibold uppercase tracking-wide text-label">Verknüpfte Aufgaben</h2>
           {/* Rein anzeigend: Bearbeitung nur ueber das Projekte-Kanban in der
               Office-Oberflaeche, kein Statusabgleich zurueck zum Vorgang. */}
           <div className="space-y-1.5">
             {verknuepfteAufgaben!.map((a) => (
-              <div key={a.id} className="border border-ind-line-2 p-2 text-sm">
+              <div key={a.id} className="border border-sepstrong p-2 text-sm">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-ind-ink-2">{a.titel}</p>
-                  <span className="shrink-0 border border-ind-line px-2 py-0.5 text-xs font-medium text-ind-ink-2">
+                  <p className="text-label">{a.titel}</p>
+                  <span className="shrink-0 border border-sep px-2 py-0.5 text-xs font-medium text-label">
                     {a.prioritaet}
                   </span>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-xs text-ind-ink-3">
+                <div className="mt-1 flex items-center justify-between text-xs text-label2">
                   <span>
                     {a.checkliste.length > 0
                       ? `${a.checkliste.filter((p) => p.erledigt).length}/${a.checkliste.length} erledigt`
@@ -2039,25 +2039,25 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
-      <div id="abschnitt-material" className="scroll-mt-4 border border-ind-line bg-ind-bg p-3">
+      <div id="abschnitt-material" className="scroll-mt-4 border border-sep bg-card p-3">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-ind-ink">Positionen</h2>
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Positionen</h2>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setShowBedarfForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint"
             >
               {showBedarfForm ? "Abbrechen" : "+ Material bestellen"}
             </button>
             <button
               onClick={() => setShowMaterialForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint"
             >
               {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
             </button>
             <button
               onClick={() => setShowLeistungForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint"
             >
               {showLeistungForm ? "Abbrechen" : "+ Leistung verwenden"}
             </button>
@@ -2065,7 +2065,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
 
         {showBedarfForm && (
-          <div className="mb-2 space-y-2 border border-ind-line-2 p-2">
+          <div className="mb-2 space-y-2 border border-sepstrong p-2">
             <SearchableSelect
               value={bedarfMaterialId}
               onChange={setBedarfMaterialId}
@@ -2077,13 +2077,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             />
 
             {bedarfMaterialId === NEU_MATERIAL && (
-              <div className="space-y-2 border border-dashed border-ind-line-2 p-2">
+              <div className="space-y-2 border border-dashed border-sepstrong p-2">
                 <input
                   type="text"
                   value={bedarfNeuBezeichnung}
                   onChange={(e) => setBedarfNeuBezeichnung(e.target.value)}
                   placeholder="Bezeichnung"
-                  className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 />
                 <div className="flex gap-2">
                   <input
@@ -2091,7 +2091,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                     value={bedarfNeuEinheit}
                     onChange={(e) => setBedarfNeuEinheit(e.target.value)}
                     placeholder="Einheit"
-                    className="w-20 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                    className="w-20 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                   <input
                     type="number"
@@ -2100,13 +2100,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                     value={bedarfNeuEinzelpreis}
                     onChange={(e) => setBedarfNeuEinzelpreis(e.target.value)}
                     placeholder="Preis (optional)"
-                    className="flex-1 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                 </div>
                 <select
                   value={bedarfNeuLieferantId}
                   onChange={(e) => setBedarfNeuLieferantId(e.target.value)}
-                  className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                 >
                   <option value="">Kein Lieferant hinterlegt</option>
                   {(lieferantenFuerNeuesMaterial ?? []).map((l) => (
@@ -2126,12 +2126,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={bedarfMenge}
                 onChange={(e) => setBedarfMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <select
                 value={bedarfZweck}
                 onChange={(e) => setBedarfZweck(e.target.value as MaterialBedarfZweck)}
-                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="bestellung">Zur Bestellung</option>
                 <option value="angebot">Für Angebot</option>
@@ -2142,7 +2142,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               value={bedarfNotiz}
               onChange={(e) => setBedarfNotiz(e.target.value)}
               placeholder="Notiz (optional)"
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <button
               disabled={
@@ -2152,12 +2152,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 materialBedarfMutation.isPending
               }
               onClick={() => materialBedarfMutation.mutate()}
-              className="btn-touch btn-industry btn-industry-primary w-full px-3 py-1.5 text-sm"
+              className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
             >
               Vormerken
             </button>
             {materialBedarfMutation.isError && (
-              <p className="text-xs text-red-700 dark:text-red-400">
+              <p className="text-xs text-st-fehlt">
                 {materialBedarfMutation.error instanceof ApiError
                   ? materialBedarfMutation.error.message
                   : "Fehler beim Vormerken"}
@@ -2171,18 +2171,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             {materialBedarfe!.map((b) => (
               <div
                 key={b.id}
-                className="flex items-center justify-between border border-ind-line-2 px-2 py-1.5 text-sm"
+                className="flex items-center justify-between border border-sepstrong px-2 py-1.5 text-sm"
               >
-                <span className="text-ind-ink">
+                <span className="text-label">
                   {b.menge}× {b.material_bezeichnung}
-                  <span className="ml-1.5 border border-ind-line px-1.5 py-0.5 text-xs text-ind-ink-2">
+                  <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
                     {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
                   </span>
                 </span>
                 {b.status === "offen" && (
                   <button
                     onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                    className="btn-touch text-xs text-red-700 dark:text-red-400"
+                    className="btn-touch text-xs text-st-fehlt"
                   >
                     Entfernen
                   </button>
@@ -2194,17 +2194,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
         {(materialVerwendungen ?? []).length > 0 || (lvVerwendungen ?? []).length > 0 ? (
           <div className="mb-2 space-y-1">
-            <h3 className="px-1 text-xs font-medium text-ind-ink-3">Verwendet</h3>
+            <h3 className="px-1 text-xs font-medium text-label2">Verwendet</h3>
             {(materialVerwendungen ?? []).map((v) => (
               <div
                 key={`material-${v.id}`}
-                className="flex items-center justify-between gap-2 border border-ind-line-2 px-2 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
               >
-                <span className="flex min-w-0 items-center gap-2 text-ind-ink">
-                  <IconBadge icon={Package} tone="amber" size="sm" />
+                <span className="flex min-w-0 items-center gap-2 text-label">
+                  <SymbolKachel icon={Package} farbe="orange" groesse={24} />
                   <span className="truncate">
                     {v.menge}× {v.material_bezeichnung}
-                    <span className="ml-1.5 border border-ind-line px-1.5 py-0.5 text-xs text-ind-ink-2">
+                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
                       {v.material_einheit}
                     </span>
                   </span>
@@ -2214,13 +2214,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             {(lvVerwendungen ?? []).map((v) => (
               <div
                 key={`lv-${v.id}`}
-                className="flex items-center justify-between gap-2 border border-ind-line-2 px-2 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
               >
-                <span className="flex min-w-0 items-center gap-2 text-ind-ink">
-                  <IconBadge icon={Clock} tone="cyan" size="sm" />
+                <span className="flex min-w-0 items-center gap-2 text-label">
+                  <SymbolKachel icon={Clock} farbe="blue" groesse={24} />
                   <span className="truncate">
                     {v.menge}× {v.lv_bezeichnung}
-                    <span className="ml-1.5 border border-ind-line px-1.5 py-0.5 text-xs text-ind-ink-2">
+                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
                       {v.lv_einheit}
                     </span>
                   </span>
@@ -2228,7 +2228,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 <button
                   onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
                   disabled={lvVerwendungEntfernenMutation.isPending}
-                  className="btn-touch shrink-0 text-xs text-red-700 disabled:opacity-50 dark:text-red-400"
+                  className="btn-touch shrink-0 text-xs text-st-fehlt disabled:opacity-50"
                 >
                   Entfernen
                 </button>
@@ -2241,7 +2241,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => angebotAusVorgangMutation.mutate()}
             disabled={angebotAusVorgangMutation.isPending}
-            className="btn-touch mb-2 btn-industry btn-industry-secondary w-full px-3 py-1.5 text-sm"
+            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
           >
             + Angebot aus diesem Vorgang erstellen
           </button>
@@ -2251,14 +2251,14 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           <button
             onClick={() => rechnungAusVorgangMutation.mutate()}
             disabled={rechnungAusVorgangMutation.isPending}
-            className="btn-touch mb-2 btn-industry btn-industry-secondary w-full px-3 py-1.5 text-sm"
+            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
           >
             + Rechnung aus diesem Vorgang erstellen
           </button>
         )}
 
         {showMaterialForm && (
-          <div className="space-y-2 border border-ind-line-2 p-2">
+          <div className="space-y-2 border border-sepstrong p-2">
             <SearchableSelect
               value={materialId}
               onChange={(v) => {
@@ -2280,7 +2280,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               <select
                 value={materialLagerId}
                 onChange={(e) => setMaterialLagerId(e.target.value)}
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value="">Lagerort wählen…</option>
                 {(materialListe?.find((m) => m.id === materialId)?.bestaende ?? []).map((b) => (
@@ -2307,18 +2307,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={materialMenge}
                 onChange={(e) => setMaterialMenge(e.target.value)}
                 placeholder="Menge"
-                className="flex-1 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <button
                 disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
                 onClick={() => materialVerwendenMutation.mutate()}
-                className="btn-touch btn-industry btn-industry-primary shrink-0 px-3 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
               >
                 Erfassen
               </button>
             </div>
             {materialVerwendenMutation.isError && (
-              <p className="text-xs text-red-700 dark:text-red-400">
+              <p className="text-xs text-st-fehlt">
                 {materialVerwendenMutation.error instanceof ApiError
                   ? materialVerwendenMutation.error.message
                   : "Fehler beim Erfassen"}
@@ -2328,9 +2328,9 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         {showLeistungForm && (
-          <div className="space-y-2 border border-ind-line-2 p-2">
+          <div className="space-y-2 border border-sepstrong p-2">
             {(leistungsverzeichnis ?? []).length === 0 ? (
-              <p className="text-xs text-ind-ink-3">
+              <p className="text-xs text-label2">
                 Für diesen Kunden ist kein Leistungsverzeichnis hinterlegt.
               </p>
             ) : (
@@ -2353,18 +2353,18 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                     value={lvMenge}
                     onChange={(e) => setLvMenge(e.target.value)}
                     placeholder="Menge"
-                    className="flex-1 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
                   />
                   <button
                     disabled={!lvPositionId || !lvMenge || leistungVerwendenMutation.isPending}
                     onClick={() => leistungVerwendenMutation.mutate()}
-                    className="btn-touch btn-industry btn-industry-primary shrink-0 px-3 py-1.5 text-sm"
+                    className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
                   >
                     Erfassen
                   </button>
                 </div>
                 {leistungVerwendenMutation.isError && (
-                  <p className="text-xs text-red-700 dark:text-red-400">
+                  <p className="text-xs text-st-fehlt">
                     {leistungVerwendenMutation.error instanceof ApiError
                       ? leistungVerwendenMutation.error.message
                       : "Fehler beim Erfassen"}
@@ -2377,13 +2377,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {kannPartnerVerwalten && (
-        <div className="border border-ind-line bg-ind-bg p-3">
+        <div className="border border-sep bg-card p-3">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-ind-ink">Nachunternehmer</h2>
+            <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Nachunternehmer</h2>
             {!vorgang.partner_id && (
               <button
                 onClick={() => setShowPartnerForm((v) => !v)}
-                className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+                className="btn-touch text-xs font-medium text-tint"
               >
                 {showPartnerForm ? "Abbrechen" : "+ Zuweisen"}
               </button>
@@ -2391,28 +2391,28 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
 
           {partnerWarnung && (
-            <p className="mb-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+            <p className="mb-2 rounded-md bg-st-arbeit-bg px-3 py-2 text-xs text-st-arbeit">
               Für diesen Partner liegt keine gültige Freistellungsbescheinigung vor -- ohne sie greift bei
               Zahlungen für Bauleistungen grundsätzlich die 15%-Bauabzugsteuer nach § 48 EStG.
             </p>
           )}
 
           {vorgang.partner_id ? (
-            <div className="flex items-center justify-between border border-ind-line-2 px-3 py-2">
+            <div className="flex items-center justify-between border border-sepstrong px-3 py-2">
               <div>
                 <button
                   onClick={() => navigate(`/partner/${vorgang.partner_id}`)}
-                  className="text-sm font-medium text-ind-ink hover:underline"
+                  className="text-sm font-medium text-label hover:underline"
                 >
                   {zugewiesenerPartner?.name ?? "…"}
                 </button>
                 {vorgang.partner_honorar_netto && (
-                  <div className="text-xs text-ind-ink-3">
+                  <div className="text-xs text-label2">
                     Honorar: {vorgang.partner_honorar_netto} EUR netto
                   </div>
                 )}
                 {vorgang.partner_freigabe_status === "abgelehnt" && vorgang.partner_ablehnung_grund && (
-                  <div className="text-xs text-red-600 dark:text-red-400">
+                  <div className="text-xs text-st-fehlt">
                     Grund: {vorgang.partner_ablehnung_grund}
                   </div>
                 )}
@@ -2428,7 +2428,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 <button
                   onClick={() => partnerAufhebenMutation.mutate()}
                   disabled={partnerAufhebenMutation.isPending}
-                  className="btn-touch text-xs text-red-700 dark:text-red-400"
+                  className="btn-touch text-xs text-st-fehlt"
                 >
                   Aufheben
                 </button>
@@ -2436,12 +2436,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             </div>
           ) : (
             !showPartnerForm && (
-              <p className="text-sm text-ind-ink-3">Kein Nachunternehmer zugewiesen.</p>
+              <p className="text-sm text-label2">Kein Nachunternehmer zugewiesen.</p>
             )
           )}
 
           {showPartnerForm && (
-            <div className="space-y-2 border border-ind-line-2 p-2">
+            <div className="space-y-2 border border-sepstrong p-2">
               <SearchableSelect
                 value={partnerAuswahl}
                 onChange={setPartnerAuswahl}
@@ -2459,12 +2459,12 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 value={partnerHonorar}
                 onChange={(e) => setPartnerHonorar(e.target.value)}
                 placeholder="Honorar netto (optional)"
-                className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <button
                 disabled={!partnerAuswahl || partnerZuweisenMutation.isPending}
                 onClick={() => partnerZuweisenMutation.mutate()}
-                className="btn-touch btn-industry btn-industry-primary w-full px-3 py-1.5 text-sm"
+                className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
               >
                 Zuweisen
               </button>
@@ -2489,16 +2489,16 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       />
 
       <div id="abschnitt-verlauf" className="scroll-mt-4 flex items-center justify-between gap-2">
-        <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-ind-ink">Verlauf</h2>
-        <span className="text-sm text-ind-ink-3">
+        <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Verlauf</h2>
+        <span className="text-sm text-label2">
           {kundenansicht ? "Kundenansicht" : "Interne Ansicht"}
         </span>
         <button
           onClick={() => setKundenansicht((v) => !v)}
           className={`btn-touch border px-3 py-1 text-xs font-semibold ${
             kundenansicht
-              ? "border-blue-600 bg-blue-600 text-white"
-              : "border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+              ? "border-tint bg-tint text-white"
+              : "border-sep text-label hover:bg-fill"
           }`}
         >
           Umschalten
@@ -2507,7 +2507,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
 
       <div>
         {verlaufEintraege.length === 0 && eigeneOutboxItems.length === 0 ? (
-          <p className="text-center text-sm text-ind-ink-3">Noch keine Einträge.</p>
+          <p className="text-center text-sm text-label2">Noch keine Einträge.</p>
         ) : (
           <>
             {/* Noch nicht synchronisierte Einträge sind immer die neuesten
@@ -2539,17 +2539,17 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
 
       {!kundenansicht && (
-        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 border border-ind-line bg-ind-bg p-3">
+        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 border border-sep bg-card p-3">
           <div className="relative">
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Kommentar schreiben…"
               rows={2}
-              className="w-full resize-none border border-ind-line bg-transparent p-2 text-sm text-ind-ink"
+              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
             />
             {showMentionPicker && (
-              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto border border-ind-line bg-ind-bg shadow-lg">
+              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto border border-sep bg-card shadow-lg">
                 {users?.map((u) => (
                   <button
                     key={u.id}
@@ -2557,7 +2557,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                       setComment((c) => `${c}@[${u.name}](${u.id}) `);
                       setShowMentionPicker(false);
                     }}
-                    className="btn-touch block w-full px-3 py-2 text-left text-sm text-ind-ink hover:bg-ind-hover"
+                    className="btn-touch block w-full px-3 py-2 text-left text-sm text-label hover:bg-fill"
                   >
                     {u.name}
                   </button>
@@ -2593,7 +2593,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 onClick={() => setShowMentionPicker((v) => !v)}
                 title="Erwähnen"
                 aria-label="Erwähnen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-ind-line text-base text-ind-ink-2 hover:bg-ind-hover"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-base text-label hover:bg-fill"
               >
                 @
               </button>
@@ -2602,7 +2602,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 disabled={fotoMutation.isPending}
                 title="Foto anhängen"
                 aria-label="Foto anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-ind-line text-ind-ink-2 hover:bg-ind-hover disabled:opacity-50"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
               >
                 <Camera size={16} strokeWidth={2} />
               </button>
@@ -2611,7 +2611,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 disabled={dokumentMutation.isPending}
                 title="Dokument anhängen"
                 aria-label="Dokument anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-ind-line text-ind-ink-2 hover:bg-ind-hover disabled:opacity-50"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
               >
                 <Paperclip size={16} strokeWidth={2} />
               </button>
@@ -2619,7 +2619,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 onClick={() => setShowUnterschriftPad((v) => !v)}
                 title="Unterschrift erfassen"
                 aria-label="Unterschrift erfassen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-ind-line text-ind-ink-2 hover:bg-ind-hover"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill"
               >
                 <PenLine size={16} strokeWidth={1.5} />
               </button>
@@ -2630,8 +2630,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 aria-pressed={kundensichtbar}
                 className={`btn-touch flex h-9 w-9 items-center justify-center border ${
                   kundensichtbar
-                    ? "border-ind-acc text-ind-acc-txt"
-                    : "border-ind-line text-ind-ink-3 hover:bg-ind-hover"
+                    ? "border-tint text-tint"
+                    : "border-sep text-label2 hover:bg-fill"
                 }`}
               >
                 {kundensichtbar ? <Eye size={16} strokeWidth={2} /> : <EyeOff size={16} strokeWidth={2} />}
@@ -2640,7 +2640,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             <button
               onClick={() => commentMutation.mutate()}
               disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch btn-industry btn-industry-primary shrink-0 px-4 py-2 text-sm"
+              className="btn-touch btn-ap-primary shrink-0 px-4 py-2 text-sm"
             >
               Senden
             </button>
@@ -2656,7 +2656,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                 }
               />
               {unterschriftMutation.isError && (
-                <p className="mt-1 text-xs text-red-700 dark:text-red-400">
+                <p className="mt-1 text-xs text-st-fehlt">
                   {unterschriftMutation.error instanceof ApiError
                     ? unterschriftMutation.error.message
                     : "Unterschrift konnte nicht gespeichert werden — bitte erneut versuchen."}
