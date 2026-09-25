@@ -66,8 +66,8 @@ export function ExportPanel({
         className="flex h-full w-[420px] flex-col bg-white shadow-2xl dark:bg-stone-900"
       >
         <div className="relative border-b border-slate-100 px-6 py-5 dark:border-stone-800">
-          <h2 className="text-base font-bold text-ind-ink">Board exportieren</h2>
-          <p className="mt-1 text-xs text-ind-ink-3">
+          <h2 className="text-base font-bold text-label">Board exportieren</h2>
+          <p className="mt-1 text-xs text-label2">
             „{board.name}“ · {notizen.length} {notizen.length === 1 ? "Notiz" : "Notizen"}
           </p>
           <button
@@ -95,13 +95,13 @@ export function ExportPanel({
                 onClick={() => setFormat(f.key)}
                 className={`rounded-xl p-3.5 text-center ${
                   format === f.key
-                    ? "btn-industry btn-industry-primary text-white"
+                    ? "btn-ap-primary text-white"
                     : "border border-slate-200 text-slate-600 dark:border-stone-700 dark:text-stone-300"
                 }`}
               >
                 <f.icon size={20} strokeWidth={2} className="mx-auto" />
                 <div className="mt-2 text-xs font-bold">{f.label}</div>
-                <div className={`mt-0.5 text-[10px] ${format === f.key ? "text-white/85" : "text-ind-ink-3"}`}>
+                <div className={`mt-0.5 text-[10px] ${format === f.key ? "text-white/85" : "text-label2"}`}>
                   {f.sub}
                 </div>
               </button>
@@ -109,7 +109,7 @@ export function ExportPanel({
           </div>
           <button
             onClick={() => (format === "png" ? onExportPng() : format === "pdf" ? onExportPdf() : onExportCsv())}
-            className="btn-industry btn-industry-primary mb-6 w-full py-2.5 text-xs"
+            className="btn-ap-primary mb-6 w-full py-2.5 text-xs"
           >
             {format.toUpperCase()} herunterladen
           </button>
@@ -118,7 +118,7 @@ export function ExportPanel({
             In FieldVibe übernehmen
           </p>
           {notizen.length === 0 ? (
-            <p className="text-xs text-ind-ink-3">Keine Klebezettel/Notizen auf diesem Board.</p>
+            <p className="text-xs text-label2">Keine Klebezettel/Notizen auf diesem Board.</p>
           ) : (
             <div className="space-y-2">
               {notizen.map((n) => (
@@ -158,7 +158,7 @@ function NotizUebernahme({
   const text = notizText(node) ?? "";
   return (
     <div className="rounded-xl border border-slate-200 p-3 dark:border-stone-700">
-      <p className="line-clamp-2 text-xs font-medium text-ind-ink">{text || "(leer)"}</p>
+      <p className="line-clamp-2 text-xs font-medium text-label">{text || "(leer)"}</p>
       {offen === null && (
         <div className="mt-2 flex items-center gap-3">
           <button onClick={() => onOeffnen("vorgang")} className="text-xs font-semibold text-blue-700 dark:text-blue-400">
@@ -214,7 +214,7 @@ function NeuerVorgangMiniform({
         <select
           value={leistungstyp}
           onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-xs text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
         >
           {LEISTUNGSTYP_OPTIONEN.map((o) => (
             <option key={o.value} value={o.value}>
@@ -225,7 +225,7 @@ function NeuerVorgangMiniform({
         <select
           value={abrechnungsart}
           onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-xs text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
         >
           {ABRECHNUNGSART_OPTIONEN.map((o) => (
             <option key={o.value} value={o.value}>
@@ -239,11 +239,11 @@ function NeuerVorgangMiniform({
         <button
           onClick={() => erstellen.mutate()}
           disabled={!kundeId || erstellen.isPending}
-          className="btn-industry btn-industry-primary flex items-center gap-1 px-3 py-1.5 text-xs"
+          className="btn-ap-primary flex items-center gap-1 px-3 py-1.5 text-xs"
         >
           <Link2 size={11} strokeWidth={2.5} /> Vorgang anlegen
         </button>
-        <button onClick={onAbbrechen} className="text-xs font-medium text-ind-ink-3">
+        <button onClick={onAbbrechen} className="text-xs font-medium text-label2">
           Abbrechen
         </button>
       </div>
@@ -286,7 +286,7 @@ function MangelMeldenMiniform({
         onChange={(e) => setBeschreibung(e.target.value)}
         rows={2}
         placeholder="Beschreibung des Mangels…"
-        className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-xs text-ind-ink"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-xs text-label"
       />
       {melden.isError && <p className="text-[11px] text-red-600 dark:text-red-400">Melden fehlgeschlagen.</p>}
       <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ function MangelMeldenMiniform({
         >
           Mangel melden
         </button>
-        <button onClick={onAbbrechen} className="text-xs font-medium text-ind-ink-3">
+        <button onClick={onAbbrechen} className="text-xs font-medium text-label2">
           Abbrechen
         </button>
       </div>

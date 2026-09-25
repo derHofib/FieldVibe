@@ -61,7 +61,7 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
   return (
     <Karte className="mb-4 space-y-3 p-4">
       <div>
-        <label className="mb-1 block text-xs font-medium text-ind-ink-3">Kunde</label>
+        <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
         <SearchableSelect
           value={kundeId}
           onChange={setKundeId}
@@ -73,11 +73,11 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
         <button
           disabled={!kundeId || erstellen.isPending}
           onClick={() => erstellen.mutate()}
-          className="btn-industry btn-industry-primary flex-1 px-4 py-2 text-sm"
+          className="btn-ap-primary flex-1 px-4 py-2 text-sm"
         >
           Angebot anlegen
         </button>
-        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-ind-ink-3">
+        <button onClick={onAbbrechen} className="px-2 text-sm font-medium text-label2">
           Abbrechen
         </button>
       </div>
@@ -175,16 +175,16 @@ export function OfficeRechnungenPage() {
         ))}
 
       {rechnungen.data && bereich === "rechnungen" && (
-        <div className="mb-4 flex flex-wrap gap-4 text-xs text-ind-ink-3">
+        <div className="mb-4 flex flex-wrap gap-4 text-xs text-label2">
           <span>
             Summe brutto:{" "}
-            <strong className="tabular-nums text-ind-ink">
+            <strong className="tabular-nums text-label">
               {euro(rechnungen.data.summe_brutto)}
             </strong>
           </span>
           <span>
             Davon offen:{" "}
-            <strong className="tabular-nums text-ind-ink">
+            <strong className="tabular-nums text-label">
               {euro(rechnungen.data.summe_offen)}
             </strong>
           </span>
@@ -192,7 +192,7 @@ export function OfficeRechnungenPage() {
       )}
 
       {laedt ? (
-        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
       ) : eintraege.length === 0 ? (
         <EmptyState
           icon={bereich === "rechnungen" ? Receipt : FileCheck2}
@@ -211,7 +211,7 @@ export function OfficeRechnungenPage() {
                     : "hover:bg-slate-50 dark:hover:bg-stone-800/50"
                 }`}
               >
-                <p className="truncate text-[13px] font-semibold text-ind-ink">
+                <p className="truncate text-[13px] font-semibold text-label">
                   {e.nummer} · <span className="tabular-nums">{e.betrag}</span>
                 </p>
                 {e.zusatz && (
@@ -219,7 +219,7 @@ export function OfficeRechnungenPage() {
                     className={`mt-0.5 truncate text-[11.5px] ${
                       e.warnung
                         ? "font-bold text-rose-600 dark:text-rose-300"
-                        : "text-ind-ink-3"
+                        : "text-label2"
                     }`}
                   >
                     {e.zusatz}

@@ -65,7 +65,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 dark:border-stone-800">
-        <p className="text-sm font-semibold text-ind-ink">{titel}</p>
+        <p className="text-sm font-semibold text-label">{titel}</p>
         <button
           onClick={onAbbrechen}
           aria-label="Schließen"
@@ -127,7 +127,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             senden.mutate();
           }}
           disabled={!parseAdressen(an).length || (modus.art === "neu" && !betreff.trim()) || senden.isPending}
-          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-4 py-2 text-xs"
+          className="btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-xs"
         >
           {senden.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} strokeWidth={2.25} />}
           Senden

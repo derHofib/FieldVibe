@@ -307,21 +307,21 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
   };
 
   if (!board) {
-    return <p className="p-8 text-center text-sm text-ind-ink-3">Lädt…</p>;
+    return <p className="p-8 text-center text-sm text-label2">Lädt…</p>;
   }
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-ind-line">
+    <div className="flex h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-sep">
       <div className="flex h-14 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 dark:border-stone-800 dark:bg-stone-900">
         <button
           onClick={() => navigate("/boards")}
-          className="text-xs font-semibold text-slate-500 hover:text-ind-ink-2 dark:hover:text-stone-200"
+          className="text-xs font-semibold text-slate-500 hover:text-label dark:hover:text-stone-200"
         >
           ← Boards
         </button>
         <div className="h-5 w-px bg-slate-200 dark:bg-stone-700" />
-        <p className="text-sm font-bold text-ind-ink">{board.name}</p>
-        <span className="text-xs text-ind-ink-3">
+        <p className="text-sm font-bold text-label">{board.name}</p>
+        <span className="text-xs text-label2">
           {speichern.isPending ? "Speichert…" : "Gespeichert"}
         </span>
         <div className="ml-auto flex items-center gap-2">
@@ -354,7 +354,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
           </button>
           <button
             onClick={() => speichern.mutate({ nodes, edges })}
-            className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-1.5 text-xs"
+            className="btn-ap-primary flex items-center gap-1.5 px-3 py-1.5 text-xs"
           >
             <Save size={13} strokeWidth={2} /> Speichern
           </button>
@@ -452,12 +452,12 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
               </>
             )}
             <div className="my-1 h-px bg-slate-100 dark:bg-stone-800" />
-            <span title="Verbinden: von einem Punkt am Rand einer Karte zur naechsten ziehen" className="flex h-9 w-9 items-center justify-center text-ind-ink-3">
+            <span title="Verbinden: von einem Punkt am Rand einer Karte zur naechsten ziehen" className="flex h-9 w-9 items-center justify-center text-label2">
               <ArrowUpRight size={17} strokeWidth={2} />
             </span>
             <span
               title="Duplizieren: Strg/Cmd+D oder Rechtsklick auf eine Karte · Kopieren/Einfügen: Strg/Cmd+C dann Strg/Cmd+V"
-              className="flex h-9 w-9 items-center justify-center text-ind-ink-3"
+              className="flex h-9 w-9 items-center justify-center text-label2"
             >
               <Copy size={15} strokeWidth={2} />
             </span>

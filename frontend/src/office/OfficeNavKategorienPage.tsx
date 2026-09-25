@@ -134,23 +134,23 @@ export function OfficeNavKategorienPage() {
   }
 
   if (isLoading || !initialisiert) {
-    return <p className="p-4 text-sm text-ind-ink-3">Lädt…</p>;
+    return <p className="p-4 text-sm text-label2">Lädt…</p>;
   }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ‹ Zurück
         </button>
-        <h1 className="mt-1 text-lg font-bold text-ind-ink">Menü-Kategorien</h1>
-        <p className="mt-1 text-sm text-ind-ink-3">
+        <h1 className="mt-1 text-lg font-bold text-label">Menü-Kategorien</h1>
+        <p className="mt-1 text-sm text-label2">
           Bestimmt, wie die Office-Seitenleiste gruppiert. Gilt für alle Nutzer dieses Mandanten.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Kategorien
         </h2>
         <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
@@ -159,7 +159,7 @@ export function OfficeNavKategorienPage() {
               <input
                 value={k.name}
                 onChange={(e) => kategorieUmbenennen(k.localId, e.target.value)}
-                className="min-w-0 flex-1 border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="min-w-0 flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
               <button
                 onClick={() => kategorieVerschieben(i, -1)}
@@ -196,14 +196,14 @@ export function OfficeNavKategorienPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ind-ink-3">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Zuordnung
         </h2>
         <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
           {NAV_SEITEN.map((seite) => (
             <div key={seite.key} className="flex items-center gap-3 p-3">
               <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
-              <span className="min-w-0 flex-1 truncate font-medium text-ind-ink">
+              <span className="min-w-0 flex-1 truncate font-medium text-label">
                 {seite.label}
               </span>
               <select
@@ -218,7 +218,7 @@ export function OfficeNavKategorienPage() {
                     return { ...bisher, [seite.key]: wert };
                   })
                 }
-                className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               >
                 <option value={OHNE_KATEGORIE}>Nicht zugeordnet</option>
                 {kategorien.map((k) => (
@@ -237,7 +237,7 @@ export function OfficeNavKategorienPage() {
       <button
         onClick={speichern}
         disabled={speichernMutation.isPending}
-        className="btn-industry btn-industry-primary w-full"
+        className="btn-ap-primary w-full"
       >
         {speichernMutation.isPending ? "Speichern…" : "Speichern"}
       </button>

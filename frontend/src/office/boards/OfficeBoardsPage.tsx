@@ -61,7 +61,7 @@ export function OfficeBoardsPage() {
       <SeitenKopf titel="Boards" anzahl={boards?.length}>
         <button
           onClick={() => setZeigeNeu(true)}
-          className="btn-industry btn-industry-primary flex items-center gap-1.5 px-3 py-2 text-xs"
+          className="btn-ap-primary flex items-center gap-1.5 px-3 py-2 text-xs"
         >
           <Plus size={14} strokeWidth={2.5} />
           Neues Board
@@ -72,21 +72,21 @@ export function OfficeBoardsPage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Name</label>
+              <label className="mb-1 block text-xs font-medium text-label2">Name</label>
               <input
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="z. B. Projektplanung Rheinblick"
-                className="w-full border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
+                className="w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ind-ink-3">Art</label>
+              <label className="mb-1 block text-xs font-medium text-label2">Art</label>
               <select
                 value={typ}
                 onChange={(e) => setTyp(e.target.value as BoardTyp)}
-                className="border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
+                className="border border-sep bg-transparent px-3 py-2 text-sm text-label"
               >
                 {(Object.keys(TYP_LABEL) as BoardTyp[]).map((t) => (
                   <option key={t} value={t}>
@@ -98,13 +98,13 @@ export function OfficeBoardsPage() {
             <button
               onClick={() => erstellen.mutate()}
               disabled={!name.trim() || erstellen.isPending}
-              className="btn-industry btn-industry-primary px-4 py-2 text-xs"
+              className="btn-ap-primary px-4 py-2 text-xs"
             >
               Anlegen
             </button>
             <button
               onClick={() => setZeigeNeu(false)}
-              className="rounded-lg px-3 py-2 text-xs font-medium text-ind-ink-3"
+              className="rounded-lg px-3 py-2 text-xs font-medium text-label2"
             >
               Abbrechen
             </button>
@@ -113,7 +113,7 @@ export function OfficeBoardsPage() {
       )}
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
       ) : !boards || boards.length === 0 ? (
         <EmptyState icon={StickyNote} text="Noch keine Boards angelegt." />
       ) : (
@@ -143,12 +143,12 @@ export function OfficeBoardsPage() {
                     </span>
                   </div>
                   <div className="p-3.5">
-                    <p className="truncate text-sm font-bold text-ind-ink">{b.name}</p>
+                    <p className="truncate text-sm font-bold text-label">{b.name}</p>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-medium text-ind-ink-3">
+                      <span className="text-[11px] font-medium text-label2">
                         {TYP_LABEL[b.board_typ]}
                       </span>
-                      <span className="text-[11px] text-ind-ink-3">
+                      <span className="text-[11px] text-label2">
                         {relativeZeit(b.updated_at)}
                       </span>
                     </div>

@@ -32,7 +32,7 @@ export function OfficeBuchhaltungPage() {
       <SeitenKopf titel="Buchhaltung" />
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-ind-ink-3">Lädt…</p>
+        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
       ) : !data ? (
         <EmptyState icon={Receipt} text="Keine Auswertung verfügbar." />
       ) : (
@@ -99,7 +99,7 @@ function PostenTabelle({
 }) {
   return (
     <div>
-      <h2 className="mb-2 text-sm font-bold text-ind-ink">{titel}</h2>
+      <h2 className="mb-2 text-sm font-bold text-label">{titel}</h2>
       {eintraege.length === 0 ? (
         <EmptyState icon={Wallet} text="Nichts offen." />
       ) : (
@@ -121,16 +121,16 @@ function PostenTabelle({
                   onClick={() => onOeffnen(e.id)}
                   className="cursor-pointer border-b border-slate-100 last:border-b-0 hover:bg-slate-50 dark:border-stone-800 dark:hover:bg-stone-800/50"
                 >
-                  <td className="px-3.5 py-2.5 font-semibold text-ind-ink-2">
+                  <td className="px-3.5 py-2.5 font-semibold text-label">
                     {e.nummer}
                   </td>
-                  <td className="px-3.5 py-2.5 text-ind-ink">
+                  <td className="px-3.5 py-2.5 text-label">
                     {e.partner_name}
                   </td>
-                  <td className="px-3.5 py-2.5 text-right font-bold tabular-nums text-ind-ink">
+                  <td className="px-3.5 py-2.5 text-right font-bold tabular-nums text-label">
                     {euro(e.offener_betrag)}
                   </td>
-                  <td className="px-3.5 py-2.5 tabular-nums text-ind-ink-3">
+                  <td className="px-3.5 py-2.5 tabular-nums text-label2">
                     {e.faellig_am ?? "–"}
                   </td>
                   <td className="px-3.5 py-2.5 text-right">
@@ -139,7 +139,7 @@ function PostenTabelle({
                         {e.tage_ueberfaellig} Tage
                       </span>
                     ) : (
-                      <span className="text-ind-ink-3">–</span>
+                      <span className="text-label2">–</span>
                     )}
                   </td>
                 </tr>

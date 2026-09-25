@@ -244,7 +244,7 @@ export function OfficeDispoPage() {
         <select
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
-          className="border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         >
           <option value="">Alle Projekte</option>
           {(projekte ?? []).map((p) => (
@@ -256,7 +256,7 @@ export function OfficeDispoPage() {
       </SeitenKopf>
 
       {fehler && (
-        <div className="mb-4 flex items-center justify-between gap-2 border border-ind-bad px-3 py-2 text-sm text-ind-bad">
+        <div className="mb-4 flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
           <span className="flex items-center gap-1.5">
             <AlertTriangle size={14} strokeWidth={1.5} /> {fehler}
           </span>
@@ -267,7 +267,7 @@ export function OfficeDispoPage() {
       )}
 
       {warnungen.length > 0 && (
-        <div className="mb-4 border border-ind-warn p-3 text-sm text-ind-warn">
+        <div className="mb-4 border border-st-arbeit p-3 text-sm text-st-arbeit">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -282,7 +282,7 @@ export function OfficeDispoPage() {
       <div className="flex items-start gap-4">
         <div className="w-64 shrink-0 space-y-2">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-ind-ink-3">
+            <span className="text-xs font-bold text-label2">
               Nicht disponiert
             </span>
             <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
@@ -290,7 +290,7 @@ export function OfficeDispoPage() {
             </span>
           </div>
           {backlogLaedt ? (
-            <p className="py-6 text-center text-xs text-ind-ink-3">Lädt…</p>
+            <p className="py-6 text-center text-xs text-label2">Lädt…</p>
           ) : backlog.length === 0 ? (
             <EmptyState icon={Inbox} text="Alles disponiert." />
           ) : (
@@ -309,7 +309,7 @@ export function OfficeDispoPage() {
                     className={`card-interactive cursor-grab rounded-xl border bg-white p-2.5 dark:bg-stone-900 ${
                       ueberfaellig
                         ? "border-rose-300 dark:border-rose-500/40"
-                        : "border-ind-line"
+                        : "border-sep"
                     }`}
                   >
                     {/* Als Button: per Drag&Drop auf die Zeitachse ziehen bleibt
@@ -324,16 +324,16 @@ export function OfficeDispoPage() {
                     >
                       <GripVertical
                         size={14}
-                        className="mt-0.5 shrink-0 text-ind-ink-3"
+                        className="mt-0.5 shrink-0 text-label2"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10.5px] font-bold text-ind-ink-3">
+                        <p className="text-[10.5px] font-bold text-label2">
                           {v.vorgangsnummer}
                         </p>
-                        <p className="truncate text-[13px] font-semibold text-ind-ink">
+                        <p className="truncate text-[13px] font-semibold text-label">
                           {v.titel}
                         </p>
-                        <p className="truncate text-[11.5px] text-ind-ink-3">
+                        <p className="truncate text-[11.5px] text-label2">
                           {v.kunde_name}
                         </p>
                         {v.faelligkeit_am && (
@@ -368,7 +368,7 @@ export function OfficeDispoPage() {
               <ChevronLeft size={16} />
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-ind-ink">
+              <span className="text-sm font-semibold text-label">
                 {formatTag(tag)}
               </span>
               {!heute && (
@@ -394,7 +394,7 @@ export function OfficeDispoPage() {
           ) : (
             <div className="overflow-x-auto">
               <div style={{ width: LABEL_BREITE + GESAMT_BREITE }}>
-                <div className="flex border-b border-ind-line">
+                <div className="flex border-b border-sep">
                   <div
                     className="sticky left-0 z-10 shrink-0 bg-white dark:bg-stone-900"
                     style={{ width: LABEL_BREITE }}
@@ -512,10 +512,10 @@ export function OfficeDispoPage() {
                             <button
                               onClick={() => setBearbeitenId(termin.id)}
                               title={termin.titel}
-                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border border-ind-line px-2 text-left text-xs ${
+                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border border-sep px-2 text-left text-xs ${
                                 abgesagt
-                                  ? "text-ind-ink-3 line-through"
-                                  : "bg-ind-hover text-ind-ink"
+                                  ? "text-label2 line-through"
+                                  : "bg-fill text-label"
                               }`}
                             >
                               <span className="truncate font-semibold">{termin.titel}</span>
@@ -624,7 +624,7 @@ function TerminBearbeitenPanel({
         className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-ind-ink">Termin bearbeiten</h2>
+          <h2 className="text-sm font-bold text-label">Termin bearbeiten</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
@@ -641,21 +641,21 @@ function TerminBearbeitenPanel({
         </button>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Titel *</label>
+          <label className="mb-1 block text-xs font-medium text-label2">Titel *</label>
           <input
             ref={titelRef}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Techniker</label>
+          <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
           <select
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
@@ -667,28 +667,28 @@ function TerminBearbeitenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Start</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Start</label>
             <input
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Ende</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
             <input
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
               <Car size={12} /> Fahrzeit (Min.)
             </label>
             <input
@@ -697,11 +697,11 @@ function TerminBearbeitenPanel({
               value={fahrzeit}
               onChange={(e) => setFahrzeit(e.target.value)}
               placeholder="0"
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-ind-ink-3">
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
               <Coffee size={12} /> Pause danach (Min.)
             </label>
             <input
@@ -710,18 +710,18 @@ function TerminBearbeitenPanel({
               value={pause}
               onChange={(e) => setPause(e.target.value)}
               placeholder="0"
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Notiz</label>
+          <label className="mb-1 block text-xs font-medium text-label2">Notiz</label>
           <textarea
             value={notiz}
             onChange={(e) => setNotiz(e.target.value)}
             rows={2}
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
 
@@ -737,7 +737,7 @@ function TerminBearbeitenPanel({
           <button
             onClick={speichern}
             disabled={!titel.trim()}
-            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Speichern
           </button>
@@ -787,7 +787,7 @@ function BacklogPlanenPanel({
         className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-ind-ink">Termin planen</h2>
+          <h2 className="text-sm font-bold text-label">Termin planen</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
@@ -796,17 +796,17 @@ function BacklogPlanenPanel({
           </button>
         </div>
 
-        <p className="text-xs text-ind-ink-3">
+        <p className="text-xs text-label2">
           {vorgang.vorgangsnummer} — {vorgang.titel}
         </p>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-ind-ink-3">Techniker</label>
+          <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
           <select
             ref={technikerRef}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
@@ -818,21 +818,21 @@ function BacklogPlanenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Start</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Start</label>
             <input
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-ind-ink-3">Ende</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
             <input
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full border border-ind-line bg-transparent px-2 py-1.5 text-sm text-ind-ink"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>
@@ -847,7 +847,7 @@ function BacklogPlanenPanel({
               })
             }
             disabled={!technikerId}
-            className="btn-touch rounded-md btn-industry btn-industry-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Termin anlegen
           </button>
