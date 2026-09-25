@@ -62,12 +62,12 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
     return rechte?.find((e) => e.bereich === bereich && e.aktion === aktion)?.erlaubt ?? false;
   }
 
-  if (isLoading) return <p className="p-4 text-sm text-ind-ink-3">Lädt…</p>;
+  if (isLoading) return <p className="p-4 text-sm text-label2">Lädt…</p>;
 
   return (
-    <div className="overflow-x-auto border-t border-ind-line">
+    <div className="overflow-x-auto border-t border-sep">
       <table className="w-full text-left text-sm">
-        <thead className="text-xs text-ind-ink-3">
+        <thead className="text-xs text-label2">
           <tr>
             <th className="px-4 py-2">Bereich</th>
             {AKTIONEN.map((aktion) => (
@@ -77,10 +77,10 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-ind-line">
+        <tbody className="divide-y divide-sep">
           {BEREICHE.map((bereich) => (
             <tr key={bereich}>
-              <td className="px-4 py-2 font-medium text-ind-ink-2">
+              <td className="px-4 py-2 font-medium text-label">
                 {BEREICH_LABEL[bereich]}
               </td>
               {AKTIONEN.map((aktion) => (
@@ -161,42 +161,42 @@ export function AccountTypenPage() {
   return (
     <div className="space-y-6">
       <div>
-        <Link to="/einstellungen" className="text-sm font-medium text-ind-acc-txt hover:underline">
+        <Link to="/einstellungen" className="text-sm font-medium text-tint hover:underline">
           ← Zurück zu Einstellungen
         </Link>
-        <h1 className="mt-2 text-lg font-bold text-ind-ink">Account-Typen & Rechte</h1>
-        <p className="mt-1 text-sm text-ind-ink-3">
+        <h1 className="mt-2 text-lg font-bold text-label">Account-Typen & Rechte</h1>
+        <p className="mt-1 text-sm text-label2">
           Definiere beliebig viele eigene Account-Typen (z.B. "Techniker", "Bürokraft") und lege je Typ
           fest, was er in jedem Funktionsbereich sehen, erstellen, bearbeiten und löschen darf.
           mandant_admin ist von dieser Matrix nicht betroffen und hat immer vollen Zugriff.
         </p>
       </div>
 
-      <section className="border border-ind-line bg-ind-bg p-4">
-        <h2 className="mb-3 text-sm font-bold text-ind-ink">Neuen Account-Typ anlegen</h2>
+      <section className="border border-sep bg-card p-4">
+        <h2 className="mb-3 text-sm font-bold text-label">Neuen Account-Typ anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
+            <label className="mb-1 block text-sm font-medium text-label">Name</label>
             <input
               required
               placeholder="z.B. Techniker"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+            <label className="mb-1 block text-sm font-medium text-label">
               Icon (optional)
             </label>
             <input
               placeholder="🔧"
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
-              className="btn-touch w-20 border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch w-20 border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
-          <label className="flex items-center gap-2 pb-2 text-sm text-ind-ink-2">
+          <label className="flex items-center gap-2 pb-2 text-sm text-label">
             <input
               type="checkbox"
               className="h-4 w-4 accent-ind-acc"
@@ -205,7 +205,7 @@ export function AccountTypenPage() {
             />
             Sieht nur zugewiesene Kunden
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-ind-ink-2">
+          <label className="flex items-center gap-2 pb-2 text-sm text-label">
             <input
               type="checkbox"
               className="h-4 w-4 accent-ind-acc"
@@ -217,7 +217,7 @@ export function AccountTypenPage() {
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch btn-industry btn-industry-primary"
+            className="btn-touch btn-ap-primary"
           >
             Anlegen
           </button>
@@ -228,12 +228,12 @@ export function AccountTypenPage() {
       <section className="space-y-3">
         {deleteError && <p className="text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-ind-ink-3">Lädt…</p>
+          <p className="text-label2">Lädt…</p>
         ) : typen && typen.length > 0 ? (
           typen.map((typ) => (
             <div
               key={typ.id}
-              className="border border-ind-line bg-ind-bg"
+              className="border border-sep bg-card"
             >
               <button
                 onClick={() => setExpandedId(expandedId === typ.id ? null : typ.id)}
@@ -241,8 +241,8 @@ export function AccountTypenPage() {
               >
                 <span className="text-xl">{typ.icon || "🧩"}</span>
                 <span className="min-w-0 flex-1">
-                  <span className="block font-semibold text-ind-ink">{typ.name}</span>
-                  <span className="block text-xs text-ind-ink-3">
+                  <span className="block font-semibold text-label">{typ.name}</span>
+                  <span className="block text-xs text-label2">
                     {typ.anzahl_nutzer} {typ.anzahl_nutzer === 1 ? "Nutzer" : "Nutzer"}
                     {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
                     {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Aufträge selbst übernehmen"}
@@ -270,13 +270,13 @@ export function AccountTypenPage() {
                 >
                   Löschen
                 </button>
-                <span className="text-ind-ink-3">
+                <span className="text-label2">
                   {expandedId === typ.id ? "▲" : "▼"}
                 </span>
               </button>
               {expandedId === typ.id && (
                 <>
-                  <label className="flex items-center gap-2 border-t border-ind-line px-4 py-3 text-sm text-ind-ink-2">
+                  <label className="flex items-center gap-2 border-t border-sep px-4 py-3 text-sm text-label">
                     <input
                       type="checkbox"
                       className="h-4 w-4 accent-ind-acc"
@@ -296,7 +296,7 @@ export function AccountTypenPage() {
             </div>
           ))
         ) : (
-          <p className="text-sm text-ind-ink-3">
+          <p className="text-sm text-label2">
             Noch keine Account-Typen angelegt.
           </p>
         )}

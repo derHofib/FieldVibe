@@ -110,29 +110,29 @@ export function MandantDetailPage() {
     moduleMutation.mutate(naechste);
   }
 
-  if (isLoading) return <p className="text-ind-ink-3">Lädt…</p>;
-  if (!mandant) return <p className="text-ind-ink-3">Mandant nicht gefunden.</p>;
+  if (isLoading) return <p className="text-label2">Lädt…</p>;
+  if (!mandant) return <p className="text-label2">Mandant nicht gefunden.</p>;
 
   return (
     <div className="max-w-2xl space-y-8">
-      <Link to="/mandanten" className="text-sm font-medium text-ind-acc-txt hover:underline">
+      <Link to="/mandanten" className="text-sm font-medium text-tint hover:underline">
         ← Zurück zu Mandanten
       </Link>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-ind-ink">Stammdaten</h2>
+        <h2 className="mb-4 text-lg font-bold text-label">Stammdaten</h2>
         <form onSubmit={handleSaveStammdaten} className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
+            <label className="mb-1 block text-sm font-medium text-label">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+            <label className="mb-1 block text-sm font-medium text-label">
               Slug (Subdomain)
             </label>
             <input
@@ -143,18 +143,18 @@ export function MandantDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Branche</label>
+            <label className="mb-1 block text-sm font-medium text-label">Branche</label>
             <input
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div className="flex items-center gap-3">
             <button
               type="submit"
               disabled={stammdatenMutation.isPending}
-              className="btn-touch btn-industry btn-industry-primary"
+              className="btn-touch btn-ap-primary"
             >
               Speichern
             </button>
@@ -167,12 +167,12 @@ export function MandantDetailPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-ind-ink">Status</h2>
+        <h2 className="mb-4 text-lg font-bold text-label">Status</h2>
         <select
           value={mandant.status}
           disabled={statusMutation.isPending}
           onChange={(e) => handleStatusChange(e.target.value as MandantStatus)}
-          className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
         >
           {Object.entries(STATUS_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
@@ -193,14 +193,14 @@ export function MandantDetailPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-ind-ink">Module</h2>
-        <p className="mb-2 text-xs text-ind-ink-3">
+        <h2 className="mb-4 text-lg font-bold text-label">Module</h2>
+        <p className="mb-2 text-xs text-label2">
           "Aufträge" (Anlegen, Chat/Foto/Status, Zeit start/stopp) ist immer aktiv und hier nicht
           abwählbar.
         </p>
         <div className="space-y-1.5 rounded-md bg-slate-50 p-3 dark:bg-stone-800">
           {ALLE_MODULE.map((modul) => (
-            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-ind-ink-2">
+            <label key={modul} className="btn-touch flex items-center gap-2 text-sm text-label">
               <input
                 type="checkbox"
                 checked={!mandant.deaktivierte_module.includes(modul)}

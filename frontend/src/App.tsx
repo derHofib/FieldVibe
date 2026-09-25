@@ -74,7 +74,7 @@ const OfficeAppLazy = lazy(() =>
 
 function OfficeApp() {
   return (
-    <Suspense fallback={<div className="p-6 text-ind-ink-3">Lädt…</div>}>
+    <Suspense fallback={<div className="p-6 text-label2">Lädt…</div>}>
       <OfficeAppLazy />
     </Suspense>
   );

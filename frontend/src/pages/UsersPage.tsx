@@ -43,7 +43,7 @@ function LinkKopierenButton({ link }: { link: string }) {
         setKopiert(true);
         setTimeout(() => setKopiert(false), 1500);
       }}
-      className="btn-touch btn-industry btn-industry-secondary"
+      className="btn-touch btn-ap"
     >
       {kopiert ? "Kopiert ✓" : "Link kopieren"}
     </button>
@@ -172,50 +172,50 @@ export function UsersPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-4 text-lg font-bold text-ind-ink">
+        <h2 className="mb-4 text-lg font-bold text-label">
           {kannEingeladenWerden ? "Kollegen einladen" : "Neuen Account anlegen"}
         </h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
+              <label className="mb-1 block text-sm font-medium text-label">Name</label>
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">E-Mail</label>
+            <label className="mb-1 block text-sm font-medium text-label">E-Mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Passwort</label>
+              <label className="mb-1 block text-sm font-medium text-label">Passwort</label>
               <input
                 type="password"
                 required
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Rolle</label>
+            <label className="mb-1 block text-sm font-medium text-label">Rolle</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             >
               {(isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).map((value) => (
                 <option key={value} value={value}>
@@ -226,7 +226,7 @@ export function UsersPage() {
           </div>
           {role === "custom" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+              <label className="mb-1 block text-sm font-medium text-label">
                 Account-Typ
               </label>
               {accountTypen && accountTypen.length > 0 ? (
@@ -234,7 +234,7 @@ export function UsersPage() {
                   required
                   value={accountTypId}
                   onChange={(e) => setAccountTypId(e.target.value)}
-                  className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                  className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
                 >
                   <option value="" disabled>
                     Bitte wählen…
@@ -249,7 +249,7 @@ export function UsersPage() {
               ) : (
                 <Link
                   to="/account-typen"
-                  className="text-sm font-medium text-ind-acc-txt hover:underline"
+                  className="text-sm font-medium text-tint hover:underline"
                 >
                   Noch keine Account-Typen — jetzt anlegen →
                 </Link>
@@ -258,12 +258,12 @@ export function UsersPage() {
           )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-ind-ink-2">Mandant</label>
+              <label className="mb-1 block text-sm font-medium text-label">Mandant</label>
               <select
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
-                className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="" disabled>
                   Bitte wählen…
@@ -279,7 +279,7 @@ export function UsersPage() {
           <button
             type="submit"
             disabled={createMutation.isPending || einladenMutation.isPending}
-            className="btn-touch btn-industry btn-industry-primary"
+            className="btn-touch btn-ap-primary"
           >
             {kannEingeladenWerden ? "Einladen" : "Anlegen"}
           </button>
@@ -299,9 +299,9 @@ export function UsersPage() {
 
       {einladungen && einladungen.length > 0 && (
         <section>
-          <h2 className="mb-4 text-lg font-bold text-ind-ink">Offene Einladungen</h2>
-          <table className="w-full border border-ind-line bg-ind-bg text-left">
-            <thead className="text-sm text-ind-ink-3">
+          <h2 className="mb-4 text-lg font-bold text-label">Offene Einladungen</h2>
+          <table className="w-full border border-sep bg-card text-left">
+            <thead className="text-sm text-label2">
               <tr>
                 <th className="px-4 py-3">E-Mail</th>
                 <th className="px-4 py-3">Rolle</th>
@@ -309,19 +309,19 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ind-line text-sm">
+            <tbody className="divide-y divide-sep text-sm">
               {einladungen
                 .filter((e) => e.status === "offen")
                 .map((e) => (
                   <tr key={e.id}>
-                    <td className="px-4 py-3 text-ind-ink">{e.email}</td>
-                    <td className="px-4 py-3 text-ind-ink-2">{einladungRolleLabel(e)}</td>
+                    <td className="px-4 py-3 text-label">{e.email}</td>
+                    <td className="px-4 py-3 text-label">{einladungRolleLabel(e)}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`border px-2 py-0.5 text-xs font-semibold ${
                           e.abgelaufen
                             ? "border-amber-400 text-amber-700 dark:border-amber-600 dark:text-amber-300"
-                            : "border-ind-line text-ind-ink-3"
+                            : "border-sep text-label2"
                         }`}
                       >
                         {e.abgelaufen ? "Abgelaufen" : "Offen"}
@@ -332,7 +332,7 @@ export function UsersPage() {
                         {e.registrierungslink && <LinkKopierenButton link={e.registrierungslink} />}
                         <button
                           onClick={() => resendMutation.mutate(e.id)}
-                          className="btn-touch btn-industry btn-industry-secondary"
+                          className="btn-touch btn-ap"
                         >
                           Erneut senden
                         </button>
@@ -356,13 +356,13 @@ export function UsersPage() {
       )}
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-ind-ink">Accounts</h2>
+        <h2 className="mb-4 text-lg font-bold text-label">Accounts</h2>
         {deleteError && <p className="mb-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-ind-ink-3">Lädt…</p>
+          <p className="text-label2">Lädt…</p>
         ) : (
-          <table className="w-full border border-ind-line bg-ind-bg text-left">
-            <thead className="text-sm text-ind-ink-3">
+          <table className="w-full border border-sep bg-card text-left">
+            <thead className="text-sm text-label2">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">E-Mail</th>
@@ -372,16 +372,16 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ind-line text-sm">
+            <tbody className="divide-y divide-sep text-sm">
               {users?.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-3 font-medium text-ind-ink">{u.name}</td>
-                  <td className="px-4 py-3 text-ind-ink-3">{u.email}</td>
-                  <td className="px-4 py-3 text-ind-ink-2">
+                  <td className="px-4 py-3 font-medium text-label">{u.name}</td>
+                  <td className="px-4 py-3 text-label2">{u.email}</td>
+                  <td className="px-4 py-3 text-label">
                     {u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role]}
                   </td>
                   {isSuperAdmin && (
-                    <td className="px-4 py-3 text-ind-ink-3">
+                    <td className="px-4 py-3 text-label2">
                       {u.mandant_id ? mandantNameById.get(u.mandant_id) ?? "–" : "–"}
                     </td>
                   )}
@@ -390,7 +390,7 @@ export function UsersPage() {
                       className={`border px-2 py-0.5 text-xs font-semibold ${
                         u.aktiv
                           ? "border-green-400 text-green-700 dark:border-green-600 dark:text-green-300"
-                          : "border-ind-line text-ind-ink-3"
+                          : "border-sep text-label2"
                       }`}
                     >
                       {u.aktiv ? "Aktiv" : "Deaktiviert"}
@@ -402,7 +402,7 @@ export function UsersPage() {
                         onClick={() =>
                           toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
                         }
-                        className="btn-touch btn-industry btn-industry-secondary"
+                        className="btn-touch btn-ap"
                       >
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
                       </button>

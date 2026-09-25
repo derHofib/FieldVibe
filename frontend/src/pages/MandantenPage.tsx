@@ -56,19 +56,19 @@ export function MandantenPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-4 text-lg font-bold text-ind-ink">Neuen Mandanten anlegen</h2>
+        <h2 className="mb-4 text-lg font-bold text-label">Neuen Mandanten anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Name</label>
+            <label className="mb-1 block text-sm font-medium text-label">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">
+            <label className="mb-1 block text-sm font-medium text-label">
               Slug (Subdomain)
             </label>
             <input
@@ -76,21 +76,21 @@ export function MandantenPage() {
               pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ind-ink-2">Branche</label>
+            <label className="mb-1 block text-sm font-medium text-label">Branche</label>
             <input
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
-              className="btn-touch border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <button
             type="submit"
             disabled={createMutation.isPending}
-            className="btn-touch btn-industry btn-industry-primary"
+            className="btn-touch btn-ap-primary"
           >
             Anlegen
           </button>
@@ -99,9 +99,9 @@ export function MandantenPage() {
       </section>
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-ind-ink">Mandanten</h2>
+        <h2 className="mb-4 text-lg font-bold text-label">Mandanten</h2>
         {isLoading ? (
-          <p className="text-ind-ink-3">Lädt…</p>
+          <p className="text-label2">Lädt…</p>
         ) : (
           <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
@@ -116,9 +116,9 @@ export function MandantenPage() {
             <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
               {mandanten?.map((m) => (
                 <tr key={m.id}>
-                  <td className="px-4 py-3 font-medium text-ind-ink">{m.name}</td>
-                  <td className="px-4 py-3 text-ind-ink-3">{m.slug}</td>
-                  <td className="px-4 py-3 text-ind-ink-3">{m.branche ?? "–"}</td>
+                  <td className="px-4 py-3 font-medium text-label">{m.name}</td>
+                  <td className="px-4 py-3 text-label2">{m.slug}</td>
+                  <td className="px-4 py-3 text-label2">{m.branche ?? "–"}</td>
                   <td className="px-4 py-3">
                     <span className={`px-3 py-1 text-xs font-semibold ${STATUS_BADGE[m.status]}`}>
                       {STATUS_LABEL[m.status]}

@@ -24,14 +24,14 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   });
 
   return (
-    <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+    <div className="space-y-2 border border-sep bg-card p-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-ind-ink-2">SMTP (globaler Mailversand)</span>
+        <span className="text-sm font-semibold text-label">SMTP (globaler Mailversand)</span>
         <span
           className={`border px-2 py-0.5 text-xs font-semibold ${
             integration.aktiv
               ? "border-green-400 text-green-700 dark:border-green-600 dark:text-green-300"
-              : "border-ind-line text-ind-ink-3"
+              : "border-sep text-label2"
           }`}
         >
           {integration.aktiv ? "Aktiv" : "Inaktiv"}
@@ -43,25 +43,25 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
           value={host}
           onChange={(e) => setHost(e.target.value)}
           placeholder="Host"
-          className="input-industry"
+          className="field-ap"
         />
         <input
           value={port}
           onChange={(e) => setPort(e.target.value)}
           placeholder="Port"
-          className="input-industry"
+          className="field-ap"
         />
         <input
           value={user}
           onChange={(e) => setUser(e.target.value)}
           placeholder="Benutzername"
-          className="input-industry"
+          className="field-ap"
         />
         <input
           value={fromAddress}
           onChange={(e) => setFromAddress(e.target.value)}
           placeholder="Absender-Adresse (z.B. account@fieldvibe.de)"
-          className="input-industry"
+          className="field-ap"
         />
       </div>
       <input
@@ -69,7 +69,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
         value={secret}
         onChange={(e) => setSecret(e.target.value)}
         placeholder={integration.hat_secret ? "Passwort (gesetzt, zum Ändern eingeben)" : "Passwort"}
-        className="input-industry"
+        className="field-ap"
       />
 
       <div className="flex gap-2">
@@ -81,14 +81,14 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
             })
           }
           disabled={updateMutation.isPending}
-          className="btn-touch btn-industry btn-industry-primary flex-1 py-1.5 text-sm disabled:opacity-50"
+          className="btn-touch btn-ap-primary flex-1 py-1.5 text-sm disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => updateMutation.mutate({ aktiv: !integration.aktiv })}
           disabled={updateMutation.isPending}
-          className="btn-touch btn-industry btn-industry-secondary py-1.5 text-sm disabled:opacity-50"
+          className="btn-touch btn-ap py-1.5 text-sm disabled:opacity-50"
         >
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
@@ -138,22 +138,22 @@ export function EinstellungenPage() {
     },
   });
 
-  if (isLoading) return <p className="text-center text-ind-ink-3">Lädt…</p>;
+  if (isLoading) return <p className="text-center text-label2">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
 
   return (
     <div className="space-y-4">
-      <h1 className="font-heading text-2xl font-semibold text-ind-ink">Plattform-Einstellungen</h1>
+      <h1 className="font-heading text-2xl font-semibold text-label">Plattform-Einstellungen</h1>
 
       <div className="space-y-2">
-        <p className="text-sm text-ind-ink-3">
+        <p className="text-sm text-label2">
           Greift, sobald ein Mandant selbst keine eigene SMTP-Integration eingerichtet hat (Seite
           „Integrationen" im jeweiligen Mandanten-Bereich) — für Einladungen und Passwort-Reset-Mails.
           Ein Mandant mit eigener SMTP-Konfiguration überschreibt das automatisch, hier muss nichts
           umgeschaltet werden.
         </p>
-        <p className="text-xs text-ind-ink-3">
+        <p className="text-xs text-label2">
           Absenderadresse braucht eine Domain, für die SPF/DKIM tatsächlich eingerichtet ist — sonst
           landen die Mails eher im Spam-Ordner der Empfänger.
         </p>
@@ -162,31 +162,31 @@ export function EinstellungenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 border border-ind-line bg-ind-bg p-4">
+        <div className="space-y-2 border border-sep bg-card p-4">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="Host"
-              className="input-industry"
+              className="field-ap"
             />
             <input
               value={port}
               onChange={(e) => setPort(e.target.value)}
               placeholder="Port"
-              className="input-industry"
+              className="field-ap"
             />
             <input
               value={user}
               onChange={(e) => setUser(e.target.value)}
               placeholder="Benutzername"
-              className="input-industry"
+              className="field-ap"
             />
             <input
               value={fromAddress}
               onChange={(e) => setFromAddress(e.target.value)}
               placeholder="Absender-Adresse"
-              className="input-industry"
+              className="field-ap"
             />
           </div>
           <input
@@ -194,12 +194,12 @@ export function EinstellungenPage() {
             value={secret}
             onChange={(e) => setSecret(e.target.value)}
             placeholder="Passwort"
-            className="input-industry"
+            className="field-ap"
           />
           <button
             disabled={!host || !fromAddress || createMutation.isPending}
             onClick={() => createMutation.mutate()}
-            className="btn-touch btn-industry btn-industry-primary w-full py-1.5 text-sm disabled:opacity-50"
+            className="btn-touch btn-ap-primary w-full py-1.5 text-sm disabled:opacity-50"
           >
             SMTP einrichten
           </button>
@@ -207,7 +207,7 @@ export function EinstellungenPage() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-touch btn-industry btn-industry-secondary w-full py-2.5 text-sm"
+          className="btn-touch btn-ap w-full py-2.5 text-sm"
         >
           + Globales SMTP einrichten
         </button>
