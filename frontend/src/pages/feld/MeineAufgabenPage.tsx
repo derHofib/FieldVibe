@@ -166,7 +166,7 @@ export function MeineAufgabenPage() {
                 <div
                   key={a.id}
                   onClick={() => setPanelAufgabe(a)}
-                  className={`card-interactive flex cursor-pointer gap-2.5 border border-sep bg-card p-3 ${
+                  className={`card-interactive flex cursor-pointer gap-2.5 card-ap p-3 ${
                     ueberfaellig ? "ring-1 ring-st-fehlt " : ""
                   }`}
                 >
@@ -240,7 +240,7 @@ export function MeineAufgabenPage() {
                 <div
                   key={a.id}
                   onClick={() => setPanelAufgabe(a)}
-                  className="card-interactive flex cursor-pointer items-center gap-2.5 border border-sep bg-card p-3"
+                  className="card-interactive flex cursor-pointer items-center gap-2.5 card-ap p-3"
                 >
                   <button
                     onClick={(e) => {

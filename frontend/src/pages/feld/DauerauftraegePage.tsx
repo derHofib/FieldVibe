@@ -30,7 +30,7 @@ export function DauerauftraegePage() {
             <button
               key={d.id}
               onClick={() => navigate(`/dauerauftraege/${d.id}`)}
-              className="btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
+              className="btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
             >
               <div>
                 <div className="text-sm font-medium text-label">

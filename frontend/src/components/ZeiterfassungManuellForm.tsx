@@ -94,7 +94,7 @@ export function ZeiterfassungManuellForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-3 border border-sep bg-card p-4"
+      className="space-y-3 card-ap p-4"
     >
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 sm:col-span-1">

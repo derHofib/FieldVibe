@@ -67,7 +67,7 @@ export function EmailSection({
   });
 
   return (
-    <div className="border border-sep bg-card p-3">
+    <div className="card-ap p-3">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-label2">E-Mail</h2>
         {!showForm && (

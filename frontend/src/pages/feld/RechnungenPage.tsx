@@ -53,7 +53,7 @@ function AngeboteListe() {
       </button>
 
       {showForm && (
-        <div className="space-y-3 border border-sep bg-card p-4">
+        <div className="space-y-3 card-ap p-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
             <SearchableSelect
@@ -83,7 +83,7 @@ function AngeboteListe() {
             <button
               key={a.id}
               onClick={() => navigate(`/angebote/${a.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
+              className="card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
             >
               <div>
                 <div className="text-xs text-label2">{a.angebotsnummer}</div>
@@ -167,7 +167,7 @@ export function RechnungenPage() {
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto border border-sep bg-card p-1">
+      <div className="flex gap-2 overflow-x-auto card-ap p-1">
         {([
           { wert: "rechnungen" as const, label: "Rechnungen" },
           { wert: "angebote" as const, label: "Angebote" },
@@ -260,7 +260,7 @@ export function RechnungenPage() {
           </div>
 
           {data && (
-            <div className="grid grid-cols-3 gap-2 border border-sep bg-card p-3 text-center">
+            <div className="grid grid-cols-3 gap-2 card-ap p-3 text-center">
               <div>
                 <div className="text-xs text-label2">Treffer</div>
                 <div className="text-sm font-semibold tabular-nums text-label">

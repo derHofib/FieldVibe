@@ -118,7 +118,7 @@ function NeueAnfrage() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-3 border border-sep bg-card p-4"
+      className="space-y-3 card-ap p-4"
     >
       <p className="text-xs text-label2">
         Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
@@ -279,7 +279,7 @@ export function PortalAnfragenPage() {
           {anfragen.map((a) => (
             <div
               key={a.id}
-              className="border border-sep bg-card p-4"
+              className="card-ap p-4"
             >
               <div className="flex items-start justify-between">
                 <div className="font-medium text-label">{a.titel}</div>

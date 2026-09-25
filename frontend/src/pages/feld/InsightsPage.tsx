@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
 
 function Kachel({ label, wert }: { label: string; wert: string }) {
   return (
-    <div className="border border-sep bg-card p-4">
+    <div className="card-ap p-4">
       <div className="text-xs font-medium text-label2">{label}</div>
       <div className="mt-1 text-2xl font-bold text-label">{wert}</div>
     </div>
@@ -83,7 +83,7 @@ export function InsightsPage() {
         <Kachel label="Angebote angenommen" wert={String(insights.angebote_angenommen)} />
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Vorgänge nach Status</h2>
         <div className="space-y-1.5">
           {Object.entries(insights.vorgaenge_nach_status).map(([status, count]) => (
@@ -105,7 +105,7 @@ export function InsightsPage() {
         </div>
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">
           Techniker-Auslastung (diese Woche)
         </h2>
@@ -125,7 +125,7 @@ export function InsightsPage() {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Export</h2>
         <div className="space-y-2">
           <button

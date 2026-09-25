@@ -164,7 +164,7 @@ export function AnsprechpartnerVerwaltung({
           ) : (
             <div
               key={a.id}
-              className="border border-sep bg-card p-3"
+              className="card-ap p-3"
             >
               <div className="flex items-start justify-between">
                 <div>

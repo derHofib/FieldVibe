@@ -316,7 +316,7 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
             return (
               <div
                 key={m.id}
-                className="flex items-center justify-between border border-sep bg-card p-3"
+                className="flex items-center justify-between card-ap p-3"
               >
                 <span className="text-sm font-medium text-label">{m.bezeichnung}</span>
                 <span
@@ -434,7 +434,7 @@ export function AnlageProfilePage() {
         ← Zurück
       </button>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <h1 className="text-lg font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
@@ -485,7 +485,7 @@ export function AnlageProfilePage() {
         <DetailsBearbeiten profil={profil} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Auswertung</h2>
         <div className="flex flex-wrap gap-2">
           {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
@@ -519,7 +519,7 @@ export function AnlageProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >
@@ -559,7 +559,7 @@ export function AnlageProfilePage() {
         </div>
 
         {showForm && (
-          <div className="mb-2 space-y-2 border border-sep bg-card p-3">
+          <div className="mb-2 space-y-2 card-ap p-3">
             <input
               value={bezeichnung}
               onChange={(e) => setBezeichnung(e.target.value)}
@@ -611,7 +611,7 @@ export function AnlageProfilePage() {
             {pruefzyklen!.map((z) => (
               <div
                 key={z.id}
-                className="border border-sep bg-card p-3"
+                className="card-ap p-3"
               >
                 <div className="text-sm font-medium text-label">{z.bezeichnung}</div>
                 <div className="text-xs text-label2">
@@ -659,7 +659,7 @@ export function AnlageProfilePage() {
           <h2 className="mb-2 text-sm font-semibold text-label2">Inventur</h2>
           {!inventurzyklus ? (
             kannVerwalten ? (
-              <div className="space-y-2 border border-sep bg-card p-3">
+              <div className="space-y-2 card-ap p-3">
                 <p className="text-sm text-label2">
                   Noch kein Inventurzyklus für diesen Lagerort eingerichtet.
                 </p>
@@ -685,7 +685,7 @@ export function AnlageProfilePage() {
               <p className="text-sm text-label2">Kein Inventurzyklus eingerichtet.</p>
             )
           ) : (
-            <div className="border border-sep bg-card p-3">
+            <div className="card-ap p-3">
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-medium ${faelligkeitsFarbe(inventurzyklus.naechste_inventur_am)}`}>
                   Fällig: {new Date(inventurzyklus.naechste_inventur_am).toLocaleDateString("de-DE")}

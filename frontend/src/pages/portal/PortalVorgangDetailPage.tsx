@@ -31,7 +31,7 @@ function PortalEventBubble({ event }: { event: VorgangEvent }) {
   }
 
   return (
-    <div className="mb-3 border border-sep bg-card p-3">
+    <div className="mb-3 card-ap p-3">
       <div className="mb-1 text-xs text-label2">
         {new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}
       </div>
@@ -76,7 +76,7 @@ export function PortalVorgangDetailPage() {
         ← Zurück
       </button>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="text-xs text-label2">Auftrag Nr. {vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-label">{vorgang.titel}</h1>
         {vorgang.beschreibung && (

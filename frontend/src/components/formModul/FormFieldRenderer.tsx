@@ -409,7 +409,7 @@ export function FormFieldRenderer({
       {required && <span className="ml-1 text-st-fehlt">*</span>}
     </label>
   );
-  const wrapperClass = "border border-sep bg-card p-3";
+  const wrapperClass = "card-ap p-3";
   const inputClass =
     "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-label2 text-label dark:disabled:bg-stone-800/50";
 
@@ -707,7 +707,7 @@ export function FormFieldRenderer({
                 href={datei.url}
                 target="_blank"
                 rel="noreferrer"
-                className="mb-2 flex items-center gap-2 border border-sep bg-card p-2 text-sm text-tint"
+                className="mb-2 flex items-center gap-2 card-ap p-2 text-sm text-tint"
               >
                 <FileText size={16} strokeWidth={1.5} className="shrink-0" />
                 <span className="truncate">{datei.filename || "Datei ansehen"}</span>

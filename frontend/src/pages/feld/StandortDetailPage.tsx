@@ -326,7 +326,7 @@ export function StandortDetailPage() {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <h1 className="text-lg font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
@@ -355,7 +355,7 @@ export function StandortDetailPage() {
         <AdresseBearbeiten standortId={id!} adresse={profil.adresse} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Auswertung</h2>
         {Object.keys(profil.vorgaenge_nach_status).length === 0 ? (
           <p className="text-sm text-label2">Noch keine Vorgänge an diesem Standort.</p>
@@ -385,7 +385,7 @@ export function StandortDetailPage() {
               <button
                 key={a.id}
                 onClick={() => navigate(`/anlagen/${a.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
@@ -420,7 +420,7 @@ export function StandortDetailPage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >

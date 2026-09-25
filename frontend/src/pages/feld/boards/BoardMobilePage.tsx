@@ -45,7 +45,7 @@ function VorgangZeile({ vorgangId, onOeffnen }: { vorgangId: string; onOeffnen: 
   return (
     <button
       onClick={onOeffnen}
-      className="btn-touch flex w-full items-center gap-3 border border-sep bg-card p-3 text-left"
+      className="btn-touch flex w-full items-center gap-3 card-ap p-3 text-left"
     >
       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
         <Link2 size={15} strokeWidth={2} />

@@ -72,7 +72,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
     "border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
 
   return (
-    <div className="space-y-3 border border-sep bg-card p-4">
+    <div className="space-y-3 card-ap p-4">
       <div>
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
           <Building2 size={15} strokeWidth={2} className="text-violet-500" /> Firmenprofil
@@ -229,7 +229,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   });
 
   return (
-    <div className="space-y-2 border border-sep bg-card p-4">
+    <div className="space-y-2 card-ap p-4">
       <div>
         <h2 className="flex items-center gap-1.5 text-sm font-semibold text-label">
           <Mail size={15} strokeWidth={2} className="text-st-fehlt" /> Mahnwesen
@@ -280,7 +280,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
   });
 
   return (
-    <div className="border border-sep bg-card p-4">
+    <div className="card-ap p-4">
       <h2 className="mb-1 text-sm font-semibold text-label">
         Wiedervorlage-Standardfrist
       </h2>
@@ -333,7 +333,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 border border-sep bg-card p-4">
+    <div className="space-y-2 card-ap p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-label">SMTP (E-Mail-Versand)</span>
         <span
@@ -435,7 +435,7 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
   });
 
   return (
-    <div className="space-y-2 border border-sep bg-card p-4">
+    <div className="space-y-2 card-ap p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-label">
           IMAP (Rechnungseingang-Import)
@@ -608,7 +608,7 @@ export function IntegrationenPage() {
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 
       {einstellungen && (
-        <div className="border border-sep bg-card p-4">
+        <div className="card-ap p-4">
           <h2 className="mb-1 text-sm font-semibold text-label">
             Prüfzyklen-/Mahnwesen-Uhrzeit
           </h2>
@@ -649,7 +649,7 @@ export function IntegrationenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 border border-sep bg-card p-4">
+        <div className="space-y-2 card-ap p-4">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}
@@ -709,7 +709,7 @@ export function IntegrationenPage() {
       {imap ? (
         <ImapZeile integration={imap} />
       ) : showImapForm ? (
-        <div className="space-y-2 border border-sep bg-card p-4">
+        <div className="space-y-2 card-ap p-4">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={imapHost}

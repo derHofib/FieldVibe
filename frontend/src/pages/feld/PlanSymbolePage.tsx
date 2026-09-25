@@ -31,7 +31,7 @@ function SymbolKarte({
   const [name, setName] = useState(symbol.name);
 
   return (
-    <div className="flex flex-col items-center gap-2 border border-sep bg-card p-3">
+    <div className="flex flex-col items-center gap-2 card-ap p-3">
       <div className="flex h-16 w-16 items-center justify-center border border-sepstrong bg-fill">
         <img src={symbol.url} alt={symbol.name} className="max-h-12 max-w-12 object-contain" />
       </div>
@@ -124,7 +124,7 @@ export function PlanSymbolePage() {
         </p>
       </div>
 
-      <div className="space-y-2 border border-sep bg-card p-4">
+      <div className="space-y-2 card-ap p-4">
         <p className="text-[11px] font-bold tracking-wide text-label2 uppercase">Neues Symbol</p>
         <div className="flex flex-col gap-2 sm:flex-row">
           <label className="btn-touch flex flex-1 cursor-pointer items-center justify-center gap-1.5 border border-dashed border-sepstrong px-3 py-2 text-sm text-label hover:bg-fill">

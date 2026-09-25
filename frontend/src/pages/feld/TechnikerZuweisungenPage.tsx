@@ -63,7 +63,7 @@ export function TechnikerZuweisungenPage() {
           {uebersicht.map((row) => (
             <div
               key={row.techniker.id}
-              className="border border-sep bg-card p-4"
+              className="card-ap p-4"
             >
               <div className="font-semibold text-label">{row.techniker.name}</div>
               <div className="text-xs text-label2">{row.techniker.email}</div>

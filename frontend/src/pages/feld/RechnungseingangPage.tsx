@@ -110,7 +110,7 @@ export function RechnungseingangPage() {
       </div>
 
       {showForm && (
-        <div className="space-y-2 border border-sep bg-card p-4">
+        <div className="space-y-2 card-ap p-4">
           <select
             value={form.lieferantId}
             onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
@@ -237,7 +237,7 @@ export function RechnungseingangPage() {
           <button
             key={e.id}
             onClick={() => navigate(`/rechnungseingang/${e.id}`)}
-            className="btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
+            className="btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
           >
             <div>
               <div className="text-sm font-semibold text-label">

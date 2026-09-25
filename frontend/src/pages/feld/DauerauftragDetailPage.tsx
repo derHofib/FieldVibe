@@ -92,7 +92,7 @@ export function DauerauftragDetailPage() {
         ← Zurück
       </button>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-lg font-bold text-label">{dauerauftrag.titel}</h1>
@@ -323,7 +323,7 @@ export function DauerauftragDetailPage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left ${
+                className={`btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >

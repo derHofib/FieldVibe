@@ -31,7 +31,7 @@ function SettingsLink({
   return (
     <button
       onClick={onClick}
-      className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
+      className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
     >
       <IconBadge icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">

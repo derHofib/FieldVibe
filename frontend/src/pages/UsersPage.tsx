@@ -300,7 +300,7 @@ export function UsersPage() {
       {einladungen && einladungen.length > 0 && (
         <section>
           <h2 className="mb-4 text-lg font-bold text-label">Offene Einladungen</h2>
-          <table className="w-full border border-sep bg-card text-left">
+          <table className="w-full card-ap text-left">
             <thead className="text-sm text-label2">
               <tr>
                 <th className="px-4 py-3">E-Mail</th>
@@ -361,7 +361,7 @@ export function UsersPage() {
         {isLoading ? (
           <p className="text-label2">Lädt…</p>
         ) : (
-          <table className="w-full border border-sep bg-card text-left">
+          <table className="w-full card-ap text-left">
             <thead className="text-sm text-label2">
               <tr>
                 <th className="px-4 py-3">Name</th>

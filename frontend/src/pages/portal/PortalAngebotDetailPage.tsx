@@ -47,7 +47,7 @@ export function PortalAngebotDetailPage() {
         ← Zurück
       </button>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div className="text-xs text-label2">Angebot Nr. {angebot.angebotsnummer}</div>
           <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[angebot.status]}`}>
@@ -71,7 +71,7 @@ export function PortalAngebotDetailPage() {
 
       {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Positionen</h2>
         {angebot.positionen.length === 0 ? (
           <p className="text-sm text-label2">Keine Positionen.</p>

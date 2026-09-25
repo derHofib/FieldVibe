@@ -581,7 +581,7 @@ function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverz
     <>
       <button
         onClick={() => setOffen(true)}
-        className="card-interactive flex w-full items-center gap-2 border border-sep bg-card p-3 text-left"
+        className="card-interactive flex w-full items-center gap-2 card-ap p-3 text-left"
       >
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-label">
@@ -698,7 +698,7 @@ export function LeistungsverzeichnisDetailPage() {
       </div>
 
       {kannVerwalten ? (
-        <div className="border border-sep bg-card p-3">
+        <div className="card-ap p-3">
           <KundenZuweisung kundenIds={lv.kunden_ids} onChange={(ids) => kundenSpeichern.mutate(ids)} />
         </div>
       ) : (

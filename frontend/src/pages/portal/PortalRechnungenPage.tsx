@@ -21,7 +21,7 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
   });
 
   return (
-    <div className="border border-sep bg-card p-4">
+    <div className="card-ap p-4">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-label2">Rechnung Nr. {rechnung.rechnungsnummer}</div>

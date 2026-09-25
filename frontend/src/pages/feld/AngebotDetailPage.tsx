@@ -197,7 +197,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-label2">{angebot.angebotsnummer}</div>
@@ -221,7 +221,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Positionen</h2>
           {angebot.status === "entwurf" && (

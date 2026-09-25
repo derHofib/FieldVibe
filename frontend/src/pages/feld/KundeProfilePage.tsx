@@ -79,7 +79,7 @@ function Stammdaten({
       .filter(Boolean)
       .join(", ");
     return (
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Stammdaten</h2>
           {kannVerwalten && (
@@ -111,7 +111,7 @@ function Stammdaten({
   }
 
   return (
-    <div className="space-y-2 border border-sep bg-card p-4">
+    <div className="space-y-2 card-ap p-4">
       <h2 className="text-sm font-semibold text-label2">Stammdaten bearbeiten</h2>
       <input
         value={form.strasse}
@@ -536,7 +536,7 @@ function StandorteVerwaltung({ kundeId, kannVerwalten }: { kundeId: string; kann
           {standorte.map((s) => (
             <div
               key={s.id}
-              className={`flex items-center justify-between border border-sep bg-card p-3 ${
+              className={`flex items-center justify-between card-ap p-3 ${
                 s.aktiv ? "" : "opacity-60"
               }`}
             >
@@ -711,7 +711,7 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
   });
 
   return (
-    <div className="flex items-center justify-between border border-sep bg-card p-3">
+    <div className="flex items-center justify-between card-ap p-3">
       <div>
         <div className="text-sm font-medium text-label">
           {position.bezeichnung}
@@ -820,7 +820,7 @@ function PortalZugangZeile({ zugang, kundeId }: { zugang: KundenportalZugang; ku
 
   return (
     <div
-      className={`flex items-start justify-between border border-sep bg-card p-3 ${
+      className={`flex items-start justify-between card-ap p-3 ${
         zugang.aktiv ? "" : "opacity-60"
       }`}
     >
@@ -875,7 +875,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
   }
 
   return (
-    <div className="border border-sep bg-card p-4">
+    <div className="card-ap p-4">
       <h2 className="mb-2 text-sm font-semibold text-label2">
         Portal-Link für {kunde.name}
       </h2>
@@ -1066,7 +1066,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
             <button
               key={d.id}
               onClick={() => navigate(`/dauerauftraege/${d.id}`)}
-              className="card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
+              className="card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
             >
               <div>
                 <div className="text-sm font-medium text-label">
@@ -1159,7 +1159,7 @@ export function KundeProfilePage() {
         <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
-        <div className="border border-sep bg-card p-4">
+        <div className="card-ap p-4">
           <div className="text-xs text-label2">{kunde.kundennummer}</div>
           <h1 className="text-lg font-bold text-label">{kunde.name}</h1>
           {kunde.typ && <span className="text-sm text-label2">{kunde.typ}</span>}
@@ -1178,7 +1178,7 @@ export function KundeProfilePage() {
         ← Zurück
       </button>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-label2">{profil.kundennummer}</div>
@@ -1279,7 +1279,7 @@ export function KundeProfilePage() {
             {profil.anlagen.map((a) => (
               <div
                 key={a.id}
-                className={`flex items-center justify-between border border-sep bg-card p-3 ${
+                className={`flex items-center justify-between card-ap p-3 ${
                   a.aktiv ? "" : "opacity-60"
                 }`}
               >
@@ -1332,7 +1332,7 @@ export function KundeProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >

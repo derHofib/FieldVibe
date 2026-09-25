@@ -163,7 +163,7 @@ function FeldKarte({ field, ausgewaehlt, onSelect }: { field: FormField; ausgewa
       <div className="min-w-0 flex-1">
         <FormFieldRenderer field={field} value={undefined} onChange={() => {}} readOnly required={field.pflichtfeld} />
       </div>
-      <span className="absolute top-1.5 right-1.5 border border-sep bg-card px-1.5 py-0.5 text-[10px] text-label2">
+      <span className="absolute top-1.5 right-1.5 card-ap px-1.5 py-0.5 text-[10px] text-label2">
         {field.feld_typ}
       </span>
     </div>
@@ -574,7 +574,7 @@ function UnterformularFeldZeile({
         <FormFieldRenderer field={field} value={undefined} onChange={() => {}} readOnly required={field.pflichtfeld} />
       </div>
       <div className="mt-1 flex shrink-0 flex-col items-end gap-1">
-        <span className="border border-sep bg-card px-1.5 py-0.5 text-[10px] text-label2">{field.feld_typ}</span>
+        <span className="card-ap px-1.5 py-0.5 text-[10px] text-label2">{field.feld_typ}</span>
         <div className="flex gap-1">
           <button
             onClick={onRegelnOeffnen}
@@ -1020,7 +1020,7 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
       <p className="mx-auto max-w-[1400px] text-[11px] font-bold tracking-wide text-label2 uppercase">Formular</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="mx-auto flex max-w-[1400px] gap-4 border border-sep bg-card" style={{ minHeight: 520 }}>
+        <div className="mx-auto flex max-w-[1400px] gap-4 card-ap" style={{ minHeight: 520 }}>
           <div className="p-3">
             <FeldTypPalette />
           </div>

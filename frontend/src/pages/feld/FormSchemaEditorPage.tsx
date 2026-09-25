@@ -35,7 +35,7 @@ const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "publ
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
 
 const inputClass = "btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label";
-const sectionClass = "space-y-3 border border-sep bg-card p-4";
+const sectionClass = "space-y-3 card-ap p-4";
 
 const EFFEKT_LABEL: Record<FormLogicEffekt, string> = {
   show: "Anzeigen, wenn",

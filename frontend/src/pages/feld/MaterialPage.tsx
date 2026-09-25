@@ -75,7 +75,7 @@ function MaterialZeile({
   });
 
   return (
-    <div className="card-interactive border border-sep bg-card p-3">
+    <div className="card-interactive card-ap p-3">
       <div className="flex items-center justify-between">
         <button
           onClick={() => navigate(`/material/${material.id}`)}
@@ -246,7 +246,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   });
 
   return (
-    <div className="border border-sep bg-card p-3">
+    <div className="card-ap p-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-label2">Fahrzeuge & Lagerorte</h2>
         <button
@@ -471,7 +471,7 @@ export function MaterialPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-label">Material</h1>
 
-      <div className="flex gap-2 overflow-x-auto border border-sep bg-card p-1">
+      <div className="flex gap-2 overflow-x-auto card-ap p-1">
         {(["material", "bestellwesen"] as const).map((t) => (
           <button
             key={t}
@@ -500,7 +500,7 @@ export function MaterialPage() {
       )}
 
       {showForm && tab === "material" && (
-        <div className="space-y-3 border border-sep bg-card p-4">
+        <div className="space-y-3 card-ap p-4">
           <input
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
@@ -600,7 +600,7 @@ export function MaterialPage() {
           <LagerorteVerwaltung lagerorte={lagerorte.filter((l) => l.objekttyp !== "lager" || l.bezeichnung !== "Zentrallager")} />
 
           {(material ?? []).length > 0 && (
-            <div className="space-y-2 border border-sep bg-card p-3">
+            <div className="space-y-2 card-ap p-3">
               <input
                 value={matSuche}
                 onChange={(e) => setMatSuche(e.target.value)}
@@ -667,7 +667,7 @@ export function MaterialPage() {
 
       {tab === "bestellwesen" && (
         <div className="space-y-4">
-          <div className="border border-sep bg-card p-3">
+          <div className="card-ap p-3">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-label2">Lieferanten</h2>
               <button
@@ -732,7 +732,7 @@ export function MaterialPage() {
             )}
           </div>
 
-          <div className="border border-sep bg-card p-3">
+          <div className="card-ap p-3">
             <h2 className="mb-2 text-sm font-semibold text-label2">Offene Materialbedarfe</h2>
             <div className="mb-2 flex gap-2 rounded-md bg-fill p-1">
               <button
@@ -819,7 +819,7 @@ export function MaterialPage() {
             )}
           </div>
 
-          <div className="border border-sep bg-card p-3">
+          <div className="card-ap p-3">
             <h2 className="mb-2 text-sm font-semibold text-label2">Bestellungen</h2>
             {(bestellungen ?? []).length === 0 ? (
               <p className="text-sm text-label2">Noch keine Bestellungen vorhanden.</p>

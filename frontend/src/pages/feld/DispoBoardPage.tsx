@@ -162,7 +162,7 @@ export function DispoBoardPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between border border-sep bg-card p-3">
+      <div className="flex items-center justify-between card-ap p-3">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
           className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm "
@@ -214,7 +214,7 @@ export function DispoBoardPage() {
       </button>
 
       {showForm && form && (
-        <div className="space-y-3 border border-sep bg-card p-4">
+        <div className="space-y-3 card-ap p-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-label2">Vorgang</label>
             <select

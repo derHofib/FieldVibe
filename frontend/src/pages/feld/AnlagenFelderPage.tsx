@@ -92,7 +92,7 @@ export function AnlagenFelderPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-2 border border-sep bg-card p-4"
+        className="space-y-2 card-ap p-4"
       >
         <div>
           <label className="mb-1 block text-sm font-medium text-label">Anlagentyp</label>
@@ -145,7 +145,7 @@ export function AnlagenFelderPage() {
           {gruppen.map(([typ, felder]) => (
             <div
               key={typ}
-              className="border border-sep bg-card p-4"
+              className="card-ap p-4"
             >
               <h2 className="mb-2 text-sm font-semibold text-label2">{typ}</h2>
               <div className="space-y-1.5">

@@ -59,7 +59,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   });
 
   return (
-    <div className="border border-sep bg-card p-4">
+    <div className="card-ap p-4">
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs text-label2">
@@ -192,7 +192,7 @@ export function AnfragenPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-label">Auftragsanfragen</h1>
-      <div className="flex gap-2 border border-sep bg-card p-1">
+      <div className="flex gap-2 card-ap p-1">
         {(["offen", "alle"] as const).map((f) => (
           <button
             key={f}

@@ -82,7 +82,7 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
       .filter(Boolean)
       .join(", ");
     return (
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Stammdaten</h2>
           <button
@@ -131,7 +131,7 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
   }
 
   return (
-    <div className="space-y-2 border border-sep bg-card p-4">
+    <div className="space-y-2 card-ap p-4">
       <h2 className="text-sm font-semibold text-label2">Stammdaten bearbeiten</h2>
       <input
         value={form.gewerk}
@@ -312,7 +312,7 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
   const abgelaufeneAnzahl = (nachweise ?? []).filter((n) => n.abgelaufen).length;
 
   return (
-    <div className="border border-sep bg-card p-4">
+    <div className="card-ap p-4">
       <div className="mb-2 flex items-center gap-2">
         <h2 className="text-sm font-semibold text-label2">Nachweise</h2>
         {abgelaufeneAnzahl > 0 && (
@@ -394,7 +394,7 @@ function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
   if (!vorgaenge || vorgaenge.length === 0) return null;
 
   return (
-    <div className="border border-sep bg-card p-4">
+    <div className="card-ap p-4">
       <h2 className="mb-2 text-sm font-semibold text-label2">Zugewiesene Vorgänge</h2>
       <div className="space-y-2">
         {vorgaenge.map((v) => (
@@ -450,7 +450,7 @@ export function PartnerProfilePage() {
         ← Zurück
       </button>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
             <Briefcase size={18} strokeWidth={2} className="text-label2" />

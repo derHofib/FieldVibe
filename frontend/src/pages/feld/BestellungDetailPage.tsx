@@ -104,7 +104,7 @@ export function BestellungDetailPage() {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-label2">{bestellung.bestellnummer}</div>
@@ -141,7 +141,7 @@ export function BestellungDetailPage() {
         </div>
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Positionen</h2>
         <div className="space-y-1.5">
           {bestellung.positionen.map((p) => (
@@ -173,7 +173,7 @@ export function BestellungDetailPage() {
       />
 
       {wareneingangOffen && (
-        <div className="border border-sep bg-card p-4">
+        <div className="card-ap p-4">
           <h2 className="mb-1 text-sm font-semibold text-label2">
             Wareneingang -- Preise prüfen
           </h2>

@@ -40,7 +40,7 @@ function TeamKennzahlen() {
   const maxOffen = Math.max(1, ...(kennzahlen?.offene_vorgaenge_je_techniker.map((t) => t.anzahl_offen) ?? [1]));
 
   return (
-    <div className="space-y-3 border border-sep bg-card p-3">
+    <div className="space-y-3 card-ap p-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-label">
           <Users size={15} strokeWidth={2} /> Team-Kennzahlen
@@ -169,19 +169,19 @@ export function StatistikPage() {
 
       {kannAuswerten && statistik && (
         <div className="grid grid-cols-3 gap-2">
-          <div className="border border-sep bg-card p-3 text-center">
+          <div className="card-ap p-3 text-center">
             <div className="text-xl font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.wochenstunden))}
             </div>
             <div className="text-xs text-label2">Std. diese Woche</div>
           </div>
-          <div className="border border-sep bg-card p-3 text-center">
+          <div className="card-ap p-3 text-center">
             <div className="text-xl font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.monatsstunden))}
             </div>
             <div className="text-xs text-label2">Std. dieser Monat</div>
           </div>
-          <div className="border border-sep bg-card p-3 text-center">
+          <div className="card-ap p-3 text-center">
             <div className="text-xl font-bold text-label">
               {formatStundenAlsHHMM(Number(statistik.jahresstunden))}
             </div>
@@ -191,7 +191,7 @@ export function StatistikPage() {
       )}
 
       {kannErfassen && (
-        <div className="border border-sep bg-card p-3">
+        <div className="card-ap p-3">
           <div className="mb-2 flex items-center justify-between">
             <button
               onClick={() => {

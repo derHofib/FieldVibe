@@ -65,7 +65,7 @@ export function FormSchemasPage() {
       </div>
 
       {formOffen ? (
-        <form onSubmit={submit} className="space-y-3 border border-sep bg-card p-4">
+        <form onSubmit={submit} className="space-y-3 card-ap p-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-label">Name</label>
             <input
@@ -107,7 +107,7 @@ export function FormSchemasPage() {
       ) : (
         <div className="space-y-2">
           {schemas.map((s) => (
-            <button key={s.id} onClick={() => navigate(`/form-schemas/${s.id}`)} className="btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left">
+            <button key={s.id} onClick={() => navigate(`/form-schemas/${s.id}`)} className="btn-touch flex w-full items-center justify-between card-ap p-3 text-left">
               <div>
                 <div className="text-sm font-medium text-label">{s.name}</div>
                 <div className="text-xs text-label2">Version {s.version}</div>

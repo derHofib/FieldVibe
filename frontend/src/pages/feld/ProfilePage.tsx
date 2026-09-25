@@ -18,7 +18,7 @@ export function ProfilePage() {
 
   return (
     <div className="space-y-4">
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center border border-sep text-lg font-bold text-label">
             {currentUser?.name?.slice(0, 1)}
@@ -48,7 +48,7 @@ export function ProfilePage() {
       {kannDisponieren && (
         <button
           onClick={() => navigate("/techniker-zuweisungen")}
-          className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
+          className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
         >
           <IconBadge icon={Wrench} tone="emerald" size="sm" />
           <span className="font-medium text-label">Techniker-Zuweisungen</span>
@@ -58,7 +58,7 @@ export function ProfilePage() {
       {kannDisponieren && istModulAktiv(currentUser, "dauerauftrag") && (
         <button
           onClick={() => navigate("/dauerauftraege")}
-          className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
+          className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
         >
           <IconBadge icon={Repeat} tone="amber" size="sm" />
           <span className="font-medium text-label">Dauer-Aufträge</span>
@@ -68,7 +68,7 @@ export function ProfilePage() {
       {istModulAktiv(currentUser, "zeiterfassung") && (
         <button
           onClick={() => navigate("/statistik")}
-          className="card-interactive btn-touch flex w-full items-center gap-3 border border-sep bg-card p-4 text-left"
+          className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
         >
           <IconBadge icon={Timer} tone="cyan" size="sm" />
           <span className="font-medium text-label">

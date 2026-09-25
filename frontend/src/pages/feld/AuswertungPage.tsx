@@ -51,7 +51,7 @@ export function AuswertungPage() {
       </div>
 
       {offenePosten && (offenePosten.debitoren.length > 0 || offenePosten.kreditoren.length > 0) && (
-        <div className="border border-sep bg-card p-4">
+        <div className="card-ap p-4">
           <h2 className="mb-2 text-sm font-semibold text-label2">Offene Posten</h2>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -131,7 +131,7 @@ export function AuswertungPage() {
         </div>
       )}
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs text-label2">
             Von
@@ -162,7 +162,7 @@ export function AuswertungPage() {
       </div>
 
       {bericht && (
-        <div className="border border-sep bg-card p-4">
+        <div className="card-ap p-4">
           <h2 className="mb-2 text-sm font-semibold text-label2">
             Umsatzsteuer (Ausgangsrechnungen)
           </h2>
@@ -216,7 +216,7 @@ export function AuswertungPage() {
         </div>
       )}
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-1 text-sm font-semibold text-label2">DATEV-Export</h2>
         <p className="mb-3 text-xs text-label2">
           Buchungsstapel-CSV auf Basis gängiger SKR03-Konten -- vor dem ersten echten Import bitte mit

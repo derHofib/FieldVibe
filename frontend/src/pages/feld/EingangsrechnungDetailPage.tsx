@@ -86,7 +86,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="border border-sep bg-card p-2">
+        <div className="card-ap p-2">
           {belegUrl?.url ? (
             <iframe title="Beleg" src={belegUrl.url} className="h-[70vh] w-full rounded-md" />
           ) : (
@@ -94,7 +94,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           )}
         </div>
 
-        <div className="space-y-3 border border-sep bg-card p-4">
+        <div className="space-y-3 card-ap p-4">
           <div>
             <label className="mb-1 block text-xs text-label2">Lieferant</label>
             <select value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
@@ -283,7 +283,7 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-label2">
@@ -333,7 +333,7 @@ export function EingangsrechnungDetailPage() {
         </div>
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Beleg</h2>
         {eingangsrechnung.beleg_object_key ? (
           <div className="flex gap-2">
@@ -377,7 +377,7 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Positionen</h2>
           {eingangsrechnung.status === "offen" && (
@@ -456,7 +456,7 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Zahlungen</h2>
           {eingangsrechnung.status === "offen" && (

@@ -172,7 +172,7 @@ export function AccountTypenPage() {
         </p>
       </div>
 
-      <section className="border border-sep bg-card p-4">
+      <section className="card-ap p-4">
         <h2 className="mb-3 text-sm font-bold text-label">Neuen Account-Typ anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
@@ -233,7 +233,7 @@ export function AccountTypenPage() {
           typen.map((typ) => (
             <div
               key={typ.id}
-              className="border border-sep bg-card"
+              className="card-ap"
             >
               <button
                 onClick={() => setExpandedId(expandedId === typ.id ? null : typ.id)}

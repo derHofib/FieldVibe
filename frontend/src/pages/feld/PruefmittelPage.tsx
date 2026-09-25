@@ -106,7 +106,7 @@ export function PruefmittelPage() {
       </button>
 
       {showForm && (
-        <div className="space-y-3 border border-sep bg-card p-4">
+        <div className="space-y-3 card-ap p-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-label2">
               Bezeichnung
@@ -181,7 +181,7 @@ export function PruefmittelPage() {
           sortiert.map((mittel) => (
             <div
               key={mittel.id}
-              className="border border-sep bg-card p-3"
+              className="card-ap p-3"
             >
               <div className="flex items-start justify-between">
                 <div>

@@ -280,7 +280,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-xs text-label2">{rechnung.rechnungsnummer}</div>
@@ -340,7 +340,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Positionen</h2>
           {rechnung.status === "entwurf" && (
@@ -454,7 +454,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       {(rechnung.status === "versendet" ||
         rechnung.status === "teilweise_bezahlt" ||
         rechnung.status === "bezahlt") && (
-        <div className="border border-sep bg-card p-4">
+        <div className="card-ap p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-label2">Zahlungen</h2>
             {(rechnung.status === "versendet" || rechnung.status === "teilweise_bezahlt") && (

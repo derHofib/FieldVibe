@@ -40,7 +40,7 @@ export function FormularAbschnitt({ vorgangId, vorgangStatus }: { vorgangId: str
   }
 
   return (
-    <div className="border border-sep bg-card p-3">
+    <div className="card-ap p-3">
       <h2 className="mb-2 text-sm font-semibold text-label2">Formulare</h2>
 
       {(ausfuellungen ?? []).length > 0 && (

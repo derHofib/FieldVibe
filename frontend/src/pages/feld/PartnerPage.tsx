@@ -94,7 +94,7 @@ export function PartnerPage() {
       </button>
 
       {showForm && (
-        <div className="space-y-3 border border-sep bg-card p-4">
+        <div className="space-y-3 card-ap p-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-label2">
               Firmenname *
@@ -205,7 +205,7 @@ export function PartnerPage() {
             <button
               key={p.id}
               onClick={() => navigate(`/partner/${p.id}`)}
-              className={`card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left ${
+              className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                 p.aktiv ? "" : "opacity-60"
               }`}
             >

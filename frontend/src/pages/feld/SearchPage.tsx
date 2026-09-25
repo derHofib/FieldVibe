@@ -75,7 +75,7 @@ export function SearchPage() {
               <button
                 key={`${hit.kategorie}-${hit.id}`}
                 onClick={() => navigate(hitPath(hit))}
-                className="card-interactive btn-touch flex w-full items-center justify-between border border-sep bg-card p-3 text-left"
+                className="card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left"
               >
                 <div>
                   <div className="text-sm font-medium text-label">{hit.titel}</div>

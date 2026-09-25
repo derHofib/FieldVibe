@@ -121,7 +121,7 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="border border-sep bg-card p-4">
+      <div className="card-ap p-4">
         <h1 className="text-lg font-bold text-label">{material.bezeichnung}</h1>
         <p className="mt-1 text-xs text-label2">
           Gesamtbestand: {material.bestand_gesamt} {material.einheit}
@@ -140,7 +140,7 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="space-y-3 border border-sep bg-card p-4">
+      <div className="space-y-3 card-ap p-4">
         <h2 className="text-sm font-semibold text-label2">Stammdaten</h2>
         <div>
           <label className="mb-1 block text-xs text-label2">Bezeichnung</label>
@@ -240,7 +240,7 @@ export function MaterialDetailPage() {
         )}
       </div>
 
-      <div className="space-y-2 border border-sep bg-card p-4">
+      <div className="space-y-2 card-ap p-4">
         <h2 className="text-sm font-semibold text-label2">Tags</h2>
         <div className="flex flex-wrap gap-1.5">
           {zugewieseneTags.length === 0 && (

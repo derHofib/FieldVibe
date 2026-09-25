@@ -24,7 +24,7 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   });
 
   return (
-    <div className="space-y-2 border border-sep bg-card p-4">
+    <div className="space-y-2 card-ap p-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-label">SMTP (globaler Mailversand)</span>
         <span
@@ -162,7 +162,7 @@ export function EinstellungenPage() {
       {smtp ? (
         <SmtpZeile integration={smtp} />
       ) : showForm ? (
-        <div className="space-y-2 border border-sep bg-card p-4">
+        <div className="space-y-2 card-ap p-4">
           <div className="grid grid-cols-2 gap-2">
             <input
               value={host}

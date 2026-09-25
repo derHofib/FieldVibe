@@ -70,7 +70,7 @@ export function TeamZeitenPage() {
       </div>
 
       {technikerId && (
-        <div className="border border-sep bg-card p-3">
+        <div className="card-ap p-3">
           <div className="mb-2 flex items-center justify-between">
             <button
               onClick={() => {

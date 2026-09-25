@@ -27,7 +27,7 @@ export function PortalAngebotePage() {
             <button
               key={a.id}
               onClick={() => navigate(`/portal/angebote/${a.id}`)}
-              className="card-interactive btn-touch block w-full border border-sep bg-card p-4 text-left"
+              className="card-interactive btn-touch block w-full card-ap p-4 text-left"
             >
               <div className="flex items-start justify-between">
                 <div>
