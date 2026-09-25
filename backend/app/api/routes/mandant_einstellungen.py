@@ -39,6 +39,8 @@ def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
         logo_object_key=mandant.logo_object_key,
         standard_lohn_gemeinkosten_prozent=mandant.standard_lohn_gemeinkosten_prozent,
         standard_gewinn_wagnis_prozent=mandant.standard_gewinn_wagnis_prozent,
+        km_satz_netto=mandant.km_satz_netto,
+        fahrzeit_abrechnung=mandant.fahrzeit_abrechnung,
     )
 
 
@@ -77,6 +79,10 @@ async def update_einstellungen(
         mandant.standard_lohn_gemeinkosten_prozent = updates["standard_lohn_gemeinkosten_prozent"]
     if updates.get("standard_gewinn_wagnis_prozent") is not None:
         mandant.standard_gewinn_wagnis_prozent = updates["standard_gewinn_wagnis_prozent"]
+    if "km_satz_netto" in updates:
+        mandant.km_satz_netto = updates["km_satz_netto"]
+    if updates.get("fahrzeit_abrechnung") is not None:
+        mandant.fahrzeit_abrechnung = updates["fahrzeit_abrechnung"]
     await session.flush()
     await session.refresh(mandant)
     return _to_read_model(mandant)

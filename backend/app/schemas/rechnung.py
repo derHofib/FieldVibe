@@ -1,8 +1,13 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+# Muss mit RECHNUNG_POSITION_QUELLEN in app/models/rechnung.py
+# uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 8).
+RechnungPositionQuelle = Literal["material", "zeit", "fahrzeit", "fahrtkosten", "leistung"]
 
 
 class RechnungPositionCreate(BaseModel):
@@ -10,6 +15,11 @@ class RechnungPositionCreate(BaseModel):
     menge: Decimal = Decimal("1")
     einheit: str = "Stk"
     einzelpreis: Decimal = Decimal("0")
+    # Nur gesetzt, wenn die Position aus einem Rechnungsvorschlag uebernommen
+    # wurde (siehe RechnungPositionVorschlag) -- steuert, ob und welche
+    # Zeiterfassung-Eintraege beim Uebernehmen gesperrt werden (Konzept
+    # Abschnitt 8). NULL bei frei eingetragenen Positionen.
+    quelle: RechnungPositionQuelle | None = None
 
 
 class RechnungPositionRead(BaseModel):
@@ -21,6 +31,7 @@ class RechnungPositionRead(BaseModel):
     menge: Decimal
     einheit: str
     einzelpreis: Decimal
+    quelle: RechnungPositionQuelle | None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -33,7 +44,7 @@ class RechnungPositionRead(BaseModel):
 # Objekt in der DB, wird bei jedem Aufruf frisch aus Material-Verwendungen
 # und Zeiterfassung berechnet.
 class RechnungPositionVorschlag(BaseModel):
-    quelle: str  # "material" | "zeit" | "leistung"
+    quelle: RechnungPositionQuelle
     beschreibung: str
     menge: Decimal
     einheit: str

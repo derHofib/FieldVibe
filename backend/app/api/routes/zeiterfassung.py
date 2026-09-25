@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,7 +21,7 @@ from app.models.mandant import Mandant
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
-from app.models.zeiterfassung import Zeiterfassung
+from app.models.zeiterfassung import ZEITERFASSUNG_BUCHUNGSSTATUS, Zeiterfassung
 from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.schemas.zeiterfassung import (
     ZEITERFASSUNG_BUCHUNGSSTATUS_LABEL,
@@ -34,7 +34,9 @@ from app.schemas.zeiterfassung import (
     ZeiterfassungRead,
     ZeiterfassungStart,
     ZeiterfassungStatistik,
+    ZeiterfassungStatusSumme,
     ZeiterfassungStopBody,
+    ZeiterfassungSummenNachStatus,
     ZeiterfassungUpdate,
 )
 from app.services import papierkorb_service
@@ -308,6 +310,56 @@ async def get_statistik(
         monatsstunden=await _stunden_seit(monatsstart),
         jahresstunden=await _stunden_seit(jahresstart),
     )
+
+
+_ZEIT_SUMME_LEER = ZeiterfassungStatusSumme(
+    arbeitszeit_stunden=Decimal("0.0"), fahrzeit_stunden=Decimal("0.0"), km=Decimal("0.0")
+)
+
+
+@router.get("/summen", response_model=ZeiterfassungSummenNachStatus)
+async def get_zeit_summen(
+    auftrag_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
+    session: AsyncSession = Depends(get_db),
+) -> ZeiterfassungSummenNachStatus:
+    """"Zeit"-Block im Auftrag-/Projekt-Panel (Stufe 4, docs/konzepte/
+    ZEITERFASSUNG.md Abschnitt 7.4): Summen ueber alle Vorgaenge eines
+    Auftrags bzw. Projekts, je Buchungsstatus. Reine Anzeige -- bearbeitet
+    und gebucht wird weiterhin am Vorgang bzw. auf "Zeiten buchen"."""
+    if (auftrag_id is None) == (projekt_id is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Genau eines von auftrag_id/projekt_id angeben",
+        )
+    stmt = (
+        select(
+            Zeiterfassung.buchungsstatus,
+            Zeiterfassung.kategorie,
+            func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)),
+            func.sum(Zeiterfassung.km),
+        )
+        .join(Vorgang, Vorgang.id == Zeiterfassung.vorgang_id)
+        .where(
+            Zeiterfassung.ende_at.is_not(None),
+            Zeiterfassung.geloescht_am.is_(None),
+            Zeiterfassung.kategorie.in_(("auftrag", "fahrzeit")),
+        )
+        .group_by(Zeiterfassung.buchungsstatus, Zeiterfassung.kategorie)
+    )
+    stmt = stmt.where(Vorgang.auftrag_id == auftrag_id) if auftrag_id is not None else stmt.where(
+        Vorgang.projekt_id == projekt_id
+    )
+
+    summen = {s: _ZEIT_SUMME_LEER.model_copy() for s in ZEITERFASSUNG_BUCHUNGSSTATUS}
+    for buchungsstatus, kategorie, sekunden, km in (await session.execute(stmt)).all():
+        stunden = (Decimal(str(sekunden or 0)) / Decimal(3600)).quantize(Decimal("0.1"))
+        if kategorie == "auftrag":
+            summen[buchungsstatus].arbeitszeit_stunden += stunden
+        else:
+            summen[buchungsstatus].fahrzeit_stunden += stunden
+            summen[buchungsstatus].km += Decimal(str(km or 0))
+    return ZeiterfassungSummenNachStatus(**summen)
 
 
 @router.get("/wochenzettel-pdf", dependencies=[Depends(require_module("statistik"))])

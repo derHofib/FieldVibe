@@ -1,6 +1,11 @@
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+# Muss mit MANDANT_FAHRZEIT_ABRECHNUNG in app/models/mandant.py
+# uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 5.3/8).
+FahrzeitAbrechnung = Literal["keine", "zeit", "km", "zeit_und_km"]
 
 
 class MandantEinstellungenRead(BaseModel):
@@ -17,6 +22,10 @@ class MandantEinstellungenRead(BaseModel):
     # tatsaechlich verwendeten Wert (Default 0).
     standard_lohn_gemeinkosten_prozent: Decimal
     standard_gewinn_wagnis_prozent: Decimal
+    # Fahrzeit-Abrechnung (Stufe 4) -- km_satz_netto=NULL heisst "aus", auch
+    # wenn fahrzeit_abrechnung km/zeit_und_km verlangt (siehe rechnung_service).
+    km_satz_netto: Decimal | None
+    fahrzeit_abrechnung: FahrzeitAbrechnung
 
 
 class MandantEinstellungenUpdate(BaseModel):
@@ -32,6 +41,9 @@ class MandantEinstellungenUpdate(BaseModel):
     firmendaten: dict | None = None
     standard_lohn_gemeinkosten_prozent: Decimal | None = Field(default=None, ge=0)
     standard_gewinn_wagnis_prozent: Decimal | None = Field(default=None, ge=0)
+    # None setzt explizit zurueck auf "aus" (wie scheduler_stunde_utc oben).
+    km_satz_netto: Decimal | None = Field(default=None, ge=0)
+    fahrzeit_abrechnung: FahrzeitAbrechnung | None = None
 
 
 class MandantLogoUrl(BaseModel):

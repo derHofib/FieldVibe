@@ -22,6 +22,10 @@ from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 RECHNUNG_STATUS = ("entwurf", "versendet", "teilweise_bezahlt", "bezahlt", "storniert")
 RECHNUNG_ZAHLUNGSARTEN = ("ueberweisung", "bar", "karte", "lastschrift", "sonstiges")
 
+# Muss mit der CHECK-Constraint ck_rechnung_positionen_quelle_valid
+# (Migration 0086) uebereinstimmen. NULL = manuell eingetragene Position.
+RECHNUNG_POSITION_QUELLEN = ("material", "zeit", "fahrzeit", "fahrtkosten", "leistung")
+
 
 class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "rechnungen"
@@ -85,6 +89,11 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
 
 class RechnungPosition(Base):
     __tablename__ = "rechnung_positionen"
+    __table_args__ = (
+        CheckConstraint(
+            f"quelle IS NULL OR quelle IN {RECHNUNG_POSITION_QUELLEN}", name="ck_rechnung_positionen_quelle_valid"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -100,6 +109,12 @@ class RechnungPosition(Base):
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher diese
+    # Position stammt -- steuert beim Entfernen, welche Zeiterfassung-
+    # Eintraege wieder auf 'gebucht' zurueckgesetzt werden (siehe
+    # app/services/rechnung_service.py). NULL bei manuell eingetragenen
+    # Positionen.
+    quelle: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class RechnungZahlung(Base):

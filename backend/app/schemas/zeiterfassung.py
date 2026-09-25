@@ -54,6 +54,22 @@ class ZeiterfassungStatistik(BaseModel):
     jahresstunden: Decimal
 
 
+class ZeiterfassungStatusSumme(BaseModel):
+    arbeitszeit_stunden: Decimal
+    fahrzeit_stunden: Decimal
+    km: Decimal
+
+
+# Fuer den "Zeit"-Block im Auftrag-/Projekt-Panel (Stufe 4, docs/konzepte/
+# ZEITERFASSUNG.md Abschnitt 7.4) -- Summen ueber alle Vorgaenge eines
+# Auftrags/Projekts, je Buchungsstatus.
+class ZeiterfassungSummenNachStatus(BaseModel):
+    vermerkt: ZeiterfassungStatusSumme
+    vorgemerkt: ZeiterfassungStatusSumme
+    gebucht: ZeiterfassungStatusSumme
+    abgerechnet: ZeiterfassungStatusSumme
+
+
 class ZeiterfassungStart(BaseModel):
     vorgang_id: UUID
     taetigkeit: str | None = None
@@ -132,6 +148,7 @@ class ZeiterfassungRead(BaseModel):
     km: Decimal | None
     fahrzeug_id: UUID | None
     quelle: Literal["timer", "manuell"]
+    abgerechnet_rechnung_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

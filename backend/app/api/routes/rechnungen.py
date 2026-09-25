@@ -50,6 +50,8 @@ from app.services.rechnung_service import (
     to_read_model,
     to_read_model_bulk,
     zahlungen_fuer,
+    zeiterfassung_abrechnen,
+    zeiterfassung_abrechnung_zuruecksetzen,
 )
 
 router = APIRouter(
@@ -353,6 +355,7 @@ def _neue_positionen(
             menge=e.menge,
             einheit=e.einheit,
             einzelpreis=e.einzelpreis,
+            quelle=e.quelle,
         )
         for i, e in enumerate(eintraege)
     ]
@@ -443,6 +446,7 @@ async def create_rechnung(
 async def add_position(
     rechnung_id: UUID,
     body: RechnungPositionCreate,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
     rechnung = await session.get(Rechnung, rechnung_id)
@@ -464,8 +468,72 @@ async def add_position(
             menge=body.menge,
             einheit=body.einheit,
             einzelpreis=body.einzelpreis,
+            quelle=body.quelle,
         )
     )
+    # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): eine aus einem
+    # Zeit-Vorschlag uebernommene Position sperrt die zugrunde liegenden
+    # Zeiterfassung-Eintraege (buchungsstatus -> 'abgerechnet'). "leistung"
+    # und "material" bleiben bewusst aussen vor (siehe zeiterfassung_abrechnen).
+    if body.quelle in ("zeit", "fahrzeit", "fahrtkosten") and rechnung.vorgang_id is not None:
+        await zeiterfassung_abrechnen(
+            session,
+            vorgang_id=rechnung.vorgang_id,
+            quelle=body.quelle,
+            rechnung_id=rechnung.id,
+            geaendert_von=auth.user_id,
+        )
+    await session.flush()
+    await session.refresh(rechnung)
+    return await to_read_model(session, rechnung)
+
+
+@router.delete(
+    "/{rechnung_id}/positionen/{position_id}",
+    response_model=RechnungRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def remove_position(
+    rechnung_id: UUID,
+    position_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status != "entwurf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf entfernt werden"
+        )
+    position = await session.get(RechnungPosition, position_id)
+    if position is None or position.rechnung_id != rechnung_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
+
+    # "fahrzeit" und "fahrtkosten" sperren dieselben Zeiterfassung-Zeilen
+    # (Stunden bzw. km derselben Fahrt) -- erst zuruecksetzen, wenn keine
+    # Geschwister-Position mehr auf derselben Rechnung besteht, sonst
+    # braeuchte die verbleibende Position die gesperrten Zeilen noch.
+    _GESCHWISTER_QUELLE = {"fahrzeit": "fahrtkosten", "fahrtkosten": "fahrzeit"}
+    if position.quelle in ("zeit", "fahrzeit", "fahrtkosten") and rechnung.vorgang_id is not None:
+        geschwister_quelle = _GESCHWISTER_QUELLE.get(position.quelle)
+        rest = await positionen_fuer(session, rechnung_id)
+        geschwister_besteht = geschwister_quelle is not None and any(
+            p.id != position.id and p.quelle == geschwister_quelle for p in rest
+        )
+        if not geschwister_besteht:
+            await zeiterfassung_abrechnung_zuruecksetzen(
+                session,
+                rechnung_id=rechnung_id,
+                quelle=position.quelle,
+                vorgang_id=rechnung.vorgang_id,
+                geaendert_von=auth.user_id,
+            )
+
+    await session.delete(position)
     await session.flush()
     await session.refresh(rechnung)
     return await to_read_model(session, rechnung)
@@ -474,6 +542,7 @@ async def add_position(
 @router.get("/{rechnung_id}/positionsvorschlaege", response_model=list[RechnungPositionVorschlag])
 async def get_positionsvorschlaege(
     rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[RechnungPositionVorschlag]:
     rechnung = await session.get(Rechnung, rechnung_id)
@@ -481,7 +550,8 @@ async def get_positionsvorschlaege(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
     if rechnung.vorgang_id is None:
         return []
-    return await positionen_vorschlaege_fuer_vorgang(session, rechnung.vorgang_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    return await positionen_vorschlaege_fuer_vorgang(session, rechnung.vorgang_id, mandant)
 
 
 async def _auf_bezahlt_setzen(

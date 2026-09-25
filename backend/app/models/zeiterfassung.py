@@ -101,3 +101,11 @@ class Zeiterfassung(TimestampMixin, SoftDeleteMixin, Base):
         UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=True
     )
     quelle: Mapped[str] = mapped_column(Text, nullable=False, default="manuell")
+    # Abrechnung (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): wird
+    # gesetzt, wenn eine "zeit"/"fahrzeit"/"fahrtkosten"-Rechnungsposition
+    # diesen Eintrag uebernimmt (zusammen mit buchungsstatus="abgerechnet"),
+    # und beim Entfernen der Position wieder auf NULL zurueckgesetzt (siehe
+    # app/services/rechnung_service.py).
+    abgerechnet_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id"), nullable=True
+    )

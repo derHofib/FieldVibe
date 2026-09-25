@@ -12,6 +12,7 @@ from app.models.mandant import Mandant
 from app.models.material import Material, MaterialVerwendung
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
 from app.models.zeiterfassung import Zeiterfassung
+from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.schemas.rechnung import (
     RechnungPositionRead,
     RechnungPositionVorschlag,
@@ -24,6 +25,18 @@ from app.services.numbering_service import next_rechnungsnummer
 _CENT = Decimal("0.01")
 _STUNDE = Decimal("3600")
 
+# Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): welche Kategorie
+# hinter einer "zeit"/"fahrzeit"/"fahrtkosten"-Rechnungsposition steckt --
+# "fahrzeit" und "fahrtkosten" teilen sich dieselben Zeiterfassung-Zeilen
+# (Stunden bzw. km desselben Fahrt-Eintrags), siehe
+# zeiterfassung_abrechnung_zuruecksetzen fuer die daraus folgende
+# Geschwister-Pruefung beim Entfernen einer Position.
+_ZEITERFASSUNG_QUELLE_KATEGORIE = {
+    "zeit": "auftrag",
+    "fahrzeit": "fahrzeit",
+    "fahrtkosten": "fahrzeit",
+}
+
 
 async def positionen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[RechnungPosition]:
     result = await session.execute(
@@ -35,7 +48,7 @@ async def positionen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[Rech
 
 
 async def positionen_vorschlaege_fuer_vorgang(
-    session: AsyncSession, vorgang_id: UUID
+    session: AsyncSession, vorgang_id: UUID, mandant: Mandant
 ) -> list[RechnungPositionVorschlag]:
     """Fuer die "Vorschlaege aus Vorgang"-Box in RechnungDetailPage: fasst am
     Vorgang bereits erfasstes Material, abrechenbare Zeiterfassung UND
@@ -103,6 +116,46 @@ async def positionen_vorschlaege_fuer_vorgang(
             )
         )
 
+    # Fahrzeit mit km (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt 8):
+    # gesteuert ueber mandant.fahrzeit_abrechnung -- 'keine' zeigt wie bisher
+    # nichts zusaetzlich. "fahrzeit" und "fahrtkosten" fassen dieselben
+    # Fahrt-Eintraege nach Stunden bzw. km zusammen (siehe
+    # _ZEITERFASSUNG_QUELLE_KATEGORIE), koennen also beide zugleich
+    # erscheinen und beim Uebernehmen dieselben Zeilen sperren.
+    if mandant.fahrzeit_abrechnung != "keine":
+        fahrzeit_stmt = select(
+            func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)),
+            func.sum(Zeiterfassung.km),
+        ).where(
+            Zeiterfassung.vorgang_id == vorgang_id,
+            Zeiterfassung.kategorie == "fahrzeit",
+            Zeiterfassung.abrechenbar.is_(True),
+            Zeiterfassung.ende_at.is_not(None),
+            Zeiterfassung.buchungsstatus == "gebucht",
+            Zeiterfassung.geloescht_am.is_(None),
+        )
+        fahrzeit_sekunden, fahrzeit_km = (await session.execute(fahrzeit_stmt)).one_or_none() or (None, None)
+        if mandant.fahrzeit_abrechnung in ("zeit", "zeit_und_km") and fahrzeit_sekunden:
+            vorschlaege.append(
+                RechnungPositionVorschlag(
+                    quelle="fahrzeit",
+                    beschreibung="Fahrzeit",
+                    menge=(Decimal(str(fahrzeit_sekunden)) / _STUNDE).quantize(Decimal("0.01")),
+                    einheit="Std",
+                    einzelpreis=Decimal("0"),
+                )
+            )
+        if mandant.fahrzeit_abrechnung in ("km", "zeit_und_km") and fahrzeit_km:
+            vorschlaege.append(
+                RechnungPositionVorschlag(
+                    quelle="fahrtkosten",
+                    beschreibung="Fahrtkosten",
+                    menge=Decimal(fahrzeit_km).quantize(Decimal("0.1")),
+                    einheit="km",
+                    einzelpreis=mandant.km_satz_netto or Decimal("0"),
+                )
+            )
+
     # Leistungsverzeichnis: Zeit MIT SVS-Kopplung (nach lv_position_id
     # gruppiert und in Stunden umgerechnet) plus direkte
     # LeistungsverzeichnisVerwendungen -- beide Quellen sind bereits ueber
@@ -154,6 +207,84 @@ async def positionen_vorschlaege_fuer_vorgang(
             )
 
     return vorschlaege
+
+
+async def _zeiterfassung_fuer_quelle(
+    session: AsyncSession, vorgang_id: UUID, quelle: str
+) -> list[Zeiterfassung]:
+    """Dieselben Kriterien wie in positionen_vorschlaege_fuer_vorgang (Zweig
+    "zeit" bzw. "fahrzeit"/"fahrtkosten"), aber als tatsaechliche Zeilen
+    statt Summe -- fuer das Sperren beim Uebernehmen einer Rechnungsposition
+    (Konzept Abschnitt 8). Nur fuer die drei Zeiterfassung-basierten Quellen
+    definiert, "material"/"leistung" liefern eine leere Liste."""
+    kategorie = _ZEITERFASSUNG_QUELLE_KATEGORIE.get(quelle)
+    if kategorie is None:
+        return []
+    stmt = select(Zeiterfassung).where(
+        Zeiterfassung.vorgang_id == vorgang_id,
+        Zeiterfassung.kategorie == kategorie,
+        Zeiterfassung.abrechenbar.is_(True),
+        Zeiterfassung.ende_at.is_not(None),
+        Zeiterfassung.buchungsstatus == "gebucht",
+        Zeiterfassung.geloescht_am.is_(None),
+    )
+    if quelle == "zeit":
+        stmt = stmt.where(Zeiterfassung.lv_position_id.is_(None))
+    return list((await session.execute(stmt)).scalars().all())
+
+
+async def zeiterfassung_abrechnen(
+    session: AsyncSession, *, vorgang_id: UUID, quelle: str, rechnung_id: UUID, geaendert_von: UUID
+) -> None:
+    """Sperrt die einer "zeit"/"fahrzeit"/"fahrtkosten"-Position zugrunde
+    liegenden Zeiterfassung-Eintraege, wenn diese Position in eine Rechnung
+    uebernommen wird (Konzept Abschnitt 8/9: gebucht+abgerechnet sind
+    Rechnungsgrundlage und daher GoBD-gesperrt). Nur noch 'gebucht'e
+    Eintraege werden ueberhaupt gefunden (siehe _zeiterfassung_fuer_quelle),
+    ein zweiter Aufruf fuer eine Geschwister-Quelle (z.B. "fahrtkosten"
+    nachdem "fahrzeit" dieselben Zeilen schon gesperrt hat) findet dann
+    keine mehr und ist ein No-op -- die Zeilen zeigen ohnehin schon auf
+    dieselbe Rechnung."""
+    for eintrag in await _zeiterfassung_fuer_quelle(session, vorgang_id, quelle):
+        eintrag.buchungsstatus = "abgerechnet"
+        eintrag.abgerechnet_rechnung_id = rechnung_id
+        session.add(
+            ZeiterfassungAenderung(
+                mandant_id=eintrag.mandant_id,
+                zeiterfassung_id=eintrag.id,
+                aktion="abgerechnet",
+                geaendert_von=geaendert_von,
+            )
+        )
+
+
+async def zeiterfassung_abrechnung_zuruecksetzen(
+    session: AsyncSession, *, rechnung_id: UUID, quelle: str, vorgang_id: UUID, geaendert_von: UUID
+) -> None:
+    """Kehrt zeiterfassung_abrechnen beim Entfernen einer Rechnungsposition
+    um -- der Aufrufer (siehe remove_position in app/api/routes/rechnungen.py)
+    prueft vorher, ob noch eine Geschwister-Position (fahrzeit<->fahrtkosten,
+    dieselben Zeilen) auf derselben Rechnung besteht und ruft in dem Fall
+    gar nicht erst auf."""
+    kategorie = _ZEITERFASSUNG_QUELLE_KATEGORIE.get(quelle)
+    if kategorie is None:
+        return
+    stmt = select(Zeiterfassung).where(
+        Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
+        Zeiterfassung.vorgang_id == vorgang_id,
+        Zeiterfassung.kategorie == kategorie,
+    )
+    for eintrag in (await session.execute(stmt)).scalars().all():
+        eintrag.buchungsstatus = "gebucht"
+        eintrag.abgerechnet_rechnung_id = None
+        session.add(
+            ZeiterfassungAenderung(
+                mandant_id=eintrag.mandant_id,
+                zeiterfassung_id=eintrag.id,
+                aktion="abrechnung_zurueckgesetzt",
+                geaendert_von=geaendert_von,
+            )
+        )
 
 
 def netto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Decimal:

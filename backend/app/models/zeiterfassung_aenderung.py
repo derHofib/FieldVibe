@@ -20,6 +20,7 @@ ZEITERFASSUNG_AENDERUNG_AKTIONEN = (
     "gebucht",
     "buchung_storniert",
     "abgerechnet",
+    "abrechnung_zurueckgesetzt",
 )
 
 

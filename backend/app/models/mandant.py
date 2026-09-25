@@ -19,6 +19,11 @@ from app.db.base import Base, TimestampMixin
 # Export (Kennzahlen-Kacheln, CSV/PDF) -- der Start/Stopp-Timer direkt am
 # Vorgang gehoert weiterhin zum "vorgaenge"-Boden oben und bleibt in jedem
 # Fall aktiv, backend-seitig gibt es dafuer daher keine neue Sperre.
+# Muss mit der CHECK-Constraint ck_mandanten_fahrzeit_abrechnung_valid
+# (Migration 0086) uebereinstimmen. Steuert die Fahrzeit/Fahrtkosten-
+# Rechnungsvorschlaege (siehe rechnung_service.positionen_vorschlaege_fuer_vorgang).
+MANDANT_FAHRZEIT_ABRECHNUNG = ("keine", "zeit", "km", "zeit_und_km")
+
 MANDANT_MODULE = (
     "kundenverwaltung",
     "dispo",
@@ -50,6 +55,13 @@ class Mandant(TimestampMixin, Base):
         CheckConstraint(
             "wiedervorlage_standard_tage IS NULL OR wiedervorlage_standard_tage > 0",
             name="ck_mandanten_wiedervorlage_standard_tage_valid",
+        ),
+        CheckConstraint(
+            "km_satz_netto IS NULL OR km_satz_netto >= 0", name="ck_mandanten_km_satz_netto_nicht_negativ"
+        ),
+        CheckConstraint(
+            f"fahrzeit_abrechnung IN {MANDANT_FAHRZEIT_ABRECHNUNG}",
+            name="ck_mandanten_fahrzeit_abrechnung_valid",
         ),
     )
 
@@ -98,3 +110,7 @@ class Mandant(TimestampMixin, Base):
     standard_gewinn_wagnis_prozent: Mapped[Decimal] = mapped_column(
         Numeric(5, 2), nullable=False, default=Decimal("0")
     )
+    # Fahrzeit-Abrechnung (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt
+    # 5.3/8) -- beide NULL/'keine' aendert am bisherigen Verhalten nichts.
+    km_satz_netto: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)
+    fahrzeit_abrechnung: Mapped[str] = mapped_column(Text, nullable=False, default="keine")
