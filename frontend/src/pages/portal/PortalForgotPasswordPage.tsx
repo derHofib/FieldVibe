@@ -24,12 +24,12 @@ export function PortalForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ind-bg p-4">
-      <Blueprint className="w-full max-w-sm bg-ind-bg p-8">
-        <h1 className="mb-1 font-heading text-xl font-semibold uppercase tracking-wide text-ind-ink">
+    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+      <Blueprint className="w-full max-w-sm bg-card p-8">
+        <h1 className="mb-1 font-heading text-xl font-semibold uppercase tracking-wide text-label">
           Passwort vergessen
         </h1>
-        <p className="mb-6 text-sm text-ind-ink-3">
+        <p className="mb-6 text-sm text-label2">
           Wir senden Ihnen einen Link zum Zurücksetzen, falls die Adresse bekannt ist.
         </p>
 
@@ -40,7 +40,7 @@ export function PortalForgotPasswordPage() {
           </p>
         ) : (
           <form onSubmit={handleSubmit}>
-            <label htmlFor="portal-forgot-email" className="mb-1 block text-sm font-medium text-ind-ink-2">
+            <label htmlFor="portal-forgot-email" className="mb-1 block text-sm font-medium text-label">
               E-Mail
             </label>
             <input
@@ -49,19 +49,19 @@ export function PortalForgotPasswordPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="input-industry btn-touch mb-4"
+              className="field-ap btn-touch mb-4"
             />
             <button
               type="submit"
               disabled={submitting}
-              className="btn-touch btn-industry btn-industry-primary w-full py-2 disabled:opacity-50"
+              className="btn-touch btn-ap-primary w-full py-2 disabled:opacity-50"
             >
               {submitting ? "Senden…" : "Link anfordern"}
             </button>
           </form>
         )}
 
-        <Link to="/portal/login" className="mt-4 block text-center text-sm text-ind-ink-3 hover:text-ind-ink">
+        <Link to="/portal/login" className="mt-4 block text-center text-sm text-label2 hover:text-label">
           Zurück zur Anmeldung
         </Link>
       </Blueprint>

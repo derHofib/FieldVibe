@@ -43,20 +43,20 @@ export function PortalAngebotDetailPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-ind-ink-3">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
 
-      <div className="border border-ind-line bg-ind-bg p-4">
+      <div className="border border-sep bg-card p-4">
         <div className="flex items-start justify-between">
-          <div className="text-xs text-ind-ink-3">Angebot Nr. {angebot.angebotsnummer}</div>
+          <div className="text-xs text-label2">Angebot Nr. {angebot.angebotsnummer}</div>
           <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[angebot.status]}`}>
             {ANGEBOT_STATUS_LABEL[angebot.status]}
           </span>
         </div>
-        <p className="mt-1 text-xs text-ind-ink-3">{ANGEBOT_STATUS_ERKLAERUNG[angebot.status]}</p>
+        <p className="mt-1 text-xs text-label2">{ANGEBOT_STATUS_ERKLAERUNG[angebot.status]}</p>
         {angebot.gueltig_bis && (
-          <p className="mt-1 text-xs text-ind-ink-3">
+          <p className="mt-1 text-xs text-label2">
             Gültig bis {new Date(angebot.gueltig_bis).toLocaleDateString("de-DE")}
           </p>
         )}
@@ -71,10 +71,10 @@ export function PortalAngebotDetailPage() {
 
       {fehler && <p className="text-sm text-red-700 dark:text-red-400">{fehler}</p>}
 
-      <div className="border border-ind-line bg-ind-bg p-4">
-        <h2 className="mb-2 text-sm font-semibold text-ind-ink-3">Positionen</h2>
+      <div className="border border-sep bg-card p-4">
+        <h2 className="mb-2 text-sm font-semibold text-label2">Positionen</h2>
         {angebot.positionen.length === 0 ? (
-          <p className="text-sm text-ind-ink-3">Keine Positionen.</p>
+          <p className="text-sm text-label2">Keine Positionen.</p>
         ) : (
           <div className="space-y-1.5">
             {angebot.positionen.map((p) => (
@@ -83,19 +83,19 @@ export function PortalAngebotDetailPage() {
                 className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm dark:bg-stone-800/60"
               >
                 <div>
-                  <div className="text-ind-ink-2">{p.beschreibung}</div>
-                  <div className="text-xs text-ind-ink-3">
+                  <div className="text-label">{p.beschreibung}</div>
+                  <div className="text-xs text-label2">
                     {p.menge} {p.einheit} × {p.einzelpreis} EUR
                   </div>
                 </div>
-                <div className="font-medium text-ind-ink-2">{p.gesamt} EUR</div>
+                <div className="font-medium text-label">{p.gesamt} EUR</div>
               </div>
             ))}
           </div>
         )}
         <div className="mt-3 border-t border-slate-100 pt-2 text-right text-sm dark:border-stone-800">
-          <div className="text-ind-ink-3">Netto: {angebot.gesamt_netto} EUR</div>
-          <div className="font-semibold text-ind-ink">
+          <div className="text-label2">Netto: {angebot.gesamt_netto} EUR</div>
+          <div className="font-semibold text-label">
             Brutto: {angebot.gesamt_brutto} EUR
           </div>
         </div>

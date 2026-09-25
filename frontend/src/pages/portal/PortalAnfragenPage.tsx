@@ -107,7 +107,7 @@ function NeueAnfrage() {
         )}
         <button
           onClick={() => setZeigen(true)}
-          className="btn-touch w-full rounded-lg btn-industry btn-industry-primary py-3 text-sm font-medium"
+          className="btn-touch w-full rounded-lg btn-ap-primary py-3 text-sm font-medium"
         >
           + Neue Auftragsanfrage stellen
         </button>
@@ -118,13 +118,13 @@ function NeueAnfrage() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-3 border border-ind-line bg-ind-bg p-4"
+      className="space-y-3 border border-sep bg-card p-4"
     >
-      <p className="text-xs text-ind-ink-3">
+      <p className="text-xs text-label2">
         Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
       </p>
       <div>
-        <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-ind-ink-2">
+        <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
           Titel
         </label>
         <input
@@ -132,11 +132,11 @@ function NeueAnfrage() {
           autoFocus
           value={titel}
           onChange={(e) => setTitel(e.target.value)}
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         />
       </div>
       <div>
-        <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-ind-ink-2">
+        <label htmlFor="portal-anfrage-beschreibung" className="mb-1 block text-sm font-medium text-label">
           Beschreibung
         </label>
         <textarea
@@ -144,18 +144,18 @@ function NeueAnfrage() {
           value={beschreibung}
           onChange={(e) => setBeschreibung(e.target.value)}
           rows={3}
-          className="w-full resize-none border border-ind-line bg-transparent p-2 text-ind-ink"
+          className="w-full resize-none border border-sep bg-transparent p-2 text-label"
         />
       </div>
       <div>
-        <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-ind-ink-2">
+        <label htmlFor="portal-anfrage-art" className="mb-1 block text-sm font-medium text-label">
           Art
         </label>
         <select
           id="portal-anfrage-art"
           value={leistungstyp}
           onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-          className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+          className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
         >
           {LEISTUNGSTYPEN.map((l) => (
             <option key={l.value} value={l.value}>
@@ -167,7 +167,7 @@ function NeueAnfrage() {
 
       {(standorte ?? []).length > 0 && (
         <div>
-          <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-anfrage-standort" className="mb-1 block text-sm font-medium text-label">
             Standort (optional)
           </label>
           <select
@@ -177,7 +177,7 @@ function NeueAnfrage() {
               setStandortId(e.target.value);
               setAnlageId("");
             }}
-            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Kein Standort</option>
             {standorte?.filter((s) => s.aktiv).map((s) => (
@@ -203,7 +203,7 @@ function NeueAnfrage() {
             value={neuerStandortName}
             onChange={(e) => setNeuerStandortName(e.target.value)}
             placeholder="Bezeichnung (z.B. Filiale Nord)"
-            className="btn-touch flex-1 border border-ind-line bg-transparent px-3 py-2 text-sm text-ind-ink"
+            className="btn-touch flex-1 border border-sep bg-transparent px-3 py-2 text-sm text-label"
           />
           <button
             type="button"
@@ -218,14 +218,14 @@ function NeueAnfrage() {
 
       {anlagenFuerStandort.length > 0 && (
         <div>
-          <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-anfrage-anlage" className="mb-1 block text-sm font-medium text-label">
             Anlage (optional)
           </label>
           <select
             id="portal-anfrage-anlage"
             value={anlageId}
             onChange={(e) => setAnlageId(e.target.value)}
-            className="btn-touch w-full border border-ind-line bg-transparent px-3 py-2 text-ind-ink"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Keine Anlage</option>
             {anlagenFuerStandort.filter((a) => a.aktiv).map((a) => (
@@ -243,7 +243,7 @@ function NeueAnfrage() {
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-industry btn-industry-primary py-2 text-sm font-medium disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Anfrage senden
         </button>
@@ -267,7 +267,7 @@ export function PortalAnfragenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-ind-ink">Ihre Auftragsanfragen</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Auftragsanfragen</h1>
       <NeueAnfrage />
 
       {isLoading ? (
@@ -279,21 +279,21 @@ export function PortalAnfragenPage() {
           {anfragen.map((a) => (
             <div
               key={a.id}
-              className="border border-ind-line bg-ind-bg p-4"
+              className="border border-sep bg-card p-4"
             >
               <div className="flex items-start justify-between">
-                <div className="font-medium text-ind-ink">{a.titel}</div>
+                <div className="font-medium text-label">{a.titel}</div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[a.status]}`}>
                   {STATUS_LABEL[a.status]}
                 </span>
               </div>
               {a.beschreibung && (
-                <p className="mt-1 text-sm text-ind-ink-3">{a.beschreibung}</p>
+                <p className="mt-1 text-sm text-label2">{a.beschreibung}</p>
               )}
               {a.ablehnungsgrund && (
                 <>
-                  <p className="mt-1 text-xs text-ind-ink-3">Grund: {a.ablehnungsgrund}</p>
-                  <p className="mt-1 text-xs text-ind-ink-3">
+                  <p className="mt-1 text-xs text-label2">Grund: {a.ablehnungsgrund}</p>
+                  <p className="mt-1 text-xs text-label2">
                     Bei Fragen wenden Sie sich gerne direkt an uns, oder stellen Sie eine neue Anfrage.
                   </p>
                 </>

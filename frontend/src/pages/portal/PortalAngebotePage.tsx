@@ -16,7 +16,7 @@ export function PortalAngebotePage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-ind-ink">Ihre Angebote</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Angebote</h1>
       {isLoading ? (
         <SkeletonList count={3} />
       ) : !angebote || angebote.length === 0 ? (
@@ -27,12 +27,12 @@ export function PortalAngebotePage() {
             <button
               key={a.id}
               onClick={() => navigate(`/portal/angebote/${a.id}`)}
-              className="card-interactive btn-touch block w-full border border-ind-line bg-ind-bg p-4 text-left"
+              className="card-interactive btn-touch block w-full border border-sep bg-card p-4 text-left"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-xs text-ind-ink-3">Angebot Nr. {a.angebotsnummer}</div>
-                  <div className="font-medium text-ind-ink">{a.gesamt_brutto} EUR</div>
+                  <div className="text-xs text-label2">Angebot Nr. {a.angebotsnummer}</div>
+                  <div className="font-medium text-label">{a.gesamt_brutto} EUR</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[a.status]}`}>
                   {ANGEBOT_STATUS_LABEL[a.status]}

@@ -21,13 +21,13 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
   });
 
   return (
-    <div className="border border-ind-line bg-ind-bg p-4">
+    <div className="border border-sep bg-card p-4">
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs text-ind-ink-3">Rechnung Nr. {rechnung.rechnungsnummer}</div>
-          <div className="font-medium text-ind-ink">{rechnung.betrag_brutto} EUR</div>
+          <div className="text-xs text-label2">Rechnung Nr. {rechnung.rechnungsnummer}</div>
+          <div className="font-medium text-label">{rechnung.betrag_brutto} EUR</div>
           {rechnung.faellig_am && (
-            <div className={`text-xs ${ueberfaellig ? "font-medium text-ind-bad" : "text-ind-ink-3"}`}>
+            <div className={`text-xs ${ueberfaellig ? "font-medium text-st-fehlt" : "text-label2"}`}>
               {ueberfaellig ? "Überfällig seit " : "Fällig am "}
               {new Date(rechnung.faellig_am).toLocaleDateString("de-DE")}
             </div>
@@ -36,8 +36,8 @@ function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
         <span
           className={
             ueberfaellig
-              ? "border border-ind-bad px-2 py-1 text-xs font-semibold text-ind-bad"
-              : "border border-ind-line px-2 py-1 text-xs font-semibold text-ind-ink-2"
+              ? "border border-st-fehlt px-2 py-1 text-xs font-semibold text-st-fehlt"
+              : "border border-sep px-2 py-1 text-xs font-semibold text-label"
           }
         >
           {ueberfaellig ? "Überfällig" : RECHNUNG_STATUS_LABEL[rechnung.status]}
@@ -66,7 +66,7 @@ export function PortalRechnungenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-ind-ink">Ihre Rechnungen</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Rechnungen</h1>
       {isLoading ? (
         <SkeletonList count={3} />
       ) : !rechnungen || rechnungen.length === 0 ? (

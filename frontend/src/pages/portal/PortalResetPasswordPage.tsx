@@ -29,9 +29,9 @@ export function PortalResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ind-bg p-4">
-      <Blueprint className="w-full max-w-sm bg-ind-bg p-8">
-        <h1 className="mb-6 font-heading text-xl font-semibold uppercase tracking-wide text-ind-ink">
+    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+      <Blueprint className="w-full max-w-sm bg-card p-8">
+        <h1 className="mb-6 font-heading text-xl font-semibold uppercase tracking-wide text-label">
           Neues Passwort setzen
         </h1>
 
@@ -48,7 +48,7 @@ export function PortalResetPasswordPage() {
             </p>
             <button
               onClick={() => navigate("/portal/login")}
-              className="btn-touch btn-industry btn-industry-primary w-full py-2"
+              className="btn-touch btn-ap-primary w-full py-2"
             >
               Zur Anmeldung
             </button>
@@ -60,7 +60,7 @@ export function PortalResetPasswordPage() {
                 {error}
               </div>
             )}
-            <label htmlFor="portal-reset-password" className="mb-1 block text-sm font-medium text-ind-ink-2">
+            <label htmlFor="portal-reset-password" className="mb-1 block text-sm font-medium text-label">
               Neues Passwort
             </label>
             <input
@@ -70,20 +70,20 @@ export function PortalResetPasswordPage() {
               minLength={10}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-industry btn-touch mb-1"
+              className="field-ap btn-touch mb-1"
             />
-            <p className="mb-4 text-xs text-ind-ink-3">Mindestens 10 Zeichen.</p>
+            <p className="mb-4 text-xs text-label2">Mindestens 10 Zeichen.</p>
             <button
               type="submit"
               disabled={submitting || !token}
-              className="btn-touch btn-industry btn-industry-primary w-full py-2 disabled:opacity-50"
+              className="btn-touch btn-ap-primary w-full py-2 disabled:opacity-50"
             >
               {submitting ? "Speichern…" : "Passwort speichern"}
             </button>
           </form>
         )}
 
-        <Link to="/portal/login" className="mt-4 block text-center text-sm text-ind-ink-3 hover:text-ind-ink">
+        <Link to="/portal/login" className="mt-4 block text-center text-sm text-label2 hover:text-label">
           Zurück zur Anmeldung
         </Link>
       </Blueprint>

@@ -53,18 +53,18 @@ export function PortalLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ind-bg p-4">
+    <div className="flex min-h-screen items-center justify-center bg-card p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm">
         <div className="mb-6 flex items-center justify-center gap-2.5">
-          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border border-ind-line-2 text-ind-acc">
+          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border border-sepstrong text-tint">
             <Hexagon size={17} strokeWidth={1.5} />
           </div>
-          <span className="font-heading text-xl font-semibold uppercase tracking-wide text-ind-ink">
-            Kunden<span className="text-ind-acc-txt">portal</span>
+          <span className="font-heading text-xl font-semibold uppercase tracking-wide text-label">
+            Kunden<span className="text-tint">portal</span>
           </span>
         </div>
 
-        <Blueprint className="bg-ind-bg p-8">
+        <Blueprint className="bg-card p-8">
           {logoInfo?.url && (
             <img
               src={logoInfo.url}
@@ -72,7 +72,7 @@ export function PortalLoginPage() {
               className="mx-auto mb-4 h-16 w-16 object-contain"
             />
           )}
-          <p className="mb-6 text-center text-sm text-ind-ink-3">
+          <p className="mb-6 text-center text-sm text-label2">
             {linkInfo
               ? `Willkommen, ${linkInfo.kunde_name} – bitte mit Ihrer E-Mail und Ihrem Passwort anmelden.`
               : "Anmeldung für Ihre Aufträge, Angebote und Rechnungen"}
@@ -84,7 +84,7 @@ export function PortalLoginPage() {
             </div>
           )}
 
-          <label htmlFor="portal-login-email" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-login-email" className="mb-1 block text-sm font-medium text-label">
             E-Mail
           </label>
           <input
@@ -93,10 +93,10 @@ export function PortalLoginPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="input-industry btn-touch mb-4"
+            className="field-ap btn-touch mb-4"
           />
 
-          <label htmlFor="portal-login-password" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-login-password" className="mb-1 block text-sm font-medium text-label">
             Passwort
           </label>
           <input
@@ -105,18 +105,18 @@ export function PortalLoginPage() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input-industry btn-touch mb-6"
+            className="field-ap btn-touch mb-6"
           />
 
           <button
             type="submit"
             disabled={submitting}
-            className="btn-touch btn-industry btn-industry-primary w-full py-2 disabled:opacity-50"
+            className="btn-touch btn-ap-primary w-full py-2 disabled:opacity-50"
           >
             {submitting ? "Anmelden…" : "Anmelden"}
           </button>
 
-          <Link to="/portal/passwort-vergessen" className="mt-4 block text-center text-sm text-ind-ink-3 hover:text-ind-ink">
+          <Link to="/portal/passwort-vergessen" className="mt-4 block text-center text-sm text-label2 hover:text-label">
             Passwort vergessen?
           </Link>
         </Blueprint>

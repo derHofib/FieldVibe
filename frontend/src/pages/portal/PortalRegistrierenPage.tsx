@@ -32,12 +32,12 @@ export function PortalRegistrierenPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ind-bg p-4">
-      <Blueprint className="w-full max-w-sm bg-ind-bg p-8">
-        <h1 className="mb-2 font-heading text-xl font-semibold uppercase tracking-wide text-ind-ink">
-          Kunden<span className="text-ind-acc-txt">portal</span> — Zugang einrichten
+    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+      <Blueprint className="w-full max-w-sm bg-card p-8">
+        <h1 className="mb-2 font-heading text-xl font-semibold uppercase tracking-wide text-label">
+          Kunden<span className="text-tint">portal</span> — Zugang einrichten
         </h1>
-        <p className="mb-6 text-sm text-ind-ink-3">
+        <p className="mb-6 text-sm text-label2">
           Mit diesem Zugang sehen Sie jederzeit den Status Ihrer Aufträge, Angebote und Rechnungen.
         </p>
 
@@ -54,7 +54,7 @@ export function PortalRegistrierenPage() {
             </div>
           )}
 
-          <label htmlFor="portal-register-name" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-register-name" className="mb-1 block text-sm font-medium text-label">
             Name
           </label>
           <input
@@ -62,10 +62,10 @@ export function PortalRegistrierenPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="input-industry btn-touch mb-4"
+            className="field-ap btn-touch mb-4"
           />
 
-          <label htmlFor="portal-register-password" className="mb-1 block text-sm font-medium text-ind-ink-2">
+          <label htmlFor="portal-register-password" className="mb-1 block text-sm font-medium text-label">
             Passwort
           </label>
           <input
@@ -75,14 +75,14 @@ export function PortalRegistrierenPage() {
             minLength={10}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input-industry btn-touch mb-1"
+            className="field-ap btn-touch mb-1"
           />
-          <p className="mb-6 text-xs text-ind-ink-3">Mindestens 10 Zeichen.</p>
+          <p className="mb-6 text-xs text-label2">Mindestens 10 Zeichen.</p>
 
           <button
             type="submit"
             disabled={submitting || !token}
-            className="btn-touch btn-industry btn-industry-primary w-full py-2 disabled:opacity-50"
+            className="btn-touch btn-ap-primary w-full py-2 disabled:opacity-50"
           >
             {submitting ? "Registrieren…" : "Zugang einrichten"}
           </button>
