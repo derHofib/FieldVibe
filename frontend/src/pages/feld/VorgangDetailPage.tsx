@@ -57,6 +57,7 @@ import type {
   PartnerFreigabeStatus,
   TerminStatus,
   TerminWarnung,
+  VorgangAbrechnungsart,
   VorgangEvent,
   VorgangStatus,
 } from "../../types";
@@ -129,6 +130,25 @@ const STATUS_LABEL: Record<VorgangStatus, string> = {
   abgeschlossen: "Abgeschlossen",
   abgerechnet: "Abgerechnet",
   storniert: "Storniert",
+};
+
+// Fuer die Kurzuebersicht-Spalte im Desktop-Layout (layout="dicht") --
+// Leistungstyp/Abrechnungsart stehen sonst nirgends auf dieser Seite.
+const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
+  stoerung: "Störung",
+  installation: "Installation",
+  wartung: "Wartung",
+  pruefung: "Prüfung",
+  beratung: "Beratung",
+  planung: "Planung",
+};
+
+const ABRECHNUNGSART_LABEL: Record<VorgangAbrechnungsart, string> = {
+  pauschale: "Pauschale",
+  aufwand: "Nach Aufwand",
+  festpreis: "Festpreis",
+  wartungsvertrag: "Wartungsvertrag",
+  gewaehrleistung: "Gewährleistung",
 };
 
 // Spiegelt app/services/vorgang_completion_service.py:VORGANG_STATUS_GESCHLOSSEN
@@ -1237,9 +1257,10 @@ export function VorgangDetailPage({
 
       <div
         id="abschnitt-uebersicht"
-        className={`scroll-mt-4 card-ap p-4 ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
+        className={`scroll-mt-4 grid gap-4 ${layout === "dicht" ? "lg:grid-cols-[1fr_280px] lg:items-start" : ""} ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
         {...tabPanelProps("abschnitt-uebersicht")}
       >
+      <div className="card-ap p-4">
         <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
         <h1 className="font-heading text-lg font-semibold uppercase tracking-wide text-label">{vorgang.titel}</h1>
         {parentVorgang && (
@@ -1717,6 +1738,32 @@ export function VorgangDetailPage({
             ))}
           </div>
         )}
+      </div>
+
+      {layout === "dicht" && (
+        <div className="card-ap h-fit space-y-3 p-4">
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Kurzübersicht</h2>
+          <dl className="space-y-2.5 text-sm">
+            {[
+              ["Status", STATUS_LABEL[vorgang.status]],
+              ["Priorität", String(vorgang.prioritaet)],
+              ["Zugewiesen an", vorgang.zugewiesener_name ?? "Nicht zugewiesen"],
+              [
+                "Fälligkeit",
+                vorgang.faelligkeit_am ? new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE") : "—",
+              ],
+              ["Leistungstyp", LEISTUNGSTYP_LABEL[vorgang.leistungstyp]],
+              ["Abrechnungsart", ABRECHNUNGSART_LABEL[vorgang.abrechnungsart]],
+              ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
+            ].map(([label, wert]) => (
+              <div key={label} className="flex items-baseline justify-between gap-2">
+                <dt className="text-label2">{label}</dt>
+                <dd className="text-right font-medium text-label">{wert}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
       </div>
 
       <div id="abschnitt-zeit" className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-zeit") ? "" : "hidden"}`} {...tabPanelProps("abschnitt-zeit")}>

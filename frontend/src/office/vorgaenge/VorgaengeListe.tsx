@@ -16,8 +16,11 @@ import { Karte } from "../OfficeUi";
 
 /** Liste links, Detail rechts. Das Detail-Panel rendert bewusst die
  * bestehende VorgangDetailPage (per id-Prop statt Route) statt eines
- * Nachbaus: die Seite ist ohnehin fuer eine schmale Spalte entworfen, und
- * ein zweiter Nachbau wuerde fachlich sofort auseinanderlaufen. */
+ * Nachbaus -- ein zweiter Nachbau wuerde fachlich sofort auseinanderlaufen.
+ * Mit layout="dicht" bekommt sie echte Tabs statt Anker-Scroll und nutzt
+ * die volle Spaltenbreite (kein max-w-3xl-Deckel mehr), waehrend die
+ * mobile Feld-App und die Office-SchmaleSpalte-Route (OfficeApp.tsx)
+ * unveraendert die schmale, einspaltige Fassung zeigen. */
 export function VorgaengeListe({
   vorgaenge,
   hasNextPage,
@@ -89,7 +92,7 @@ export function VorgaengeListe({
 
       <Karte className="max-h-[calc(100vh-13rem)] overflow-y-auto p-4">
         {aktiv ? (
-          <div className="mx-auto max-w-3xl">
+          <div>
             <div className="mb-3 flex justify-end">
               <button onClick={() => navigate(`/vorgaenge/${aktiv}`)} className="btn-ap text-xs">
                 <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
