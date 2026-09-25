@@ -1463,8 +1463,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="text-sm text-label2">Status:</label>
+          <label htmlFor="vorgang-status-select" className="text-sm text-label2">
+            Status:
+          </label>
           <select
+            id="vorgang-status-select"
             value={vorgang.status}
             onChange={(e) => {
               const status = e.target.value as VorgangStatus;
@@ -1664,7 +1667,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           statt dass man sich alles herunterscrollen muss (siehe
           Design-Vorschlag). Reine <a href="#..."> statt scrollIntoView, das
           bleibt auch ohne JS-Handler funktionsfaehig. */}
-      <nav className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
+      <nav aria-label="Auftrags-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
         {ANCHOR_ABSCHNITTE.map((a) => (
           <a
             key={a.ziel}

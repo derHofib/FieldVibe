@@ -244,6 +244,7 @@ export function OfficeDispoPage() {
         <select
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
+          aria-label="Nach Projekt filtern"
           className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         >
           <option value="">Alle Projekte</option>

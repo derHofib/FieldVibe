@@ -227,7 +227,7 @@ export function OfficeLayout() {
             </div>
           )}
 
-          <nav className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto">
+          <nav aria-label="Hauptnavigation" className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto">
             {gruppen.map((gruppe) => {
               const kollabiert = !!eingeklappteKategorien[gruppe.name];
               return (

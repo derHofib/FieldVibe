@@ -56,7 +56,12 @@ export function VorgaengeListe({
                   <p className="truncate text-[13px] font-semibold text-label">
                     {v.vorgangsnummer} · {v.titel}
                   </p>
-                  <p className="mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] text-label2">
+                  {/* text-label statt text-label2 im ausgewaehlten Zustand:
+                   * auf bg-tintbg (helle Akzent-Flaeche) faellt text-label2
+                   * bei 11.5px unter 4.5:1 Kontrast (axe-core). */}
+                  <p
+                    className={`mt-0.5 flex items-center gap-1.5 truncate text-[11.5px] ${ausgewaehlt ? "text-label" : "text-label2"}`}
+                  >
                     <span className="truncate">{v.kunde_name}</span>
                     {istUeberfaellig(v.faelligkeit_am) && (
                       <span className="shrink-0 font-bold text-st-fehlt">· überfällig</span>
