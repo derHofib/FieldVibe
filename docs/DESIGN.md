@@ -87,7 +87,7 @@ Scale-System, aus dem Code verifiziert):
 | Größe | Verwendung |
 |---|---|
 | 17px | Listenzeilen-Text, Sheet-Titel, Formularfelder |
-| 15px | `.field-ap` Eingabefeld-Text |
+| 16px | `.field-ap` Eingabefeld-Text (Mindestgröße auf allen Eingabefeldern -- iOS Safari zoomt sonst beim Fokussieren hinein) |
 | 13px | Buttons, Sekundärtext, Segmented-Control |
 | 11–13px | Meta-Text, Badges |
 | 10px | Bottom-Nav-Tab-Label |
@@ -135,7 +135,7 @@ CSS-Rezepte (`index.css`):
 
 ```css
 .card-ap        /* bg-card, 0.5px border-sep, radius-ap-card (12px), shadow-card */
-.field-ap       /* Formularfeld: bg-card, border-sep, radius-ap-input (8px), 15px */
+.field-ap       /* Formularfeld: bg-card, border-sep, radius-ap-input (8px), 16px */
 .btn-ap         /* Basis-Button: border-sepstrong, bg-card */
 .btn-ap-primary /* Füllung tint-solid, weißer Text, radius-ap-sm (7px) */
 .btn-ap-toolbar /* 28x28px Icon-only, transparent, hover: fill */

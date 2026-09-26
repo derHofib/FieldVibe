@@ -515,7 +515,11 @@ body {
   width: 100%;
   min-height: 36px;
   padding: 0.45rem 0.7rem;
-  font-size: 15px;
+  /* 16px, nicht 15px: Safari auf iOS zoomt beim Fokussieren eines Feldes
+     automatisch hinein, sobald dessen Schrift kleiner als 16px ist -- siehe
+     auch die Mindestgroesse fuer aeltere, noch nicht auf .field-ap
+     umgestellte Formularfelder weiter unten. */
+  font-size: 16px;
   color: var(--label);
   background: var(--card);
   border: 0.5px solid var(--sep);
@@ -532,6 +536,19 @@ body {
 textarea.field-ap {
   min-height: 90px;
   resize: vertical;
+}
+
+/* Mindestens 16px auf allen Eingabefeldern, auch dort, wo statt .field-ap
+   noch Tailwind-Klassen einzeln gesetzt werden (aeltere Formulare mit
+   z.B. "text-sm"/"text-xs") -- gleicher Zoom-Grund wie bei .field-ap oben.
+   Unlayered wie .field-ap selbst, deshalb ueber Tailwinds utilities-Layer
+   wirksam, unabhaengig von der Reihenfolge der Klassen im JSX. Das
+   Suchfeld (SearchField.tsx) ist bewusst ausgenommen -- seine Groesse
+   (13px Desktop/17px Mobil) wird dort je nach Kontext gesetzt und ist
+   unkritisch (Desktop kennt keinen Zoom-bei-Fokus, Mobil liegt mit 17px
+   schon ueber der Schwelle). */
+:where(input, select, textarea):not(.search-ap-input) {
+  font-size: 16px;
 }
 
 /* Suchfeld (Abschnitt 4.2) -- randlos, Fuellung statt Rahmen. Groesse
