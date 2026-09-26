@@ -436,12 +436,29 @@ export function VorgangDetailPage({
   // werden die Abschnitte zu echten Tabs (ein Panel sichtbar) statt der
   // mobilen Anker-Scroll-Liste (alle Abschnitte untereinander).
   const [desktopTab, setDesktopTab] = useState(ANCHOR_ABSCHNITTE[0].ziel);
-  const istAktiverTab = (ziel: string) => layout !== "dicht" || desktopTab === ziel;
+  // Im "kompakt"-Layout ist die Arbeitszeit-Liste die einzige Ausnahme von
+  // der Anker-Scroll-Liste: standardmaessig eingeklappt (nur ein "Zeit
+  // erfassen"-Button auf der Hauptseite), erst auf Wunsch als eigener
+  // Abschnitt sichtbar -- der lange Verlauf frueherer Buchungen war sonst
+  // immer Teil des ersten Scrollens durch den Vorgang.
+  const [zeitTabOffen, setZeitTabOffen] = useState(false);
+  const istAktiverTab = (ziel: string) => {
+    if (layout === "dicht") return desktopTab === ziel;
+    if (ziel === "abschnitt-zeit") return zeitTabOffen;
+    return true;
+  };
   const tabPanelProps = (ziel: string) =>
     layout === "dicht" ? { role: "tabpanel" as const, "aria-labelledby": `tab-${ziel}` } : {};
   const { currentUser, hatRecht } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dokumentInputRef = useRef<HTMLInputElement>(null);
+  const zeitAbschnittRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (zeitTabOffen && layout !== "dicht") {
+      zeitAbschnittRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [zeitTabOffen, layout]);
 
   const [comment, setComment] = useState("");
   const [kundensichtbar, setKundensichtbar] = useState(false);
@@ -1390,15 +1407,28 @@ export function VorgangDetailPage({
         </div>
       ) : (
         <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
-          {ANCHOR_ABSCHNITTE.map((a) => (
-            <a
-              key={a.ziel}
-              href={`#${a.ziel}`}
-              className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
-            >
-              {a.label}
-            </a>
-          ))}
+          {ANCHOR_ABSCHNITTE.map((a) =>
+            a.ziel === "abschnitt-zeit" ? (
+              <button
+                key={a.ziel}
+                type="button"
+                onClick={() => setZeitTabOffen(true)}
+                className={`shrink-0 whitespace-nowrap font-medium ${
+                  zeitTabOffen ? "text-label" : "text-label2 hover:text-label"
+                }`}
+              >
+                {a.label}
+              </button>
+            ) : (
+              <a
+                key={a.ziel}
+                href={`#${a.ziel}`}
+                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
+              >
+                {a.label}
+              </a>
+            ),
+          )}
         </nav>
       )}
 
@@ -1885,6 +1915,16 @@ export function VorgangDetailPage({
             ))}
           </div>
         )}
+
+        {layout !== "dicht" && !zeitTabOffen && (
+          <button
+            type="button"
+            onClick={() => setZeitTabOffen(true)}
+            className="btn-touch btn-ap-primary mt-3 w-full"
+          >
+            Zeit erfassen{gesamtStunden !== "0:00" && ` · bisher ${gesamtStunden} Std.`}
+          </button>
+        )}
       </div>
 
       {layout === "dicht" && (
@@ -1913,7 +1953,12 @@ export function VorgangDetailPage({
       )}
       </div>
 
-      <div id="abschnitt-zeit" className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-zeit") ? "" : "hidden"}`} {...tabPanelProps("abschnitt-zeit")}>
+      <div
+        id="abschnitt-zeit"
+        ref={zeitAbschnittRef}
+        className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-zeit") ? "" : "hidden"}`}
+        {...tabPanelProps("abschnitt-zeit")}
+      >
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
           <div className="flex items-center gap-3">
