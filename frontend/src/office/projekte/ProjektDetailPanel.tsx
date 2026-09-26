@@ -209,9 +209,17 @@ export function ProjektDetailPanel({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
-              Vorgänge direkt am Projekt ({vorgaenge?.length ?? 0})
-            </label>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="block text-[11px] font-bold tracking-wide text-label3 uppercase">
+                Vorgänge direkt am Projekt ({vorgaenge?.length ?? 0})
+              </label>
+              <button
+                onClick={() => navigate(`/neu?projekt_id=${projekt.id}`)}
+                className="text-xs font-medium text-tint hover:underline"
+              >
+                + Neuer Vorgang
+              </button>
+            </div>
             {!vorgaenge || vorgaenge.length === 0 ? (
               <p className="text-sm text-label2">Keine Vorgänge direkt zugeordnet.</p>
             ) : (

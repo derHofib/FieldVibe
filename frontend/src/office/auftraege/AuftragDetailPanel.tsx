@@ -107,9 +107,17 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">
-            Vorgänge ({vorgaenge?.length ?? 0})
-          </label>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="block text-[11px] font-bold tracking-wide text-label3 uppercase">
+              Vorgänge ({vorgaenge?.length ?? 0})
+            </label>
+            <button
+              onClick={() => navigate(`/neu?auftrag_id=${auftrag.id}`)}
+              className="text-xs font-medium text-tint hover:underline"
+            >
+              + Neuer Vorgang
+            </button>
+          </div>
           {!vorgaenge || vorgaenge.length === 0 ? (
             <EmptyState icon={Layers} text="Noch kein Vorgang zugeordnet." />
           ) : (

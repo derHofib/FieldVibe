@@ -615,6 +615,11 @@ export const vorgaengeApi = {
     anlage_id?: string | null;
     weitere_anlage_ids?: string[];
     standort_id?: string | null;
+    // Ordnet den Vorgang direkt beim Anlegen einem Projekt bzw. Auftrag zu
+    // (siehe "+ Neuer Vorgang"-Einstiegspunkte in ProjektDetailPanel.tsx/
+    // AuftragDetailPanel.tsx) -- beide unabhaengig voneinander nutzbar.
+    projekt_id?: string | null;
+    auftrag_id?: string | null;
     titel: string;
     beschreibung?: string;
     abrechnungsart: string;
@@ -645,6 +650,7 @@ export const vorgaengeApi = {
         | "anlage_id"
         | "standort_id"
         | "projekt_id"
+        | "auftrag_id"
         | "faelligkeit_am"
         | "adresse"
         | "zugewiesener_user_id"

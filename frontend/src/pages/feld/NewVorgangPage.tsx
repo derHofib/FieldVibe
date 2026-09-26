@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScanLine } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { anlagenApi, kundenApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
+import { anlagenApi, auftraegeApi, kundenApi, projekteApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { Sheet } from "../../components/apple/Sheet";
 import { QrScanner } from "../../components/QrScanner";
+import { SearchableSelect } from "../../components/SearchableSelect";
 import { queueVorgang } from "../../offline/outbox";
 import type { Anlage, KundeTyp, Leistungstyp, VorgangAbrechnungsart } from "../../types";
 
@@ -56,8 +57,15 @@ const FORM_ID = "neuer-vorgang-formular";
 export function NewVorgangPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  // "+ Neuer Vorgang" aus ProjektDetailPanel.tsx/AuftragDetailPanel.tsx
+  // verlinkt hierher mit ?projekt_id=.../?auftrag_id=..., damit der neue
+  // Vorgang direkt der richtigen Ebene zugeordnet ist -- beide Felder
+  // bleiben trotzdem per SearchableSelect aenderbar (siehe dort unten).
+  const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [kundeId, setKundeId] = useState("");
+  const [projektId, setProjektId] = useState(searchParams.get("projekt_id") ?? "");
+  const [auftragId, setAuftragId] = useState(searchParams.get("auftrag_id") ?? "");
   const [anlage, setAnlage] = useState<Anlage | null>(null);
   const [standortId, setStandortId] = useState("");
   const [weitereAnlagenIds, setWeitereAnlagenIds] = useState<Set<string>>(new Set());
@@ -85,6 +93,8 @@ export function NewVorgangPage() {
   }
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list() });
   const { data: anlagenListe } = useQuery({
     queryKey: ["anlagen", kundeId, "aktiv"],
     queryFn: () => anlagenApi.list(kundeId, undefined, true),
@@ -169,6 +179,8 @@ export function NewVorgangPage() {
         anlage_id: anlage?.id ?? null,
         weitere_anlage_ids: Array.from(weitereAnlagenIds),
         standort_id: standortId || null,
+        projekt_id: projektId || null,
+        auftrag_id: auftragId || null,
         titel,
         beschreibung,
         abrechnungsart,
@@ -463,6 +475,27 @@ export function NewVorgangPage() {
             </div>
           </div>
         )}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-label">Projekt (optional)</label>
+            <SearchableSelect
+              value={projektId}
+              onChange={setProjektId}
+              placeholder="Kein Projekt"
+              options={(projekte ?? []).map((p) => ({ value: p.id, label: p.name }))}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-label">Auftrag (optional)</label>
+            <SearchableSelect
+              value={auftragId}
+              onChange={setAuftragId}
+              placeholder="Kein Auftrag"
+              options={(auftraege ?? []).map((a) => ({ value: a.id, label: a.titel }))}
+            />
+          </div>
+        </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-label">Titel</label>

@@ -391,6 +391,7 @@ export interface Vorgang {
   vertrag_id: string | null;
   parent_vorgang_id: string | null;
   projekt_id: string | null;
+  auftrag_id: string | null;
   dauerauftrag_id: string | null;
   titel: string;
   beschreibung: string | null;
