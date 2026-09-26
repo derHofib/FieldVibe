@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Link2, MapPin, Plus, Users, X } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -42,6 +42,7 @@ function VerknuepfungsZeile({
   suchOptionen,
   onWaehlen,
   platzhalter,
+  extraAktion,
 }: {
   icon: typeof Link2;
   farbe: KachelFarbe;
@@ -53,6 +54,7 @@ function VerknuepfungsZeile({
   suchOptionen: { value: string; label: string }[];
   onWaehlen: (id: string) => void;
   platzhalter: string;
+  extraAktion?: ReactNode;
 }) {
   return (
     <div>
@@ -76,7 +78,10 @@ function VerknuepfungsZeile({
           </button>
         </div>
       ) : (
-        <SearchableSelect value="" onChange={onWaehlen} placeholder={platzhalter} options={suchOptionen} />
+        <>
+          <SearchableSelect value="" onChange={onWaehlen} placeholder={platzhalter} options={suchOptionen} />
+          {extraAktion}
+        </>
       )}
     </div>
   );
@@ -374,6 +379,30 @@ export function ProjektAufgabeDetailPanel({
             }))}
             onWaehlen={setVorgangId}
             platzhalter="Vorgang suchen…"
+            // Nur fuer bereits gespeicherte Aufgaben (aufgabe.id noetig, um den
+            // neuen Vorgang nach dem Anlegen zurueck zu verknuepfen -- siehe
+            // NewVorgangPage.tsx, aufgabe_id-Query-Param). Titel/Kunde/Anlage/
+            // Standort werden vorbelegt, damit sie nicht doppelt erfasst werden.
+            extraAktion={
+              !istNeu ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (kundeId) params.set("kunde_id", kundeId);
+                    if (anlageId) params.set("anlage_id", anlageId);
+                    if (standortId) params.set("standort_id", standortId);
+                    if (titel) params.set("titel", titel);
+                    if (beschreibung) params.set("beschreibung", beschreibung);
+                    params.set("aufgabe_id", aufgabe!.id);
+                    navigate(`/neu?${params.toString()}`);
+                  }}
+                  className="mt-1.5 text-xs font-medium text-tint hover:underline"
+                >
+                  + Neuen Vorgang aus dieser Aufgabe anlegen
+                </button>
+              ) : undefined
+            }
           />
 
           <VerknuepfungsZeile

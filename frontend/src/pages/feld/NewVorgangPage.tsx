@@ -3,7 +3,15 @@ import { ScanLine } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { anlagenApi, auftraegeApi, kundenApi, projekteApi, standorteApi, vorgaengeApi } from "../../api/endpoints";
+import {
+  anlagenApi,
+  auftraegeApi,
+  kundenApi,
+  projekteApi,
+  projektAufgabenApi,
+  standorteApi,
+  vorgaengeApi,
+} from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { Sheet } from "../../components/apple/Sheet";
 import { QrScanner } from "../../components/QrScanner";
@@ -63,14 +71,21 @@ export function NewVorgangPage() {
   // bleiben trotzdem per SearchableSelect aenderbar (siehe dort unten).
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
-  const [kundeId, setKundeId] = useState("");
+  const [kundeId, setKundeId] = useState(searchParams.get("kunde_id") ?? "");
   const [projektId, setProjektId] = useState(searchParams.get("projekt_id") ?? "");
   const [auftragId, setAuftragId] = useState(searchParams.get("auftrag_id") ?? "");
   const [anlage, setAnlage] = useState<Anlage | null>(null);
-  const [standortId, setStandortId] = useState("");
+  const [standortId, setStandortId] = useState(searchParams.get("standort_id") ?? "");
   const [weitereAnlagenIds, setWeitereAnlagenIds] = useState<Set<string>>(new Set());
-  const [titel, setTitel] = useState("");
-  const [beschreibung, setBeschreibung] = useState("");
+  const [titel, setTitel] = useState(searchParams.get("titel") ?? "");
+  const [beschreibung, setBeschreibung] = useState(searchParams.get("beschreibung") ?? "");
+  // "+ Neuen Vorgang aus dieser Aufgabe anlegen" aus
+  // ProjektAufgabeDetailPanel.tsx verlinkt hierher mit ?aufgabe_id=... (plus
+  // vorbelegtem kunde_id/anlage_id/standort_id/titel/beschreibung) -- nach
+  // erfolgreichem Anlegen wird die Aufgabe unten auf den neuen Vorgang
+  // verknuepft, damit sie nicht doppelt erfasst werden muss.
+  const aufgabeId = searchParams.get("aufgabe_id") ?? "";
+  const vorbelegteAnlageId = searchParams.get("anlage_id") ?? "";
   const [leistungstyp, setLeistungstyp] = useState<Leistungstyp>("stoerung");
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("aufwand");
   const [prioritaet, setPrioritaet] = useState(3);
@@ -116,6 +131,15 @@ export function NewVorgangPage() {
   useEffect(() => {
     setWeitereAnlagenIds(new Set((standortAnlagen ?? []).map((a) => a.id)));
   }, [standortAnlagen]);
+
+  // Aus der Aufgabe vorbelegte Anlage erst setzbar, sobald anlagenListe (nach
+  // dem vorbelegten kundeId) geladen ist -- das <select> braucht das volle
+  // Anlage-Objekt, nicht nur die ID (siehe QR-Scan-Handhabung oben).
+  useEffect(() => {
+    if (!vorbelegteAnlageId || anlage) return;
+    const gefunden = anlagenListe?.find((a) => a.id === vorbelegteAnlageId);
+    if (gefunden) setAnlage(gefunden);
+  }, [anlagenListe, vorbelegteAnlageId, anlage]);
 
   const createAnlageMutation = useMutation({
     mutationFn: () =>
@@ -199,8 +223,19 @@ export function NewVorgangPage() {
         return { online: false as const };
       }
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
+      if (result.online && aufgabeId) {
+        try {
+          await projektAufgabenApi.update(aufgabeId, { vorgang_id: result.vorgang.id });
+          queryClient.invalidateQueries({ queryKey: ["projekt-aufgaben"] });
+        } catch {
+          // Vorgang ist bereits angelegt -- die Rueckverknuepfung ist rein
+          // referenziell und laesst sich bei Bedarf im Aufgaben-Panel
+          // manuell nachtragen, ein Fehlschlag hier darf das Anlegen nicht
+          // rueckgaengig machen.
+        }
+      }
       if (result.online) {
         navigate(`/vorgaenge/${result.vorgang.id}`);
       } else {
