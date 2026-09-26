@@ -944,10 +944,22 @@ export const zeiterfassungApi = {
     }),
   list: (vorgangId: string) =>
     apiFetch<Zeiterfassung[]>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
-  listFuerZeitraum: (params: { techniker_id?: string; von?: string; bis?: string; buchungsstatus?: string }) => {
-    const qs = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]
-    ).toString();
+  listFuerZeitraum: (params: {
+    techniker_id?: string;
+    von?: string;
+    bis?: string;
+    buchungsstatus?: string;
+    // Fuer die Seite "Zeiten buchen" (docs/konzepte/ZEITERFASSUNG.md
+    // Abschnitt 7.3) -- siehe list_zeiterfassung in
+    // backend/app/api/routes/zeiterfassung.py.
+    kunde_id?: string;
+    auftrag_id?: string;
+    projekt_id?: string;
+    laufend?: boolean;
+    vermerkt_aelter_als_tage?: number;
+  }) => {
+    const entries = Object.entries(params).filter(([, v]) => v !== undefined) as [string, string | number | boolean][];
+    const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
     return apiFetch<Zeiterfassung[]>(`/api/zeiterfassung${qs ? `?${qs}` : ""}`);
   },
   statistik: (technikerId?: string) =>

@@ -6,6 +6,7 @@ import {
   Clock,
   Gauge,
   HardHat,
+  Hourglass,
   Inbox,
   KanbanSquare,
   Layers,
@@ -179,6 +180,18 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/statistik",
     kategorie: "Arbeit",
     sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "zeiterfassung"),
+  },
+  {
+    key: "zeiten_buchen",
+    label: "Zeiten buchen",
+    icon: Hourglass,
+    tone: "cyan",
+    route: "/zeiten-buchen",
+    kategorie: "Arbeit",
+    // Nur fuer Buchungsberechtigte (Konzept 7.3) -- ohne das Recht gibt es
+    // dort nichts zu tun (kein Techniker vermerkt/bucht fuer sich selbst).
+    sichtbar: ({ currentUser }) =>
+      !!currentUser?.darf_zeiten_buchen && istModulAktiv(currentUser, "zeiterfassung"),
   },
   {
     key: "pruefmittel",

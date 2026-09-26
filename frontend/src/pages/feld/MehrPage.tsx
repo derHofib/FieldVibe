@@ -7,6 +7,7 @@ import { Monogramm } from "../../components/apple/Monogramm";
 import { AppearancePicker } from "../../components/AppearancePicker";
 import { NAV_KATEGORIE_REIHENFOLGE, sichtbareNavSeiten } from "../../config/navSeiten";
 import { useAuth } from "../../context/AuthContext";
+import { useVorgemerkteZeitenAnzahl } from "../../hooks/useVorgemerkteZeitenAnzahl";
 
 /** "Mehr"-Tab (Abschnitt 5.3, vierter Tab): ersetzt die vorherige
  * individualisierbare Bottom-Nav-Rotunde -- bei genau 4 festen Tabs gibt es
@@ -23,6 +24,7 @@ export function MehrPage() {
   // Mandanten-Verwaltung -- nur fuer die Rollen sichtbar, die sie vorher
   // auch sahen.
   const kannVerwaltungSehen = currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
+  const vorgemerkteAnzahl = useVorgemerkteZeitenAnzahl();
 
   const sichtbar = sichtbareNavSeiten(currentUser, hatRecht).filter(
     (seite) => !seite.nurOffice && seite.key !== "feed",
@@ -66,6 +68,11 @@ export function MehrPage() {
                 >
                   <seite.icon size={20} strokeWidth={2} className="shrink-0 text-tint" />
                   <span className="flex-1 text-[17px] text-label">{seite.label}</span>
+                  {seite.key === "zeiten_buchen" && !!vorgemerkteAnzahl && (
+                    <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-st-fehlt-dot px-1.5 text-[12px] font-bold text-white">
+                      {vorgemerkteAnzahl > 9 ? "9+" : vorgemerkteAnzahl}
+                    </span>
+                  )}
                 </GroupedListRow>
               ))}
             </GroupedList>

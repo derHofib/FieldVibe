@@ -665,9 +665,12 @@ export type ZeiterfassungBuchungsstatus = "vermerkt" | "vorgemerkt" | "gebucht" 
 export interface Zeiterfassung {
   id: string;
   vorgang_id: string | null;
-  // Transient, vom Backend aufgeloest -- siehe _mit_vorgangsnummern in
+  // Transient, vom Backend aufgeloest -- siehe _mit_vorgang_kontext in
   // backend/app/api/routes/zeiterfassung.py.
   vorgangsnummer: string | null;
+  vorgang_kunde_id: string | null;
+  vorgang_auftrag_id: string | null;
+  vorgang_projekt_id: string | null;
   techniker_id: string;
   start_at: string;
   ende_at: string | null;

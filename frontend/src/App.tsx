@@ -63,6 +63,7 @@ import { StatistikPage } from "./pages/feld/StatistikPage";
 import { TeamZeitenPage } from "./pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
+import { ZeitenBuchenPage } from "./pages/feld/ZeitenBuchenPage";
 import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
 
@@ -191,6 +192,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
           <Route path="/team-zeiten" element={<TeamZeitenPage />} />
+          <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
           <Route path="/papierkorb" element={<PapierkorbPage />} />
           <Route path="*" element={<Navigate to={standardStartseite} replace />} />
         </Route>

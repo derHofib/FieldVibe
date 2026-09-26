@@ -25,6 +25,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { effektiveNavGruppen, sichtbareNavSeiten } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
+import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
 
@@ -93,6 +94,7 @@ export function OfficeLayout() {
   const { currentUser, hatRecht, logout } = useAuth();
   const navigate = useNavigate();
   const { outboxCount, isOnline } = useAppLiveDaten();
+  const vorgemerkteAnzahl = useVorgemerkteZeitenAnzahl();
   // In localStorage gemerkt (nicht im Backend wie office_nav_items) -- ist
   // reine Anzeige-Praeferenz des Geraets, keine Nutzer-Stammdaten.
   const [eingeklappt, setEingeklappt] = useState(() => localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1");
@@ -255,7 +257,7 @@ export function OfficeLayout() {
                         to={seite.route}
                         title={eingeklappt ? seite.label : undefined}
                         className={({ isActive }) =>
-                          `mb-0.5 flex h-[30px] items-center rounded-[7px] text-[13px] ${
+                          `relative mb-0.5 flex h-[30px] items-center rounded-[7px] text-[13px] ${
                             eingeklappt ? "justify-center px-0" : "gap-2.5 px-2.5"
                           } ${isActive ? "bg-fill2 font-semibold text-label" : "text-label2 hover:bg-fill hover:text-label"}`
                         }
@@ -266,6 +268,17 @@ export function OfficeLayout() {
                           className={`shrink-0 ${seite.key === "projekte" ? "text-tile-indigo" : "text-tint"}`}
                         />
                         {!eingeklappt && <span className="truncate">{seite.label}</span>}
+                        {seite.key === "zeiten_buchen" && !!vorgemerkteAnzahl && (
+                          <span
+                            className={
+                              eingeklappt
+                                ? "absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-st-fehlt-dot"
+                                : "ml-auto flex h-4 min-w-[16px] shrink-0 items-center justify-center rounded-full bg-st-fehlt-dot px-1 text-[10px] font-bold text-white"
+                            }
+                          >
+                            {!eingeklappt && (vorgemerkteAnzahl > 9 ? "9+" : vorgemerkteAnzahl)}
+                          </span>
+                        )}
                       </NavLink>
                     ))}
                 </div>

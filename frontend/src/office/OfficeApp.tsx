@@ -41,6 +41,7 @@ import { StatistikPage } from "../pages/feld/StatistikPage";
 import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
+import { ZeitenBuchenPage } from "../pages/feld/ZeitenBuchenPage";
 import { OfficeLayout } from "./OfficeLayout";
 import { OfficeNavKategorienPage } from "./OfficeNavKategorienPage";
 import { OfficeNavSettingsPage } from "./OfficeNavSettingsPage";
@@ -126,6 +127,7 @@ export function OfficeApp() {
         <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
         <Route path="/statistik" element={<StatistikPage />} />
         <Route path="/team-zeiten" element={<TeamZeitenPage />} />
+        <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
         <Route path="/papierkorb" element={<PapierkorbPage />} />
         </Route>
 
