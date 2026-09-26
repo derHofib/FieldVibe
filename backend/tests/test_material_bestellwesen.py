@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.db.session import system_session
 from app.models.material import Material, MaterialBestand, MaterialBewegung
 from app.models.material_bedarf import MaterialBedarf
+from app.models.projekt import Projekt
 from tests.conftest import auth_headers, login
 
 
@@ -167,6 +168,48 @@ async def test_list_material_bedarfe_mit_details_and_filter(
         "/api/material-bedarfe", headers=auth_headers(token), params={"zweck": "bestellung"}
     )
     assert leer_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_material_bedarfe_filter_projekt_id(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """Fuer den Positionen-Tab der Projekt-Detailansicht (siehe
+    office/projekte/ProjektDetailPanel.tsx) -- MaterialBedarf selbst hat
+    kein projekt_id, der Filter laeuft ueber den verknuepften Vorgang."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    async with system_session() as session:
+        projekt = Projekt(mandant_id=mandant.id, name="Testprojekt", erstellt_von=admin.id)
+        session.add(projekt)
+        await session.flush()
+        projekt_id = projekt.id
+
+    vorgang_im_projekt = await make_vorgang(mandant=mandant, kunde=kunde, projekt_id=projekt_id)
+    anderer_vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    material = await _make_material(mandant, bezeichnung="Steckdose")
+
+    await client.post(
+        "/api/material-bedarfe",
+        headers=auth_headers(token),
+        json={"material_id": str(material.id), "vorgang_id": str(vorgang_im_projekt.id), "menge": "2"},
+    )
+    await client.post(
+        "/api/material-bedarfe",
+        headers=auth_headers(token),
+        json={"material_id": str(material.id), "vorgang_id": str(anderer_vorgang.id), "menge": "5"},
+    )
+
+    resp = await client.get(
+        "/api/material-bedarfe", headers=auth_headers(token), params={"projekt_id": str(projekt_id)}
+    )
+    assert resp.status_code == 200
+    [eintrag] = resp.json()
+    assert eintrag["menge"] == "2.00"
+    assert eintrag["vorgang_vorgangsnummer"] == vorgang_im_projekt.vorgangsnummer
 
 
 @pytest.mark.asyncio

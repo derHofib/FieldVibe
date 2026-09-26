@@ -33,6 +33,11 @@ router = APIRouter(
 )
 async def list_material_bedarfe(
     vorgang_id: UUID | None = Query(default=None),
+    # Fuer den Positionen-Tab der Projekt-Detailansicht (siehe
+    # office/projekte/ProjektDetailPanel.tsx) -- MaterialBedarf selbst hat
+    # kein projekt_id, deshalb Filter ueber den verknuepften Vorgang, analog
+    # zu list_termine in app/api/routes/termine.py.
+    projekt_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     zweck: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
@@ -44,6 +49,10 @@ async def list_material_bedarfe(
     )
     if vorgang_id:
         stmt = stmt.where(MaterialBedarf.vorgang_id == vorgang_id)
+    if projekt_id:
+        stmt = stmt.join(Vorgang, Vorgang.id == MaterialBedarf.vorgang_id).where(
+            Vorgang.projekt_id == projekt_id
+        )
     if status_filter:
         stmt = stmt.where(MaterialBedarf.status == status_filter)
     if zweck:
