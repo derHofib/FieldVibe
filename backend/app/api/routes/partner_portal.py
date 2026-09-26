@@ -47,7 +47,7 @@ async def _require_eigener_vorgang(
     Mandanten."""
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None or vorgang.partner_id != auth.partner_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auftrag nicht gefunden")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
 
 
@@ -138,7 +138,7 @@ async def auftrag_status_aendern(
     if vorgang.partner_freigabe_status != "angenommen":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Auftrag muss erst angenommen werden",
+            detail="Vorgang muss erst angenommen werden",
         )
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(
@@ -183,7 +183,7 @@ async def kommentar_erstellen(
     if vorgang.partner_freigabe_status != "angenommen":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Auftrag muss erst angenommen werden",
+            detail="Vorgang muss erst angenommen werden",
         )
     if vorgang.status in VORGANG_STATUS_GESCHLOSSEN:
         raise HTTPException(

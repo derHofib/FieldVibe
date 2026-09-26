@@ -204,7 +204,7 @@ export const NAV_SEITEN: NavSeite[] = [
   },
   {
     key: "anfragen",
-    label: "Auftragsanfragen",
+    label: "Vorgangsanfragen",
     icon: Inbox,
     tone: "amber",
     route: "/anfragen",

@@ -262,7 +262,7 @@ async def export_zeiterfassung_csv(
                 e.start_at.strftime("%d.%m.%Y"),
                 techniker.name if techniker else "",
                 vorgang.vorgangsnummer if vorgang else "",
-                ZEITERFASSUNG_KATEGORIE_LABEL.get(e.kategorie, "Auftrag"),
+                ZEITERFASSUNG_KATEGORIE_LABEL.get(e.kategorie, "Vorgang"),
                 e.taetigkeit or "",
                 e.start_at.strftime("%H:%M"),
                 e.ende_at.strftime("%H:%M") if e.ende_at else "",

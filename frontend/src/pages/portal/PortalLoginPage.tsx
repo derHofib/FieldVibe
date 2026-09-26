@@ -75,7 +75,7 @@ export function PortalLoginPage() {
           <p className="mb-6 text-center text-sm text-label2">
             {linkInfo
               ? `Willkommen, ${linkInfo.kunde_name} – bitte mit Ihrer E-Mail und Ihrem Passwort anmelden.`
-              : "Anmeldung für Ihre Aufträge, Angebote und Rechnungen"}
+              : "Anmeldung für Ihre Vorgänge, Angebote und Rechnungen"}
           </p>
 
           {error && (

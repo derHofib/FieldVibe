@@ -27,7 +27,7 @@ function formatZeitpunkt(iso: string): string {
 // bewusst kein Label hat -- dort steht sonst die Vorgangsnummer). In diesem
 // Sheet befinden wir uns immer schon im Kontext eines Vorgangs.
 const KATEGORIE_OPTIONEN: { wert: ZeiterfassungKategorie; label: string }[] = [
-  { wert: "auftrag", label: "Auftrag (dieser Vorgang)" },
+  { wert: "auftrag", label: "Arbeitszeit (dieser Vorgang)" },
   { wert: "fahrzeit", label: "Fahrzeit" },
   { wert: "verwaltung", label: "Verwaltung" },
   { wert: "schulung", label: "Schulung" },

@@ -1,5 +1,5 @@
 // Editor fuer ein Formular-Modul-v2-Schema: Felder/Gruppen, Views, Regeln
-// und Auftragstyp-Zuordnungen verwalten. Der Felder-Tab ist ein visueller
+// und Leistungstyp-Zuordnungen verwalten. Der Felder-Tab ist ein visueller
 // WYSIWYG-Drag&Drop-Builder (siehe FormBuilderCanvas.tsx) -- Kategorien-
 // Palette links, Formular-Vorschau in der Mitte, feste Eigenschaften-Spalte
 // rechts. Positionierung je VIEW (Druck/PDF) passiert weiterhin ueber
@@ -483,7 +483,7 @@ export function FormSchemaEditorPage() {
 
       {tab === "zuordnungen" && (
         <div className={sectionClass}>
-          <h2 className="text-sm font-semibold text-label">Auftragstyp-Zuordnungen</h2>
+          <h2 className="text-sm font-semibold text-label">Leistungstyp-Zuordnungen</h2>
           {schema.zuordnungen.map((z) => (
             <div key={z.id} className="flex items-center justify-between border-b border-sep py-1.5 text-sm">
               <span className="text-label">

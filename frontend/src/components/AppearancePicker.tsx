@@ -10,7 +10,7 @@ const OPTIONEN: { wert: Appearance; label: string }[] = [
 
 /** Drei-Wege-Auswahl fuer die Einstellungen-Seiten (Abschnitt 2.1) -- als
  * gruppierte-Liste-Zeilen mit Haekchen rechts, analog zu anderen
- * Einfachauswahl-Listen im Auftrag (z. B. "Neuer Auftrag"-Sheet). */
+ * Einfachauswahl-Listen im Auftrag (z. B. "Neuer Vorgang"-Sheet). */
 export function AppearancePicker() {
   const { appearance, setAppearance } = useTheme();
 

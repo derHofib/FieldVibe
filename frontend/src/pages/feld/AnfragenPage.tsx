@@ -191,7 +191,7 @@ export function AnfragenPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-bold text-label">Auftragsanfragen</h1>
+      <h1 className="text-lg font-bold text-label">Vorgangsanfragen</h1>
       <div className="flex gap-2 card-ap p-1">
         {(["offen", "alle"] as const).map((f) => (
           <button

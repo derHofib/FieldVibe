@@ -109,7 +109,7 @@ function NeueAnfrage() {
           onClick={() => setZeigen(true)}
           className="btn-touch w-full rounded-lg btn-ap-primary py-3 text-sm font-medium"
         >
-          + Neue Auftragsanfrage stellen
+          + Neue Vorgangsanfrage stellen
         </button>
       </div>
     );
@@ -121,7 +121,7 @@ function NeueAnfrage() {
       className="space-y-3 card-ap p-4"
     >
       <p className="text-xs text-label2">
-        Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
+        Ihre Anfrage wird von uns geprüft und in einen Vorgang übernommen, sobald sie bestätigt ist.
       </p>
       <div>
         <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
@@ -267,7 +267,7 @@ export function PortalAnfragenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Auftragsanfragen</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Vorgangsanfragen</h1>
       <NeueAnfrage />
 
       {isLoading ? (

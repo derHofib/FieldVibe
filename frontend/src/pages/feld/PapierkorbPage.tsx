@@ -30,7 +30,7 @@ const ENTITY_TYP_LABEL: Record<PapierkorbEntityTyp, string> = {
   inventurzyklus: "Inventurzyklus",
   fahrzeug_zuweisung: "Fahrzeug-Zuweisung",
   tag: "Tag",
-  vorgang_anfrage: "Auftragsanfrage",
+  vorgang_anfrage: "Vorgangsanfrage",
 };
 
 function formatDatum(iso: string): string {

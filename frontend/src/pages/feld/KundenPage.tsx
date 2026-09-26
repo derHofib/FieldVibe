@@ -83,7 +83,7 @@ export function KundenPage() {
             onClick={() => navigate("/anfragen")}
             className="btn-touch btn-ap px-3 py-1.5 text-xs font-semibold"
           >
-            Auftragsanfragen
+            Vorgangsanfragen
           </button>
         )}
       </div>

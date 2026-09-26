@@ -13,7 +13,7 @@ import {
 
 /** Gruppiert Zeiterfassungen nach lokalem Kalendertag, mit Tagessumme
  * (ohne Pause/Urlaub/Krankheit, siehe ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT)
- * und aufklappbaren Einzeleintraegen (Von-Bis, Auftragsnummer bzw.
+ * und aufklappbaren Einzeleintraegen (Von-Bis, Vorgangsnummer bzw.
  * Kategorie, Notiz). */
 export function ZeiterfassungTagesliste({
   eintraege,

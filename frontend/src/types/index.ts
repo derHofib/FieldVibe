@@ -416,7 +416,7 @@ export interface Vorgang {
   updated_at: string;
 }
 
-// --- Auftragsanfragen (Kundenportal) ----------------------------------------
+// --- Vorgangsanfragen (Kundenportal) ----------------------------------------
 
 export type VorgangAnfrageStatus = "offen" | "angenommen" | "abgelehnt";
 

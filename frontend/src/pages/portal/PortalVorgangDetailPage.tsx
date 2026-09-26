@@ -11,13 +11,13 @@ import type { VorgangEvent, VorgangStatus } from "../../types";
 // Kunde ohne App-Vorwissen weiss bei "Wartet auf Kunde" sonst nicht, was
 // von ihm erwartet wird.
 const STATUS_ERKLAERUNG: Record<VorgangStatus, string> = {
-  neu: "Ihr Auftrag ist eingegangen und wird eingeplant.",
-  geplant: "Für Ihren Auftrag ist bereits ein Termin vorgesehen.",
-  in_arbeit: "Der Techniker arbeitet aktuell an diesem Auftrag.",
+  neu: "Ihr Vorgang ist eingegangen und wird eingeplant.",
+  geplant: "Für Ihren Vorgang ist bereits ein Termin vorgesehen.",
+  in_arbeit: "Der Techniker arbeitet aktuell an diesem Vorgang.",
   wartet_kunde: "Wir warten auf eine Rückmeldung von Ihnen — bitte im Verlauf unten nachsehen.",
   abgeschlossen: "Die Arbeiten sind abgeschlossen.",
-  abgerechnet: "Der Auftrag ist abgeschlossen und wurde bereits abgerechnet.",
-  storniert: "Dieser Auftrag wurde storniert.",
+  abgerechnet: "Der Vorgang ist abgeschlossen und wurde bereits abgerechnet.",
+  storniert: "Dieser Vorgang wurde storniert.",
 };
 
 function PortalEventBubble({ event }: { event: VorgangEvent }) {
@@ -77,7 +77,7 @@ export function PortalVorgangDetailPage() {
       </button>
 
       <div className="card-ap p-4">
-        <div className="text-xs text-label2">Auftrag Nr. {vorgang.vorgangsnummer}</div>
+        <div className="text-xs text-label2">Vorgang Nr. {vorgang.vorgangsnummer}</div>
         <h1 className="text-lg font-bold text-label">{vorgang.titel}</h1>
         {vorgang.beschreibung && (
           <p className="mt-2 text-sm text-label">{vorgang.beschreibung}</p>

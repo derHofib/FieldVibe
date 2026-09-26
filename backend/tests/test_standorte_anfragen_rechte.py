@@ -165,7 +165,7 @@ async def test_inaktive_anlage_kann_nicht_fuer_neuen_vorgang_gewaehlt_werden(
     assert resp.status_code == 400
 
 
-# --- Auftragsanfragen ----------------------------------------------------
+# --- Vorgangsanfragen ----------------------------------------------------
 
 
 @pytest.mark.asyncio

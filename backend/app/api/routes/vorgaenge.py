@@ -915,7 +915,7 @@ async def vorgang_partner_zuweisen(
                 event_type="system",
                 is_system=True,
                 author_user_id=auth.user_id,
-                body=f"Als Teilleistung/Auftrag an Nachunternehmer '{partner.name}' vorgeschlagen",
+                body=f"Als Teilleistung an Nachunternehmer '{partner.name}' vorgeschlagen",
                 payload={"partner_id": str(partner.id)},
             )
         )

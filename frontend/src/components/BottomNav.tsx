@@ -23,12 +23,12 @@ interface Tab {
 // erreichbar war, liegt jetzt vollstaendig unter "Mehr" (siehe MehrPage.tsx).
 const TABS: Tab[] = [
   { key: "heute", label: "Heute", icon: CalendarDays, route: `/feed?faellig_von=${heuteIso()}&faellig_bis=${heuteIso()}` },
-  { key: "auftraege", label: "Aufträge", icon: ClipboardCheck, route: "/feed" },
+  { key: "auftraege", label: "Vorgänge", icon: ClipboardCheck, route: "/feed" },
   { key: "projekte", label: "Projekte", icon: Folder, route: "/projekte" },
   { key: "mehr", label: "Mehr", icon: MoreHorizontal, route: "/mehr" },
 ];
 
-// "Heute" und "Aufträge" fuehren beide auf /feed (nur mit unterschiedlichem
+// "Heute" und "Vorgänge" fuehren beide auf /feed (nur mit unterschiedlichem
 // Filter in der Suche) -- React-Routers eingebauter NavLink-Abgleich
 // vergleicht nur den Pfad, nicht die Suche, deshalb hier von Hand ermittelt,
 // welcher der beiden gerade aktiv ist.

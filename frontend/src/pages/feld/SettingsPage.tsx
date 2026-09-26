@@ -108,7 +108,7 @@ export function SettingsPage() {
             icon={ClipboardList}
             tone="violet"
             label="Formulare"
-            beschreibung="Checklisten & Protokolle für Auftragstypen erstellen"
+            beschreibung="Checklisten & Protokolle für Leistungstypen erstellen"
             onClick={() => navigate("/form-schemas")}
           />
         )}
