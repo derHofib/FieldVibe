@@ -149,6 +149,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/profil" element={<ProfilePage />} />
           <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
           <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
+          <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
+          <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
           <Route path="/kunden/:id" element={<KundeProfilePage />} />
           <Route path="/partner/:id" element={<PartnerProfilePage />} />
           <Route path="/anlagen/:id" element={<AnlageProfilePage />} />

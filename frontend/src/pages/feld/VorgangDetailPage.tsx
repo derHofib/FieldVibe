@@ -207,6 +207,16 @@ const ANCHOR_ABSCHNITTE: { ziel: string; label: string }[] = [
   { ziel: "abschnitt-verlauf", label: "Verlauf" },
 ];
 
+// Abschnitte, die im "kompakt"-Layout als eigene Unterseite statt als Teil
+// der durchlaufenden Seite existieren (siehe arbeitszeitInhalt/
+// verlaufInhalt/positionenInhalt weiter unten) -- Wert ist das Route-Suffix
+// hinter /vorgaenge/:id/.
+const ABSCHNITT_ROUTE: Record<string, string> = {
+  "abschnitt-zeit": "zeit",
+  "abschnitt-verlauf": "verlauf",
+  "abschnitt-material": "positionen",
+};
+
 // Unauffaellige, transparente Pill zur Unterscheidung der Eintragsart im
 // gemeinsamen Verlauf (Kommentar/E-Mail laufen dort jetzt durcheinander) --
 // bewusst zurueckhaltend statt eines vollflaechigen Badges, siehe
@@ -426,13 +436,18 @@ function adresseAlsZeile(adresse: Adresse | null | undefined): string {
 export function VorgangDetailPage({
   id: idProp,
   layout = "kompakt",
-  // "zeit": eigene Unterseite nur mit der Arbeitszeit-Liste (Route
-  // /vorgaenge/:id/zeit, siehe App.tsx/OfficeApp.tsx) -- ausgeloest ueber
-  // den "Zeit erfassen"-Button bzw. die "Zeit"-Anker-Pille im
-  // "kompakt"-Layout. Im "dicht"-Layout (Office-Inspektor-Spalte) ohne
-  // Wirkung, dort ist Zeit ohnehin schon ein echter Tab.
+  // Eigene Unterseite fuer einen einzelnen Abschnitt (Routen /vorgaenge/
+  // :id/zeit, /verlauf, /positionen, siehe App.tsx/OfficeApp.tsx und
+  // ABSCHNITT_ROUTE oben) -- ausgeloest ueber die jeweilige Anker-Pille
+  // bzw. den Einstiegspunkt auf der Uebersicht im "kompakt"-Layout. Im
+  // "dicht"-Layout (Office-Inspektor-Spalte) ohne Wirkung, dort sind alle
+  // Abschnitte ohnehin schon echte Tabs.
   ansicht = "voll",
-}: { id?: string; layout?: "kompakt" | "dicht"; ansicht?: "voll" | "zeit" } = {}) {
+}: {
+  id?: string;
+  layout?: "kompakt" | "dicht";
+  ansicht?: "voll" | "zeit" | "verlauf" | "positionen";
+} = {}) {
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -452,6 +467,11 @@ export function VorgangDetailPage({
   const [comment, setComment] = useState("");
   const [kundensichtbar, setKundensichtbar] = useState(false);
   const [kundenansicht, setKundenansicht] = useState(false);
+  // Verlauf-Filter: "system" = Statuswechsel/automatische Eintraege,
+  // "kommentare" = alles Nutzergenerierte (Kommentar/Foto/Unterschrift/
+  // Dokument), "email" = E-Mail-Verlauf -- rein clientseitig auf der
+  // bereits geladenen Liste, kein eigener Endpunkt noetig.
+  const [verlaufFilter, setVerlaufFilter] = useState<"alle" | "kommentare" | "system" | "email">("alle");
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [showUnterschriftPad, setShowUnterschriftPad] = useState(false);
   const [taetigkeit, setTaetigkeit] = useState("");
@@ -1239,6 +1259,19 @@ export function VorgangDetailPage({
     ...sichtbareEvents.map((event): VerlaufEintrag => ({ art: "event", zeit: event.created_at, event })),
     ...(kundenansicht ? [] : (emails ?? []).map((email): VerlaufEintrag => ({ art: "email", zeit: email.created_at, email }))),
   ].sort((a, b) => new Date(b.zeit).getTime() - new Date(a.zeit).getTime());
+  const verlaufEintraegeGefiltert = verlaufEintraege.filter((eintrag) => {
+    if (verlaufFilter === "alle") return true;
+    if (eintrag.art === "email") return verlaufFilter === "email";
+    if (verlaufFilter === "system") return eintrag.event.is_system || eintrag.event.event_type === "status_change";
+    // "kommentare": alles Nutzergenerierte -- Kommentar, Foto, Unterschrift, Dokument.
+    return !eintrag.event.is_system && eintrag.event.event_type !== "status_change";
+  });
+  const eigeneOutboxItemsGefiltert = eigeneOutboxItems.filter((item) => {
+    if (verlaufFilter === "alle") return true;
+    if (verlaufFilter === "email") return false; // Outbox kennt keine E-Mails.
+    if (verlaufFilter === "system") return item.kind === "status";
+    return item.kind !== "status";
+  });
 
   const gesamtSekunden = (zeiterfassungListe ?? []).reduce((summe, e) => {
     if (!e.ende_at) return summe;
@@ -1247,8 +1280,46 @@ export function VorgangDetailPage({
   const gesamtStunden = formatSekundenAlsHHMM(gesamtSekunden);
   const gesamtKm = (zeiterfassungListe ?? []).reduce((summe, e) => summe + (Number(e.km) || 0), 0);
 
+  // Kennzahlen-Zeile auf der Uebersicht (nur "kompakt"+"voll", siehe unten) --
+  // je ein kompakter Wert pro Abschnitt, verlinkt dorthin, damit man nicht
+  // erst hineinklicken muss um zu wissen, ob dort ueberhaupt etwas ist.
+  const naechsterTermin = (termine ?? [])
+    .filter((t) => new Date(t.start_at).getTime() >= Date.now() && t.status !== "abgesagt")
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0];
+  const offeneMaengelAnzahl = (maengel ?? []).filter((m) => m.status !== "behoben" && m.status !== "abgelehnt").length;
+  const positionenAnzahl =
+    (materialBedarfe?.length ?? 0) + (materialVerwendungen?.length ?? 0) + (lvVerwendungen?.length ?? 0);
+
   const timerLaeuftHier = laufenderTimer && laufenderTimer.vorgang_id === id;
   const timerLaeuftAnderswo = laufenderTimer && laufenderTimer.vorgang_id !== id;
+
+  // Eine klare Primäraktion statt vieler gleich gewichteter Text-Links --
+  // je nach Zustand des Vorgangs genau EIN naheliegender naechster Schritt,
+  // als Sticky-Button am unteren Bildschirmrand (siehe primaryAktionBar
+  // unten). Reihenfolge = Prioritaet: Zuweisung vor laufendem Timer vor
+  // Abrechnung vor normaler Zeiterfassung.
+  const primaerAktion: { label: string; onClick: () => void; disabled?: boolean } | null =
+    !vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
+      ? {
+          label: "Ticket übernehmen",
+          onClick: () => uebernehmenMutation.mutate(),
+          disabled: uebernehmenMutation.isPending,
+        }
+      : timerLaeuftHier
+        ? {
+            label: "Zeit stoppen",
+            onClick: () => stopTimerMutation.mutate(laufenderTimer!.id),
+            disabled: stopTimerMutation.isPending,
+          }
+        : vorgang.status === "abgeschlossen" && kannDisponieren
+          ? {
+              label: "Rechnung erstellen",
+              onClick: () => rechnungAusVorgangMutation.mutate(),
+              disabled: rechnungAusVorgangMutation.isPending,
+            }
+          : !VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status)
+            ? { label: "Zeit erfassen", onClick: () => navigate(`/vorgaenge/${id}/zeit`) }
+            : null;
 
   // Buchungsablauf (Stufe 2, siehe docs/konzepte/ZEITERFASSUNG.md
   // Abschnitt 6.1/6.2) -- eine Zeile ist auswaehlbar, wenn sie zu einem der
@@ -1594,6 +1665,660 @@ export function VorgangDetailPage({
     </>
   );
 
+  // Inhalt der Verlauf-Ansicht -- gleiches Prinzip wie arbeitszeitInhalt
+  // oben: im "dicht"-Layout ein echter Tab, im "kompakt"-Layout eine eigene
+  // Unterseite (Route /vorgaenge/:id/verlauf, ansicht="verlauf" unten)
+  // statt eines immer sichtbaren Abschnitts auf der Hauptseite.
+  const verlaufInhalt = (
+    <>
+      <EmailSection
+        queryKey={["vorgang-emails", id]}
+        listEmails={() => vorgaengeApi.emails(id!)}
+        sendEmail={(body) =>
+          vorgaengeApi.sendEmail(id!, {
+            empfaenger: body.empfaenger,
+            betreff: body.betreff ?? "",
+            inhalt: body.inhalt ?? "",
+          })
+        }
+        defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
+        showHistory={false}
+        defaultOpen={location.hash === "#email"}
+      />
+
+      <div className="scroll-mt-4 flex items-center justify-between gap-2">
+        <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Verlauf</h2>
+        <span className="text-sm text-label2">{kundenansicht ? "Kundenansicht" : "Interne Ansicht"}</span>
+        <button
+          onClick={() => setKundenansicht((v) => !v)}
+          className={`btn-touch border px-3 py-1 text-xs font-semibold ${
+            kundenansicht ? "border-tint bg-tint-solid text-white" : "border-sep text-label hover:bg-fill"
+          }`}
+        >
+          Umschalten
+        </button>
+      </div>
+
+      <div className="mt-2 mb-1 flex flex-wrap items-center gap-1.5 text-xs">
+        {(
+          [
+            { wert: "alle", label: "Alle" },
+            { wert: "kommentare", label: "Kommentare" },
+            { wert: "system", label: "System" },
+            { wert: "email", label: "E-Mail" },
+          ] as const
+        ).map((f) => (
+          <button
+            key={f.wert}
+            onClick={() => setVerlaufFilter(f.wert)}
+            className={`btn-touch border px-2.5 py-1 font-medium ${
+              verlaufFilter === f.wert
+                ? "border-tint bg-tint-solid text-white"
+                : "border-sep text-label2 hover:bg-fill"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        {verlaufEintraegeGefiltert.length === 0 && eigeneOutboxItemsGefiltert.length === 0 ? (
+          <p className="text-center text-sm text-label2">
+            {verlaufFilter === "alle" ? "Noch keine Einträge." : "Keine Einträge in diesem Filter."}
+          </p>
+        ) : (
+          <>
+            {/* Noch nicht synchronisierte Einträge sind immer die neuesten
+                -- stehen deshalb vor den bereits synchronisierten Events. */}
+            {!kundenansicht &&
+              eigeneOutboxItemsGefiltert.map((item) => (
+                <OutboxBubble
+                  key={item.client_uuid}
+                  item={item}
+                  onDiscard={async (clientUuid) => {
+                    await discardOutboxItem(clientUuid);
+                    queryClient.invalidateQueries({ queryKey: ["outbox", id] });
+                  }}
+                />
+              ))}
+            {verlaufEintraegeGefiltert.map((eintrag) =>
+              eintrag.art === "email" ? (
+                <EmailBubble key={`email-${eintrag.email.id}`} email={eintrag.email} />
+              ) : (
+                <EventBubble
+                  key={`event-${eintrag.event.id}`}
+                  event={eintrag.event}
+                  onHighlight={(eventId) => highlightMutation.mutate(eventId)}
+                />
+              ),
+            )}
+          </>
+        )}
+      </div>
+
+      {!kundenansicht && (
+        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 card-ap p-3">
+          <div className="relative">
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Kommentar schreiben…"
+              rows={2}
+              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
+            />
+            {/* .card-ap bringt schon eine eigene box-shadow mit (siehe
+             * Cascade-Layer-Falle in DESIGN.md) -- shadow-lg hier waere
+             * tot, deshalb nicht ergaenzt. */}
+            {showMentionPicker && (
+              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto card-ap">
+                {users?.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => {
+                      setComment((c) => `${c}@[${u.name}](${u.id}) `);
+                      setShowMentionPicker(false);
+                    }}
+                    className="btn-touch block w-full px-3 py-2 text-left text-sm text-label hover:bg-fill"
+                  >
+                    {u.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) fotoMutation.mutate(file);
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={dokumentInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) dokumentMutation.mutate(file);
+              e.target.value = "";
+            }}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setShowMentionPicker((v) => !v)}
+                title="Erwähnen"
+                aria-label="Erwähnen"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-base text-label hover:bg-fill"
+              >
+                @
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={fotoMutation.isPending}
+                title="Foto anhängen"
+                aria-label="Foto anhängen"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
+              >
+                <Camera size={16} strokeWidth={2} />
+              </button>
+              <button
+                onClick={() => dokumentInputRef.current?.click()}
+                disabled={dokumentMutation.isPending}
+                title="Dokument anhängen"
+                aria-label="Dokument anhängen"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
+              >
+                <Paperclip size={16} strokeWidth={2} />
+              </button>
+              <button
+                onClick={() => setShowUnterschriftPad((v) => !v)}
+                title="Unterschrift erfassen"
+                aria-label="Unterschrift erfassen"
+                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill"
+              >
+                <PenLine size={16} strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={() => setKundensichtbar((v) => !v)}
+                title={
+                  kundensichtbar
+                    ? "Für Kunde sichtbar – antippen zum Verbergen"
+                    : "Nur intern – antippen um für Kunde sichtbar zu machen"
+                }
+                aria-label="Für Kunde sichtbar umschalten"
+                aria-pressed={kundensichtbar}
+                className={`btn-touch flex h-9 w-9 items-center justify-center border ${
+                  kundensichtbar ? "border-tint text-tint" : "border-sep text-label2 hover:bg-fill"
+                }`}
+              >
+                {kundensichtbar ? <Eye size={16} strokeWidth={2} /> : <EyeOff size={16} strokeWidth={2} />}
+              </button>
+            </div>
+            <button
+              onClick={() => commentMutation.mutate()}
+              disabled={!comment.trim() || commentMutation.isPending}
+              className="btn-touch btn-ap-primary shrink-0 px-4 py-2 text-sm"
+            >
+              Senden
+            </button>
+          </div>
+
+          {showUnterschriftPad && (
+            <div className="mt-2">
+              <SignaturePad
+                isSaving={unterschriftMutation.isPending}
+                onCancel={() => setShowUnterschriftPad(false)}
+                onSave={(blob, unterzeichnerName) => unterschriftMutation.mutate({ blob, unterzeichnerName })}
+              />
+              {unterschriftMutation.isError && (
+                <p className="mt-1 text-xs text-st-fehlt">
+                  {unterschriftMutation.error instanceof ApiError
+                    ? unterschriftMutation.error.message
+                    : "Unterschrift konnte nicht gespeichert werden — bitte erneut versuchen."}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  // Inhalt der Positionen-Ansicht -- gleiches Prinzip wie arbeitszeitInhalt/
+  // verlaufInhalt oben: im "dicht"-Layout ein echter Tab, im "kompakt"-Layout
+  // eine eigene Unterseite (Route /vorgaenge/:id/positionen, ansicht=
+  // "positionen" unten) statt eines Abschnitts auf der Hauptseite.
+  const positionenInhalt = (
+    <>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Positionen</h2>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setShowBedarfForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-tint"
+            >
+              {showBedarfForm ? "Abbrechen" : "+ Material bestellen"}
+            </button>
+            <button
+              onClick={() => setShowMaterialForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-tint"
+            >
+              {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
+            </button>
+            <button
+              onClick={() => setShowLeistungForm((v) => !v)}
+              className="btn-touch text-xs font-medium text-tint"
+            >
+              {showLeistungForm ? "Abbrechen" : "+ Leistung verwenden"}
+            </button>
+          </div>
+        </div>
+
+        {showBedarfForm && (
+          <div className="mb-2 space-y-2 border border-sepstrong p-2">
+            <SearchableSelect
+              value={bedarfMaterialId}
+              onChange={setBedarfMaterialId}
+              placeholder="Material wählen…"
+              options={[
+                ...(materialListe ?? []).map((m) => ({ value: m.id, label: m.bezeichnung })),
+                { value: NEU_MATERIAL, label: "+ Neues Material anlegen…" },
+              ]}
+            />
+
+            {bedarfMaterialId === NEU_MATERIAL && (
+              <div className="space-y-2 border border-dashed border-sepstrong p-2">
+                <input
+                  type="text"
+                  value={bedarfNeuBezeichnung}
+                  onChange={(e) => setBedarfNeuBezeichnung(e.target.value)}
+                  placeholder="Bezeichnung"
+                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={bedarfNeuEinheit}
+                    onChange={(e) => setBedarfNeuEinheit(e.target.value)}
+                    placeholder="Einheit"
+                    className="w-20 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={bedarfNeuEinzelpreis}
+                    onChange={(e) => setBedarfNeuEinzelpreis(e.target.value)}
+                    placeholder="Preis (optional)"
+                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  />
+                </div>
+                <select
+                  value={bedarfNeuLieferantId}
+                  onChange={(e) => setBedarfNeuLieferantId(e.target.value)}
+                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                >
+                  <option value="">Kein Lieferant hinterlegt</option>
+                  {(lieferantenFuerNeuesMaterial ?? []).map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={bedarfMenge}
+                onChange={(e) => setBedarfMenge(e.target.value)}
+                placeholder="Menge"
+                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              />
+              <select
+                value={bedarfZweck}
+                onChange={(e) => setBedarfZweck(e.target.value as MaterialBedarfZweck)}
+                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              >
+                <option value="bestellung">Zur Bestellung</option>
+                <option value="angebot">Für Angebot</option>
+              </select>
+            </div>
+            <input
+              type="text"
+              value={bedarfNotiz}
+              onChange={(e) => setBedarfNotiz(e.target.value)}
+              placeholder="Notiz (optional)"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+            <button
+              disabled={
+                !bedarfMaterialId ||
+                !bedarfMenge ||
+                (bedarfMaterialId === NEU_MATERIAL && !bedarfNeuBezeichnung.trim()) ||
+                materialBedarfMutation.isPending
+              }
+              onClick={() => materialBedarfMutation.mutate()}
+              className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
+            >
+              Vormerken
+            </button>
+            {materialBedarfMutation.isError && (
+              <p className="text-xs text-st-fehlt">
+                {materialBedarfMutation.error instanceof ApiError
+                  ? materialBedarfMutation.error.message
+                  : "Fehler beim Vormerken"}
+              </p>
+            )}
+          </div>
+        )}
+
+        {(materialBedarfe ?? []).length > 0 &&
+          (layout === "dicht" ? (
+            <div className="mb-2 overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-label2">
+                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
+                    <th className="px-2 py-1 text-xs font-medium">Material</th>
+                    <th className="px-2 py-1 text-xs font-medium">Zweck</th>
+                    <th className="px-2 py-1 text-xs font-medium">Status</th>
+                    <th className="px-2 py-1"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {materialBedarfe!.map((b) => (
+                    <tr key={b.id} className="border-t border-sep">
+                      <td className="px-2 py-1.5 tabular-nums text-label">{b.menge}×</td>
+                      <td className="px-2 py-1.5 text-label">{b.material_bezeichnung}</td>
+                      <td className="px-2 py-1.5 text-label2">{b.zweck === "angebot" ? "Angebot" : "Bestellung"}</td>
+                      <td className="px-2 py-1.5 text-label2">{b.status}</td>
+                      <td className="px-2 py-1.5 text-right">
+                        {b.status === "offen" && (
+                          <button
+                            onClick={() => bedarfEntfernenMutation.mutate(b.id)}
+                            className="btn-touch text-xs text-st-fehlt"
+                          >
+                            Entfernen
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mb-2 space-y-1">
+              {materialBedarfe!.map((b) => (
+                <div
+                  key={b.id}
+                  className="flex items-center justify-between border border-sepstrong px-2 py-1.5 text-sm"
+                >
+                  <span className="text-label">
+                    {b.menge}× {b.material_bezeichnung}
+                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                      {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
+                    </span>
+                  </span>
+                  {b.status === "offen" && (
+                    <button
+                      onClick={() => bedarfEntfernenMutation.mutate(b.id)}
+                      className="btn-touch text-xs text-st-fehlt"
+                    >
+                      Entfernen
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+
+        {(materialVerwendungen ?? []).length > 0 || (lvVerwendungen ?? []).length > 0 ? (
+          layout === "dicht" ? (
+            <div className="mb-2 overflow-x-auto">
+              <h3 className="px-1 pb-1 text-xs font-medium text-label2">Verwendet</h3>
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-label2">
+                    <th className="px-2 py-1 text-xs font-medium">Typ</th>
+                    <th className="px-2 py-1 text-xs font-medium">Bezeichnung</th>
+                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
+                    <th className="px-2 py-1"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(materialVerwendungen ?? []).map((v) => (
+                    <tr key={`material-${v.id}`} className="border-t border-sep">
+                      <td className="px-2 py-1.5">
+                        <SymbolKachel icon={Package} farbe="orange" groesse={20} />
+                      </td>
+                      <td className="px-2 py-1.5 text-label">{v.material_bezeichnung}</td>
+                      <td className="px-2 py-1.5 tabular-nums text-label2">
+                        {v.menge} {v.material_einheit}
+                      </td>
+                      <td className="px-2 py-1.5"></td>
+                    </tr>
+                  ))}
+                  {(lvVerwendungen ?? []).map((v) => (
+                    <tr key={`lv-${v.id}`} className="border-t border-sep">
+                      <td className="px-2 py-1.5">
+                        <SymbolKachel icon={Clock} farbe="blue" groesse={20} />
+                      </td>
+                      <td className="px-2 py-1.5 text-label">{v.lv_bezeichnung}</td>
+                      <td className="px-2 py-1.5 tabular-nums text-label2">
+                        {v.menge} {v.lv_einheit}
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        <button
+                          onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
+                          disabled={lvVerwendungEntfernenMutation.isPending}
+                          className="btn-touch text-xs text-st-fehlt disabled:opacity-50"
+                        >
+                          Entfernen
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mb-2 space-y-1">
+              <h3 className="px-1 text-xs font-medium text-label2">Verwendet</h3>
+              {(materialVerwendungen ?? []).map((v) => (
+                <div
+                  key={`material-${v.id}`}
+                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-label">
+                    <SymbolKachel icon={Package} farbe="orange" groesse={24} />
+                    <span className="truncate">
+                      {v.menge}× {v.material_bezeichnung}
+                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                        {v.material_einheit}
+                      </span>
+                    </span>
+                  </span>
+                </div>
+              ))}
+              {(lvVerwendungen ?? []).map((v) => (
+                <div
+                  key={`lv-${v.id}`}
+                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
+                >
+                  <span className="flex min-w-0 items-center gap-2 text-label">
+                    <SymbolKachel icon={Clock} farbe="blue" groesse={24} />
+                    <span className="truncate">
+                      {v.menge}× {v.lv_bezeichnung}
+                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
+                        {v.lv_einheit}
+                      </span>
+                    </span>
+                  </span>
+                  <button
+                    onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
+                    disabled={lvVerwendungEntfernenMutation.isPending}
+                    className="btn-touch shrink-0 text-xs text-st-fehlt disabled:opacity-50"
+                  >
+                    Entfernen
+                  </button>
+                </div>
+              ))}
+            </div>
+          )
+        ) : null}
+
+        {kannDisponieren && (
+          <button
+            onClick={() => angebotAusVorgangMutation.mutate()}
+            disabled={angebotAusVorgangMutation.isPending}
+            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
+          >
+            + Angebot aus diesem Vorgang erstellen
+          </button>
+        )}
+
+        {kannDisponieren && (
+          <button
+            onClick={() => rechnungAusVorgangMutation.mutate()}
+            disabled={rechnungAusVorgangMutation.isPending}
+            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
+          >
+            + Rechnung aus diesem Vorgang erstellen
+          </button>
+        )}
+
+        {showMaterialForm && (
+          <div className="space-y-2 border border-sepstrong p-2">
+            <SearchableSelect
+              value={materialId}
+              onChange={(v) => {
+                setMaterialId(v);
+                // Fuer Techniker das eigene zugewiesene Fahrzeug als
+                // Standard-Lagerort vorschlagen (siehe Techniker-
+                // Zuweisungen-Seite) -- spart bei jedem Materialverbrauch
+                // aus dem eigenen Fahrzeug den manuellen Auswahlschritt.
+                setMaterialLagerId(meinFahrzeug?.id ?? "");
+              }}
+              placeholder="Material wählen…"
+              options={(materialListe ?? []).map((m) => ({
+                value: m.id,
+                label: m.bezeichnung,
+                sublabel: `(${m.bestand_gesamt} ${m.einheit} gesamt verfügbar)`,
+              }))}
+            />
+            {materialId && (
+              <select
+                value={materialLagerId}
+                onChange={(e) => setMaterialLagerId(e.target.value)}
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              >
+                <option value="">Lagerort wählen…</option>
+                {(materialListe?.find((m) => m.id === materialId)?.bestaende ?? []).map((b) => (
+                  <option key={b.lager_id} value={b.lager_id}>
+                    {b.lager_bezeichnung} ({b.menge} verfügbar)
+                  </option>
+                ))}
+                {lagerorte
+                  .filter(
+                    (l) => !materialListe?.find((m) => m.id === materialId)?.bestaende.some((b) => b.lager_id === l.id)
+                  )
+                  .map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.bezeichnung} (0 verfügbar)
+                    </option>
+                  ))}
+              </select>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={materialMenge}
+                onChange={(e) => setMaterialMenge(e.target.value)}
+                placeholder="Menge"
+                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+              />
+              <button
+                disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
+                onClick={() => materialVerwendenMutation.mutate()}
+                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
+              >
+                Erfassen
+              </button>
+            </div>
+            {materialVerwendenMutation.isError && (
+              <p className="text-xs text-st-fehlt">
+                {materialVerwendenMutation.error instanceof ApiError
+                  ? materialVerwendenMutation.error.message
+                  : "Fehler beim Erfassen"}
+              </p>
+            )}
+          </div>
+        )}
+
+        {showLeistungForm && (
+          <div className="space-y-2 border border-sepstrong p-2">
+            {(leistungsverzeichnis ?? []).length === 0 ? (
+              <p className="text-xs text-label2">
+                Für diesen Kunden ist kein Leistungsverzeichnis hinterlegt.
+              </p>
+            ) : (
+              <>
+                <SearchableSelect
+                  value={lvPositionId}
+                  onChange={setLvPositionId}
+                  placeholder="Position wählen…"
+                  options={(leistungsverzeichnis ?? []).map((p) => ({
+                    value: p.id,
+                    label: p.bezeichnung,
+                    sublabel: `${p.einzelpreis} €/${p.einheit}`,
+                  }))}
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={lvMenge}
+                    onChange={(e) => setLvMenge(e.target.value)}
+                    placeholder="Menge"
+                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+                  />
+                  <button
+                    disabled={!lvPositionId || !lvMenge || leistungVerwendenMutation.isPending}
+                    onClick={() => leistungVerwendenMutation.mutate()}
+                    className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
+                  >
+                    Erfassen
+                  </button>
+                </div>
+                {leistungVerwendenMutation.isError && (
+                  <p className="text-xs text-st-fehlt">
+                    {leistungVerwendenMutation.error instanceof ApiError
+                      ? leistungVerwendenMutation.error.message
+                      : "Fehler beim Erfassen"}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+    </>
+  );
+
   if (ansicht === "zeit" && layout !== "dicht") {
     return (
       <div className="space-y-4">
@@ -1651,8 +2376,40 @@ export function VorgangDetailPage({
     );
   }
 
+  if (ansicht === "verlauf" && layout !== "dicht") {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+          ← Zurück zum Vorgang
+        </button>
+        <div className="card-ap p-3">
+          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+        </div>
+        <div className="card-ap p-3">{verlaufInhalt}</div>
+      </div>
+    );
+  }
+
+  if (ansicht === "positionen" && layout !== "dicht") {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+          ← Zurück zum Vorgang
+        </button>
+        <div className="card-ap p-3">
+          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+        </div>
+        <div className="card-ap p-3">{positionenInhalt}</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${layout !== "dicht" && primaerAktion ? "pb-20" : ""}`}>
       <div className="flex items-center justify-between">
         <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
@@ -1750,12 +2507,17 @@ export function VorgangDetailPage({
         </div>
       ) : (
         <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
-          {ANCHOR_ABSCHNITTE.map((a) =>
-            a.ziel === "abschnitt-zeit" ? (
+          {ANCHOR_ABSCHNITTE.map((a) => {
+            // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
+            // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
+            // springen -- alle anderen bleiben Sprungmarken auf der
+            // durchlaufenden Seite.
+            const eigeneSeite = ABSCHNITT_ROUTE[a.ziel];
+            return eigeneSeite ? (
               <button
                 key={a.ziel}
                 type="button"
-                onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
+                onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
                 className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
               >
                 {a.label}
@@ -1768,14 +2530,99 @@ export function VorgangDetailPage({
               >
                 {a.label}
               </a>
-            ),
-          )}
+            );
+          })}
         </nav>
+      )}
+
+      {/* Kurzuebersicht: bisher Teil des Uebersicht-Tabs (nur dort sichtbar),
+       * jetzt tab-uebergreifend oben angeheftet -- Status/Prioritaet/
+       * Zustaendigkeit bleiben so auch auf Zeit/Termine/Maengel/Positionen/
+       * Verlauf im Blick, ohne dafuer zurueck zu tabben. */}
+      {layout === "dicht" && (
+        <div className="card-ap mb-3 space-y-2.5 p-3">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm lg:grid-cols-4">
+            {[
+              ["Status", STATUS_LABEL[vorgang.status]],
+              ["Priorität", String(vorgang.prioritaet)],
+              ["Zugewiesen an", vorgang.zugewiesener_name ?? "Nicht zugewiesen"],
+              [
+                "Fälligkeit",
+                vorgang.faelligkeit_am ? new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE") : "—",
+              ],
+              ["Leistungstyp", LEISTUNGSTYP_LABEL[vorgang.leistungstyp]],
+              ["Abrechnungsart", ABRECHNUNGSART_LABEL[vorgang.abrechnungsart]],
+              ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
+            ].map(([label, wert]) => (
+              <div key={label} className="flex items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-0.5">
+                <dt className="text-xs text-label2">{label}</dt>
+                <dd className="text-right font-medium text-label lg:text-left">{wert}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
+      {/* Kennzahlen-Zeile: auf einen Blick, ob in den anderen Abschnitten
+       * ueberhaupt etwas wartet, statt jeden einzeln aufklappen zu muessen
+       * -- Zeit/Positionen/Verlauf verlinken zur eigenen Unterseite,
+       * Termine/Maengel springen zum Abschnitt weiter unten. Nur im
+       * "kompakt"-Layout auf der Hauptseite (die eigenen Unterseiten
+       * brauchen sie nicht, "dicht" hat dafuer die echten Tabs). */}
+      {layout !== "dicht" && ansicht === "voll" && (
+        <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
+          <button
+            type="button"
+            onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Zeit</span>
+            <span className="text-sm font-semibold text-label">
+              {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
+            </span>
+          </button>
+          <a
+            href="#abschnitt-termine"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Nächster Termin</span>
+            <span className="text-sm font-semibold text-label">
+              {naechsterTermin
+                ? new Date(naechsterTermin.start_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
+                : "—"}
+            </span>
+          </a>
+          <a
+            href="#abschnitt-maengel"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Mängel</span>
+            <span className={`text-sm font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
+              {offeneMaengelAnzahl} offen
+            </span>
+          </a>
+          <button
+            type="button"
+            onClick={() => navigate(`/vorgaenge/${id}/positionen`)}
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Positionen</span>
+            <span className="text-sm font-semibold text-label">{positionenAnzahl}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/vorgaenge/${id}/verlauf`)}
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Verlauf</span>
+            <span className="text-sm font-semibold text-label">{verlaufEintraege.length} Einträge</span>
+          </button>
+        </div>
       )}
 
       <div
         id="abschnitt-uebersicht"
-        className={`scroll-mt-4 grid gap-4 ${layout === "dicht" ? "lg:grid-cols-[1fr_280px] lg:items-start" : ""} ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
+        className={`scroll-mt-4 grid gap-4 ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
         {...tabPanelProps("abschnitt-uebersicht")}
       >
       <div className="card-ap p-4">
@@ -2256,42 +3103,8 @@ export function VorgangDetailPage({
             ))}
           </div>
         )}
-
-        {layout !== "dicht" && (
-          <button
-            type="button"
-            onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
-            className="btn-touch btn-ap-primary mt-3 w-full"
-          >
-            Zeit erfassen{gesamtStunden !== "0:00" && ` · bisher ${gesamtStunden} Std.`}
-          </button>
-        )}
       </div>
 
-      {layout === "dicht" && (
-        <div className="card-ap h-fit space-y-3 p-4">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Kurzübersicht</h2>
-          <dl className="space-y-2.5 text-sm">
-            {[
-              ["Status", STATUS_LABEL[vorgang.status]],
-              ["Priorität", String(vorgang.prioritaet)],
-              ["Zugewiesen an", vorgang.zugewiesener_name ?? "Nicht zugewiesen"],
-              [
-                "Fälligkeit",
-                vorgang.faelligkeit_am ? new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE") : "—",
-              ],
-              ["Leistungstyp", LEISTUNGSTYP_LABEL[vorgang.leistungstyp]],
-              ["Abrechnungsart", ABRECHNUNGSART_LABEL[vorgang.abrechnungsart]],
-              ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
-            ].map(([label, wert]) => (
-              <div key={label} className="flex items-baseline justify-between gap-2">
-                <dt className="text-label2">{label}</dt>
-                <dd className="text-right font-medium text-label">{wert}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
       </div>
 
       {layout === "dicht" && (
@@ -2310,7 +3123,13 @@ export function VorgangDetailPage({
         {...tabPanelProps("abschnitt-termine")}
       >
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Termine</h2>
+          {/* Leerer Abschnitt auf Mobile: Ueberschrift entfaellt, die
+           * Leer-Meldung nennt den Abschnitt stattdessen selbst -- spart
+           * eine ganze Zeile, ohne den Abschnitt komplett zu verstecken
+           * (Aktion bleibt sofort erreichbar). */}
+          {!(layout !== "dicht" && (termine ?? []).length === 0 && !showTerminForm) && (
+            <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Termine</h2>
+          )}
           {kannDisponieren && (
             <button
               onClick={() => {
@@ -2492,7 +3311,7 @@ export function VorgangDetailPage({
               );
             })()
           : (termine ?? []).length === 0 ? (
-              <p className="text-sm text-label2">Keine Termine geplant.</p>
+              <p className="text-sm text-label2">{showTerminForm ? "Keine Termine geplant." : "Termine: Keine geplant."}</p>
             ) : (
               <div className="space-y-1.5">
                 {termine!.map((t) => (
@@ -2552,7 +3371,12 @@ export function VorgangDetailPage({
         {...tabPanelProps("abschnitt-maengel")}
       >
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Mängel</h2>
+          {/* Leerer Abschnitt auf Mobile: Ueberschrift entfaellt, die
+           * Leer-Meldung nennt den Abschnitt stattdessen selbst (siehe
+           * gleiches Muster oben bei Termine). */}
+          {!(layout !== "dicht" && (maengel ?? []).length === 0 && !showMangelForm) && (
+            <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Mängel</h2>
+          )}
           <div className="flex items-center gap-3">
             {(maengel ?? []).length > 0 && (
               <button
@@ -2603,7 +3427,9 @@ export function VorgangDetailPage({
         )}
 
         {(maengel ?? []).length === 0 ? (
-          <p className="text-sm text-label2">Keine Mängel erfasst.</p>
+          <p className="text-sm text-label2">
+            {layout === "dicht" || showMangelForm ? "Keine Mängel erfasst." : "Mängel: Keine erfasst."}
+          </p>
         ) : (
           <div className="space-y-1.5">
             {maengel!.map((m) => (
@@ -2694,431 +3520,15 @@ export function VorgangDetailPage({
         </div>
       )}
 
-      <div
-        id="abschnitt-material"
-        className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-material") ? "" : "hidden"}`}
-        {...tabPanelProps("abschnitt-material")}
-      >
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Positionen</h2>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => setShowBedarfForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint"
-            >
-              {showBedarfForm ? "Abbrechen" : "+ Material bestellen"}
-            </button>
-            <button
-              onClick={() => setShowMaterialForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint"
-            >
-              {showMaterialForm ? "Abbrechen" : "+ Material verwenden"}
-            </button>
-            <button
-              onClick={() => setShowLeistungForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint"
-            >
-              {showLeistungForm ? "Abbrechen" : "+ Leistung verwenden"}
-            </button>
-          </div>
+      {layout === "dicht" && (
+        <div
+          id="abschnitt-material"
+          className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-material") ? "" : "hidden"}`}
+          {...tabPanelProps("abschnitt-material")}
+        >
+          {positionenInhalt}
         </div>
-
-        {showBedarfForm && (
-          <div className="mb-2 space-y-2 border border-sepstrong p-2">
-            <SearchableSelect
-              value={bedarfMaterialId}
-              onChange={setBedarfMaterialId}
-              placeholder="Material wählen…"
-              options={[
-                ...(materialListe ?? []).map((m) => ({ value: m.id, label: m.bezeichnung })),
-                { value: NEU_MATERIAL, label: "+ Neues Material anlegen…" },
-              ]}
-            />
-
-            {bedarfMaterialId === NEU_MATERIAL && (
-              <div className="space-y-2 border border-dashed border-sepstrong p-2">
-                <input
-                  type="text"
-                  value={bedarfNeuBezeichnung}
-                  onChange={(e) => setBedarfNeuBezeichnung(e.target.value)}
-                  placeholder="Bezeichnung"
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={bedarfNeuEinheit}
-                    onChange={(e) => setBedarfNeuEinheit(e.target.value)}
-                    placeholder="Einheit"
-                    className="w-20 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={bedarfNeuEinzelpreis}
-                    onChange={(e) => setBedarfNeuEinzelpreis(e.target.value)}
-                    placeholder="Preis (optional)"
-                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                  />
-                </div>
-                <select
-                  value={bedarfNeuLieferantId}
-                  onChange={(e) => setBedarfNeuLieferantId(e.target.value)}
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                >
-                  <option value="">Kein Lieferant hinterlegt</option>
-                  {(lieferantenFuerNeuesMaterial ?? []).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div className="flex gap-2">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={bedarfMenge}
-                onChange={(e) => setBedarfMenge(e.target.value)}
-                placeholder="Menge"
-                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-              />
-              <select
-                value={bedarfZweck}
-                onChange={(e) => setBedarfZweck(e.target.value as MaterialBedarfZweck)}
-                className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-              >
-                <option value="bestellung">Zur Bestellung</option>
-                <option value="angebot">Für Angebot</option>
-              </select>
-            </div>
-            <input
-              type="text"
-              value={bedarfNotiz}
-              onChange={(e) => setBedarfNotiz(e.target.value)}
-              placeholder="Notiz (optional)"
-              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-            />
-            <button
-              disabled={
-                !bedarfMaterialId ||
-                !bedarfMenge ||
-                (bedarfMaterialId === NEU_MATERIAL && !bedarfNeuBezeichnung.trim()) ||
-                materialBedarfMutation.isPending
-              }
-              onClick={() => materialBedarfMutation.mutate()}
-              className="btn-touch btn-ap-primary w-full px-3 py-1.5 text-sm"
-            >
-              Vormerken
-            </button>
-            {materialBedarfMutation.isError && (
-              <p className="text-xs text-st-fehlt">
-                {materialBedarfMutation.error instanceof ApiError
-                  ? materialBedarfMutation.error.message
-                  : "Fehler beim Vormerken"}
-              </p>
-            )}
-          </div>
-        )}
-
-        {(materialBedarfe ?? []).length > 0 &&
-          (layout === "dicht" ? (
-            <div className="mb-2 overflow-x-auto">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="text-left text-label2">
-                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
-                    <th className="px-2 py-1 text-xs font-medium">Material</th>
-                    <th className="px-2 py-1 text-xs font-medium">Zweck</th>
-                    <th className="px-2 py-1 text-xs font-medium">Status</th>
-                    <th className="px-2 py-1"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {materialBedarfe!.map((b) => (
-                    <tr key={b.id} className="border-t border-sep">
-                      <td className="px-2 py-1.5 tabular-nums text-label">{b.menge}×</td>
-                      <td className="px-2 py-1.5 text-label">{b.material_bezeichnung}</td>
-                      <td className="px-2 py-1.5 text-label2">{b.zweck === "angebot" ? "Angebot" : "Bestellung"}</td>
-                      <td className="px-2 py-1.5 text-label2">{b.status}</td>
-                      <td className="px-2 py-1.5 text-right">
-                        {b.status === "offen" && (
-                          <button
-                            onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                            className="btn-touch text-xs text-st-fehlt"
-                          >
-                            Entfernen
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="mb-2 space-y-1">
-              {materialBedarfe!.map((b) => (
-                <div
-                  key={b.id}
-                  className="flex items-center justify-between border border-sepstrong px-2 py-1.5 text-sm"
-                >
-                  <span className="text-label">
-                    {b.menge}× {b.material_bezeichnung}
-                    <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
-                      {b.zweck === "angebot" ? "Angebot" : "Bestellung"} · {b.status}
-                    </span>
-                  </span>
-                  {b.status === "offen" && (
-                    <button
-                      onClick={() => bedarfEntfernenMutation.mutate(b.id)}
-                      className="btn-touch text-xs text-st-fehlt"
-                    >
-                      Entfernen
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-
-        {(materialVerwendungen ?? []).length > 0 || (lvVerwendungen ?? []).length > 0 ? (
-          layout === "dicht" ? (
-            <div className="mb-2 overflow-x-auto">
-              <h3 className="px-1 pb-1 text-xs font-medium text-label2">Verwendet</h3>
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="text-left text-label2">
-                    <th className="px-2 py-1 text-xs font-medium">Typ</th>
-                    <th className="px-2 py-1 text-xs font-medium">Bezeichnung</th>
-                    <th className="px-2 py-1 text-xs font-medium">Menge</th>
-                    <th className="px-2 py-1"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(materialVerwendungen ?? []).map((v) => (
-                    <tr key={`material-${v.id}`} className="border-t border-sep">
-                      <td className="px-2 py-1.5">
-                        <SymbolKachel icon={Package} farbe="orange" groesse={20} />
-                      </td>
-                      <td className="px-2 py-1.5 text-label">{v.material_bezeichnung}</td>
-                      <td className="px-2 py-1.5 tabular-nums text-label2">
-                        {v.menge} {v.material_einheit}
-                      </td>
-                      <td className="px-2 py-1.5"></td>
-                    </tr>
-                  ))}
-                  {(lvVerwendungen ?? []).map((v) => (
-                    <tr key={`lv-${v.id}`} className="border-t border-sep">
-                      <td className="px-2 py-1.5">
-                        <SymbolKachel icon={Clock} farbe="blue" groesse={20} />
-                      </td>
-                      <td className="px-2 py-1.5 text-label">{v.lv_bezeichnung}</td>
-                      <td className="px-2 py-1.5 tabular-nums text-label2">
-                        {v.menge} {v.lv_einheit}
-                      </td>
-                      <td className="px-2 py-1.5 text-right">
-                        <button
-                          onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
-                          disabled={lvVerwendungEntfernenMutation.isPending}
-                          className="btn-touch text-xs text-st-fehlt disabled:opacity-50"
-                        >
-                          Entfernen
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="mb-2 space-y-1">
-              <h3 className="px-1 text-xs font-medium text-label2">Verwendet</h3>
-              {(materialVerwendungen ?? []).map((v) => (
-                <div
-                  key={`material-${v.id}`}
-                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
-                >
-                  <span className="flex min-w-0 items-center gap-2 text-label">
-                    <SymbolKachel icon={Package} farbe="orange" groesse={24} />
-                    <span className="truncate">
-                      {v.menge}× {v.material_bezeichnung}
-                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
-                        {v.material_einheit}
-                      </span>
-                    </span>
-                  </span>
-                </div>
-              ))}
-              {(lvVerwendungen ?? []).map((v) => (
-                <div
-                  key={`lv-${v.id}`}
-                  className="flex items-center justify-between gap-2 border border-sepstrong px-2 py-1.5 text-sm"
-                >
-                  <span className="flex min-w-0 items-center gap-2 text-label">
-                    <SymbolKachel icon={Clock} farbe="blue" groesse={24} />
-                    <span className="truncate">
-                      {v.menge}× {v.lv_bezeichnung}
-                      <span className="ml-1.5 border border-sep px-1.5 py-0.5 text-xs text-label">
-                        {v.lv_einheit}
-                      </span>
-                    </span>
-                  </span>
-                  <button
-                    onClick={() => lvVerwendungEntfernenMutation.mutate(v.id)}
-                    disabled={lvVerwendungEntfernenMutation.isPending}
-                    className="btn-touch shrink-0 text-xs text-st-fehlt disabled:opacity-50"
-                  >
-                    Entfernen
-                  </button>
-                </div>
-              ))}
-            </div>
-          )
-        ) : null}
-
-        {kannDisponieren && (
-          <button
-            onClick={() => angebotAusVorgangMutation.mutate()}
-            disabled={angebotAusVorgangMutation.isPending}
-            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
-          >
-            + Angebot aus diesem Vorgang erstellen
-          </button>
-        )}
-
-        {kannDisponieren && (
-          <button
-            onClick={() => rechnungAusVorgangMutation.mutate()}
-            disabled={rechnungAusVorgangMutation.isPending}
-            className="btn-touch mb-2 btn-ap w-full px-3 py-1.5 text-sm"
-          >
-            + Rechnung aus diesem Vorgang erstellen
-          </button>
-        )}
-
-        {showMaterialForm && (
-          <div className="space-y-2 border border-sepstrong p-2">
-            <SearchableSelect
-              value={materialId}
-              onChange={(v) => {
-                setMaterialId(v);
-                // Fuer Techniker das eigene zugewiesene Fahrzeug als
-                // Standard-Lagerort vorschlagen (siehe Techniker-
-                // Zuweisungen-Seite) -- spart bei jedem Materialverbrauch
-                // aus dem eigenen Fahrzeug den manuellen Auswahlschritt.
-                setMaterialLagerId(meinFahrzeug?.id ?? "");
-              }}
-              placeholder="Material wählen…"
-              options={(materialListe ?? []).map((m) => ({
-                value: m.id,
-                label: m.bezeichnung,
-                sublabel: `(${m.bestand_gesamt} ${m.einheit} gesamt verfügbar)`,
-              }))}
-            />
-            {materialId && (
-              <select
-                value={materialLagerId}
-                onChange={(e) => setMaterialLagerId(e.target.value)}
-                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-              >
-                <option value="">Lagerort wählen…</option>
-                {(materialListe?.find((m) => m.id === materialId)?.bestaende ?? []).map((b) => (
-                  <option key={b.lager_id} value={b.lager_id}>
-                    {b.lager_bezeichnung} ({b.menge} verfügbar)
-                  </option>
-                ))}
-                {lagerorte
-                  .filter(
-                    (l) => !materialListe?.find((m) => m.id === materialId)?.bestaende.some((b) => b.lager_id === l.id)
-                  )
-                  .map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.bezeichnung} (0 verfügbar)
-                    </option>
-                  ))}
-              </select>
-            )}
-            <div className="flex gap-2">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={materialMenge}
-                onChange={(e) => setMaterialMenge(e.target.value)}
-                placeholder="Menge"
-                className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-              />
-              <button
-                disabled={!materialId || !materialLagerId || !materialMenge || materialVerwendenMutation.isPending}
-                onClick={() => materialVerwendenMutation.mutate()}
-                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
-              >
-                Erfassen
-              </button>
-            </div>
-            {materialVerwendenMutation.isError && (
-              <p className="text-xs text-st-fehlt">
-                {materialVerwendenMutation.error instanceof ApiError
-                  ? materialVerwendenMutation.error.message
-                  : "Fehler beim Erfassen"}
-              </p>
-            )}
-          </div>
-        )}
-
-        {showLeistungForm && (
-          <div className="space-y-2 border border-sepstrong p-2">
-            {(leistungsverzeichnis ?? []).length === 0 ? (
-              <p className="text-xs text-label2">
-                Für diesen Kunden ist kein Leistungsverzeichnis hinterlegt.
-              </p>
-            ) : (
-              <>
-                <SearchableSelect
-                  value={lvPositionId}
-                  onChange={setLvPositionId}
-                  placeholder="Position wählen…"
-                  options={(leistungsverzeichnis ?? []).map((p) => ({
-                    value: p.id,
-                    label: p.bezeichnung,
-                    sublabel: `${p.einzelpreis} €/${p.einheit}`,
-                  }))}
-                />
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={lvMenge}
-                    onChange={(e) => setLvMenge(e.target.value)}
-                    placeholder="Menge"
-                    className="flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                  />
-                  <button
-                    disabled={!lvPositionId || !lvMenge || leistungVerwendenMutation.isPending}
-                    onClick={() => leistungVerwendenMutation.mutate()}
-                    className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
-                  >
-                    Erfassen
-                  </button>
-                </div>
-                {leistungVerwendenMutation.isError && (
-                  <p className="text-xs text-st-fehlt">
-                    {leistungVerwendenMutation.error instanceof ApiError
-                      ? leistungVerwendenMutation.error.message
-                      : "Fehler beim Erfassen"}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
       {kannPartnerVerwalten && (
         <div
@@ -3220,209 +3630,11 @@ export function VorgangDetailPage({
         </div>
       )}
 
-      {/* Verlauf-Tab-Inhalt (EmailSection + gemischter Kommentar-/E-Mail-Feed
-       * + Kommentar-Composer) hat keinen einzelnen umschliessenden Container
-       * im Quelltext -- deshalb hier als ein Wrapper-Div fuer das
-       * Tab-Ausblenden im "dicht"-Layout ergaenzt, statt jede einzelne
-       * Stelle separat zu gaten. */}
-      <div className={istAktiverTab("abschnitt-verlauf") ? "" : "hidden"} {...tabPanelProps("abschnitt-verlauf")}>
-      <EmailSection
-        queryKey={["vorgang-emails", id]}
-        listEmails={() => vorgaengeApi.emails(id!)}
-        sendEmail={(body) =>
-          vorgaengeApi.sendEmail(id!, {
-            empfaenger: body.empfaenger,
-            betreff: body.betreff ?? "",
-            inhalt: body.inhalt ?? "",
-          })
-        }
-        defaultEmpfaenger={kunde?.ansprechpartner.find((a) => a.email)?.email ?? undefined}
-        showHistory={false}
-        defaultOpen={location.hash === "#email"}
-      />
-
-      <div id="abschnitt-verlauf" className="scroll-mt-4 flex items-center justify-between gap-2">
-        <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Verlauf</h2>
-        <span className="text-sm text-label2">
-          {kundenansicht ? "Kundenansicht" : "Interne Ansicht"}
-        </span>
-        <button
-          onClick={() => setKundenansicht((v) => !v)}
-          className={`btn-touch border px-3 py-1 text-xs font-semibold ${
-            kundenansicht
-              ? "border-tint bg-tint-solid text-white"
-              : "border-sep text-label hover:bg-fill"
-          }`}
-        >
-          Umschalten
-        </button>
-      </div>
-
-      <div>
-        {verlaufEintraege.length === 0 && eigeneOutboxItems.length === 0 ? (
-          <p className="text-center text-sm text-label2">Noch keine Einträge.</p>
-        ) : (
-          <>
-            {/* Noch nicht synchronisierte Einträge sind immer die neuesten
-                -- stehen deshalb vor den bereits synchronisierten Events. */}
-            {!kundenansicht &&
-              eigeneOutboxItems.map((item) => (
-                <OutboxBubble
-                  key={item.client_uuid}
-                  item={item}
-                  onDiscard={async (clientUuid) => {
-                    await discardOutboxItem(clientUuid);
-                    queryClient.invalidateQueries({ queryKey: ["outbox", id] });
-                  }}
-                />
-              ))}
-            {verlaufEintraege.map((eintrag) =>
-              eintrag.art === "email" ? (
-                <EmailBubble key={`email-${eintrag.email.id}`} email={eintrag.email} />
-              ) : (
-                <EventBubble
-                  key={`event-${eintrag.event.id}`}
-                  event={eintrag.event}
-                  onHighlight={(eventId) => highlightMutation.mutate(eventId)}
-                />
-              ),
-            )}
-          </>
-        )}
-      </div>
-
-      {!kundenansicht && (
-        <div className="sticky bottom-[var(--klebe-abstand)] space-y-2 card-ap p-3">
-          <div className="relative">
-            <textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Kommentar schreiben…"
-              rows={2}
-              className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
-            />
-            {/* .card-ap bringt schon eine eigene box-shadow mit (siehe
-             * Cascade-Layer-Falle in DESIGN.md) -- shadow-lg hier waere
-             * tot, deshalb nicht ergaenzt. */}
-            {showMentionPicker && (
-              <div className="absolute bottom-full left-0 mb-1 max-h-40 w-full overflow-y-auto card-ap">
-                {users?.map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => {
-                      setComment((c) => `${c}@[${u.name}](${u.id}) `);
-                      setShowMentionPicker(false);
-                    }}
-                    className="btn-touch block w-full px-3 py-2 text-left text-sm text-label hover:bg-fill"
-                  >
-                    {u.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) fotoMutation.mutate(file);
-              e.target.value = "";
-            }}
-          />
-          <input
-            ref={dokumentInputRef}
-            type="file"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) dokumentMutation.mutate(file);
-              e.target.value = "";
-            }}
-          />
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setShowMentionPicker((v) => !v)}
-                title="Erwähnen"
-                aria-label="Erwähnen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-base text-label hover:bg-fill"
-              >
-                @
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={fotoMutation.isPending}
-                title="Foto anhängen"
-                aria-label="Foto anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
-              >
-                <Camera size={16} strokeWidth={2} />
-              </button>
-              <button
-                onClick={() => dokumentInputRef.current?.click()}
-                disabled={dokumentMutation.isPending}
-                title="Dokument anhängen"
-                aria-label="Dokument anhängen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill disabled:opacity-50"
-              >
-                <Paperclip size={16} strokeWidth={2} />
-              </button>
-              <button
-                onClick={() => setShowUnterschriftPad((v) => !v)}
-                title="Unterschrift erfassen"
-                aria-label="Unterschrift erfassen"
-                className="btn-touch flex h-9 w-9 items-center justify-center border border-sep text-label hover:bg-fill"
-              >
-                <PenLine size={16} strokeWidth={1.5} />
-              </button>
-              <button
-                onClick={() => setKundensichtbar((v) => !v)}
-                title={kundensichtbar ? "Für Kunde sichtbar – antippen zum Verbergen" : "Nur intern – antippen um für Kunde sichtbar zu machen"}
-                aria-label="Für Kunde sichtbar umschalten"
-                aria-pressed={kundensichtbar}
-                className={`btn-touch flex h-9 w-9 items-center justify-center border ${
-                  kundensichtbar
-                    ? "border-tint text-tint"
-                    : "border-sep text-label2 hover:bg-fill"
-                }`}
-              >
-                {kundensichtbar ? <Eye size={16} strokeWidth={2} /> : <EyeOff size={16} strokeWidth={2} />}
-              </button>
-            </div>
-            <button
-              onClick={() => commentMutation.mutate()}
-              disabled={!comment.trim() || commentMutation.isPending}
-              className="btn-touch btn-ap-primary shrink-0 px-4 py-2 text-sm"
-            >
-              Senden
-            </button>
-          </div>
-
-          {showUnterschriftPad && (
-            <div className="mt-2">
-              <SignaturePad
-                isSaving={unterschriftMutation.isPending}
-                onCancel={() => setShowUnterschriftPad(false)}
-                onSave={(blob, unterzeichnerName) =>
-                  unterschriftMutation.mutate({ blob, unterzeichnerName })
-                }
-              />
-              {unterschriftMutation.isError && (
-                <p className="mt-1 text-xs text-st-fehlt">
-                  {unterschriftMutation.error instanceof ApiError
-                    ? unterschriftMutation.error.message
-                    : "Unterschrift konnte nicht gespeichert werden — bitte erneut versuchen."}
-                </p>
-              )}
-            </div>
-          )}
+      {layout === "dicht" && (
+        <div id="abschnitt-verlauf" className={istAktiverTab("abschnitt-verlauf") ? "" : "hidden"} {...tabPanelProps("abschnitt-verlauf")}>
+          {verlaufInhalt}
         </div>
       )}
-      </div>
 
       {zeitSheetModus && (
         <ZeiteintragSheet
@@ -3468,6 +3680,19 @@ export function VorgangDetailPage({
           />
         </div>
       </Sheet>
+
+      {layout !== "dicht" && ansicht === "voll" && primaerAktion && (
+        <div className="fixed inset-x-0 z-30 flex justify-center px-3" style={{ bottom: "var(--klebe-abstand)" }}>
+          <button
+            type="button"
+            onClick={primaerAktion.onClick}
+            disabled={primaerAktion.disabled}
+            className="btn-touch btn-ap-primary w-full max-w-md disabled:opacity-50"
+          >
+            {primaerAktion.label}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
