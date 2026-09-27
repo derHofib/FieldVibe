@@ -86,6 +86,53 @@ async def test_zeit_summen_je_status_fuer_auftrag(
 
 
 @pytest.mark.asyncio
+async def test_zeit_summen_zaehlt_km_auch_bei_kategorie_auftrag(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """km kann seit Konzept Abschnitt 11 auch an einer "auftrag"-Zeile
+    haengen (Fahrt direkt an der Arbeitszeit) -- die km-Summe darf sie
+    nicht mehr uebersehen, nur weil sie nicht kategorie="fahrzeit" ist."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    token = await login(client, admin.email, "pw-123456")
+
+    async with system_session() as session:
+        auftrag = Auftrag(mandant_id=mandant.id, kunde_id=kunde.id, titel="Testauftrag", erstellt_von=admin.id)
+        session.add(auftrag)
+        await session.flush()
+        auftrag_id = auftrag.id
+
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde, auftrag_id=auftrag_id)
+
+    async with system_session() as session:
+        start = datetime.now(timezone.utc)
+        session.add(
+            Zeiterfassung(
+                mandant_id=mandant.id,
+                vorgang_id=vorgang.id,
+                techniker_id=admin.id,
+                start_at=start,
+                ende_at=start + timedelta(hours=2),
+                kategorie="auftrag",
+                abrechenbar=True,
+                buchungsstatus="gebucht",
+                km=Decimal("15.5"),
+            )
+        )
+        await session.flush()
+
+    resp = await client.get(
+        f"/api/zeiterfassung/summen?auftrag_id={auftrag_id}", headers=auth_headers(token)
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["gebucht"]["arbeitszeit_stunden"] == "2.0"
+    assert body["gebucht"]["fahrzeit_stunden"] == "0.0"
+    assert body["gebucht"]["km"] == "15.5"
+
+
+@pytest.mark.asyncio
 async def test_zeit_summen_braucht_genau_ein_filter(client, make_mandant, make_user):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")

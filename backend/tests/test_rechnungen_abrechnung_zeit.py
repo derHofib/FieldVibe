@@ -213,6 +213,145 @@ async def test_remove_position_ohne_geschwister_setzt_zeit_zurueck(
         assert endstand.abgerechnet_rechnung_id is None
 
 
+async def _auftrag_eintrag_mit_km(
+    session, *, mandant, vorgang, techniker, km: str = "18.0", stunden: float = 3.0
+) -> Zeiterfassung:
+    """Arbeitszeit (kategorie="auftrag") mit angehaengter km-Angabe, statt
+    eines eigenen Fahrzeit-Eintrags (Konzept Abschnitt 11)."""
+    start = datetime.now(timezone.utc)
+    eintrag = Zeiterfassung(
+        mandant_id=mandant.id,
+        vorgang_id=vorgang.id,
+        techniker_id=techniker.id,
+        start_at=start,
+        ende_at=start + timedelta(hours=stunden),
+        kategorie="auftrag",
+        abrechenbar=True,
+        buchungsstatus="gebucht",
+        km=Decimal(km),
+    )
+    session.add(eintrag)
+    await session.flush()
+    await session.refresh(eintrag)
+    return eintrag
+
+
+@pytest.mark.asyncio
+async def test_fahrtkosten_vorschlag_zaehlt_km_von_auftrag_zeile(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    await client.patch(
+        "/api/mandant/einstellungen",
+        headers=auth_headers(token),
+        json={"fahrzeit_abrechnung": "zeit_und_km", "km_satz_netto": "0.30"},
+    )
+
+    async with system_session() as session:
+        await _auftrag_eintrag_mit_km(session, mandant=mandant, vorgang=vorgang, techniker=admin, km="18.0", stunden=3.0)
+
+    created = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "vorgang_id": str(vorgang.id)},
+    )
+    resp = await client.get(
+        f"/api/rechnungen/{created.json()['id']}/positionsvorschlaege", headers=auth_headers(token)
+    )
+    vorschlaege = resp.json()
+
+    # Die Dauer der Arbeitszeit-Zeile steckt in "zeit" (Arbeitszeit)...
+    zeit = next(v for v in vorschlaege if v["quelle"] == "zeit")
+    assert zeit["menge"] == "3.00"
+    # ...und ihre km unabhaengig davon in "fahrtkosten" -- keine eigene
+    # Fahrzeit-Zeile noetig. "fahrzeit" (Stunden) erscheint dagegen nicht,
+    # weil es keinen eigenstaendigen Fahrzeit-Eintrag gibt.
+    assert all(v["quelle"] != "fahrzeit" for v in vorschlaege)
+    fahrtkosten = next(v for v in vorschlaege if v["quelle"] == "fahrtkosten")
+    assert fahrtkosten["menge"] == "18.0"
+
+
+@pytest.mark.asyncio
+async def test_zeit_und_fahrtkosten_sind_geschwister_bei_gemeinsamer_auftrag_zeile(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    """Eine "auftrag"-Zeile mit km ist Grundlage fuer zwei Positionen
+    zugleich ("zeit" und "fahrtkosten") -- das Entfernen einer der beiden
+    darf die Zeile nicht entsperren, solange die andere sie noch braucht."""
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    token = await login(client, admin.email, "pw-123456")
+
+    await client.patch(
+        "/api/mandant/einstellungen",
+        headers=auth_headers(token),
+        json={"fahrzeit_abrechnung": "zeit_und_km", "km_satz_netto": "0.30"},
+    )
+
+    async with system_session() as session:
+        eintrag = await _auftrag_eintrag_mit_km(session, mandant=mandant, vorgang=vorgang, techniker=admin)
+        eintrag_id = eintrag.id
+
+    created = await client.post(
+        "/api/rechnungen",
+        headers=auth_headers(token),
+        json={"kunde_id": str(kunde.id), "vorgang_id": str(vorgang.id)},
+    )
+    rechnung_id = created.json()["id"]
+
+    zeit_resp = await client.post(
+        f"/api/rechnungen/{rechnung_id}/positionen",
+        headers=auth_headers(token),
+        json={"beschreibung": "Arbeitszeit", "menge": "3", "einheit": "Std", "einzelpreis": "0", "quelle": "zeit"},
+    )
+    zeit_position_id = next(p["id"] for p in zeit_resp.json()["positionen"] if p["quelle"] == "zeit")
+
+    fahrtkosten_resp = await client.post(
+        f"/api/rechnungen/{rechnung_id}/positionen",
+        headers=auth_headers(token),
+        json={
+            "beschreibung": "Fahrtkosten",
+            "menge": "18",
+            "einheit": "km",
+            "einzelpreis": "0.30",
+            "quelle": "fahrtkosten",
+        },
+    )
+    fahrtkosten_position_id = next(
+        p["id"] for p in fahrtkosten_resp.json()["positionen"] if p["quelle"] == "fahrtkosten"
+    )
+
+    async with system_session() as session:
+        zwischenstand = await session.get(Zeiterfassung, eintrag_id)
+        assert zwischenstand.buchungsstatus == "abgerechnet"
+
+    # "Zeit" entfernen: "Fahrtkosten" braucht die Zeile noch, bleibt gesperrt.
+    remove_1 = await client.delete(
+        f"/api/rechnungen/{rechnung_id}/positionen/{zeit_position_id}", headers=auth_headers(token)
+    )
+    assert remove_1.status_code == 200
+    async with system_session() as session:
+        zwischenstand = await session.get(Zeiterfassung, eintrag_id)
+        assert zwischenstand.buchungsstatus == "abgerechnet"
+
+    # Letzte verbleibende Position entfernen: jetzt zurueck auf 'gebucht'.
+    remove_2 = await client.delete(
+        f"/api/rechnungen/{rechnung_id}/positionen/{fahrtkosten_position_id}", headers=auth_headers(token)
+    )
+    assert remove_2.status_code == 200
+    async with system_session() as session:
+        endstand = await session.get(Zeiterfassung, eintrag_id)
+        assert endstand.buchungsstatus == "gebucht"
+        assert endstand.abgerechnet_rechnung_id is None
+
+
 @pytest.mark.asyncio
 async def test_remove_position_nur_im_entwurf(client, make_mandant, make_user, make_kunde):
     mandant = await make_mandant()

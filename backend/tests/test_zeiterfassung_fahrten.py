@@ -27,6 +27,35 @@ async def test_km_nur_bei_kategorie_fahrzeit(client, make_mandant, make_user):
 
 
 @pytest.mark.asyncio
+async def test_km_bei_kategorie_auftrag_erlaubt(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
+):
+    """Seit Konzept Abschnitt 11 kann km auch direkt an der Arbeitszeit
+    haengen, statt als eigener Fahrzeit-Eintrag -- siehe _pruefe_fahrt_felder."""
+    mandant = await make_mandant()
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
+    token = await login(client, techniker.email, "pw-123456")
+
+    start = datetime.now(timezone.utc)
+    resp = await client.post(
+        "/api/zeiterfassung/manuell",
+        headers=auth_headers(token),
+        json={
+            "vorgang_id": str(vorgang.id),
+            "start_at": start.isoformat(),
+            "ende_at": (start + timedelta(hours=1)).isoformat(),
+            "kategorie": "auftrag",
+            "km": "18.5",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["km"] == "18.5"
+
+
+@pytest.mark.asyncio
 async def test_fahrzeug_nur_bei_kategorie_fahrzeit(client, make_mandant, make_user, make_anlage):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")

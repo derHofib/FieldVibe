@@ -387,7 +387,10 @@ async def get_zeit_summen(
             summen[buchungsstatus].arbeitszeit_stunden += stunden
         else:
             summen[buchungsstatus].fahrzeit_stunden += stunden
-            summen[buchungsstatus].km += Decimal(str(km or 0))
+        # km kann seit Konzept Abschnitt 11 auch an "auftrag"-Zeilen haengen
+        # (Fahrt direkt an der Arbeitszeit statt als eigener Fahrzeit-
+        # Eintrag), daher unabhaengig von der Kategorie mitgezaehlt.
+        summen[buchungsstatus].km += Decimal(str(km or 0))
     return ZeiterfassungSummenNachStatus(**summen)
 
 
@@ -684,14 +687,19 @@ def _pruefe_vorgang_nicht_gesperrt(vorgang: Vorgang) -> None:
         )
 
 
+_FAHRT_FELDER_KATEGORIEN = ("fahrzeit", "auftrag")
+
+
 def _pruefe_fahrt_felder(kategorie: str, km: Decimal | None, fahrzeug_id: UUID | None) -> None:
-    """km/fahrzeug_id sind nur bei kategorie='fahrzeit' sinnvoll (Konzept
-    Abschnitt 11) -- die Pruefung sitzt hier statt als DB-CHECK, weil sich
-    die Kategorie per PATCH aendern kann (siehe Migration 0085)."""
-    if kategorie != "fahrzeit" and (km is not None or fahrzeug_id is not None):
+    """km/fahrzeug_id sind bei kategorie='fahrzeit' (eigenstaendige Fahrt)
+    UND kategorie='auftrag' (Arbeitszeit mit optionaler Fahrt-Angabe,
+    Konzept Abschnitt 11) sinnvoll -- die Pruefung sitzt hier statt als
+    DB-CHECK, weil sich die Kategorie per PATCH aendern kann (siehe
+    Migration 0085)."""
+    if kategorie not in _FAHRT_FELDER_KATEGORIEN and (km is not None or fahrzeug_id is not None):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="km/Fahrzeug sind nur bei Kategorie 'fahrzeit' erlaubt",
+            detail="km/Fahrzeug sind nur bei Kategorie 'Arbeitszeit' oder 'fahrzeit' erlaubt",
         )
 
 

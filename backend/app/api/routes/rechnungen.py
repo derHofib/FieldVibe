@@ -513,17 +513,23 @@ async def remove_position(
     if position is None or position.rechnung_id != rechnung_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
 
-    # "fahrzeit" und "fahrtkosten" sperren dieselben Zeiterfassung-Zeilen
-    # (Stunden bzw. km derselben Fahrt) -- erst zuruecksetzen, wenn keine
-    # Geschwister-Position mehr auf derselben Rechnung besteht, sonst
-    # braeuchte die verbleibende Position die gesperrten Zeilen noch.
-    _GESCHWISTER_QUELLE = {"fahrzeit": "fahrtkosten", "fahrtkosten": "fahrzeit"}
+    # "fahrzeit" und "fahrtkosten" sperren dieselben eigenstaendigen
+    # Fahrt-Zeilen (Stunden bzw. km derselben Fahrt). Seit km auch an einer
+    # "auftrag"-Zeile haengen kann (Konzept Abschnitt 11), teilt sich
+    # "fahrtkosten" solche Zeilen zusaetzlich mit "zeit" -- daher sind
+    # "zeit" und "fahrtkosten" jetzt ebenfalls Geschwister. Erst
+    # zuruecksetzen, wenn keine Geschwister-Position mehr auf derselben
+    # Rechnung besteht, sonst braeuchte die verbleibende Position die
+    # gesperrten Zeilen noch.
+    _GESCHWISTER_QUELLEN = {
+        "fahrzeit": ("fahrtkosten",),
+        "fahrtkosten": ("fahrzeit", "zeit"),
+        "zeit": ("fahrtkosten",),
+    }
     if position.quelle in ("zeit", "fahrzeit", "fahrtkosten") and rechnung.vorgang_id is not None:
-        geschwister_quelle = _GESCHWISTER_QUELLE.get(position.quelle)
+        geschwister_quellen = _GESCHWISTER_QUELLEN.get(position.quelle, ())
         rest = await positionen_fuer(session, rechnung_id)
-        geschwister_besteht = geschwister_quelle is not None and any(
-            p.id != position.id and p.quelle == geschwister_quelle for p in rest
-        )
+        geschwister_besteht = any(p.id != position.id and p.quelle in geschwister_quellen for p in rest)
         if not geschwister_besteht:
             await zeiterfassung_abrechnung_zuruecksetzen(
                 session,

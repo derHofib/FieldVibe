@@ -93,9 +93,11 @@ class Zeiterfassung(TimestampMixin, SoftDeleteMixin, Base):
     )
     gebucht_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Fahrten mit km (Stufe 3, docs/konzepte/ZEITERFASSUNG.md Abschnitt 11):
-    # km/fahrzeug_id sind nur bei kategorie="fahrzeit" sinnvoll befuellt --
-    # die Pruefung sitzt in der Route, nicht als CHECK (Kategorie kann sich
-    # per PATCH aendern). quelle wird ausschliesslich vom Server gesetzt.
+    # km/fahrzeug_id sind bei kategorie="fahrzeit" (eigenstaendige Fahrt) UND
+    # kategorie="auftrag" (Arbeitszeit mit optionaler Fahrt-Angabe, statt
+    # eines eigenen Fahrzeit-Eintrags) sinnvoll befuellt -- die Pruefung
+    # sitzt in der Route, nicht als CHECK (Kategorie kann sich per PATCH
+    # aendern). quelle wird ausschliesslich vom Server gesetzt.
     km: Mapped[Decimal | None] = mapped_column(Numeric(7, 1), nullable=True)
     fahrzeug_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("anlagen.id"), nullable=True

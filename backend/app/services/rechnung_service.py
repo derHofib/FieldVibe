@@ -25,17 +25,26 @@ from app.services.numbering_service import next_rechnungsnummer
 _CENT = Decimal("0.01")
 _STUNDE = Decimal("3600")
 
-# Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): welche Kategorie
-# hinter einer "zeit"/"fahrzeit"/"fahrtkosten"-Rechnungsposition steckt --
-# "fahrzeit" und "fahrtkosten" teilen sich dieselben Zeiterfassung-Zeilen
-# (Stunden bzw. km desselben Fahrt-Eintrags), siehe
-# zeiterfassung_abrechnung_zuruecksetzen fuer die daraus folgende
-# Geschwister-Pruefung beim Entfernen einer Position.
-_ZEITERFASSUNG_QUELLE_KATEGORIE = {
-    "zeit": "auftrag",
-    "fahrzeit": "fahrzeit",
-    "fahrtkosten": "fahrzeit",
-}
+# Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): welche Kategorie(n)
+# hinter einer "zeit"/"fahrzeit"/"fahrtkosten"-Rechnungsposition stecken.
+# "fahrzeit" und "fahrtkosten" teilen sich dieselben eigenstaendigen
+# Fahrt-Zeilen (Stunden bzw. km desselben Fahrt-Eintrags). Seit Konzept
+# Abschnitt 11 kann km aber AUCH an einer "auftrag"-Zeile haengen (Fahrt
+# direkt an der Arbeitszeit statt eines eigenen Fahrzeit-Eintrags) --
+# "fahrtkosten" zieht sein km deshalb aus BEIDEN Kategorien, waehrend
+# "zeit" weiterhin alle "auftrag"-Zeilen nach Dauer abrechnet. Eine
+# "auftrag"-Zeile mit km ist damit potenziell Grundlage fuer zwei
+# Positionen zugleich ("zeit" und "fahrtkosten") -- siehe
+# _ZEITERFASSUNG_QUELLE_FILTER und die Geschwister-Pruefung in
+# app/api/routes/rechnungen.py (_GESCHWISTER_QUELLE).
+def _zeiterfassung_quelle_filter(quelle: str) -> list | None:
+    if quelle == "zeit":
+        return [Zeiterfassung.kategorie == "auftrag"]
+    if quelle == "fahrzeit":
+        return [Zeiterfassung.kategorie == "fahrzeit"]
+    if quelle == "fahrtkosten":
+        return [Zeiterfassung.kategorie.in_(("auftrag", "fahrzeit")), Zeiterfassung.km.is_not(None)]
+    return None
 
 
 async def positionen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[RechnungPosition]:
@@ -118,14 +127,17 @@ async def positionen_vorschlaege_fuer_vorgang(
 
     # Fahrzeit mit km (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt 8):
     # gesteuert ueber mandant.fahrzeit_abrechnung -- 'keine' zeigt wie bisher
-    # nichts zusaetzlich. "fahrzeit" und "fahrtkosten" fassen dieselben
-    # Fahrt-Eintraege nach Stunden bzw. km zusammen (siehe
-    # _ZEITERFASSUNG_QUELLE_KATEGORIE), koennen also beide zugleich
-    # erscheinen und beim Uebernehmen dieselben Zeilen sperren.
+    # nichts zusaetzlich. "Fahrzeit" (Stunden) bleibt exklusiv fuer
+    # eigenstaendige Fahrt-Eintraege (kategorie="fahrzeit") -- Arbeitszeit
+    # steckt immer schon in der "Zeit"-Position oben. "Fahrtkosten" (km)
+    # summiert dagegen ueber BEIDE Kategorien, seit km seit Konzept
+    # Abschnitt 11 auch direkt an einer Arbeitszeit-Zeile haengen kann
+    # (siehe _zeiterfassung_quelle_filter) -- "Zeit" und "Fahrtkosten"
+    # koennen sich dadurch dieselbe Zeile teilen, genau wie bisher schon
+    # "Fahrzeit" und "Fahrtkosten".
     if mandant.fahrzeit_abrechnung != "keine":
-        fahrzeit_stmt = select(
-            func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)),
-            func.sum(Zeiterfassung.km),
+        fahrzeit_stunden_stmt = select(
+            func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at))
         ).where(
             Zeiterfassung.vorgang_id == vorgang_id,
             Zeiterfassung.kategorie == "fahrzeit",
@@ -134,7 +146,7 @@ async def positionen_vorschlaege_fuer_vorgang(
             Zeiterfassung.buchungsstatus == "gebucht",
             Zeiterfassung.geloescht_am.is_(None),
         )
-        fahrzeit_sekunden, fahrzeit_km = (await session.execute(fahrzeit_stmt)).one_or_none() or (None, None)
+        fahrzeit_sekunden = (await session.execute(fahrzeit_stunden_stmt)).scalar_one_or_none()
         if mandant.fahrzeit_abrechnung in ("zeit", "zeit_und_km") and fahrzeit_sekunden:
             vorschlaege.append(
                 RechnungPositionVorschlag(
@@ -145,12 +157,23 @@ async def positionen_vorschlaege_fuer_vorgang(
                     einzelpreis=Decimal("0"),
                 )
             )
-        if mandant.fahrzeit_abrechnung in ("km", "zeit_und_km") and fahrzeit_km:
+
+        fahrtkosten_km_stmt = select(func.sum(Zeiterfassung.km)).where(
+            Zeiterfassung.vorgang_id == vorgang_id,
+            Zeiterfassung.kategorie.in_(("auftrag", "fahrzeit")),
+            Zeiterfassung.km.is_not(None),
+            Zeiterfassung.abrechenbar.is_(True),
+            Zeiterfassung.ende_at.is_not(None),
+            Zeiterfassung.buchungsstatus == "gebucht",
+            Zeiterfassung.geloescht_am.is_(None),
+        )
+        fahrtkosten_km = (await session.execute(fahrtkosten_km_stmt)).scalar_one_or_none()
+        if mandant.fahrzeit_abrechnung in ("km", "zeit_und_km") and fahrtkosten_km:
             vorschlaege.append(
                 RechnungPositionVorschlag(
                     quelle="fahrtkosten",
                     beschreibung="Fahrtkosten",
-                    menge=Decimal(fahrzeit_km).quantize(Decimal("0.1")),
+                    menge=Decimal(fahrtkosten_km).quantize(Decimal("0.1")),
                     einheit="km",
                     einzelpreis=mandant.km_satz_netto or Decimal("0"),
                 )
@@ -217,12 +240,12 @@ async def _zeiterfassung_fuer_quelle(
     statt Summe -- fuer das Sperren beim Uebernehmen einer Rechnungsposition
     (Konzept Abschnitt 8). Nur fuer die drei Zeiterfassung-basierten Quellen
     definiert, "material"/"leistung" liefern eine leere Liste."""
-    kategorie = _ZEITERFASSUNG_QUELLE_KATEGORIE.get(quelle)
-    if kategorie is None:
+    filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
+    if filter_bedingungen is None:
         return []
     stmt = select(Zeiterfassung).where(
         Zeiterfassung.vorgang_id == vorgang_id,
-        Zeiterfassung.kategorie == kategorie,
+        *filter_bedingungen,
         Zeiterfassung.abrechenbar.is_(True),
         Zeiterfassung.ende_at.is_not(None),
         Zeiterfassung.buchungsstatus == "gebucht",
@@ -264,15 +287,16 @@ async def zeiterfassung_abrechnung_zuruecksetzen(
     """Kehrt zeiterfassung_abrechnen beim Entfernen einer Rechnungsposition
     um -- der Aufrufer (siehe remove_position in app/api/routes/rechnungen.py)
     prueft vorher, ob noch eine Geschwister-Position (fahrzeit<->fahrtkosten,
-    dieselben Zeilen) auf derselben Rechnung besteht und ruft in dem Fall
+    oder zeit<->fahrtkosten wenn dieselbe "auftrag"-Zeile sowohl Dauer als
+    auch km beisteuert) auf derselben Rechnung besteht und ruft in dem Fall
     gar nicht erst auf."""
-    kategorie = _ZEITERFASSUNG_QUELLE_KATEGORIE.get(quelle)
-    if kategorie is None:
+    filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
+    if filter_bedingungen is None:
         return
     stmt = select(Zeiterfassung).where(
         Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
         Zeiterfassung.vorgang_id == vorgang_id,
-        Zeiterfassung.kategorie == kategorie,
+        *filter_bedingungen,
     )
     for eintrag in (await session.execute(stmt)).scalars().all():
         eintrag.buchungsstatus = "gebucht"
