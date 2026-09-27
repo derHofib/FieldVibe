@@ -443,10 +443,17 @@ export function VorgangDetailPage({
   // "dicht"-Layout (Office-Inspektor-Spalte) ohne Wirkung, dort sind alle
   // Abschnitte ohnehin schon echte Tabs.
   ansicht = "voll",
+  // Nur im "dicht"-Layout relevant: die Office-Vollbild-Route (siehe
+  // OfficeApp.tsx, /vorgaenge/:id/vollbild) hat echte Desktop-Breite statt
+  // der schmalen Inspektor-Spalte in VorgaengeListe.tsx -- dort lohnt sich
+  // eine feste zweite Spalte fuer den Verlauf (immer sichtbar statt Tab,
+  // siehe verlaufSpalteBreit unten), in der schmalen Spalte nicht.
+  breit = false,
 }: {
   id?: string;
   layout?: "kompakt" | "dicht";
   ansicht?: "voll" | "zeit" | "verlauf" | "positionen";
+  breit?: boolean;
 } = {}) {
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
@@ -2319,307 +2326,17 @@ export function VorgangDetailPage({
     </>
   );
 
-  if (ansicht === "zeit" && layout !== "dicht") {
-    return (
-      <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
-          ← Zurück zum Vorgang
-        </button>
-        <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
-        </div>
-        <div className="card-ap p-3">{arbeitszeitInhalt}</div>
+  // "Vollbild"-Layout (Office-Route /vorgaenge/:id/vollbild, siehe
+  // OfficeApp.tsx): Verlauf steht dort als feste zweite Spalte staendig
+  // sichtbar neben den uebrigen (weiterhin per Tab umschaltbaren)
+  // Abschnitten, statt selbst ein Tab zu sein -- lohnt sich nur bei
+  // echter Desktop-Breite, nicht in der schmalen Inspektor-Spalte
+  // (VorgaengeListe.tsx), daher eigener "breit"-Prop statt an "dicht"
+  // allein gekoppelt.
+  const verlaufSpalteBreit = layout === "dicht" && breit;
 
-        {zeitSheetModus && (
-          <ZeiteintragSheet
-            offen
-            onClose={() => setZeitSheetModus(null)}
-            vorgangId={id!}
-            eintrag={zeitSheetModus === "neu" ? null : zeitSheetModus}
-            onGespeichert={() => setZeitSheetModus(null)}
-          />
-        )}
-
-        <Sheet
-          offen={!!nachStoppenEintrag}
-          onClose={() => setNachStoppenEintrag(null)}
-          titel="Was hast du gemacht?"
-          links={
-            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-[17px] text-tint">
-              Später
-            </button>
-          }
-          rechts={
-            <button
-              type="button"
-              onClick={() => nachStoppenTaetigkeitMutation.mutate()}
-              disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
-              className="text-[17px] font-semibold text-tint disabled:opacity-40"
-            >
-              Fertig
-            </button>
-          }
-        >
-          <div className="space-y-4 p-4">
-            <input
-              autoFocus
-              value={nachStoppenTaetigkeit}
-              onChange={(e) => setNachStoppenTaetigkeit(e.target.value)}
-              placeholder="z. B. Wartung an Anlage durchgeführt"
-              className="field-ap"
-            />
-          </div>
-        </Sheet>
-      </div>
-    );
-  }
-
-  if (ansicht === "verlauf" && layout !== "dicht") {
-    return (
-      <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
-          ← Zurück zum Vorgang
-        </button>
-        <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
-        </div>
-        <div className="card-ap p-3">{verlaufInhalt}</div>
-      </div>
-    );
-  }
-
-  if (ansicht === "positionen" && layout !== "dicht") {
-    return (
-      <div className="space-y-4">
-        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
-          ← Zurück zum Vorgang
-        </button>
-        <div className="card-ap p-3">
-          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
-          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
-        </div>
-        <div className="card-ap p-3">{positionenInhalt}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`space-y-4 ${layout !== "dicht" && primaerAktion ? "pb-20" : ""}`}>
-      <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-label2">
-          ← Zurück
-        </button>
-        {kannLoeschen && (
-          <button
-            onClick={() => {
-              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
-                deleteVorgangMutation.mutate();
-              }
-            }}
-            disabled={deleteVorgangMutation.isPending}
-            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50"
-          >
-            Vorgang löschen
-          </button>
-        )}
-      </div>
-
-      {aktionsFehler && (
-        <div className="flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
-          <span className="flex items-center gap-1.5">
-            <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
-          </span>
-          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-xs underline">
-            Ausblenden
-          </button>
-        </div>
-      )}
-
-      {/* Fakten-Leiste: die wichtigsten Eckdaten auf einen Blick, bevor man
-          in die Karte darunter eintaucht (siehe Design-Vorschlag "Feed und
-          Detail neu gedacht"). */}
-      {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
-        <div className="flex flex-wrap gap-1.5">
-          {(anlage?.bezeichnung || standort?.bezeichnung) && (
-            <span className="flex items-center gap-1.5 border border-sep px-2.5 py-1 text-xs font-medium text-label">
-              <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
-            </span>
-          )}
-          {vorgang.faelligkeit_am && (
-            <span
-              className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
-                vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
-                !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                  ? "border-st-fehlt text-st-fehlt"
-                  : "border-sep text-label"
-              }`}
-            >
-              <Clock size={13} strokeWidth={1.5} />
-              {vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
-              !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                ? `${Math.round(
-                    (new Date().setHours(0, 0, 0, 0) - new Date(vorgang.faelligkeit_am).setHours(0, 0, 0, 0)) /
-                      (1000 * 60 * 60 * 24),
-                  )} Tage überfällig`
-                : `Fällig: ${new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE")}`}
-            </span>
-          )}
-          {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
-            <span className="flex items-center gap-1.5 border border-dashed border-st-arbeit px-2.5 py-1 text-xs font-medium text-st-arbeit">
-              <UserPlus size={13} strokeWidth={1.5} /> Nicht zugewiesen
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Kompakt (Feld-App, Office-SchmaleSpalte): Anker-Nav, springt zu den
-       * Abschnitten weiter unten -- reine <a href="#..."> statt
-       * scrollIntoView, bleibt so auch ohne JS-Handler funktionsfaehig.
-       * Dicht (Office-Inspektor-Spalte): echte Tabs, ein Panel sichtbar,
-       * role="tablist"/"tab" fuer Screenreader. */}
-      {layout === "dicht" ? (
-        <div
-          role="tablist"
-          aria-label="Vorgangs-Abschnitte"
-          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-sm"
-        >
-          {ANCHOR_ABSCHNITTE.map((a) => (
-            <button
-              key={a.ziel}
-              type="button"
-              role="tab"
-              id={`tab-${a.ziel}`}
-              aria-selected={desktopTab === a.ziel}
-              aria-controls={a.ziel}
-              onClick={() => setDesktopTab(a.ziel)}
-              className={`shrink-0 rounded-[7px] px-2.5 py-1 font-medium whitespace-nowrap ${
-                desktopTab === a.ziel ? "bg-fill text-label" : "text-label2 hover:text-label"
-              }`}
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
-          {ANCHOR_ABSCHNITTE.map((a) => {
-            // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
-            // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
-            // springen -- alle anderen bleiben Sprungmarken auf der
-            // durchlaufenden Seite.
-            const eigeneSeite = ABSCHNITT_ROUTE[a.ziel];
-            return eigeneSeite ? (
-              <button
-                key={a.ziel}
-                type="button"
-                onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
-                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
-              >
-                {a.label}
-              </button>
-            ) : (
-              <a
-                key={a.ziel}
-                href={`#${a.ziel}`}
-                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
-              >
-                {a.label}
-              </a>
-            );
-          })}
-        </nav>
-      )}
-
-      {/* Kurzuebersicht: bisher Teil des Uebersicht-Tabs (nur dort sichtbar),
-       * jetzt tab-uebergreifend oben angeheftet -- Status/Prioritaet/
-       * Zustaendigkeit bleiben so auch auf Zeit/Termine/Maengel/Positionen/
-       * Verlauf im Blick, ohne dafuer zurueck zu tabben. */}
-      {layout === "dicht" && (
-        <div className="card-ap mb-3 space-y-2.5 p-3">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm lg:grid-cols-4">
-            {[
-              ["Status", STATUS_LABEL[vorgang.status]],
-              ["Priorität", String(vorgang.prioritaet)],
-              ["Zugewiesen an", vorgang.zugewiesener_name ?? "Nicht zugewiesen"],
-              [
-                "Fälligkeit",
-                vorgang.faelligkeit_am ? new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE") : "—",
-              ],
-              ["Leistungstyp", LEISTUNGSTYP_LABEL[vorgang.leistungstyp]],
-              ["Abrechnungsart", ABRECHNUNGSART_LABEL[vorgang.abrechnungsart]],
-              ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
-            ].map(([label, wert]) => (
-              <div key={label} className="flex items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-0.5">
-                <dt className="text-xs text-label2">{label}</dt>
-                <dd className="text-right font-medium text-label lg:text-left">{wert}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
-
-      {/* Kennzahlen-Zeile: auf einen Blick, ob in den anderen Abschnitten
-       * ueberhaupt etwas wartet, statt jeden einzeln aufklappen zu muessen
-       * -- Zeit/Positionen/Verlauf verlinken zur eigenen Unterseite,
-       * Termine/Maengel springen zum Abschnitt weiter unten. Nur im
-       * "kompakt"-Layout auf der Hauptseite (die eigenen Unterseiten
-       * brauchen sie nicht, "dicht" hat dafuer die echten Tabs). */}
-      {layout !== "dicht" && ansicht === "voll" && (
-        <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
-          <button
-            type="button"
-            onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
-          >
-            <span className="text-[11px] text-label2">Zeit</span>
-            <span className="text-sm font-semibold text-label">
-              {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
-            </span>
-          </button>
-          <a
-            href="#abschnitt-termine"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
-          >
-            <span className="text-[11px] text-label2">Nächster Termin</span>
-            <span className="text-sm font-semibold text-label">
-              {naechsterTermin
-                ? new Date(naechsterTermin.start_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
-                : "—"}
-            </span>
-          </a>
-          <a
-            href="#abschnitt-maengel"
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
-          >
-            <span className="text-[11px] text-label2">Mängel</span>
-            <span className={`text-sm font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
-              {offeneMaengelAnzahl} offen
-            </span>
-          </a>
-          <button
-            type="button"
-            onClick={() => navigate(`/vorgaenge/${id}/positionen`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
-          >
-            <span className="text-[11px] text-label2">Positionen</span>
-            <span className="text-sm font-semibold text-label">{positionenAnzahl}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/vorgaenge/${id}/verlauf`)}
-            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
-          >
-            <span className="text-[11px] text-label2">Verlauf</span>
-            <span className="text-sm font-semibold text-label">{verlaufEintraege.length} Einträge</span>
-          </button>
-        </div>
-      )}
-
+  const dichtLinkeSpalteInhalt = (
+    <>
       <div
         id="abschnitt-uebersicht"
         className={`scroll-mt-4 grid gap-4 ${istAktiverTab("abschnitt-uebersicht") ? "" : "hidden"}`}
@@ -3629,11 +3346,336 @@ export function VorgangDetailPage({
           )}
         </div>
       )}
+    </>
+  );
 
-      {layout === "dicht" && (
-        <div id="abschnitt-verlauf" className={istAktiverTab("abschnitt-verlauf") ? "" : "hidden"} {...tabPanelProps("abschnitt-verlauf")}>
-          {verlaufInhalt}
+  const verlaufAbschnittDiv = layout === "dicht" && (
+    <div
+      id="abschnitt-verlauf"
+      className={verlaufSpalteBreit || istAktiverTab("abschnitt-verlauf") ? "" : "hidden"}
+      {...tabPanelProps("abschnitt-verlauf")}
+    >
+      {verlaufInhalt}
+    </div>
+  );
+
+  if (ansicht === "zeit" && layout !== "dicht") {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+          ← Zurück zum Vorgang
+        </button>
+        <div className="card-ap p-3">
+          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
         </div>
+        <div className="card-ap p-3">{arbeitszeitInhalt}</div>
+
+        {zeitSheetModus && (
+          <ZeiteintragSheet
+            offen
+            onClose={() => setZeitSheetModus(null)}
+            vorgangId={id!}
+            eintrag={zeitSheetModus === "neu" ? null : zeitSheetModus}
+            onGespeichert={() => setZeitSheetModus(null)}
+          />
+        )}
+
+        <Sheet
+          offen={!!nachStoppenEintrag}
+          onClose={() => setNachStoppenEintrag(null)}
+          titel="Was hast du gemacht?"
+          links={
+            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-[17px] text-tint">
+              Später
+            </button>
+          }
+          rechts={
+            <button
+              type="button"
+              onClick={() => nachStoppenTaetigkeitMutation.mutate()}
+              disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
+              className="text-[17px] font-semibold text-tint disabled:opacity-40"
+            >
+              Fertig
+            </button>
+          }
+        >
+          <div className="space-y-4 p-4">
+            <input
+              autoFocus
+              value={nachStoppenTaetigkeit}
+              onChange={(e) => setNachStoppenTaetigkeit(e.target.value)}
+              placeholder="z. B. Wartung an Anlage durchgeführt"
+              className="field-ap"
+            />
+          </div>
+        </Sheet>
+      </div>
+    );
+  }
+
+  if (ansicht === "verlauf" && layout !== "dicht") {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+          ← Zurück zum Vorgang
+        </button>
+        <div className="card-ap p-3">
+          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+        </div>
+        <div className="card-ap p-3">{verlaufInhalt}</div>
+      </div>
+    );
+  }
+
+  if (ansicht === "positionen" && layout !== "dicht") {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+          ← Zurück zum Vorgang
+        </button>
+        <div className="card-ap p-3">
+          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+        </div>
+        <div className="card-ap p-3">{positionenInhalt}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`space-y-4 ${layout !== "dicht" && primaerAktion ? "pb-20" : ""}`}>
+      <div className="flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+          ← Zurück
+        </button>
+        {kannLoeschen && (
+          <button
+            onClick={() => {
+              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+                deleteVorgangMutation.mutate();
+              }
+            }}
+            disabled={deleteVorgangMutation.isPending}
+            className="btn-touch text-sm font-medium text-st-fehlt disabled:opacity-50"
+          >
+            Vorgang löschen
+          </button>
+        )}
+      </div>
+
+      {aktionsFehler && (
+        <div className="flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} strokeWidth={1.5} /> {aktionsFehler}
+          </span>
+          <button onClick={() => setAktionsFehler(null)} className="btn-touch text-xs underline">
+            Ausblenden
+          </button>
+        </div>
+      )}
+
+      {/* Fakten-Leiste: die wichtigsten Eckdaten auf einen Blick, bevor man
+          in die Karte darunter eintaucht (siehe Design-Vorschlag "Feed und
+          Detail neu gedacht"). */}
+      {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
+        <div className="flex flex-wrap gap-1.5">
+          {(anlage?.bezeichnung || standort?.bezeichnung) && (
+            <span className="flex items-center gap-1.5 border border-sep px-2.5 py-1 text-xs font-medium text-label">
+              <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}
+            </span>
+          )}
+          {vorgang.faelligkeit_am && (
+            <span
+              className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
+                vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+                !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
+                  ? "border-st-fehlt text-st-fehlt"
+                  : "border-sep text-label"
+              }`}
+            >
+              <Clock size={13} strokeWidth={1.5} />
+              {vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+              !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
+                ? `${Math.round(
+                    (new Date().setHours(0, 0, 0, 0) - new Date(vorgang.faelligkeit_am).setHours(0, 0, 0, 0)) /
+                      (1000 * 60 * 60 * 24),
+                  )} Tage überfällig`
+                : `Fällig: ${new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE")}`}
+            </span>
+          )}
+          {!vorgang.zugewiesener_user_id && !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
+            <span className="flex items-center gap-1.5 border border-dashed border-st-arbeit px-2.5 py-1 text-xs font-medium text-st-arbeit">
+              <UserPlus size={13} strokeWidth={1.5} /> Nicht zugewiesen
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Kompakt (Feld-App, Office-SchmaleSpalte): Anker-Nav, springt zu den
+       * Abschnitten weiter unten -- reine <a href="#..."> statt
+       * scrollIntoView, bleibt so auch ohne JS-Handler funktionsfaehig.
+       * Dicht (Office-Inspektor-Spalte): echte Tabs, ein Panel sichtbar,
+       * role="tablist"/"tab" fuer Screenreader. */}
+      {layout === "dicht" ? (
+        <div
+          role="tablist"
+          aria-label="Vorgangs-Abschnitte"
+          className="-mx-3 mb-3 flex gap-1 overflow-x-auto border-b border-sep px-3 pb-2 text-sm"
+        >
+          {ANCHOR_ABSCHNITTE
+            // Verlauf ist im "breit"-Layout keine umschaltbare Tab-Seite
+            // mehr, sondern eine staendig sichtbare zweite Spalte (siehe
+            // verlaufSpalteBreit/dichtLinkeSpalteInhalt) -- als Tab-Pille
+            // wuerde er nur verwirren, weil ein Klick nichts umschaltet.
+            .filter((a) => !(verlaufSpalteBreit && a.ziel === "abschnitt-verlauf"))
+            .map((a) => (
+              <button
+                key={a.ziel}
+                type="button"
+                role="tab"
+                id={`tab-${a.ziel}`}
+                aria-selected={desktopTab === a.ziel}
+                aria-controls={a.ziel}
+                onClick={() => setDesktopTab(a.ziel)}
+                className={`shrink-0 rounded-[7px] px-2.5 py-1 font-medium whitespace-nowrap ${
+                  desktopTab === a.ziel ? "bg-fill text-label" : "text-label2 hover:text-label"
+                }`}
+              >
+                {a.label}
+              </button>
+            ))}
+        </div>
+      ) : (
+        <nav aria-label="Vorgangs-Abschnitte" className="scrollbar-none -mx-3 flex gap-4 overflow-x-auto border-b border-sep px-3 pb-2 text-sm">
+          {ANCHOR_ABSCHNITTE.map((a) => {
+            // Abschnitte mit eigener Unterseite (siehe arbeitszeitInhalt/
+            // verlaufInhalt oben) navigieren dorthin statt zum Anker zu
+            // springen -- alle anderen bleiben Sprungmarken auf der
+            // durchlaufenden Seite.
+            const eigeneSeite = ABSCHNITT_ROUTE[a.ziel];
+            return eigeneSeite ? (
+              <button
+                key={a.ziel}
+                type="button"
+                onClick={() => navigate(`/vorgaenge/${id}/${eigeneSeite}`)}
+                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
+              >
+                {a.label}
+              </button>
+            ) : (
+              <a
+                key={a.ziel}
+                href={`#${a.ziel}`}
+                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
+              >
+                {a.label}
+              </a>
+            );
+          })}
+        </nav>
+      )}
+
+      {/* Kurzuebersicht: bisher Teil des Uebersicht-Tabs (nur dort sichtbar),
+       * jetzt tab-uebergreifend oben angeheftet -- Status/Prioritaet/
+       * Zustaendigkeit bleiben so auch auf Zeit/Termine/Maengel/Positionen/
+       * Verlauf im Blick, ohne dafuer zurueck zu tabben. */}
+      {layout === "dicht" && (
+        <div className="card-ap mb-3 space-y-2.5 p-3">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm lg:grid-cols-4">
+            {[
+              ["Status", STATUS_LABEL[vorgang.status]],
+              ["Priorität", String(vorgang.prioritaet)],
+              ["Zugewiesen an", vorgang.zugewiesener_name ?? "Nicht zugewiesen"],
+              [
+                "Fälligkeit",
+                vorgang.faelligkeit_am ? new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE") : "—",
+              ],
+              ["Leistungstyp", LEISTUNGSTYP_LABEL[vorgang.leistungstyp]],
+              ["Abrechnungsart", ABRECHNUNGSART_LABEL[vorgang.abrechnungsart]],
+              ["Erstellt am", new Date(vorgang.created_at).toLocaleDateString("de-DE")],
+            ].map(([label, wert]) => (
+              <div key={label} className="flex items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-0.5">
+                <dt className="text-xs text-label2">{label}</dt>
+                <dd className="text-right font-medium text-label lg:text-left">{wert}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
+      {/* Kennzahlen-Zeile: auf einen Blick, ob in den anderen Abschnitten
+       * ueberhaupt etwas wartet, statt jeden einzeln aufklappen zu muessen
+       * -- Zeit/Positionen/Verlauf verlinken zur eigenen Unterseite,
+       * Termine/Maengel springen zum Abschnitt weiter unten. Nur im
+       * "kompakt"-Layout auf der Hauptseite (die eigenen Unterseiten
+       * brauchen sie nicht, "dicht" hat dafuer die echten Tabs). */}
+      {layout !== "dicht" && ansicht === "voll" && (
+        <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
+          <button
+            type="button"
+            onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Zeit</span>
+            <span className="text-sm font-semibold text-label">
+              {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
+            </span>
+          </button>
+          <a
+            href="#abschnitt-termine"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Nächster Termin</span>
+            <span className="text-sm font-semibold text-label">
+              {naechsterTermin
+                ? new Date(naechsterTermin.start_at).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })
+                : "—"}
+            </span>
+          </a>
+          <a
+            href="#abschnitt-maengel"
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Mängel</span>
+            <span className={`text-sm font-semibold ${offeneMaengelAnzahl > 0 ? "text-st-fehlt" : "text-label"}`}>
+              {offeneMaengelAnzahl} offen
+            </span>
+          </a>
+          <button
+            type="button"
+            onClick={() => navigate(`/vorgaenge/${id}/positionen`)}
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Positionen</span>
+            <span className="text-sm font-semibold text-label">{positionenAnzahl}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/vorgaenge/${id}/verlauf`)}
+            className="btn-touch flex shrink-0 flex-col items-start gap-0.5 border border-sep px-3 py-2 text-left hover:bg-fill"
+          >
+            <span className="text-[11px] text-label2">Verlauf</span>
+            <span className="text-sm font-semibold text-label">{verlaufEintraege.length} Einträge</span>
+          </button>
+        </div>
+      )}
+
+      {verlaufSpalteBreit ? (
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1 space-y-4">{dichtLinkeSpalteInhalt}</div>
+          <div className="w-[380px] shrink-0">{verlaufAbschnittDiv}</div>
+        </div>
+      ) : (
+        <>
+          {dichtLinkeSpalteInhalt}
+          {verlaufAbschnittDiv}
+        </>
       )}
 
       {zeitSheetModus && (

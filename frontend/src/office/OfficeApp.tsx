@@ -82,6 +82,19 @@ export function OfficeApp() {
         <Route path="/boards/:id" element={<OfficeBoardPage />} />
         <Route path="/projekte" element={<OfficeProjektePage />} />
         <Route path="/auftraege" element={<OfficeAuftraegePage />} />
+        {/* "Ganze Seite" aus der Split-Ansicht (VorgaengeListe.tsx) -- volle
+            Desktop-Breite statt der schmalen Inspektor-Spalte, deshalb
+            bewusst NICHT in <SchmaleSpalte> unten. layout="dicht" fuer
+            echte Tabs, breit fuer die staendig sichtbare Verlauf-Spalte
+            (siehe VorgangDetailPage.tsx, verlaufSpalteBreit). */}
+        <Route
+          path="/vorgaenge/:id/vollbild"
+          element={
+            <div className="mx-auto max-w-[1400px]">
+              <VorgangDetailPage layout="dicht" breit />
+            </div>
+          }
+        />
 
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>
