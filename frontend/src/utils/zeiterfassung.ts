@@ -48,8 +48,13 @@ export function montagDerWoche(datum: Date): Date {
   return montag;
 }
 
+// Bewusst NICHT d.toISOString().slice(0, 10) -- toISOString() rechnet immer
+// auf UTC um, bei lokaler Mitternacht in einer Zeitzone oestlich von UTC
+// (z.B. Europe/Berlin) landet das noch auf dem VORTAG und verschiebt damit
+// z.B. einen Wochenfilter (von/bis) komplett um einen Tag. Gleiches Prinzip
+// wie lokalerTag() oben: lokale Datumsfelder direkt auslesen.
 export function toDateInput(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // --- Buchungsablauf (Stufe 2, docs/konzepte/ZEITERFASSUNG.md) -----------
