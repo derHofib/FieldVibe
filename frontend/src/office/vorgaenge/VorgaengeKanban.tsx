@@ -116,7 +116,7 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                     >
                       <button
                         type="button"
-                        onClick={() => navigate(`/vorgaenge/${v.id}`)}
+                        onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
                         className="block w-full text-left"
                       >
                         <p className="text-[10.5px] font-bold text-label2">

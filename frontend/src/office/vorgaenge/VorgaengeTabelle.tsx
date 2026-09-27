@@ -98,7 +98,7 @@ export function VorgaengeTabelle({ vorgaenge }: { vorgaenge: FeedCard[] }) {
           {table.getRowModel().rows.map((row) => (
             <tr
               key={row.id}
-              onClick={() => navigate(`/vorgaenge/${row.original.id}`)}
+              onClick={() => navigate(`/vorgaenge/${row.original.id}/vollbild`)}
               className="cursor-pointer border-b border-sep last:border-b-0 hover:bg-fill"
             >
               {row.getVisibleCells().map((cell) => (

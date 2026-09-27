@@ -78,7 +78,7 @@ export function ProjektUebersicht({ projektId }: { projektId: string }) {
             {vorgaenge.map((v) => (
               <button
                 key={v.id}
-                onClick={() => navigate(`/vorgaenge/${v.id}`)}
+                onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
                 className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-fill"
               >
                 <div className="min-w-0">

@@ -125,7 +125,7 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
               {vorgaenge.map((v) => (
                 <button
                   key={v.id}
-                  onClick={() => navigate(`/vorgaenge/${v.id}`)}
+                  onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
                   className="flex w-full items-center justify-between gap-2 border border-sepstrong px-2.5 py-2 text-left text-sm hover:bg-fill"
                 >
                   <span className="min-w-0 flex-1 truncate text-label">

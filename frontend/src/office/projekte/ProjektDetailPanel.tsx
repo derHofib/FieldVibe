@@ -227,7 +227,7 @@ export function ProjektDetailPanel({
                 {vorgaenge.map((v) => (
                   <button
                     key={v.id}
-                    onClick={() => navigate(`/vorgaenge/${v.id}`)}
+                    onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)}
                     className="flex w-full items-center justify-between gap-2 border border-sepstrong px-2.5 py-2 text-left text-sm hover:bg-fill"
                   >
                     <span className="min-w-0 flex-1 truncate text-label">
@@ -365,7 +365,7 @@ export function ProjektDetailPanel({
                               key={t.id}
                               type="button"
                               title={t.titel}
-                              onClick={() => navigate(`/vorgaenge/${t.vorgang_id}`)}
+                              onClick={() => navigate(`/vorgaenge/${t.vorgang_id}/vollbild`)}
                               className={`w-full rounded-[5px] border p-1 text-left text-[11px] ${
                                 t.status === "abgesagt" ? "border-sep text-label2 line-through" : "border-tint text-tint"
                               }`}
@@ -414,7 +414,7 @@ export function ProjektDetailPanel({
                       <td className="px-2 py-1.5 text-label">{b.material_bezeichnung}</td>
                       <td className="px-2 py-1.5 text-label2">
                         <button
-                          onClick={() => navigate(`/vorgaenge/${b.vorgang_id}`)}
+                          onClick={() => navigate(`/vorgaenge/${b.vorgang_id}/vollbild`)}
                           className="hover:underline"
                         >
                           {b.vorgang_vorgangsnummer}

@@ -543,7 +543,7 @@ export function OfficeDispoPage() {
           onClose={() => setBearbeitenId(null)}
           onSave={(body) => updateMutation.mutate({ id: bearbeitenTermin.id, body })}
           onDelete={() => deleteMutation.mutate(bearbeitenTermin.id)}
-          onZumVorgang={() => navigate(`/vorgaenge/${bearbeitenTermin.vorgang_id}`)}
+          onZumVorgang={() => navigate(`/vorgaenge/${bearbeitenTermin.vorgang_id}/vollbild`)}
         />
       )}
 

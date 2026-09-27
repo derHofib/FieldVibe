@@ -59,7 +59,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
         e.preventDefault();
         umschalten(geordnete[fokus].id);
       } else if (e.key === "Enter" && geordnete[fokus]) {
-        navigate(`/vorgaenge/${geordnete[fokus].id}`);
+        navigate(`/vorgaenge/${geordnete[fokus].id}/vollbild`);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -144,7 +144,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
                       {gewaehlt && <Check size={11} strokeWidth={3} aria-hidden="true" />}
                     </button>
 
-                    <button onClick={() => navigate(`/vorgaenge/${v.id}`)} className="block w-full text-left">
+                    <button onClick={() => navigate(`/vorgaenge/${v.id}/vollbild`)} className="block w-full text-left">
                       <p className="text-[10px] font-bold text-label2">
                         {v.vorgangsnummer}
                       </p>
