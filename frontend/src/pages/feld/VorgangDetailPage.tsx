@@ -426,7 +426,13 @@ function adresseAlsZeile(adresse: Adresse | null | undefined): string {
 export function VorgangDetailPage({
   id: idProp,
   layout = "kompakt",
-}: { id?: string; layout?: "kompakt" | "dicht" } = {}) {
+  // "zeit": eigene Unterseite nur mit der Arbeitszeit-Liste (Route
+  // /vorgaenge/:id/zeit, siehe App.tsx/OfficeApp.tsx) -- ausgeloest ueber
+  // den "Zeit erfassen"-Button bzw. die "Zeit"-Anker-Pille im
+  // "kompakt"-Layout. Im "dicht"-Layout (Office-Inspektor-Spalte) ohne
+  // Wirkung, dort ist Zeit ohnehin schon ein echter Tab.
+  ansicht = "voll",
+}: { id?: string; layout?: "kompakt" | "dicht"; ansicht?: "voll" | "zeit" } = {}) {
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -436,29 +442,12 @@ export function VorgangDetailPage({
   // werden die Abschnitte zu echten Tabs (ein Panel sichtbar) statt der
   // mobilen Anker-Scroll-Liste (alle Abschnitte untereinander).
   const [desktopTab, setDesktopTab] = useState(ANCHOR_ABSCHNITTE[0].ziel);
-  // Im "kompakt"-Layout ist die Arbeitszeit-Liste die einzige Ausnahme von
-  // der Anker-Scroll-Liste: standardmaessig eingeklappt (nur ein "Zeit
-  // erfassen"-Button auf der Hauptseite), erst auf Wunsch als eigener
-  // Abschnitt sichtbar -- der lange Verlauf frueherer Buchungen war sonst
-  // immer Teil des ersten Scrollens durch den Vorgang.
-  const [zeitTabOffen, setZeitTabOffen] = useState(false);
-  const istAktiverTab = (ziel: string) => {
-    if (layout === "dicht") return desktopTab === ziel;
-    if (ziel === "abschnitt-zeit") return zeitTabOffen;
-    return true;
-  };
+  const istAktiverTab = (ziel: string) => layout !== "dicht" || desktopTab === ziel;
   const tabPanelProps = (ziel: string) =>
     layout === "dicht" ? { role: "tabpanel" as const, "aria-labelledby": `tab-${ziel}` } : {};
   const { currentUser, hatRecht } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dokumentInputRef = useRef<HTMLInputElement>(null);
-  const zeitAbschnittRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (zeitTabOffen && layout !== "dicht") {
-      zeitAbschnittRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [zeitTabOffen, layout]);
 
   const [comment, setComment] = useState("");
   const [kundensichtbar, setKundensichtbar] = useState(false);
@@ -467,11 +456,12 @@ export function VorgangDetailPage({
   const [showUnterschriftPad, setShowUnterschriftPad] = useState(false);
   const [taetigkeit, setTaetigkeit] = useState("");
   // Zeit-Tab: Sheet zum Anlegen/Bearbeiten eines Eintrags (Stufe 1, siehe
-  // docs/konzepte/ZEITERFASSUNG.md) -- offen, wenn zeitSheetModus gesetzt ist.
-  // "neu" oeffnet leer (vorbelegt mit diesem Vorgang), "neu-fahrt" oeffnet
-  // leer mit kategorie="fahrzeit" vorbelegt (Stufe 3), ein Eintrag oeffnet
+  // docs/konzepte/ZEITERFASSUNG.md) -- offen, wenn zeitSheetModus gesetzt
+  // ist. "neu" oeffnet leer (vorbelegt mit diesem Vorgang, kategorie=
+  // "auftrag"), km/Fahrzeug sind darin ein optionales Feld statt eines
+  // eigenen "Fahrt"-Einstiegs (Konzept Abschnitt 11); ein Eintrag oeffnet
   // zum Bearbeiten.
-  const [zeitSheetModus, setZeitSheetModus] = useState<"neu" | "neu-fahrt" | Zeiterfassung | null>(null);
+  const [zeitSheetModus, setZeitSheetModus] = useState<"neu" | Zeiterfassung | null>(null);
   // Kleines Taetigkeits-Sheet, das automatisch nach "Stoppen" erscheint --
   // der gerade beendete Eintrag, oder null wenn keins offen ist.
   const [nachStoppenEintrag, setNachStoppenEintrag] = useState<Zeiterfassung | null>(null);
@@ -1308,6 +1298,359 @@ export function VorgangDetailPage({
     }
   }
 
+  // Inhalt der Arbeitszeit-Ansicht -- im "dicht"-Layout einer von mehreren
+  // echten Tabs (siehe ANCHOR_ABSCHNITTE), im "kompakt"-Layout dagegen eine
+  // eigene Unterseite (Route /vorgaenge/:id/zeit, ansicht="zeit" unten) statt
+  // eines Abschnitts auf der Hauptseite -- dort bleibt nur der "Zeit
+  // erfassen"-Button. Als Variable statt direkt im JSX, weil beide Stellen
+  // denselben Inhalt brauchen.
+  const arbeitszeitInhalt = (
+    <>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
+        {!VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) && (
+          <button onClick={() => setZeitSheetModus("neu")} className="btn-touch text-xs font-medium text-tint">
+            + Zeit nachtragen
+          </button>
+        )}
+        <span className="w-full text-sm font-medium text-label">
+          Bisher {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
+        </span>
+      </div>
+      {timerLaeuftHier ? (
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-sm font-medium text-label">
+            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" />
+            Zeit läuft seit{" "}
+            {new Date(laufenderTimer.start_at).toLocaleTimeString("de-DE", {
+              timeZone: "Europe/Berlin",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          <button
+            onClick={() => stopTimerMutation.mutate(laufenderTimer.id)}
+            disabled={stopTimerMutation.isPending}
+            className="btn-touch rounded-md bg-st-fehlt-dot px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            Stoppen
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            value={taetigkeit}
+            onChange={(e) => setTaetigkeit(e.target.value)}
+            placeholder="Tätigkeit (optional)"
+            className="btn-touch flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          />
+          <button
+            onClick={() => startTimerMutation.mutate()}
+            disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
+            title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
+            className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
+          >
+            Zeit starten
+          </button>
+        </div>
+      )}
+
+      {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 &&
+        (layout === "dicht" ? (
+          <div className="mt-2 overflow-x-auto border-t border-sep pt-2">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="text-left text-label2">
+                  <th className="w-6 px-2 py-1" />
+                  <th className="px-2 py-1 font-medium">Techniker</th>
+                  <th className="px-2 py-1 font-medium">Tätigkeit</th>
+                  <th className="px-2 py-1 font-medium">Datum</th>
+                  <th className="px-2 py-1 font-medium">Von–Bis</th>
+                  <th className="px-2 py-1 text-right font-medium">Dauer</th>
+                  <th className="px-2 py-1 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...(zeiterfassungListe ?? [])]
+                  .filter((e) => e.ende_at)
+                  .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
+                  .map((e) => {
+                    const dauerSekunden =
+                      (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
+                    const techniker = users?.find((u) => u.id === e.techniker_id);
+                    return (
+                      <tr key={e.id} className="border-t border-sep hover:bg-fill">
+                        <td className="px-2 py-1.5">
+                          {kannZeitAuswaehlen(e) && (
+                            <input
+                              type="checkbox"
+                              checked={ausgewaehlteZeitIds.has(e.id)}
+                              onChange={() => zeitCheckboxToggeln(e)}
+                              onClick={(ev) => ev.stopPropagation()}
+                              className="h-4 w-4"
+                            />
+                          )}
+                        </td>
+                        <td className="cursor-pointer px-2 py-1.5 text-label" onClick={() => setZeitSheetModus(e)}>
+                          {techniker?.name ?? "—"}
+                        </td>
+                        <td className="cursor-pointer px-2 py-1.5 text-label2" onClick={() => setZeitSheetModus(e)}>
+                          {e.taetigkeit || (
+                            <span className="flex items-center gap-1 text-st-arbeit">
+                              <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
+                            </span>
+                          )}
+                        </td>
+                        <td className="cursor-pointer px-2 py-1.5 tabular-nums text-label2" onClick={() => setZeitSheetModus(e)}>
+                          {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
+                        </td>
+                        <td className="cursor-pointer px-2 py-1.5 tabular-nums text-label2" onClick={() => setZeitSheetModus(e)}>
+                          {new Date(e.start_at).toLocaleTimeString("de-DE", {
+                            timeZone: "Europe/Berlin",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                          –
+                          {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
+                            timeZone: "Europe/Berlin",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                        <td
+                          className="cursor-pointer px-2 py-1.5 text-right font-medium tabular-nums text-label"
+                          onClick={() => setZeitSheetModus(e)}
+                        >
+                          {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                          {e.km && <span className="ml-1 font-normal text-label2">· {e.km} km</span>}
+                        </td>
+                        <td className="cursor-pointer px-2 py-1.5" onClick={() => setZeitSheetModus(e)}>
+                          <StatusPille
+                            status={buchungsstatusZuToken(e.buchungsstatus)}
+                            label={BUCHUNGSSTATUS_LABEL[e.buchungsstatus]}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="mt-3 space-y-3 border-t border-sep pt-3">
+            {(() => {
+              let letztesDatum = "";
+              return [...(zeiterfassungListe ?? [])]
+                .filter((e) => e.ende_at)
+                .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
+                .map((e) => {
+                  const dauerSekunden =
+                    (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
+                  const techniker = users?.find((u) => u.id === e.techniker_id);
+                  const datum = new Date(e.start_at).toLocaleDateString("de-DE", {
+                    timeZone: "Europe/Berlin",
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "2-digit",
+                  });
+                  const neuesDatum = datum !== letztesDatum;
+                  letztesDatum = datum;
+                  return (
+                    <div key={e.id}>
+                      {neuesDatum && (
+                        <div className="mb-1.5 text-[11px] font-bold tracking-wide text-label3 uppercase">
+                          {datum}
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        {kannZeitAuswaehlen(e) && (
+                          <input
+                            type="checkbox"
+                            checked={ausgewaehlteZeitIds.has(e.id)}
+                            onChange={() => zeitCheckboxToggeln(e)}
+                            className="btn-touch mt-3.5 h-4 w-4 shrink-0"
+                          />
+                        )}
+                        <button
+                          onClick={() => setZeitSheetModus(e)}
+                          className="btn-touch flex min-w-0 flex-1 items-start justify-between gap-3 border border-sep px-3 py-2.5 text-left hover:bg-fill"
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-label">
+                              {new Date(e.start_at).toLocaleTimeString("de-DE", {
+                                timeZone: "Europe/Berlin",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                              –
+                              {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
+                                timeZone: "Europe/Berlin",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                              <span className="font-normal text-label2"> · {techniker?.name ?? "—"}</span>
+                            </div>
+                            <div className="mt-0.5 truncate text-xs text-label2">
+                              {e.taetigkeit || (
+                                <span className="inline-flex items-center gap-1 text-st-arbeit">
+                                  <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <span className="text-sm font-semibold tabular-nums text-label">
+                              {formatSekundenAlsHHMM(dauerSekunden)} Std.
+                            </span>
+                            {e.km && <span className="text-[11px] tabular-nums text-label2">{e.km} km</span>}
+                            <StatusPille
+                              status={buchungsstatusZuToken(e.buchungsstatus)}
+                              label={BUCHUNGSSTATUS_LABEL[e.buchungsstatus]}
+                            />
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                });
+            })()}
+          </div>
+        ))}
+
+      {ausgewaehlteZeitIds.size > 0 && (
+        <div className="mt-2 border-t border-sep pt-2">
+          {stornierenModus ? (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={stornierenGrund}
+                onChange={(e) => setStornierenGrund(e.target.value)}
+                placeholder="Grund für die Stornierung"
+                className="field-ap flex-1 text-sm"
+              />
+              <button
+                onClick={() => stornierenMutation.mutate()}
+                disabled={!stornierenGrund.trim() || stornierenMutation.isPending}
+                className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-xs disabled:opacity-40"
+              >
+                Bestätigen
+              </button>
+              <button
+                onClick={() => setStornierenModus(false)}
+                className="btn-touch shrink-0 px-2 py-1.5 text-xs text-label2"
+              >
+                Abbrechen
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-label2">{ausgewaehlteZeitIds.size} ausgewählt</span>
+              {ausgewaehlterStatus === "vermerkt" && (
+                <button
+                  onClick={() => vormerkenMutation.mutate([...ausgewaehlteZeitIds])}
+                  disabled={vormerkenMutation.isPending}
+                  className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                >
+                  Zur Buchung vormerken
+                </button>
+              )}
+              {(ausgewaehlterStatus === "vermerkt" || ausgewaehlterStatus === "vorgemerkt") &&
+                darfZeitenBuchen && (
+                  <button
+                    onClick={handleBuchen}
+                    disabled={buchenMutation.isPending}
+                    className="btn-touch btn-ap-primary px-3 py-1.5 text-xs"
+                  >
+                    Buchen
+                  </button>
+                )}
+              {ausgewaehlterStatus === "vorgemerkt" && (
+                <button
+                  onClick={() => zurueckziehenMutation.mutate([...ausgewaehlteZeitIds])}
+                  disabled={zurueckziehenMutation.isPending}
+                  className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                >
+                  Zurückziehen
+                </button>
+              )}
+              {ausgewaehlterStatus === "gebucht" && darfZeitenBuchen && (
+                <button
+                  onClick={() => setStornierenModus(true)}
+                  className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
+                >
+                  Buchung stornieren
+                </button>
+              )}
+              <button
+                onClick={() => setAusgewaehlteZeitIds(new Set())}
+                className="btn-touch px-2 py-1.5 text-xs text-label2"
+              >
+                Auswahl aufheben
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+
+  if (ansicht === "zeit" && layout !== "dicht") {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(`/vorgaenge/${id}`)} className="text-sm text-label2">
+          ← Zurück zum Vorgang
+        </button>
+        <div className="card-ap p-3">
+          <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
+          <h1 className="font-heading text-base font-semibold text-label">{vorgang.titel}</h1>
+          {kunde && <p className="mt-0.5 text-xs text-label2">{kunde.name}</p>}
+        </div>
+        <div className="card-ap p-3">{arbeitszeitInhalt}</div>
+
+        {zeitSheetModus && (
+          <ZeiteintragSheet
+            offen
+            onClose={() => setZeitSheetModus(null)}
+            vorgangId={id!}
+            eintrag={zeitSheetModus === "neu" ? null : zeitSheetModus}
+            onGespeichert={() => setZeitSheetModus(null)}
+          />
+        )}
+
+        <Sheet
+          offen={!!nachStoppenEintrag}
+          onClose={() => setNachStoppenEintrag(null)}
+          titel="Was hast du gemacht?"
+          links={
+            <button type="button" onClick={() => setNachStoppenEintrag(null)} className="text-[17px] text-tint">
+              Später
+            </button>
+          }
+          rechts={
+            <button
+              type="button"
+              onClick={() => nachStoppenTaetigkeitMutation.mutate()}
+              disabled={!nachStoppenTaetigkeit.trim() || nachStoppenTaetigkeitMutation.isPending}
+              className="text-[17px] font-semibold text-tint disabled:opacity-40"
+            >
+              Fertig
+            </button>
+          }
+        >
+          <div className="space-y-4 p-4">
+            <input
+              autoFocus
+              value={nachStoppenTaetigkeit}
+              onChange={(e) => setNachStoppenTaetigkeit(e.target.value)}
+              placeholder="z. B. Wartung an Anlage durchgeführt"
+              className="field-ap"
+            />
+          </div>
+        </Sheet>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -1412,10 +1755,8 @@ export function VorgangDetailPage({
               <button
                 key={a.ziel}
                 type="button"
-                onClick={() => setZeitTabOffen(true)}
-                className={`shrink-0 whitespace-nowrap font-medium ${
-                  zeitTabOffen ? "text-label" : "text-label2 hover:text-label"
-                }`}
+                onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
+                className="shrink-0 whitespace-nowrap font-medium text-label2 hover:text-label"
               >
                 {a.label}
               </button>
@@ -1916,10 +2257,10 @@ export function VorgangDetailPage({
           </div>
         )}
 
-        {layout !== "dicht" && !zeitTabOffen && (
+        {layout !== "dicht" && (
           <button
             type="button"
-            onClick={() => setZeitTabOffen(true)}
+            onClick={() => navigate(`/vorgaenge/${id}/zeit`)}
             className="btn-touch btn-ap-primary mt-3 w-full"
           >
             Zeit erfassen{gesamtStunden !== "0:00" && ` · bisher ${gesamtStunden} Std.`}
@@ -1953,293 +2294,15 @@ export function VorgangDetailPage({
       )}
       </div>
 
-      <div
-        id="abschnitt-zeit"
-        ref={zeitAbschnittRef}
-        className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-zeit") ? "" : "hidden"}`}
-        {...tabPanelProps("abschnitt-zeit")}
-      >
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-heading text-sm font-semibold uppercase tracking-wide text-label">Arbeitszeit</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-label">
-              Bisher {gesamtStunden} Std.{gesamtKm > 0 && ` · ${gesamtKm.toFixed(1)} km`}
-            </span>
-            {!VORGANG_STATUS_ZEIT_GESPERRT.includes(vorgang.status) && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setZeitSheetModus("neu-fahrt")}
-                  className="btn-touch text-xs font-medium text-tint"
-                >
-                  + Fahrt erfassen
-                </button>
-                <button
-                  onClick={() => setZeitSheetModus("neu")}
-                  className="btn-touch text-xs font-medium text-tint"
-                >
-                  + Zeit nachtragen
-                </button>
-              </div>
-            )}
-          </div>
+      {layout === "dicht" && (
+        <div
+          id="abschnitt-zeit"
+          className={`scroll-mt-4 card-ap p-3 ${istAktiverTab("abschnitt-zeit") ? "" : "hidden"}`}
+          {...tabPanelProps("abschnitt-zeit")}
+        >
+          {arbeitszeitInhalt}
         </div>
-        {timerLaeuftHier ? (
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm font-medium text-label">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" />
-              Zeit läuft seit{" "}
-              {new Date(laufenderTimer.start_at).toLocaleTimeString("de-DE", {
-                timeZone: "Europe/Berlin",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-            <button
-              onClick={() => stopTimerMutation.mutate(laufenderTimer.id)}
-              disabled={stopTimerMutation.isPending}
-              className="btn-touch rounded-md bg-st-fehlt-dot px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-            >
-              Stoppen
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input
-              value={taetigkeit}
-              onChange={(e) => setTaetigkeit(e.target.value)}
-              placeholder="Tätigkeit (optional)"
-              className="btn-touch flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-            />
-            <button
-              onClick={() => startTimerMutation.mutate()}
-              disabled={startTimerMutation.isPending || !!timerLaeuftAnderswo}
-              title={timerLaeuftAnderswo ? "Es läuft bereits ein Timer für einen anderen Vorgang" : ""}
-              className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-sm"
-            >
-              Zeit starten
-            </button>
-          </div>
-        )}
-
-        {(zeiterfassungListe ?? []).filter((e) => e.ende_at).length > 0 &&
-          (layout === "dicht" ? (
-            <div className="mt-2 overflow-x-auto border-t border-sep pt-2">
-              <table className="w-full border-collapse text-xs">
-                <thead>
-                  <tr className="text-left text-label2">
-                    <th className="w-6 px-2 py-1" />
-                    <th className="px-2 py-1 font-medium">Techniker</th>
-                    <th className="px-2 py-1 font-medium">Tätigkeit</th>
-                    <th className="px-2 py-1 font-medium">Datum</th>
-                    <th className="px-2 py-1 font-medium">Von–Bis</th>
-                    <th className="px-2 py-1 text-right font-medium">Dauer</th>
-                    <th className="px-2 py-1 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...(zeiterfassungListe ?? [])]
-                    .filter((e) => e.ende_at)
-                    .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
-                    .map((e) => {
-                      const dauerSekunden =
-                        (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
-                      const techniker = users?.find((u) => u.id === e.techniker_id);
-                      return (
-                        <tr key={e.id} className="border-t border-sep hover:bg-fill">
-                          <td className="px-2 py-1.5">
-                            {kannZeitAuswaehlen(e) && (
-                              <input
-                                type="checkbox"
-                                checked={ausgewaehlteZeitIds.has(e.id)}
-                                onChange={() => zeitCheckboxToggeln(e)}
-                                onClick={(ev) => ev.stopPropagation()}
-                                className="h-4 w-4"
-                              />
-                            )}
-                          </td>
-                          <td className="cursor-pointer px-2 py-1.5 text-label" onClick={() => setZeitSheetModus(e)}>
-                            {techniker?.name ?? "—"}
-                          </td>
-                          <td className="cursor-pointer px-2 py-1.5 text-label2" onClick={() => setZeitSheetModus(e)}>
-                            {e.taetigkeit || (
-                              <span className="flex items-center gap-1 text-st-arbeit">
-                                <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
-                              </span>
-                            )}
-                          </td>
-                          <td className="cursor-pointer px-2 py-1.5 tabular-nums text-label2" onClick={() => setZeitSheetModus(e)}>
-                            {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
-                          </td>
-                          <td className="cursor-pointer px-2 py-1.5 tabular-nums text-label2" onClick={() => setZeitSheetModus(e)}>
-                            {new Date(e.start_at).toLocaleTimeString("de-DE", {
-                              timeZone: "Europe/Berlin",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                            –
-                            {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
-                              timeZone: "Europe/Berlin",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </td>
-                          <td
-                            className="cursor-pointer px-2 py-1.5 text-right font-medium tabular-nums text-label"
-                            onClick={() => setZeitSheetModus(e)}
-                          >
-                            {formatSekundenAlsHHMM(dauerSekunden)} Std.
-                            {e.km && <span className="ml-1 font-normal text-label2">· {e.km} km</span>}
-                          </td>
-                          <td className="cursor-pointer px-2 py-1.5" onClick={() => setZeitSheetModus(e)}>
-                            <StatusPille
-                              status={buchungsstatusZuToken(e.buchungsstatus)}
-                              label={BUCHUNGSSTATUS_LABEL[e.buchungsstatus]}
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="mt-2 space-y-1 border-t border-sep pt-2">
-              {[...(zeiterfassungListe ?? [])]
-                .filter((e) => e.ende_at)
-                .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
-                .map((e) => {
-                  const dauerSekunden =
-                    (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000;
-                  const techniker = users?.find((u) => u.id === e.techniker_id);
-                  return (
-                    <div key={e.id} className="flex items-center gap-2">
-                      {kannZeitAuswaehlen(e) && (
-                        <input
-                          type="checkbox"
-                          checked={ausgewaehlteZeitIds.has(e.id)}
-                          onChange={() => zeitCheckboxToggeln(e)}
-                          className="btn-touch h-4 w-4 shrink-0"
-                        />
-                      )}
-                      <button
-                        onClick={() => setZeitSheetModus(e)}
-                        className="btn-touch flex min-w-0 flex-1 items-center justify-between gap-2 text-left text-xs text-label2 hover:bg-fill"
-                      >
-                        <span className="min-w-0">
-                          {techniker?.name ?? "—"}
-                          {" · "}
-                          {e.taetigkeit || (
-                            <span className="inline-flex items-center gap-1 text-st-arbeit">
-                              <AlertTriangle size={12} strokeWidth={2} /> Tätigkeit fehlt
-                            </span>
-                          )}
-                          {" · "}
-                          {new Date(e.start_at).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" })}
-                          {" · "}
-                          {new Date(e.start_at).toLocaleTimeString("de-DE", {
-                            timeZone: "Europe/Berlin",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          –
-                          {new Date(e.ende_at!).toLocaleTimeString("de-DE", {
-                            timeZone: "Europe/Berlin",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <span className="font-medium text-label">
-                            {formatSekundenAlsHHMM(dauerSekunden)} Std.
-                            {e.km && <span className="ml-1 font-normal text-label2">· {e.km} km</span>}
-                          </span>
-                          <StatusPille
-                            status={buchungsstatusZuToken(e.buchungsstatus)}
-                            label={BUCHUNGSSTATUS_LABEL[e.buchungsstatus]}
-                          />
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })}
-            </div>
-          ))}
-
-        {ausgewaehlteZeitIds.size > 0 && (
-          <div className="mt-2 border-t border-sep pt-2">
-            {stornierenModus ? (
-              <div className="flex items-center gap-2">
-                <input
-                  autoFocus
-                  value={stornierenGrund}
-                  onChange={(e) => setStornierenGrund(e.target.value)}
-                  placeholder="Grund für die Stornierung"
-                  className="field-ap flex-1 text-sm"
-                />
-                <button
-                  onClick={() => stornierenMutation.mutate()}
-                  disabled={!stornierenGrund.trim() || stornierenMutation.isPending}
-                  className="btn-touch btn-ap-primary shrink-0 px-3 py-1.5 text-xs disabled:opacity-40"
-                >
-                  Bestätigen
-                </button>
-                <button
-                  onClick={() => setStornierenModus(false)}
-                  className="btn-touch shrink-0 px-2 py-1.5 text-xs text-label2"
-                >
-                  Abbrechen
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-label2">{ausgewaehlteZeitIds.size} ausgewählt</span>
-                {ausgewaehlterStatus === "vermerkt" && (
-                  <button
-                    onClick={() => vormerkenMutation.mutate([...ausgewaehlteZeitIds])}
-                    disabled={vormerkenMutation.isPending}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
-                  >
-                    Zur Buchung vormerken
-                  </button>
-                )}
-                {(ausgewaehlterStatus === "vermerkt" || ausgewaehlterStatus === "vorgemerkt") &&
-                  darfZeitenBuchen && (
-                    <button
-                      onClick={handleBuchen}
-                      disabled={buchenMutation.isPending}
-                      className="btn-touch btn-ap-primary px-3 py-1.5 text-xs"
-                    >
-                      Buchen
-                    </button>
-                  )}
-                {ausgewaehlterStatus === "vorgemerkt" && (
-                  <button
-                    onClick={() => zurueckziehenMutation.mutate([...ausgewaehlteZeitIds])}
-                    disabled={zurueckziehenMutation.isPending}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
-                  >
-                    Zurückziehen
-                  </button>
-                )}
-                {ausgewaehlterStatus === "gebucht" && darfZeitenBuchen && (
-                  <button
-                    onClick={() => setStornierenModus(true)}
-                    className="btn-touch border border-sepstrong px-3 py-1.5 text-xs font-medium text-label hover:bg-fill"
-                  >
-                    Buchung stornieren
-                  </button>
-                )}
-                <button
-                  onClick={() => setAusgewaehlteZeitIds(new Set())}
-                  className="btn-touch px-2 py-1.5 text-xs text-label2"
-                >
-                  Auswahl aufheben
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
 
       <div
         id="abschnitt-termine"
@@ -3366,8 +3429,7 @@ export function VorgangDetailPage({
           offen
           onClose={() => setZeitSheetModus(null)}
           vorgangId={id!}
-          eintrag={zeitSheetModus === "neu" || zeitSheetModus === "neu-fahrt" ? null : zeitSheetModus}
-          initialKategorie={zeitSheetModus === "neu-fahrt" ? "fahrzeit" : undefined}
+          eintrag={zeitSheetModus === "neu" ? null : zeitSheetModus}
           onGespeichert={() => setZeitSheetModus(null)}
         />
       )}

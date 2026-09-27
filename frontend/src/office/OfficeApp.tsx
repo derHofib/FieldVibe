@@ -87,6 +87,7 @@ export function OfficeApp() {
         <Route element={<SchmaleSpalte />}>
         <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
         <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
+        <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
         <Route path="/neu" element={<NewVorgangPage />} />
         <Route path="/suche" element={<SearchPage />} />
         <Route path="/benachrichtigungen" element={<NotificationsPage />} />

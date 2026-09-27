@@ -66,17 +66,12 @@ export function ZeiteintragSheet({
   onClose,
   vorgangId,
   eintrag,
-  initialKategorie,
   onGespeichert,
 }: {
   offen: boolean;
   onClose: () => void;
   vorgangId: string;
   eintrag?: Zeiterfassung | null;
-  // Vorbelegung beim Neuanlegen, z.B. "+ Fahrt erfassen" startet direkt mit
-  // kategorie="fahrzeit". Ohne Wirkung beim Bearbeiten eines bestehenden
-  // Eintrags (dessen Kategorie hat Vorrang).
-  initialKategorie?: ZeiterfassungKategorie;
   onGespeichert: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -90,7 +85,7 @@ export function ZeiteintragSheet({
   const vorEinerStunde = new Date(jetzt.getTime() - 60 * 60 * 1000);
 
   const [kategorie, setKategorie] = useState<ZeiterfassungKategorie>(
-    eintrag?.kategorie ?? initialKategorie ?? "auftrag",
+    eintrag?.kategorie ?? "auftrag",
   );
   const [taetigkeit, setTaetigkeit] = useState(eintrag?.taetigkeit ?? "");
   const [startAt, setStartAt] = useState(
@@ -107,7 +102,14 @@ export function ZeiteintragSheet({
   const [grund, setGrund] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const istFahrt = kategorie === "fahrzeit";
+  // km/Fahrzeug sind seit Konzept Abschnitt 11 nicht mehr exklusiv an
+  // kategorie="fahrzeit" gebunden -- eine normale Arbeitszeit (kategorie=
+  // "auftrag") kann optional ebenfalls km aufnehmen, statt eine separate
+  // Fahrzeit-Zeile zu brauchen (siehe app/api/routes/zeiterfassung.py,
+  // _pruefe_fahrt_felder). "Fahrzeit" bleibt als eigene Kategorie fuer
+  // Fahrten ohne zugehoerige Arbeitszeit (z.B. Anfahrt ohne Leistung vor
+  // Ort) weiterhin waehlbar.
+  const zeigtFahrtFelder = kategorie === "fahrzeit" || kategorie === "auftrag";
 
   const { data: verlauf } = useQuery({
     queryKey: ["zeiterfassung-verlauf", eintrag?.id],
@@ -118,7 +120,7 @@ export function ZeiteintragSheet({
   const { data: fahrzeuge } = useQuery({
     queryKey: ["anlagen-fahrzeuge"],
     queryFn: () => anlagenApi.list(undefined, "fahrzeug"),
-    enabled: istFahrt,
+    enabled: zeigtFahrtFelder,
   });
 
   // Vorbelegung mit dem zugewiesenen Fahrzeug -- nur beim Neuanlegen, nicht
@@ -126,7 +128,7 @@ export function ZeiteintragSheet({
   const { data: zugewiesenesFahrzeug } = useQuery({
     queryKey: ["fahrzeug-zuweisung-mir"],
     queryFn: fahrzeugZuweisungenApi.mir,
-    enabled: istFahrt && !istBearbeiten,
+    enabled: zeigtFahrtFelder && !istBearbeiten,
   });
   useEffect(() => {
     if (zugewiesenesFahrzeug && !fahrzeugId) {
@@ -151,7 +153,7 @@ export function ZeiteintragSheet({
         ende_at: new Date(endeAt).toISOString(),
         taetigkeit,
         abrechenbar,
-        ...(istFahrt ? { km: km || undefined, fahrzeug_id: fahrzeugId || undefined } : {}),
+        ...(zeigtFahrtFelder ? { km: km || undefined, fahrzeug_id: fahrzeugId || undefined } : {}),
       }),
     onSuccess: invalidateUndSchliessen,
     onError: (err) =>
@@ -166,10 +168,11 @@ export function ZeiteintragSheet({
         ende_at: new Date(endeAt).toISOString(),
         taetigkeit,
         abrechenbar,
-        // Beim Wechsel weg von "fahrzeit" werden km/Fahrzeug explizit
-        // geloescht statt stillschweigend stehen zu bleiben.
-        km: istFahrt ? km || null : null,
-        fahrzeug_id: istFahrt ? fahrzeugId || null : null,
+        // Beim Wechsel auf eine Kategorie ohne Fahrt-Feld (z.B. "Urlaub")
+        // werden km/Fahrzeug explizit geloescht statt stillschweigend
+        // stehen zu bleiben.
+        km: zeigtFahrtFelder ? km || null : null,
+        fahrzeug_id: zeigtFahrtFelder ? fahrzeugId || null : null,
         ...(istFremd ? { grund } : {}),
       }),
     onSuccess: invalidateUndSchliessen,
@@ -293,7 +296,7 @@ export function ZeiteintragSheet({
                 {formatZeitpunkt(eintrag.start_at)} – {eintrag.ende_at ? formatZeitpunkt(eintrag.ende_at) : "—"}
               </dd>
             </div>
-            {eintrag.kategorie === "fahrzeit" && eintrag.km && (
+            {eintrag.km && (
               <div className="flex justify-between">
                 <dt className="text-label2">km</dt>
                 <dd className="text-label">
@@ -388,10 +391,12 @@ export function ZeiteintragSheet({
             </div>
           </div>
 
-          {istFahrt && (
+          {zeigtFahrtFelder && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-label2">km</label>
+                <label className="mb-1 block text-xs font-medium text-label2">
+                  km {kategorie === "auftrag" && <span className="font-normal text-label3">(optional)</span>}
+                </label>
                 <input
                   type="number"
                   step="0.1"
