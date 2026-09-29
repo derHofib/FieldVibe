@@ -84,20 +84,22 @@ export function FilterVorlagenLeiste({
             return (
               <div
                 key={v.id}
-                className={`flex shrink-0 items-center gap-1 rounded-full py-1.5 pl-3 pr-1.5 text-xs font-medium ${
+                className={`flex h-8 shrink-0 items-stretch rounded-full pl-3 pr-1 text-xs font-medium ${
                   aktiv
-                    ? "btn-ap-primary text-white"
+                    ? "bg-tint-solid text-white"
                     : "bg-card text-label shadow-xs dark:shadow-none dark:ring-1 "
                 }`}
               >
-                <button onClick={() => onApply(v.filter_json)} className="btn-touch whitespace-nowrap">
+                {/* Feste Chip-Hoehe statt btn-touch: sonst waechst der Chip je
+                    nach Zustand unterschiedlich und die Leiste springt. */}
+                <button onClick={() => onApply(v.filter_json)} className="whitespace-nowrap pr-1">
                   {v.ist_standard && "★ "}
                   {v.name}
                 </button>
                 <button
                   onClick={() => standardMutation.mutate(v)}
                   title={v.ist_standard ? "Als Standard entfernen" : "Als Standard setzen"}
-                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-label2"}`}
+                  className={`px-1.5 ${aktiv ? "text-white/80" : "text-label2"}`}
                 >
                   {v.ist_standard ? "★" : "☆"}
                 </button>
@@ -105,7 +107,7 @@ export function FilterVorlagenLeiste({
                   onClick={() => {
                     if (window.confirm(`Filter-Vorlage "${v.name}" löschen?`)) deleteMutation.mutate(v.id);
                   }}
-                  className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-label2"}`}
+                  className={`px-1.5 ${aktiv ? "text-white/80" : "text-label2"}`}
                 >
                   ×
                 </button>
