@@ -119,6 +119,7 @@ import type {
   RechnungPosition,
   RechnungPositionQuelle,
   RechnungPositionVorschlag,
+  AbrechenbarerVorgang,
   RechnungZahlungCreate,
   RechteAktion,
   RechteBereich,
@@ -1243,6 +1244,7 @@ export const rechnungenApi = {
     faellig_am?: string;
     leistungsdatum?: string;
     positionen?: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
+    vorgaenge?: { vorgang_id: string; stundensatz: string }[];
   }) => apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
   addPosition: (
     id: string,
@@ -1252,6 +1254,13 @@ export const rechnungenApi = {
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   removePosition: (id: string, positionId: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen/${positionId}`, { method: "DELETE" }),
+  updatePosition: (id: string, positionId: string, body: { beschreibung?: string; einzelpreis?: string }) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen/${positionId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  abrechenbareVorgaenge: (kundeId: string) =>
+    apiFetch<AbrechenbarerVorgang[]>(`/api/rechnungen/abrechenbare-vorgaenge?kunde_id=${encodeURIComponent(kundeId)}`),
   updateStatus: (id: string, status: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
   storno: (id: string) => apiFetch<Rechnung>(`/api/rechnungen/${id}/storno`, { method: "POST" }),

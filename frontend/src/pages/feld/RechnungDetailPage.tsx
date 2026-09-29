@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, FileText, ListChecks, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -103,6 +103,44 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
   );
 }
 
+/** Einzelpreis im Entwurf inline editierbar; gespeichert wird bei Enter/Blur,
+ * nur wenn sich der Wert geaendert hat. */
+function EinzelpreisFeld({
+  wert,
+  disabled,
+  onSpeichern,
+}: {
+  wert: string;
+  disabled: boolean;
+  onSpeichern: (neu: string) => void;
+}) {
+  const [text, setText] = useState(wert);
+  useEffect(() => setText(wert), [wert]);
+  const speichern = () => {
+    if (text === "" || Number(text) === Number(wert)) {
+      setText(wert);
+      return;
+    }
+    onSpeichern(text);
+  };
+  return (
+    <input
+      type="number"
+      step="0.01"
+      min="0"
+      value={text}
+      disabled={disabled}
+      aria-label="Einzelpreis (EUR)"
+      onChange={(e) => setText(e.target.value)}
+      onBlur={speichern}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      className="w-20 border border-sep bg-transparent px-1.5 py-0.5 text-right text-xs text-label disabled:opacity-50"
+    />
+  );
+}
+
 const ZAHLUNGSART_OPTIONEN: { value: RechnungZahlungsart; label: string }[] = [
   { value: "ueberweisung", label: "Überweisung" },
   { value: "bar", label: "Bar" },
@@ -194,6 +232,12 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
   const removePositionMutation = useMutation({
     mutationFn: (positionId: string) => rechnungenApi.removePosition(id!, positionId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
+  });
+
+  const updatePositionMutation = useMutation({
+    mutationFn: ({ positionId, einzelpreis }: { positionId: string; einzelpreis: string }) =>
+      rechnungenApi.updatePosition(id!, positionId, { einzelpreis }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
   });
 
@@ -441,6 +485,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
         )}
 
+        {updatePositionMutation.isError && (
+          <p className="mb-2 text-xs text-st-fehlt">
+            {updatePositionMutation.error instanceof ApiError
+              ? updatePositionMutation.error.message
+              : "Preis konnte nicht gespeichert werden"}
+          </p>
+        )}
+
         {rechnung.positionen.length === 0 ? (
           <p className="text-sm text-label2">
             Keine eigenen Positionen -- Betrag wurde als Gesamtsumme angelegt.
@@ -454,9 +506,24 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               >
                 <div>
                   <div className="text-label">{p.beschreibung}</div>
-                  <div className="text-xs text-label2">
-                    {p.menge} {p.einheit} × {p.einzelpreis} EUR
+                  <div className="flex items-center gap-1 text-xs text-label2">
+                    {p.menge} {p.einheit} ×{" "}
+                    {rechnung.status === "entwurf" ? (
+                      <EinzelpreisFeld
+                        wert={p.einzelpreis}
+                        disabled={updatePositionMutation.isPending}
+                        onSpeichern={(einzelpreis) =>
+                          updatePositionMutation.mutate({ positionId: p.id, einzelpreis })
+                        }
+                      />
+                    ) : (
+                      p.einzelpreis
+                    )}{" "}
+                    EUR
                   </div>
+                  {p.quelle === "zeit" && Number(p.einzelpreis) === 0 && (
+                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">Stundensatz fehlt</div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="font-medium text-label">{p.gesamt} EUR</div>

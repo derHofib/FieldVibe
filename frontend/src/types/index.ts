@@ -876,6 +876,17 @@ export interface RechnungPosition {
   einzelpreis: string;
   gesamt: string;
   quelle: RechnungPositionQuelle | null;
+  vorgang_id: string | null;
+}
+
+// Offene, noch nicht abgerechnete Stunden eines Vorgangs (Einzelposten-
+// Rechnung) -- getrennt nach Stunden mit und ohne hinterlegten SVS.
+export interface AbrechenbarerVorgang {
+  vorgang_id: string;
+  vorgangsnummer: string;
+  titel: string;
+  stunden_ohne_svs: string;
+  stunden_mit_svs: string;
 }
 
 // Vom Backend bei jedem Aufruf frisch aus Material-Verwendungen und
