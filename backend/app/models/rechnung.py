@@ -129,6 +129,11 @@ class RechnungPosition(Base):
         nullable=True,
         index=True,
     )
+    # Nur bei quelle="material": Grundlage fuers gezielte Freigeben der
+    # MaterialVerwendungen dieses Materials am Vorgang beim Entfernen.
+    material_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("material.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
 
 class RechnungZahlung(Base):

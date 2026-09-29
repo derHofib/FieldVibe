@@ -14,17 +14,11 @@ from app.models.zeiterfassung import Zeiterfassung
 from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.services import rechnung_service
 from tests.conftest import auth_headers, login
-from tests.test_rechnungen_sammelrechnung import _daten_zwei_vorgaenge, _setup, _svs, _zeit
+from tests.test_rechnungen_sammelrechnung import _daten_zwei_vorgaenge, _setup, _svs, _zeit, sammelrechnung
 
 
 async def _sammelrechnung(client, token, kunde, *vorgaenge):
-    resp = await client.post(
-        "/api/rechnungen",
-        headers=auth_headers(token),
-        json={"kunde_id": str(kunde.id), "vorgaenge": [{"vorgang_id": str(v.id)} for v in vorgaenge]},
-    )
-    assert resp.status_code == 201, resp.text
-    return resp.json()
+    return await sammelrechnung(client, token, kunde, *vorgaenge)
 
 
 async def _zeilen(*ids):
@@ -127,14 +121,6 @@ async def test_storno_gibt_stunden_frei_und_schreibt_events_an_alle_vorgaenge(
     mandant, admin, kunde, va, vb, token = await _setup(client, make_mandant, make_user, make_kunde, make_vorgang)
     ids = await _daten_zwei_vorgaenge(mandant, admin, va, vb)
     rechnung = await _sammelrechnung(client, token, kunde, va, vb)
-    # pdf_service._positionen_tabelle maskiert den Gedankenstrich der
-    # Sammelrechnungs-Beschreibungen nicht (bekannter Fund, nicht Teil dieses
-    # Tests) -- fuer den Versand hier ASCII setzen.
-    async with system_session() as session:
-        for p in (
-            await session.execute(select(RechnungPosition).where(RechnungPosition.rechnung_id == UUID(rechnung["id"])))
-        ).scalars():
-            p.beschreibung = p.beschreibung.replace("\u2013", "-")
     resp = await client.patch(
         f"/api/rechnungen/{rechnung['id']}", headers=auth_headers(token), json={"status": "versendet"}
     )
@@ -147,8 +133,14 @@ async def test_storno_gibt_stunden_frei_und_schreibt_events_an_alle_vorgaenge(
     for e in await _zeilen(*ids):
         assert e.buchungsstatus == "gebucht"
         assert e.abgerechnet_rechnung_id is None
-    # Die Stornorechnung selbst sperrt nichts und traegt keine Quelle/Vorgang
-    assert all(p["quelle"] is None and p["vorgang_id"] is None for p in storno["positionen"])
+    # Die Stornorechnung selbst sperrt nichts: keine Quelle/LV-/Material-Bezuege,
+    # der Vorgang bleibt nur fuer die Gruppendarstellung der Storno-PDF erhalten.
+    assert all(
+        p["quelle"] is None and p["lv_position_id"] is None and p["material_id"] is None
+        for p in storno["positionen"]
+    )
+    assert {p["vorgang_id"] for p in storno["positionen"]} == {str(va.id), str(vb.id)}
+    assert [v["id"] for v in storno["vorgaenge"]] == [str(va.id), str(vb.id)]
     assert await _abrechenbar(client, token, kunde) == {str(va.id), str(vb.id)}
 
     async with system_session() as session:

@@ -82,6 +82,8 @@ class MaterialVerwendungRead(BaseModel):
     menge: Decimal
     verwendet_von: UUID
     created_at: datetime
+    abrechnungsstatus: Literal["offen", "abgerechnet"]
+    abgerechnet_rechnung_id: UUID | None
 
 
 class MaterialVerwendungMitDetails(MaterialVerwendungRead):

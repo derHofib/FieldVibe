@@ -28,6 +28,7 @@ from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.pdf_service import generate_angebot_pdf, generate_rechnung_pdf
 from app.services.rechnung_service import (
     positionen_fuer as rechnung_positionen_fuer,
+    vorgang_koepfe_map,
     to_read_model as rechnung_to_read_model,
 )
 from app.services.storage_service import download_bytes
@@ -202,7 +203,9 @@ async def eigene_rechnung_pdf(
     mandant = await session.get(Mandant, auth.mandant_id)
     positionen = await rechnung_positionen_fuer(session, rechnung.id)
 
-    pdf_bytes = generate_rechnung_pdf(mandant, rechnung, kunde, positionen)
+    pdf_bytes = generate_rechnung_pdf(
+        mandant, rechnung, kunde, positionen, vorgang_koepfe=await vorgang_koepfe_map(session, positionen)
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

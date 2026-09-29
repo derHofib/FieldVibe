@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
+from uuid import UUID
 
 from fpdf import FPDF
 from fpdf.enums import OutputIntentSubType, XPos, YPos
@@ -108,25 +109,74 @@ def _kopf(pdf: FPDF, mandant: Mandant, titel: str, nummer: str, kunde: Kunde) ->
     pdf.ln(6)
 
 
-def _positionen_tabelle(pdf: FPDF, positionen: list[AngebotPosition]) -> Decimal:
+_POSITIONEN_SPALTEN = (("Pos.", 12), ("Beschreibung", 90), ("Menge", 22), ("Einheit", 22), ("Preis", 22), ("Gesamt", 22))
+_POSITIONEN_BREITE = sum(breite for _, breite in _POSITIONEN_SPALTEN)
+
+
+def _positionen_kopfzeile(pdf: FPDF) -> None:
     pdf.set_font("Helvetica", "B", 10)
-    spalten = (("Pos.", 12), ("Beschreibung", 90), ("Menge", 22), ("Einheit", 22), ("Preis", 22), ("Gesamt", 22))
-    for label, breite in spalten:
+    for label, breite in _POSITIONEN_SPALTEN:
         pdf.cell(breite, 8, label, border=1)
     pdf.ln()
-
     pdf.set_font("Helvetica", "", 10)
+
+
+def _positionszeile(pdf: FPDF, p: AngebotPosition) -> Decimal:
+    zeilen_gesamt = p.menge * p.einzelpreis
+    pdf.cell(12, 8, str(p.position), border=1)
+    pdf.cell(90, 8, _pdf_safe_text(p.beschreibung)[:55], border=1)
+    pdf.cell(22, 8, f"{p.menge:g}", border=1, align="R")
+    pdf.cell(22, 8, _pdf_safe_text(p.einheit), border=1)
+    pdf.cell(22, 8, _fmt_betrag(p.einzelpreis), border=1, align="R")
+    pdf.cell(22, 8, _fmt_betrag(zeilen_gesamt), border=1, align="R")
+    pdf.ln()
+    return zeilen_gesamt
+
+
+def _positionen_tabelle(pdf: FPDF, positionen: list[AngebotPosition]) -> Decimal:
+    _positionen_kopfzeile(pdf)
     gesamt_netto = Decimal("0")
     for p in sorted(positionen, key=lambda x: x.position):
-        zeilen_gesamt = p.menge * p.einzelpreis
-        gesamt_netto += zeilen_gesamt
-        pdf.cell(12, 8, str(p.position), border=1)
-        pdf.cell(90, 8, _pdf_safe_text(p.beschreibung)[:55], border=1)
-        pdf.cell(22, 8, f"{p.menge:g}", border=1, align="R")
-        pdf.cell(22, 8, _pdf_safe_text(p.einheit), border=1)
-        pdf.cell(22, 8, _fmt_betrag(p.einzelpreis), border=1, align="R")
-        pdf.cell(22, 8, _fmt_betrag(zeilen_gesamt), border=1, align="R")
-        pdf.ln()
+        gesamt_netto += _positionszeile(pdf, p)
+    return gesamt_netto
+
+
+def _rechnung_positionen_tabelle(
+    pdf: FPDF, positionen: list[RechnungPosition], vorgang_koepfe: dict[UUID, tuple[str, str]]
+) -> Decimal:
+    """Positionen ohne Vorgang zuerst wie bisher, danach je Vorgang eine
+    Kopfzeile, dessen Positionen und eine Zwischensumme. Ohne vorgang_id an
+    irgendeiner Position ist das Ergebnis identisch zu _positionen_tabelle."""
+    _positionen_kopfzeile(pdf)
+    sortiert = sorted(positionen, key=lambda x: x.position)
+    gesamt_netto = Decimal("0")
+    gruppen: dict[UUID, list[RechnungPosition]] = {}
+    for p in sortiert:
+        if p.vorgang_id is None:
+            gesamt_netto += _positionszeile(pdf, p)
+        else:
+            gruppen.setdefault(p.vorgang_id, []).append(p)
+
+    for vorgang_id, gruppe in gruppen.items():
+        nummer, titel = vorgang_koepfe.get(vorgang_id, ("Vorgang", ""))
+        pdf.set_font("Helvetica", "B", 10)
+        kopf = f"{nummer} · {titel}" if titel else nummer
+        pdf.cell(_POSITIONEN_BREITE, 8, _pdf_safe_text(kopf)[:95], border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_font("Helvetica", "", 10)
+        zwischensumme = Decimal("0")
+        for p in gruppe:
+            zwischensumme += _positionszeile(pdf, p)
+        gesamt_netto += zwischensumme
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(
+            _POSITIONEN_BREITE - 22,
+            8,
+            _pdf_safe_text(f"Zwischensumme {nummer}"),
+            border=1,
+            align="R",
+        )
+        pdf.cell(22, 8, _fmt_betrag(zwischensumme), border=1, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_font("Helvetica", "", 10)
     return gesamt_netto
 
 
@@ -381,6 +431,7 @@ def generate_rechnung_pdf(
     positionen: list[RechnungPosition] | None = None,
     storniert_rechnung: Rechnung | None = None,
     *,
+    vorgang_koepfe: dict[UUID, tuple[str, str]] | None = None,
     pdfa_output_intent: bool = False,
 ) -> bytes:
     """pdfa_output_intent=True fuegt einen sRGB-OutputIntent hinzu (Betriebs-
@@ -413,7 +464,7 @@ def generate_rechnung_pdf(
     pdf.ln(4)
 
     if positionen:
-        gesamt_netto = _positionen_tabelle(pdf, positionen)
+        gesamt_netto = _rechnung_positionen_tabelle(pdf, positionen, vorgang_koepfe or {})
     else:
         gesamt_netto = rechnung.betrag_netto
 

@@ -23,6 +23,9 @@ class RechnungPositionCreate(BaseModel):
     # Nur bei quelle="leistung": die LV-Position, deren SVS-gekoppelte Zeit
     # mit uebernommen (und gesperrt) wird.
     lv_position_id: UUID | None = None
+    # Nur bei quelle="material": das Material, dessen offene Verwendungen am
+    # Vorgang mit uebernommen (und gesperrt) werden.
+    material_id: UUID | None = None
 
 
 class RechnungPositionRead(BaseModel):
@@ -37,6 +40,7 @@ class RechnungPositionRead(BaseModel):
     quelle: RechnungPositionQuelle | None
     vorgang_id: UUID | None
     lv_position_id: UUID | None
+    material_id: UUID | None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -55,6 +59,7 @@ class RechnungPositionVorschlag(BaseModel):
     einheit: str
     einzelpreis: Decimal
     lv_position_id: UUID | None = None
+    material_id: UUID | None = None
 
 
 class RechnungZahlungCreate(BaseModel):
@@ -77,11 +82,24 @@ class RechnungZahlungRead(BaseModel):
     created_at: datetime
 
 
-class RechnungVorgangAuswahl(BaseModel):
+class RechnungVorgangAuswahlPosten(BaseModel):
+    quelle: RechnungPositionQuelle
+    lv_position_id: UUID | None = None
+    material_id: UUID | None = None
+
+
+class RechnungVorgangUebernahme(BaseModel):
     vorgang_id: UUID
     # Zeit ohne SVS-Kopplung hat keinen hinterlegten Satz (siehe
-    # positionen_vorschlaege_fuer_vorgang) -- er wird je Vorgang mitgegeben.
+    # positionen_vorschlaege_fuer_vorgang) -- er wird je Uebernahme mitgegeben.
     stundensatz: Decimal = Field(default=Decimal("0"), ge=0)
+    auswahl: list[RechnungVorgangAuswahlPosten]
+
+
+class RechnungVorgangKopf(BaseModel):
+    id: UUID
+    vorgangsnummer: str
+    titel: str
 
 
 class RechnungPositionUpdate(BaseModel):
@@ -97,15 +115,14 @@ class AbrechenbarerVorgang(BaseModel):
     titel: str
     stunden_ohne_svs: Decimal
     stunden_mit_svs: Decimal
+    # Anzahl verschiedener Materialien mit offenen (nicht abgerechneten)
+    # Verwendungen am Vorgang.
+    material_offen: int = 0
 
 
 class RechnungCreate(BaseModel):
     kunde_id: UUID
     vorgang_id: UUID | None = None
-    # Sammelrechnung: gebuchte, abrechenbare Stunden mehrerer Vorgaenge
-    # desselben Kunden werden als Positionen uebernommen. Schliesst
-    # vorgang_id aus.
-    vorgaenge: list[RechnungVorgangAuswahl] = Field(default_factory=list)
     # betrag_netto bleibt der einfache Weg fuer eine einzelne Abschlussrechnung
     # ohne eigene Positionen (unveraendertes Verhalten aus Phase 6). Werden
     # positionen mitgegeben, wird betrag_netto beim Lesen durch deren Summe
@@ -153,6 +170,9 @@ class RechnungRead(BaseModel):
     updated_at: datetime
     positionen: list[RechnungPositionRead]
     zahlungen: list[RechnungZahlungRead] = Field(default_factory=list)
+    # Alle distinct vorgang_id der Positionen, nach erster Positionsnummer --
+    # Grundlage der Gruppendarstellung (Ueberschrift je Vorgang).
+    vorgaenge: list[RechnungVorgangKopf] = Field(default_factory=list)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

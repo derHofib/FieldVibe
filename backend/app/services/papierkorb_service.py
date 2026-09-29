@@ -48,6 +48,9 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.zeiterfassung import Zeiterfassung
 from app.services.rechnung_service import (
+    material_freigeben_fuer_rechnung,
+    material_verweis_loesen,
+    material_wieder_sperren_fuer_rechnung,
     zeiterfassung_freigeben_fuer_rechnung,
     zeiterfassung_verweis_loesen,
     zeiterfassung_wieder_sperren_fuer_rechnung,
@@ -270,6 +273,7 @@ async def soft_delete(
             await zeiterfassung_freigeben_fuer_rechnung(
                 session, rechnung_id=eid, geaendert_von=actor_user_id, verweis_behalten=True
             )
+            await material_freigeben_fuer_rechnung(session, rechnung_id=eid, verweis_behalten=True)
         for kind_typ, fk_attr in kind.kinder:
             for kind_id in await _aktive_kinder(
                 session, kind_typ=kind_typ, fk_attr=fk_attr, parent_id=eid
@@ -296,6 +300,7 @@ async def restore(
         await zeiterfassung_wieder_sperren_fuer_rechnung(
             session, rechnung_id=entity_id, geaendert_von=actor_user_id
         )
+        await material_wieder_sperren_fuer_rechnung(session, rechnung_id=entity_id)
     await session.flush()
     return obj
 
@@ -326,6 +331,7 @@ async def purge(session: AsyncSession, *, entity_typ: str, entity_id: UUID) -> b
 
     if entity_typ == "rechnung":
         await zeiterfassung_verweis_loesen(session, rechnung_id=entity_id)
+        await material_verweis_loesen(session, rechnung_id=entity_id)
     await session.delete(obj)
     await session.flush()
     return True

@@ -11,12 +11,16 @@ from app.models.leistungsverzeichnis import LeistungsverzeichnisPosition, Leistu
 from app.models.mandant import Mandant
 from app.models.material import Material, MaterialVerwendung
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
+from app.models.vorgang import Vorgang
+from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.schemas.rechnung import (
     RechnungPositionRead,
     RechnungPositionVorschlag,
     RechnungRead,
+    RechnungVorgangAuswahlPosten,
+    RechnungVorgangKopf,
     RechnungZahlungRead,
 )
 from app.services import e_invoice_service, pdf_service, storage_service
@@ -73,13 +77,19 @@ async def positionen_vorschlaege_fuer_vorgang(
     LV-Eintrag ausgegeben."""
     material_stmt = (
         select(
+            Material.id,
             Material.bezeichnung,
             Material.einheit,
             Material.einzelpreis,
             func.sum(MaterialVerwendung.menge).label("menge"),
         )
         .join(Material, Material.id == MaterialVerwendung.material_id)
-        .where(MaterialVerwendung.vorgang_id == vorgang_id)
+        .where(
+            MaterialVerwendung.vorgang_id == vorgang_id,
+            # Bereits in eine Rechnung uebernommenes Material ist gesperrt
+            # (Spiegel zu Zeiterfassung.buchungsstatus == "gebucht").
+            MaterialVerwendung.abrechnungsstatus == "offen",
+        )
         .group_by(Material.id, Material.bezeichnung, Material.einheit, Material.einzelpreis)
         .order_by(Material.bezeichnung)
     )
@@ -91,8 +101,9 @@ async def positionen_vorschlaege_fuer_vorgang(
             menge=menge,
             einheit=einheit,
             einzelpreis=einzelpreis or Decimal("0"),
+            material_id=material_id,
         )
-        for bezeichnung, einheit, einzelpreis, menge in material_result.all()
+        for material_id, bezeichnung, einheit, einzelpreis, menge in material_result.all()
     ]
 
     # Zeit OHNE SVS-Kopplung: eine einzelne unbepreiste Sammelposition, wie
@@ -408,6 +419,164 @@ async def zeiterfassung_verweis_loesen(session: AsyncSession, *, rechnung_id: UU
     )
 
 
+async def material_abrechnen(
+    session: AsyncSession, *, vorgang_id: UUID, material_id: UUID, rechnung_id: UUID
+) -> None:
+    """Sperrt alle offenen Verwendungen dieses Materials am Vorgang, wenn die
+    zugehoerige "material"-Position in eine Rechnung uebernommen wird
+    (Spiegel zu zeiterfassung_abrechnen). Bestand/Bewegungen bleiben
+    unberuehrt -- die wurden schon beim Erfassen der Verwendung gebucht."""
+    stmt = select(MaterialVerwendung).where(
+        MaterialVerwendung.vorgang_id == vorgang_id,
+        MaterialVerwendung.material_id == material_id,
+        MaterialVerwendung.abrechnungsstatus == "offen",
+    )
+    for verwendung in (await session.execute(stmt)).scalars().all():
+        verwendung.abrechnungsstatus = "abgerechnet"
+        verwendung.abgerechnet_rechnung_id = rechnung_id
+
+
+async def material_abrechnung_zuruecksetzen(
+    session: AsyncSession, *, rechnung_id: UUID, vorgang_id: UUID, material_id: UUID
+) -> None:
+    """Kehrt material_abrechnen beim Entfernen einer Material-Position um. Der
+    Aufrufer prueft vorher, ob noch eine zweite Position mit gleichem
+    Vorgang+Material auf der Rechnung besteht."""
+    stmt = select(MaterialVerwendung).where(
+        MaterialVerwendung.abgerechnet_rechnung_id == rechnung_id,
+        MaterialVerwendung.abrechnungsstatus == "abgerechnet",
+        MaterialVerwendung.vorgang_id == vorgang_id,
+        MaterialVerwendung.material_id == material_id,
+    )
+    for verwendung in (await session.execute(stmt)).scalars().all():
+        verwendung.abrechnungsstatus = "offen"
+        verwendung.abgerechnet_rechnung_id = None
+
+
+async def material_freigeben_fuer_rechnung(
+    session: AsyncSession, *, rechnung_id: UUID, verweis_behalten: bool
+) -> None:
+    """Gegenstueck zu zeiterfassung_freigeben_fuer_rechnung fuer Material
+    (Loeschen des Entwurfs, Storno). verweis_behalten=True laesst den Verweis
+    fuers Wiederherstellen aus dem Papierkorb stehen."""
+    stmt = select(MaterialVerwendung).where(
+        MaterialVerwendung.abgerechnet_rechnung_id == rechnung_id,
+        MaterialVerwendung.abrechnungsstatus == "abgerechnet",
+    )
+    for verwendung in (await session.execute(stmt)).scalars().all():
+        verwendung.abrechnungsstatus = "offen"
+        if not verweis_behalten:
+            verwendung.abgerechnet_rechnung_id = None
+
+
+async def material_wieder_sperren_fuer_rechnung(session: AsyncSession, *, rechnung_id: UUID) -> None:
+    """Gegenstueck zu material_freigeben_fuer_rechnung(verweis_behalten=True)
+    beim Wiederherstellen. Verwendungen, die zwischenzeitlich von einer
+    anderen Rechnung gesperrt wurden, zeigen auf diese und werden uebergangen."""
+    stmt = select(MaterialVerwendung).where(
+        MaterialVerwendung.abgerechnet_rechnung_id == rechnung_id,
+        MaterialVerwendung.abrechnungsstatus == "offen",
+    )
+    for verwendung in (await session.execute(stmt)).scalars().all():
+        verwendung.abrechnungsstatus = "abgerechnet"
+
+
+async def material_verweis_loesen(session: AsyncSession, *, rechnung_id: UUID) -> None:
+    """Vor dem endgueltigen Loeschen einer Rechnung: siehe
+    zeiterfassung_verweis_loesen."""
+    await session.execute(
+        update(MaterialVerwendung)
+        .where(
+            MaterialVerwendung.abgerechnet_rechnung_id == rechnung_id,
+            MaterialVerwendung.abrechnungsstatus == "offen",
+        )
+        .values(abgerechnet_rechnung_id=None)
+    )
+
+
+def _auswahl_schluessel(
+    quelle: str, lv_position_id: UUID | None, material_id: UUID | None
+) -> tuple[str, UUID | None, UUID | None]:
+    """Identifiziert einen Vorschlag-Posten: die IDs zaehlen nur bei der
+    Quelle, zu der sie gehoeren."""
+    return (
+        quelle,
+        lv_position_id if quelle == "leistung" else None,
+        material_id if quelle == "material" else None,
+    )
+
+
+async def vorgang_uebernehmen(
+    session: AsyncSession,
+    *,
+    rechnung: Rechnung,
+    vorgang: Vorgang,
+    mandant: Mandant,
+    stundensatz: Decimal,
+    auswahl: list[RechnungVorgangAuswahlPosten],
+    actor_user_id: UUID,
+) -> int:
+    """Uebernimmt die gewaehlten Posten eines Vorgangs in den Rechnungsentwurf
+    und sperrt deren Grundlage (Zeit/Leistung/Material). Die Vorschlaege
+    werden neu berechnet -- was seit der Auswahl nicht mehr offen ist, wird
+    uebersprungen statt abzubrechen. Gibt die Anzahl angelegter Positionen
+    zurueck."""
+    gewaehlt = {_auswahl_schluessel(a.quelle, a.lv_position_id, a.material_id) for a in auswahl}
+    vorschlaege = await positionen_vorschlaege_fuer_vorgang(session, vorgang.id, mandant)
+    naechste_position = max((p.position for p in await positionen_fuer(session, rechnung.id)), default=0) + 1
+
+    angelegt = 0
+    for vorschlag in vorschlaege:
+        if _auswahl_schluessel(vorschlag.quelle, vorschlag.lv_position_id, vorschlag.material_id) not in gewaehlt:
+            continue
+        session.add(
+            RechnungPosition(
+                mandant_id=rechnung.mandant_id,
+                rechnung_id=rechnung.id,
+                position=naechste_position,
+                # Ohne Vorgangsnummer: der Gruppenkopf zeigt den Vorgang.
+                beschreibung=vorschlag.beschreibung,
+                menge=vorschlag.menge,
+                einheit=vorschlag.einheit,
+                einzelpreis=stundensatz if vorschlag.quelle == "zeit" else vorschlag.einzelpreis,
+                quelle=vorschlag.quelle,
+                vorgang_id=vorgang.id,
+                lv_position_id=vorschlag.lv_position_id,
+                material_id=vorschlag.material_id,
+            )
+        )
+        naechste_position += 1
+        angelegt += 1
+        if vorschlag.quelle == "material":
+            if vorschlag.material_id is not None:
+                await material_abrechnen(
+                    session, vorgang_id=vorgang.id, material_id=vorschlag.material_id, rechnung_id=rechnung.id
+                )
+        else:
+            await zeiterfassung_abrechnen(
+                session,
+                vorgang_id=vorgang.id,
+                quelle=vorschlag.quelle,
+                rechnung_id=rechnung.id,
+                geaendert_von=actor_user_id,
+                lv_position_id=vorschlag.lv_position_id,
+            )
+
+    if angelegt:
+        session.add(
+            VorgangEvent(
+                mandant_id=rechnung.mandant_id,
+                vorgang_id=vorgang.id,
+                event_type="rechnung_status",
+                author_user_id=actor_user_id,
+                body=f"Rechnung {rechnung.rechnungsnummer}: Vorgang übernommen",
+                payload={"rechnung_id": str(rechnung.id), "status": rechnung.status},
+            )
+        )
+    await session.flush()
+    return angelegt
+
+
 def netto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Decimal:
     """Positionen (falls vorhanden) sind die Quelle der Wahrheit, dieselbe
     Ueberlegung wie bei Angebot.gesamt_netto: verhindert eine veraltete Summe
@@ -552,6 +721,7 @@ async def kunden_namen_fuer(
 _AUSGESCHLOSSENE_FELDER = (
     "positionen",
     "zahlungen",
+    "vorgaenge",
     "betrag_netto",
     "betrag_brutto",
     "bezahlter_betrag",
@@ -561,14 +731,52 @@ _AUSGESCHLOSSENE_FELDER = (
 )
 
 
+async def vorgang_koepfe_fuer_mehrere(
+    session: AsyncSession, rechnung_ids: list[UUID]
+) -> dict[UUID, list[RechnungVorgangKopf]]:
+    """Eine Query fuer alle Rechnungen einer Seite: distinct Vorgaenge der
+    Positionen, je Rechnung nach der ersten Positionsnummer sortiert."""
+    if not rechnung_ids:
+        return {}
+    erste_position = func.min(RechnungPosition.position)
+    result = await session.execute(
+        select(RechnungPosition.rechnung_id, Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel)
+        .join(Vorgang, Vorgang.id == RechnungPosition.vorgang_id)
+        .where(RechnungPosition.rechnung_id.in_(rechnung_ids))
+        .group_by(RechnungPosition.rechnung_id, Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel)
+        .order_by(RechnungPosition.rechnung_id, erste_position)
+    )
+    gruppiert: dict[UUID, list[RechnungVorgangKopf]] = {rid: [] for rid in rechnung_ids}
+    for rechnung_id, vorgang_id, nummer, titel in result.all():
+        gruppiert[rechnung_id].append(RechnungVorgangKopf(id=vorgang_id, vorgangsnummer=nummer, titel=titel))
+    return gruppiert
+
+
+async def vorgang_koepfe_map(
+    session: AsyncSession, positionen: list[RechnungPosition]
+) -> dict[UUID, tuple[str, str]]:
+    """vorgang_id -> (Vorgangsnummer, Titel) fuer die Gruppenkoepfe der PDF."""
+    ids = {p.vorgang_id for p in positionen if p.vorgang_id is not None}
+    if not ids:
+        return {}
+    result = await session.execute(
+        select(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel).where(Vorgang.id.in_(ids))
+    )
+    return {vorgang_id: (nummer, titel) for vorgang_id, nummer, titel in result.all()}
+
+
 def _read_model_aus(
-    rechnung: Rechnung, positionen: list[RechnungPosition], zahlungen: list[RechnungZahlung]
+    rechnung: Rechnung,
+    positionen: list[RechnungPosition],
+    zahlungen: list[RechnungZahlung],
+    vorgaenge: list[RechnungVorgangKopf],
 ) -> RechnungRead:
     return RechnungRead(
         **{k: getattr(rechnung, k) for k in RechnungRead.model_fields if k not in _AUSGESCHLOSSENE_FELDER},
         betrag_netto=netto_betrag(rechnung, positionen),
         positionen=[RechnungPositionRead.model_validate(p) for p in positionen],
         zahlungen=[RechnungZahlungRead.model_validate(z) for z in zahlungen],
+        vorgaenge=vorgaenge,
     )
 
 
@@ -578,8 +786,14 @@ async def to_read_model_bulk(
     ids = [r.id for r in rechnungen]
     positionen_je_rechnung = await positionen_fuer_mehrere(session, ids)
     zahlungen_je_rechnung = await zahlungen_fuer_mehrere(session, ids)
+    vorgaenge_je_rechnung = await vorgang_koepfe_fuer_mehrere(session, ids)
     return [
-        _read_model_aus(r, positionen_je_rechnung.get(r.id, []), zahlungen_je_rechnung.get(r.id, []))
+        _read_model_aus(
+            r,
+            positionen_je_rechnung.get(r.id, []),
+            zahlungen_je_rechnung.get(r.id, []),
+            vorgaenge_je_rechnung.get(r.id, []),
+        )
         for r in rechnungen
     ]
 
@@ -587,7 +801,8 @@ async def to_read_model_bulk(
 async def to_read_model(session: AsyncSession, rechnung: Rechnung) -> RechnungRead:
     positionen = await positionen_fuer(session, rechnung.id)
     zahlungen = await zahlungen_fuer(session, rechnung.id)
-    return _read_model_aus(rechnung, positionen, zahlungen)
+    vorgaenge = (await vorgang_koepfe_fuer_mehrere(session, [rechnung.id]))[rechnung.id]
+    return _read_model_aus(rechnung, positionen, zahlungen, vorgaenge)
 
 
 async def erstelle_stornorechnung(
@@ -631,6 +846,10 @@ async def erstelle_stornorechnung(
                 menge=p.menge,
                 einheit=p.einheit,
                 einzelpreis=-p.einzelpreis,
+                # Nur fuer die Gruppendarstellung der Storno-PDF -- quelle/
+                # lv_position_id/material_id bleiben leer, damit der Beleg nie
+                # als Sperrgrundlage gilt.
+                vorgang_id=p.vorgang_id,
             )
         )
 
@@ -646,13 +865,14 @@ def _rechnung_dokument_bytes(
     kunde: Kunde,
     positionen: list[RechnungPosition],
     storniert_rechnung: Rechnung | None,
+    vorgang_koepfe: dict[UUID, tuple[str, str]],
 ) -> tuple[bytes, bytes | None]:
     """Normales PDF ist immer der Ausgangspunkt. Nur wenn der Mandant
     e_rechnung_aktiv gesetzt hat UND alle EN16931-Pflichtangaben vorhanden
     sind, wird stattdessen ein ZUGFeRD-Hybrid-PDF (mit eingebetteter CII-XML)
     erzeugt -- sonst stiller Fallback aufs normale PDF, kein Versand-Block."""
     pdf_bytes = pdf_service.generate_rechnung_pdf(
-        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung
+        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung, vorgang_koepfe=vorgang_koepfe
     )
     if not (mandant.firmendaten or {}).get("e_rechnung_aktiv"):
         return pdf_bytes, None
@@ -665,7 +885,13 @@ def _rechnung_dokument_bytes(
     dokument = e_invoice_service.baue_cii_dokument(mandant, rechnung, kunde, positionen, netto, brutto)
     xml_bytes = e_invoice_service.cii_xml_bytes(dokument)
     pdf_bytes_mit_output_intent = pdf_service.generate_rechnung_pdf(
-        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung, pdfa_output_intent=True
+        mandant,
+        rechnung,
+        kunde,
+        positionen,
+        storniert_rechnung=storniert_rechnung,
+        vorgang_koepfe=vorgang_koepfe,
+        pdfa_output_intent=True,
     )
     hybrid_pdf_bytes = e_invoice_service.baue_hybrid_pdf(pdf_bytes_mit_output_intent, xml_bytes)
     return hybrid_pdf_bytes, xml_bytes
@@ -685,7 +911,8 @@ async def archiviere_pdf(
     der Aufrufer sie z.B. direkt als E-Mail-Anhang weiterverwenden kann,
     ohne sie erneut aus MinIO abzurufen."""
     positionen = await positionen_fuer(session, rechnung.id)
-    pdf_bytes, xml_bytes = _rechnung_dokument_bytes(rechnung, mandant, kunde, positionen, storniert_rechnung)
+    koepfe = await vorgang_koepfe_map(session, positionen)
+    pdf_bytes, xml_bytes = _rechnung_dokument_bytes(rechnung, mandant, kunde, positionen, storniert_rechnung, koepfe)
     key = storage_service.new_rechnung_pdf_key(rechnung.id)
     await storage_service.upload_bytes(key, pdf_bytes, "application/pdf")
     rechnung.pdf_object_key = key
@@ -710,5 +937,10 @@ async def pdf_bytes_fuer(
         return await storage_service.download_bytes(rechnung.pdf_object_key)
     positionen = await positionen_fuer(session, rechnung.id)
     return pdf_service.generate_rechnung_pdf(
-        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung
+        mandant,
+        rechnung,
+        kunde,
+        positionen,
+        storniert_rechnung=storniert_rechnung,
+        vorgang_koepfe=await vorgang_koepfe_map(session, positionen),
     )

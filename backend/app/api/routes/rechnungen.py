@@ -17,6 +17,7 @@ from app.api.deps import (
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
+from app.models.material import Material, MaterialVerwendung
 from app.models.rechnung import RECHNUNG_ZAHLUNGSARTEN, Rechnung, RechnungPosition, RechnungZahlung
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
@@ -31,6 +32,7 @@ from app.schemas.rechnung import (
     RechnungPositionVorschlag,
     RechnungRead,
     RechnungUpdate,
+    RechnungVorgangUebernahme,
     RechnungZahlungCreate,
 )
 from app.services import papierkorb_service, storage_service
@@ -44,6 +46,9 @@ from app.services.rechnung_service import (
     brutto_sql,
     erstelle_stornorechnung,
     kunden_namen_fuer,
+    material_abrechnen,
+    material_abrechnung_zuruecksetzen,
+    material_freigeben_fuer_rechnung,
     netto_sql,
     offen_sql,
     pdf_bytes_fuer,
@@ -52,6 +57,7 @@ from app.services.rechnung_service import (
     status_nach_zahlung,
     to_read_model,
     to_read_model_bulk,
+    vorgang_uebernehmen,
     zahlungen_fuer,
     zeiterfassung_abrechnen,
     zeiterfassung_abrechnung_zuruecksetzen,
@@ -326,13 +332,14 @@ async def list_abrechenbare_vorgaenge(
     kunde_id: UUID = Query(...),
     session: AsyncSession = Depends(get_db),
 ) -> list[AbrechenbarerVorgang]:
-    """Auswahlliste fuer die Sammelrechnung. Dieselben Kriterien wie die
-    Zeit-Vorschlaege (positionen_vorschlaege_fuer_vorgang) -- eine Query
-    gruppiert ueber alle Vorgaenge des Kunden statt eine je Vorgang."""
+    """Auswahlliste fuer "Vorgang hinzufuegen". Dieselben Kriterien wie die
+    Vorschlaege (positionen_vorschlaege_fuer_vorgang) -- eine Query je Quelle
+    gruppiert ueber alle Vorgaenge des Kunden statt eine je Vorgang. Ein
+    Vorgang erscheint bei offenen Stunden ODER offenem Material."""
     dauer = func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)
     ohne_svs = func.coalesce(func.sum(case((Zeiterfassung.lv_position_id.is_(None), dauer), else_=0)), 0)
     mit_svs = func.coalesce(func.sum(case((Zeiterfassung.lv_position_id.is_not(None), dauer), else_=0)), 0)
-    result = await session.execute(
+    zeit_result = await session.execute(
         select(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel, ohne_svs, mit_svs)
         .join(Zeiterfassung, Zeiterfassung.vorgang_id == Vorgang.id)
         .where(
@@ -346,20 +353,45 @@ async def list_abrechenbare_vorgaenge(
         )
         .group_by(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel)
         .having(ohne_svs + mit_svs > 0)
-        .order_by(Vorgang.vorgangsnummer.desc())
+    )
+    material_result = await session.execute(
+        select(
+            Vorgang.id,
+            Vorgang.vorgangsnummer,
+            Vorgang.titel,
+            func.count(func.distinct(MaterialVerwendung.material_id)),
+        )
+        .join(MaterialVerwendung, MaterialVerwendung.vorgang_id == Vorgang.id)
+        .where(
+            Vorgang.kunde_id == kunde_id,
+            Vorgang.geloescht_am.is_(None),
+            MaterialVerwendung.abrechnungsstatus == "offen",
+        )
+        .group_by(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel)
     )
     stunde = Decimal("3600")
     cent = Decimal("0.01")
-    return [
-        AbrechenbarerVorgang(
+    eintraege: dict[UUID, AbrechenbarerVorgang] = {}
+    for vorgang_id, nummer, titel, o, m in zeit_result.all():
+        eintraege[vorgang_id] = AbrechenbarerVorgang(
             vorgang_id=vorgang_id,
             vorgangsnummer=nummer,
             titel=titel,
             stunden_ohne_svs=(Decimal(str(o)) / stunde).quantize(cent),
             stunden_mit_svs=(Decimal(str(m)) / stunde).quantize(cent),
         )
-        for vorgang_id, nummer, titel, o, m in result.all()
-    ]
+    for vorgang_id, nummer, titel, anzahl in material_result.all():
+        eintrag = eintraege.get(vorgang_id)
+        if eintrag is None:
+            eintrag = eintraege[vorgang_id] = AbrechenbarerVorgang(
+                vorgang_id=vorgang_id,
+                vorgangsnummer=nummer,
+                titel=titel,
+                stunden_ohne_svs=Decimal("0.00"),
+                stunden_mit_svs=Decimal("0.00"),
+            )
+        eintrag.material_offen = anzahl
+    return sorted(eintraege.values(), key=lambda e: e.vorgangsnummer, reverse=True)
 
 
 @router.get("/{rechnung_id}", response_model=RechnungRead)
@@ -433,19 +465,9 @@ async def create_rechnung(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if body.vorgang_id is not None and body.vorgaenge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Entweder vorgang_id oder vorgaenge angeben, nicht beides",
-        )
-    ausgewaehlte_ids = [a.vorgang_id for a in body.vorgaenge]
-    if len(set(ausgewaehlte_ids)) != len(ausgewaehlte_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Ein Vorgang darf nur einmal ausgewählt werden"
-        )
-
-    async def _vorgang_des_kunden(vorgang_id: UUID) -> Vorgang:
-        vorgang = await session.get(Vorgang, vorgang_id)
+    vorgang = None
+    if body.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, body.vorgang_id)
         if vorgang is None or vorgang.geloescht_am is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -455,10 +477,6 @@ async def create_rechnung(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum angegebenen Kunden"
             )
-        return vorgang
-
-    vorgang = await _vorgang_des_kunden(body.vorgang_id) if body.vorgang_id is not None else None
-    sammel_vorgaenge = [(await _vorgang_des_kunden(a.vorgang_id), a) for a in body.vorgaenge]
 
     mandant = await session.get(Mandant, auth.mandant_id)
     # Kleinunternehmer (§19 UStG) duerfen keine Umsatzsteuer ausweisen -- der
@@ -471,9 +489,7 @@ async def create_rechnung(
     rechnung = Rechnung(
         mandant_id=auth.mandant_id,
         kunde_id=body.kunde_id,
-        # Bei genau einem gewaehlten Vorgang bleibt die Rechnung an ihm haengen
-        # (Vorschlagsbox der Detailseite); ab zwei bleibt sie ohne Bezug.
-        vorgang_id=sammel_vorgaenge[0][0].id if len(sammel_vorgaenge) == 1 else body.vorgang_id,
+        vorgang_id=body.vorgang_id,
         rechnungsnummer=rechnungsnummer,
         betrag_netto=body.betrag_netto,
         mwst_satz=mwst_satz,
@@ -484,51 +500,16 @@ async def create_rechnung(
     session.add(rechnung)
     await session.flush()
 
-    neue = _neue_positionen(rechnung.id, auth.mandant_id, body.positionen)
-    for p in neue:
+    for p in _neue_positionen(rechnung.id, auth.mandant_id, body.positionen):
         session.add(p)
-    naechste_position = len(neue) + 1
-
-    for sammel_vorgang, auswahl in sammel_vorgaenge:
-        vorschlaege = await positionen_vorschlaege_fuer_vorgang(session, sammel_vorgang.id, mandant)
-        for vorschlag in vorschlaege:
-            # Material bleibt bewusst aussen vor -- es hat keine gebuchten
-            # Stunden, die zu sperren waeren.
-            if vorschlag.quelle not in ("zeit", "fahrzeit", "fahrtkosten", "leistung"):
-                continue
-            session.add(
-                RechnungPosition(
-                    mandant_id=auth.mandant_id,
-                    rechnung_id=rechnung.id,
-                    position=naechste_position,
-                    beschreibung=(
-                        f"{vorschlag.beschreibung} – {sammel_vorgang.vorgangsnummer} {sammel_vorgang.titel}"
-                    ),
-                    menge=vorschlag.menge,
-                    einheit=vorschlag.einheit,
-                    einzelpreis=auswahl.stundensatz if vorschlag.quelle == "zeit" else vorschlag.einzelpreis,
-                    quelle=vorschlag.quelle,
-                    vorgang_id=sammel_vorgang.id,
-                    lv_position_id=vorschlag.lv_position_id,
-                )
-            )
-            naechste_position += 1
-            await zeiterfassung_abrechnen(
-                session,
-                vorgang_id=sammel_vorgang.id,
-                quelle=vorschlag.quelle,
-                rechnung_id=rechnung.id,
-                geaendert_von=auth.user_id,
-                lv_position_id=vorschlag.lv_position_id,
-            )
     await session.flush()
     await session.refresh(rechnung)
 
-    for ereignis_vorgang in ([vorgang] if vorgang is not None else []) + [v for v, _ in sammel_vorgaenge]:
+    if vorgang is not None:
         session.add(
             VorgangEvent(
                 mandant_id=auth.mandant_id,
-                vorgang_id=ereignis_vorgang.id,
+                vorgang_id=vorgang.id,
                 event_type="rechnung_status",
                 author_user_id=auth.user_id,
                 body=f"Rechnung {rechnungsnummer} erstellt (Entwurf)",
@@ -536,6 +517,83 @@ async def create_rechnung(
             )
         )
     await session.flush()
+    return await to_read_model(session, rechnung)
+
+
+async def _entwurf_laden(session: AsyncSession, rechnung_id: UUID) -> Rechnung:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status != "entwurf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgänge können nur im Entwurf hinzugefügt werden"
+        )
+    return rechnung
+
+
+async def _vorgang_des_kunden(session: AsyncSession, vorgang_id: UUID, kunde_id: UUID) -> Vorgang:
+    vorgang = await session.get(Vorgang, vorgang_id)
+    if vorgang is None or vorgang.geloescht_am is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+    if vorgang.kunde_id != kunde_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum Kunden der Rechnung"
+        )
+    return vorgang
+
+
+@router.get(
+    "/{rechnung_id}/vorgaenge/{vorgang_id}/vorschlaege",
+    response_model=list[RechnungPositionVorschlag],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def get_vorgang_vorschlaege(
+    rechnung_id: UUID,
+    vorgang_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[RechnungPositionVorschlag]:
+    rechnung = await _entwurf_laden(session, rechnung_id)
+    vorgang = await _vorgang_des_kunden(session, vorgang_id, rechnung.kunde_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    return await positionen_vorschlaege_fuer_vorgang(session, vorgang.id, mandant)
+
+
+@router.post(
+    "/{rechnung_id}/vorgaenge",
+    response_model=RechnungRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def add_vorgang(
+    rechnung_id: UUID,
+    body: RechnungVorgangUebernahme,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    rechnung = await _entwurf_laden(session, rechnung_id)
+    if not body.auswahl:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keine Posten ausgewählt")
+    vorgang = await _vorgang_des_kunden(session, body.vorgang_id, rechnung.kunde_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    await vorgang_uebernehmen(
+        session,
+        rechnung=rechnung,
+        vorgang=vorgang,
+        mandant=mandant,
+        stundensatz=body.stundensatz,
+        auswahl=body.auswahl,
+        actor_user_id=auth.user_id,
+    )
+    await session.refresh(rechnung)
     return await to_read_model(session, rechnung)
 
 
@@ -561,6 +619,17 @@ async def add_position(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf ergänzt werden"
         )
 
+    # Nur eine Material-Position mit Materialbezug sperrt Verwendungen; ohne
+    # material_id oder Vorgang bleibt "material" eine freie Position.
+    material_gesperrt = (
+        body.quelle == "material" and body.material_id is not None and rechnung.vorgang_id is not None
+    )
+    if material_gesperrt and await session.get(Material, body.material_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Material nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
+
     bestehende = await positionen_fuer(session, rechnung_id)
     naechste_position = max((p.position for p in bestehende), default=0) + 1
     session.add(
@@ -574,16 +643,23 @@ async def add_position(
             einzelpreis=body.einzelpreis,
             quelle=body.quelle,
             vorgang_id=(
-                rechnung.vorgang_id if body.quelle in ("zeit", "fahrzeit", "fahrtkosten", "leistung") else None
+                rechnung.vorgang_id
+                if body.quelle in ("zeit", "fahrzeit", "fahrtkosten", "leistung") or material_gesperrt
+                else None
             ),
             lv_position_id=body.lv_position_id if body.quelle == "leistung" else None,
+            material_id=body.material_id if material_gesperrt else None,
         )
     )
+    if material_gesperrt:
+        await material_abrechnen(
+            session, vorgang_id=rechnung.vorgang_id, material_id=body.material_id, rechnung_id=rechnung.id
+        )
     # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): eine aus einem
     # Zeit-Vorschlag uebernommene Position sperrt die zugrunde liegenden
     # Zeiterfassung-Eintraege (buchungsstatus -> 'abgerechnet'). Bei "leistung"
-    # nur die SVS-gekoppelte Zeit; LV-Verwendungen und "material" bleiben
-    # bewusst aussen vor (siehe zeiterfassung_abrechnen).
+    # nur die SVS-gekoppelte Zeit; LV-Verwendungen bleiben bewusst aussen vor
+    # (siehe zeiterfassung_abrechnen), Material sperrt oben.
     if body.quelle in ("zeit", "fahrzeit", "fahrtkosten", "leistung") and rechnung.vorgang_id is not None:
         await zeiterfassung_abrechnen(
             session,
@@ -664,6 +740,23 @@ async def remove_position(
                 vorgang_id=entsperr_vorgang_id,
                 geaendert_von=auth.user_id,
                 lv_position_id=position.lv_position_id,
+            )
+
+    if position.quelle == "material" and position.material_id is not None and entsperr_vorgang_id is not None:
+        rest = await positionen_fuer(session, rechnung_id)
+        geschwister_besteht = any(
+            p.id != position.id
+            and p.quelle == "material"
+            and p.material_id == position.material_id
+            and (p.vorgang_id or rechnung.vorgang_id) == entsperr_vorgang_id
+            for p in rest
+        )
+        if not geschwister_besteht:
+            await material_abrechnung_zuruecksetzen(
+                session,
+                rechnung_id=rechnung_id,
+                vorgang_id=entsperr_vorgang_id,
+                material_id=position.material_id,
             )
 
     await session.delete(position)
@@ -864,6 +957,7 @@ async def storno_rechnung(
     await zeiterfassung_freigeben_fuer_rechnung(
         session, rechnung_id=rechnung.id, geaendert_von=auth.user_id, verweis_behalten=False
     )
+    await material_freigeben_fuer_rechnung(session, rechnung_id=rechnung.id, verweis_behalten=False)
 
     kunde = await session.get(Kunde, storno.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
