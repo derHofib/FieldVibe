@@ -1244,13 +1244,13 @@ export const rechnungenApi = {
     faellig_am?: string;
     leistungsdatum?: string;
     positionen?: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
-    vorgaenge?: { vorgang_id: string; stundensatz: string }[];
   }) => apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
   addPosition: (
     id: string,
     body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
       quelle?: RechnungPositionQuelle;
       lv_position_id?: string | null;
+      material_id?: string | null;
     },
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   removePosition: (id: string, positionId: string) =>
@@ -1275,6 +1275,16 @@ export const rechnungenApi = {
     apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen`, { method: "POST", body: JSON.stringify(body) }),
   stornoZahlung: (id: string, zahlungId: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}/zahlungen/${zahlungId}/storno`, { method: "POST" }),
+  vorgangVorschlaege: (id: string, vorgangId: string) =>
+    apiFetch<RechnungPositionVorschlag[]>(`/api/rechnungen/${id}/vorgaenge/${vorgangId}/vorschlaege`),
+  vorgangUebernehmen: (
+    id: string,
+    body: {
+      vorgang_id: string;
+      stundensatz: string;
+      auswahl: { quelle: RechnungPositionQuelle; lv_position_id?: string | null; material_id?: string | null }[];
+    },
+  ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/vorgaenge`, { method: "POST", body: JSON.stringify(body) }),
   positionsvorschlaege: (id: string) =>
     apiFetch<RechnungPositionVorschlag[]>(`/api/rechnungen/${id}/positionsvorschlaege`),
 };

@@ -878,6 +878,7 @@ export interface RechnungPosition {
   quelle: RechnungPositionQuelle | null;
   vorgang_id: string | null;
   lv_position_id?: string | null;
+  material_id?: string | null;
 }
 
 // Offene, noch nicht abgerechnete Stunden eines Vorgangs (Einzelposten-
@@ -888,6 +889,8 @@ export interface AbrechenbarerVorgang {
   titel: string;
   stunden_ohne_svs: string;
   stunden_mit_svs: string;
+  // Anzahl offener Materialposten des Vorgangs.
+  material_offen: number;
 }
 
 // Vom Backend bei jedem Aufruf frisch aus Material-Verwendungen und
@@ -900,6 +903,13 @@ export interface RechnungPositionVorschlag {
   einheit: string;
   einzelpreis: string;
   lv_position_id?: string | null;
+  material_id?: string | null;
+}
+
+export interface RechnungVorgangRef {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
 }
 
 export interface RechnungZahlung {
@@ -940,6 +950,7 @@ export interface Rechnung {
   created_at: string;
   updated_at: string;
   positionen: RechnungPosition[];
+  vorgaenge: RechnungVorgangRef[];
   betrag_brutto: string;
   ist_ueberfaellig: boolean;
   tage_ueberfaellig: number;

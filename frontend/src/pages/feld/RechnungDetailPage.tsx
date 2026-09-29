@@ -5,15 +5,17 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi, leistungsverzeichnisApi, rechnungenApi } from "../../api/endpoints";
-import type { RechnungPositionQuelle, RechnungPositionVorschlag } from "../../types";
+import type { RechnungPosition, RechnungPositionQuelle, RechnungPositionVorschlag } from "../../types";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
+import { VorgangHinzufuegen } from "../../components/rechnung/VorgangHinzufuegen";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { downloadBlob } from "../../utils/download";
 import { heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
+import { gruppierePositionen } from "../../utils/rechnungAbrechnung";
 import type { RechnungZahlungsart } from "../../types";
 
 const VORSCHLAG_QUELLE_LABEL: Record<RechnungPositionQuelle, string> = {
@@ -50,6 +52,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
           einzelpreis: v.einzelpreis,
           quelle: v.quelle,
           lv_position_id: v.lv_position_id,
+          material_id: v.material_id,
         });
       }
     },
@@ -161,6 +164,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   const { currentUser } = useAuth();
   const kannLoeschen = currentUser?.role === "loesch_operativ";
   const [showForm, setShowForm] = useState(false);
+  const [showVorgang, setShowVorgang] = useState(false);
   const [form, setForm] = useState({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
   const [lvAuswahl, setLvAuswahl] = useState("");
   const [showZahlungForm, setShowZahlungForm] = useState(false);
@@ -295,6 +299,49 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   }
   if (!rechnung) return <p className="text-center text-label2">Lädt…</p>;
 
+  const { ohneVorgang, gruppen } = gruppierePositionen(rechnung.positionen, rechnung.vorgaenge ?? []);
+  const renderPosition = (p: RechnungPosition) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
+              >
+                <div>
+                  <div className="text-label">{p.beschreibung}</div>
+                  <div className="flex items-center gap-1 text-xs text-label2">
+                    {p.menge} {p.einheit} ×{" "}
+                    {rechnung.status === "entwurf" ? (
+                      <EinzelpreisFeld
+                        wert={p.einzelpreis}
+                        disabled={updatePositionMutation.isPending}
+                        onSpeichern={(einzelpreis) =>
+                          updatePositionMutation.mutate({ positionId: p.id, einzelpreis })
+                        }
+                      />
+                    ) : (
+                      p.einzelpreis
+                    )}{" "}
+                    EUR
+                  </div>
+                  {p.quelle === "zeit" && Number(p.einzelpreis) === 0 && (
+                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">Stundensatz fehlt</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="font-medium text-label">{p.gesamt} EUR</div>
+                  {rechnung.status === "entwurf" && (
+                    <button
+                      onClick={() => removePositionMutation.mutate(p.id)}
+                      disabled={removePositionMutation.isPending}
+                      title="Position entfernen"
+                      className="btn-touch p-1 text-label2 hover:text-st-fehlt disabled:opacity-50"
+                    >
+                      <X size={14} strokeWidth={2} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -403,12 +450,20 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Positionen</h2>
           {rechnung.status === "entwurf" && (
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint "
-            >
-              {showForm ? "Abbrechen" : "+ Position"}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowVorgang(true)}
+                className="btn-touch text-xs font-medium text-tint "
+              >
+                + Vorgang
+              </button>
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="btn-touch text-xs font-medium text-tint "
+              >
+                {showForm ? "Abbrechen" : "+ Position"}
+              </button>
+            </div>
           )}
         </div>
 
@@ -500,45 +555,14 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </p>
         ) : (
           <div className="space-y-1.5">
-            {rechnung.positionen.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
-              >
-                <div>
-                  <div className="text-label">{p.beschreibung}</div>
-                  <div className="flex items-center gap-1 text-xs text-label2">
-                    {p.menge} {p.einheit} ×{" "}
-                    {rechnung.status === "entwurf" ? (
-                      <EinzelpreisFeld
-                        wert={p.einzelpreis}
-                        disabled={updatePositionMutation.isPending}
-                        onSpeichern={(einzelpreis) =>
-                          updatePositionMutation.mutate({ positionId: p.id, einzelpreis })
-                        }
-                      />
-                    ) : (
-                      p.einzelpreis
-                    )}{" "}
-                    EUR
-                  </div>
-                  {p.quelle === "zeit" && Number(p.einzelpreis) === 0 && (
-                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">Stundensatz fehlt</div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="font-medium text-label">{p.gesamt} EUR</div>
-                  {rechnung.status === "entwurf" && (
-                    <button
-                      onClick={() => removePositionMutation.mutate(p.id)}
-                      disabled={removePositionMutation.isPending}
-                      title="Position entfernen"
-                      className="btn-touch p-1 text-label2 hover:text-st-fehlt disabled:opacity-50"
-                    >
-                      <X size={14} strokeWidth={2} />
-                    </button>
-                  )}
-                </div>
+            {ohneVorgang.map(renderPosition)}
+            {gruppen.map((g) => (
+              <div key={g.vorgang.id} className="space-y-1.5 pt-2">
+                <p className="text-[13px] font-semibold tracking-wide text-label2">
+                  {g.vorgang.vorgangsnummer} · {g.vorgang.titel}
+                </p>
+                {g.positionen.map(renderPosition)}
+                <div className="text-right text-xs font-semibold text-label">Zwischensumme: {g.zwischensumme} EUR</div>
               </div>
             ))}
           </div>
@@ -655,6 +679,15 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             </div>
           )}
         </div>
+      )}
+
+      {rechnung.status === "entwurf" && (
+        <VorgangHinzufuegen
+          rechnungId={id!}
+          kundeId={rechnung.kunde_id}
+          offen={showVorgang}
+          onClose={() => setShowVorgang(false)}
+        />
       )}
 
       <EmailSection
