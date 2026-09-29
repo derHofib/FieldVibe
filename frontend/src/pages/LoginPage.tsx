@@ -1,10 +1,10 @@
-import { Hexagon } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import Blueprint from "../components/Blueprint";
+import { Logo } from "../components/brand/Logo";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -33,13 +33,8 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-card p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm">
-        <div className="mb-6 flex items-center justify-center gap-2.5">
-          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border border-sepstrong text-tint">
-            <Hexagon size={17} strokeWidth={1.5} />
-          </div>
-          <span className="font-heading text-xl font-semibold uppercase tracking-wide text-label">
-            Field<span className="text-tint">Vibe</span>
-          </span>
+        <div className="mb-6 flex justify-center">
+          <Logo variante="wortmarke" hoehe={32} />
         </div>
 
         <Blueprint className="bg-card p-8">

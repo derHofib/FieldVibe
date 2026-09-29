@@ -1,7 +1,8 @@
-import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle, Settings, Hexagon } from "lucide-react";
+import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle, Settings } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import { Logo } from "./brand/Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
 const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard }[] = [
@@ -29,13 +30,8 @@ export function Layout() {
     <div className="min-h-screen bg-card text-label">
       <div className="flex min-h-screen">
         <aside className="w-16 shrink-0 border-r border-sep p-2 sm:w-56 sm:p-4">
-          <div className="mb-6 hidden items-center gap-2.5 sm:flex">
-            <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center border border-sepstrong text-tint">
-              <Hexagon size={15} strokeWidth={1.5} />
-            </div>
-            <span className="font-heading text-lg font-semibold uppercase tracking-wide text-label">
-              Field<span className="text-tint-text">Vibe</span>
-            </span>
+          <div className="mb-6 hidden sm:block">
+            <Logo variante="wortmarke" hoehe={22} />
           </div>
           <nav className="flex flex-col gap-1">
             {NAV_ITEMS.map((item) => (

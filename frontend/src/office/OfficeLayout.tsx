@@ -12,7 +12,6 @@ import {
   Search,
   Settings,
   Smartphone,
-  Zap,
 } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useState } from "react";
@@ -21,6 +20,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { navKategorienApi, projekteApi, statistikApi } from "../api/endpoints";
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { Monogramm } from "../components/apple/Monogramm";
+import { Logo } from "../components/brand/Logo";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { effektiveNavGruppen, sichtbareNavSeiten } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
@@ -177,15 +177,11 @@ export function OfficeLayout() {
         >
           <div className={`mb-3 flex items-center ${eingeklappt ? "flex-col gap-2" : "justify-between px-1.5"}`}>
             <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[7px] bg-label text-win">
-                <Zap size={14} strokeWidth={2} fill="currentColor" />
-              </div>
-              {!eingeklappt && (
-                <button
-                  onClick={() => navigate("/vorgaenge")}
-                  className="truncate text-left text-sm font-bold text-label"
-                >
-                  FieldVibe
+              {eingeklappt ? (
+                <Logo variante="pin" hoehe={28} />
+              ) : (
+                <button onClick={() => navigate("/vorgaenge")} className="min-w-0 text-left" aria-label="FieldVibe – zu den Vorgängen">
+                  <Logo variante="wortmarke" hoehe={23} />
                 </button>
               )}
             </div>
