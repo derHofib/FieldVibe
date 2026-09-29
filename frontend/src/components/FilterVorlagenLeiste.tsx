@@ -78,19 +78,17 @@ export function FilterVorlagenLeiste({
   return (
     <div className="space-y-2">
       {(vorlagen ?? []).length > 0 && (
-        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 py-0.5">
           {vorlagen!.map((v) => {
             const aktiv = filtersEqual(filter, v.filter_json);
             return (
               <div
                 key={v.id}
-                className={`flex h-8 shrink-0 items-stretch rounded-full pl-3 pr-1 text-xs font-medium ${
-                  aktiv
-                    ? "bg-tint-solid text-white"
-                    : "bg-card text-label shadow-xs dark:shadow-none dark:ring-1 "
+                className={`flex h-[26px] shrink-0 items-stretch rounded-[13px] pl-2.5 pr-0.5 text-xs font-medium ${
+                  aktiv ? "bg-tint-solid text-white" : "bg-fill text-label"
                 }`}
               >
-                {/* Feste Chip-Hoehe statt btn-touch: sonst waechst der Chip je
+                {/* Gleiche Masse wie FilterChip statt btn-touch: sonst waechst der Chip je
                     nach Zustand unterschiedlich und die Leiste springt. */}
                 <button onClick={() => onApply(v.filter_json)} className="whitespace-nowrap pr-1">
                   {v.ist_standard && "★ "}
