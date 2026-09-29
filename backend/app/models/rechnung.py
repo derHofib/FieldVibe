@@ -115,6 +115,12 @@ class RechnungPosition(Base):
     # app/services/rechnung_service.py). NULL bei manuell eingetragenen
     # Positionen.
     quelle: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Sammelrechnung: aus welchem Vorgang die Position stammt -- Grundlage
+    # fuers gezielte Entsperren der Zeiterfassung dieses einen Vorgangs.
+    # NULL bei manuellen Positionen und Altbestand ohne Vorgangsbezug.
+    vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vorgaenge.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
 
 class RechnungZahlung(Base):

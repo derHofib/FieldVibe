@@ -32,6 +32,7 @@ class RechnungPositionRead(BaseModel):
     einheit: str
     einzelpreis: Decimal
     quelle: RechnungPositionQuelle | None
+    vorgang_id: UUID | None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -71,9 +72,35 @@ class RechnungZahlungRead(BaseModel):
     created_at: datetime
 
 
+class RechnungVorgangAuswahl(BaseModel):
+    vorgang_id: UUID
+    # Zeit ohne SVS-Kopplung hat keinen hinterlegten Satz (siehe
+    # positionen_vorschlaege_fuer_vorgang) -- er wird je Vorgang mitgegeben.
+    stundensatz: Decimal = Field(default=Decimal("0"), ge=0)
+
+
+class RechnungPositionUpdate(BaseModel):
+    # menge/einheit/quelle/vorgang_id bewusst nicht aenderbar: sie haengen an
+    # den gesperrten Zeiterfassung-Eintraegen.
+    beschreibung: str | None = None
+    einzelpreis: Decimal | None = Field(default=None, ge=0)
+
+
+class AbrechenbarerVorgang(BaseModel):
+    vorgang_id: UUID
+    vorgangsnummer: str
+    titel: str
+    stunden_ohne_svs: Decimal
+    stunden_mit_svs: Decimal
+
+
 class RechnungCreate(BaseModel):
     kunde_id: UUID
     vorgang_id: UUID | None = None
+    # Sammelrechnung: gebuchte, abrechenbare Stunden mehrerer Vorgaenge
+    # desselben Kunden werden als Positionen uebernommen. Schliesst
+    # vorgang_id aus.
+    vorgaenge: list[RechnungVorgangAuswahl] = Field(default_factory=list)
     # betrag_netto bleibt der einfache Weg fuer eine einzelne Abschlussrechnung
     # ohne eigene Positionen (unveraendertes Verhalten aus Phase 6). Werden
     # positionen mitgegeben, wird betrag_netto beim Lesen durch deren Summe

@@ -21,10 +21,13 @@ from app.models.rechnung import RECHNUNG_ZAHLUNGSARTEN, Rechnung, RechnungPositi
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
+from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.rechnung import (
+    AbrechenbarerVorgang,
     RechnungCreate,
     RechnungListe,
     RechnungPositionCreate,
+    RechnungPositionUpdate,
     RechnungPositionVorschlag,
     RechnungRead,
     RechnungUpdate,
@@ -309,6 +312,55 @@ async def export_rechnungen_csv(
     )
 
 
+# Muss VOR "/{rechnung_id}" stehen (siehe export/csv).
+@router.get(
+    "/abrechenbare-vorgaenge",
+    response_model=list[AbrechenbarerVorgang],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "erstellen")),
+    ],
+)
+async def list_abrechenbare_vorgaenge(
+    kunde_id: UUID = Query(...),
+    session: AsyncSession = Depends(get_db),
+) -> list[AbrechenbarerVorgang]:
+    """Auswahlliste fuer die Sammelrechnung. Dieselben Kriterien wie die
+    Zeit-Vorschlaege (positionen_vorschlaege_fuer_vorgang) -- eine Query
+    gruppiert ueber alle Vorgaenge des Kunden statt eine je Vorgang."""
+    dauer = func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)
+    ohne_svs = func.coalesce(func.sum(case((Zeiterfassung.lv_position_id.is_(None), dauer), else_=0)), 0)
+    mit_svs = func.coalesce(func.sum(case((Zeiterfassung.lv_position_id.is_not(None), dauer), else_=0)), 0)
+    result = await session.execute(
+        select(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel, ohne_svs, mit_svs)
+        .join(Zeiterfassung, Zeiterfassung.vorgang_id == Vorgang.id)
+        .where(
+            Vorgang.kunde_id == kunde_id,
+            Vorgang.geloescht_am.is_(None),
+            Zeiterfassung.kategorie == "auftrag",
+            Zeiterfassung.abrechenbar.is_(True),
+            Zeiterfassung.ende_at.is_not(None),
+            Zeiterfassung.buchungsstatus == "gebucht",
+            Zeiterfassung.geloescht_am.is_(None),
+        )
+        .group_by(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel)
+        .having(ohne_svs + mit_svs > 0)
+        .order_by(Vorgang.vorgangsnummer.desc())
+    )
+    stunde = Decimal("3600")
+    cent = Decimal("0.01")
+    return [
+        AbrechenbarerVorgang(
+            vorgang_id=vorgang_id,
+            vorgangsnummer=nummer,
+            titel=titel,
+            stunden_ohne_svs=(Decimal(str(o)) / stunde).quantize(cent),
+            stunden_mit_svs=(Decimal(str(m)) / stunde).quantize(cent),
+        )
+        for vorgang_id, nummer, titel, o, m in result.all()
+    ]
+
+
 @router.get("/{rechnung_id}", response_model=RechnungRead)
 async def get_rechnung(rechnung_id: UUID, session: AsyncSession = Depends(get_db)) -> RechnungRead:
     rechnung = await session.get(Rechnung, rechnung_id)
@@ -380,10 +432,20 @@ async def create_rechnung(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    vorgang = None
-    if body.vorgang_id is not None:
-        vorgang = await session.get(Vorgang, body.vorgang_id)
-        if vorgang is None:
+    if body.vorgang_id is not None and body.vorgaenge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Entweder vorgang_id oder vorgaenge angeben, nicht beides",
+        )
+    ausgewaehlte_ids = [a.vorgang_id for a in body.vorgaenge]
+    if len(set(ausgewaehlte_ids)) != len(ausgewaehlte_ids):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Ein Vorgang darf nur einmal ausgewählt werden"
+        )
+
+    async def _vorgang_des_kunden(vorgang_id: UUID) -> Vorgang:
+        vorgang = await session.get(Vorgang, vorgang_id)
+        if vorgang is None or vorgang.geloescht_am is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
@@ -392,6 +454,10 @@ async def create_rechnung(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum angegebenen Kunden"
             )
+        return vorgang
+
+    vorgang = await _vorgang_des_kunden(body.vorgang_id) if body.vorgang_id is not None else None
+    sammel_vorgaenge = [(await _vorgang_des_kunden(a.vorgang_id), a) for a in body.vorgaenge]
 
     mandant = await session.get(Mandant, auth.mandant_id)
     # Kleinunternehmer (§19 UStG) duerfen keine Umsatzsteuer ausweisen -- der
@@ -404,7 +470,9 @@ async def create_rechnung(
     rechnung = Rechnung(
         mandant_id=auth.mandant_id,
         kunde_id=body.kunde_id,
-        vorgang_id=body.vorgang_id,
+        # Bei genau einem gewaehlten Vorgang bleibt die Rechnung an ihm haengen
+        # (Vorschlagsbox der Detailseite); ab zwei bleibt sie ohne Bezug.
+        vorgang_id=sammel_vorgaenge[0][0].id if len(sammel_vorgaenge) == 1 else body.vorgang_id,
         rechnungsnummer=rechnungsnummer,
         betrag_netto=body.betrag_netto,
         mwst_satz=mwst_satz,
@@ -415,23 +483,57 @@ async def create_rechnung(
     session.add(rechnung)
     await session.flush()
 
-    for p in _neue_positionen(rechnung.id, auth.mandant_id, body.positionen):
+    neue = _neue_positionen(rechnung.id, auth.mandant_id, body.positionen)
+    for p in neue:
         session.add(p)
+    naechste_position = len(neue) + 1
+
+    for sammel_vorgang, auswahl in sammel_vorgaenge:
+        vorschlaege = await positionen_vorschlaege_fuer_vorgang(session, sammel_vorgang.id, mandant)
+        for vorschlag in vorschlaege:
+            # Material bleibt bewusst aussen vor -- es hat keine gebuchten
+            # Stunden, die zu sperren waeren.
+            if vorschlag.quelle not in ("zeit", "fahrzeit", "fahrtkosten", "leistung"):
+                continue
+            session.add(
+                RechnungPosition(
+                    mandant_id=auth.mandant_id,
+                    rechnung_id=rechnung.id,
+                    position=naechste_position,
+                    beschreibung=(
+                        f"{vorschlag.beschreibung} – {sammel_vorgang.vorgangsnummer} {sammel_vorgang.titel}"
+                    ),
+                    menge=vorschlag.menge,
+                    einheit=vorschlag.einheit,
+                    einzelpreis=auswahl.stundensatz if vorschlag.quelle == "zeit" else vorschlag.einzelpreis,
+                    quelle=vorschlag.quelle,
+                    vorgang_id=sammel_vorgang.id,
+                )
+            )
+            naechste_position += 1
+            if vorschlag.quelle in ("zeit", "fahrzeit", "fahrtkosten"):
+                await zeiterfassung_abrechnen(
+                    session,
+                    vorgang_id=sammel_vorgang.id,
+                    quelle=vorschlag.quelle,
+                    rechnung_id=rechnung.id,
+                    geaendert_von=auth.user_id,
+                )
     await session.flush()
     await session.refresh(rechnung)
 
-    if vorgang is not None:
+    for ereignis_vorgang in ([vorgang] if vorgang is not None else []) + [v for v, _ in sammel_vorgaenge]:
         session.add(
             VorgangEvent(
                 mandant_id=auth.mandant_id,
-                vorgang_id=vorgang.id,
+                vorgang_id=ereignis_vorgang.id,
                 event_type="rechnung_status",
                 author_user_id=auth.user_id,
                 body=f"Rechnung {rechnungsnummer} erstellt (Entwurf)",
                 payload={"rechnung_id": str(rechnung.id), "status": "entwurf"},
             )
         )
-        await session.flush()
+    await session.flush()
     return await to_read_model(session, rechnung)
 
 
@@ -469,6 +571,7 @@ async def add_position(
             einheit=body.einheit,
             einzelpreis=body.einzelpreis,
             quelle=body.quelle,
+            vorgang_id=rechnung.vorgang_id if body.quelle in ("zeit", "fahrzeit", "fahrtkosten") else None,
         )
     )
     # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): eine aus einem
@@ -526,21 +629,64 @@ async def remove_position(
         "fahrtkosten": ("fahrzeit", "zeit"),
         "zeit": ("fahrtkosten",),
     }
-    if position.quelle in ("zeit", "fahrzeit", "fahrtkosten") and rechnung.vorgang_id is not None:
+    # Der Vorgang haengt an der Position (Sammelrechnung); rechnung.vorgang_id
+    # ist nur der Fallback fuer Positionen aus der Zeit vor Migration 0087.
+    entsperr_vorgang_id = position.vorgang_id or rechnung.vorgang_id
+    if position.quelle in ("zeit", "fahrzeit", "fahrtkosten") and entsperr_vorgang_id is not None:
         geschwister_quellen = _GESCHWISTER_QUELLEN.get(position.quelle, ())
         rest = await positionen_fuer(session, rechnung_id)
-        geschwister_besteht = any(p.id != position.id and p.quelle in geschwister_quellen for p in rest)
+        geschwister_besteht = any(
+            p.id != position.id
+            and p.quelle in geschwister_quellen
+            and (p.vorgang_id or rechnung.vorgang_id) == entsperr_vorgang_id
+            for p in rest
+        )
         if not geschwister_besteht:
             await zeiterfassung_abrechnung_zuruecksetzen(
                 session,
                 rechnung_id=rechnung_id,
                 quelle=position.quelle,
-                vorgang_id=rechnung.vorgang_id,
+                vorgang_id=entsperr_vorgang_id,
                 geaendert_von=auth.user_id,
             )
 
     await session.delete(position)
     await session.flush()
+    await session.refresh(rechnung)
+    return await to_read_model(session, rechnung)
+
+
+@router.patch(
+    "/{rechnung_id}/positionen/{position_id}",
+    response_model=RechnungRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def update_position(
+    rechnung_id: UUID,
+    position_id: UUID,
+    body: RechnungPositionUpdate,
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or rechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    if rechnung.status != "entwurf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf geändert werden"
+        )
+    position = await session.get(RechnungPosition, position_id)
+    if position is None or position.rechnung_id != rechnung_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
+
+    if body.beschreibung is not None:
+        position.beschreibung = body.beschreibung
+    if body.einzelpreis is not None:
+        position.einzelpreis = body.einzelpreis
+    await session.flush()
+    await session.refresh(position)
     await session.refresh(rechnung)
     return await to_read_model(session, rechnung)
 
