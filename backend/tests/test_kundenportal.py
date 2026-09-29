@@ -1,6 +1,8 @@
 from decimal import Decimal
+from io import BytesIO
 
 import pytest
+from pypdf import PdfReader
 
 from app.core.security import hash_password
 from app.db.session import system_session
@@ -422,3 +424,44 @@ async def test_techniker_cannot_invite_kunde(client, make_mandant, make_user, ma
         json={"email": "x@example.de"},
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_kundenportal_storno_pdf_nennt_originalrechnung(client, make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    await _make_zugang(mandant, kunde, email="kunde11@example.de")
+
+    async with system_session() as session:
+        original = Rechnung(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            rechnungsnummer="R-ORIG-1",
+            betrag_netto=Decimal("100"),
+            erstellt_von=admin.id,
+        )
+        session.add(original)
+        await session.flush()
+        storno = Rechnung(
+            mandant_id=mandant.id,
+            kunde_id=kunde.id,
+            rechnungsnummer="R-STORNO-1",
+            betrag_netto=Decimal("-100"),
+            erstellt_von=admin.id,
+            ist_storno=True,
+            storniert_rechnung_id=original.id,
+        )
+        session.add(storno)
+        await session.flush()
+        storno_id = storno.id
+        await session.commit()
+
+    tokens = await _kunden_login(client, "kunde11@example.de", "kunden-pw-123")
+    resp = await client.get(
+        f"/api/kundenportal/rechnungen/{storno_id}/pdf", headers=auth_headers(tokens["access_token"])
+    )
+    assert resp.status_code == 200
+    reader = PdfReader(BytesIO(resp.content))
+    text = "\n".join(p.extract_text() for p in reader.pages)
+    assert "Storniert Rechnung R-ORIG-1" in text

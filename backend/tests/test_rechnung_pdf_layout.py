@@ -145,3 +145,57 @@ def test_rechnung_mit_defektem_logo_faellt_zurueck():
         _mandant(), _rechnung(), _kunde(), _positionen(3), logo_bytes=b"kein bild"
     )
     assert pdf.startswith(b"%PDF")
+
+
+def _letzte_seite(pdf_bytes: bytes) -> str:
+    reader = PdfReader(BytesIO(pdf_bytes))
+    return reader.pages[-1].extract_text()
+
+
+def test_rechnung_summenblock_steht_nie_allein_auf_der_letzten_seite():
+    # Durchlauf ueber viele Positionsanzahlen, damit mindestens ein Fall genau
+    # an der Seitengrenze liegt, an dem der Summenblock nicht mehr passt.
+    seiten_je_anzahl = {}
+    for anzahl in range(8, 40):
+        pdf = pdf_service.generate_rechnung_pdf(_mandant(), _rechnung(), _kunde(), _positionen(anzahl)[:anzahl])
+        seiten, _ = _text(pdf)
+        seiten_je_anzahl[anzahl] = seiten
+        letzte = _letzte_seite(pdf)
+        assert "Rechnungsbetrag" in letzte
+        if seiten > 1:
+            assert "Leistung" in letzte, f"Summenblock allein auf Seite {seiten} bei {anzahl} Positionen"
+    assert len(set(seiten_je_anzahl.values())) > 1
+
+
+def test_rechnung_letzte_position_mit_zwischensumme_wandert_mit():
+    for anzahl in range(12, 40):
+        pdf = pdf_service.generate_rechnung_pdf(
+            _mandant(), _rechnung(), _kunde(), _positionen(anzahl), vorgang_koepfe=_koepfe()
+        )
+        seiten, _ = _text(pdf)
+        letzte = _letzte_seite(pdf)
+        assert "Rechnungsbetrag" in letzte
+        if seiten > 1:
+            assert "Leistung" in letzte
+            # Zwischensumme der letzten Gruppe steht auf derselben Seite wie
+            # die letzte Position.
+            assert "Zwischensumme" in letzte
+
+
+def test_rechnung_titel_beginnt_frueh_bei_kurzem_adressblock():
+    kunde = _kunde()
+    pdf = pdf_service.generate_rechnung_pdf(_mandant(), _rechnung(), kunde, _positionen(2))
+    reader = PdfReader(BytesIO(pdf))
+    ys = []
+
+    def visitor(text, cm, tm, font_dict, font_size):
+        if text.strip() == "Rechnung" and font_size >= 19:
+            ys.append(tm[5])
+
+    reader.pages[0].extract_text(visitor_text=visitor)
+    assert ys
+    # PDF-y ist von unten gezaehlt (A4 = 297 mm = 841.9 pt) und die Grundlinie
+    # liegt ~6,5 mm unter der Zellenoberkante: Zelle bei ~92,5 mm (Ende Info-
+    # Block + 10 mm) statt der frueheren fixen 100 mm (Grundlinie ~106,5).
+    y_mm = (841.89 - ys[0]) * 25.4 / 72
+    assert 96 <= y_mm <= 102

@@ -202,6 +202,13 @@ async def eigene_rechnung_pdf(
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     positionen = await rechnung_positionen_fuer(session, rechnung.id)
+    # Die Stornorechnung gehoert demselben Kunden wie das Original; ueber die
+    # RLS-Session des Portals bleibt sie trotzdem mandantengetrennt.
+    storniert_rechnung = None
+    if rechnung.storniert_rechnung_id is not None:
+        storniert_rechnung = await session.get(Rechnung, rechnung.storniert_rechnung_id)
+        if storniert_rechnung is not None and storniert_rechnung.kunde_id != auth.kunde_id:
+            storniert_rechnung = None
 
     logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
 
@@ -210,6 +217,7 @@ async def eigene_rechnung_pdf(
         rechnung,
         kunde,
         positionen,
+        storniert_rechnung=storniert_rechnung,
         vorgang_koepfe=await vorgang_koepfe_map(session, positionen),
         logo_bytes=logo_bytes,
     )
