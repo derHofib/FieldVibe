@@ -28,6 +28,7 @@ from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_bestellnummer
 from app.services.pdf_service import generate_bestellung_pdf
+from app.services.rechnung_service import logo_bytes_laden
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -262,7 +263,9 @@ async def bestellung_pdf(
 
     mandant = await session.get(Mandant, auth.mandant_id)
 
-    pdf_bytes = generate_bestellung_pdf(mandant, bestellung, positionen, lieferant)
+    pdf_bytes = generate_bestellung_pdf(
+        mandant, bestellung, positionen, lieferant, await logo_bytes_laden(mandant)
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -308,7 +311,9 @@ async def send_bestellung_email(
     from app.models.mandant import Mandant
 
     mandant = await session.get(Mandant, auth.mandant_id)
-    pdf_bytes = generate_bestellung_pdf(mandant, bestellung, positionen, lieferant)
+    pdf_bytes = generate_bestellung_pdf(
+        mandant, bestellung, positionen, lieferant, await logo_bytes_laden(mandant)
+    )
     dateiname = f"{bestellung.bestellnummer}.pdf"
 
     log = await send_email_and_log(

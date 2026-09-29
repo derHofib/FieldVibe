@@ -905,7 +905,7 @@ def _rechnung_dokument_bytes(
     return hybrid_pdf_bytes, xml_bytes
 
 
-async def _logo_bytes_laden(mandant: Mandant) -> bytes | None:
+async def logo_bytes_laden(mandant: Mandant) -> bytes | None:
     if not mandant.logo_object_key:
         return None
     try:
@@ -931,7 +931,7 @@ async def archiviere_pdf(
     positionen = await positionen_fuer(session, rechnung.id)
     koepfe = await vorgang_koepfe_map(session, positionen)
     pdf_bytes, xml_bytes = _rechnung_dokument_bytes(
-        rechnung, mandant, kunde, positionen, storniert_rechnung, koepfe, await _logo_bytes_laden(mandant)
+        rechnung, mandant, kunde, positionen, storniert_rechnung, koepfe, await logo_bytes_laden(mandant)
     )
     key = storage_service.new_rechnung_pdf_key(rechnung.id)
     await storage_service.upload_bytes(key, pdf_bytes, "application/pdf")
@@ -963,5 +963,5 @@ async def pdf_bytes_fuer(
         positionen,
         storniert_rechnung=storniert_rechnung,
         vorgang_koepfe=await vorgang_koepfe_map(session, positionen),
-        logo_bytes=await _logo_bytes_laden(mandant),
+        logo_bytes=await logo_bytes_laden(mandant),
     )

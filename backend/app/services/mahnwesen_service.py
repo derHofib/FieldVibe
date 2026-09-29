@@ -16,7 +16,13 @@ from app.models.vorgang_event import VorgangEvent
 from app.db.session import system_session
 from app.services.email_service import send_email_and_log
 from app.services.pdf_service import generate_mahnung_pdf
-from app.services.rechnung_service import bezahlter_betrag, brutto_betrag, positionen_fuer, zahlungen_fuer
+from app.services.rechnung_service import (
+    bezahlter_betrag,
+    brutto_betrag,
+    logo_bytes_laden,
+    positionen_fuer,
+    zahlungen_fuer,
+)
 from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
 
 MAHNWESEN_AKTION = "mahnwesen_eskalation_run"
@@ -140,6 +146,7 @@ async def run_mahnwesen_eskalation(mandant_ids: list[UUID] | None = None) -> dic
                         offener_betrag,
                         verzugszinsen,
                         pauschale,
+                        await logo_bytes_laden(mandant),
                     )
                     await send_email_and_log(
                         session,

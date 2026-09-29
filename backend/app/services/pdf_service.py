@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime
 from decimal import Decimal
 from io import BytesIO
@@ -20,14 +21,6 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
-
-# fpdf2s core fonts (Helvetica/Times/Courier) sind standardmaessig Latin-1-
-# kodiert -- das deckt Umlaute/ß ab, aber NICHT das Euro-Zeichen. Rechnung und
-# Angebot (_BelegPDF) stellen deshalb auf cp1252 um und schreiben "€". Mahnung/
-# Bestellung nutzen weiter die Standardkodierung und damit "EUR" statt "€",
-# was eine Custom-Font-Einbettung spart, ohne dass Betraege missverstaendlich
-# waeren.
-_WAEHRUNG = "EUR"
 
 # Freitext im Formular-Baukasten (Feldlabels, Antworten) kommt direkt vom
 # Nutzer -- Zeichen ausserhalb von Windows-1252 (z.B. "Ω", "∆") liess fpdf2
@@ -69,78 +62,10 @@ def _fmt_zahl(zahl: Decimal) -> str:
     return f"{zahl:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 
-def _fmt_betrag(betrag: Decimal) -> str:
-    return f"{_fmt_zahl(betrag)} {_WAEHRUNG}"
-
-
 def _fmt_datum(d: date | datetime | None) -> str:
     if d is None:
         return "-"
     return d.strftime("%d.%m.%Y")
-
-
-def _kopf(pdf: FPDF, mandant: Mandant, titel: str, nummer: str, kunde: Kunde) -> None:
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    # Eigene Anschrift + Steuernummer/USt-IdNr. (§14 Abs. 4 Nr. 1+2 UStG) --
-    # ohne diese beiden Angaben ist die Rechnung fuer den Empfaenger nicht
-    # vorsteuerabzugsfaehig.
-    fd = mandant.firmendaten or {}
-    pdf.set_font("Helvetica", "", 9)
-    for zeile in _adresse_zeilen(fd.get("adresse")):
-        pdf.cell(0, 5, zeile, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if fd.get("steuernummer"):
-        pdf.cell(0, 5, f"Steuernummer: {fd['steuernummer']}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    elif fd.get("ust_idnr"):
-        pdf.cell(0, 5, f"USt-IdNr.: {fd['ust_idnr']}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(2)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"{titel} {nummer}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 6, "Kunde", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, kunde.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if kunde.adresse:
-        strasse = kunde.adresse.get("strasse") if isinstance(kunde.adresse, dict) else None
-        ort = kunde.adresse.get("ort") if isinstance(kunde.adresse, dict) else None
-        if strasse:
-            pdf.cell(0, 6, str(strasse), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        if ort:
-            pdf.cell(0, 6, str(ort), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(6)
-
-
-_POSITIONEN_SPALTEN = (("Pos.", 12), ("Beschreibung", 90), ("Menge", 22), ("Einheit", 22), ("Preis", 22), ("Gesamt", 22))
-_POSITIONEN_BREITE = sum(breite for _, breite in _POSITIONEN_SPALTEN)
-
-
-def _positionen_kopfzeile(pdf: FPDF) -> None:
-    pdf.set_font("Helvetica", "B", 10)
-    for label, breite in _POSITIONEN_SPALTEN:
-        pdf.cell(breite, 8, label, border=1)
-    pdf.ln()
-    pdf.set_font("Helvetica", "", 10)
-
-
-def _positionszeile(pdf: FPDF, p: AngebotPosition) -> Decimal:
-    zeilen_gesamt = p.menge * p.einzelpreis
-    pdf.cell(12, 8, str(p.position), border=1)
-    pdf.cell(90, 8, _pdf_safe_text(p.beschreibung)[:55], border=1)
-    pdf.cell(22, 8, f"{p.menge:g}", border=1, align="R")
-    pdf.cell(22, 8, _pdf_safe_text(p.einheit), border=1)
-    pdf.cell(22, 8, _fmt_betrag(p.einzelpreis), border=1, align="R")
-    pdf.cell(22, 8, _fmt_betrag(zeilen_gesamt), border=1, align="R")
-    pdf.ln()
-    return zeilen_gesamt
-
-
-def _positionen_tabelle(pdf: FPDF, positionen: list[AngebotPosition]) -> Decimal:
-    _positionen_kopfzeile(pdf)
-    gesamt_netto = Decimal("0")
-    for p in sorted(positionen, key=lambda x: x.position):
-        gesamt_netto += _positionszeile(pdf, p)
-    return gesamt_netto
 
 
 def _adresse_zeilen(adresse: dict | None) -> list[str]:
@@ -287,8 +212,44 @@ class _BelegPDF(FPDF):
         _set_text(self)
 
 
+_INFO_X_LABEL = 125
+_INFO_X_WERT = 152
+_INFO_WERT_BREITE = 38
+_INFO_ZEILE = 4.6
+
+
+def _info_wert_zeilen(pdf: FPDF, text: str, breite: float) -> list[str]:
+    """Bricht einen Info-Wert in Normalgroesse auf Zeilen <= breite um (Font
+    muss bereits gesetzt sein). Bevorzugt Trennstellen nach "@", "." und
+    Leerzeichen/Bindestrich, sonst zeichenweise -- so laeuft z. B. eine lange
+    E-Mail-Adresse nie ueber den rechten Rand."""
+    if pdf.get_string_width(text) <= breite:
+        return [text]
+    zeilen: list[str] = []
+    aktuell = ""
+    for teil in re.findall(r".*?[@.\s-]|.+$", text):
+        while pdf.get_string_width(teil.rstrip()) > breite:
+            # Einzelnes Token zu lang: Rest der laufenden Zeile abschliessen und
+            # das Token zeichenweise zerlegen.
+            if aktuell:
+                zeilen.append(aktuell.rstrip())
+                aktuell = ""
+            n = len(teil)
+            while n > 1 and pdf.get_string_width(teil[:n]) > breite:
+                n -= 1
+            zeilen.append(teil[:n])
+            teil = teil[n:]
+        if aktuell and pdf.get_string_width((aktuell + teil).rstrip()) > breite:
+            zeilen.append(aktuell.rstrip())
+            aktuell = ""
+        aktuell += teil
+    if aktuell.strip():
+        zeilen.append(aktuell.rstrip())
+    return zeilen or [text]
+
+
 def _beleg_adressbereich(
-    pdf: FPDF, mandant: Mandant, kunde: Kunde, paare: list[tuple[str, str]]
+    pdf: FPDF, mandant: Mandant, empfaenger: list[str], paare: list[tuple[str, str]]
 ) -> float:
     """DIN 5008 Form B: Ruecksendezeile ab 45 mm, Anschriftfeld ab 50 mm,
     Info-Block rechts. Gibt das untere Ende des tieferen Blocks zurueck."""
@@ -300,32 +261,29 @@ def _beleg_adressbereich(
 
     _set_text(pdf)
     pdf.set_font("Helvetica", "", 10)
-    empfaenger = [kunde.name, *_adresse_zeilen(kunde.adresse)][:6]
-    for i, zeile in enumerate(empfaenger):
+    zeilen_empfaenger = empfaenger[:6]
+    for i, zeile in enumerate(zeilen_empfaenger):
         pdf.set_xy(20, 50 + i * 5)
         pdf.cell(85, 5, _pdf_safe_text(zeile))
-    ende_empfaenger = 50 + len(empfaenger) * 5
+    ende_empfaenger = 50 + len(zeilen_empfaenger) * 5
 
-    wert_breite = 38
-    # Bis 7 mm ueber den Textrand hinaus toleriert, bevor die Schrift schrumpft.
-    wert_max = wert_breite + 7
-    for i, (label, wert) in enumerate(paare):
-        y = 50 + i * 5.5
-        pdf.set_xy(125, y)
+    y = 50.0
+    ende_info = 0.0
+    for label, wert in paare:
+        pdf.set_font("Helvetica", "", 9)
+        wert_zeilen = _info_wert_zeilen(pdf, _pdf_safe_text(wert), _INFO_WERT_BREITE)
+        pdf.set_xy(_INFO_X_LABEL, y)
         pdf.set_font("Helvetica", "", 8)
         _set_grau(pdf)
-        pdf.cell(27, 5, _pdf_safe_text(label))
-        text = _pdf_safe_text(wert)
-        # Lange Werte (z. B. E-Mail-Adressen) schrumpfen statt in den Rand
-        # zu laufen.
-        groesse = 9.0
-        pdf.set_font("Helvetica", "", groesse)
-        while groesse > 6.5 and pdf.get_string_width(text) > wert_max:
-            groesse -= 0.5
-            pdf.set_font("Helvetica", "", groesse)
+        pdf.cell(_INFO_X_WERT - _INFO_X_LABEL, 5, _pdf_safe_text(label))
+        pdf.set_font("Helvetica", "", 9)
         _set_text(pdf)
-        pdf.cell(wert_breite, 5, text)
-    ende_info = 50 + (len(paare) - 1) * 5.5 + 5 if paare else 0
+        for i, zeile in enumerate(wert_zeilen):
+            pdf.set_xy(_INFO_X_WERT, y + i * _INFO_ZEILE)
+            pdf.cell(_INFO_WERT_BREITE, 5, zeile)
+        hoehe = max(5.5, len(wert_zeilen) * _INFO_ZEILE + 0.9)
+        ende_info = y + max(5.0, len(wert_zeilen) * _INFO_ZEILE + 0.4)
+        y += hoehe
     return max(ende_empfaenger, ende_info)
 
 
@@ -333,8 +291,7 @@ def _beleg_titelbereich(
     pdf: FPDF,
     y: float,
     titel: str,
-    nummer: str,
-    zusatzzeile: str | None,
+    untertitel: list[str],
     einleitung: str,
 ) -> None:
     pdf.set_xy(20, y)
@@ -343,13 +300,12 @@ def _beleg_titelbereich(
     pdf.cell(0, 9, titel, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica", "", 9)
     _set_grau(pdf)
-    pdf.cell(0, 5, _pdf_safe_text(f"Nr. {nummer}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if zusatzzeile:
-        pdf.cell(0, 5, _pdf_safe_text(zusatzzeile), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    for zeile in untertitel:
+        pdf.cell(0, 5, _pdf_safe_text(zeile), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(5)
     pdf.set_font("Helvetica", "", 10)
     _set_text(pdf)
-    pdf.cell(0, 5, _pdf_safe_text(einleitung), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.multi_cell(170, 5, _pdf_safe_text(einleitung), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(8)
 
 
@@ -552,14 +508,18 @@ def _beleg_summenblock(
     *,
     label_akzent: bool = False,
     hoehe_danach: float = 0.0,
+    nur_netto: bool = False,
+    hinweis: str | None = None,
 ) -> None:
+    """nur_netto: Endbetrag ohne USt.-Zeilen (Bestellung -- Richtwert netto),
+    mit optionalem grauem hinweis darunter."""
     netto = gesamt_netto.quantize(_CENT)
-    hoehe = _beleg_summenblock_hoehe(kleinunternehmer) + hoehe_danach
+    hoehe = _beleg_summenblock_hoehe(kleinunternehmer or nur_netto) + hoehe_danach
     if not _b_platz(pdf, hoehe):
         _b_neue_seite(pdf, mit_kopfzeile=False)
     pdf.set_y(pdf.get_y() + 6)
     x = 115
-    if kleinunternehmer:
+    if kleinunternehmer or nur_netto:
         brutto = netto
     else:
         mwst = (netto * mwst_satz / Decimal("100")).quantize(_CENT)
@@ -601,6 +561,49 @@ def _beleg_summenblock(
         pdf.cell(75, 4, "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.")
         pdf.set_y(pdf.get_y() + 4)
         _set_text(pdf)
+    elif nur_netto and hinweis:
+        pdf.set_font("Helvetica", "", 8)
+        _set_grau(pdf)
+        pdf.set_xy(x, pdf.get_y() + 1)
+        pdf.cell(75, 4, _pdf_safe_text(hinweis))
+        pdf.set_y(pdf.get_y() + 4)
+        _set_text(pdf)
+
+
+def _mahn_aufstellung_hoehe(anzahl_zeilen: int) -> float:
+    # 6 Abstand + Zeilen + Linie + Endzeile
+    return 6 + anzahl_zeilen * 6 + 3 + 8
+
+
+def _mahn_aufstellung(
+    pdf: FPDF, zeilen: list[tuple[str, Decimal]], endbetrag_label: str, endbetrag: Decimal, hoehe_danach: float
+) -> None:
+    """Rechtsbuendige Aufstellung wie der Summenblock, nur eine Linie vor dem
+    Endbetrag."""
+    if not _b_platz(pdf, _mahn_aufstellung_hoehe(len(zeilen)) + hoehe_danach):
+        _b_neue_seite(pdf, mit_kopfzeile=False)
+    pdf.set_y(pdf.get_y() + 6)
+    x = 105
+    pdf.set_font("Helvetica", "", 9)
+    _set_text(pdf)
+    for label, wert in zeilen:
+        y = pdf.get_y()
+        pdf.set_xy(x, y)
+        pdf.cell(55, 6, _pdf_safe_text(label))
+        pdf.set_xy(155, y)
+        pdf.cell(35, 6, _fmt_euro(wert), align="R")
+        pdf.set_y(y + 6)
+    _linie(pdf, pdf.get_y() + 1, _LINIE_KOPF, x1=x, x2=190)
+    pdf.set_y(pdf.get_y() + 3)
+    y = pdf.get_y()
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(*_AKZENT)
+    pdf.set_xy(x, y)
+    pdf.cell(50, 8, endbetrag_label)
+    pdf.set_xy(155, y)
+    pdf.cell(35, 8, _fmt_euro(endbetrag), align="R")
+    _set_text(pdf)
+    pdf.set_y(y + 8)
 
 
 def _beleg_abschluss_zeilen(pdf: FPDF, absaetze: list[str]) -> list[list[str]]:
@@ -636,51 +639,66 @@ def _beleg_abschluss(pdf: FPDF, mandant: Mandant, absaetze: list[str]) -> None:
 def _beleg_rumpf(
     pdf: _BelegPDF,
     mandant: Mandant,
-    kunde: Kunde,
+    empfaenger: list[str],
     *,
     paare: list[tuple[str, str]],
     titel: str,
-    nummer: str,
-    zusatzzeile: str | None,
+    untertitel: list[str],
     einleitung: str,
-    positionen: list[AngebotPosition] | list[RechnungPosition] | None,
+    positionen: list[AngebotPosition] | list[RechnungPosition] | list[BestellungPosition] | None,
     vorgang_koepfe: dict[UUID, tuple[str, str]],
     netto_ohne_positionen: Decimal,
     mwst_satz: Decimal,
     endbetrag_label: str,
     label_akzent: bool,
     absaetze: list[str],
+    nur_netto: bool = False,
+    netto_hinweis: str | None = None,
+    aufstellung: tuple[list[tuple[str, Decimal]], Decimal] | None = None,
+    ohne_summenblock: bool = False,
 ) -> None:
+    """aufstellung=(Zeilen, Endbetrag) ersetzt den USt.-Summenblock durch die
+    Mahn-Aufstellung; ohne_summenblock laesst den Block ganz weg."""
     pdf.set_margins(20, 15, 20)
     pdf.set_auto_page_break(auto=True, margin=30)
     pdf.add_page()
     _set_text(pdf)
 
-    ende_adressen = _beleg_adressbereich(pdf, mandant, kunde, paare)
+    ende_adressen = _beleg_adressbereich(pdf, mandant, empfaenger, paare)
     titel_y = max(_B_TITEL_MIN_Y, ende_adressen + _B_TITEL_ABSTAND)
-    _beleg_titelbereich(pdf, titel_y, titel, nummer, zusatzzeile, einleitung)
+    _beleg_titelbereich(pdf, titel_y, titel, untertitel, einleitung)
 
     kleinunternehmer = bool((mandant.firmendaten or {}).get("ist_kleinunternehmer"))
     abschluss_hoehe = _beleg_abschluss_hoehe(pdf, absaetze)
+    if aufstellung is not None:
+        summen_hoehe = _mahn_aufstellung_hoehe(len(aufstellung[0]))
+    elif ohne_summenblock:
+        summen_hoehe = 0.0
+    else:
+        summen_hoehe = _beleg_summenblock_hoehe(kleinunternehmer or nur_netto)
     if positionen:
-        gesamt_netto = _beleg_positionen(
-            pdf,
-            positionen,
-            vorgang_koepfe,
-            _beleg_summenblock_hoehe(kleinunternehmer) + abschluss_hoehe,
-        )
+        gesamt_netto = _beleg_positionen(pdf, positionen, vorgang_koepfe, summen_hoehe + abschluss_hoehe)
     else:
         gesamt_netto = netto_ohne_positionen
-    _beleg_summenblock(
-        pdf,
-        gesamt_netto,
-        mwst_satz,
-        kleinunternehmer,
-        endbetrag_label,
-        label_akzent=label_akzent,
-        hoehe_danach=abschluss_hoehe,
-    )
+    if aufstellung is not None:
+        _mahn_aufstellung(pdf, aufstellung[0], endbetrag_label, aufstellung[1], abschluss_hoehe)
+    elif not ohne_summenblock:
+        _beleg_summenblock(
+            pdf,
+            gesamt_netto,
+            mwst_satz,
+            kleinunternehmer,
+            endbetrag_label,
+            label_akzent=label_akzent,
+            hoehe_danach=abschluss_hoehe,
+            nur_netto=nur_netto,
+            hinweis=netto_hinweis,
+        )
     _beleg_abschluss(pdf, mandant, absaetze)
+
+
+def _kunde_empfaenger(kunde: Kunde) -> list[str]:
+    return [kunde.name, *_adresse_zeilen(kunde.adresse)]
 
 
 def generate_angebot_pdf(
@@ -710,11 +728,10 @@ def generate_angebot_pdf(
     _beleg_rumpf(
         pdf,
         mandant,
-        kunde,
+        _kunde_empfaenger(kunde),
         paare=paare,
         titel="Angebot",
-        nummer=angebot.angebotsnummer,
-        zusatzzeile=None,
+        untertitel=[f"Nr. {angebot.angebotsnummer}"],
         einleitung="Vielen Dank für Ihre Anfrage. Gerne bieten wir Ihnen folgende Leistungen an:",
         positionen=positionen,
         vorgang_koepfe={},
@@ -787,11 +804,10 @@ def generate_rechnung_pdf(
     _beleg_rumpf(
         pdf,
         mandant,
-        kunde,
+        _kunde_empfaenger(kunde),
         paare=paare,
         titel=titel,
-        nummer=rechnung.rechnungsnummer,
-        zusatzzeile=zusatzzeile,
+        untertitel=[f"Nr. {rechnung.rechnungsnummer}", *([zusatzzeile] if zusatzzeile else [])],
         einleitung=(
             "Hiermit stornieren wir die oben genannte Rechnung vollständig."
             if storno
@@ -821,6 +837,20 @@ def generate_rechnung_pdf(
 
 
 _MAHNSTUFEN_LABEL = {1: "1. Mahnung", 2: "2. Mahnung", 3: "3. Mahnung"}
+_MAHNTEXT = {
+    1: (
+        "sicherlich ist Ihnen entgangen, dass die oben genannte Rechnung seit {tage} Tagen fällig ist. "
+        "Wir bitten Sie, den offenen Betrag zu begleichen."
+    ),
+    2: (
+        "leider konnten wir bis heute keinen Zahlungseingang zu der oben genannten Rechnung feststellen, "
+        "die seit {tage} Tagen fällig ist. Bitte begleichen Sie den offenen Betrag umgehend."
+    ),
+    3: (
+        "trotz unserer bisherigen Erinnerungen ist die oben genannte Rechnung seit {tage} Tagen unbezahlt. "
+        "Wir fordern Sie letztmalig auf, den offenen Betrag umgehend zu begleichen."
+    ),
+}
 
 
 def generate_mahnung_pdf(
@@ -832,34 +862,51 @@ def generate_mahnung_pdf(
     betrag_brutto: Decimal,
     verzugszinsen: Decimal,
     mahnpauschale: Decimal,
+    logo_bytes: bytes | None = None,
 ) -> bytes:
-    pdf = FPDF()
-    pdf.add_page()
-    _kopf(pdf, mandant, _MAHNSTUFEN_LABEL.get(mahnstufe, "Mahnung"), rechnung.rechnungsnummer, kunde)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(
-        0,
-        6,
-        f"Rechnung {rechnung.rechnungsnummer} vom {_fmt_datum(rechnung.created_at)}, "
-        f"{tage_ueberfaellig} Tage ueberfaellig.",
-        new_x=XPos.LMARGIN,
-        new_y=YPos.NEXT,
-    )
-    pdf.ln(4)
+    fd = mandant.firmendaten or {}
+    titel = _MAHNSTUFEN_LABEL.get(mahnstufe, "Mahnung")
+    paare = [
+        ("Datum", _fmt_datum(date.today())),
+        ("Rechnungsnummer", rechnung.rechnungsnummer),
+        ("Rechnungsdatum", _fmt_datum(rechnung.created_at)),
+    ]
+    if rechnung.faellig_am:
+        paare.append(("Fällig seit", _fmt_datum(rechnung.faellig_am)))
+    paare.append(("Kundennummer", kunde.kundennummer))
 
+    text = _MAHNTEXT.get(mahnstufe, _MAHNTEXT[3]).format(tage=tage_ueberfaellig)
     zeilen = [("Offener Rechnungsbetrag", betrag_brutto), ("Verzugszinsen (§ 288 BGB)", verzugszinsen)]
     if mahnpauschale:
         zeilen.append(("Mahnpauschale (§ 288 Abs. 5 BGB)", mahnpauschale))
-    pdf.set_font("Helvetica", "", 10)
-    for label, wert in zeilen:
-        pdf.cell(148, 7, "", border=0)
-        pdf.cell(22, 7, label)
-        pdf.cell(22, 7, _fmt_betrag(wert), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     gesamt = betrag_brutto + verzugszinsen + mahnpauschale
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(148, 8, "", border=0)
-    pdf.cell(22, 8, "Gesamt fällig")
-    pdf.cell(22, 8, _fmt_betrag(gesamt), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+    schluss = []
+    if fd.get("iban"):
+        schluss.append(
+            f"Bitte überweisen Sie den Betrag unter Angabe der Rechnungsnummer {rechnung.rechnungsnummer} "
+            "auf das unten genannte Konto."
+        )
+    schluss.append("Sollten Sie die Zahlung bereits veranlasst haben, betrachten Sie dieses Schreiben bitte als gegenstandslos.")
+
+    pdf = _BelegPDF(mandant, titel, rechnung.rechnungsnummer, logo_bytes)
+    _beleg_rumpf(
+        pdf,
+        mandant,
+        _kunde_empfaenger(kunde),
+        paare=paare,
+        titel=titel,
+        untertitel=[f"zu Rechnung {rechnung.rechnungsnummer} vom {_fmt_datum(rechnung.created_at)}"],
+        einleitung=f"Sehr geehrte Damen und Herren,\n\n{text}",
+        positionen=None,
+        vorgang_koepfe={},
+        netto_ohne_positionen=Decimal("0"),
+        mwst_satz=Decimal("0"),
+        endbetrag_label="Gesamt fällig",
+        label_akzent=True,
+        absaetze=["\n".join(schluss)],
+        aufstellung=(zeilen, gesamt),
+    )
     return bytes(pdf.output())
 
 
@@ -971,44 +1018,46 @@ def generate_wochenzettel_pdf(
 
 
 def generate_bestellung_pdf(
-    mandant: Mandant, bestellung: Bestellung, positionen: list[BestellungPosition], lieferant: Lieferant | None
+    mandant: Mandant,
+    bestellung: Bestellung,
+    positionen: list[BestellungPosition],
+    lieferant: Lieferant | None,
+    logo_bytes: bytes | None = None,
 ) -> bytes:
-    """Anders als Angebot/Rechnung ist der Empfänger hier ein Lieferant statt
-    ein Kunde -- eigener, schlankerer Kopf statt _kopf() (kein
-    MwSt.-/Summenblock, da einzelpreis hier nur ein interner Richtwert ist,
-    nicht der tatsaechliche Einkaufspreis des Lieferanten)."""
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.cell(0, 10, mandant.name, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Bestellung {bestellung.bestellnummer}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(0, 6, "Lieferant", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, lieferant.name if lieferant else "-", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if lieferant and lieferant.email:
-        pdf.cell(0, 6, lieferant.email, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(6)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Datum: {_fmt_datum(bestellung.created_at)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(4)
-
-    gesamt_netto = _positionen_tabelle(pdf, positionen)
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(148, 8, "", border=0)
-    pdf.cell(22, 8, "Richtwert")
-    pdf.cell(22, 8, _fmt_betrag(gesamt_netto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
+    """Empfaenger ist ein Lieferant statt eines Kunden. Der Summenblock weist
+    nur den Netto-Richtwert aus (kein USt.-Block): einzelpreis ist hier ein
+    interner Richtwert, nicht der tatsaechliche Einkaufspreis des Lieferanten."""
+    empfaenger = ["-"]
+    if lieferant:
+        empfaenger = [lieferant.name, *[z for z in (lieferant.email, lieferant.telefon) if z]]
+    paare = [
+        ("Bestellnummer", bestellung.bestellnummer),
+        ("Datum", _fmt_datum(bestellung.created_at)),
+    ]
+    absaetze = []
     if bestellung.notiz:
-        pdf.ln(6)
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 6, "Notiz", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_font("Helvetica", "", 10)
-        pdf.multi_cell(0, 6, bestellung.notiz)
+        absaetze.append(f"Bemerkung:\n{bestellung.notiz}")
+    absaetze.append("Bitte bestätigen Sie uns die Bestellung und den Liefertermin.")
 
+    pdf = _BelegPDF(mandant, "Bestellung", bestellung.bestellnummer, logo_bytes)
+    _beleg_rumpf(
+        pdf,
+        mandant,
+        empfaenger,
+        paare=paare,
+        titel="Bestellung",
+        untertitel=[f"Nr. {bestellung.bestellnummer}"],
+        einleitung="Hiermit bestellen wir folgende Artikel:",
+        positionen=positionen,
+        vorgang_koepfe={},
+        netto_ohne_positionen=Decimal("0"),
+        mwst_satz=Decimal("0"),
+        endbetrag_label="Bestellsumme",
+        label_akzent=True,
+        absaetze=absaetze,
+        nur_netto=True,
+        netto_hinweis="Richtwert, netto zzgl. USt.",
+    )
     return bytes(pdf.output())
 
 
