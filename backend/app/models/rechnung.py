@@ -121,6 +121,14 @@ class RechnungPosition(Base):
     vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("vorgaenge.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Nur bei quelle="leistung": Grundlage fuers gezielte Freigeben der
+    # SVS-gekoppelten Zeit dieser LV-Position beim Entfernen der Position.
+    lv_position_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("leistungsverzeichnis_positionen.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
 
 class RechnungZahlung(Base):

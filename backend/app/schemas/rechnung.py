@@ -20,6 +20,9 @@ class RechnungPositionCreate(BaseModel):
     # Zeiterfassung-Eintraege beim Uebernehmen gesperrt werden (Konzept
     # Abschnitt 8). NULL bei frei eingetragenen Positionen.
     quelle: RechnungPositionQuelle | None = None
+    # Nur bei quelle="leistung": die LV-Position, deren SVS-gekoppelte Zeit
+    # mit uebernommen (und gesperrt) wird.
+    lv_position_id: UUID | None = None
 
 
 class RechnungPositionRead(BaseModel):
@@ -33,6 +36,7 @@ class RechnungPositionRead(BaseModel):
     einzelpreis: Decimal
     quelle: RechnungPositionQuelle | None
     vorgang_id: UUID | None
+    lv_position_id: UUID | None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -50,6 +54,7 @@ class RechnungPositionVorschlag(BaseModel):
     menge: Decimal
     einheit: str
     einzelpreis: Decimal
+    lv_position_id: UUID | None = None
 
 
 class RechnungZahlungCreate(BaseModel):

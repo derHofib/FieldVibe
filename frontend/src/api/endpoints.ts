@@ -1250,6 +1250,7 @@ export const rechnungenApi = {
     id: string,
     body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
       quelle?: RechnungPositionQuelle;
+      lv_position_id?: string | null;
     },
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   removePosition: (id: string, positionId: string) =>

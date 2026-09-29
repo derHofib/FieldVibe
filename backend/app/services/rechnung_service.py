@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kunde import Kunde
@@ -226,6 +226,7 @@ async def positionen_vorschlaege_fuer_vorgang(
                     menge=leistung_mengen[lv_position.id].quantize(Decimal("0.01")),
                     einheit=lv_position.einheit,
                     einzelpreis=lv_position.einzelpreis,
+                    lv_position_id=lv_position.id,
                 )
             )
 
@@ -233,14 +234,23 @@ async def positionen_vorschlaege_fuer_vorgang(
 
 
 async def _zeiterfassung_fuer_quelle(
-    session: AsyncSession, vorgang_id: UUID, quelle: str
+    session: AsyncSession, vorgang_id: UUID, quelle: str, lv_position_id: UUID | None = None
 ) -> list[Zeiterfassung]:
     """Dieselben Kriterien wie in positionen_vorschlaege_fuer_vorgang (Zweig
     "zeit" bzw. "fahrzeit"/"fahrtkosten"), aber als tatsaechliche Zeilen
     statt Summe -- fuer das Sperren beim Uebernehmen einer Rechnungsposition
-    (Konzept Abschnitt 8). Nur fuer die drei Zeiterfassung-basierten Quellen
-    definiert, "material"/"leistung" liefern eine leere Liste."""
-    filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
+    (Konzept Abschnitt 8). "leistung" greift nur die SVS-gekoppelte Zeit
+    (lv_position_id) und braucht deshalb den Parameter, ohne ihn (und fuer
+    "material") kommt eine leere Liste."""
+    if quelle == "leistung":
+        if lv_position_id is None:
+            return []
+        filter_bedingungen = [
+            Zeiterfassung.kategorie == "auftrag",
+            Zeiterfassung.lv_position_id == lv_position_id,
+        ]
+    else:
+        filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
     if filter_bedingungen is None:
         return []
     stmt = select(Zeiterfassung).where(
@@ -257,7 +267,13 @@ async def _zeiterfassung_fuer_quelle(
 
 
 async def zeiterfassung_abrechnen(
-    session: AsyncSession, *, vorgang_id: UUID, quelle: str, rechnung_id: UUID, geaendert_von: UUID
+    session: AsyncSession,
+    *,
+    vorgang_id: UUID,
+    quelle: str,
+    rechnung_id: UUID,
+    geaendert_von: UUID,
+    lv_position_id: UUID | None = None,
 ) -> None:
     """Sperrt die einer "zeit"/"fahrzeit"/"fahrtkosten"-Position zugrunde
     liegenden Zeiterfassung-Eintraege, wenn diese Position in eine Rechnung
@@ -268,7 +284,7 @@ async def zeiterfassung_abrechnen(
     nachdem "fahrzeit" dieselben Zeilen schon gesperrt hat) findet dann
     keine mehr und ist ein No-op -- die Zeilen zeigen ohnehin schon auf
     dieselbe Rechnung."""
-    for eintrag in await _zeiterfassung_fuer_quelle(session, vorgang_id, quelle):
+    for eintrag in await _zeiterfassung_fuer_quelle(session, vorgang_id, quelle, lv_position_id):
         eintrag.buchungsstatus = "abgerechnet"
         eintrag.abgerechnet_rechnung_id = rechnung_id
         session.add(
@@ -282,7 +298,13 @@ async def zeiterfassung_abrechnen(
 
 
 async def zeiterfassung_abrechnung_zuruecksetzen(
-    session: AsyncSession, *, rechnung_id: UUID, quelle: str, vorgang_id: UUID, geaendert_von: UUID
+    session: AsyncSession,
+    *,
+    rechnung_id: UUID,
+    quelle: str,
+    vorgang_id: UUID,
+    geaendert_von: UUID,
+    lv_position_id: UUID | None = None,
 ) -> None:
     """Kehrt zeiterfassung_abrechnen beim Entfernen einer Rechnungsposition
     um -- der Aufrufer (siehe remove_position in app/api/routes/rechnungen.py)
@@ -290,14 +312,26 @@ async def zeiterfassung_abrechnung_zuruecksetzen(
     oder zeit<->fahrtkosten wenn dieselbe "auftrag"-Zeile sowohl Dauer als
     auch km beisteuert) auf derselben Rechnung besteht und ruft in dem Fall
     gar nicht erst auf."""
-    filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
+    if quelle == "leistung":
+        if lv_position_id is None:
+            return
+        filter_bedingungen = [
+            Zeiterfassung.kategorie == "auftrag",
+            Zeiterfassung.lv_position_id == lv_position_id,
+        ]
+    else:
+        filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
     if filter_bedingungen is None:
         return
     stmt = select(Zeiterfassung).where(
         Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
+        Zeiterfassung.buchungsstatus == "abgerechnet",
         Zeiterfassung.vorgang_id == vorgang_id,
         *filter_bedingungen,
     )
+    if quelle == "zeit":
+        # Spiegelt _zeiterfassung_fuer_quelle: SVS-Zeile gehoert der "leistung".
+        stmt = stmt.where(Zeiterfassung.lv_position_id.is_(None))
     for eintrag in (await session.execute(stmt)).scalars().all():
         eintrag.buchungsstatus = "gebucht"
         eintrag.abgerechnet_rechnung_id = None
@@ -309,6 +343,69 @@ async def zeiterfassung_abrechnung_zuruecksetzen(
                 geaendert_von=geaendert_von,
             )
         )
+
+
+async def zeiterfassung_freigeben_fuer_rechnung(
+    session: AsyncSession, *, rechnung_id: UUID, geaendert_von: UUID | None, verweis_behalten: bool
+) -> None:
+    """Gibt alle von dieser Rechnung gesperrten Stunden frei (Loeschen des
+    Entwurfs, Storno). verweis_behalten=True laesst abgerechnet_rechnung_id
+    stehen, damit ein Wiederherstellen aus dem Papierkorb genau diese Zeilen
+    wieder sperren kann (zeiterfassung_wieder_sperren_fuer_rechnung)."""
+    stmt = select(Zeiterfassung).where(
+        Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
+        Zeiterfassung.buchungsstatus == "abgerechnet",
+    )
+    for eintrag in (await session.execute(stmt)).scalars().all():
+        eintrag.buchungsstatus = "gebucht"
+        if not verweis_behalten:
+            eintrag.abgerechnet_rechnung_id = None
+        session.add(
+            ZeiterfassungAenderung(
+                mandant_id=eintrag.mandant_id,
+                zeiterfassung_id=eintrag.id,
+                aktion="abrechnung_zurueckgesetzt",
+                geaendert_von=geaendert_von,
+            )
+        )
+
+
+async def zeiterfassung_wieder_sperren_fuer_rechnung(
+    session: AsyncSession, *, rechnung_id: UUID, geaendert_von: UUID | None
+) -> None:
+    """Gegenstueck zu zeiterfassung_freigeben_fuer_rechnung(verweis_behalten=
+    True) beim Wiederherstellen aus dem Papierkorb. Zeilen, die zwischenzeitlich
+    von einer anderen Rechnung gesperrt wurden, zeigen auf diese und werden
+    von der Verweis-Bedingung uebergangen; Zeilen mit geleertem Verweis
+    bleiben frei."""
+    stmt = select(Zeiterfassung).where(
+        Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
+        Zeiterfassung.buchungsstatus == "gebucht",
+        Zeiterfassung.geloescht_am.is_(None),
+    )
+    for eintrag in (await session.execute(stmt)).scalars().all():
+        eintrag.buchungsstatus = "abgerechnet"
+        session.add(
+            ZeiterfassungAenderung(
+                mandant_id=eintrag.mandant_id,
+                zeiterfassung_id=eintrag.id,
+                aktion="abgerechnet",
+                geaendert_von=geaendert_von,
+            )
+        )
+
+
+async def zeiterfassung_verweis_loesen(session: AsyncSession, *, rechnung_id: UUID) -> None:
+    """Vor dem endgueltigen Loeschen einer Rechnung: der behaltene Verweis
+    auf freigegebene ('gebucht'e) Zeilen wuerde sonst am FK scheitern."""
+    await session.execute(
+        update(Zeiterfassung)
+        .where(
+            Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
+            Zeiterfassung.buchungsstatus == "gebucht",
+        )
+        .values(abgerechnet_rechnung_id=None)
+    )
 
 
 def netto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Decimal:

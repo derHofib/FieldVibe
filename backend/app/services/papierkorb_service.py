@@ -47,6 +47,11 @@ from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.zeiterfassung import Zeiterfassung
+from app.services.rechnung_service import (
+    zeiterfassung_freigeben_fuer_rechnung,
+    zeiterfassung_verweis_loesen,
+    zeiterfassung_wieder_sperren_fuer_rechnung,
+)
 
 
 @dataclass(frozen=True)
@@ -258,6 +263,13 @@ async def soft_delete(
             continue
         obj.geloescht_am = now
         obj.geloescht_von = actor_user_id
+        if typ == "rechnung" and obj.status == "entwurf":
+            # Auch bei kaskadierendem Loeschen (Vorgang/Kunde): ein Entwurf im
+            # Papierkorb soll keine Stunden blockieren. Der Verweis bleibt fuers
+            # Wiederherstellen erhalten.
+            await zeiterfassung_freigeben_fuer_rechnung(
+                session, rechnung_id=eid, geaendert_von=actor_user_id, verweis_behalten=True
+            )
         for kind_typ, fk_attr in kind.kinder:
             for kind_id in await _aktive_kinder(
                 session, kind_typ=kind_typ, fk_attr=fk_attr, parent_id=eid
@@ -268,7 +280,9 @@ async def soft_delete(
     return wurzel
 
 
-async def restore(session: AsyncSession, *, entity_typ: str, entity_id: UUID) -> Any:
+async def restore(
+    session: AsyncSession, *, entity_typ: str, entity_id: UUID, actor_user_id: UUID | None = None
+) -> Any:
     """Stellt ausschliesslich den einen angefragten Datensatz wieder her --
     bewusst NICHT kaskadierend, kaskadierend geloeschte Kinder bleiben
     geloescht, bis sie einzeln wiederhergestellt werden."""
@@ -278,6 +292,10 @@ async def restore(session: AsyncSession, *, entity_typ: str, entity_id: UUID) ->
         return None
     obj.geloescht_am = None
     obj.geloescht_von = None
+    if entity_typ == "rechnung":
+        await zeiterfassung_wieder_sperren_fuer_rechnung(
+            session, rechnung_id=entity_id, geaendert_von=actor_user_id
+        )
     await session.flush()
     return obj
 
@@ -306,6 +324,8 @@ async def purge(session: AsyncSession, *, entity_typ: str, entity_id: UUID) -> b
         ):
             await purge(session, entity_typ=kind_typ, entity_id=kind_id)
 
+    if entity_typ == "rechnung":
+        await zeiterfassung_verweis_loesen(session, rechnung_id=entity_id)
     await session.delete(obj)
     await session.flush()
     return True

@@ -105,12 +105,10 @@ async def test_sammelrechnung_zwei_vorgaenge(client, make_mandant, make_user, ma
     assert pos[2]["beschreibung"] == "Stundensatz Monteur – V-B Beta"
 
     async with system_session() as session:
-        for eintrag_id in (a, b_ohne):
+        for eintrag_id in (a, b_ohne, b_svs):
             e = await session.get(Zeiterfassung, eintrag_id)
             assert e.buchungsstatus == "abgerechnet"
             assert str(e.abgerechnet_rechnung_id) == body["id"]
-        # "leistung" sperrt bewusst nicht (siehe zeiterfassung_abrechnen) --
-        # das gilt auch fuer die SVS-Zeit, hier also kein Status-Assert.
 
 
 @pytest.mark.asyncio

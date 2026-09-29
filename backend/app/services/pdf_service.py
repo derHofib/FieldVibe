@@ -121,9 +121,9 @@ def _positionen_tabelle(pdf: FPDF, positionen: list[AngebotPosition]) -> Decimal
         zeilen_gesamt = p.menge * p.einzelpreis
         gesamt_netto += zeilen_gesamt
         pdf.cell(12, 8, str(p.position), border=1)
-        pdf.cell(90, 8, p.beschreibung[:55], border=1)
+        pdf.cell(90, 8, _pdf_safe_text(p.beschreibung)[:55], border=1)
         pdf.cell(22, 8, f"{p.menge:g}", border=1, align="R")
-        pdf.cell(22, 8, p.einheit, border=1)
+        pdf.cell(22, 8, _pdf_safe_text(p.einheit), border=1)
         pdf.cell(22, 8, _fmt_betrag(p.einzelpreis), border=1, align="R")
         pdf.cell(22, 8, _fmt_betrag(zeilen_gesamt), border=1, align="R")
         pdf.ln()
@@ -322,9 +322,9 @@ def _angebot_positionen_tabelle(pdf: FPDF, positionen: list[AngebotPosition]) ->
         fill = i % 2 == 1
         pdf.cell(10, 7, str(p.position), border=1, fill=fill)
         pdf.cell(22, 7, p.artikelnummer or "", border=1, fill=fill)
-        pdf.cell(62, 7, p.beschreibung[:38], border=1, fill=fill)
+        pdf.cell(62, 7, _pdf_safe_text(p.beschreibung)[:38], border=1, fill=fill)
         pdf.cell(16, 7, f"{p.menge:g}", border=1, align="R", fill=fill)
-        pdf.cell(16, 7, p.einheit, border=1, fill=fill)
+        pdf.cell(16, 7, _pdf_safe_text(p.einheit), border=1, fill=fill)
         pdf.cell(22, 7, _fmt_betrag(p.einzelpreis), border=1, align="R", fill=fill)
         pdf.cell(22, 7, _fmt_betrag(zeilen_gesamt), border=1, align="R", fill=fill)
         pdf.ln()

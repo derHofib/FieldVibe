@@ -877,6 +877,7 @@ export interface RechnungPosition {
   gesamt: string;
   quelle: RechnungPositionQuelle | null;
   vorgang_id: string | null;
+  lv_position_id?: string | null;
 }
 
 // Offene, noch nicht abgerechnete Stunden eines Vorgangs (Einzelposten-
@@ -898,6 +899,7 @@ export interface RechnungPositionVorschlag {
   menge: string;
   einheit: string;
   einzelpreis: string;
+  lv_position_id?: string | null;
 }
 
 export interface RechnungZahlung {

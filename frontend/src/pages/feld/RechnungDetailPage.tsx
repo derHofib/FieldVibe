@@ -49,6 +49,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
           einheit: v.einheit,
           einzelpreis: v.einzelpreis,
           quelle: v.quelle,
+          lv_position_id: v.lv_position_id,
         });
       }
     },

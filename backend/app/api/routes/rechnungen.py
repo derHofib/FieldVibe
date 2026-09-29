@@ -55,6 +55,7 @@ from app.services.rechnung_service import (
     zahlungen_fuer,
     zeiterfassung_abrechnen,
     zeiterfassung_abrechnung_zuruecksetzen,
+    zeiterfassung_freigeben_fuer_rechnung,
 )
 
 router = APIRouter(
@@ -508,17 +509,18 @@ async def create_rechnung(
                     einzelpreis=auswahl.stundensatz if vorschlag.quelle == "zeit" else vorschlag.einzelpreis,
                     quelle=vorschlag.quelle,
                     vorgang_id=sammel_vorgang.id,
+                    lv_position_id=vorschlag.lv_position_id,
                 )
             )
             naechste_position += 1
-            if vorschlag.quelle in ("zeit", "fahrzeit", "fahrtkosten"):
-                await zeiterfassung_abrechnen(
-                    session,
-                    vorgang_id=sammel_vorgang.id,
-                    quelle=vorschlag.quelle,
-                    rechnung_id=rechnung.id,
-                    geaendert_von=auth.user_id,
-                )
+            await zeiterfassung_abrechnen(
+                session,
+                vorgang_id=sammel_vorgang.id,
+                quelle=vorschlag.quelle,
+                rechnung_id=rechnung.id,
+                geaendert_von=auth.user_id,
+                lv_position_id=vorschlag.lv_position_id,
+            )
     await session.flush()
     await session.refresh(rechnung)
 
@@ -571,20 +573,25 @@ async def add_position(
             einheit=body.einheit,
             einzelpreis=body.einzelpreis,
             quelle=body.quelle,
-            vorgang_id=rechnung.vorgang_id if body.quelle in ("zeit", "fahrzeit", "fahrtkosten") else None,
+            vorgang_id=(
+                rechnung.vorgang_id if body.quelle in ("zeit", "fahrzeit", "fahrtkosten", "leistung") else None
+            ),
+            lv_position_id=body.lv_position_id if body.quelle == "leistung" else None,
         )
     )
     # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): eine aus einem
     # Zeit-Vorschlag uebernommene Position sperrt die zugrunde liegenden
-    # Zeiterfassung-Eintraege (buchungsstatus -> 'abgerechnet'). "leistung"
-    # und "material" bleiben bewusst aussen vor (siehe zeiterfassung_abrechnen).
-    if body.quelle in ("zeit", "fahrzeit", "fahrtkosten") and rechnung.vorgang_id is not None:
+    # Zeiterfassung-Eintraege (buchungsstatus -> 'abgerechnet'). Bei "leistung"
+    # nur die SVS-gekoppelte Zeit; LV-Verwendungen und "material" bleiben
+    # bewusst aussen vor (siehe zeiterfassung_abrechnen).
+    if body.quelle in ("zeit", "fahrzeit", "fahrtkosten", "leistung") and rechnung.vorgang_id is not None:
         await zeiterfassung_abrechnen(
             session,
             vorgang_id=rechnung.vorgang_id,
             quelle=body.quelle,
             rechnung_id=rechnung.id,
             geaendert_von=auth.user_id,
+            lv_position_id=body.lv_position_id if body.quelle == "leistung" else None,
         )
     await session.flush()
     await session.refresh(rechnung)
@@ -624,21 +631,29 @@ async def remove_position(
     # zuruecksetzen, wenn keine Geschwister-Position mehr auf derselben
     # Rechnung besteht, sonst braeuchte die verbleibende Position die
     # gesperrten Zeilen noch.
+    # "leistung" ist nur Geschwister einer zweiten "leistung"-Position mit
+    # gleicher LV-Position (zusaetzlicher lv_position_id-Vergleich unten);
+    # "zeit" filtert lv_position_id IS NULL und teilt sich nie Zeilen damit.
     _GESCHWISTER_QUELLEN = {
         "fahrzeit": ("fahrtkosten",),
         "fahrtkosten": ("fahrzeit", "zeit"),
         "zeit": ("fahrtkosten",),
+        "leistung": ("leistung",),
     }
     # Der Vorgang haengt an der Position (Sammelrechnung); rechnung.vorgang_id
     # ist nur der Fallback fuer Positionen aus der Zeit vor Migration 0087.
     entsperr_vorgang_id = position.vorgang_id or rechnung.vorgang_id
-    if position.quelle in ("zeit", "fahrzeit", "fahrtkosten") and entsperr_vorgang_id is not None:
+    if (
+        position.quelle in ("zeit", "fahrzeit", "fahrtkosten", "leistung")
+        and entsperr_vorgang_id is not None
+    ):
         geschwister_quellen = _GESCHWISTER_QUELLEN.get(position.quelle, ())
         rest = await positionen_fuer(session, rechnung_id)
         geschwister_besteht = any(
             p.id != position.id
             and p.quelle in geschwister_quellen
             and (p.vorgang_id or rechnung.vorgang_id) == entsperr_vorgang_id
+            and (position.quelle != "leistung" or p.lv_position_id == position.lv_position_id)
             for p in rest
         )
         if not geschwister_besteht:
@@ -648,6 +663,7 @@ async def remove_position(
                 quelle=position.quelle,
                 vorgang_id=entsperr_vorgang_id,
                 geaendert_von=auth.user_id,
+                lv_position_id=position.lv_position_id,
             )
 
     await session.delete(position)
@@ -842,14 +858,26 @@ async def storno_rechnung(
             detail="Nur versendete, teilweise bezahlte oder bezahlte Rechnungen können storniert werden",
         )
 
+    original_positionen = await positionen_fuer(session, rechnung.id)
     storno = await erstelle_stornorechnung(session, rechnung, auth.user_id)
+    # Storno ist endgueltig: die Stunden gehen ohne Verweis zurueck in den Pool.
+    await zeiterfassung_freigeben_fuer_rechnung(
+        session, rechnung_id=rechnung.id, geaendert_von=auth.user_id, verweis_behalten=False
+    )
 
     kunde = await session.get(Kunde, storno.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     await archiviere_pdf(session, storno, mandant, kunde, storniert_rechnung=rechnung)
 
-    if rechnung.vorgang_id is not None:
-        vorgang = await session.get(Vorgang, rechnung.vorgang_id)
+    # Sammelrechnungen haben kein rechnung.vorgang_id -- die Vorgaenge stecken
+    # in den Positionen.
+    vorgang_ids = list(
+        dict.fromkeys(
+            v for v in [rechnung.vorgang_id, *(p.vorgang_id for p in original_positionen)] if v is not None
+        )
+    )
+    for vorgang_id in vorgang_ids:
+        vorgang = await session.get(Vorgang, vorgang_id)
         if vorgang is not None:
             session.add(
                 VorgangEvent(
