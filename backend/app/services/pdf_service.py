@@ -141,81 +141,13 @@ def _positionen_tabelle(pdf: FPDF, positionen: list[AngebotPosition]) -> Decimal
     return gesamt_netto
 
 
-def _rechnung_positionen_tabelle(
-    pdf: FPDF, positionen: list[RechnungPosition], vorgang_koepfe: dict[UUID, tuple[str, str]]
-) -> Decimal:
-    """Positionen ohne Vorgang zuerst wie bisher, danach je Vorgang eine
-    Kopfzeile, dessen Positionen und eine Zwischensumme. Ohne vorgang_id an
-    irgendeiner Position ist das Ergebnis identisch zu _positionen_tabelle."""
-    _positionen_kopfzeile(pdf)
-    sortiert = sorted(positionen, key=lambda x: x.position)
-    gesamt_netto = Decimal("0")
-    gruppen: dict[UUID, list[RechnungPosition]] = {}
-    for p in sortiert:
-        if p.vorgang_id is None:
-            gesamt_netto += _positionszeile(pdf, p)
-        else:
-            gruppen.setdefault(p.vorgang_id, []).append(p)
-
-    for vorgang_id, gruppe in gruppen.items():
-        nummer, titel = vorgang_koepfe.get(vorgang_id, ("Vorgang", ""))
-        pdf.set_font("Helvetica", "B", 10)
-        kopf = f"{nummer} · {titel}" if titel else nummer
-        pdf.cell(_POSITIONEN_BREITE, 8, _pdf_safe_text(kopf)[:95], border=1, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_font("Helvetica", "", 10)
-        zwischensumme = Decimal("0")
-        for p in gruppe:
-            zwischensumme += _positionszeile(pdf, p)
-        gesamt_netto += zwischensumme
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(
-            _POSITIONEN_BREITE - 22,
-            8,
-            _pdf_safe_text(f"Zwischensumme {nummer}"),
-            border=1,
-            align="R",
-        )
-        pdf.cell(22, 8, _fmt_betrag(zwischensumme), border=1, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        pdf.set_font("Helvetica", "", 10)
-    return gesamt_netto
-
-
-def _summenblock(pdf: FPDF, gesamt_netto: Decimal, mwst_satz: Decimal) -> None:
-    mwst_betrag = gesamt_netto * mwst_satz / Decimal("100")
-    gesamt_brutto = gesamt_netto + mwst_betrag
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "", 10)
-    for label, wert in (
-        ("Netto", _fmt_betrag(gesamt_netto)),
-        (f"MwSt. ({mwst_satz:g}%)", _fmt_betrag(mwst_betrag)),
-    ):
-        pdf.cell(148, 7, "", border=0)
-        pdf.cell(22, 7, label)
-        pdf.cell(22, 7, wert, align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(148, 8, "", border=0)
-    pdf.cell(22, 8, "Gesamt")
-    pdf.cell(22, 8, _fmt_betrag(gesamt_brutto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
-
-def _summenblock_kleinunternehmer(pdf: FPDF, gesamt_netto: Decimal) -> None:
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.cell(148, 8, "", border=0)
-    pdf.cell(22, 8, "Gesamt")
-    pdf.cell(22, 8, _fmt_betrag(gesamt_netto), align="R", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(4)
-    pdf.set_font("Helvetica", "", 8)
-    pdf.multi_cell(0, 4, "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.")
-
-
 class _AngebotPDF(FPDF):
     """Eigene FPDF-Subklasse nur fuer generate_angebot_pdf() -- Kopf-/
     Fusszeile muessen sich pro Seite automatisch wiederholen (Briefkopf auf
     Seite 1 vollstaendig, ab Seite 2 nur noch eine schmale Kennzeile;
     Bankverbindung/Rechtliches unten auf jeder Seite), was fpdf2 nur ueber
     header()/footer() anbietet -- die generischen _kopf()/_positionen_
-    tabelle()/_summenblock() oben werden von Rechnung/Bestellung/Maengel-
+    tabelle() oben werden von Rechnung/Bestellung/Maengel-
     Protokoll weiterverwendet und bleiben deshalb unveraendert."""
 
     def __init__(self, mandant: Mandant, angebot: Angebot, logo_bytes: bytes | None):
@@ -424,6 +356,445 @@ def generate_angebot_pdf(
     return bytes(pdf.output())
 
 
+# --- Rechnung: ruhiges Layout ohne Tabellenrahmen/Fuellungen -----------------
+
+_TEXT = (30, 30, 30)
+_GRAU = (120, 120, 120)
+_LINIE_HELL = (225, 225, 225)
+_LINIE_KOPF = (200, 200, 200)
+_AKZENT = (10, 106, 209)
+
+_CENT = Decimal("0.01")
+_SEITE_TOP_FOLGE = 25
+_R_SPALTEN = (10, 84, 26, 25, 25)
+_R_X_POS = 20
+_R_X_BESCHR = _R_X_POS + _R_SPALTEN[0]
+_R_X_MENGE = _R_X_BESCHR + _R_SPALTEN[1]
+_R_X_EP = _R_X_MENGE + _R_SPALTEN[2]
+_R_X_GESAMT = _R_X_EP + _R_SPALTEN[3]
+_R_X_ENDE = _R_X_GESAMT + _R_SPALTEN[4]
+_R_PAD = 2.5
+_R_ZEILE = 4.6
+
+
+def _fmt_euro(betrag: Decimal) -> str:
+    # Nur die Rechnung nutzt "€" (Core-Font mit cp1252, siehe _RechnungPDF);
+    # Angebot/Mahnung bleiben bei "EUR".
+    return f"{_fmt_zahl(betrag)} €"
+
+
+def _fmt_menge(menge: Decimal) -> str:
+    s = f"{menge:f}"
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s.replace(".", ",")
+
+
+def _set_grau(pdf: FPDF) -> None:
+    pdf.set_text_color(*_GRAU)
+
+
+def _set_text(pdf: FPDF) -> None:
+    pdf.set_text_color(*_TEXT)
+
+
+class _RechnungPDF(FPDF):
+    """Analog _AngebotPDF: Logo/Kennzeile im Kopf, Firmen- und Bankdaten im
+    Fuss jeder Seite (dort auch "Seite n von N", daher alias_nb_pages)."""
+
+    def __init__(self, mandant: Mandant, rechnung: Rechnung, logo_bytes: bytes | None):
+        super().__init__()
+        # Core-Fonts kodieren sonst latin-1 und kennen "€" nicht; cp1252
+        # (WinAnsi) enthaelt es und ist in jedem Viewer verfuegbar.
+        self.core_fonts_encoding = "cp1252"
+        self._mandant = mandant
+        self._rechnung = rechnung
+        self._logo_bytes = logo_bytes
+        self.alias_nb_pages()
+
+    def header(self) -> None:
+        if self.page_no() == 1:
+            logo_ok = False
+            if self._logo_bytes:
+                try:
+                    self.image(BytesIO(self._logo_bytes), x=20, y=15, h=16)
+                    logo_ok = True
+                except Exception:
+                    # Defektes Logo darf die Rechnung nicht verhindern.
+                    logo_ok = False
+            if not logo_ok:
+                self.set_xy(20, 15)
+                self.set_font("Helvetica", "B", 18)
+                self.set_text_color(60, 60, 60)
+                self.cell(0, 10, _pdf_safe_text(self._mandant.name))
+        else:
+            titel = "Stornorechnung" if self._rechnung.ist_storno else "Rechnung"
+            self.set_xy(20, 12)
+            self.set_font("Helvetica", "", 8)
+            _set_grau(self)
+            self.cell(
+                0,
+                5,
+                _pdf_safe_text(
+                    f"{self._mandant.name} · {titel} {self._rechnung.rechnungsnummer} · Seite {self.page_no()}"
+                ),
+            )
+        _set_text(self)
+
+    def footer(self) -> None:
+        fd = self._mandant.firmendaten or {}
+        spalte_a = [self._mandant.name, *_adresse_zeilen(fd.get("adresse"))]
+        spalte_b = []
+        if fd.get("telefon"):
+            spalte_b.append(f"Tel.: {fd['telefon']}")
+        if fd.get("email"):
+            spalte_b.append(str(fd["email"]))
+        if fd.get("website"):
+            spalte_b.append(str(fd["website"]))
+        if fd.get("steuernummer"):
+            spalte_b.append(f"Steuernummer: {fd['steuernummer']}")
+        if fd.get("ust_idnr"):
+            spalte_b.append(f"USt-IdNr.: {fd['ust_idnr']}")
+        if fd.get("geschaeftsfuehrung"):
+            spalte_b.append(f"Geschäftsführung: {fd['geschaeftsfuehrung']}")
+        if fd.get("handelsregister"):
+            spalte_b.append(str(fd["handelsregister"]))
+        spalte_c = []
+        if fd.get("bank_name"):
+            spalte_c.append(str(fd["bank_name"]))
+        if fd.get("iban"):
+            spalte_c.append(f"IBAN: {fd['iban']}")
+        if fd.get("bic"):
+            spalte_c.append(f"BIC: {fd['bic']}")
+
+        y0 = self.h - 30
+        self.set_draw_color(*_LINIE_HELL)
+        self.set_line_width(0.2)
+        self.line(20, y0, 190, y0)
+        self.set_font("Helvetica", "", 7)
+        _set_grau(self)
+        for x, breite, zeilen in ((20, 55, spalte_a), (78, 55, spalte_b), (136, 54, spalte_c)):
+            self.set_xy(x, y0 + 2)
+            if zeilen:
+                self.multi_cell(breite, 3.2, _pdf_safe_text("\n".join(zeilen)))
+        self.set_xy(150, self.h - 9)
+        self.cell(40, 3.5, f"Seite {self.page_no()} von {{nb}}", align="R")
+        _set_text(self)
+
+
+def _rechnung_adressbereich(pdf: FPDF, mandant: Mandant, rechnung: Rechnung, kunde: Kunde) -> None:
+    """DIN 5008 Form B: Ruecksendezeile ab 45 mm, Anschriftfeld ab 50 mm."""
+    fd = mandant.firmendaten or {}
+    pdf.set_xy(20, 45)
+    pdf.set_font("Helvetica", "", 6)
+    _set_grau(pdf)
+    pdf.cell(85, 4, _pdf_safe_text(" · ".join([mandant.name, *_adresse_zeilen(fd.get("adresse"))])))
+
+    _set_text(pdf)
+    pdf.set_font("Helvetica", "", 10)
+    for i, zeile in enumerate([kunde.name, *_adresse_zeilen(kunde.adresse)][:6]):
+        pdf.set_xy(20, 50 + i * 5)
+        pdf.cell(85, 5, _pdf_safe_text(zeile))
+
+    paare = [
+        ("Rechnungsnummer", rechnung.rechnungsnummer),
+        ("Rechnungsdatum", _fmt_datum(rechnung.created_at)),
+    ]
+    # §14 Abs. 4 Nr. 6 UStG verlangt den Leistungszeitpunkt immer -- ohne
+    # eigenes Leistungsdatum gilt das Rechnungsdatum und wird so ausgewiesen.
+    paare.append(
+        ("Leistungsdatum", _fmt_datum(rechnung.leistungsdatum or rechnung.created_at))
+    )
+    paare.append(("Kundennummer", kunde.kundennummer))
+    if rechnung.faellig_am:
+        paare.append(("Fällig am", _fmt_datum(rechnung.faellig_am)))
+    if kunde.ust_idnr:
+        paare.append(("USt-IdNr. Kunde", kunde.ust_idnr))
+    for i, (label, wert) in enumerate(paare):
+        y = 50 + i * 5.5
+        pdf.set_xy(125, y)
+        pdf.set_font("Helvetica", "", 8)
+        _set_grau(pdf)
+        pdf.cell(32, 5, _pdf_safe_text(label))
+        pdf.set_font("Helvetica", "", 9)
+        _set_text(pdf)
+        pdf.cell(33, 5, _pdf_safe_text(wert))
+
+
+def _rechnung_titelbereich(pdf: FPDF, rechnung: Rechnung, storniert_rechnung: Rechnung | None) -> None:
+    storno = rechnung.ist_storno
+    pdf.set_xy(20, 100)
+    pdf.set_font("Helvetica", "B", 20)
+    _set_text(pdf)
+    pdf.cell(0, 9, "Stornorechnung" if storno else "Rechnung", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font("Helvetica", "", 9)
+    _set_grau(pdf)
+    pdf.cell(0, 5, _pdf_safe_text(f"Nr. {rechnung.rechnungsnummer}"), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    if storniert_rechnung is not None:
+        pdf.cell(
+            0,
+            5,
+            _pdf_safe_text(
+                f"Storniert Rechnung {storniert_rechnung.rechnungsnummer} "
+                f"vom {_fmt_datum(storniert_rechnung.created_at)}."
+            ),
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
+    pdf.ln(5)
+    pdf.set_font("Helvetica", "", 10)
+    _set_text(pdf)
+    pdf.cell(
+        0,
+        5,
+        "Hiermit stornieren wir die oben genannte Rechnung vollständig."
+        if storno
+        else "Vielen Dank für Ihren Auftrag. Wir berechnen Ihnen folgende Leistungen:",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.ln(8)
+
+
+def _linie(pdf: FPDF, y: float, farbe: tuple[int, int, int], x1: float = 20, x2: float = 190) -> None:
+    pdf.set_draw_color(*farbe)
+    pdf.set_line_width(0.2)
+    pdf.line(x1, y, x2, y)
+
+
+def _r_kopfzeile(pdf: FPDF) -> None:
+    y = pdf.get_y()
+    pdf.set_font("Helvetica", "", 7.5)
+    _set_grau(pdf)
+    for x, breite, label, align in (
+        (_R_X_POS, _R_SPALTEN[0], "POS.", "L"),
+        (_R_X_BESCHR, _R_SPALTEN[1], "BESCHREIBUNG", "L"),
+        (_R_X_MENGE, _R_SPALTEN[2], "MENGE", "R"),
+        (_R_X_EP, _R_SPALTEN[3], "EINZELPREIS", "R"),
+        (_R_X_GESAMT, _R_SPALTEN[4], "GESAMT", "R"),
+    ):
+        pdf.set_xy(x, y)
+        pdf.cell(breite, 5, label, align=align)
+    _linie(pdf, y + 6.5, _LINIE_KOPF)
+    pdf.set_y(y + 7)
+    _set_text(pdf)
+
+
+def _r_platz(pdf: FPDF, hoehe: float) -> bool:
+    return pdf.get_y() + hoehe <= pdf.page_break_trigger
+
+
+def _r_neue_seite(pdf: FPDF, mit_kopfzeile: bool = True) -> None:
+    pdf.add_page()
+    pdf.set_y(_SEITE_TOP_FOLGE)
+    if mit_kopfzeile:
+        _r_kopfzeile(pdf)
+
+
+def _r_beschreibung_zeilen(pdf: FPDF, p: RechnungPosition) -> list[str]:
+    pdf.set_font("Helvetica", "", 9.5)
+    return pdf.multi_cell(
+        _R_SPALTEN[1], _R_ZEILE, _pdf_safe_text(p.beschreibung), dry_run=True, output="LINES"
+    ) or [""]
+
+
+def _r_positionshoehe(pdf: FPDF, p: RechnungPosition) -> float:
+    return 2 * _R_PAD + len(_r_beschreibung_zeilen(pdf, p)) * _R_ZEILE
+
+
+def _r_position(pdf: FPDF, p: RechnungPosition, mit_linie: bool) -> Decimal:
+    """Zeichnet die Position ohne Seitenumbruch-Pruefung (macht der Aufrufer
+    ueber _r_positionshoehe), damit eine Position nie geteilt wird."""
+    zeilen = _r_beschreibung_zeilen(pdf, p)
+    hoehe = 2 * _R_PAD + len(zeilen) * _R_ZEILE
+    y0 = pdf.get_y()
+    yt = y0 + _R_PAD
+    gesamt = p.menge * p.einzelpreis
+
+    pdf.set_font("Helvetica", "", 9)
+    _set_grau(pdf)
+    pdf.set_xy(_R_X_POS, yt)
+    pdf.cell(_R_SPALTEN[0], _R_ZEILE, str(p.position))
+
+    pdf.set_font("Helvetica", "", 9.5)
+    _set_text(pdf)
+    for i, zeile in enumerate(zeilen):
+        pdf.set_xy(_R_X_BESCHR, yt + i * _R_ZEILE)
+        pdf.cell(_R_SPALTEN[1], _R_ZEILE, zeile)
+
+    einheit = _pdf_safe_text(p.einheit or "").strip()
+    menge = f"{_fmt_menge(p.menge)} {einheit}".strip()
+    for x, breite, text in (
+        (_R_X_MENGE, _R_SPALTEN[2], menge),
+        (_R_X_EP, _R_SPALTEN[3], _fmt_euro(p.einzelpreis)),
+        (_R_X_GESAMT, _R_SPALTEN[4], _fmt_euro(gesamt)),
+    ):
+        pdf.set_xy(x, yt)
+        pdf.cell(breite, _R_ZEILE, text, align="R")
+
+    pdf.set_y(y0 + hoehe)
+    if mit_linie:
+        _linie(pdf, y0 + hoehe, _LINIE_HELL)
+    return gesamt
+
+
+_R_ZWISCHENSUMME_HOEHE = 8.0
+
+
+def _r_zwischensumme(pdf: FPDF, betrag: Decimal) -> None:
+    y = pdf.get_y() + 1.5
+    pdf.set_font("Helvetica", "", 9)
+    _set_grau(pdf)
+    pdf.set_xy(_R_X_MENGE, y)
+    pdf.cell(_R_SPALTEN[2] + _R_SPALTEN[3], 5, "Zwischensumme", align="R")
+    pdf.set_xy(_R_X_GESAMT, y)
+    pdf.cell(_R_SPALTEN[4], 5, _fmt_euro(betrag), align="R")
+    pdf.set_y(y + 5)
+    _set_text(pdf)
+
+
+def _rechnung_positionen(
+    pdf: FPDF, positionen: list[RechnungPosition], vorgang_koepfe: dict[UUID, tuple[str, str]]
+) -> Decimal:
+    """Positionen ohne Vorgang zuerst, danach je Vorgang Gruppenkopf, Positionen
+    und Zwischensumme. Zwischen den Positionen nur eine feine Trennlinie."""
+    sortiert = sorted(positionen, key=lambda x: x.position)
+    ohne_vorgang = [p for p in sortiert if p.vorgang_id is None]
+    gruppen: dict[UUID, list[RechnungPosition]] = {}
+    for p in sortiert:
+        if p.vorgang_id is not None:
+            gruppen.setdefault(p.vorgang_id, []).append(p)
+
+    _r_kopfzeile(pdf)
+    gesamt_netto = Decimal("0")
+
+    def block(liste: list[RechnungPosition], gruppenkopf: str | None) -> Decimal:
+        summe = Decimal("0")
+        kopf_hoehe = 0.0
+        kopf_zeilen: list[str] = []
+        if gruppenkopf is not None:
+            pdf.set_font("Helvetica", "B", 10)
+            kopf_zeilen = pdf.multi_cell(
+                _R_X_ENDE - _R_X_POS, 5, _pdf_safe_text(gruppenkopf), dry_run=True, output="LINES"
+            )
+            kopf_hoehe = 5.0 + len(kopf_zeilen) * 5 + 1.5
+        for i, p in enumerate(liste):
+            letzte = i == len(liste) - 1
+            hoehe = _r_positionshoehe(pdf, p)
+            # Gruppenkopf + erste Position und letzte Position + Zwischensumme
+            # bleiben jeweils zusammen auf einer Seite.
+            noetig = hoehe
+            if i == 0:
+                noetig += kopf_hoehe
+            if letzte and gruppenkopf is not None:
+                noetig += _R_ZWISCHENSUMME_HOEHE
+            if not _r_platz(pdf, noetig):
+                _r_neue_seite(pdf)
+                spacing = False
+            else:
+                spacing = True
+            if i == 0 and gruppenkopf is not None:
+                if spacing:
+                    pdf.set_y(pdf.get_y() + 5)
+                pdf.set_font("Helvetica", "B", 10)
+                _set_text(pdf)
+                for zeile in kopf_zeilen:
+                    pdf.set_x(_R_X_POS)
+                    pdf.cell(_R_X_ENDE - _R_X_POS, 5, zeile, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+                pdf.set_y(pdf.get_y() + 1.5)
+            summe += _r_position(pdf, p, mit_linie=not letzte)
+        if gruppenkopf is not None:
+            _r_zwischensumme(pdf, summe.quantize(_CENT))
+        return summe
+
+    if ohne_vorgang:
+        gesamt_netto += block(ohne_vorgang, None)
+    for vorgang_id, gruppe in gruppen.items():
+        nummer, titel = vorgang_koepfe.get(vorgang_id, ("Vorgang", ""))
+        gesamt_netto += block(gruppe, f"{nummer} · {titel}" if titel else nummer)
+    return gesamt_netto
+
+
+def _rechnung_summenblock(
+    pdf: FPDF, gesamt_netto: Decimal, mwst_satz: Decimal, kleinunternehmer: bool
+) -> None:
+    netto = gesamt_netto.quantize(_CENT)
+    hoehe = 6 + (10 if kleinunternehmer else 6 * 2 + 3 + 9)
+    if not _r_platz(pdf, hoehe):
+        _r_neue_seite(pdf, mit_kopfzeile=False)
+    pdf.set_y(pdf.get_y() + 6)
+    x = 115
+    if kleinunternehmer:
+        brutto = netto
+    else:
+        mwst = (netto * mwst_satz / Decimal("100")).quantize(_CENT)
+        brutto = netto + mwst
+        satz = f"{mwst_satz:f}"
+        if "." in satz:
+            satz = satz.rstrip("0").rstrip(".")
+        pdf.set_font("Helvetica", "", 9)
+        _set_text(pdf)
+        for label, wert in (
+            ("Summe netto", _fmt_euro(netto)),
+            (f"zzgl. {satz.replace('.', ',')} % USt.", _fmt_euro(mwst)),
+        ):
+            y = pdf.get_y()
+            pdf.set_xy(x, y)
+            pdf.cell(40, 6, _pdf_safe_text(label))
+            pdf.set_xy(155, y)
+            pdf.cell(35, 6, wert, align="R")
+            pdf.set_y(y + 6)
+        _linie(pdf, pdf.get_y() + 1, _LINIE_KOPF, x1=x, x2=190)
+        pdf.set_y(pdf.get_y() + 3)
+    y = pdf.get_y()
+    pdf.set_font("Helvetica", "B", 12)
+    _set_text(pdf)
+    pdf.set_xy(x, y)
+    pdf.cell(40, 8, "Rechnungsbetrag")
+    pdf.set_text_color(*_AKZENT)
+    pdf.set_xy(155, y)
+    pdf.cell(35, 8, _fmt_euro(brutto), align="R")
+    _set_text(pdf)
+    pdf.set_y(y + 8)
+    if kleinunternehmer:
+        pdf.set_font("Helvetica", "", 8)
+        _set_grau(pdf)
+        pdf.set_xy(x, pdf.get_y() + 1)
+        pdf.cell(75, 4, "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.")
+        pdf.set_y(pdf.get_y() + 4)
+        _set_text(pdf)
+
+
+def _rechnung_abschluss(pdf: FPDF, mandant: Mandant, rechnung: Rechnung) -> None:
+    fd = mandant.firmendaten or {}
+    hinweis = None
+    if not rechnung.ist_storno and fd.get("iban"):
+        if rechnung.faellig_am:
+            hinweis = (
+                f"Bitte überweisen Sie den Rechnungsbetrag bis zum {_fmt_datum(rechnung.faellig_am)} "
+                f"unter Angabe der Rechnungsnummer {rechnung.rechnungsnummer} auf das unten genannte Konto."
+            )
+        else:
+            hinweis = (
+                f"Bitte überweisen Sie den Rechnungsbetrag unter Angabe der Rechnungsnummer "
+                f"{rechnung.rechnungsnummer} auf das unten genannte Konto."
+            )
+    hoehe = (18 if hinweis else 0) + 22
+    if not _r_platz(pdf, hoehe):
+        _r_neue_seite(pdf, mit_kopfzeile=False)
+    pdf.set_x(20)
+    pdf.set_font("Helvetica", "", 9)
+    _set_text(pdf)
+    if hinweis:
+        pdf.set_y(pdf.get_y() + 8)
+        pdf.set_x(20)
+        pdf.multi_cell(170, 4.6, _pdf_safe_text(hinweis), align="L", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_y(pdf.get_y() + 8)
+    pdf.set_x(20)
+    pdf.cell(0, 5, "Mit freundlichen Grüßen", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 5, _pdf_safe_text(mandant.name), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+
 def generate_rechnung_pdf(
     mandant: Mandant,
     rechnung: Rechnung,
@@ -433,6 +804,7 @@ def generate_rechnung_pdf(
     *,
     vorgang_koepfe: dict[UUID, tuple[str, str]] | None = None,
     pdfa_output_intent: bool = False,
+    logo_bytes: bytes | None = None,
 ) -> bytes:
     """pdfa_output_intent=True fuegt einen sRGB-OutputIntent hinzu (Betriebs-
     system fpdf2, kein "enforce_compliance"-Modus -- der wuerde ungebettete
@@ -442,36 +814,22 @@ def generate_rechnung_pdf(
     dem Quell-PDF aus und uebernimmt sie unveraendert in das ZUGFeRD-Hybrid-
     PDF, erzeugt aber selbst keinen -- ohne diesen Aufruf bliebe das Hybrid-
     PDF ohne ICC-Profil und damit nicht wirklich PDF/A-3-konform."""
-    pdf = FPDF()
+    pdf = _RechnungPDF(mandant, rechnung, logo_bytes)
+    pdf.set_margins(20, 15, 20)
+    pdf.set_auto_page_break(auto=True, margin=30)
     pdf.add_page()
-    titel = "Stornorechnung" if rechnung.ist_storno else "Rechnung"
-    _kopf(pdf, mandant, titel, rechnung.rechnungsnummer, kunde)
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Rechnungsdatum: {_fmt_datum(rechnung.created_at)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if rechnung.leistungsdatum:
-        pdf.cell(0, 6, f"Leistungsdatum: {_fmt_datum(rechnung.leistungsdatum)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if rechnung.faellig_am:
-        pdf.cell(0, 6, f"Faellig am: {_fmt_datum(rechnung.faellig_am)}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    if storniert_rechnung is not None:
-        pdf.cell(
-            0,
-            6,
-            f"Diese Stornorechnung storniert Rechnung {storniert_rechnung.rechnungsnummer} "
-            f"vom {_fmt_datum(storniert_rechnung.created_at)}.",
-            new_x=XPos.LMARGIN,
-            new_y=YPos.NEXT,
-        )
-    pdf.ln(4)
+    _set_text(pdf)
+
+    _rechnung_adressbereich(pdf, mandant, rechnung, kunde)
+    _rechnung_titelbereich(pdf, rechnung, storniert_rechnung)
 
     if positionen:
-        gesamt_netto = _rechnung_positionen_tabelle(pdf, positionen, vorgang_koepfe or {})
+        gesamt_netto = _rechnung_positionen(pdf, positionen, vorgang_koepfe or {})
     else:
         gesamt_netto = rechnung.betrag_netto
-
-    if (mandant.firmendaten or {}).get("ist_kleinunternehmer"):
-        _summenblock_kleinunternehmer(pdf, gesamt_netto)
-    else:
-        _summenblock(pdf, gesamt_netto, rechnung.mwst_satz)
+    kleinunternehmer = bool((mandant.firmendaten or {}).get("ist_kleinunternehmer"))
+    _rechnung_summenblock(pdf, gesamt_netto, rechnung.mwst_satz, kleinunternehmer)
+    _rechnung_abschluss(pdf, mandant, rechnung)
 
     if pdfa_output_intent:
         pdf.add_output_intent(

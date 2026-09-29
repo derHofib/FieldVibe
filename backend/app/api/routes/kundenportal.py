@@ -203,8 +203,15 @@ async def eigene_rechnung_pdf(
     mandant = await session.get(Mandant, auth.mandant_id)
     positionen = await rechnung_positionen_fuer(session, rechnung.id)
 
+    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
+
     pdf_bytes = generate_rechnung_pdf(
-        mandant, rechnung, kunde, positionen, vorgang_koepfe=await vorgang_koepfe_map(session, positionen)
+        mandant,
+        rechnung,
+        kunde,
+        positionen,
+        vorgang_koepfe=await vorgang_koepfe_map(session, positionen),
+        logo_bytes=logo_bytes,
     )
     return Response(
         content=pdf_bytes,

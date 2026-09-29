@@ -381,8 +381,6 @@ def test_pdf_tabelle_ohne_vorgang_unveraendert_und_gruppen_mit_zwischensumme():
     from datetime import datetime, timezone
     from uuid import uuid4
 
-    from fpdf import FPDF
-
     from app.models.rechnung import RechnungPosition
     from app.services import pdf_service
 
@@ -394,15 +392,28 @@ def test_pdf_tabelle_ohne_vorgang_unveraendert_und_gruppen_mit_zwischensumme():
             einzelpreis=Decimal(preis), vorgang_id=vorgang_id,
         )
 
-    ohne = [pos(1, None, "10"), pos(2, None, "5")]
-    a, b = FPDF(), FPDF()
-    for pdf in (a, b):
+    from app.models.mandant import Mandant
+    from app.models.rechnung import Rechnung
+
+    def neues_pdf():
+        pdf = pdf_service._RechnungPDF(
+            Mandant(id=uuid4(), name="M", slug="m", firmendaten={}),
+            Rechnung(rechnungsnummer="R-1", ist_storno=False),
+            None,
+        )
+        pdf.set_margins(20, 15, 20)
+        pdf.set_auto_page_break(auto=True, margin=30)
         pdf.add_page()
-    assert pdf_service._positionen_tabelle(a, ohne) == pdf_service._rechnung_positionen_tabelle(b, ohne, {}) == Decimal("30")
+        pdf.set_y(100)
+        return pdf
+
+    ohne = [pos(1, None, "10"), pos(2, None, "5")]
+    a = neues_pdf()
+    assert pdf_service._rechnung_positionen(a, ohne, {}) == Decimal("30")
+    assert b"Zwischensumme" not in bytes(a.output())
 
     gemischt = [pos(1, vid, "10"), pos(2, None, "5"), pos(3, vid, "1")]
-    pdf = FPDF()
-    pdf.add_page()
-    summe = pdf_service._rechnung_positionen_tabelle(pdf, gemischt, {vid: ("V-00051", "Dach – Ost")})
+    pdf = neues_pdf()
+    summe = pdf_service._rechnung_positionen(pdf, gemischt, {vid: ("V-00051", "Dach – Ost")})
     assert summe == Decimal("32")
     assert bytes(pdf.output()).startswith(b"%PDF")

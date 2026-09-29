@@ -866,13 +866,20 @@ def _rechnung_dokument_bytes(
     positionen: list[RechnungPosition],
     storniert_rechnung: Rechnung | None,
     vorgang_koepfe: dict[UUID, tuple[str, str]],
+    logo_bytes: bytes | None = None,
 ) -> tuple[bytes, bytes | None]:
     """Normales PDF ist immer der Ausgangspunkt. Nur wenn der Mandant
     e_rechnung_aktiv gesetzt hat UND alle EN16931-Pflichtangaben vorhanden
     sind, wird stattdessen ein ZUGFeRD-Hybrid-PDF (mit eingebetteter CII-XML)
     erzeugt -- sonst stiller Fallback aufs normale PDF, kein Versand-Block."""
     pdf_bytes = pdf_service.generate_rechnung_pdf(
-        mandant, rechnung, kunde, positionen, storniert_rechnung=storniert_rechnung, vorgang_koepfe=vorgang_koepfe
+        mandant,
+        rechnung,
+        kunde,
+        positionen,
+        storniert_rechnung=storniert_rechnung,
+        vorgang_koepfe=vorgang_koepfe,
+        logo_bytes=logo_bytes,
     )
     if not (mandant.firmendaten or {}).get("e_rechnung_aktiv"):
         return pdf_bytes, None
@@ -892,9 +899,20 @@ def _rechnung_dokument_bytes(
         storniert_rechnung=storniert_rechnung,
         vorgang_koepfe=vorgang_koepfe,
         pdfa_output_intent=True,
+        logo_bytes=logo_bytes,
     )
     hybrid_pdf_bytes = e_invoice_service.baue_hybrid_pdf(pdf_bytes_mit_output_intent, xml_bytes)
     return hybrid_pdf_bytes, xml_bytes
+
+
+async def _logo_bytes_laden(mandant: Mandant) -> bytes | None:
+    if not mandant.logo_object_key:
+        return None
+    try:
+        return await storage_service.download_bytes(mandant.logo_object_key)
+    except Exception:
+        # Ein nicht ladbares Logo darf Versand/Download der Rechnung nicht blockieren.
+        return None
 
 
 async def archiviere_pdf(
@@ -912,7 +930,9 @@ async def archiviere_pdf(
     ohne sie erneut aus MinIO abzurufen."""
     positionen = await positionen_fuer(session, rechnung.id)
     koepfe = await vorgang_koepfe_map(session, positionen)
-    pdf_bytes, xml_bytes = _rechnung_dokument_bytes(rechnung, mandant, kunde, positionen, storniert_rechnung, koepfe)
+    pdf_bytes, xml_bytes = _rechnung_dokument_bytes(
+        rechnung, mandant, kunde, positionen, storniert_rechnung, koepfe, await _logo_bytes_laden(mandant)
+    )
     key = storage_service.new_rechnung_pdf_key(rechnung.id)
     await storage_service.upload_bytes(key, pdf_bytes, "application/pdf")
     rechnung.pdf_object_key = key
@@ -943,4 +963,5 @@ async def pdf_bytes_fuer(
         positionen,
         storniert_rechnung=storniert_rechnung,
         vorgang_koepfe=await vorgang_koepfe_map(session, positionen),
+        logo_bytes=await _logo_bytes_laden(mandant),
     )
