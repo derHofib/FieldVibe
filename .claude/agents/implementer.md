@@ -1,6 +1,6 @@
 ---
 name: implementer
-model: sonnet
+model: claude-sonnet-5-5
 description: Setzt klar spezifizierte Implementierungsaufgaben um (Code schreiben, Tests anpassen, Refactorings nach Vorgabe). Einsetzen, sobald ein Plan mit konkreten Dateien, Schnittstellen und Akzeptanzkriterien vorliegt.
 ---
 
