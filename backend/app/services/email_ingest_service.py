@@ -1,5 +1,4 @@
 import email
-import imaplib
 from datetime import date
 from decimal import Decimal
 from email.header import decode_header
@@ -18,6 +17,7 @@ from app.models.integration import MandantIntegration
 from app.models.notification import Notification
 from app.models.user import User
 from app.services import storage_service
+from app.services.mail_netz import verbinde_imap
 from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
 
 EMAIL_INGEST_AKTION = "eingangsrechnung_email_import_run"
@@ -66,7 +66,7 @@ def _fetch_neue_nachrichten(integration: MandantIntegration) -> tuple[list[bytes
     mailbox = config.get("mailbox", "INBOX")
     last_uid = int(config.get("last_uid", 0))
 
-    verbindung = imaplib.IMAP4_SSL(host, port)
+    verbindung = verbinde_imap(host, port, "ssl", 30)
     try:
         verbindung.login(user, passwort)
         verbindung.select(mailbox)

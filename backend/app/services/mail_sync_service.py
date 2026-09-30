@@ -1,5 +1,6 @@
 import email
 import imaplib
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -18,12 +19,15 @@ from app.models.mail_attachment import MailAttachment
 from app.models.mail_folder import MailFolder
 from app.models.mail_message import MailMessage
 from app.services import storage_service
+from app.services.mail_netz import MailVerbindungFehler, uebersetze_fehler, verbinde_imap
 
 # Schutz gegen einen Erst-Sync mit zehntausenden alten Nachrichten, der einen
 # einzelnen Worker-Tick blockieren wuerde -- last_uid ist bereits der
 # Fortschrittszeiger, der naechste Tick (siehe app/worker.py) macht einfach
 # an dieser Stelle weiter.
 MAX_NACHRICHTEN_PRO_ORDNER_UND_LAUF = 200
+
+logger = logging.getLogger(__name__)
 
 _LIST_RESPONSE_MUSTER = re.compile(r'^\((?P<flags>[^)]*)\)\s+"(?P<delimiter>.*)"\s+(?P<name>.+)$')
 
@@ -100,13 +104,11 @@ def _parse_fetch_flags(meta: bytes) -> bool:
 
 
 def _imap_verbinden_blockierend(account: MailAccount, passwort: str) -> imaplib.IMAP4:
-    if account.imap_verschluesselung == "ssl":
-        verbindung: imaplib.IMAP4 = imaplib.IMAP4_SSL(account.imap_host, account.imap_port, timeout=20)
-    else:
-        verbindung = imaplib.IMAP4(account.imap_host, account.imap_port, timeout=20)
-        if account.imap_verschluesselung == "starttls":
-            verbindung.starttls()
-    verbindung.login(account.imap_benutzername, passwort)
+    try:
+        verbindung = verbinde_imap(account.imap_host, account.imap_port, account.imap_verschluesselung, 20)
+        verbindung.login(account.imap_benutzername, passwort)
+    except Exception as exc:
+        raise uebersetze_fehler(exc, "imap") from exc
     return verbindung
 
 
@@ -375,7 +377,12 @@ async def run_mail_sync(account_ids: list | None = None) -> dict:
                 konten_synchronisiert += 1
             except Exception as exc:
                 fehler += 1
-                account.letzter_sync_fehler = str(exc)
+                # letzter_sync_fehler geht ueber MailAccountRead an den Client
+                # -- daher keine rohen Exception-Texte.
+                logger.warning("Mail-Sync fuer Konto %s fehlgeschlagen: %s", account.id, exc)
+                account.letzter_sync_fehler = (
+                    str(exc) if isinstance(exc, MailVerbindungFehler) else "Synchronisation fehlgeschlagen"
+                )
                 await session.flush()
 
     return {"konten_synchronisiert": konten_synchronisiert, "fehler": fehler}

@@ -1,4 +1,5 @@
 import smtplib
+import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
 from email.utils import formataddr
@@ -106,7 +107,7 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbind
 
 def _send_blocking(*, host: str, port: int, user: str | None, password: str | None, message: EmailMessage) -> None:
     with smtplib.SMTP(host, port, timeout=10) as smtp:
-        smtp.starttls()
+        smtp.starttls(context=ssl.create_default_context())
         if user and password:
             smtp.login(user, password)
         smtp.send_message(message)

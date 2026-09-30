@@ -87,6 +87,21 @@ class Settings(BaseSettings):
     global_smtp_password: str | None = None
     global_smtp_from_address: str = "account@fieldvibe.de"
 
+    # --- Mail-Postfaecher: Schutz vor SSRF (app/services/mail_netz.py) ------
+    # Nur fuer lokale Entwicklung/Tests (z.B. MailHog auf localhost): hebt die
+    # Sperre fuer private/Loopback-/Link-local-Ziele auf. In Produktion aus.
+    mail_erlaube_private_hosts: bool = Field(
+        default=False, validation_alias="FIELDVIBE_MAIL_ERLAUBE_PRIVATE_HOSTS"
+    )
+    # Komma-getrennt statt Liste, weil pydantic-settings Listen aus ENV nur
+    # als JSON liest.
+    mail_erlaubte_imap_ports: str = Field(
+        default="143,993", validation_alias="FIELDVIBE_MAIL_ERLAUBTE_IMAP_PORTS"
+    )
+    mail_erlaubte_smtp_ports: str = Field(
+        default="25,465,587,2525", validation_alias="FIELDVIBE_MAIL_ERLAUBTE_SMTP_PORTS"
+    )
+
     # --- Kundenportal Passwort-Reset (Phase-8-Nacharbeit) ----------------
     # Basis-URL des Frontends fuer den Reset-Link in der Mail; produktiv
     # https://<DOMAIN_APP> (siehe docs/DEPLOYMENT.md).

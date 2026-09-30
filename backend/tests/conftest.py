@@ -219,6 +219,15 @@ def _s3_test_server():
 
 
 @pytest.fixture(autouse=True)
+def _mail_dns_ohne_netz(monkeypatch):
+    # Mail-Hosts in Tests (imap.example.de ...) sind nicht aufloesbar; ohne
+    # diese Stub-Aufloesung scheitert die SSRF-Zielpruefung (mail_netz) schon
+    # vor dem gemockten Verbindungsaufbau. Tests zur Zielpruefung ueberschreiben
+    # _aufloesen selbst.
+    monkeypatch.setattr("app.services.mail_netz._aufloesen", lambda host, port: ["93.184.216.34"])
+
+
+@pytest.fixture(autouse=True)
 def _reset_rate_limiters():
     # Alle Test-Requests laufen ueber httpx' ASGITransport mit derselben
     # festen Client-IP (127.0.0.1) -- ohne Reset wuerden sich Fehlversuche
