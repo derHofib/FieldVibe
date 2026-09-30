@@ -226,7 +226,26 @@ if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
   fi
 fi
 
-# --- 8. Stack starten -------------------------------------------------------
+# --- 8. Datenbank-Rolle absichern ------------------------------------------
+# Das offizielle postgres-Image macht POSTGRES_USER standardmaessig zu einem
+# Superuser -- ein Superuser umgeht Row-Level-Security immer, unabhaengig von
+# den RLS-Policies der Anwendung. Backend und Worker verweigern daher den
+# Start mit einer solchen Rolle (app/db/rollen_pruefung.py); deshalb laeuft
+# dieser Schritt VOR dem Start des restlichen Stacks. Idempotent, daher bei
+# jedem Lauf (auch Updates auf bereits laufenden Servern) sicher erneut
+# ausfuehrbar.
+log "Starte Postgres..."
+"${COMPOSE[@]}" up -d postgres
+for _ in $(seq 1 60); do
+  "${COMPOSE[@]}" exec -T postgres pg_isready -U "$PG_USER" -d "$PG_DB" >/dev/null 2>&1 && break
+  sleep 1
+done
+log "Entziehe der Datenbank-Rolle Superuser-Rechte (Voraussetzung fuer wirksame Mandantentrennung per Row-Level-Security)..."
+"${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB" \
+  -c "ALTER ROLE \"${PG_USER}\" NOSUPERUSER NOBYPASSRLS;" \
+  || err "Konnte der Datenbank-Rolle nicht die Superuser-Rechte entziehen -- Row-Level-Security waere sonst wirkungslos, Deployment abgebrochen."
+
+# --- 8b. Stack starten ------------------------------------------------------
 # GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken -- rein fuer die
 # informative Update-Anzeige im Super-Admin-Bereich (aktueller vs. neuester
 # Commit auf GitHub), siehe app/services/version_service.py. Kein git-
@@ -238,18 +257,6 @@ log "Baue und starte den Stack (Postgres, MinIO, Backend, Frontend, Worker$([[ "
 if [[ "$DEPLOY_MODE" == "domain" ]]; then
   log "Caddy holt beim allerersten Start ein bis zwei Minuten lang die TLS-Zertifikate. Fortschritt: ${COMPOSE[*]} logs -f caddy"
 fi
-
-# --- 8b. Datenbank-Rolle absichern ------------------------------------------
-# Das offizielle postgres-Image macht POSTGRES_USER standardmaessig zu einem
-# Superuser -- ein Superuser umgeht Row-Level-Security immer, unabhaengig von
-# den RLS-Policies der Anwendung. Die Mandantentrennung in der Datenbank
-# greift daher erst, wenn diese Rolle kein Superuser mehr ist. Idempotent,
-# daher bei jedem Lauf (auch Updates auf bereits laufenden Servern) sicher
-# erneut ausfuehrbar.
-log "Entziehe der Datenbank-Rolle Superuser-Rechte (Voraussetzung fuer wirksame Mandantentrennung per Row-Level-Security)..."
-"${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB" \
-  -c "ALTER ROLE \"${PG_USER}\" NOSUPERUSER NOBYPASSRLS;" \
-  || err "Konnte der Datenbank-Rolle nicht die Superuser-Rechte entziehen -- Row-Level-Security waere sonst wirkungslos, Deployment abgebrochen."
 
 # --- 9. Migrationen ----------------------------------------------------------
 log "Wende Datenbank-Migrationen an..."

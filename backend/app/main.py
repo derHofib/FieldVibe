@@ -71,6 +71,7 @@ from app.api.routes import (
     zuweisungen,
 )
 from app.core.config import get_settings
+from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine
 from app.services.scheduler_service import get_last_scheduler_run
 from app.services.storage_service import ensure_bucket
@@ -81,6 +82,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    await pruefe_db_rolle(engine)
     await ensure_bucket()
     sampler_task = asyncio.create_task(resource_sampler_loop())
     yield

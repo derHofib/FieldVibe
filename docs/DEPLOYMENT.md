@@ -140,9 +140,14 @@ Drei Wege, wenn (noch) keine Domain vorhanden ist:
 
 Für Weg 3 gibt es `docker-compose.ip.yml` als Ersatz für
 `docker-compose.prod.yml` (kein Caddy, Backend/Frontend/MinIO werden
-direkt auf dem Server-Port veröffentlicht):
+direkt auf dem Server-Port veröffentlicht). Auch hier vorher die
+DB-Rolle absichern (Abschnitt 3, `ALTER ROLE … NOSUPERUSER NOBYPASSRLS`) –
+sonst verweigern Backend und Worker den Start:
 
 ```bash
+docker compose -f docker-compose.yml -f docker-compose.ip.yml up -d postgres
+docker compose -f docker-compose.yml -f docker-compose.ip.yml exec -T postgres \
+  psql -U fieldvibe -d fieldvibe -c 'ALTER ROLE "fieldvibe" NOSUPERUSER NOBYPASSRLS;'
 docker compose -f docker-compose.yml -f docker-compose.ip.yml up -d --build
 ```
 
@@ -231,6 +236,27 @@ In `.env` mindestens setzen:
 `docker-compose.override.yml` mit (reine Lokalentwicklung: Hot-Reload,
 offene DB/MinIO-Ports). Stattdessen explizit die Basis- und die
 Prod-Datei kombinieren:
+
+Das offizielle Postgres-Image macht `POSTGRES_USER` zum **Superuser** – und
+ein Superuser umgeht Row-Level-Security immer, die Mandantentrennung in der
+Datenbank wäre wirkungslos. Deshalb zuerst nur Postgres starten und der Rolle
+die Rechte entziehen (`scripts/deploy.sh` macht das automatisch; beim
+manuellen Weg ist es Pflicht und idempotent):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d postgres
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres \
+  psql -U fieldvibe -d fieldvibe -c 'ALTER ROLE "fieldvibe" NOSUPERUSER NOBYPASSRLS;'
+```
+
+(`fieldvibe` durch `POSTGRES_USER` aus der `.env` ersetzen, falls geändert.)
+Backend und Worker prüfen das beim Start (`SELECT rolsuper, rolbypassrls …`)
+und brechen mit einer klaren Fehlermeldung ab, solange die Rolle Superuser
+oder BYPASSRLS ist. Nur für Notfälle lässt sich das mit
+`FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE=1` in der `.env` übergehen (Start mit
+WARNING im Log, Mandantentrennung per RLS dann ausser Kraft).
+
+Danach den Stack starten:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build

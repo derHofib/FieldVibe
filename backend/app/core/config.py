@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     environment: str = "development"
+
+    # Notausgang fuer die Startpruefung der DB-Rolle (app/db/rollen_pruefung.py):
+    # nur setzen, wenn bewusst eine Superuser-/BYPASSRLS-Rolle genutzt wird und
+    # die Mandantentrennung per RLS damit ausser Kraft ist.
+    erlaube_rls_bypass_rolle: bool = Field(
+        default=False, validation_alias="FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE"
+    )
 
     database_url: str = (
         "postgresql+asyncpg://fieldvibe:fieldvibe@localhost:5432/fieldvibe"

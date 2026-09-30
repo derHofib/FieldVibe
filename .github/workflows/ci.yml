@@ -36,6 +36,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # Das postgres-Image macht POSTGRES_USER zum Superuser, der RLS immer
+      # umgeht -- tests/conftest.py und die App-Startpruefung verlangen eine
+      # normale Rolle. CREATEDB bleibt, weil conftest die Testdatenbank
+      # fieldvibe_test selbst anlegt.
+      - name: DB-Rolle auf NOSUPERUSER NOBYPASSRLS herabstufen
+        env:
+          PGPASSWORD: fieldvibe
+        run: >-
+          psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
+          -c 'ALTER ROLE fieldvibe NOSUPERUSER NOBYPASSRLS CREATEDB;'
+
       # DATABASE_URL/JWT_SECRET/S3_*-Defaults kommen aus tests/conftest.py
       # (os.environ.setdefault) und passen exakt zu den Postgres-Service-
       # Zugangsdaten oben -- moto stellt den S3-Mock selbst, kein MinIO

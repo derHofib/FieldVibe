@@ -19,7 +19,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
-from app.db.session import system_session
+from app.db.rollen_pruefung import pruefe_db_rolle
+from app.db.session import engine, system_session
 from app.services.email_ingest_service import run_email_ingest
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
@@ -161,6 +162,7 @@ async def _mail_sync_loop() -> None:
 
 
 async def main() -> None:
+    await pruefe_db_rolle(engine)
     logger.info(
         "Worker gestartet -- stündlicher Scheduler-Tick, Mail-Sync alle %d Sekunden",
         MAIL_SYNC_INTERVAL_SECONDS,
