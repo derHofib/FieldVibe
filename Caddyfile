@@ -2,9 +2,46 @@
 	email {$CADDY_EMAIL}
 }
 
+# Security-Header. Dieses Caddyfile gibt es nur im Domain/TLS-Modus
+# (docker-compose.prod.yml), daher ist HSTS hier unbedenklich -- der .ip.yml-
+# Modus (HTTP, kein Caddy) bekommt seine Header aus frontend/serve.json und
+# bewusst kein HSTS. includeSubDomains gilt fuer die gesamte Eltern-Domain:
+# nur verwenden, wenn dort keine Subdomain nur per HTTP laeuft. Kein "preload".
+# "-Server" entfernt den Versions-Banner der Upstreams (serve/uvicorn/MinIO).
+(header_basis) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Frontend (Feld-App, Office, Kundenportal, Super-Admin -- ein Build).
+# Die CSP laeuft vorerst als Report-Only: Quellen wurden aus dem Code
+# abgeleitet (Mapbox-Worker/Tiles, Presigned-S3-URLs fuer Fotos/PDF-iframe,
+# Theme-Vorabskript per Hash), konnten aber nicht gegen einen echten Browser
+# mit Kamera/Karte/PDF-Vorschau geprueft werden. Nach einer Beobachtungsphase
+# (Konsole: "Content-Security-Policy-Report-Only"-Verstoesse) auf
+# "Content-Security-Policy" umstellen. Der sha256-Hash gehoert zum Inline-
+# Skript in frontend/index.html und muss bei dessen Aenderung mitgezogen
+# werden (frontend/src/csp.test.ts prueft das). Kein 'unsafe-inline' fuer
+# Skripte; style-src braucht es wegen React-style-Props und Mapbox.
+# Permissions-Policy: Kamera (QR-Scanner) und Geolocation (Standort-Feld)
+# nur fuer die eigene Origin, alles andere aus.
+(header_frontend) {
+	import header_basis
+	header {
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()"
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-nDT144fgOivlgAAuKSOvAgN4HN/tZUXQQXkqZhl7Ycs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com; font-src 'self' data:; connect-src 'self' https://{$DOMAIN_API} https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src https://{$DOMAIN_S3}; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	}
+}
+
 # Feld-App / Super-Admin-Dashboard (React-Build, ausgeliefert vom
 # "frontend"-Container via `serve`).
 {$DOMAIN_APP} {
+	import header_frontend
 	reverse_proxy frontend:4173
 }
 
@@ -15,13 +52,21 @@
 # `serve -s dist` nicht kann (es schreibt jeden unbekannten Pfad auf
 # index.html um, ohne den Host anzusehen).
 {$DOMAIN_OFFICE} {
+	import header_frontend
 	reverse_proxy frontend:4173
 }
 
 # Backend-API. Eigene Subdomain statt Pfad-Praefix, damit CORS_ORIGINS im
 # Backend einfach bleibt (ein Origin pro Domain) und Anfragen 1:1 an
 # uvicorn durchgereicht werden koennen.
+# Die API liefert nur JSON; "frame-ancestors" statt einer strikten
+# default-src-CSP, weil FastAPI unter /docs Swagger-UI von einem CDN laedt.
 {$DOMAIN_API} {
+	import header_basis
+	header {
+		X-Frame-Options "DENY"
+		Content-Security-Policy "frame-ancestors 'none'"
+	}
 	reverse_proxy backend:8000
 }
 
@@ -29,6 +74,9 @@
 # S3-Presigned-URLs signieren Host UND Pfad, ein nachtraeglich
 # strippbarer Praefix wuerde die Signatur brechen. S3_PUBLIC_URL_BASE muss
 # exakt auf diese Domain zeigen (siehe .env.example).
+# Kein X-Frame-Options/frame-ancestors hier: die Eingangsrechnungs-Vorschau
+# bettet Presigned-PDFs von dieser Domain per iframe ein.
 {$DOMAIN_S3} {
+	import header_basis
 	reverse_proxy minio:9000
 }

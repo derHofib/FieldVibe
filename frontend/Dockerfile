@@ -22,5 +22,9 @@ FROM node:22-alpine AS production
 WORKDIR /app
 RUN npm install -g serve@14
 COPY --from=build /app/dist ./dist
+# Security-Header fuer den Betrieb ohne Caddy (.ip.yml); hinter Caddy
+# ueberschreibt dessen header-Direktive dieselben Felder. Bewusst ohne HSTS
+# (HTTP) und ohne CSP (API-/MinIO-Host sind im IP-Modus nicht vorab bekannt).
+COPY serve.json ./serve.json
 EXPOSE 4173
-CMD ["serve", "-s", "dist", "-l", "4173"]
+CMD ["serve", "-s", "dist", "-l", "4173", "-c", "serve.json"]

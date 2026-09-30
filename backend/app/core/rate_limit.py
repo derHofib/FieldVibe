@@ -71,4 +71,9 @@ password_reset_ip_limiter = SlidingWindowRateLimiter(max_attempts=5, window_seco
 
 
 def client_ip(request) -> str:  # type: ignore[no-untyped-def]
+    # Hinter Caddy ist request.client nur dann die echte Client-IP, wenn
+    # Uvicorn den X-Forwarded-For-Header des (per FORWARDED_ALLOW_IPS
+    # vertrauenswuerdigen) Proxys ausgewertet hat -- hier bewusst kein
+    # eigenes Header-Parsing, damit ein gefaelschter Header von direkten
+    # Clients wirkungslos bleibt.
     return request.client.host if request.client else "unknown"

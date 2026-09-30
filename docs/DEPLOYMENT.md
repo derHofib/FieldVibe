@@ -157,6 +157,12 @@ Dabei in der `.env` setzen (Server-IP statt der Domains):
 - `S3_PUBLIC_URL_BASE=http://<server-ip>:9000`
 - `FRONTEND_BASE_URL=http://<server-ip>:4173`
 
+Im IP-Modus setzt `frontend/serve.json` nur Basis-Header (nosniff,
+Referrer-Policy, X-Frame-Options, Permissions-Policy) – kein HSTS und keine
+CSP. Außerdem wird `FORWARDED_ALLOW_IPS` dort bewusst nicht gesetzt: ohne
+Proxy wäre `X-Forwarded-For` von jedem Client fälschbar, die Login-Limiter
+zählen dann die Peer-IP des Docker-Netzes.
+
 Im IP-Modus gibt es keine Subdomains und damit auch **keine
 Desktop-Ansicht** – `http://<server-ip>:4173` liefert immer die mobile
 Oberfläche. Das ist Absicht: die Umschaltung hängt am Hostnamen, und eine

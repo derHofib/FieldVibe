@@ -6,6 +6,17 @@
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 #
 services:
+  backend:
+    environment:
+      # Uvicorn liest FORWARDED_ALLOW_IPS selbst und ersetzt die Client-IP nur
+      # fuer Verbindungen von diesen Adressen durch den X-Forwarded-For-Wert
+      # (Caddy). Ohne das sahen die Login-Limiter nur die Proxy-IP und 20
+      # Fehlversuche haetten alle Nutzer gesperrt. Kein "*": das Backend ist
+      # hier nicht nach aussen publiziert, erreichbar nur im Compose-Netz
+      # (Standard-Subnetze, bei eigenem Netz anpassen). Im .ip.yml-Modus bewusst
+      # NICHT setzen -- dort haengt kein Proxy davor, der Header waere faelschbar.
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
