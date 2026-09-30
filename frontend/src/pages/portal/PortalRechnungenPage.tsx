@@ -8,9 +8,9 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { RECHNUNG_STATUS_LABEL, istRechnungUeberfaellig } from "../../utils/buchhaltung";
 import { openPdfBlob } from "../../utils/pdf";
-import type { Rechnung } from "../../types";
+import type { PortalRechnung } from "../../types";
 
-function RechnungZeile({ rechnung }: { rechnung: Rechnung }) {
+function RechnungZeile({ rechnung }: { rechnung: PortalRechnung }) {
   const [fehler, setFehler] = useState<string | null>(null);
   const ueberfaellig = istRechnungUeberfaellig(rechnung);
   const pdfMutation = useMutation({

@@ -15,19 +15,20 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.vorgang_event import VorgangEvent
-from app.schemas.anlage import AnlageRead
-from app.schemas.angebot import AngebotRead
 from app.schemas.kundenportal import (
     PORTAL_EVENT_TYPEN,
+    AngebotPortalRead,
+    AnlagePortalRead,
     KundenAngebotAntwort,
     KundenAnlageCreate,
     KundenStandortCreate,
+    RechnungPortalRead,
+    VorgangAnfragePortalRead,
     VorgangEventPortalRead,
     VorgangPortalRead,
 )
-from app.schemas.rechnung import RechnungRead
 from app.schemas.standort import StandortRead
-from app.schemas.vorgang_anfrage import VorgangAnfrageCreate, VorgangAnfrageRead
+from app.schemas.vorgang_anfrage import VorgangAnfrageCreate
 from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
 from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.pdf_service import generate_angebot_pdf, generate_rechnung_pdf
@@ -57,6 +58,16 @@ async def _require_own_vorgang(session: AsyncSession, auth: KundenAuthContext, v
     if vorgang is None or vorgang.kunde_id != auth.kunde_id or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
+
+
+async def _angebot_portal(session: AsyncSession, angebot: Angebot) -> AngebotPortalRead:
+    return AngebotPortalRead.model_validate(await to_read_model(session, angebot), from_attributes=True)
+
+
+async def _rechnung_portal(session: AsyncSession, rechnung: Rechnung) -> RechnungPortalRead:
+    return RechnungPortalRead.model_validate(
+        await rechnung_to_read_model(session, rechnung), from_attributes=True
+    )
 
 
 @router.get("/vorgaenge", response_model=list[VorgangPortalRead])
@@ -108,11 +119,11 @@ async def list_eigene_vorgang_events(
     ]
 
 
-@router.get("/angebote", response_model=list[AngebotRead])
+@router.get("/angebote", response_model=list[AngebotPortalRead])
 async def list_eigene_angebote(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> list[AngebotRead]:
+) -> list[AngebotPortalRead]:
     result = await session.execute(
         select(Angebot)
         .where(
@@ -122,7 +133,7 @@ async def list_eigene_angebote(
         )
         .order_by(Angebot.created_at.desc())
     )
-    return [await to_read_model(session, a) for a in result.scalars().all()]
+    return [await _angebot_portal(session, a) for a in result.scalars().all()]
 
 
 async def _require_own_angebot(session: AsyncSession, auth: KundenAuthContext, angebot_id: UUID) -> Angebot:
@@ -137,23 +148,23 @@ async def _require_own_angebot(session: AsyncSession, auth: KundenAuthContext, a
     return angebot
 
 
-@router.get("/angebote/{angebot_id}", response_model=AngebotRead)
+@router.get("/angebote/{angebot_id}", response_model=AngebotPortalRead)
 async def get_eigenes_angebot(
     angebot_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> AngebotRead:
+) -> AngebotPortalRead:
     angebot = await _require_own_angebot(session, auth, angebot_id)
-    return await to_read_model(session, angebot)
+    return await _angebot_portal(session, angebot)
 
 
-@router.patch("/angebote/{angebot_id}", response_model=AngebotRead)
+@router.patch("/angebote/{angebot_id}", response_model=AngebotPortalRead)
 async def antwort_auf_angebot(
     angebot_id: UUID,
     body: KundenAngebotAntwort,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> AngebotRead:
+) -> AngebotPortalRead:
     if body.status not in _KUNDE_ERLAUBTE_STATUS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -165,7 +176,7 @@ async def antwort_auf_angebot(
     )
     await session.flush()
     await session.refresh(angebot)
-    return await to_read_model(session, angebot)
+    return await _angebot_portal(session, angebot)
 
 
 @router.get("/angebote/{angebot_id}/pdf")
@@ -189,11 +200,11 @@ async def eigenes_angebot_pdf(
     )
 
 
-@router.get("/rechnungen", response_model=list[RechnungRead])
+@router.get("/rechnungen", response_model=list[RechnungPortalRead])
 async def list_eigene_rechnungen(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> list[RechnungRead]:
+) -> list[RechnungPortalRead]:
     result = await session.execute(
         select(Rechnung)
         .where(
@@ -203,7 +214,7 @@ async def list_eigene_rechnungen(
         )
         .order_by(Rechnung.created_at.desc())
     )
-    return [await rechnung_to_read_model(session, r) for r in result.scalars().all()]
+    return [await _rechnung_portal(session, r) for r in result.scalars().all()]
 
 
 async def _require_own_rechnung(session: AsyncSession, auth: KundenAuthContext, rechnung_id: UUID) -> Rechnung:
@@ -218,14 +229,14 @@ async def _require_own_rechnung(session: AsyncSession, auth: KundenAuthContext, 
     return rechnung
 
 
-@router.get("/rechnungen/{rechnung_id}", response_model=RechnungRead)
+@router.get("/rechnungen/{rechnung_id}", response_model=RechnungPortalRead)
 async def get_eigene_rechnung(
     rechnung_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
-) -> RechnungRead:
+) -> RechnungPortalRead:
     rechnung = await _require_own_rechnung(session, auth, rechnung_id)
-    return await rechnung_to_read_model(session, rechnung)
+    return await _rechnung_portal(session, rechnung)
 
 
 @router.get("/rechnungen/{rechnung_id}/pdf")
@@ -309,7 +320,7 @@ async def create_eigenen_standort(
 # --- Anlagen (Selfservice: der Kunde legt eigene Anlagen an) ---------------
 
 
-@router.get("/anlagen", response_model=list[AnlageRead])
+@router.get("/anlagen", response_model=list[AnlagePortalRead])
 async def list_eigene_anlagen(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
@@ -322,7 +333,7 @@ async def list_eigene_anlagen(
     return list(result.scalars().all())
 
 
-@router.post("/anlagen", response_model=AnlageRead, status_code=status.HTTP_201_CREATED)
+@router.post("/anlagen", response_model=AnlagePortalRead, status_code=status.HTTP_201_CREATED)
 async def create_eigene_anlage(
     body: KundenAnlageCreate,
     auth: KundenAuthContext = Depends(get_current_kunde),
@@ -361,7 +372,7 @@ async def create_eigene_anlage(
 # --- Auftragsanfragen (muessen von einem Mitarbeiter bestaetigt werden) ----
 
 
-@router.get("/anfragen", response_model=list[VorgangAnfrageRead])
+@router.get("/anfragen", response_model=list[VorgangAnfragePortalRead])
 async def list_eigene_anfragen(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
@@ -374,7 +385,7 @@ async def list_eigene_anfragen(
     return list(result.scalars().all())
 
 
-@router.get("/anfragen/{anfrage_id}", response_model=VorgangAnfrageRead)
+@router.get("/anfragen/{anfrage_id}", response_model=VorgangAnfragePortalRead)
 async def get_eigene_anfrage(
     anfrage_id: UUID,
     auth: KundenAuthContext = Depends(get_current_kunde),
@@ -386,7 +397,7 @@ async def get_eigene_anfrage(
     return anfrage
 
 
-@router.post("/anfragen", response_model=VorgangAnfrageRead, status_code=status.HTTP_201_CREATED)
+@router.post("/anfragen", response_model=VorgangAnfragePortalRead, status_code=status.HTTP_201_CREATED)
 async def create_eigene_anfrage(
     body: VorgangAnfrageCreate,
     auth: KundenAuthContext = Depends(get_current_kunde),

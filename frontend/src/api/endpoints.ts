@@ -140,7 +140,11 @@ import type {
   UstVaBericht,
   User,
   VersionInfo,
+  PortalAngebot,
+  PortalAnlage,
+  PortalRechnung,
   PortalVorgang,
+  PortalVorgangAnfrage,
   PortalVorgangEvent,
   Vorgang,
   VorgangAbhaengigkeit,
@@ -208,7 +212,10 @@ export const mandantenApi = {
 };
 
 export const usersApi = {
-  list: () => apiFetch<User[]>("/api/users"),
+  // `=== true`: Aufrufer uebergeben usersApi.list teils direkt als queryFn,
+  // dann kommt als erstes Argument der React-Query-Kontext.
+  list: (versteckte?: boolean) =>
+    apiFetch<User[]>(versteckte === true ? "/api/users?versteckte=1" : "/api/users"),
   create: (body: {
     mandant_id: string | null;
     email: string;
@@ -1847,15 +1854,15 @@ export const kundenportalApi = {
   vorgaenge: () => kundenApiFetch<PortalVorgang[]>("/api/kundenportal/vorgaenge"),
   vorgang: (id: string) => kundenApiFetch<PortalVorgang>(`/api/kundenportal/vorgaenge/${id}`),
   vorgangEvents: (id: string) => kundenApiFetch<PortalVorgangEvent[]>(`/api/kundenportal/vorgaenge/${id}/events`),
-  angebote: () => kundenApiFetch<Angebot[]>("/api/kundenportal/angebote"),
-  angebot: (id: string) => kundenApiFetch<Angebot>(`/api/kundenportal/angebote/${id}`),
+  angebote: () => kundenApiFetch<PortalAngebot[]>("/api/kundenportal/angebote"),
+  angebot: (id: string) => kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}`),
   antwortAufAngebot: (id: string, status: "angenommen" | "abgelehnt") =>
-    kundenApiFetch<Angebot>(`/api/kundenportal/angebote/${id}`, {
+    kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
   angebotPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/angebote/${id}/pdf`),
-  rechnungen: () => kundenApiFetch<Rechnung[]>("/api/kundenportal/rechnungen"),
+  rechnungen: () => kundenApiFetch<PortalRechnung[]>("/api/kundenportal/rechnungen"),
   rechnungPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/rechnungen/${id}/pdf`),
   standorte: () => kundenApiFetch<Standort[]>("/api/kundenportal/standorte"),
   standortAnlegen: (body: { bezeichnung: string; adresse?: Adresse }) =>
@@ -1863,14 +1870,14 @@ export const kundenportalApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  anlagen: () => kundenApiFetch<Anlage[]>("/api/kundenportal/anlagen"),
+  anlagen: () => kundenApiFetch<PortalAnlage[]>("/api/kundenportal/anlagen"),
   anlageAnlegen: (body: { standort_id?: string | null; bezeichnung: string; adresse?: Adresse; anlagentyp?: string }) =>
-    kundenApiFetch<Anlage>("/api/kundenportal/anlagen", {
+    kundenApiFetch<PortalAnlage>("/api/kundenportal/anlagen", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  anfragen: () => kundenApiFetch<VorgangAnfrage[]>("/api/kundenportal/anfragen"),
-  anfrage: (id: string) => kundenApiFetch<VorgangAnfrage>(`/api/kundenportal/anfragen/${id}`),
+  anfragen: () => kundenApiFetch<PortalVorgangAnfrage[]>("/api/kundenportal/anfragen"),
+  anfrage: (id: string) => kundenApiFetch<PortalVorgangAnfrage>(`/api/kundenportal/anfragen/${id}`),
   anfrageAnlegen: (body: {
     titel: string;
     beschreibung?: string;
@@ -1878,7 +1885,7 @@ export const kundenportalApi = {
     standort_id?: string | null;
     anlage_id?: string | null;
   }) =>
-    kundenApiFetch<VorgangAnfrage>("/api/kundenportal/anfragen", {
+    kundenApiFetch<PortalVorgangAnfrage>("/api/kundenportal/anfragen", {
       method: "POST",
       body: JSON.stringify(body),
     }),

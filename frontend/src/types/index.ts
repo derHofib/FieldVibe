@@ -495,6 +495,89 @@ export interface PortalVorgang {
   updated_at: string;
 }
 
+// Kundenportal-Sicht auf Angebote/Rechnungen/Anlagen/Anfragen (Backend:
+// *PortalRead-Schemas) -- bewusst ohne interne Felder (Ersteller, Vorgang-
+// Bezug, Mahn-/Zahlungs-Interna, Positions-Herkunft, Anlagen-Notizen).
+export interface PortalAngebotPosition {
+  id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  gesamt: string;
+}
+
+export interface PortalAngebot {
+  id: string;
+  angebotsnummer: string;
+  status: AngebotStatus;
+  mwst_satz: string;
+  gueltig_bis: string | null;
+  versendet_am: string | null;
+  angenommen_am: string | null;
+  abgelehnt_am: string | null;
+  created_at: string;
+  positionen: PortalAngebotPosition[];
+  gesamt_netto: string;
+  gesamt_brutto: string;
+}
+
+export interface PortalRechnungPosition {
+  id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  gesamt: string;
+}
+
+export interface PortalRechnung {
+  id: string;
+  rechnungsnummer: string;
+  status: RechnungStatus;
+  betrag_netto: string;
+  mwst_satz: string;
+  betrag_brutto: string;
+  bezahlter_betrag: string;
+  offener_betrag: string;
+  ist_ueberfaellig: boolean;
+  faellig_am: string | null;
+  leistungsdatum: string | null;
+  versendet_am: string | null;
+  bezahlt_am: string | null;
+  ist_storno: boolean;
+  created_at: string;
+  positionen: PortalRechnungPosition[];
+}
+
+export interface PortalAnlage {
+  id: string;
+  standort_id: string | null;
+  bezeichnung: string;
+  adresse: Adresse;
+  anlagentyp: string | null;
+  hersteller: string | null;
+  modell: string | null;
+  seriennummer: string | null;
+  aktiv: boolean;
+  created_at: string;
+}
+
+export interface PortalVorgangAnfrage {
+  id: string;
+  standort_id: string | null;
+  anlage_id: string | null;
+  titel: string;
+  beschreibung: string | null;
+  leistungstyp: Leistungstyp;
+  status: VorgangAnfrageStatus;
+  ablehnungsgrund: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PortalVorgangEvent {
   id: number;
   vorgang_id: string;

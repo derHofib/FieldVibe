@@ -640,3 +640,129 @@ async def test_portal_entwurf_rechnung_und_angebot_nicht_sichtbar(
         f"/api/kundenportal/angebote/{angebot_id}", headers=headers, json={"status": "angenommen"}
     )
     assert antwort.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_portal_angebot_und_rechnung_ohne_interne_felder(
+    client, make_mandant, make_user, make_kunde
+):
+    from app.models.angebot import AngebotPosition
+    from app.models.rechnung import RechnungPosition, RechnungZahlung
+
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    headers = await _portal_headers(client, mandant, kunde, "kunde-intern2@example.de")
+
+    async with system_session() as session:
+        angebot = Angebot(
+            mandant_id=mandant.id, kunde_id=kunde.id, angebotsnummer="A-INT-1",
+            status="versendet", erstellt_von=admin.id,
+        )
+        rechnung = Rechnung(
+            mandant_id=mandant.id, kunde_id=kunde.id, rechnungsnummer="R-INT-1",
+            status="teilweise_bezahlt", betrag_netto=Decimal("100"), erstellt_von=admin.id,
+            mahnstufe=2,
+        )
+        session.add_all([angebot, rechnung])
+        await session.flush()
+        session.add_all(
+            [
+                AngebotPosition(
+                    mandant_id=mandant.id, angebot_id=angebot.id, position=1,
+                    artikelnummer="ART-GEHEIM", beschreibung="Kabel", menge=Decimal("2"),
+                    einzelpreis=Decimal("5"),
+                ),
+                RechnungPosition(
+                    mandant_id=mandant.id, rechnung_id=rechnung.id, position=1,
+                    beschreibung="Arbeit", menge=Decimal("1"), einzelpreis=Decimal("100"),
+                    quelle="zeit",
+                ),
+                RechnungZahlung(
+                    mandant_id=mandant.id, rechnung_id=rechnung.id, betrag=Decimal("40"),
+                    erstellt_von=admin.id,
+                ),
+            ]
+        )
+        angebot_id, rechnung_id = angebot.id, rechnung.id
+        await session.commit()
+
+    angebot_verboten = {"erstellt_von", "vorgang_id", "kunde_id", "updated_at"}
+    angebot_position_verboten = {"artikelnummer", "positionstyp"}
+    liste = await client.get("/api/kundenportal/angebote", headers=headers)
+    detail = await client.get(f"/api/kundenportal/angebote/{angebot_id}", headers=headers)
+    antwort = await client.patch(
+        f"/api/kundenportal/angebote/{angebot_id}", headers=headers, json={"status": "angenommen"}
+    )
+    for resp, body in ((liste, liste.json()[0]), (detail, detail.json()), (antwort, antwort.json())):
+        assert resp.status_code == 200
+        assert {"angebotsnummer", "status", "gesamt_netto", "gesamt_brutto", "positionen"} <= body.keys()
+        assert angebot_verboten.isdisjoint(body.keys())
+        assert body["positionen"][0]["gesamt"] == "10.00"
+        assert angebot_position_verboten.isdisjoint(body["positionen"][0].keys())
+        assert "ART-GEHEIM" not in resp.text
+
+    rechnung_verboten = {
+        "erstellt_von", "vorgang_id", "kunde_id", "mahnstufe", "letzte_mahnung_am", "zahlungen",
+        "xml_object_key", "storniert_rechnung_id", "vorgaenge", "updated_at", "tage_ueberfaellig",
+    }
+    position_verboten = {"quelle", "vorgang_id", "lv_position_id", "material_id"}
+    liste = await client.get("/api/kundenportal/rechnungen", headers=headers)
+    detail = await client.get(f"/api/kundenportal/rechnungen/{rechnung_id}", headers=headers)
+    for resp, body in ((liste, liste.json()[0]), (detail, detail.json())):
+        assert resp.status_code == 200
+        assert {
+            "rechnungsnummer", "status", "betrag_netto", "betrag_brutto", "bezahlter_betrag",
+            "offener_betrag", "ist_ueberfaellig", "faellig_am", "positionen",
+        } <= body.keys()
+        assert rechnung_verboten.isdisjoint(body.keys())
+        assert position_verboten.isdisjoint(body["positionen"][0].keys())
+        assert body["bezahlter_betrag"] == "40.00"
+        assert body["offener_betrag"] == "79.00"
+
+
+@pytest.mark.asyncio
+async def test_portal_anlage_und_anfrage_ohne_interne_felder(
+    client, make_mandant, make_kunde, make_anlage
+):
+    mandant = await make_mandant()
+    kunde = await make_kunde(mandant=mandant)
+    headers = await _portal_headers(client, mandant, kunde, "kunde-intern3@example.de")
+    await make_anlage(
+        mandant=mandant, kunde=kunde, bezeichnung="Heizung", notiz="Kunde zahlt schlecht",
+        stammdaten={"intern": "x"}, qr_code="QR-INTERN-1", geo_lat=1.0, geo_lng=2.0,
+    )
+
+    anlage_verboten = {
+        "notiz", "stammdaten", "qr_code", "geo_lat", "geo_lng", "anschaffungsdatum", "objekttyp",
+        "kunde_id", "erstellt_von_kundenportal_zugang_id", "updated_at",
+    }
+    liste = await client.get("/api/kundenportal/anlagen", headers=headers)
+    assert liste.status_code == 200
+    assert {"id", "bezeichnung", "standort_id", "anlagentyp", "aktiv"} <= liste.json()[0].keys()
+    assert anlage_verboten.isdisjoint(liste.json()[0].keys())
+    assert "zahlt schlecht" not in liste.text
+
+    neu = await client.post(
+        "/api/kundenportal/anlagen", headers=headers, json={"bezeichnung": "Neue Anlage"}
+    )
+    assert neu.status_code == 201
+    assert neu.json()["bezeichnung"] == "Neue Anlage"
+    assert anlage_verboten.isdisjoint(neu.json().keys())
+
+    anfrage_verboten = {
+        "kunde_id", "kundenportal_zugang_id", "vorgang_id", "bearbeitet_von", "bearbeitet_am",
+    }
+    erstellt = await client.post(
+        "/api/kundenportal/anfragen",
+        headers=headers,
+        json={"titel": "Heizung kalt", "beschreibung": "Seit gestern", "leistungstyp": "stoerung"},
+    )
+    assert erstellt.status_code == 201
+    anfrage_id = erstellt.json()["id"]
+    liste = await client.get("/api/kundenportal/anfragen", headers=headers)
+    detail = await client.get(f"/api/kundenportal/anfragen/{anfrage_id}", headers=headers)
+    for body in (erstellt.json(), liste.json()[0], detail.json()):
+        assert {"id", "titel", "beschreibung", "leistungstyp", "status", "ablehnungsgrund"} <= body.keys()
+        assert body["status"] == "offen"
+        assert anfrage_verboten.isdisjoint(body.keys())
