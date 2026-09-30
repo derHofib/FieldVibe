@@ -46,7 +46,7 @@ async def _require_eigener_vorgang(
     sonst saehe ein Partner die Vorgaenge aller anderen Partner desselben
     Mandanten."""
     vorgang = await session.get(Vorgang, vorgang_id)
-    if vorgang is None or vorgang.partner_id != auth.partner_id:
+    if vorgang is None or vorgang.partner_id != auth.partner_id or vorgang.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     return vorgang
 
@@ -79,7 +79,7 @@ async def list_eigene_auftraege(
 ) -> list[PartnerVorgangRead]:
     result = await session.execute(
         select(Vorgang)
-        .where(Vorgang.partner_id == auth.partner_id)
+        .where(Vorgang.partner_id == auth.partner_id, Vorgang.geloescht_am.is_(None))
         .order_by(Vorgang.last_activity_at.desc())
     )
     return [await _to_partner_read(session, v) for v in result.scalars().all()]

@@ -477,6 +477,38 @@ export interface VorgangEvent {
   dokument_dateiname: string | null;
 }
 
+// Kundenportal-Sicht (Backend: VorgangPortalRead/VorgangEventPortalRead) --
+// bewusst ohne Honorar-/Partner-/Nutzer-Felder.
+export interface PortalVorgang {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
+  beschreibung: string | null;
+  leistungstyp: Leistungstyp;
+  status: VorgangStatus;
+  faelligkeit_am: string | null;
+  anlage_id: string | null;
+  standort_id: string | null;
+  abgeschlossen_am: string | null;
+  last_activity_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PortalVorgangEvent {
+  id: number;
+  vorgang_id: string;
+  event_type: VorgangEventType;
+  is_system: boolean;
+  body: string | null;
+  created_at: string;
+  foto_url: string | null;
+  foto_thumbnail_url: string | null;
+  unterschrift_url: string | null;
+  dokument_url: string | null;
+  dokument_dateiname: string | null;
+}
+
 export interface Tag {
   id: string;
   label: string;

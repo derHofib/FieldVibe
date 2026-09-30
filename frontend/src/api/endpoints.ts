@@ -140,6 +140,8 @@ import type {
   UstVaBericht,
   User,
   VersionInfo,
+  PortalVorgang,
+  PortalVorgangEvent,
   Vorgang,
   VorgangAbhaengigkeit,
   VorgangAbhaengigkeitenListe,
@@ -1842,9 +1844,9 @@ export const mailApi = {
 };
 
 export const kundenportalApi = {
-  vorgaenge: () => kundenApiFetch<Vorgang[]>("/api/kundenportal/vorgaenge"),
-  vorgang: (id: string) => kundenApiFetch<Vorgang>(`/api/kundenportal/vorgaenge/${id}`),
-  vorgangEvents: (id: string) => kundenApiFetch<VorgangEvent[]>(`/api/kundenportal/vorgaenge/${id}/events`),
+  vorgaenge: () => kundenApiFetch<PortalVorgang[]>("/api/kundenportal/vorgaenge"),
+  vorgang: (id: string) => kundenApiFetch<PortalVorgang>(`/api/kundenportal/vorgaenge/${id}`),
+  vorgangEvents: (id: string) => kundenApiFetch<PortalVorgangEvent[]>(`/api/kundenportal/vorgaenge/${id}/events`),
   angebote: () => kundenApiFetch<Angebot[]>("/api/kundenportal/angebote"),
   angebot: (id: string) => kundenApiFetch<Angebot>(`/api/kundenportal/angebote/${id}`),
   antwortAufAngebot: (id: string, status: "angenommen" | "abgelehnt") =>

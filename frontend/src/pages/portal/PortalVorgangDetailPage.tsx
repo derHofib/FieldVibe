@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { kundenportalApi } from "../../api/endpoints";
 import { SkeletonCard } from "../../components/Skeleton";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
-import type { VorgangEvent, VorgangStatus } from "../../types";
+import type { PortalVorgangEvent, VorgangStatus } from "../../types";
 
 // Kurze, laienverstaendliche Erklaerung je Status -- die internen Labels
 // aus vorgangDarstellung.ts reichen fuer Technikerinnen, aber ein externer
@@ -20,7 +20,7 @@ const STATUS_ERKLAERUNG: Record<VorgangStatus, string> = {
   storniert: "Dieser Vorgang wurde storniert.",
 };
 
-function PortalEventBubble({ event }: { event: VorgangEvent }) {
+function PortalEventBubble({ event }: { event: PortalVorgangEvent }) {
   if (event.is_system) {
     return (
       <div className="my-2 text-center text-xs text-label2">
