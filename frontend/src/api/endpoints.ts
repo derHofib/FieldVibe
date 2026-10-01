@@ -212,10 +212,9 @@ export const mandantenApi = {
 };
 
 export const usersApi = {
-  // `=== true`: Aufrufer uebergeben usersApi.list teils direkt als queryFn,
-  // dann kommt als erstes Argument der React-Query-Kontext.
-  list: (versteckte?: boolean) =>
-    apiFetch<User[]>(versteckte === true ? "/api/users?versteckte=1" : "/api/users"),
+  list: () => apiFetch<User[]>("/api/users"),
+  // Eigene Funktion statt Parameter an list: die wird vielerorts direkt als queryFn uebergeben.
+  listMitVersteckten: () => apiFetch<User[]>("/api/users?versteckte=1"),
   create: (body: {
     mandant_id: string | null;
     email: string;

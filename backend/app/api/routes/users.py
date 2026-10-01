@@ -1,7 +1,8 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +21,11 @@ from app.services.einladung_service import (
     registrierungslink_erzeugen,
     to_read_model,
     versende_einladung,
+)
+from app.services.user_anonymisierung_service import (
+    anonymisiere_user,
+    ist_anonymisiert,
+    nicht_anonymisiert,
 )
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -68,7 +74,12 @@ async def _to_read(session: AsyncSession, user: User) -> UserRead:
 )
 async def list_einladungen(session: AsyncSession = Depends(get_db)) -> list[EinladungRead]:
     result = await session.execute(
-        select(Einladung).where(Einladung.art == "mitarbeiter").order_by(Einladung.created_at.desc())
+        select(Einladung)
+        .where(
+            Einladung.art == "mitarbeiter",
+            or_(Einladung.rolle.is_(None), Einladung.rolle != "super_admin"),
+        )
+        .order_by(Einladung.created_at.desc())
     )
     return [
         EinladungRead(
@@ -196,13 +207,27 @@ async def einladung_widerrufen(
         Depends(require_recht("mitarbeiterverwaltung", "sehen")),
     ],
 )
-async def list_users(session: AsyncSession = Depends(get_db)) -> list[UserRead]:
+async def list_users(
+    versteckte: bool = False,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[UserRead]:
     # RLS restricts a mandant_admin's session to their own mandant already;
     # super_admin sessions bypass RLS and therefore see every account.
     # Read-only for custom account types too: colleagues' names are needed
     # for the @-mention picker in the Vorgangs-Chat (Phase 3) and aren't
     # sensitive the way account management (create/patch below) is.
-    result = await session.execute(select(User).order_by(User.name))
+    # Anonymisierte Nutzer (siehe user_anonymisierung_service) sind nie
+    # auswaehlbar. `versteckte` ist kein Sicherheitsmerkmal, nur eine
+    # Ausblendung der Papierkorb-Accounts in der Standardansicht.
+    stmt = select(User).where(nicht_anonymisiert())
+    if auth.mandant_id is not None:
+        # Mandanten-Kontext (auch Impersonation): Plattform-Admins gehoeren
+        # nicht in die Nutzerliste des Mandanten.
+        stmt = stmt.where(User.role != "super_admin")
+    if not versteckte:
+        stmt = stmt.where(User.role.not_in(_PAPIERKORB_ROLLEN))
+    result = await session.execute(stmt.order_by(User.name))
     users = list(result.scalars().all())
 
     account_typ_ids = {u.account_typ_id for u in users if u.account_typ_id is not None}
@@ -315,7 +340,7 @@ async def update_user(
     session: AsyncSession = Depends(get_db),
 ) -> UserRead:
     user = await session.get(User, user_id)
-    if user is None:
+    if user is None or ist_anonymisiert(user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
         )
@@ -391,7 +416,7 @@ async def delete_user(
     session: AsyncSession = Depends(get_db),
 ) -> None:
     user = await session.get(User, user_id)
-    if user is None:
+    if user is None or ist_anonymisiert(user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
 
     if auth.role in ("mandant_admin", "loesch_operativ"):
@@ -415,12 +440,14 @@ async def delete_user(
 
     if user.role == "mandant_admin":
         # Ein Mandant ohne jeden mandant_admin waere von niemandem mehr
-        # verwaltbar -- der letzte muss also erhalten bleiben.
+        # verwaltbar -- der letzte muss also erhalten bleiben. Anonymisierte
+        # Admins zaehlen nicht mit (Zeile bleibt als Rolle mandant_admin bestehen).
         andere_admins = await session.scalar(
             select(func.count()).select_from(User).where(
                 User.mandant_id == user.mandant_id,
                 User.role == "mandant_admin",
                 User.id != user.id,
+                nicht_anonymisiert(),
             )
         )
         if andere_admins == 0:
@@ -429,19 +456,40 @@ async def delete_user(
                 detail="Der letzte Mandanten-Admin kann nicht gelöscht werden",
             )
 
+    if user.role == "super_admin":
+        andere_super_admins = await session.scalar(
+            select(func.count()).select_from(User).where(
+                User.role == "super_admin", User.id != user.id, nicht_anonymisiert()
+            )
+        )
+        if andere_super_admins == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Der letzte Super-Admin kann nicht gelöscht werden",
+            )
+
     mandant_id = user.mandant_id
-    audit_payload = {"email": user.email, "role": user.role}
+    rolle = user.role
+    audit_payload = {"role": user.role}
     try:
-        await session.delete(user)
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                "Nutzer kann nicht gelöscht werden, da noch Daten damit verknüpft sind "
-                "(z.B. Zeiterfassungen, erstellte Angebote/Rechnungen) -- stattdessen deaktivieren."
-            ),
-        ) from exc
+        # Savepoint, damit ein FK-Verstoss nicht die ganze Request-Transaktion
+        # abbricht. Core-DELETE statt session.delete(): der ORM-Zustand bleibt
+        # nach dem Rollback unveraendert und wird anschliessend anonymisiert.
+        async with session.begin_nested():
+            await session.execute(sa_delete(User).where(User.id == user_id))
+    except IntegrityError:
+        await anonymisiere_user(session, user)
+        # DSGVO: keine alte E-Mail im Audit-Log, nur ID + Rolle + Akteur.
+        await log_action(
+            session,
+            aktion="user_anonymisiert",
+            mandant_id=mandant_id,
+            actor_user_id=auth.user_id,
+            entity_type="user",
+            entity_id=user_id,
+            payload={"role": rolle},
+        )
+        return
 
     await log_action(
         session,

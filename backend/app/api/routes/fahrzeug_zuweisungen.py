@@ -15,6 +15,7 @@ from app.api.deps import (
 from app.models.anlage import Anlage
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
 from app.models.user import User
+from app.services.user_anonymisierung_service import nicht_anonymisiert
 from app.schemas.anlage import AnlageRead
 from app.schemas.fahrzeug_zuweisung import FahrzeugZuweisungSetzen, FahrzeugZuweisungUebersicht
 from app.schemas.user import UserRead
@@ -58,7 +59,7 @@ async def uebersicht(
     Zeigt auch Techniker ohne Zuweisung (fahrzeug=None)."""
     techniker_ids = await technik_user_ids(session, auth.mandant_id)
     techniker_result = await session.execute(
-        select(User).where(User.id.in_(techniker_ids)).order_by(User.name)
+        select(User).where(User.id.in_(techniker_ids), nicht_anonymisiert()).order_by(User.name)
     )
     techniker_liste = list(techniker_result.scalars().all())
 

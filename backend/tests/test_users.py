@@ -365,7 +365,7 @@ async def test_admin_can_delete_unused_user(client, make_mandant, make_user):
 
 
 @pytest.mark.asyncio
-async def test_user_delete_blocked_when_zeiterfassung_exists(
+async def test_user_delete_anonymizes_when_zeiterfassung_exists(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     from datetime import datetime, timedelta, timezone
@@ -394,7 +394,7 @@ async def test_user_delete_blocked_when_zeiterfassung_exists(
         await session.flush()
 
     resp = await client.delete(f"/api/users/{techniker.id}", headers=auth_headers(token))
-    assert resp.status_code == 409
+    assert resp.status_code == 204
 
 
 @pytest.mark.asyncio

@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
 import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
-import type { Einladung, EinladungRolle, Role } from "../types";
+import { Sheet } from "../components/apple/Sheet";
+import type { Einladung, EinladungRolle, Role, User } from "../types";
+import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -64,7 +66,37 @@ export function UsersPage() {
   const [mandantId, setMandantId] = useState<string>("");
   const [letzteEinladung, setLetzteEinladung] = useState<Einladung | null>(null);
 
-  const { data: users, isLoading } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const [versteckteAnzeigen, setVersteckteAnzeigen] = useState(false);
+  const klickZeiten = useRef<number[]>([]);
+  const [loeschZiel, setLoeschZiel] = useState<User | null>(null);
+  const [loeschBestaetigung, setLoeschBestaetigung] = useState("");
+
+  useEffect(() => {
+    function aufTaste(e: KeyboardEvent) {
+      if (istVersteckteTastenkombi(e)) {
+        e.preventDefault();
+        setVersteckteAnzeigen(true);
+      }
+    }
+    document.addEventListener("keydown", aufTaste);
+    return () => document.removeEventListener("keydown", aufTaste);
+  }, []);
+
+  function aufUeberschriftKlick() {
+    const { zeiten, erreicht } = klickFolge(klickZeiten.current, Date.now());
+    klickZeiten.current = zeiten;
+    if (erreicht) setVersteckteAnzeigen(true);
+  }
+
+  function versteckteAusblenden() {
+    setVersteckteAnzeigen(false);
+    if (role === "loesch_ansicht" || role === "loesch_operativ") setRole("mandant_admin");
+  }
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users", { versteckte: versteckteAnzeigen }],
+    queryFn: versteckteAnzeigen ? usersApi.listMitVersteckten : usersApi.list,
+  });
   const { data: mandanten } = useQuery({
     queryKey: ["mandanten"],
     queryFn: mandantenApi.list,
@@ -125,12 +157,24 @@ export function UsersPage() {
     mutationFn: usersApi.remove,
     onSuccess: () => {
       setDeleteError(null);
+      setLoeschZiel(null);
+      setLoeschBestaetigung("");
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
   const kannEingeladenWerden = istEinladungsfaehig(role);
+  const verfuegbareRollen = (isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).filter(
+    (r) => versteckteAnzeigen || (r !== "loesch_ansicht" && r !== "loesch_operativ"),
+  );
+  const loeschErwartet = loeschZiel ? loeschZiel.name.trim() || loeschZiel.email : "";
+  const loeschBestaetigt = loeschZiel !== null && loeschBestaetigung.trim() === loeschErwartet;
+
+  function loeschDialogSchliessen() {
+    setLoeschZiel(null);
+    setLoeschBestaetigung("");
+  }
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -217,7 +261,7 @@ export function UsersPage() {
               onChange={(e) => setRole(e.target.value as Role)}
               className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             >
-              {(isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).map((value) => (
+              {verfuegbareRollen.map((value) => (
                 <option key={value} value={value}>
                   {value === "custom" ? "Account-Typ…" : ROLE_LABEL[value]}
                 </option>
@@ -356,7 +400,17 @@ export function UsersPage() {
       )}
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-label">Accounts</h2>
+        <h2 className="mb-4 text-lg font-bold text-label" onClick={aufUeberschriftKlick}>
+          Accounts
+        </h2>
+        {versteckteAnzeigen && (
+          <p className="mb-2 flex items-center gap-2 text-sm text-label2">
+            Versteckte Accounts werden angezeigt
+            <button type="button" onClick={versteckteAusblenden} className="font-medium text-tint-text hover:underline">
+              Ausblenden
+            </button>
+          </p>
+        )}
         {deleteError && <p className="mb-2 text-sm text-st-fehlt ">{deleteError}</p>}
         {isLoading ? (
           <p className="text-label2">Lädt…</p>
@@ -408,10 +462,9 @@ export function UsersPage() {
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm(`${u.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
-                            setDeleteError(null);
-                            deleteMutation.mutate(u.id);
-                          }
+                          setDeleteError(null);
+                          setLoeschBestaetigung("");
+                          setLoeschZiel(u);
                         }}
                         disabled={u.id === currentUser?.id}
                         title={u.id === currentUser?.id ? "Eigener Account kann nicht gelöscht werden" : undefined}
@@ -427,6 +480,49 @@ export function UsersPage() {
           </table>
         )}
       </section>
+
+      <Sheet
+        offen={loeschZiel !== null}
+        onClose={loeschDialogSchliessen}
+        titel="Account löschen"
+        links={
+          <button type="button" onClick={loeschDialogSchliessen} className="text-[17px] text-tint-text">
+            Abbrechen
+          </button>
+        }
+        rechts={
+          <button
+            type="button"
+            disabled={!loeschBestaetigt || deleteMutation.isPending}
+            onClick={() => loeschZiel && deleteMutation.mutate(loeschZiel.id)}
+            className="text-[17px] font-semibold text-st-fehlt disabled:opacity-40"
+          >
+            Löschen
+          </button>
+        }
+      >
+        {loeschZiel && (
+          <div className="space-y-4 p-4">
+            <p className="text-[15px] text-label">
+              Account von {loeschZiel.name || loeschZiel.email} endgültig löschen? Persönliche Daten werden
+              unwiderruflich entfernt. Zeiterfassungen, Rechnungen und Verlauf bleiben erhalten und werden als
+              „Gelöschter Nutzer“ angezeigt.
+            </p>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-label">
+                Zur Bestätigung „{loeschErwartet}“ eintippen
+              </label>
+              <input
+                value={loeschBestaetigung}
+                onChange={(e) => setLoeschBestaetigung(e.target.value)}
+                autoComplete="off"
+                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              />
+            </div>
+            {deleteError && <p className="text-sm text-st-fehlt">{deleteError}</p>}
+          </div>
+        )}
+      </Sheet>
     </div>
   );
 }
