@@ -21,10 +21,11 @@ async def _make_foto_event(mandant, vorgang, **kwargs) -> VorgangEvent:
 
 
 @pytest.mark.asyncio
-async def test_create_and_list_highlight(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_create_and_list_highlight(client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     event = await _make_foto_event(mandant, vorgang)
     token = await login(client, techniker.email, "pw-123456")
@@ -45,10 +46,11 @@ async def test_create_and_list_highlight(client, make_mandant, make_user, make_k
 
 
 @pytest.mark.asyncio
-async def test_cannot_highlight_non_foto_event(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_cannot_highlight_non_foto_event(client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     event = await _make_foto_event(mandant, vorgang, event_type="kommentar", body="Text", payload={})
     token = await login(client, techniker.email, "pw-123456")
@@ -60,10 +62,11 @@ async def test_cannot_highlight_non_foto_event(client, make_mandant, make_user, 
 
 
 @pytest.mark.asyncio
-async def test_duplicate_highlight_returns_409(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_duplicate_highlight_returns_409(client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     event = await _make_foto_event(mandant, vorgang)
     token = await login(client, techniker.email, "pw-123456")
@@ -81,12 +84,14 @@ async def test_duplicate_highlight_returns_409(client, make_mandant, make_user, 
 
 @pytest.mark.asyncio
 async def test_techniker_can_only_delete_own_highlight(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     techniker1 = await make_user(mandant=mandant, role="techniker", password="pw-123456", email="t1@example.de")
     techniker2 = await make_user(mandant=mandant, role="techniker", password="pw-123456", email="t2@example.de")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker1)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker2)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     event = await _make_foto_event(mandant, vorgang)
     token1 = await login(client, techniker1.email, "pw-123456")
@@ -105,11 +110,12 @@ async def test_techniker_can_only_delete_own_highlight(
 
 
 @pytest.mark.asyncio
-async def test_admin_can_delete_any_highlight(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_admin_can_delete_any_highlight(client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung):
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456", email="admin@example.de")
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456", email="tech@example.de")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     event = await _make_foto_event(mandant, vorgang)
     tech_token = await login(client, techniker.email, "pw-123456")
@@ -125,12 +131,13 @@ async def test_admin_can_delete_any_highlight(client, make_mandant, make_user, m
 
 
 @pytest.mark.asyncio
-async def test_mandant_isolation_for_highlights(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_mandant_isolation_for_highlights(client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung):
     mandant1 = await make_mandant(name="Betrieb1")
     mandant2 = await make_mandant(name="Betrieb2")
     techniker1 = await make_user(mandant=mandant1, role="techniker", password="pw-123456")
     techniker2 = await make_user(mandant=mandant2, role="techniker", password="pw-123456")
     kunde1 = await make_kunde(mandant=mandant1)
+    await make_kunde_zuweisung(mandant=mandant1, kunde=kunde1, techniker=techniker1)
     vorgang1 = await make_vorgang(mandant=mandant1, kunde=kunde1)
     event1 = await _make_foto_event(mandant1, vorgang1)
     token1 = await login(client, techniker1.email, "pw-123456")

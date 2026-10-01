@@ -49,11 +49,12 @@ async def test_invalid_schweregrad_rejected(
 
 @pytest.mark.asyncio
 async def test_direct_status_transition_to_behoben_allowed(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, techniker.email, "pw-123456")
 
@@ -74,11 +75,12 @@ async def test_direct_status_transition_to_behoben_allowed(
 
 @pytest.mark.asyncio
 async def test_direct_status_transition_to_in_bearbeitung_rejected(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, techniker.email, "pw-123456")
 
@@ -96,10 +98,11 @@ async def test_direct_status_transition_to_in_bearbeitung_rejected(
 
 
 @pytest.mark.asyncio
-async def test_maengel_protokoll_pdf(client, make_mandant, make_user, make_kunde, make_vorgang):
+async def test_maengel_protokoll_pdf(client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung):
     mandant = await make_mandant()
     techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=techniker)
     vorgang = await make_vorgang(mandant=mandant, kunde=kunde)
     token = await login(client, techniker.email, "pw-123456")
 
@@ -119,13 +122,14 @@ async def test_maengel_protokoll_pdf(client, make_mandant, make_user, make_kunde
 
 @pytest.mark.asyncio
 async def test_mandant_isolation_for_maengel(
-    client, make_mandant, make_user, make_kunde, make_vorgang
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_kunde_zuweisung
 ):
     mandant1 = await make_mandant(name="Betrieb1")
     mandant2 = await make_mandant(name="Betrieb2")
     techniker1 = await make_user(mandant=mandant1, role="techniker", password="pw-123456")
     admin2 = await make_user(mandant=mandant2, role="mandant_admin", password="pw-123456")
     kunde1 = await make_kunde(mandant=mandant1)
+    await make_kunde_zuweisung(mandant=mandant1, kunde=kunde1, techniker=techniker1)
     vorgang1 = await make_vorgang(mandant=mandant1, kunde=kunde1)
     token1 = await login(client, techniker1.email, "pw-123456")
     token2 = await login(client, admin2.email, "pw-123456")

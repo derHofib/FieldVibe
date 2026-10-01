@@ -63,6 +63,11 @@ from app.services.rechnung_service import (
     zeiterfassung_abrechnung_zuruecksetzen,
     zeiterfassung_freigeben_fuer_rechnung,
 )
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    require_kunde_zugewiesen,
+    require_kunde_zugriff,
+)
 
 router = APIRouter(
     prefix="/api/rechnungen",
@@ -87,6 +92,22 @@ _GUELTIGE_UEBERGAENGE = {
     # Notausgang ("Rest ist abgehakt") erreichbar.
     "teilweise_bezahlt": {"bezahlt"},
 }
+
+
+async def _rechnung_laden(
+    session: AsyncSession,
+    auth: AuthContext,
+    rechnung_id: UUID,
+    *,
+    geloeschte_zulassen: bool = False,
+) -> Rechnung:
+    """Zentraler Zugriff auf eine Rechnung per ID: Papierkorb + Einschraenkung
+    auf zugewiesene Kunden (nur_zugewiesene_kunden) -> 404."""
+    rechnung = await session.get(Rechnung, rechnung_id)
+    if rechnung is None or (rechnung.geloescht_am is not None and not geloeschte_zulassen):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    await require_kunde_zugriff(session, auth, rechnung.kunde_id, "Rechnung nicht gefunden")
+    return rechnung
 
 
 async def _storniert_rechnung_fuer(session: AsyncSession, rechnung: Rechnung) -> Rechnung | None:
@@ -182,6 +203,7 @@ async def list_rechnungen(
     sort: str = Query(default="-datum"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungListe:
     bedingungen = _filter_bedingungen(
@@ -198,6 +220,9 @@ async def list_rechnungen(
         nur_offen,
         nur_ueberfaellig,
     )
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        bedingungen.append(Rechnung.kunde_id.in_(erlaubte_kunden))
 
     absteigend = sort.startswith("-")
     schluessel = sort.lstrip("-")
@@ -261,6 +286,7 @@ async def export_rechnungen_csv(
     betrag_bis: Decimal | None = Query(default=None),
     nur_offen: bool = Query(default=False),
     nur_ueberfaellig: bool = Query(default=False),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     bedingungen = _filter_bedingungen(
@@ -277,6 +303,9 @@ async def export_rechnungen_csv(
         nur_offen,
         nur_ueberfaellig,
     )
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        bedingungen.append(Rechnung.kunde_id.in_(erlaubte_kunden))
     result = await session.execute(
         select(Rechnung).where(*bedingungen).order_by(Rechnung.created_at.desc(), Rechnung.id.asc())
     )
@@ -330,12 +359,14 @@ async def export_rechnungen_csv(
 )
 async def list_abrechenbare_vorgaenge(
     kunde_id: UUID = Query(...),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[AbrechenbarerVorgang]:
     """Auswahlliste fuer "Vorgang hinzufuegen". Dieselben Kriterien wie die
     Vorschlaege (positionen_vorschlaege_fuer_vorgang) -- eine Query je Quelle
     gruppiert ueber alle Vorgaenge des Kunden statt eine je Vorgang. Ein
     Vorgang erscheint bei offenen Stunden ODER offenem Material."""
+    await require_kunde_zugriff(session, auth, kunde_id, "Kunde nicht gefunden")
     dauer = func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at)
     ohne_svs = func.coalesce(func.sum(case((Zeiterfassung.lv_position_id.is_(None), dauer), else_=0)), 0)
     mit_svs = func.coalesce(func.sum(case((Zeiterfassung.lv_position_id.is_not(None), dauer), else_=0)), 0)
@@ -395,10 +426,12 @@ async def list_abrechenbare_vorgaenge(
 
 
 @router.get("/{rechnung_id}", response_model=RechnungRead)
-async def get_rechnung(rechnung_id: UUID, session: AsyncSession = Depends(get_db)) -> RechnungRead:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+async def get_rechnung(
+    rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     return await to_read_model(session, rechnung)
 
 
@@ -415,9 +448,7 @@ async def delete_rechnung(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status != "entwurf":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -465,6 +496,7 @@ async def create_rechnung(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    await require_kunde_zugewiesen(session, auth, body.kunde_id)
     vorgang = None
     if body.vorgang_id is not None:
         vorgang = await session.get(Vorgang, body.vorgang_id)
@@ -520,10 +552,8 @@ async def create_rechnung(
     return await to_read_model(session, rechnung)
 
 
-async def _entwurf_laden(session: AsyncSession, rechnung_id: UUID) -> Rechnung:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+async def _entwurf_laden(session: AsyncSession, auth: AuthContext, rechnung_id: UUID) -> Rechnung:
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status != "entwurf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgänge können nur im Entwurf hinzugefügt werden"
@@ -559,7 +589,7 @@ async def get_vorgang_vorschlaege(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[RechnungPositionVorschlag]:
-    rechnung = await _entwurf_laden(session, rechnung_id)
+    rechnung = await _entwurf_laden(session, auth, rechnung_id)
     vorgang = await _vorgang_des_kunden(session, vorgang_id, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     return await positionen_vorschlaege_fuer_vorgang(session, vorgang.id, mandant)
@@ -579,7 +609,7 @@ async def add_vorgang(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    rechnung = await _entwurf_laden(session, rechnung_id)
+    rechnung = await _entwurf_laden(session, auth, rechnung_id)
     if not body.auswahl:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Keine Posten ausgewählt")
     vorgang = await _vorgang_des_kunden(session, body.vorgang_id, rechnung.kunde_id)
@@ -611,9 +641,7 @@ async def add_position(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status != "entwurf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf ergänzt werden"
@@ -688,9 +716,7 @@ async def remove_position(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status != "entwurf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf entfernt werden"
@@ -777,11 +803,10 @@ async def update_position(
     rechnung_id: UUID,
     position_id: UUID,
     body: RechnungPositionUpdate,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status != "entwurf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf geändert werden"
@@ -806,9 +831,7 @@ async def get_positionsvorschlaege(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[RechnungPositionVorschlag]:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.vorgang_id is None:
         return []
     mandant = await session.get(Mandant, auth.mandant_id)
@@ -844,9 +867,7 @@ async def update_rechnung(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
 
     if body.betrag_netto is not None:
         if rechnung.status != "entwurf":
@@ -942,9 +963,7 @@ async def storno_rechnung(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status not in ("versendet", "teilweise_bezahlt", "bezahlt"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1003,9 +1022,7 @@ async def add_zahlung(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status not in ("versendet", "teilweise_bezahlt"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1097,9 +1114,7 @@ async def storno_zahlung(
     die Zeile zu aendern/loeschen -- das Zahlungs-Ledger bleibt additiv
     (siehe RechnungZahlung-Docstring). Umgeht bewusst _GUELTIGE_UEBERGAENGE:
     dieser Pfad korrigiert Bewegungsdaten, schreibt keinen Belegstatus fort."""
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     if rechnung.status == "storniert":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Rechnung ist storniert"
@@ -1172,9 +1187,7 @@ async def rechnung_pdf(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id, geloeschte_zulassen=True)
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     storniert_rechnung = await _storniert_rechnung_fuer(session, rechnung)
@@ -1193,9 +1206,7 @@ async def rechnung_xml(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id, geloeschte_zulassen=True)
     if not rechnung.xml_object_key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Keine ZUGFeRD-XML fuer diese Rechnung vorhanden")
     xml_bytes = await storage_service.download_bytes(rechnung.xml_object_key)
@@ -1208,11 +1219,11 @@ async def rechnung_xml(
 
 @router.get("/{rechnung_id}/emails", response_model=list[EmailLogRead])
 async def list_rechnung_emails(
-    rechnung_id: UUID, session: AsyncSession = Depends(get_db)
+    rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> list[EmailLog]:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     result = await session.execute(
         select(EmailLog)
         .where(EmailLog.entity_type == "rechnung", EmailLog.entity_id == rechnung_id)
@@ -1236,9 +1247,7 @@ async def send_rechnung_email(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> EmailLog:
-    rechnung = await session.get(Rechnung, rechnung_id)
-    if rechnung is None or rechnung.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rechnung nicht gefunden")
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
     kunde = await session.get(Kunde, rechnung.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     storniert_rechnung = await _storniert_rechnung_fuer(session, rechnung)

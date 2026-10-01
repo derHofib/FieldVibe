@@ -20,6 +20,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.schemas.mangel import MangelCreate, MangelRead, MangelUpdate
 from app.services import papierkorb_service
 from app.services.pdf_service import generate_maengel_protokoll_pdf
+from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugriff
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -49,6 +50,7 @@ _ERLAUBTE_DIREKTE_STATUS = ("behoben", "abgelehnt")
 async def list_maengel(
     vorgang_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Mangel]:
     stmt = select(Mangel).where(Mangel.geloescht_am.is_(None)).order_by(Mangel.created_at.desc())
@@ -56,6 +58,11 @@ async def list_maengel(
         stmt = stmt.where(Mangel.vorgang_id == vorgang_id)
     if status_filter:
         stmt = stmt.where(Mangel.status == status_filter)
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(
+            Mangel.vorgang_id.in_(select(Vorgang.id).where(Vorgang.kunde_id.in_(erlaubte_kunden)))
+        )
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -69,6 +76,7 @@ async def maengel_protokoll_pdf(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await require_kunde_zugriff(session, auth, vorgang.kunde_id, "Vorgang nicht gefunden")
     mandant = await session.get(Mandant, auth.mandant_id)
     maengel = list(
         (await session.execute(select(Mangel).where(Mangel.vorgang_id == vorgang_id))).scalars().all()
@@ -82,12 +90,26 @@ async def maengel_protokoll_pdf(
     )
 
 
-@router.get("/{mangel_id}", response_model=MangelRead)
-async def get_mangel(mangel_id: UUID, session: AsyncSession = Depends(get_db)) -> Mangel:
+async def _mangel_laden(session: AsyncSession, auth: AuthContext, mangel_id: UUID) -> Mangel:
+    """Papierkorb + Einschraenkung auf zugewiesene Kunden (ueber den Vorgang
+    des Mangels, nur_zugewiesene_kunden) -> 404."""
     mangel = await session.get(Mangel, mangel_id)
     if mangel is None or mangel.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mangel nicht gefunden")
+    vorgang = await session.get(Vorgang, mangel.vorgang_id)
+    await require_kunde_zugriff(
+        session, auth, vorgang.kunde_id if vorgang else None, "Mangel nicht gefunden"
+    )
     return mangel
+
+
+@router.get("/{mangel_id}", response_model=MangelRead)
+async def get_mangel(
+    mangel_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Mangel:
+    return await _mangel_laden(session, auth, mangel_id)
 
 
 @router.delete(
@@ -103,6 +125,8 @@ async def delete_mangel(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
+    # Vorab laden, damit der Zuweisungs-Check vor dem Soft-Delete greift.
+    await _mangel_laden(session, auth, mangel_id)
     mangel = await papierkorb_service.soft_delete(
         session, entity_typ="mangel", entity_id=mangel_id, actor_user_id=auth.user_id
     )
@@ -133,6 +157,7 @@ async def create_mangel(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    await require_kunde_zugriff(session, auth, vorgang.kunde_id, "Vorgang nicht gefunden")
     if body.anlage_id is not None and body.anlage_id != vorgang.anlage_id:
         # Kein Hard-Fail auf Anlagen-Existenz per FK reicht nicht: eine
         # fremde/nicht zum Vorgang passende Anlage waere ein stiller
@@ -182,9 +207,7 @@ async def update_mangel(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Mangel:
-    mangel = await session.get(Mangel, mangel_id)
-    if mangel is None or mangel.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mangel nicht gefunden")
+    mangel = await _mangel_laden(session, auth, mangel_id)
 
     changes = body.model_dump(exclude_unset=True)
     if "schweregrad" in changes and changes["schweregrad"] not in MANGEL_SCHWEREGRADE:
