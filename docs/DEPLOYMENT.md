@@ -366,10 +366,17 @@ Beide fragen vor dem Überschreiben explizit nach Bestätigung.
 cd SocialCRM
 git pull
 export GIT_COMMIT="$(git rev-parse --short HEAD)"
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres \
+  psql -U fieldvibe -d fieldvibe -c 'ALTER ROLE "fieldvibe" NOSUPERUSER NOBYPASSRLS;'
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
   run --rm backend alembic upgrade head
 ```
+
+Der `ALTER ROLE`-Schritt ist idempotent. Backend und Worker verweigern den
+Start, solange die Datenbank-Rolle Superuser/BYPASSRLS ist (siehe Abschnitt
+3) -- Benutzer- und Datenbankname ggf. an `POSTGRES_USER`/`POSTGRES_DB`
+aus der `.env` anpassen.
 
 `GIT_COMMIT` wird als Build-Arg ins Backend-Image gebacken und treibt die
 rein informative Update-Anzeige im Super-Admin-Bereich (Menüpunkt

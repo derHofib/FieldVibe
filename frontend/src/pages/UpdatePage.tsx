@@ -101,6 +101,8 @@ export function UpdatePage() {
             <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 text-xs text-label3">
 {`git pull
 export GIT_COMMIT="$(git rev-parse --short HEAD)"
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres \\
+  psql -U fieldvibe -d fieldvibe -c 'ALTER ROLE "fieldvibe" NOSUPERUSER NOBYPASSRLS;'
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend alembic upgrade head`}
             </pre>

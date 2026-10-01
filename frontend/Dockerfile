@@ -25,6 +25,7 @@ COPY --from=build /app/dist ./dist
 # Security-Header fuer den Betrieb ohne Caddy (.ip.yml); hinter Caddy
 # ueberschreibt dessen header-Direktive dieselben Felder. Bewusst ohne HSTS
 # (HTTP) und ohne CSP (API-/MinIO-Host sind im IP-Modus nicht vorab bekannt).
+# serve loest -c relativ zum Auslieferungsordner (dist) auf -- daher absoluter Pfad.
 COPY serve.json ./serve.json
 EXPOSE 4173
-CMD ["serve", "-s", "dist", "-l", "4173", "-c", "serve.json"]
+CMD ["serve", "-s", "dist", "-l", "4173", "-c", "/app/serve.json"]
