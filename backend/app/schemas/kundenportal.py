@@ -109,7 +109,8 @@ class VorgangPortalRead(BaseModel):
 
 # Nur Ereignistypen, die fuer den Kunden eine Bedeutung haben -- zusaetzlich
 # zum kundensichtbar-Flag, damit ein versehentlich freigegebenes
-# Zeit-/Material-/Eingangsrechnungs-Event nie beim Kunden landet.
+# Zeit-/Material-/Eingangsrechnungs-Event nie beim Kunden landet. Maengel
+# und Rechnungsstatus sind ausdruecklich fuer den Kunden gewuenscht.
 PORTAL_EVENT_TYPEN: tuple[str, ...] = (
     "kommentar",
     "status_change",
@@ -120,6 +121,8 @@ PORTAL_EVENT_TYPEN: tuple[str, ...] = (
     "unterschrift",
     "formular",
     "leistung",
+    "mangel",
+    "rechnung_status",
     "system",
 )
 
