@@ -131,11 +131,9 @@ fi
 log "Prüfe/generiere Secrets in .env (bereits gesetzte Werte bleiben unverändert)..."
 
 is_placeholder POSTGRES_PASSWORD && set_env POSTGRES_PASSWORD "$(gen_secret)"
-PG_USER="$(get_env POSTGRES_USER)"
-PG_PW="$(get_env POSTGRES_PASSWORD)"
-PG_DB="$(get_env POSTGRES_DB)"
-set_env DATABASE_URL "postgresql+asyncpg://${PG_USER}:${PG_PW}@postgres:5432/${PG_DB}"
-set_env DATABASE_URL_SYNC "postgresql+psycopg2://${PG_USER}:${PG_PW}@postgres:5432/${PG_DB}"
+# DATABASE_URL/DATABASE_URL_SYNC setzt scripts/app_rolle_einrichten.sh in
+# Abschnitt 8 -- die Anwendung verbindet sich als eigene App-Rolle, nicht als
+# POSTGRES_USER (Bootstrap-Superuser, siehe dort).
 
 is_placeholder JWT_SECRET && set_env JWT_SECRET "$(gen_secret)"
 is_placeholder INTEGRATION_SECRET_KEY && set_env INTEGRATION_SECRET_KEY "$(gen_secret)"
@@ -227,23 +225,18 @@ if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
 fi
 
 # --- 8. Datenbank-Rolle absichern ------------------------------------------
-# Das offizielle postgres-Image macht POSTGRES_USER standardmaessig zu einem
-# Superuser -- ein Superuser umgeht Row-Level-Security immer, unabhaengig von
-# den RLS-Policies der Anwendung. Backend und Worker verweigern daher den
-# Start mit einer solchen Rolle (app/db/rollen_pruefung.py); deshalb laeuft
-# dieser Schritt VOR dem Start des restlichen Stacks. Idempotent, daher bei
-# jedem Lauf (auch Updates auf bereits laufenden Servern) sicher erneut
-# ausfuehrbar.
-log "Starte Postgres..."
-"${COMPOSE[@]}" up -d postgres
-for _ in $(seq 1 60); do
-  "${COMPOSE[@]}" exec -T postgres pg_isready -U "$PG_USER" -d "$PG_DB" >/dev/null 2>&1 && break
-  sleep 1
-done
-log "Entziehe der Datenbank-Rolle Superuser-Rechte (Voraussetzung fuer wirksame Mandantentrennung per Row-Level-Security)..."
-"${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB" \
-  -c "ALTER ROLE \"${PG_USER}\" NOSUPERUSER NOBYPASSRLS;" \
-  || err "Konnte der Datenbank-Rolle nicht die Superuser-Rechte entziehen -- Row-Level-Security waere sonst wirkungslos, Deployment abgebrochen."
+# Das offizielle postgres-Image macht POSTGRES_USER zum Bootstrap-Superuser,
+# dem sich SUPERUSER/BYPASSRLS nicht entziehen lassen -- und ein Superuser
+# umgeht Row-Level-Security immer. Backend und Worker verweigern daher den
+# Start mit so einer Rolle (app/db/rollen_pruefung.py). Stattdessen laeuft
+# die Anwendung als eigene Rolle (APP_DB_USER, Standard fieldvibe_app); das
+# Skript legt sie an, uebertraegt das Eigentum an bestehenden Tabellen und
+# stellt DATABASE_URL in .env um. Muss VOR dem Start von Backend/Worker und
+# den Migrationen laufen; bei einer Neuinstallation ist das Schema noch
+# leer. Idempotent, bei jedem Lauf sicher wiederholbar.
+log "Richte die Datenbank-Rolle für die Anwendung ein (Voraussetzung für wirksame Mandantentrennung per Row-Level-Security)..."
+./scripts/app_rolle_einrichten.sh --nur-rolle --compose "${COMPOSE[*]}" \
+  || err "Einrichtung der App-Rolle fehlgeschlagen -- Row-Level-Security wäre sonst wirkungslos, Deployment abgebrochen."
 
 # --- 8b. Stack starten ------------------------------------------------------
 # GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken -- rein fuer die

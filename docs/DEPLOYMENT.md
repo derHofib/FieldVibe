@@ -141,13 +141,12 @@ Drei Wege, wenn (noch) keine Domain vorhanden ist:
 Für Weg 3 gibt es `docker-compose.ip.yml` als Ersatz für
 `docker-compose.prod.yml` (kein Caddy, Backend/Frontend/MinIO werden
 direkt auf dem Server-Port veröffentlicht). Auch hier vorher die
-DB-Rolle absichern (Abschnitt 3, `ALTER ROLE … NOSUPERUSER NOBYPASSRLS`) –
-sonst verweigern Backend und Worker den Start:
+App-Rolle in der Datenbank einrichten (Abschnitt 3,
+`scripts/app_rolle_einrichten.sh`) – sonst verweigern Backend und Worker den
+Start:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.ip.yml up -d postgres
-docker compose -f docker-compose.yml -f docker-compose.ip.yml exec -T postgres \
-  psql -U fieldvibe -d fieldvibe -c 'ALTER ROLE "fieldvibe" NOSUPERUSER NOBYPASSRLS;'
+./scripts/app_rolle_einrichten.sh --nur-rolle --compose "docker compose -f docker-compose.yml -f docker-compose.ip.yml"
 docker compose -f docker-compose.yml -f docker-compose.ip.yml up -d --build
 ```
 
@@ -243,22 +242,27 @@ In `.env` mindestens setzen:
 offene DB/MinIO-Ports). Stattdessen explizit die Basis- und die
 Prod-Datei kombinieren:
 
-Das offizielle Postgres-Image macht `POSTGRES_USER` zum **Superuser** – und
-ein Superuser umgeht Row-Level-Security immer, die Mandantentrennung in der
-Datenbank wäre wirkungslos. Deshalb zuerst nur Postgres starten und der Rolle
-die Rechte entziehen (`scripts/deploy.sh` macht das automatisch; beim
-manuellen Weg ist es Pflicht und idempotent):
+Das offizielle Postgres-Image macht `POSTGRES_USER` zum **Bootstrap-
+Superuser** – und ein Superuser umgeht Row-Level-Security immer, die
+Mandantentrennung in der Datenbank wäre wirkungslos. Dem Bootstrap-User lässt
+sich das nicht entziehen (`ALTER ROLE … NOSUPERUSER` scheitert mit „The
+bootstrap user must have the SUPERUSER attribute"). Deshalb bleibt
+`POSTGRES_USER` reiner Admin-Zugang, und Backend, Worker und Migrationen
+verbinden sich als eigene Rolle `fieldvibe_app` (`LOGIN NOSUPERUSER
+NOBYPASSRLS`). `scripts/deploy.sh` richtet sie automatisch ein; beim manuellen
+Weg ist es Pflicht und idempotent:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d postgres
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T postgres \
-  psql -U fieldvibe -d fieldvibe -c 'ALTER ROLE "fieldvibe" NOSUPERUSER NOBYPASSRLS;'
+./scripts/app_rolle_einrichten.sh --nur-rolle --compose "docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 ```
 
-(`fieldvibe` durch `POSTGRES_USER` aus der `.env` ersetzen, falls geändert.)
-Backend und Worker prüfen das beim Start (`SELECT rolsuper, rolbypassrls …`)
-und brechen mit einer klaren Fehlermeldung ab, solange die Rolle Superuser
-oder BYPASSRLS ist. Nur für Notfälle lässt sich das mit
+Das Skript startet Postgres, legt die Rolle mit zufälligem Passwort an
+(`APP_DB_USER`/`APP_DB_PASSWORD` in der `.env`), überträgt das Eigentum an
+vorhandenen Tabellen (`scripts/sql/app_rolle_einrichten.sql`) und setzt
+`DATABASE_URL`/`DATABASE_URL_SYNC` in der `.env` auf die neue Rolle. Backend
+und Worker prüfen beim Start (`SELECT rolsuper, rolbypassrls …`) und brechen
+mit einer klaren Fehlermeldung ab, solange die Verbindung Superuser oder
+BYPASSRLS ist. Nur für Notfälle lässt sich das mit
 `FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE=1` in der `.env` übergehen (Start mit
 WARNING im Log, Mandantentrennung per RLS dann ausser Kraft).
 
@@ -366,17 +370,28 @@ Beide fragen vor dem Überschreiben explizit nach Bestätigung.
 cd SocialCRM
 git pull
 export GIT_COMMIT="$(git rev-parse --short HEAD)"
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec postgres \
-  psql -U fieldvibe -d fieldvibe -c 'ALTER ROLE "fieldvibe" NOSUPERUSER NOBYPASSRLS;'
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
   run --rm backend alembic upgrade head
 ```
 
-Der `ALTER ROLE`-Schritt ist idempotent. Backend und Worker verweigern den
-Start, solange die Datenbank-Rolle Superuser/BYPASSRLS ist (siehe Abschnitt
-3) -- Benutzer- und Datenbankname ggf. an `POSTGRES_USER`/`POSTGRES_DB`
-aus der `.env` anpassen.
+**Einmalig nach dem Update auf die App-Rolle** (Installationen, die bisher
+als `POSTGRES_USER` liefen oder mit `FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE=1`
+betrieben wurden), im Repo-Verzeichnis:
+
+```bash
+./scripts/app_rolle_einrichten.sh
+```
+
+Das Skript sichert Datenbank (`scripts/backup.sh`) und `.env`, richtet die
+Rolle ein, stellt `.env` um, startet Backend/Worker neu und wendet die
+Migrationen an. Schlägt ein Schritt nach der `.env`-Änderung fehl, spielt es
+die alte `.env` zurück und startet Backend/Worker wieder damit; die
+Eigentumsänderungen in der Datenbank bleiben bestehen (harmlos, der
+Admin-User kann weiterhin alles), ein erneuter Lauf ist gefahrlos.
+`--dry-run` zeigt vorab die Schritte. Ein weiterer Lauf ist jederzeit
+idempotent. Benutzer- und Datenbankname kommen aus `POSTGRES_USER`/
+`POSTGRES_DB` der `.env`.
 
 `GIT_COMMIT` wird als Build-Arg ins Backend-Image gebacken und treibt die
 rein informative Update-Anzeige im Super-Admin-Bereich (Menüpunkt

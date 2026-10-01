@@ -1,7 +1,18 @@
 # Local development overrides: hot reload, exposed ports, source mounted in.
 # Applied automatically by `docker compose up` alongside docker-compose.yml.
 services:
+  # Lokal verbindet sich die App ebenfalls als fieldvibe_app (NOSUPERUSER
+  # NOBYPASSRLS), sonst blockiert die RLS-Startpruefung das Backend. Das
+  # Init-Skript legt die Rolle nur bei frischem Volume an; bei einem
+  # bestehenden Volume einmalig nachholen mit:
+  #   ./scripts/app_rolle_einrichten.sh --ohne-backup --compose "docker compose"
   postgres:
+    environment:
+      APP_DB_USER: ${APP_DB_USER:-fieldvibe_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:-fieldvibe_app}
+    volumes:
+      - ./scripts/docker-initdb-app-rolle.sh:/docker-entrypoint-initdb.d/10-app-rolle.sh:ro
+      - ./scripts/sql/app_rolle_einrichten.sql:/opt/fieldvibe/app_rolle_einrichten.sql:ro
     ports:
       - "5432:5432"
 
@@ -11,6 +22,9 @@ services:
       - "9001:9001"
 
   backend:
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
+      DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
       - ./backend/app:/app/app
@@ -18,6 +32,11 @@ services:
       - ./backend/tests:/app/tests
     ports:
       - "8000:8000"
+
+  worker:
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
+      DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
 
   frontend:
     build:

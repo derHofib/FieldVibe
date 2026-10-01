@@ -36,23 +36,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      # Das postgres-Image macht POSTGRES_USER zum Superuser, der RLS immer
-      # umgeht -- tests/conftest.py und die App-Startpruefung verlangen eine
-      # normale Rolle. CREATEDB bleibt, weil conftest die Testdatenbank
+      # Das postgres-Image macht POSTGRES_USER (fieldvibe) zum Bootstrap-
+      # Superuser, der RLS immer umgeht und sich nicht herabstufen laesst
+      # (ALTER ROLE ... NOSUPERUSER scheitert). tests/conftest.py und die App-
+      # Startpruefung verlangen eine normale Rolle -- also eine eigene
+      # Testrolle anlegen. CREATEDB, weil conftest die Testdatenbank
       # fieldvibe_test selbst anlegt.
-      - name: DB-Rolle auf NOSUPERUSER NOBYPASSRLS herabstufen
+      - name: Test-Rolle ohne Superuser/BYPASSRLS anlegen
         env:
           PGPASSWORD: fieldvibe
         run: >-
           psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
-          -c 'ALTER ROLE fieldvibe NOSUPERUSER NOBYPASSRLS CREATEDB;'
+          -c "CREATE ROLE fieldvibe_test LOGIN PASSWORD 'fieldvibe_test' NOSUPERUSER NOBYPASSRLS CREATEDB;"
 
-      # DATABASE_URL/JWT_SECRET/S3_*-Defaults kommen aus tests/conftest.py
-      # (os.environ.setdefault) und passen exakt zu den Postgres-Service-
-      # Zugangsdaten oben -- moto stellt den S3-Mock selbst, kein MinIO
-      # noetig.
+      # JWT_SECRET/S3_*-Defaults kommen aus tests/conftest.py
+      # (os.environ.setdefault) -- moto stellt den S3-Mock selbst, kein MinIO
+      # noetig. Nur die DB-URLs zeigen auf die Testrolle statt auf den
+      # Bootstrap-Superuser.
       - name: pytest
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
+          DATABASE_URL_SYNC: postgresql+psycopg2://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
         run: pytest
 
   docker-build:

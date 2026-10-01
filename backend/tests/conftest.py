@@ -166,10 +166,10 @@ def _ensure_db_role_is_not_superuser() -> None:
     """Postgres-Superuser umgehen Row-Level-Security immer, unabhaengig von
     FORCE ROW LEVEL SECURITY und den Policies selbst -- das ist eingebautes
     Postgres-Verhalten, keine Anwendungslogik. Das offizielle postgres-Image
-    macht POSTGRES_USER beim allerersten Start standardmaessig zu einem
-    Superuser; scripts/deploy.sh entzieht dem Produktions-Rollennamen dieses
-    Recht deshalb explizit per ALTER ROLE (siehe dortiger Kommentar). Lokale
-    und Test-Datenbanken durchlaufen deploy.sh nie -- ohne diesen Check
+    macht POSTGRES_USER beim allerersten Start zum Bootstrap-Superuser, der
+    sich nicht herabstufen laesst; Produktion und CI nutzen deshalb eine
+    eigene Rolle (scripts/app_rolle_einrichten.sh bzw. ci.yml). Lokale und
+    Test-Datenbanken durchlaufen deploy.sh nie -- ohne diesen Check
     wuerden alle RLS-Isolations-Tests grau/gruen bleiben, obwohl sie faktisch
     nichts mehr pruefen, weil die Rolle jede Policy ignoriert.
     """
@@ -184,9 +184,11 @@ def _ensure_db_role_is_not_superuser() -> None:
         raise RuntimeError(
             f"Die DB-Rolle '{sync_url.username}' ist Superuser oder hat BYPASSRLS -- "
             "Row-Level-Security-Policies werden fuer diese Rolle komplett ignoriert, "
-            "RLS-Isolations-Tests wuerden also grundlos gruen sein. Fix: "
-            f"ALTER ROLE \"{sync_url.username}\" NOSUPERUSER NOBYPASSRLS; "
-            "(siehe scripts/deploy.sh, Abschnitt 'Datenbank-Rolle absichern')."
+            "RLS-Isolations-Tests wuerden also grundlos gruen sein. Fix: DATABASE_URL/"
+            "DATABASE_URL_SYNC auf eine Rolle ohne diese Rechte mit CREATEDB zeigen lassen, "
+            "z. B. CREATE ROLE fieldvibe_test LOGIN PASSWORD '...' NOSUPERUSER NOBYPASSRLS "
+            "CREATEDB; (siehe .github/workflows/ci.yml). Der Bootstrap-User des "
+            "postgres-Images laesst sich nicht herabstufen."
         )
 
 

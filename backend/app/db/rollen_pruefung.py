@@ -33,9 +33,8 @@ async def pruefe_db_rolle(engine: AsyncEngine) -> None:
 
     meldung = (
         f"Datenbank-Rolle {row.name} ist Superuser/BYPASSRLS – Mandantentrennung "
-        "per RLS wäre wirkungslos. Fix: "
-        f'ALTER ROLE "{row.name}" NOSUPERUSER NOBYPASSRLS; '
-        "Siehe docs/DEPLOYMENT.md, Abschnitt 3."
+        "per RLS wäre wirkungslos. Fix: scripts/app_rolle_einrichten.sh ausführen "
+        "(siehe docs/DEPLOYMENT.md, Abschnitt 3)."
     )
     if get_settings().erlaube_rls_bypass_rolle:
         logger.warning(
