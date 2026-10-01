@@ -2,9 +2,12 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ProjektAufgabePrioritaet = Literal["niedrig", "mittel", "hoch"]
+ProjektAufgabeTyp = Literal["aufgabe", "phase", "schritt", "meilenstein"]
+ZeitplanTyp = Literal["phase", "schritt", "meilenstein"]
+VerschiebeModus = Literal["bei_konflikt", "immer"]
 
 
 class ChecklistenPunkt(BaseModel):
@@ -121,6 +124,10 @@ class ProjektAufgabeRead(BaseModel):
     standort_id: UUID | None
     checkliste: list[ChecklistenPunkt]
     zusatzfelder: dict[str, str]
+    typ: ProjektAufgabeTyp
+    start_am: date | None
+    ende_am: date | None
+    fortschritt: int
     erstellt_von: UUID
     created_at: datetime
     updated_at: datetime
@@ -140,3 +147,75 @@ class ProjektAufgabeMitDetails(ProjektAufgabeRead):
     standort_name: str | None = None
     unteraufgaben_gesamt: int = 0
     unteraufgaben_erledigt: int = 0
+
+
+class ZeitplanElement(BaseModel):
+    id: UUID
+    typ: ZeitplanTyp
+    titel: str
+    phase_id: UUID | None
+    start_am: date | None
+    ende_am: date | None
+    fortschritt: int
+    plan_reihenfolge: int
+    zugewiesen_an: UUID | None
+    zugewiesen_name: str | None
+    erledigt: bool
+
+
+class ZeitplanAbhaengigkeit(BaseModel):
+    id: UUID
+    vorgaenger_id: UUID
+    nachfolger_id: UUID
+    # Phase 1: nur ende_anfang (Spalte fuer anfang_anfang/ende_ende vorbereitet).
+    art: Literal["ende_anfang"]
+    versatz_tage: int
+
+
+class ZeitplanRead(BaseModel):
+    projekt_id: UUID
+    verschiebe_modus: VerschiebeModus
+    elemente: list[ZeitplanElement]
+    abhaengigkeiten: list[ZeitplanAbhaengigkeit]
+
+
+class ZeitplanElementCreate(BaseModel):
+    typ: ZeitplanTyp
+    titel: str
+    phase_id: UUID | None = None
+    start_am: date | None = None
+    ende_am: date | None = None
+    zugewiesen_an: UUID | None = None
+
+
+class ZeitplanElementUpdate(BaseModel):
+    # titel/fortschritt/plan_reihenfolge sind nicht null-bar -- ein explizites
+    # null wird ueber den Validator abgelehnt statt still ignoriert.
+    titel: str | None = None
+    start_am: date | None = None
+    ende_am: date | None = None
+    fortschritt: int | None = Field(default=None, ge=0, le=100)
+    phase_id: UUID | None = None
+    plan_reihenfolge: int | None = None
+    zugewiesen_an: UUID | None = None
+
+    @model_validator(mode="after")
+    def _keine_null_werte(self) -> "ZeitplanElementUpdate":
+        for feld in ("titel", "fortschritt", "plan_reihenfolge"):
+            if feld in self.model_fields_set and getattr(self, feld) is None:
+                raise ValueError(f"{feld} darf nicht null sein")
+        return self
+
+
+class ZeitplanAbhaengigkeitCreate(BaseModel):
+    vorgaenger_id: UUID
+    nachfolger_id: UUID
+    versatz_tage: int = Field(default=0, ge=-3650, le=3650)
+
+
+class ZeitplanAbhaengigkeitUpdate(BaseModel):
+    versatz_tage: int = Field(ge=-3650, le=3650)
+
+
+class ZeitplanEinstellungenUpdate(BaseModel):
+    verschiebe_modus: VerschiebeModus

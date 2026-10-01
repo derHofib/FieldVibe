@@ -68,6 +68,7 @@ from app.api.routes import (
     vorgang_anfragen,
     vorgang_events,
     zeiterfassung,
+    zeitplan,
     zuweisungen,
 )
 from app.core.config import get_settings
@@ -172,6 +173,7 @@ app.include_router(plattform_integrationen.router)
 app.include_router(nav_kategorien.router)
 app.include_router(projekte.router)
 app.include_router(projekte.aufgaben_router)
+app.include_router(zeitplan.router)
 
 
 @app.get("/healthz")

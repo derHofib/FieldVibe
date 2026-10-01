@@ -62,6 +62,10 @@ aufgaben_router = APIRouter(
 # jede Spalte ist danach frei umbenennbar/loeschbar wie jede andere auch.
 STANDARD_SPALTEN = ("Offen", "In Arbeit", "Review", "Fertig")
 
+# Zeitplan-Schritte erscheinen wie normale Aufgaben im Kanban, Phasen und
+# Meilensteine (keine Spalte) nicht.
+ZEITPLAN_NUR_TYPEN = ("phase", "meilenstein")
+
 
 async def _require_projekt(session: AsyncSession, projekt_id: UUID) -> Projekt:
     projekt = await session.get(Projekt, projekt_id)
@@ -79,7 +83,9 @@ async def _require_spalte(session: AsyncSession, projekt_id: UUID, spalte_id: UU
 
 async def _require_aufgabe(session: AsyncSession, aufgabe_id: UUID) -> ProjektAufgabe:
     aufgabe = await session.get(ProjektAufgabe, aufgabe_id)
-    if aufgabe is None or aufgabe.geloescht_am is not None:
+    # Phasen/Meilensteine gehoeren dem Zeitplan (app/api/routes/zeitplan.py),
+    # nicht der Kanban-/Aufgaben-API.
+    if aufgabe is None or aufgabe.geloescht_am is not None or aufgabe.typ in ZEITPLAN_NUR_TYPEN:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
     return aufgabe
 
@@ -417,7 +423,9 @@ async def list_aufgaben(
         .outerjoin(Anlage, Anlage.id == ProjektAufgabe.anlage_id)
         .outerjoin(Kunde, Kunde.id == ProjektAufgabe.kunde_id)
         .outerjoin(Standort, Standort.id == ProjektAufgabe.standort_id)
-        .where(ProjektAufgabe.geloescht_am.is_(None), bedingung)
+        .where(
+            ProjektAufgabe.geloescht_am.is_(None), ProjektAufgabe.typ.notin_(ZEITPLAN_NUR_TYPEN), bedingung
+        )
         .order_by(ProjektAufgabe.created_at)
     )
     result = await session.execute(stmt)
@@ -575,6 +583,9 @@ async def update_aufgabe(
     if "erledigt" in changes:
         erledigt = changes.pop("erledigt")
         changes["erledigt_am"] = datetime.now(UTC) if erledigt else None
+        # Zeitplan-Schritt: Abhaken im Kanban hält den Fortschrittsbalken synchron.
+        if aufgabe.typ == "schritt":
+            changes["fortschritt"] = 100 if erledigt else (0 if aufgabe.fortschritt == 100 else aufgabe.fortschritt)
 
     for feld, wert in changes.items():
         setattr(aufgabe, feld, wert)

@@ -1,13 +1,28 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    SmallInteger,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 PROJEKT_AUFGABE_PRIORITAETEN = ("niedrig", "mittel", "hoch")
+# 'aufgabe' = bisherige Kanban-/private Aufgabe ohne Zeitplan; die uebrigen
+# Typen bilden den Gantt-Zeitplan (siehe app/services/zeitplan_service.py).
+PROJEKT_AUFGABE_TYPEN = ("aufgabe", "phase", "schritt", "meilenstein")
+PROJEKT_VERSCHIEBE_MODI = ("bei_konflikt", "immer")
+PROJEKT_ABHAENGIGKEIT_ARTEN = ("ende_anfang", "anfang_anfang", "ende_ende")
 
 
 class Projekt(SoftDeleteMixin, TimestampMixin, Base):
@@ -35,6 +50,10 @@ class Projekt(SoftDeleteMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str | None] = mapped_column(Text, nullable=True)
     archiviert: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Zeitplan: ob Nachfolger nur bei Konflikt oder immer mitgezogen werden.
+    verschiebe_modus: Mapped[str] = mapped_column(
+        Text, nullable=False, default="bei_konflikt", server_default="bei_konflikt"
+    )
     erstellt_von: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
 
 
@@ -90,6 +109,16 @@ class ProjektAufgabe(SoftDeleteMixin, TimestampMixin, Base):
         CheckConstraint(
             "spalte_id IS NULL OR projekt_id IS NOT NULL", name="ck_projekt_aufgaben_spalte_erfordert_projekt"
         ),
+        CheckConstraint(f"typ IN {PROJEKT_AUFGABE_TYPEN}", name="ck_projekt_aufgaben_typ_valid"),
+        CheckConstraint(
+            "ende_am IS NULL OR start_am IS NULL OR ende_am >= start_am",
+            name="ck_projekt_aufgaben_zeitraum_valid",
+        ),
+        CheckConstraint(
+            "typ <> 'meilenstein' OR start_am IS NULL OR ende_am = start_am",
+            name="ck_projekt_aufgaben_meilenstein_eintaegig",
+        ),
+        CheckConstraint("fortschritt BETWEEN 0 AND 100", name="ck_projekt_aufgaben_fortschritt_valid"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -132,3 +161,46 @@ class ProjektAufgabe(SoftDeleteMixin, TimestampMixin, Base):
     checkliste: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     zusatzfelder: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     erstellt_von: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    typ: Mapped[str] = mapped_column(Text, nullable=False, default="aufgabe", server_default="aufgabe")
+    # Zeitplan-Spanne, inklusiv; bei Phasen aus den Elementen abgeleitet und
+    # nur zum billigen Lesen gespeichert.
+    start_am: Mapped[date | None] = mapped_column(nullable=True)
+    ende_am: Mapped[date | None] = mapped_column(nullable=True)
+    fortschritt: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0, server_default="0")
+    # Gantt-Gruppierung -- bewusst nicht eltern_aufgabe_id (Unteraufgaben).
+    plan_phase_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekt_aufgaben.id", ondelete="SET NULL"), nullable=True
+    )
+    plan_reihenfolge: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class ProjektAufgabeAbhaengigkeit(Base):
+    """Verbindung im Zeitplan (Vorgaenger -> Nachfolger). Phase 1 nutzt nur
+    art 'ende_anfang'; die Spalte ist fuer Anfang-Anfang/Ende-Ende
+    vorbereitet. Bewusst nicht papierkorbfaehig -- reine Planungs-
+    Konfiguration, wird beim Loeschen eines Elements hart entfernt."""
+
+    __tablename__ = "projekt_aufgabe_abhaengigkeiten"
+    __table_args__ = (
+        UniqueConstraint("vorgaenger_id", "nachfolger_id", name="uq_projekt_abh_paar"),
+        CheckConstraint(f"art IN {PROJEKT_ABHAENGIGKEIT_ARTEN}", name="ck_projekt_abh_art_valid"),
+        CheckConstraint("vorgaenger_id <> nachfolger_id", name="ck_projekt_abh_kein_selbstbezug"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    projekt_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekte.id", ondelete="CASCADE"), nullable=False
+    )
+    vorgaenger_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekt_aufgaben.id", ondelete="CASCADE"), nullable=False
+    )
+    nachfolger_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekt_aufgaben.id", ondelete="CASCADE"), nullable=False
+    )
+    art: Mapped[str] = mapped_column(Text, nullable=False, default="ende_anfang", server_default="ende_anfang")
+    versatz_tage: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
