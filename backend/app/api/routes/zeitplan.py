@@ -1,20 +1,23 @@
 from collections.abc import Awaitable, Callable
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_recht, require_roles
 from app.api.routes.projekte import _require_projekt
 from app.schemas.projekt import (
     ZeitplanAbhaengigkeitCreate,
     ZeitplanAbhaengigkeitUpdate,
+    ZeitplanBestellungAuswahl,
     ZeitplanEinstellungenUpdate,
     ZeitplanElementCreate,
     ZeitplanElementUpdate,
     ZeitplanRead,
+    ZeitplanVorgangAuswahl,
 )
 from app.services import zeitplan_service as svc
+from app.services.zuweisung_service import erlaubte_kunde_ids
 
 # Lesen wie die uebrigen Projekt-Routen; jede Mutation braucht zusaetzlich
 # "bearbeiten" (siehe _SCHREIBEN) und liefert den kompletten Zeitplan zurueck.
@@ -57,6 +60,33 @@ async def get_zeitplan(projekt_id: UUID, session: AsyncSession = Depends(get_db)
     return await svc.lese_zeitplan(session, projekt)
 
 
+@router.get("/auswahl/vorgaenge", response_model=list[ZeitplanVorgangAuswahl])
+async def auswahl_vorgaenge(
+    projekt_id: UUID,
+    q: str | None = None,
+    limit: int = Query(default=30, ge=1, le=100),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[ZeitplanVorgangAuswahl]:
+    projekt = await _require_projekt(session, projekt_id)
+    return await svc.auswahl_vorgaenge(session, projekt, q, limit, await erlaubte_kunde_ids(session, auth))
+
+
+@router.get(
+    "/auswahl/bestellungen",
+    response_model=list[ZeitplanBestellungAuswahl],
+    dependencies=[Depends(require_module("material")), Depends(require_recht("material", "sehen"))],
+)
+async def auswahl_bestellungen(
+    projekt_id: UUID,
+    q: str | None = None,
+    limit: int = Query(default=30, ge=1, le=100),
+    session: AsyncSession = Depends(get_db),
+) -> list[ZeitplanBestellungAuswahl]:
+    await _require_projekt(session, projekt_id)
+    return await svc.auswahl_bestellungen(session, q, limit)
+
+
 @router.post("/elemente", response_model=ZeitplanRead, dependencies=_SCHREIBEN)
 async def create_element(
     projekt_id: UUID,
@@ -64,6 +94,7 @@ async def create_element(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> ZeitplanRead:
+    erlaubte = await erlaubte_kunde_ids(session, auth)
     return await _ausfuehren(
         session,
         projekt_id,
@@ -78,6 +109,10 @@ async def create_element(
             start_am=body.start_am,
             ende_am=body.ende_am,
             zugewiesen_an=body.zugewiesen_an,
+            vorgang_id=body.vorgang_id,
+            bestellung_id=body.bestellung_id,
+            partner_id=body.partner_id,
+            erlaubte_kunden=erlaubte,
         ),
     )
 
@@ -90,11 +125,12 @@ async def update_element(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> ZeitplanRead:
+    erlaubte = await erlaubte_kunde_ids(session, auth)
     return await _ausfuehren(
         session,
         projekt_id,
         lambda projekt: svc.element_aendern(
-            session, projekt, element_id, body.model_dump(exclude_unset=True), auth.mandant_id
+            session, projekt, element_id, body.model_dump(exclude_unset=True), auth.mandant_id, erlaubte
         ),
     )
 
@@ -129,6 +165,7 @@ async def create_abhaengigkeit(
             vorgaenger_id=body.vorgaenger_id,
             nachfolger_id=body.nachfolger_id,
             versatz_tage=body.versatz_tage,
+            art=body.art,
         ),
     )
 
@@ -143,7 +180,9 @@ async def update_abhaengigkeit(
     return await _ausfuehren(
         session,
         projekt_id,
-        lambda projekt: svc.abhaengigkeit_aendern(session, projekt, abhaengigkeit_id, body.versatz_tage),
+        lambda projekt: svc.abhaengigkeit_aendern(
+            session, projekt, abhaengigkeit_id, versatz_tage=body.versatz_tage, art=body.art
+        ),
     )
 
 

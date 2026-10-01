@@ -183,3 +183,17 @@ class VorgangPartnerZuweisungResponse(BaseModel):
     partner_id: UUID | None
     partner_freigabe_status: PartnerFreigabeStatus | None
     freistellungsbescheinigung_warnung: bool
+
+
+class PartnerZeitplanSchritt(BaseModel):
+    """Bewusst minimal: ein Fremdgewerk-Schritt aus einem Projekt-Zeitplan,
+    ohne Zustaendige, Kundendaten oder interne Verweise."""
+
+    id: UUID
+    titel: str
+    projekt_name: str
+    phase_titel: str | None
+    start_am: date | None
+    ende_am: date | None
+    fortschritt: int
+    erledigt: bool

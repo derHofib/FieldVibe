@@ -1,5 +1,6 @@
 """Gantt-Zeitplan fuer Projekte: Phasen, Arbeitsschritte, Meilensteine mit
-Ende->Anfang-Abhaengigkeiten.
+Abhaengigkeiten (Ende->Anfang, Anfang->Anfang, Ende->Ende) und optionalen
+Verknuepfungen (Vorgang, Bestellung/Liefertermin, Partner).
 
 Zweigeteilt: der obere Teil (PlanElement, propagiere, aendere_element, ...)
 rechnet rein auf In-Memory-Strukturen und kennt weder Datenbank noch HTTP --
@@ -16,20 +17,41 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any, Iterable, Mapping
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.auftrag import Auftrag
+from app.models.bestellung import Bestellung
+from app.models.lieferant import Lieferant
+from app.models.partner import Partner
+from app.models.termin import Termin
+from app.models.vorgang import Vorgang
 from app.models.projekt import (
+    PROJEKT_ABHAENGIGKEIT_ARTEN,
     Projekt,
     ProjektAufgabe,
     ProjektAufgabeAbhaengigkeit,
     ProjektSpalte,
 )
 from app.models.user import User
-from app.schemas.projekt import ZeitplanAbhaengigkeit, ZeitplanElement, ZeitplanRead
+from app.schemas.projekt import (
+    ZeitplanAbhaengigkeit,
+    ZeitplanBestellungAuswahl,
+    ZeitplanBestellungRef,
+    ZeitplanElement,
+    ZeitplanPartnerRef,
+    ZeitplanRead,
+    ZeitplanTerminRef,
+    ZeitplanVorgangAuswahl,
+    ZeitplanVorgangRef,
+)
 
 ZEITPLAN_TYPEN = ("phase", "schritt", "meilenstein")
 VERSCHIEBE_MODI = ("bei_konflikt", "immer")
+# Verknuepfter Vorgang in diesem Status = Schritt erledigt (storniert zaehlt
+# bewusst nicht).
+VORGANG_ERLEDIGT = ("abgeschlossen", "abgerechnet")
+_MSG_DATUM_AUS_BESTELLUNG = "Das Datum kommt aus der Bestellung (Liefertermin)"
 
 _NICHT_GESETZT: Any = object()
 
@@ -73,6 +95,7 @@ class PlanKante:
     vorgaenger_id: UUID
     nachfolger_id: UUID
     versatz_tage: int = 0
+    art: str = "ende_anfang"
 
 
 def _datiert(el: PlanElement | None) -> bool:
@@ -100,6 +123,21 @@ def fruehester_start(vorgaenger: PlanElement, versatz_tage: int) -> date:
     if vorgaenger.typ == "meilenstein":
         return vorgaenger.start_am + timedelta(days=versatz_tage)
     return vorgaenger.ende_am + timedelta(days=1 + versatz_tage)
+
+
+def _verletzung_tage(el: PlanElement, vorgaenger: PlanElement, kante: PlanKante) -> int:
+    """Um wie viele Tage `el` nach hinten muss, damit die Kante erfuellt ist
+    (<= 0: erfuellt). Anfang->Anfang: Start des Nachfolgers >= Start des
+    Vorgaengers + Versatz. Ende->Ende: Ende des Nachfolgers >= Ende des
+    Vorgaengers + Versatz (die Dauer des Nachfolgers bleibt, er wandert als
+    Ganzes). Ende->Anfang wie fruehester_start()."""
+    assert el.start_am is not None and el.ende_am is not None
+    assert vorgaenger.start_am is not None and vorgaenger.ende_am is not None
+    if kante.art == "anfang_anfang":
+        return (vorgaenger.start_am + timedelta(days=kante.versatz_tage) - el.start_am).days
+    if kante.art == "ende_ende":
+        return (vorgaenger.ende_am + timedelta(days=kante.versatz_tage) - el.ende_am).days
+    return (fruehester_start(vorgaenger, kante.versatz_tage) - el.start_am).days
 
 
 def hat_pfad(kanten: Iterable[PlanKante], von: UUID, nach: UUID) -> bool:
@@ -139,11 +177,18 @@ def propagiere(
     modus: str,
     ausgangspunkte: Mapping[UUID, int],
     erzwinge: Iterable[UUID] = (),
+    start_deltas: Mapping[UUID, int] | None = None,
+    fest: Iterable[UUID] = (),
 ) -> set[UUID]:
     """Zieht alle transitiven Nachfolger der `ausgangspunkte` nach.
 
     `ausgangspunkte` bildet die bereits (vom Aufrufer) geaenderten Elemente
-    auf die Aenderung ihres Endes in Tagen ab (positiv = spaeter). Sie selbst
+    auf die Aenderung ihres Endes in Tagen ab (positiv = spaeter);
+    `start_deltas` analog fuer den Start (Default: dasselbe Delta, also eine
+    reine Verschiebung) -- relevant nur fuer Anfang->Anfang im Modus
+    'immer'. `fest` sind Elemente, deren Datum von aussen vorgegeben ist
+    (Meilenstein mit Bestellung): sie werden wie Ausgangspunkte ohne
+    Aenderung behandelt und nie verschoben. Ausgangspunkte selbst
     werden nie angefasst -- auch nicht, wenn sie ihren eigenen Vorgaenger
     verletzen; das ist eine explizite Nutzerentscheidung. `erzwinge` sind
     zusaetzliche Elemente (z. B. der Nachfolger einer neuen Verbindung), bei
@@ -157,11 +202,13 @@ def propagiere(
     * Modus 'immer': N wird zuerst um das Delta verschoben, um das sich das
       Ende seiner bewegten Vorgaenger geaendert hat (auch nach vorne). Hat
       N mehrere bewegte Vorgaenger, gilt das groesste Delta (bei Verschiebung
-      nach vorne also das kleinste Stueck nach vorne -- vorsichtig).
+      nach vorne also das kleinste Stueck nach vorne -- vorsichtig). Je
+      Kante zaehlt das Delta, das zur Art passt: Start des Vorgaengers bei
+      Anfang->Anfang, sonst sein Ende.
     * Beide Modi: danach wird die Konflikt-Regel durchgesetzt. N darf keinen
-      Vorgaenger verletzen: ist N.start < fruehester Start (Maximum ueber
-      ALLE Vorgaenger, auch unbewegte), wird N um genau die Differenz nach
-      hinten geschoben. Die Dauer bleibt immer erhalten.
+      Vorgaenger verletzen: die strengste Kante (Maximum ueber ALLE
+      Vorgaenger, auch unbewegte, und alle Arten) bestimmt, wie weit N nach
+      hinten geschoben wird. Die Dauer bleibt immer erhalten.
     * Modus 'bei_konflikt': es findet nur diese zweite Regel statt -- N
       wandert nie nach vorne, ein vorhandener Puffer bleibt erhalten.
 
@@ -205,26 +252,37 @@ def propagiere(
         raise ZeitplanZyklus("Diese Verbindung würde einen Kreis erzeugen")
 
     ende_delta: dict[UUID, int] = dict(ausgangspunkte)
+    start_delta: dict[UUID, int] = dict(ausgangspunkte if start_deltas is None else start_deltas)
+    fest = set(fest)
     verschoben: set[UUID] = set()
     for n in reihenfolge:
         if n in ausgangspunkte:
+            start_delta.setdefault(n, ende_delta[n])
+            continue
+        if n in fest:
+            ende_delta[n] = start_delta[n] = 0
             continue
         el = elemente[n]
-        alt_ende = el.ende_am
+        alt_start, alt_ende = el.start_am, el.ende_am
         eingehend = vorgaenger_von[n]
 
         if modus == "immer":
-            deltas = [ende_delta[k.vorgaenger_id] for k in eingehend if k.vorgaenger_id in ende_delta]
+            deltas = [
+                (start_delta if k.art == "anfang_anfang" else ende_delta)[k.vorgaenger_id]
+                for k in eingehend
+                if k.vorgaenger_id in ende_delta
+            ]
             if deltas:
                 _verschiebe(el, max(deltas))
 
         if eingehend:
-            frueh = max(fruehester_start(elemente[k.vorgaenger_id], k.versatz_tage) for k in eingehend)
-            assert el.start_am is not None
-            if el.start_am < frueh:
-                _verschiebe(el, (frueh - el.start_am).days)
+            noetig = max(_verletzung_tage(el, elemente[k.vorgaenger_id], k) for k in eingehend)
+            if noetig > 0:
+                _verschiebe(el, noetig)
 
+        assert el.start_am is not None and alt_start is not None
         assert el.ende_am is not None and alt_ende is not None
+        start_delta[n] = (el.start_am - alt_start).days
         delta = (el.ende_am - alt_ende).days
         ende_delta[n] = delta
         if delta:
@@ -252,13 +310,16 @@ def aktualisiere_phasenspannen(elemente: dict[UUID, PlanElement]) -> set[UUID]:
     return geaendert
 
 
-def verschiebe_phase(elemente: dict[UUID, PlanElement], phase_id: UUID, tage: int) -> dict[UUID, int]:
+def verschiebe_phase(
+    elemente: dict[UUID, PlanElement], phase_id: UUID, tage: int, fest: Iterable[UUID] = ()
+) -> dict[UUID, int]:
     """Verschiebt alle Elemente mit Datum der Phase um `tage`. Rueckgabe: die
     bewegten Elemente mit ihrem Ende-Delta (= `tage`), als `ausgangspunkte`
-    fuer propagiere() geeignet."""
+    fuer propagiere() geeignet. `fest` bleiben stehen (Datum von aussen)."""
     bewegt: dict[UUID, int] = {}
+    fest = set(fest)
     for el in elemente.values():
-        if el.typ != "phase" and el.phase_id == phase_id and _datiert(el):
+        if el.typ != "phase" and el.phase_id == phase_id and _datiert(el) and el.id not in fest:
             _verschiebe(el, tage)
             bewegt[el.id] = tage
     return bewegt
@@ -286,6 +347,7 @@ def aendere_element(
     *,
     start_am: Any = _NICHT_GESETZT,
     ende_am: Any = _NICHT_GESETZT,
+    fest: Iterable[UUID] = (),
 ) -> set[UUID]:
     """Aendert den Zeitraum eines Elements, zieht Nachfolger nach und
     aktualisiert alle Phasenspannen. Rueckgabe: ids aller Elemente (inkl.
@@ -299,6 +361,8 @@ def aendere_element(
     el = elemente[element_id]
     vorher = {i: (e.start_am, e.ende_am) for i, e in elemente.items()}
     kanten = list(kanten)
+    fest = set(fest)
+    start_deltas: dict[UUID, int] | None = None
 
     if el.typ == "phase":
         if start_am is _NICHT_GESETZT and ende_am is _NICHT_GESETZT:
@@ -314,7 +378,7 @@ def aendere_element(
             raise ZeitplanRegelverstoss(
                 "Phasen können nur verschoben werden -- die Dauer ergibt sich aus den Elementen"
             )
-        ausgangspunkte = verschiebe_phase(elemente, element_id, delta_start)
+        ausgangspunkte = verschiebe_phase(elemente, element_id, delta_start, fest)
     else:
         alt_start, alt_ende = el.start_am, el.ende_am
         neu_start = alt_start if start_am is _NICHT_GESETZT else start_am
@@ -327,6 +391,8 @@ def aendere_element(
         el.start_am, el.ende_am = neu_start, neu_ende
         if neu_ende is not None and alt_ende is not None:
             ausgangspunkte = {element_id: (neu_ende - alt_ende).days}
+            if alt_start is not None and neu_start is not None:
+                start_deltas = {element_id: (neu_start - alt_start).days}
         elif neu_ende is not None:
             # Erstmals datiert: kein Delta, aber Nachfolger (falls
             # Verbindungen existieren) gegen das neue Ende pruefen.
@@ -335,7 +401,7 @@ def aendere_element(
             ausgangspunkte = {}
 
     if ausgangspunkte:
-        propagiere(elemente, kanten, modus, ausgangspunkte)
+        propagiere(elemente, kanten, modus, ausgangspunkte, start_deltas=start_deltas, fest=fest)
     aktualisiere_phasenspannen(elemente)
     return {i for i, e in elemente.items() if (e.start_am, e.ende_am) != vorher[i]}
 
@@ -380,7 +446,7 @@ def _plan_aus(orm: Mapping[UUID, ProjektAufgabe]) -> dict[UUID, PlanElement]:
 
 
 def _kanten_aus(deps: Iterable[ProjektAufgabeAbhaengigkeit]) -> list[PlanKante]:
-    return [PlanKante(d.vorgaenger_id, d.nachfolger_id, d.versatz_tage) for d in deps]
+    return [PlanKante(d.vorgaenger_id, d.nachfolger_id, d.versatz_tage, d.art) for d in deps]
 
 
 def _schreibe_zurueck(orm: Mapping[UUID, ProjektAufgabe], plan: Mapping[UUID, PlanElement]) -> None:
@@ -413,6 +479,9 @@ async def lese_zeitplan(session: AsyncSession, projekt: Projekt) -> ZeitplanRead
                 ProjektAufgabe.zugewiesen_an,
                 User.name,
                 ProjektAufgabe.erledigt_am,
+                ProjektAufgabe.vorgang_id,
+                ProjektAufgabe.bestellung_id,
+                ProjektAufgabe.partner_id,
             )
             .outerjoin(User, User.id == ProjektAufgabe.zugewiesen_an)
             .where(
@@ -423,22 +492,75 @@ async def lese_zeitplan(session: AsyncSession, projekt: Projekt) -> ZeitplanRead
             .order_by(ProjektAufgabe.plan_reihenfolge, ProjektAufgabe.created_at)
         )
     ).all()
-    elemente = [
-        ZeitplanElement(
-            id=r[0],
-            typ=r[1],
-            titel=r[2],
-            phase_id=r[3],
-            start_am=r[4],
-            ende_am=r[5],
-            fortschritt=r[6],
-            plan_reihenfolge=r[7],
-            zugewiesen_an=r[8],
-            zugewiesen_name=r[9],
-            erledigt=r[10] is not None,
+
+    # Je Verknuepfungsart genau eine Query fuer alle Elemente (kein N+1).
+    vorgang_ids = {r[11] for r in zeilen if r[11] is not None}
+    vorgaenge: dict[UUID, ZeitplanVorgangRef] = {}
+    termine: dict[UUID, list[ZeitplanTerminRef]] = defaultdict(list)
+    if vorgang_ids:
+        for v in (
+            await session.execute(
+                select(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel, Vorgang.status).where(
+                    Vorgang.id.in_(vorgang_ids), Vorgang.geloescht_am.is_(None)
+                )
+            )
+        ).all():
+            vorgaenge[v[0]] = ZeitplanVorgangRef(id=v[0], vorgangsnummer=v[1], titel=v[2], status=v[3])
+        for t in (
+            await session.execute(
+                select(Termin.id, Termin.vorgang_id, Termin.start_at, Termin.ende_at, User.name)
+                .outerjoin(User, User.id == Termin.techniker_id)
+                .where(Termin.vorgang_id.in_(vorgang_ids), Termin.geloescht_am.is_(None))
+                .order_by(Termin.start_at, Termin.id)
+            )
+        ).all():
+            termine[t[1]].append(ZeitplanTerminRef(id=t[0], start=t[2], ende=t[3], techniker_name=t[4]))
+
+    bestellung_ids = {r[12] for r in zeilen if r[12] is not None}
+    bestellungen: dict[UUID, ZeitplanBestellungRef] = {}
+    if bestellung_ids:
+        for b in (
+            await session.execute(
+                select(Bestellung.id, Bestellung.bestellnummer, Bestellung.status, Bestellung.liefertermin, Lieferant.name)
+                .outerjoin(Lieferant, Lieferant.id == Bestellung.lieferant_id)
+                .where(Bestellung.id.in_(bestellung_ids), Bestellung.geloescht_am.is_(None))
+            )
+        ).all():
+            bestellungen[b[0]] = ZeitplanBestellungRef(
+                id=b[0], bestellnummer=b[1], status=b[2], liefertermin=b[3], lieferant_name=b[4]
+            )
+
+    partner_ids = {r[13] for r in zeilen if r[13] is not None}
+    partner: dict[UUID, ZeitplanPartnerRef] = {}
+    if partner_ids:
+        for p in (await session.execute(select(Partner.id, Partner.name).where(Partner.id.in_(partner_ids)))).all():
+            partner[p[0]] = ZeitplanPartnerRef(id=p[0], name=p[1])
+
+    elemente = []
+    for r in zeilen:
+        vorgang = vorgaenge.get(r[11]) if r[11] is not None else None
+        erledigt = vorgang.status in VORGANG_ERLEDIGT if vorgang is not None else r[10] is not None
+        bestellung = bestellungen.get(r[12]) if r[12] is not None else None
+        elemente.append(
+            ZeitplanElement(
+                id=r[0],
+                typ=r[1],
+                titel=r[2],
+                phase_id=r[3],
+                start_am=r[4],
+                ende_am=r[5],
+                fortschritt=100 if vorgang is not None and erledigt else r[6],
+                plan_reihenfolge=r[7],
+                zugewiesen_an=r[8],
+                zugewiesen_name=r[9],
+                erledigt=erledigt,
+                vorgang=vorgang,
+                termine=termine.get(r[11], []) if vorgang is not None else [],
+                bestellung=bestellung,
+                datum_gesperrt=bestellung is not None,
+                partner=partner.get(r[13]) if r[13] is not None else None,
+            )
         )
-        for r in zeilen
-    ]
     # Phasen zuerst (nach plan_reihenfolge), danach die Elemente -- das
     # Frontend gruppiert selbst anhand phase_id.
     elemente.sort(key=lambda e: (e.typ != "phase", e.plan_reihenfolge))
@@ -486,6 +608,66 @@ def _pruefe_phase(orm: Mapping[UUID, ProjektAufgabe], phase_id: UUID | None) -> 
         raise ZeitplanRegelverstoss("Phase nicht gefunden oder gehört nicht zu diesem Projekt")
 
 
+def _nur_typ(el_typ: str, erlaubt: str, meldung: str) -> None:
+    if el_typ != erlaubt:
+        raise ZeitplanRegelverstoss(meldung)
+
+
+async def _pruefe_vorgang(
+    session: AsyncSession,
+    orm: Mapping[UUID, ProjektAufgabe],
+    element_id: UUID | None,
+    vorgang_id: UUID,
+    erlaubte_kunden: set[UUID] | None,
+) -> None:
+    # RLS blendet fremde Mandanten aus -> hier "nicht gefunden".
+    v = await session.get(Vorgang, vorgang_id)
+    if (
+        v is None
+        or v.geloescht_am is not None
+        or (erlaubte_kunden is not None and v.kunde_id not in erlaubte_kunden)
+    ):
+        raise ZeitplanRegelverstoss("Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten")
+    if any(a.vorgang_id == vorgang_id and a.id != element_id for a in orm.values()):
+        raise ZeitplanRegelverstoss("Dieser Vorgang ist in diesem Zeitplan bereits mit einem Element verknüpft")
+
+
+async def _aktive_bestellung(session: AsyncSession, bestellung_id: UUID | None) -> Bestellung | None:
+    if bestellung_id is None:
+        return None
+    b = await session.get(Bestellung, bestellung_id)
+    return b if b is not None and b.geloescht_am is None else None
+
+
+async def _pruefe_bestellung(session: AsyncSession, bestellung_id: UUID) -> Bestellung:
+    b = await _aktive_bestellung(session, bestellung_id)
+    if b is None:
+        raise ZeitplanRegelverstoss("Bestellung nicht gefunden oder gehört nicht zum eigenen Mandanten")
+    return b
+
+
+async def _pruefe_partner(session: AsyncSession, partner_id: UUID) -> None:
+    p = await session.get(Partner, partner_id)
+    if p is None or not p.aktiv:
+        raise ZeitplanRegelverstoss("Partner nicht gefunden, inaktiv oder gehört nicht zum eigenen Mandanten")
+
+
+async def _feste_ids(session: AsyncSession, orm: Mapping[UUID, ProjektAufgabe]) -> set[UUID]:
+    """Meilensteine mit (nicht gelöschter) Bestellung: ihr Datum gehört dem
+    Liefertermin und darf von der Propagation nicht verschoben werden."""
+    ids = {a.bestellung_id for a in orm.values() if a.bestellung_id is not None}
+    if not ids:
+        return set()
+    aktiv = set(
+        (
+            await session.execute(
+                select(Bestellung.id).where(Bestellung.id.in_(ids), Bestellung.geloescht_am.is_(None))
+            )
+        ).scalars()
+    )
+    return {a.id for a in orm.values() if a.bestellung_id in aktiv}
+
+
 def _naechste_reihenfolge(orm: Mapping[UUID, ProjektAufgabe], typ: str, phase_id: UUID | None) -> int:
     gruppe = [
         a.plan_reihenfolge
@@ -512,6 +694,10 @@ async def element_anlegen(
     start_am: date | None,
     ende_am: date | None,
     zugewiesen_an: UUID | None,
+    vorgang_id: UUID | None = None,
+    bestellung_id: UUID | None = None,
+    partner_id: UUID | None = None,
+    erlaubte_kunden: set[UUID] | None = None,
 ) -> None:
     if typ not in ZEITPLAN_TYPEN:
         raise ZeitplanRegelverstoss("Unbekannter Typ")
@@ -523,6 +709,18 @@ async def element_anlegen(
         start_am = ende_am = None
     _pruefe_phase(orm, phase_id)
     await _pruefe_nutzer(session, mandant_id, zugewiesen_an)
+    if vorgang_id is not None:
+        _nur_typ(typ, "schritt", "Ein Vorgang kann nur mit einem Arbeitsschritt verknüpft werden")
+        await _pruefe_vorgang(session, orm, None, vorgang_id, erlaubte_kunden)
+    if partner_id is not None:
+        _nur_typ(typ, "schritt", "Ein Fremdgewerk kann nur einem Arbeitsschritt zugeordnet werden")
+        await _pruefe_partner(session, partner_id)
+    if bestellung_id is not None:
+        _nur_typ(typ, "meilenstein", "Eine Bestellung kann nur mit einem Meilenstein verknüpft werden")
+        bestellung = await _pruefe_bestellung(session, bestellung_id)
+        if start_am is not None or ende_am is not None:
+            raise ZeitplanRegelverstoss(_MSG_DATUM_AUS_BESTELLUNG)
+        start_am = ende_am = bestellung.liefertermin
     start_am, ende_am = _normalisiere_zeitraum(typ, start_am, ende_am)
 
     spalte_id = None
@@ -548,6 +746,9 @@ async def element_anlegen(
             plan_phase_id=phase_id,
             plan_reihenfolge=_naechste_reihenfolge(orm, typ, phase_id),
             zugewiesen_an=zugewiesen_an,
+            vorgang_id=vorgang_id,
+            bestellung_id=bestellung_id,
+            partner_id=partner_id,
             erstellt_von=user_id,
         )
     )
@@ -564,7 +765,12 @@ async def _aktualisiere_phasen(session: AsyncSession, projekt_id: UUID) -> None:
 
 
 async def element_aendern(
-    session: AsyncSession, projekt: Projekt, element_id: UUID, aenderungen: Mapping[str, Any], mandant_id: UUID
+    session: AsyncSession,
+    projekt: Projekt,
+    element_id: UUID,
+    aenderungen: Mapping[str, Any],
+    mandant_id: UUID,
+    erlaubte_kunden: set[UUID] | None = None,
 ) -> None:
     """`aenderungen` enthaelt nur tatsaechlich gesendete Felder (exclude_unset)."""
     orm, deps = await _lade(session, projekt.id)
@@ -595,11 +801,33 @@ async def element_aendern(
         a.plan_reihenfolge = aenderungen["plan_reihenfolge"]
 
     zeit = {k: aenderungen[k] for k in ("start_am", "ende_am") if k in aenderungen}
+    if "vorgang_id" in aenderungen:
+        if aenderungen["vorgang_id"] is not None:
+            _nur_typ(a.typ, "schritt", "Ein Vorgang kann nur mit einem Arbeitsschritt verknüpft werden")
+            await _pruefe_vorgang(session, orm, element_id, aenderungen["vorgang_id"], erlaubte_kunden)
+        a.vorgang_id = aenderungen["vorgang_id"]
+    if "partner_id" in aenderungen:
+        if aenderungen["partner_id"] is not None:
+            _nur_typ(a.typ, "schritt", "Ein Fremdgewerk kann nur einem Arbeitsschritt zugeordnet werden")
+            await _pruefe_partner(session, aenderungen["partner_id"])
+        a.partner_id = aenderungen["partner_id"]
+    if "bestellung_id" in aenderungen:
+        neue_bestellung = aenderungen["bestellung_id"]
+        if neue_bestellung is not None:
+            _nur_typ(a.typ, "meilenstein", "Eine Bestellung kann nur mit einem Meilenstein verknüpft werden")
+            bestellung = await _pruefe_bestellung(session, neue_bestellung)
+            if zeit:
+                raise ZeitplanRegelverstoss(_MSG_DATUM_AUS_BESTELLUNG)
+            zeit = {"start_am": bestellung.liefertermin, "ende_am": bestellung.liefertermin}
+        a.bestellung_id = neue_bestellung
+    elif zeit and await _aktive_bestellung(session, a.bestellung_id) is not None:
+        raise ZeitplanRegelverstoss(_MSG_DATUM_AUS_BESTELLUNG)
     # Beide Phasen-Spannen (alte und neue) muessen auch ohne Datums-Aenderung
     # nachgezogen werden -- aendere_element() erledigt das nur bei Datumsfeldern.
     modus = await _projekt_modus(session, projekt)
     if zeit:
-        aendere_element(plan, _kanten_aus(deps), modus, element_id, **zeit)
+        fest = await _feste_ids(session, orm)
+        aendere_element(plan, _kanten_aus(deps), modus, element_id, fest=fest, **zeit)
     else:
         aktualisiere_phasenspannen(plan)
     _schreibe_zurueck(orm, plan)
@@ -642,7 +870,9 @@ async def _wende_regel_auf_nachfolger_an(session: AsyncSession, projekt: Projekt
     orm, deps = await _lade(session, projekt.id)
     plan = _plan_aus(orm)
     modus = await _projekt_modus(session, projekt)
-    propagiere(plan, _kanten_aus(deps), modus, {}, erzwinge=[nachfolger_id])
+    propagiere(
+        plan, _kanten_aus(deps), modus, {}, erzwinge=[nachfolger_id], fest=await _feste_ids(session, orm)
+    )
     aktualisiere_phasenspannen(plan)
     _schreibe_zurueck(orm, plan)
     await session.flush()
@@ -657,7 +887,10 @@ async def abhaengigkeit_anlegen(
     vorgaenger_id: UUID,
     nachfolger_id: UUID,
     versatz_tage: int,
+    art: str = "ende_anfang",
 ) -> None:
+    if art not in PROJEKT_ABHAENGIGKEIT_ARTEN:
+        raise ZeitplanRegelverstoss("Unbekannte Abhängigkeitsart")
     if vorgaenger_id == nachfolger_id:
         raise ZeitplanRegelverstoss("Ein Element kann nicht von sich selbst abhängen")
     orm, deps = await _lade(session, projekt.id)
@@ -679,7 +912,7 @@ async def abhaengigkeit_anlegen(
             projekt_id=projekt.id,
             vorgaenger_id=vorgaenger_id,
             nachfolger_id=nachfolger_id,
-            art="ende_anfang",
+            art=art,
             versatz_tage=versatz_tage,
             erstellt_von=user_id,
         )
@@ -689,10 +922,19 @@ async def abhaengigkeit_anlegen(
 
 
 async def abhaengigkeit_aendern(
-    session: AsyncSession, projekt: Projekt, abh_id: UUID, versatz_tage: int
+    session: AsyncSession,
+    projekt: Projekt,
+    abh_id: UUID,
+    versatz_tage: int | None = None,
+    art: str | None = None,
 ) -> None:
     d = await _abhaengigkeit(session, projekt.id, abh_id)
-    d.versatz_tage = versatz_tage
+    if art is not None:
+        if art not in PROJEKT_ABHAENGIGKEIT_ARTEN:
+            raise ZeitplanRegelverstoss("Unbekannte Abhängigkeitsart")
+        d.art = art
+    if versatz_tage is not None:
+        d.versatz_tage = versatz_tage
     await session.flush()
     await _wende_regel_auf_nachfolger_an(session, projekt, d.nachfolger_id)
 
@@ -708,3 +950,90 @@ async def modus_setzen(session: AsyncSession, projekt: Projekt, modus: str) -> N
         raise ZeitplanRegelverstoss("Unbekannter Verschiebe-Modus")
     projekt.verschiebe_modus = modus
     await session.flush()
+
+
+async def liefertermin_uebernehmen(session: AsyncSession, bestellung: Bestellung) -> None:
+    """Setzt alle mit der Bestellung verknuepften Meilensteine auf deren
+    (neuen) Liefertermin -- None = Meilenstein ohne Datum -- und zieht die
+    Nachfolger je nach Modus des jeweiligen Projekts nach."""
+    zeilen = (
+        await session.execute(
+            select(ProjektAufgabe.id, ProjektAufgabe.projekt_id).where(
+                ProjektAufgabe.bestellung_id == bestellung.id,
+                ProjektAufgabe.typ == "meilenstein",
+                ProjektAufgabe.projekt_id.is_not(None),
+                ProjektAufgabe.geloescht_am.is_(None),
+            )
+        )
+    ).all()
+    for element_id, projekt_id in zeilen:
+        projekt = await session.get(Projekt, projekt_id)
+        if projekt is None or projekt.geloescht_am is not None:
+            continue
+        orm, deps = await _lade(session, projekt_id)
+        if element_id not in orm:
+            continue
+        plan = _plan_aus(orm)
+        aendere_element(
+            plan,
+            _kanten_aus(deps),
+            await _projekt_modus(session, projekt),
+            element_id,
+            start_am=bestellung.liefertermin,
+            ende_am=bestellung.liefertermin,
+            fest=await _feste_ids(session, orm),
+        )
+        _schreibe_zurueck(orm, plan)
+        await session.flush()
+
+
+def _like_muster(q: str) -> str:
+    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+async def auswahl_vorgaenge(
+    session: AsyncSession,
+    projekt: Projekt,
+    q: str | None,
+    limit: int,
+    erlaubte_kunden: set[UUID] | None,
+) -> list[ZeitplanVorgangAuswahl]:
+    """Vorgaenge des Projekts (direkt oder ueber einen Auftrag des Projekts)
+    zuerst, danach die uebrigen des Mandanten."""
+    gehoert = or_(Vorgang.projekt_id == projekt.id, Auftrag.projekt_id == projekt.id)
+    stmt = (
+        select(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel, Vorgang.status, gehoert.label("gehoert"))
+        .outerjoin(Auftrag, Auftrag.id == Vorgang.auftrag_id)
+        .where(Vorgang.geloescht_am.is_(None))
+    )
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(Vorgang.kunde_id.in_(erlaubte_kunden))
+    if q and q.strip():
+        muster = _like_muster(q.strip())
+        stmt = stmt.where(or_(Vorgang.vorgangsnummer.ilike(muster), Vorgang.titel.ilike(muster)))
+    stmt = stmt.order_by(func.coalesce(gehoert, False).desc(), Vorgang.created_at.desc()).limit(limit)
+    return [
+        ZeitplanVorgangAuswahl(
+            id=r[0], vorgangsnummer=r[1], titel=r[2], status=r[3], gehoert_zum_projekt=bool(r[4])
+        )
+        for r in (await session.execute(stmt)).all()
+    ]
+
+
+async def auswahl_bestellungen(
+    session: AsyncSession, q: str | None, limit: int
+) -> list[ZeitplanBestellungAuswahl]:
+    stmt = (
+        select(Bestellung.id, Bestellung.bestellnummer, Bestellung.status, Bestellung.liefertermin, Lieferant.name)
+        .outerjoin(Lieferant, Lieferant.id == Bestellung.lieferant_id)
+        .where(Bestellung.geloescht_am.is_(None))
+    )
+    if q and q.strip():
+        muster = _like_muster(q.strip())
+        stmt = stmt.where(or_(Bestellung.bestellnummer.ilike(muster), Lieferant.name.ilike(muster)))
+    stmt = stmt.order_by(Bestellung.created_at.desc()).limit(limit)
+    return [
+        ZeitplanBestellungAuswahl(id=r[0], bestellnummer=r[1], status=r[2], liefertermin=r[3], lieferant_name=r[4])
+        for r in (await session.execute(stmt)).all()
+    ]

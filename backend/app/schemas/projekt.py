@@ -8,6 +8,7 @@ ProjektAufgabePrioritaet = Literal["niedrig", "mittel", "hoch"]
 ProjektAufgabeTyp = Literal["aufgabe", "phase", "schritt", "meilenstein"]
 ZeitplanTyp = Literal["phase", "schritt", "meilenstein"]
 VerschiebeModus = Literal["bei_konflikt", "immer"]
+AbhaengigkeitArt = Literal["ende_anfang", "anfang_anfang", "ende_ende"]
 
 
 class ChecklistenPunkt(BaseModel):
@@ -149,6 +150,33 @@ class ProjektAufgabeMitDetails(ProjektAufgabeRead):
     unteraufgaben_erledigt: int = 0
 
 
+class ZeitplanVorgangRef(BaseModel):
+    id: UUID
+    vorgangsnummer: str
+    titel: str
+    status: str
+
+
+class ZeitplanTerminRef(BaseModel):
+    id: UUID
+    start: datetime
+    ende: datetime | None
+    techniker_name: str | None
+
+
+class ZeitplanBestellungRef(BaseModel):
+    id: UUID
+    bestellnummer: str
+    status: str
+    liefertermin: date | None
+    lieferant_name: str | None
+
+
+class ZeitplanPartnerRef(BaseModel):
+    id: UUID
+    name: str
+
+
 class ZeitplanElement(BaseModel):
     id: UUID
     typ: ZeitplanTyp
@@ -161,14 +189,20 @@ class ZeitplanElement(BaseModel):
     zugewiesen_an: UUID | None
     zugewiesen_name: str | None
     erledigt: bool
+    vorgang: ZeitplanVorgangRef | None = None
+    termine: list[ZeitplanTerminRef] = Field(default_factory=list)
+    bestellung: ZeitplanBestellungRef | None = None
+    # True = start_am/ende_am kommen aus dem Liefertermin der Bestellung und
+    # sind nicht direkt editierbar.
+    datum_gesperrt: bool = False
+    partner: ZeitplanPartnerRef | None = None
 
 
 class ZeitplanAbhaengigkeit(BaseModel):
     id: UUID
     vorgaenger_id: UUID
     nachfolger_id: UUID
-    # Phase 1: nur ende_anfang (Spalte fuer anfang_anfang/ende_ende vorbereitet).
-    art: Literal["ende_anfang"]
+    art: AbhaengigkeitArt
     versatz_tage: int
 
 
@@ -186,6 +220,9 @@ class ZeitplanElementCreate(BaseModel):
     start_am: date | None = None
     ende_am: date | None = None
     zugewiesen_an: UUID | None = None
+    vorgang_id: UUID | None = None
+    bestellung_id: UUID | None = None
+    partner_id: UUID | None = None
 
 
 class ZeitplanElementUpdate(BaseModel):
@@ -198,6 +235,10 @@ class ZeitplanElementUpdate(BaseModel):
     phase_id: UUID | None = None
     plan_reihenfolge: int | None = None
     zugewiesen_an: UUID | None = None
+    # null = Verknuepfung loesen (nur ueber model_fields_set unterscheidbar).
+    vorgang_id: UUID | None = None
+    bestellung_id: UUID | None = None
+    partner_id: UUID | None = None
 
     @model_validator(mode="after")
     def _keine_null_werte(self) -> "ZeitplanElementUpdate":
@@ -210,12 +251,36 @@ class ZeitplanElementUpdate(BaseModel):
 class ZeitplanAbhaengigkeitCreate(BaseModel):
     vorgaenger_id: UUID
     nachfolger_id: UUID
+    art: AbhaengigkeitArt = "ende_anfang"
     versatz_tage: int = Field(default=0, ge=-3650, le=3650)
 
 
 class ZeitplanAbhaengigkeitUpdate(BaseModel):
-    versatz_tage: int = Field(ge=-3650, le=3650)
+    art: AbhaengigkeitArt | None = None
+    versatz_tage: int | None = Field(default=None, ge=-3650, le=3650)
+
+    @model_validator(mode="after")
+    def _mindestens_ein_feld(self) -> "ZeitplanAbhaengigkeitUpdate":
+        if self.art is None and self.versatz_tage is None:
+            raise ValueError("art oder versatz_tage angeben")
+        return self
 
 
 class ZeitplanEinstellungenUpdate(BaseModel):
     verschiebe_modus: VerschiebeModus
+
+
+class ZeitplanVorgangAuswahl(BaseModel):
+    id: UUID
+    vorgangsnummer: str
+    titel: str
+    status: str
+    gehoert_zum_projekt: bool
+
+
+class ZeitplanBestellungAuswahl(BaseModel):
+    id: UUID
+    bestellnummer: str
+    status: str
+    liefertermin: date | None
+    lieferant_name: str | None

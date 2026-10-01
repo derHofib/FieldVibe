@@ -29,6 +29,7 @@ from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_bestellnummer
 from app.services.pdf_service import generate_bestellung_pdf
 from app.services.rechnung_service import logo_bytes_laden
+from app.services.zeitplan_service import liefertermin_uebernehmen
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -145,6 +146,7 @@ async def create_bestellung_from_bedarfe(
         bestellnummer=bestellnummer,
         erstellt_von=auth.user_id,
         notiz=body.notiz,
+        liefertermin=body.liefertermin,
     )
     session.add(bestellung)
     await session.flush()
@@ -214,6 +216,9 @@ async def update_bestellung(
         bestellung.lieferant_id = body.lieferant_id
     if body.notiz is not None:
         bestellung.notiz = body.notiz
+    liefertermin_geaendert = "liefertermin" in body.model_fields_set and body.liefertermin != bestellung.liefertermin
+    if "liefertermin" in body.model_fields_set:
+        bestellung.liefertermin = body.liefertermin
     if body.positionen_preise and body.status != "eingegangen":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -229,6 +234,8 @@ async def update_bestellung(
         )
 
     await session.flush()
+    if liefertermin_geaendert:
+        await liefertermin_uebernehmen(session, bestellung)
     await session.refresh(bestellung)
     return await to_read_model(session, bestellung)
 

@@ -1,13 +1,15 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import PartnerAuthContext, get_current_partner, get_partner_db, require_module_partner
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.projekt import Projekt, ProjektAufgabe
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.partner import (
@@ -15,10 +17,12 @@ from app.schemas.partner import (
     PartnerVorgangKommentar,
     PartnerVorgangRead,
     PartnerVorgangStatusUpdate,
+    PartnerZeitplanSchritt,
 )
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.event_bus import event_bus
 from app.services.partner_service import apply_partner_status_transition
+from app.services.zeitplan_service import VORGANG_ERLEDIGT
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
@@ -70,6 +74,67 @@ async def _to_partner_read(session: AsyncSession, vorgang: Vorgang) -> PartnerVo
         last_activity_at=vorgang.last_activity_at,
         created_at=vorgang.created_at,
     )
+
+
+@router.get("/zeitplan", response_model=list[PartnerZeitplanSchritt])
+async def list_eigene_zeitplan_schritte(
+    auth: PartnerAuthContext = Depends(get_current_partner),
+    session: AsyncSession = Depends(get_partner_db),
+) -> list[PartnerZeitplanSchritt]:
+    """Read-only: die dem Partner zugeordneten Fremdgewerk-Schritte aus den
+    Projekt-Zeitplaenen. Der partner_id-Filter ist hier die eigentliche
+    Zugriffsgrenze (RLS zieht nur den Mandanten), und das Schema gibt
+    bewusst nichts ausser Titel/Projektname/Zeitraum/Stand heraus."""
+    phase = aliased(ProjektAufgabe)
+    grenze = datetime.now(timezone.utc).date() - timedelta(days=30)
+    zeilen = (
+        await session.execute(
+            select(
+                ProjektAufgabe.id,
+                ProjektAufgabe.titel,
+                Projekt.name,
+                phase.titel,
+                ProjektAufgabe.start_am,
+                ProjektAufgabe.ende_am,
+                ProjektAufgabe.fortschritt,
+                ProjektAufgabe.erledigt_am,
+                ProjektAufgabe.vorgang_id,
+                Vorgang.status,
+            )
+            .join(Projekt, Projekt.id == ProjektAufgabe.projekt_id)
+            .outerjoin(
+                phase, (phase.id == ProjektAufgabe.plan_phase_id) & (phase.geloescht_am.is_(None))
+            )
+            .outerjoin(
+                Vorgang, (Vorgang.id == ProjektAufgabe.vorgang_id) & (Vorgang.geloescht_am.is_(None))
+            )
+            .where(
+                ProjektAufgabe.partner_id == auth.partner_id,
+                ProjektAufgabe.typ == "schritt",
+                ProjektAufgabe.geloescht_am.is_(None),
+                Projekt.geloescht_am.is_(None),
+                Projekt.archiviert.is_(False),
+                (ProjektAufgabe.ende_am.is_(None)) | (ProjektAufgabe.ende_am >= grenze),
+            )
+            .order_by(ProjektAufgabe.start_am.asc().nulls_last(), ProjektAufgabe.created_at)
+        )
+    ).all()
+    ergebnis = []
+    for r in zeilen:
+        erledigt = r[9] in VORGANG_ERLEDIGT if r[9] is not None else r[7] is not None
+        ergebnis.append(
+            PartnerZeitplanSchritt(
+                id=r[0],
+                titel=r[1],
+                projekt_name=r[2],
+                phase_titel=r[3],
+                start_am=r[4],
+                ende_am=r[5],
+                fortschritt=100 if r[8] is not None and erledigt else r[6],
+                erledigt=erledigt,
+            )
+        )
+    return ergebnis
 
 
 @router.get("/auftraege", response_model=list[PartnerVorgangRead])

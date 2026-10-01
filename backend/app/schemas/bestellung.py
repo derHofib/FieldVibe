@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
@@ -12,12 +12,15 @@ class BestellungAusBedarfenCreate(BaseModel):
     material_bedarf_ids: list[UUID]
     lieferant_id: UUID | None = None
     notiz: str | None = None
+    liefertermin: date | None = None
 
 
 class BestellungUpdate(BaseModel):
     status: BestellungStatus | None = None
     lieferant_id: UUID | None = None
     notiz: str | None = None
+    # null = Liefertermin entfernen (ueber model_fields_set vom Weglassen unterscheidbar).
+    liefertermin: date | None = None
     # Beim Wareneingang (status="eingegangen") koennen einzelne Positionen auf
     # den tatsaechlich bezahlten Preis korrigiert werden -- der bisherige Wert
     # war nur eine Planung zum Bestellzeitpunkt (siehe BestellungPosition).
@@ -45,6 +48,7 @@ class BestellungRead(BaseModel):
     bestellnummer: str
     status: BestellungStatus
     notiz: str | None
+    liefertermin: date | None
     erstellt_von: UUID
     created_at: datetime
     updated_at: datetime

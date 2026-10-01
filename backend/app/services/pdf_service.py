@@ -1034,6 +1034,8 @@ def generate_bestellung_pdf(
         ("Bestellnummer", bestellung.bestellnummer),
         ("Datum", _fmt_datum(bestellung.created_at)),
     ]
+    if bestellung.liefertermin:
+        paare.append(("Liefertermin", _fmt_datum(bestellung.liefertermin)))
     absaetze = []
     if bestellung.notiz:
         absaetze.append(f"Bemerkung:\n{bestellung.notiz}")

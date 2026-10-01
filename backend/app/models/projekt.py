@@ -172,12 +172,19 @@ class ProjektAufgabe(SoftDeleteMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("projekt_aufgaben.id", ondelete="SET NULL"), nullable=True
     )
     plan_reihenfolge: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Zeitplan-Verknuepfungen: Meilenstein <- Bestellung (Liefertermin liefert
+    # das Datum), Schritt <- Partner (Fremdgewerk, sichtbar im Partnerportal).
+    bestellung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("bestellungen.id", ondelete="SET NULL"), nullable=True
+    )
+    partner_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("partner.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class ProjektAufgabeAbhaengigkeit(Base):
-    """Verbindung im Zeitplan (Vorgaenger -> Nachfolger). Phase 1 nutzt nur
-    art 'ende_anfang'; die Spalte ist fuer Anfang-Anfang/Ende-Ende
-    vorbereitet. Bewusst nicht papierkorbfaehig -- reine Planungs-
+    """Verbindung im Zeitplan (Vorgaenger -> Nachfolger) mit art
+    ende_anfang/anfang_anfang/ende_ende. Bewusst nicht papierkorbfaehig -- reine Planungs-
     Konfiguration, wird beim Loeschen eines Elements hart entfernt."""
 
     __tablename__ = "projekt_aufgabe_abhaengigkeiten"
