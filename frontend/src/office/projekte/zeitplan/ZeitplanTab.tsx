@@ -9,15 +9,20 @@ import { EmptyState } from "../../../components/EmptyState";
 import { SearchableSelect } from "../../../components/SearchableSelect";
 import { SegmentedControl } from "../../../components/apple/SegmentedControl";
 import { Sheet } from "../../../components/apple/Sheet";
-import type { Zeitplan, ZeitplanAbhaengigkeit, ZeitplanElement, ZeitplanElementUpdate, ZeitplanTyp, ZeitplanVerschiebeModus } from "../../../types";
+import type { Zeitplan, ZeitplanAbhaengigkeit, ZeitplanAbhaengigkeitArt, ZeitplanElement, ZeitplanElementUpdate, ZeitplanTyp, ZeitplanVerschiebeModus } from "../../../types";
+import { ElementDetailSheet } from "./ElementDetailSheet";
+import { GanttLegende } from "./GanttLegende";
 import { GanttListe } from "./GanttListe";
 import { GanttZeitleiste, type GanttZiehAnzeige } from "./GanttZeitleiste";
 import { VerbindungsPopover } from "./VerbindungsPopover";
 import {
+  ART_ERKLAERUNG,
+  ART_LABEL,
   PX_PRO_TAG,
   SCHRITT_STANDARD_DAUER,
   ZEILEN_HOEHE,
   anzeigeZeitraeume,
+  balkenRechteck,
   baueZeilen,
   berechneVorschau,
   elementAenderung,
@@ -31,6 +36,7 @@ import {
   pixelZuTagen,
   standardStart,
   tagZuX,
+  verbindungsArtBeimZiehen,
   zeitbereich,
   type Aenderung,
   type Entwurf,
@@ -59,6 +65,19 @@ interface ZiehZustand {
   zeigerX?: number;
   zeigerY?: number;
   zielId?: string | null;
+  quelleSeite?: "anfang" | "ende";
+  /** Art, die beim Loslassen am aktuellen Ziel entstuende (null: kein gueltiges Ziel). */
+  verbindungsArt?: ZeitplanAbhaengigkeitArt | null;
+  /** Zeiger steht ueber einer Zeile, aber dort ist keine Verbindung moeglich. */
+  ungueltig?: boolean;
+}
+
+function hinweisText(z: ZiehZustand): string {
+  if (z.verbindungsArt && z.zielId) return `${ART_LABEL[z.verbindungsArt]}: ${ART_ERKLAERUNG[z.verbindungsArt]}`;
+  if (z.ungueltig) return z.quelleSeite === "anfang" ? "Von einem Anfang aus nur auf die linke Hälfte des Ziels (Anfang → Anfang)" : "Hier ist keine Verbindung möglich";
+  return z.quelleSeite === "anfang"
+    ? "Auf den Anfang eines Schritts ziehen: Anfang → Anfang"
+    : "Auf ein Ziel ziehen: linke Hälfte Ende → Anfang, rechte Hälfte Ende → Ende";
 }
 
 function fehlerText(e: unknown): string {
@@ -108,7 +127,8 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
   const [bearbeiteId, setBearbeiteId] = useState<string | null>(null);
   const [entwurf, setEntwurf] = useState<Entwurf | null>(null);
   const [dialog, setDialog] = useState<{ art: "fortschritt" | "zuweisen"; element: ZeitplanElement } | null>(null);
-  const [depPopover, setDepPopover] = useState<{ dep: ZeitplanAbhaengigkeit; x: number; y: number } | null>(null);
+  const [depPopover, setDepPopover] = useState<{ depId: string; x: number; y: number } | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [zieh, setZieh] = useState<ZiehZustand | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -128,8 +148,8 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
 
   // Aktueller Stand fuer die window-Listener waehrend des Ziehens (die
   // Closures wuerden sonst den Stand vom Ziehbeginn festhalten).
-  const aktuell = useRef({ elemente, abhaengigkeiten, modus, zoom, zeilen, bereich });
-  aktuell.current = { elemente, abhaengigkeiten, modus, zoom, zeilen, bereich };
+  const aktuell = useRef({ elemente, abhaengigkeiten, modus, zoom, zeilen, bereich, positionen });
+  aktuell.current = { elemente, abhaengigkeiten, modus, zoom, zeilen, bereich, positionen };
 
   // --- Mutationen ---------------------------------------------------------
 
@@ -198,6 +218,8 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    // Datum kommt aus der Bestellung -- nicht ziehbar (der Server lehnt es ohnehin mit 400 ab).
+    if (aktuell.current.elemente.find((el) => el.id === id)?.datum_gesperrt) return;
     const startX = e.clientX;
     ziehRef.current = { delta: 0 };
     setZieh({ art, id, delta: 0, vorschau: new Map() });
@@ -236,22 +258,36 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     window.addEventListener("keydown", aufEsc, true);
   }
 
-  function verbindenStart(e: ReactPointerEvent, id: string) {
+  function verbindenStart(e: ReactPointerEvent, id: string, seite: "anfang" | "ende") {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
     document.body.style.userSelect = "none";
     let zielId: string | null = null;
+    let art: ZeitplanAbhaengigkeitArt | null = null;
 
     const aufBewegen = (ev: PointerEvent) => {
       const rect = svgRef.current?.getBoundingClientRect();
       if (!rect) return;
       const x = ev.clientX - rect.left;
       const y = ev.clientY - rect.top;
-      const { zeilen: z, elemente: el, abhaengigkeiten: deps } = aktuell.current;
-      const zeile = z[Math.floor(y / ZEILEN_HOEHE)];
-      zielId = zeile?.art === "element" && istGueltigesVerbindungsziel(el, deps, id, zeile.element.id) ? zeile.element.id : null;
-      setZieh({ art: "verbinden", id, delta: 0, vorschau: new Map(), zeigerX: x, zeigerY: y, zielId });
+      const { zeilen: z, elemente: el, abhaengigkeiten: deps, positionen: pos, zoom: zm, bereich: br } = aktuell.current;
+      const index = Math.floor(y / ZEILEN_HOEHE);
+      const zeile = z[index];
+      zielId = null;
+      art = null;
+      let ungueltig = false;
+      if (zeile?.art === "element") {
+        const zeitraum = pos.get(zeile.element.id);
+        if (istGueltigesVerbindungsziel(el, deps, id, zeile.element.id) && zeitraum) {
+          const a = verbindungsArtBeimZiehen(seite, balkenRechteck(zeile.element.typ, zeitraum, index, zm, br.ursprung), x);
+          if (a) {
+            zielId = zeile.element.id;
+            art = a;
+          } else ungueltig = true;
+        } else if (zeile.element.id !== id) ungueltig = true;
+      }
+      setZieh({ art: "verbinden", id, delta: 0, vorschau: new Map(), zeigerX: x, zeigerY: y, zielId, quelleSeite: seite, verbindungsArt: art, ungueltig });
     };
     const aufraeumen = () => {
       window.removeEventListener("pointermove", aufBewegen);
@@ -263,10 +299,11 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     };
     const aufLoslassen = () => {
       const ziel = zielId;
+      const gewaehlteArt = art;
       aufraeumen();
-      if (ziel) {
+      if (ziel && gewaehlteArt) {
         setFehler(null);
-        aendern.mutate(() => zeitplanApi.createAbhaengigkeit(projektId, { vorgaenger_id: id, nachfolger_id: ziel }));
+        aendern.mutate(() => zeitplanApi.createAbhaengigkeit(projektId, { vorgaenger_id: id, nachfolger_id: ziel, art: gewaehlteArt }));
       }
     };
     const aufAbbrechen = () => aufraeumen();
@@ -279,12 +316,13 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     window.addEventListener("pointerup", aufLoslassen);
     window.addEventListener("pointercancel", aufAbbrechen);
     window.addEventListener("keydown", aufEsc, true);
-    setZieh({ art: "verbinden", id, delta: 0, vorschau: new Map(), zielId: null });
+    setZieh({ art: "verbinden", id, delta: 0, vorschau: new Map(), zielId: null, quelleSeite: seite });
   }
 
   function aufTaste(e: ReactKeyboardEvent, id: string) {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     e.preventDefault();
+    if (aktuell.current.elemente.find((el) => el.id === id)?.datum_gesperrt) return;
     const richtung = e.key === "ArrowRight" ? 1 : -1;
     if (e.shiftKey && e.altKey) verschiebungSpeichern(id, "dauer", richtung);
     else verschiebungSpeichern(id, "verschieben", richtung * (e.shiftKey ? 7 : 1));
@@ -315,7 +353,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
   }
 
   function depKlick(dep: ZeitplanAbhaengigkeit, position: { x: number; y: number }) {
-    setDepPopover({ dep, ...position });
+    setDepPopover({ depId: dep.id, ...position });
   }
 
   // --- Scroll: beim ersten Laden auf "heute"/ersten Termin, bei Zoom-Wechsel auf dasselbe Datum
@@ -373,8 +411,13 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
         zeigerX: zieh.zeigerX,
         zeigerY: zieh.zeigerY,
         zielId: zieh.zielId,
+        quelleSeite: zieh.quelleSeite,
+        verbindungsArt: zieh.verbindungsArt,
       }
     : null;
+  const depOffen = depPopover ? abhaengigkeiten.find((d) => d.id === depPopover.depId) ?? null : null;
+  const detailElement = detailId ? elemente.find((e) => e.id === detailId) ?? null : null;
+  const detailZeitraum = detailElement ? positionen.get(detailElement.id) : undefined;
 
   const depTitel = (id: string) => elemente.find((e) => e.id === id)?.titel ?? "";
 
@@ -396,6 +439,10 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           />
           <Info size={15} strokeWidth={2} className="text-label2" aria-label={MODUS_ERKLAERUNG} role="img" />
         </div>
+        {/* Immer im Fluss vorhanden (leer = unsichtbar), damit die Zeile beim Ziehen nicht springt. */}
+        <p aria-live="polite" className="ml-auto min-h-5 text-xs text-label2">
+          {zieh?.art === "verbinden" ? hinweisText(zieh) : ""}
+        </p>
       </div>
 
       {fehler && (
@@ -438,6 +485,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
               onEntwurfFertig={entwurfFertig}
               onFortschritt={(element) => setDialog({ art: "fortschritt", element })}
               onZuweisen={(element) => setDialog({ art: "zuweisen", element })}
+              onDetails={(element) => setDetailId(element.id)}
               onLoeschen={loeschen}
             />
             <GanttZeitleiste
@@ -448,7 +496,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
               bereich={bereich}
               heute={heute}
               zieh={ziehAnzeige}
-              ausgewaehltDepId={depPopover?.dep.id ?? null}
+              ausgewaehltDepId={depPopover?.depId ?? null}
               svgRef={svgRef}
               onZiehStart={ziehStart}
               onVerbindenStart={verbindenStart}
@@ -459,21 +507,48 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
         </div>
       )}
 
-      {depPopover && (
+      {!leer && <GanttLegende />}
+
+      {depPopover && depOffen && (
         <VerbindungsPopover
-          abhaengigkeit={depPopover.dep}
+          abhaengigkeit={depOffen}
           position={{ x: depPopover.x, y: depPopover.y }}
-          vorgaengerTitel={depTitel(depPopover.dep.vorgaenger_id)}
-          nachfolgerTitel={depTitel(depPopover.dep.nachfolger_id)}
+          vorgaengerTitel={depTitel(depOffen.vorgaenger_id)}
+          nachfolgerTitel={depTitel(depOffen.nachfolger_id)}
           onClose={() => setDepPopover(null)}
           onVersatz={(tage) => {
             setFehler(null);
-            aendern.mutate(() => zeitplanApi.updateAbhaengigkeit(projektId, depPopover.dep.id, { versatz_tage: tage }));
+            aendern.mutate(() => zeitplanApi.updateAbhaengigkeit(projektId, depOffen.id, { versatz_tage: tage }));
+          }}
+          onArt={(art) => {
+            setFehler(null);
+            aendern.mutate(() => zeitplanApi.updateAbhaengigkeit(projektId, depOffen.id, { art }));
           }}
           onLoeschen={() => {
             setFehler(null);
-            aendern.mutate(() => zeitplanApi.removeAbhaengigkeit(projektId, depPopover.dep.id));
+            aendern.mutate(() => zeitplanApi.removeAbhaengigkeit(projektId, depOffen.id));
             setDepPopover(null);
+          }}
+        />
+      )}
+
+      {detailElement && (
+        <ElementDetailSheet
+          projektId={projektId}
+          element={detailElement}
+          zeitraumText={
+            detailZeitraum
+              ? detailElement.typ === "meilenstein"
+                ? formatKurz(detailZeitraum.start)
+                : formatBereich(formatTag(detailZeitraum.start), formatTag(detailZeitraum.ende))
+              : "Ohne Datum"
+          }
+          fehler={fehler}
+          busy={aendern.isPending}
+          onPatch={(body) => patch(detailElement.id, body)}
+          onClose={() => {
+            setDetailId(null);
+            setFehler(null);
           }}
         />
       )}

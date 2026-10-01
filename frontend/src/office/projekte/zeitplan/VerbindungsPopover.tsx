@@ -2,9 +2,12 @@ import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { ZeitplanAbhaengigkeit } from "../../../types";
+import type { ZeitplanAbhaengigkeit, ZeitplanAbhaengigkeitArt } from "../../../types";
+import { ART_ERKLAERUNG, ART_LABEL } from "./zeitplanLogik";
 
-/** Kleines Popover an einer Verbindungslinie: Versatz in Tagen (auch
+const ARTEN: ZeitplanAbhaengigkeitArt[] = ["ende_anfang", "anfang_anfang", "ende_ende"];
+
+/** Kleines Popover an einer Verbindungslinie: Art, Versatz in Tagen (auch
  * negativ) und Loeschen. Position in Viewport-Koordinaten (fixed, Portal),
  * damit das Scroll-Gebiet des Gantt es nicht abschneidet. */
 export function VerbindungsPopover({
@@ -13,6 +16,7 @@ export function VerbindungsPopover({
   vorgaengerTitel,
   nachfolgerTitel,
   onVersatz,
+  onArt,
   onLoeschen,
   onClose,
 }: {
@@ -21,6 +25,7 @@ export function VerbindungsPopover({
   vorgaengerTitel: string;
   nachfolgerTitel: string;
   onVersatz: (tage: number) => void;
+  onArt: (art: ZeitplanAbhaengigkeitArt) => void;
   onLoeschen: () => void;
   onClose: () => void;
 }) {
@@ -58,10 +63,10 @@ export function VerbindungsPopover({
       ref={ref}
       role="dialog"
       aria-label="Verbindung bearbeiten"
-      className="fixed z-[60] w-[260px] rounded-[10px] border-[0.5px] p-3"
+      className="fixed z-[60] w-[280px] rounded-[10px] border-[0.5px] p-3"
       style={{
-        top: Math.min(position.y + 8, window.innerHeight - 190),
-        left: Math.min(Math.max(8, position.x - 130), window.innerWidth - 268),
+        top: Math.max(8, Math.min(position.y + 8, window.innerHeight - 420)),
+        left: Math.min(Math.max(8, position.x - 140), window.innerWidth - 288),
         backgroundColor: "var(--menu)",
         backdropFilter: "blur(30px)",
         WebkitBackdropFilter: "blur(30px)",
@@ -72,6 +77,35 @@ export function VerbindungsPopover({
       <p className="mb-2 truncate text-xs text-label2">
         {vorgaengerTitel} → {nachfolgerTitel}
       </p>
+      <p id="zeitplan-art-label" className="mb-1 text-[11px] font-bold tracking-wide text-label3 uppercase">
+        Art der Verbindung
+      </p>
+      <div role="radiogroup" aria-labelledby="zeitplan-art-label" className="mb-3 space-y-1">
+        {ARTEN.map((art) => {
+          const aktiv = (abhaengigkeit.art ?? "ende_anfang") === art;
+          return (
+            <button
+              key={art}
+              type="button"
+              role="radio"
+              aria-checked={aktiv}
+              onClick={() => !aktiv && onArt(art)}
+              className={`block w-full rounded-[8px] px-2 py-1.5 text-left ${aktiv ? "bg-tintbg" : "hover:bg-fill"}`}
+            >
+              <span className={`flex items-center gap-1.5 text-[13px] font-semibold ${aktiv ? "text-tint-text" : "text-label"}`}>
+                <span
+                  aria-hidden="true"
+                  className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${aktiv ? "border-tint" : "border-sepstrong"}`}
+                >
+                  {aktiv && <span className="h-2 w-2 rounded-full bg-tint" />}
+                </span>
+                {ART_LABEL[art]}
+              </span>
+              <span className="block pl-5 text-[11px] text-label2">{ART_ERKLAERUNG[art]}</span>
+            </button>
+          );
+        })}
+      </div>
       <label className="mb-1 block text-[11px] font-bold tracking-wide text-label3 uppercase" htmlFor="zeitplan-versatz">
         Versatz in Tagen
       </label>
@@ -80,8 +114,7 @@ export function VerbindungsPopover({
         type="number"
         step={1}
         value={wert}
-        autoFocus
-        onChange={(e) => setWert(e.target.value)}
+                onChange={(e) => setWert(e.target.value)}
         onBlur={speichern}
         onKeyDown={(e) => {
           if (e.key === "Enter") {

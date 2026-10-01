@@ -162,7 +162,11 @@ import type {
   Zeitplan,
   ZeitplanElementCreate,
   ZeitplanElementUpdate,
+  ZeitplanAbhaengigkeitArt,
+  ZeitplanBestellungRef,
   ZeitplanVerschiebeModus,
+  ZeitplanVorgangAuswahl,
+  PartnerZeitplanEintrag,
 } from "../types";
 
 export const authApi = {
@@ -1544,10 +1548,10 @@ export const materialBedarfeApi = {
 export const bestellungenApi = {
   list: () => apiFetch<Bestellung[]>("/api/bestellungen"),
   get: (id: string) => apiFetch<Bestellung>(`/api/bestellungen/${id}`),
-  createFromBedarfe: (materialBedarfIds: string[], lieferantId?: string, notiz?: string) =>
+  createFromBedarfe: (materialBedarfIds: string[], lieferantId?: string, notiz?: string, liefertermin?: string) =>
     apiFetch<Bestellung>("/api/bestellungen/from-bedarfe", {
       method: "POST",
-      body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, lieferant_id: lieferantId, notiz }),
+      body: JSON.stringify({ material_bedarf_ids: materialBedarfIds, lieferant_id: lieferantId, notiz, liefertermin: liefertermin || undefined }),
     }),
   update: (
     id: string,
@@ -1555,6 +1559,7 @@ export const bestellungenApi = {
       status?: string;
       lieferant_id?: string | null;
       notiz?: string;
+      liefertermin?: string | null;
       positionen_preise?: Record<string, string>;
     },
   ) => apiFetch<Bestellung>(`/api/bestellungen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -1714,13 +1719,13 @@ export const zeitplanApi = {
     apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente/${elementId}`, { method: "DELETE" }),
   createAbhaengigkeit: (
     projektId: string,
-    body: { vorgaenger_id: string; nachfolger_id: string; versatz_tage?: number },
+    body: { vorgaenger_id: string; nachfolger_id: string; versatz_tage?: number; art?: ZeitplanAbhaengigkeitArt },
   ) =>
     apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten`, {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  updateAbhaengigkeit: (projektId: string, depId: string, body: { versatz_tage: number }) =>
+  updateAbhaengigkeit: (projektId: string, depId: string, body: { art?: ZeitplanAbhaengigkeitArt; versatz_tage?: number }) =>
     apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten/${depId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
@@ -1732,6 +1737,20 @@ export const zeitplanApi = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  auswahlVorgaenge: (projektId: string, q: string, limit = 30) =>
+    apiFetch<ZeitplanVorgangAuswahl[]>(
+      `/api/projekte/${projektId}/zeitplan/auswahl/vorgaenge?q=${encodeURIComponent(q)}&limit=${limit}`,
+    ),
+  auswahlBestellungen: (projektId: string, q: string, limit = 30) =>
+    apiFetch<ZeitplanBestellungRef[]>(
+      `/api/projekte/${projektId}/zeitplan/auswahl/bestellungen?q=${encodeURIComponent(q)}&limit=${limit}`,
+    ),
+};
+
+// Token-Handling fuer Partner-Logins gibt es im Frontend noch nicht (siehe
+// docs/BACKLOG.md 1.2) -- apiFetch sendet vorerst den Mitarbeiter-Token.
+export const partnerPortalApi = {
+  zeitplan: () => apiFetch<PartnerZeitplanEintrag[]>("/api/partnerportal/zeitplan"),
 };
 
 export const auftraegeApi = {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Folder } from "lucide-react";
+import { CalendarRange, Folder } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { projekteApi } from "../../api/endpoints";
@@ -37,20 +37,31 @@ export function ProjektePageMobil() {
         ) : (
           <GroupedList>
             {aktive.map((projekt, i) => (
-              <GroupedListRow
-                key={projekt.id}
-                onClick={() => navigate(`/feed?projekt_id=${projekt.id}`)}
-                navigierbar
-                last={i === aktive.length - 1}
-              >
-                <SymbolKachel icon={Folder} farbe="indigo" />
-                <div className="min-w-0">
-                  <p className="truncate text-[17px] text-label">{projekt.name}</p>
-                  {projekt.beschreibung && (
-                    <p className="truncate text-[13px] text-label2">{projekt.beschreibung}</p>
-                  )}
-                </div>
-              </GroupedListRow>
+              // Zeitplan-Knopf als Geschwister ueber der Zeile (nicht darin): ein
+              // Button im Button waere ungueltiges HTML.
+              <div key={projekt.id} className="relative">
+                <GroupedListRow
+                  onClick={() => navigate(`/feed?projekt_id=${projekt.id}`)}
+                  navigierbar
+                  last={i === aktive.length - 1}
+                >
+                  <SymbolKachel icon={Folder} farbe="indigo" />
+                  <div className="min-w-0 pr-9">
+                    <p className="truncate text-[17px] text-label">{projekt.name}</p>
+                    {projekt.beschreibung && (
+                      <p className="truncate text-[13px] text-label2">{projekt.beschreibung}</p>
+                    )}
+                  </div>
+                </GroupedListRow>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/projekte/${projekt.id}/zeitplan`)}
+                  aria-label={`Zeitplan von ${projekt.name}`}
+                  className="btn-touch absolute top-1/2 right-8 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-tint hover:bg-fill"
+                >
+                  <CalendarRange size={20} strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              </div>
             ))}
           </GroupedList>
         )}

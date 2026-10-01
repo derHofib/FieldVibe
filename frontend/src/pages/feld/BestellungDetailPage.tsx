@@ -56,6 +56,16 @@ export function BestellungDetailPage() {
     },
   });
 
+  // Liefertermin wirkt auf verknuepfte Zeitplan-Meilensteine (Lieferung).
+  const lieferterminMutation = useMutation({
+    mutationFn: (liefertermin: string | null) => bestellungenApi.update(id!, { liefertermin }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bestellung", id] });
+      queryClient.invalidateQueries({ queryKey: ["bestellungen"] });
+      queryClient.invalidateQueries({ queryKey: ["projekt-zeitplan"] });
+    },
+  });
+
   const csvMutation = useMutation({
     mutationFn: () => bestellungenApi.csv(id!),
     onSuccess: (blob) => downloadBlob(blob, `${bestellung?.bestellnummer ?? "Bestellung"}.csv`),
@@ -116,6 +126,17 @@ export function BestellungDetailPage() {
             {STATUS_LABEL[bestellung.status]}
           </span>
         </div>
+        <label className="mt-3 flex items-center justify-between gap-3 text-sm text-label2">
+          Liefertermin
+          <input
+            type="date"
+            value={bestellung.liefertermin ?? ""}
+            onChange={(e) => lieferterminMutation.mutate(e.target.value || null)}
+            disabled={lieferterminMutation.isPending}
+            aria-label="Liefertermin"
+            className="rounded-[var(--radius-ap-input)] border border-sep bg-card px-2 py-1 text-sm text-label disabled:opacity-50"
+          />
+        </label>
         {bestellung.notiz && (
           <p className="mt-2 text-sm text-label">{bestellung.notiz}</p>
         )}

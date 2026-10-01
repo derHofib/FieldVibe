@@ -1400,6 +1400,8 @@ export interface Bestellung {
   bestellnummer: string;
   status: BestellungStatus;
   notiz: string | null;
+  /** "YYYY-MM-DD"; wirkt auf Zeitplan-Meilensteine. */
+  liefertermin: string | null;
   erstellt_von: string;
   created_at: string;
   updated_at: string;
@@ -2040,13 +2042,63 @@ export interface ZeitplanElement {
   zugewiesen_an: string | null;
   zugewiesen_name: string | null;
   erledigt: boolean;
+  /** Nur Schritte: verknüpfter Vorgang (Server setzt bei abgeschlossen/abgerechnet erledigt + 100 %). */
+  vorgang: ZeitplanVorgangRef | null;
+  /** Dispo-Termine des verknüpften Vorgangs. */
+  termine: ZeitplanTermin[];
+  /** Nur Meilensteine: verknüpfte Bestellung (Lieferung). */
+  bestellung: ZeitplanBestellungRef | null;
+  /** true bei verknüpfter Bestellung: Datum kommt aus dem Liefertermin. */
+  datum_gesperrt: boolean;
+  /** Nur Schritte: Fremdgewerk / Nachunternehmer. */
+  partner: { id: string; name: string } | null;
+}
+
+export interface ZeitplanVorgangRef {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
+  status: VorgangStatus;
+}
+
+export interface ZeitplanTermin {
+  id: string;
+  start: string;
+  ende: string | null;
+  techniker_name: string | null;
+}
+
+export interface ZeitplanBestellungRef {
+  id: string;
+  bestellnummer: string;
+  status: BestellungStatus;
+  liefertermin: string | null;
+  lieferant_name: string | null;
+}
+
+export interface ZeitplanVorgangAuswahl extends ZeitplanVorgangRef {
+  gehoert_zum_projekt: boolean;
+}
+
+export type ZeitplanAbhaengigkeitArt = "ende_anfang" | "anfang_anfang" | "ende_ende";
+
+/** Eigener Zeitplan-Eintrag des Partnerportals (GET /api/partner-portal/zeitplan). */
+export interface PartnerZeitplanEintrag {
+  id: string;
+  titel: string;
+  projekt_name: string;
+  phase_titel: string | null;
+  start_am: string | null;
+  ende_am: string | null;
+  fortschritt: number;
+  erledigt: boolean;
 }
 
 export interface ZeitplanAbhaengigkeit {
   id: string;
   vorgaenger_id: string;
   nachfolger_id: string;
-  art: "ende_anfang";
+  art: ZeitplanAbhaengigkeitArt;
   versatz_tage: number;
 }
 
@@ -2064,6 +2116,9 @@ export interface ZeitplanElementCreate {
   start_am?: string | null;
   ende_am?: string | null;
   zugewiesen_an?: string | null;
+  vorgang_id?: string | null;
+  bestellung_id?: string | null;
+  partner_id?: string | null;
 }
 
 export interface ZeitplanElementUpdate {
@@ -2074,6 +2129,10 @@ export interface ZeitplanElementUpdate {
   phase_id?: string | null;
   plan_reihenfolge?: number;
   zugewiesen_an?: string | null;
+  /** null = Verknüpfung lösen. */
+  vorgang_id?: string | null;
+  bestellung_id?: string | null;
+  partner_id?: string | null;
 }
 
 export type AuftragStatus = "offen" | "in_arbeit" | "abgeschlossen" | "storniert";

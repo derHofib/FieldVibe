@@ -53,6 +53,7 @@ import { PostfachPage } from "./pages/feld/PostfachPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { ProjektePageMobil } from "./pages/feld/ProjektePageMobil";
+import { ProjektZeitplanMobilPage } from "./pages/feld/ProjektZeitplanMobilPage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { RechnungenPage } from "./pages/feld/RechnungenPage";
 import { RechnungseingangPage } from "./pages/feld/RechnungseingangPage";
@@ -167,6 +168,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
           <Route path="/mehr" element={<MehrPage />} />
           <Route path="/projekte" element={<ProjektePageMobil />} />
+          <Route path="/projekte/:id/zeitplan" element={<ProjektZeitplanMobilPage />} />
           <Route path="/boards" element={<BoardsUebersichtPage />} />
           <Route path="/boards/:id" element={<BoardMobilePage />} />
           <Route path="/pruefmittel" element={<PruefmittelPage />} />

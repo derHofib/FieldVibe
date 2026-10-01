@@ -1,8 +1,8 @@
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent, RefObject } from "react";
 import { useMemo } from "react";
 
-import type { ZeitplanAbhaengigkeit } from "../../../types";
-import { GanttBalken } from "./GanttBalken";
+import type { ZeitplanAbhaengigkeit, ZeitplanAbhaengigkeitArt } from "../../../types";
+import { GanttBalken, PARTNER_STREIFEN_ID } from "./GanttBalken";
 import { GanttVerbindungen } from "./GanttVerbindungen";
 import {
   PX_PRO_TAG,
@@ -32,6 +32,9 @@ export interface GanttZiehAnzeige {
   zeigerX?: number;
   zeigerY?: number;
   zielId?: string | null;
+  /** Nur Verbinden: von welchem Anfasser gezogen wird und welche Art am Ziel entsteht. */
+  quelleSeite?: "anfang" | "ende";
+  verbindungsArt?: ZeitplanAbhaengigkeitArt | null;
 }
 
 /** Zeitleiste: sticky Kopf (Monate/KW/Tage je Zoom) und der SVG-Koerper mit
@@ -63,7 +66,7 @@ export function GanttZeitleiste({
   ausgewaehltDepId: string | null;
   svgRef: RefObject<SVGSVGElement | null>;
   onZiehStart: (e: ReactPointerEvent, id: string, art: ZiehArt) => void;
-  onVerbindenStart: (e: ReactPointerEvent, id: string) => void;
+  onVerbindenStart: (e: ReactPointerEvent, id: string, seite: "anfang" | "ende") => void;
   onTaste: (e: ReactKeyboardEvent, id: string) => void;
   onDepKlick: (dep: ZeitplanAbhaengigkeit, position: { x: number; y: number }) => void;
 }) {
@@ -93,6 +96,8 @@ export function GanttZeitleiste({
 
   const ziehGeo = zieh ? geometrie.get(zieh.id) : undefined;
   const zielGeo = zieh?.zielId ? geometrie.get(zieh.zielId) : undefined;
+  const quelleX = ziehGeo ? (zieh?.quelleSeite === "anfang" ? ziehGeo.links : ziehGeo.rechts) : 0;
+  const zielX = zielGeo ? (zieh?.verbindungsArt === "ende_ende" ? zielGeo.rechts : zielGeo.links) : 0;
   // Erste Zeile: kein Platz ueber dem Balken (Kopf), Infozeile darunter.
   const infoY = ziehGeo ? (ziehGeo.y - 26 < 2 ? ziehGeo.y + ziehGeo.h + 4 : ziehGeo.y - 26) : 0;
   const infoBreite = zieh?.info ? zieh.info.length * 6.4 + 16 : 0;
@@ -137,6 +142,12 @@ export function GanttZeitleiste({
         aria-label="Zeitleiste"
         style={{ cursor: zieh?.art === "verbinden" ? "crosshair" : undefined }}
       >
+        <defs>
+          <pattern id={PARTNER_STREIFEN_ID} width={6} height={6} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width={2} height={6} fill="#fff" fillOpacity={0.18} />
+          </pattern>
+        </defs>
+
         {wochenenden.map((t) => (
           <rect key={t} x={tagZuX(t, bereich.ursprung, zoom)} y={0} width={px} height={hoehe} className="fill-fill" opacity={0.7} />
         ))}
@@ -163,11 +174,12 @@ export function GanttZeitleiste({
               element={z.element}
               zeitraum={pos}
               rechteck={rechteck}
+              zoom={zoom}
               aktiv={zieh?.id === z.element.id}
               verbindenAktiv={verbinden && zieh?.id === z.element.id}
               istZiel={verbinden && zieh?.zielId === z.element.id}
               onZiehStart={(e, art) => onZiehStart(e, z.element.id, art)}
-              onVerbindenStart={(e) => onVerbindenStart(e, z.element.id)}
+              onVerbindenStart={(e, seite) => onVerbindenStart(e, z.element.id, seite)}
               onTaste={(e) => onTaste(e, z.element.id)}
             />
           );
@@ -176,15 +188,15 @@ export function GanttZeitleiste({
         {zieh?.art === "verbinden" && ziehGeo && zieh.zeigerX !== undefined && zieh.zeigerY !== undefined && (
           <g pointerEvents="none">
             <line
-              x1={ziehGeo.rechts}
+              x1={quelleX}
               y1={ziehGeo.cy}
-              x2={zielGeo ? zielGeo.links : zieh.zeigerX}
+              x2={zielGeo ? zielX : zieh.zeigerX}
               y2={zielGeo ? zielGeo.cy : zieh.zeigerY}
               className="stroke-tint"
               strokeWidth={2}
               strokeDasharray={zielGeo ? undefined : "4 3"}
             />
-            <circle cx={zielGeo ? zielGeo.links : zieh.zeigerX} cy={zielGeo ? zielGeo.cy : zieh.zeigerY} r={3.5} className="fill-tint" />
+            <circle cx={zielGeo ? zielX : zieh.zeigerX} cy={zielGeo ? zielGeo.cy : zieh.zeigerY} r={3.5} className="fill-tint" />
           </g>
         )}
 

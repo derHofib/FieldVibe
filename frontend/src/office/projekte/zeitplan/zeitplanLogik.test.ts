@@ -20,8 +20,17 @@ import {
   PX_PRO_TAG,
   rundePfad,
   tagZuX,
+  verbindungsAnker,
+  verbindungsArtBeimZiehen,
   verbindungsPfad,
   verbindungsPunkte,
+  verbindungsPunkteAnfangAnfang,
+  verbindungsPunkteEndeEnde,
+  pfeilZeigtNachLinks,
+  terminAusserhalb,
+  terminLabel,
+  terminTag,
+  balkenRechteck,
   wochentag,
   wuerdeKreisErzeugen,
   xZuTag,
@@ -31,10 +40,10 @@ import {
 } from "./zeitplanLogik";
 
 function el(id: string, typ: ZeitplanElement["typ"], start: string | null, ende: string | null, phase: string | null = null): ZeitplanElement {
-  return { id, typ, titel: id, phase_id: phase, start_am: start, ende_am: ende, fortschritt: 0, plan_reihenfolge: 0, zugewiesen_an: null, zugewiesen_name: null, erledigt: false };
+  return { id, typ, titel: id, phase_id: phase, start_am: start, ende_am: ende, fortschritt: 0, plan_reihenfolge: 0, zugewiesen_an: null, zugewiesen_name: null, erledigt: false, vorgang: null, termine: [], bestellung: null, datum_gesperrt: false, partner: null };
 }
-function dep(v: string, n: string, versatz = 0): ZeitplanAbhaengigkeit {
-  return { id: `${v}>${n}`, vorgaenger_id: v, nachfolger_id: n, art: "ende_anfang", versatz_tage: versatz };
+function dep(v: string, n: string, versatz = 0, art: ZeitplanAbhaengigkeit["art"] = "ende_anfang"): ZeitplanAbhaengigkeit {
+  return { id: `${v}>${n}`, vorgaenger_id: v, nachfolger_id: n, art, versatz_tage: versatz };
 }
 const direkt = (id: string, s: string, e: string) => new Map<string, Aenderung>([[id, { start_am: s, ende_am: e }]]);
 
@@ -332,5 +341,262 @@ describe("Verbindungslinien", () => {
   it("Rundung wird bei kurzen Segmenten begrenzt, doppelte Punkte entfallen", () => {
     const d = rundePfad([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }], 5);
     expect(d).toBe("M 0 0 L 2 0 Q 4 0 4 2 L 4 4");
+  });
+});
+
+describe("Propagation Anfang -> Anfang", () => {
+  // A (12.-14.), B (15.-17.), Dauer jeweils 3
+  const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+  const b = el("B", "schritt", "2026-10-15", "2026-10-17");
+  const aa = (versatz = 0) => dep("A", "B", versatz, "anfang_anfang");
+
+  it("bei_konflikt: Start des Vorgaengers nach hinten schiebt B samt Dauer erst bei Konflikt", () => {
+    // A startet am 16. -> B muss mindestens 16. starten
+    const v = berechneVorschau([a, b], [aa()], "bei_konflikt", direkt("A", "2026-10-16", "2026-10-18"));
+    expect(v.get("B")).toEqual({ start_am: "2026-10-16", ende_am: "2026-10-18" });
+    // A startet am 14. -> B (15.) bleibt, Bedingung erfuellt
+    const ok = berechneVorschau([a, b], [aa()], "bei_konflikt", direkt("A", "2026-10-14", "2026-10-16"));
+    expect(ok.has("B")).toBe(false);
+  });
+
+  it("Ende des Vorgaengers ist egal: nur Dauer-Aenderung laesst B stehen", () => {
+    const v = berechneVorschau([a, b], [aa()], "bei_konflikt", direkt("A", "2026-10-12", "2026-10-25"));
+    expect(v.has("B")).toBe(false);
+  });
+
+  it("Versatz wirkt auf den Start-Bezug", () => {
+    const v = berechneVorschau([a, b], [aa(2)], "bei_konflikt", direkt("A", "2026-10-15", "2026-10-17"));
+    expect(v.get("B")).toEqual({ start_am: "2026-10-17", ende_am: "2026-10-19" });
+  });
+
+  it("immer: B folgt dem Delta des Vorgaenger-STARTS, auch nach vorne", () => {
+    const vor = berechneVorschau([a, b], [aa()], "immer", direkt("A", "2026-10-10", "2026-10-12"));
+    expect(vor.get("B")).toEqual({ start_am: "2026-10-13", ende_am: "2026-10-15" });
+    // Dauer-Aenderung (Start gleich) bewegt B nicht
+    const dauer = berechneVorschau([a, b], [aa()], "immer", direkt("A", "2026-10-12", "2026-10-20"));
+    expect(dauer.has("B")).toBe(false);
+  });
+
+  it("Meilenstein als Nachfolger startet am Vorgaenger-Start + Versatz", () => {
+    const m = el("M", "meilenstein", "2026-10-12", "2026-10-12");
+    const v = berechneVorschau([a, m], [dep("A", "M", 1, "anfang_anfang")], "bei_konflikt", direkt("A", "2026-10-14", "2026-10-16"));
+    expect(v.get("M")).toEqual({ start_am: "2026-10-15", ende_am: "2026-10-15" });
+  });
+});
+
+describe("Propagation Ende -> Ende", () => {
+  const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+  // B endet am 16., Dauer 3
+  const b = el("B", "schritt", "2026-10-14", "2026-10-16");
+  const ee = (versatz = 0) => dep("A", "B", versatz, "ende_ende");
+
+  it("bei_konflikt: Ende von B darf nicht vor dem Ende von A liegen, Dauer bleibt", () => {
+    // A endet am 20. -> B muss spaetestens... fruehestes Ende 20., Start 18.
+    const v = berechneVorschau([a, b], [ee()], "bei_konflikt", direkt("A", "2026-10-12", "2026-10-20"));
+    expect(v.get("B")).toEqual({ start_am: "2026-10-18", ende_am: "2026-10-20" });
+  });
+
+  it("bei_konflikt: Bedingung erfuellt -> B bleibt", () => {
+    const v = berechneVorschau([a, b], [ee()], "bei_konflikt", direkt("A", "2026-10-12", "2026-10-16"));
+    expect(v.has("B")).toBe(false);
+  });
+
+  it("Versatz: Ende B >= Ende A + Versatz", () => {
+    const v = berechneVorschau([a, b], [ee(2)], "bei_konflikt", direkt("A", "2026-10-12", "2026-10-15"));
+    expect(v.get("B")).toEqual({ start_am: "2026-10-15", ende_am: "2026-10-17" });
+    const neg = berechneVorschau([a, b], [ee(-1)], "bei_konflikt", direkt("A", "2026-10-12", "2026-10-17"));
+    expect(neg.has("B")).toBe(false); // 17. - 1 = 16. -> B endet schon am 16.
+  });
+
+  it("immer: B folgt dem Delta des Vorgaenger-ENDES auch nach vorne", () => {
+    const v = berechneVorschau([a, b], [ee()], "immer", direkt("A", "2026-10-12", "2026-10-12"));
+    expect(v.get("B")).toEqual({ start_am: "2026-10-12", ende_am: "2026-10-14" });
+  });
+
+  it("Meilenstein-Nachfolger: Ende = Start, Datum >= Vorgaenger-Ende + Versatz", () => {
+    const m = el("M", "meilenstein", "2026-10-13", "2026-10-13");
+    const v = berechneVorschau([a, m], [dep("A", "M", 0, "ende_ende")], "bei_konflikt", direkt("A", "2026-10-12", "2026-10-18"));
+    expect(v.get("M")).toEqual({ start_am: "2026-10-18", ende_am: "2026-10-18" });
+  });
+});
+
+describe("Gemischte Vorgaenger", () => {
+  it("strengste Bedingung gewinnt (EA, AA, EE auf demselben Nachfolger)", () => {
+    const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+    const c = el("C", "schritt", "2026-10-12", "2026-10-13");
+    const d = el("D", "schritt", "2026-10-12", "2026-10-13");
+    const x = el("X", "schritt", "2026-10-12", "2026-10-14"); // Dauer 3
+    const deps = [dep("A", "X", 0, "ende_anfang"), dep("C", "X", 0, "anfang_anfang"), dep("D", "X", 0, "ende_ende")];
+    // D endet am 22. -> X-Start >= 20; A-Ende 14. -> >= 15; C-Start 12. -> >= 12
+    const v = berechneVorschau([a, c, d, x], deps, "bei_konflikt", direkt("D", "2026-10-21", "2026-10-22"));
+    expect(v.get("X")).toEqual({ start_am: "2026-10-20", ende_am: "2026-10-22" });
+    // Jetzt wird A weit nach hinten geschoben (Ende 30.): EA ist strenger
+    const v2 = berechneVorschau([a, c, d, x], deps, "bei_konflikt", direkt("A", "2026-10-28", "2026-10-30"));
+    expect(v2.get("X")).toEqual({ start_am: "2026-10-31", ende_am: "2026-11-02" });
+  });
+
+  it("Kette ueber verschiedene Arten propagiert", () => {
+    const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+    const b = el("B", "schritt", "2026-10-12", "2026-10-13");
+    const c = el("C", "schritt", "2026-10-12", "2026-10-12");
+    const deps = [dep("A", "B", 0, "anfang_anfang"), dep("B", "C", 0, "ende_ende")];
+    const v = berechneVorschau([a, b, c], deps, "bei_konflikt", direkt("A", "2026-10-20", "2026-10-22"));
+    expect(v.get("B")).toEqual({ start_am: "2026-10-20", ende_am: "2026-10-21" });
+    expect(v.get("C")).toEqual({ start_am: "2026-10-21", ende_am: "2026-10-21" });
+  });
+
+  it("immer: groesstes Delta ueber verschiedene Bezugspunkte", () => {
+    const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+    const c = el("C", "schritt", "2026-10-12", "2026-10-14");
+    const x = el("X", "schritt", "2026-10-15", "2026-10-17");
+    const deps = [dep("A", "X", 0, "anfang_anfang"), dep("C", "X", 0, "ende_anfang")];
+    const direktBeide = new Map<string, Aenderung>([
+      ["A", { start_am: "2026-10-13", ende_am: "2026-10-15" }], // Start-Delta +1
+      ["C", { start_am: "2026-10-12", ende_am: "2026-10-17" }], // Ende-Delta +3
+    ]);
+    const v = berechneVorschau([a, c, x], deps, "immer", direktBeide);
+    expect(v.get("X")).toEqual({ start_am: "2026-10-18", ende_am: "2026-10-20" });
+  });
+
+  it("alte Daten ohne art gelten als Ende -> Anfang", () => {
+    const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+    const b = el("B", "schritt", "2026-10-15", "2026-10-17");
+    const alt = { id: "x", vorgaenger_id: "A", nachfolger_id: "B", versatz_tage: 0 } as unknown as ZeitplanAbhaengigkeit;
+    const v = berechneVorschau([a, b], [alt], "bei_konflikt", direkt("A", "2026-10-14", "2026-10-16"));
+    expect(v.get("B")?.start_am).toBe("2026-10-17");
+  });
+});
+
+describe("Pfade nach Art", () => {
+  it("Anfang -> Anfang: links herum, Pfeil am Anfang des Ziels", () => {
+    const p = verbindungsPunkteAnfangAnfang({ x: 100, y: 18 }, { x: 160, y: 54 });
+    expect(p).toEqual([
+      { x: 100, y: 18 },
+      { x: 92, y: 18 },
+      { x: 92, y: 54 },
+      { x: 160, y: 54 },
+    ]);
+    // Nachfolger weiter links: Umlauf links vom linkeren Anfang
+    const p2 = verbindungsPunkteAnfangAnfang({ x: 100, y: 18 }, { x: 40, y: 54 });
+    expect(p2[1].x).toBe(32);
+    expect(p2[3]).toEqual({ x: 40, y: 54 });
+  });
+
+  it("Ende -> Ende: rechts herum, endet am Ende des Ziels", () => {
+    const p = verbindungsPunkteEndeEnde({ x: 100, y: 18 }, { x: 160, y: 54 });
+    expect(p).toEqual([
+      { x: 100, y: 18 },
+      { x: 168, y: 18 },
+      { x: 168, y: 54 },
+      { x: 160, y: 54 },
+    ]);
+    const p2 = verbindungsPunkteEndeEnde({ x: 200, y: 18 }, { x: 160, y: 54 });
+    expect(p2[1].x).toBe(208);
+  });
+
+  it("verbindungsPfad ohne Art bleibt Ende -> Anfang; Pfade sind NaN-frei", () => {
+    const von = { x: 100, y: 18 };
+    const nach = { x: 160, y: 54 };
+    expect(verbindungsPfad(von, nach)).toBe(verbindungsPfad(von, nach, "ende_anfang"));
+    for (const art of ["ende_anfang", "anfang_anfang", "ende_ende"] as const) {
+      const d = verbindungsPfad(von, nach, art);
+      expect(d.startsWith("M 100 18")).toBe(true);
+      expect(d).not.toMatch(/NaN/);
+    }
+    expect(verbindungsPfad(von, nach, "anfang_anfang").endsWith("L 160 54")).toBe(true);
+    expect(verbindungsPfad(von, nach, "ende_ende").endsWith("L 160 54")).toBe(true);
+  });
+
+  it("Anker: AA links->links, EE rechts->rechts, EA rechts->links; Pfeilrichtung", () => {
+    const v = balkenRechteck("schritt", { start: 10, ende: 12 }, 0, "tag", 0);
+    const n = balkenRechteck("schritt", { start: 20, ende: 22 }, 1, "tag", 0);
+    expect(verbindungsAnker("anfang_anfang", v, n)).toEqual({ von: { x: v.links, y: v.cy }, nach: { x: n.links, y: n.cy } });
+    expect(verbindungsAnker("ende_ende", v, n)).toEqual({ von: { x: v.rechts, y: v.cy }, nach: { x: n.rechts, y: n.cy } });
+    expect(verbindungsAnker("ende_anfang", v, n)).toEqual({ von: { x: v.rechts, y: v.cy }, nach: { x: n.links, y: n.cy } });
+    expect(pfeilZeigtNachLinks("ende_ende")).toBe(true);
+    expect(pfeilZeigtNachLinks("anfang_anfang")).toBe(false);
+  });
+});
+
+describe("Art beim Ziehen", () => {
+  const ziel = balkenRechteck("schritt", { start: 10, ende: 13 }, 1, "tag", 0); // x 320, w 128
+  const mitte = ziel.x + ziel.w / 2;
+
+  it("Ende-Anfasser: linke Haelfte Ende -> Anfang, rechte Haelfte Ende -> Ende", () => {
+    expect(verbindungsArtBeimZiehen("ende", ziel, ziel.x + 5)).toBe("ende_anfang");
+    expect(verbindungsArtBeimZiehen("ende", ziel, mitte)).toBe("ende_anfang");
+    expect(verbindungsArtBeimZiehen("ende", ziel, mitte + 1)).toBe("ende_ende");
+  });
+
+  it("Anfang-Anfasser: nur linke Haelfte gueltig (Anfang -> Anfang)", () => {
+    expect(verbindungsArtBeimZiehen("anfang", ziel, ziel.x + 5)).toBe("anfang_anfang");
+    expect(verbindungsArtBeimZiehen("anfang", ziel, mitte + 10)).toBeNull();
+  });
+});
+
+describe("Dispo-Termine", () => {
+  const t = (start: string) => ({ id: "t", start, ende: null, techniker_name: "Max Berger" });
+
+  it("Tag und Beschriftung aus lokaler Uhrzeit", () => {
+    expect(formatTag(terminTag(t("2026-10-14T08:00:00")))).toBe("2026-10-14");
+    expect(terminLabel(t("2026-10-14T08:00:00"))).toBe("Termin 14.10. 08:00 · Max Berger");
+    expect(terminLabel({ ...t("2026-10-14T08:05:00"), techniker_name: null })).toBe("Termin 14.10. 08:05");
+  });
+
+  it("ausserhalb des Plan-Zeitraums erkannt (Grenzen inklusive)", () => {
+    const z = { start: parseTag("2026-10-12"), ende: parseTag("2026-10-14") };
+    expect(terminAusserhalb(t("2026-10-12T07:00:00"), z)).toBe(false);
+    expect(terminAusserhalb(t("2026-10-14T18:00:00"), z)).toBe(false);
+    expect(terminAusserhalb(t("2026-10-15T08:00:00"), z)).toBe(true);
+    expect(terminAusserhalb(t("2026-10-11T08:00:00"), z)).toBe(true);
+  });
+
+  it("zeitbereich beruecksichtigt Termine ausserhalb der Elemente", () => {
+    const heute = parseTag("2026-10-12");
+    const e = { ...el("A", "schritt", "2026-10-12", "2026-10-14"), termine: [t("2026-12-20T08:00:00")] };
+    const b = zeitbereich([e], heute, 10);
+    expect(b.ursprung + b.anzahlTage).toBeGreaterThan(parseTag("2026-12-20"));
+  });
+});
+
+describe("Gesperrte Elemente (Datum aus Bestellung)", () => {
+  const gesperrt = (id: string, tag: string) => ({ ...el(id, "meilenstein", tag, tag), datum_gesperrt: true });
+
+  it("gesperrter Meilenstein als Nachfolger wird nicht verschoben, sein Nachfolger aber gegen ihn geprueft", () => {
+    const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+    const m = gesperrt("M", "2026-10-15");
+    const x = el("X", "schritt", "2026-10-16", "2026-10-17");
+    const deps = [dep("A", "M"), dep("M", "X")];
+    const v = berechneVorschau([a, m, x], deps, "bei_konflikt", direkt("A", "2026-10-20", "2026-10-22"));
+    expect(v.has("M")).toBe(false);
+    // X liegt (ab M am 15.) weiterhin frueh genug -> bleibt
+    expect(v.has("X")).toBe(false);
+  });
+
+  it("Nachfolger eines gesperrten Meilensteins weicht dessen Datum aus", () => {
+    const m = gesperrt("M", "2026-10-15");
+    const x = el("X", "schritt", "2026-10-15", "2026-10-16");
+    const v = berechneVorschau([m, x], [dep("M", "X")], "bei_konflikt", new Map());
+    // Meilenstein-Vorgaenger: Start X >= 15. + 0, X bleibt
+    expect(v.has("X")).toBe(false);
+    const x2 = el("X", "schritt", "2026-10-14", "2026-10-15");
+    // X vor dem Meilenstein: nur wenn direkt bewegt wird, greift die Pruefung
+    const v2 = berechneVorschau([m, x2], [dep("M", "X")], "bei_konflikt", direkt("X", "2026-10-10", "2026-10-11"));
+    expect(v2.get("X")).toEqual({ start_am: "2026-10-10", ende_am: "2026-10-11" });
+  });
+
+  it("immer-Modus schiebt gesperrte Nachfolger ebenfalls nicht", () => {
+    const a = el("A", "schritt", "2026-10-12", "2026-10-14");
+    const m = gesperrt("M", "2026-10-15");
+    const v = berechneVorschau([a, m], [dep("A", "M")], "immer", direkt("A", "2026-10-10", "2026-10-12"));
+    expect(v.has("M")).toBe(false);
+  });
+
+  it("Phase verschieben laesst gesperrte Kinder stehen", () => {
+    const s1 = el("S", "schritt", "2026-10-12", "2026-10-14", "P");
+    const m = { ...gesperrt("M", "2026-10-15"), phase_id: "P" };
+    const v = phaseVerschieben([s1, m], "P", 3);
+    expect(v.get("S")).toEqual({ start_am: "2026-10-15", ende_am: "2026-10-17" });
+    expect(v.has("M")).toBe(false);
   });
 });

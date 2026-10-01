@@ -1,10 +1,10 @@
-import { ChevronDown, ChevronRight, Gauge, MoreHorizontal, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import { ChevronDown, ChevronRight, Gauge, Info, Link2, MoreHorizontal, Package, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import { useRef } from "react";
 
 import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
 import type { ZeitplanElement, ZeitplanTyp } from "../../../types";
 import { KOPF_HOEHE } from "./GanttZeitleiste";
-import { ZEILEN_HOEHE, type Zeile } from "./zeitplanLogik";
+import { ZEILEN_HOEHE, formatKurz, parseTag, type Zeile } from "./zeitplanLogik";
 
 export const LISTE_BREITE = 280;
 
@@ -62,6 +62,17 @@ function TitelEingabe({
   );
 }
 
+/** Zweite Zeile unter dem Titel: Fremdgewerk bzw. Lieferstand. */
+function zweiteZeile(e: ZeitplanElement): { text: string; warn?: boolean } | null {
+  if (e.typ === "schritt" && e.partner) return { text: `Fremdgewerk · ${e.partner.name}` };
+  if (e.typ === "meilenstein" && e.bestellung) {
+    const lt = e.bestellung.liefertermin;
+    const lieferant = e.bestellung.lieferant_name ? ` · ${e.bestellung.lieferant_name}` : "";
+    return lt ? { text: `Lieferung ${formatKurz(parseTag(lt))}${lieferant}` } : { text: `Liefertermin offen${lieferant}`, warn: true };
+  }
+  return null;
+}
+
 /** Linke Spalte: Phasen als aufklappbare Gruppen, darunter Schritte und
  * Meilensteine; inline anlegen und umbenennen. */
 export function GanttListe({
@@ -76,6 +87,7 @@ export function GanttListe({
   onEntwurfFertig,
   onFortschritt,
   onZuweisen,
+  onDetails,
   onLoeschen,
 }: {
   zeilen: Zeile[];
@@ -89,10 +101,28 @@ export function GanttListe({
   onEntwurfFertig: (typ: ZeitplanTyp, phaseId: string | null, titel: string | null) => void;
   onFortschritt: (e: ZeitplanElement) => void;
   onZuweisen: (e: ZeitplanElement) => void;
+  onDetails: (e: ZeitplanElement) => void;
   onLoeschen: (e: ZeitplanElement) => void;
 }) {
+  // Einfachklick oeffnet die Details; ein Doppelklick (Umbenennen) soll sie
+  // nicht vorher oeffnen -- daher kurz warten und beim zweiten Klick abbrechen.
+  const klickTimer = useRef<number | null>(null);
+  function einfachKlick(e: ZeitplanElement) {
+    if (klickTimer.current !== null) window.clearTimeout(klickTimer.current);
+    klickTimer.current = window.setTimeout(() => {
+      klickTimer.current = null;
+      onDetails(e);
+    }, 220);
+  }
+  function doppelKlick(e: ZeitplanElement) {
+    if (klickTimer.current !== null) window.clearTimeout(klickTimer.current);
+    klickTimer.current = null;
+    onBearbeiteStart(e.id);
+  }
+
   function menue(e: ZeitplanElement): PulldownItem[] {
     return [
+      { label: "Details …", icon: Info, onSelect: () => onDetails(e) },
       { label: "Umbenennen", icon: Pencil, onSelect: () => onBearbeiteStart(e.id) },
       ...(e.typ === "schritt" ? [{ label: "Fortschritt setzen …", icon: Gauge, onSelect: () => onFortschritt(e) }] : []),
       { label: "Zuweisen …", icon: UserPlus, onSelect: () => onZuweisen(e) },
@@ -175,15 +205,28 @@ export function GanttListe({
                 onAbbruch={onBearbeiteEnde}
               />
             ) : (
-              <span
-                onDoubleClick={() => onBearbeiteStart(e.id)}
-                title={e.titel}
-                className={`min-w-0 flex-1 truncate text-[13px] ${istPhase ? "font-semibold" : ""} ${
-                  e.erledigt ? "text-label2 line-through" : "text-label"
-                }`}
+              <button
+                type="button"
+                onClick={() => einfachKlick(e)}
+                onDoubleClick={() => doppelKlick(e)}
+                title={`${e.titel} – Details öffnen`}
+                className="flex min-w-0 flex-1 flex-col items-start text-left"
               >
-                {e.titel}
-              </span>
+                <span
+                  className={`flex w-full min-w-0 items-center gap-1 text-[13px] leading-[16px] ${istPhase ? "font-semibold" : ""} ${
+                    e.erledigt ? "text-label2 line-through" : "text-label"
+                  }`}
+                >
+                  <span className="truncate">{e.titel}</span>
+                  {e.vorgang && <Link2 size={12} strokeWidth={2} className="shrink-0 text-label2" aria-label={`Vorgang ${e.vorgang.vorgangsnummer} verknüpft`} role="img" />}
+                  {e.bestellung && <Package size={12} strokeWidth={2} className="shrink-0 text-label2" aria-label={`Bestellung ${e.bestellung.bestellnummer} verknüpft`} role="img" />}
+                </span>
+                {zweiteZeile(e) && (
+                  <span className={`block w-full truncate text-[11px] leading-[12px] ${zweiteZeile(e)!.warn ? "text-st-arbeit" : "text-label2"}`}>
+                    {zweiteZeile(e)!.text}
+                  </span>
+                )}
+              </button>
             )}
 
             {e.zugewiesen_name && <Initialen name={e.zugewiesen_name} />}

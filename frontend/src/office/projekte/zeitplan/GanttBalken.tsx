@@ -1,13 +1,46 @@
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent as ReactKeyboardEvent } from "react";
 
+import { Package } from "lucide-react";
+
+import { VORGANG_STATUS_LABEL, vorgangStatusZuToken } from "../../../components/apple/status";
+import type { StatusKey } from "../../../components/apple/status";
 import type { ZeitplanElement } from "../../../types";
-import { formatBereich, formatKurz, formatTag, type BalkenRechteck, type Zeitraum, type ZiehArt } from "./zeitplanLogik";
+import {
+  PX_PRO_TAG,
+  formatBereich,
+  formatKurz,
+  formatTag,
+  terminAusserhalb,
+  terminLabel,
+  terminTag,
+  type BalkenRechteck,
+  type Zeitraum,
+  type Zoom,
+  type ZiehArt,
+} from "./zeitplanLogik";
+
+// Volle Klassennamen (kein String-Bau), damit Tailwind sie beim Scannen findet.
+const DOT_FUELLUNG: Record<StatusKey, string> = {
+  neu: "fill-st-neu-dot",
+  geplant: "fill-st-geplant-dot",
+  arbeit: "fill-st-arbeit-dot",
+  fehlt: "fill-st-fehlt-dot",
+  erledigt: "fill-st-erledigt-dot",
+  wartet: "fill-st-wartet-dot",
+};
+
+export const PARTNER_STREIFEN_ID = "gantt-partner-streifen";
 
 const TYP_LABEL = { phase: "Phase", schritt: "Schritt", meilenstein: "Meilenstein" } as const;
 
 export function balkenBeschreibung(e: ZeitplanElement, z: Zeitraum): string {
   const bereich = e.typ === "meilenstein" ? formatKurz(z.start) : formatBereich(formatTag(z.start), formatTag(z.ende));
-  return `${TYP_LABEL[e.typ]} ${e.titel}, ${bereich}${e.erledigt ? ", erledigt" : ""}`;
+  const extra = [
+    e.vorgang ? `Vorgang ${e.vorgang.vorgangsnummer}` : null,
+    e.partner ? `Fremdgewerk ${e.partner.name}` : null,
+    e.bestellung ? `Lieferung ${e.bestellung.bestellnummer}` : null,
+  ].filter(Boolean);
+  return `${e.bestellung ? "Lieferung" : TYP_LABEL[e.typ]} ${e.titel}, ${bereich}${e.erledigt ? ", erledigt" : ""}${extra.length ? `, ${extra.join(", ")}` : ""}`;
 }
 
 /** Ein Balken (Schritt), Sammelbalken (Phase) oder eine Raute (Meilenstein)
@@ -18,6 +51,7 @@ export function GanttBalken({
   element,
   zeitraum,
   rechteck,
+  zoom,
   aktiv,
   verbindenAktiv,
   istZiel,
@@ -28,24 +62,41 @@ export function GanttBalken({
   element: ZeitplanElement;
   zeitraum: Zeitraum;
   rechteck: BalkenRechteck;
+  zoom: Zoom;
   aktiv: boolean;
   verbindenAktiv: boolean;
   istZiel: boolean;
   onZiehStart: (e: ReactPointerEvent, art: ZiehArt) => void;
-  onVerbindenStart: (e: ReactPointerEvent) => void;
+  onVerbindenStart: (e: ReactPointerEvent, seite: "anfang" | "ende") => void;
   onTaste: (e: ReactKeyboardEvent) => void;
 }) {
-  const { x, y, w, h, cy, rechts } = rechteck;
+  const { x, y, w, h, cy, rechts, links } = rechteck;
   const istPhase = element.typ === "phase";
   const istMeilenstein = element.typ === "meilenstein";
   const fortschritt = Math.min(100, Math.max(0, element.fortschritt));
   const clipId = `gantt-clip-${element.id}`;
+  const istPartner = element.typ === "schritt" && !!element.partner;
+  const istLieferung = istMeilenstein && !!element.bestellung;
+  const gesperrt = element.datum_gesperrt;
+  const sperrText = gesperrt && element.bestellung ? `Datum aus Bestellung ${element.bestellung.bestellnummer} (Liefertermin)` : null;
+  const vorgangDot = element.typ === "schritt" && element.vorgang && w >= 28 ? vorgangStatusZuToken(element.vorgang.status) : null;
+  const titelVersatz = vorgangDot ? 14 : 0;
 
   // Titel im Balken, wenn er (grob geschaetzt, 6.3 px je Zeichen bei 11 px) hineinpasst.
-  const titelBreite = element.titel.length * 6.3 + 14;
+  const titelBreite = element.titel.length * 6.3 + 14 + titelVersatz;
   const imBalken = element.typ === "schritt" && w >= titelBreite;
   const titelDaneben = !imBalken;
   const labelX = rechts + (istMeilenstein || istPhase ? 14 : 16);
+  const px = PX_PRO_TAG[zoom];
+  const ziehCursor = gesperrt ? "cursor-not-allowed" : "cursor-grab";
+  const ziehStart = (e: ReactPointerEvent, art: ZiehArt) => {
+    if (gesperrt) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onZiehStart(e, art);
+  };
 
   return (
     <g
@@ -53,8 +104,12 @@ export function GanttBalken({
       role="button"
       tabIndex={0}
       aria-label={balkenBeschreibung(element, zeitraum)}
-      aria-description="Pfeiltasten links und rechts verschieben um einen Tag, mit Umschalt um eine Woche, mit Umschalt und Alt wird die Dauer geändert."
-      onKeyDown={onTaste}
+      aria-description={
+        gesperrt
+          ? "Das Datum kommt aus dem Liefertermin der Bestellung und kann hier nicht verschoben werden."
+          : "Pfeiltasten links und rechts verschieben um einen Tag, mit Umschalt um eine Woche, mit Umschalt und Alt wird die Dauer geändert."
+      }
+      onKeyDown={gesperrt ? undefined : onTaste}
       opacity={element.erledigt ? 0.55 : 1}
       style={{ touchAction: "none" }}
     >
@@ -79,17 +134,33 @@ export function GanttBalken({
             height={7}
             rx={2}
             className="cursor-grab fill-tone-indigo"
-            onPointerDown={(e) => onZiehStart(e, "verschieben")}
+            onPointerDown={(e) => ziehStart(e, "verschieben")}
           />
           <polygon points={`${x},${cy + 1} ${x + 8},${cy + 1} ${x},${cy + 8}`} className="fill-tone-indigo" pointerEvents="none" />
           <polygon points={`${x + w},${cy + 1} ${x + w - 8},${cy + 1} ${x + w},${cy + 8}`} className="fill-tone-indigo" pointerEvents="none" />
         </>
+      ) : istLieferung ? (
+        <>
+          <rect
+            x={x}
+            y={y}
+            width={w}
+            height={h}
+            rx={4}
+            className={`${ziehCursor} ${istZiel ? "fill-tone-amber stroke-tint" : "fill-tone-amber"}`}
+            strokeWidth={istZiel ? 2 : 0}
+            onPointerDown={(e) => ziehStart(e, "verschieben")}
+          >
+            {sperrText && <title>{sperrText}</title>}
+          </rect>
+          <Package x={x + 3} y={y + 3} width={h - 6} height={h - 6} strokeWidth={2.2} color="#1c1c1e" pointerEvents="none" aria-hidden="true" />
+        </>
       ) : istMeilenstein ? (
         <polygon
           points={`${x + w / 2},${y} ${x + w},${cy} ${x + w / 2},${y + h} ${x},${cy}`}
-          className={`cursor-grab ${istZiel ? "fill-tone-amber stroke-tint" : "fill-tone-amber"}`}
+          className={`${ziehCursor} ${istZiel ? "fill-tone-amber stroke-tint" : "fill-tone-amber"}`}
           strokeWidth={istZiel ? 2 : 0}
-          onPointerDown={(e) => onZiehStart(e, "verschieben")}
+          onPointerDown={(e) => ziehStart(e, "verschieben")}
         />
       ) : (
         <>
@@ -102,15 +173,27 @@ export function GanttBalken({
             width={w}
             height={h}
             rx={6}
-            className={`cursor-grab fill-tint-solid ${istZiel ? "stroke-label" : ""}`}
+            className={`cursor-grab ${istPartner ? "fill-tone-violet" : "fill-tint-solid"} ${istZiel ? "stroke-label" : ""}`}
             strokeWidth={istZiel ? 2 : 0}
             onPointerDown={(e) => onZiehStart(e, "verschieben")}
           />
+          {istPartner && (
+            <>
+              {/* Abdunkeln fuer Kontrast zu weissem Text, Streifen als Nicht-Farb-Merkmal. */}
+              <rect x={x} y={y} width={w} height={h} fill="#000" fillOpacity={0.14} clipPath={`url(#${clipId})`} pointerEvents="none" />
+              <rect x={x} y={y} width={w} height={h} fill={`url(#${PARTNER_STREIFEN_ID})`} clipPath={`url(#${clipId})`} pointerEvents="none" />
+            </>
+          )}
           {fortschritt > 0 && (
             <rect x={x} y={y} width={(w * fortschritt) / 100} height={h} fill="#000" fillOpacity={0.28} clipPath={`url(#${clipId})`} pointerEvents="none" />
           )}
+          {vorgangDot && element.vorgang && (
+            <circle cx={x + 10} cy={cy} r={4.5} strokeWidth={1.5} className={`${DOT_FUELLUNG[vorgangDot]} stroke-white`} pointerEvents="all">
+              <title>{`Vorgang ${element.vorgang.vorgangsnummer} · ${element.vorgang.titel} (${VORGANG_STATUS_LABEL[element.vorgang.status]})`}</title>
+            </circle>
+          )}
           {imBalken && (
-            <text x={x + 8} y={cy + 4} fontSize={11} fontWeight={600} className="fill-white" pointerEvents="none">
+            <text x={x + 8 + titelVersatz} y={cy + 4} fontSize={11} fontWeight={600} className="fill-white" pointerEvents="none">
               {element.erledigt ? "✓ " : ""}
               {element.titel}
             </text>
@@ -142,19 +225,51 @@ export function GanttBalken({
         </text>
       )}
 
+      {element.typ === "schritt" &&
+        element.termine.map((t) => {
+          const aus = terminAusserhalb(t, zeitraum);
+          const tx = x + (terminTag(t) - zeitraum.start) * px + px / 2;
+          return (
+            <circle
+              key={t.id}
+              cx={tx}
+              cy={cy + h / 2}
+              r={3.5}
+              strokeWidth={1.5}
+              className={aus ? "fill-st-fehlt-dot stroke-card" : "fill-card stroke-label"}
+            >
+              <title>{`${terminLabel(t)}${aus ? " – liegt außerhalb des Plans" : ""}`}</title>
+            </circle>
+          );
+        })}
+
       {!istPhase && (
-        <circle
-          cx={rechts + 5}
-          cy={cy}
-          r={5}
-          strokeWidth={2}
-          className={`cursor-crosshair fill-card stroke-tint ${
-            verbindenAktiv || aktiv ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-          }`}
-          onPointerDown={onVerbindenStart}
-        >
-          <title>Zum Verbinden auf einen anderen Schritt oder Meilenstein ziehen</title>
-        </circle>
+        <>
+          <circle
+            cx={links - 5}
+            cy={cy}
+            r={4}
+            strokeWidth={2}
+            className={`cursor-crosshair fill-card stroke-tint ${
+              verbindenAktiv || aktiv ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+            }`}
+            onPointerDown={(e) => onVerbindenStart(e, "anfang")}
+          >
+            <title>Vom Anfang ziehen: Anfang → Anfang (auf den Anfang des Ziels)</title>
+          </circle>
+          <circle
+            cx={rechts + 5}
+            cy={cy}
+            r={5}
+            strokeWidth={2}
+            className={`cursor-crosshair fill-card stroke-tint ${
+              verbindenAktiv || aktiv ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+            }`}
+            onPointerDown={(e) => onVerbindenStart(e, "ende")}
+          >
+            <title>Vom Ende ziehen: Ende → Anfang (linke Hälfte des Ziels) oder Ende → Ende (rechte Hälfte)</title>
+          </circle>
+        </>
       )}
     </g>
   );

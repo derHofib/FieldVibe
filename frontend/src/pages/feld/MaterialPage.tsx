@@ -8,6 +8,7 @@ import { angeboteApi, anlagenApi, bestellungenApi, lieferantenApi, materialApi, 
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
+import { formatDatum } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
 import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBedarfZweck, Tag } from "../../types";
 
@@ -338,6 +339,7 @@ export function MaterialPage() {
   const [bedarfZweck, setBedarfZweck] = useState<MaterialBedarfZweck>("bestellung");
   const [ausgewaehlteBedarfe, setAusgewaehlteBedarfe] = useState<Set<string>>(new Set());
   const [bestellLieferantId, setBestellLieferantId] = useState("");
+  const [bestellLiefertermin, setBestellLiefertermin] = useState("");
   const [showLieferantForm, setShowLieferantForm] = useState(false);
   const [lieferantName, setLieferantName] = useState("");
   const [lieferantEmail, setLieferantEmail] = useState("");
@@ -403,11 +405,13 @@ export function MaterialPage() {
 
   const bestellungErstellenMutation = useMutation({
     mutationFn: () =>
-      bestellungenApi.createFromBedarfe(Array.from(ausgewaehlteBedarfe), bestellLieferantId || undefined),
+      bestellungenApi.createFromBedarfe(Array.from(ausgewaehlteBedarfe), bestellLieferantId || undefined, undefined, bestellLiefertermin || undefined),
     onSuccess: (bestellung) => {
       setAusgewaehlteBedarfe(new Set());
+      setBestellLiefertermin("");
       queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "offen", "bestellung"] });
       queryClient.invalidateQueries({ queryKey: ["bestellungen"] });
+      queryClient.invalidateQueries({ queryKey: ["projekt-zeitplan"] });
       navigate(`/bestellungen/${bestellung.id}`);
     },
   });
@@ -797,6 +801,15 @@ export function MaterialPage() {
                     </option>
                   ))}
                 </select>
+                <label className="flex items-center justify-between gap-2 text-sm text-label2">
+                  Liefertermin (optional)
+                  <input
+                    type="date"
+                    value={bestellLiefertermin}
+                    onChange={(e) => setBestellLiefertermin(e.target.value)}
+                    className="rounded-[var(--radius-ap-input)] border border-sep bg-card px-2 py-1 text-sm text-label"
+                  />
+                </label>
                 <button
                   disabled={bestellungErstellenMutation.isPending}
                   onClick={() => bestellungErstellenMutation.mutate()}
@@ -831,7 +844,10 @@ export function MaterialPage() {
                     onClick={() => navigate(`/bestellungen/${b.id}`)}
                     className="card-interactive btn-touch flex w-full items-center justify-between rounded-md bg-fill px-2 py-1.5 text-left text-sm"
                   >
-                    <span className="text-label">{b.bestellnummer}</span>
+                    <span className="min-w-0 text-label">
+                      {b.bestellnummer}
+                      {b.liefertermin && <span className="ml-1.5 text-xs text-label2">Lieferung {formatDatum(b.liefertermin)}</span>}
+                    </span>
                     <span className="border border-sep px-2 py-0.5 text-xs text-label">
                       {BESTELLUNG_STATUS_LABEL[b.status]}
                     </span>

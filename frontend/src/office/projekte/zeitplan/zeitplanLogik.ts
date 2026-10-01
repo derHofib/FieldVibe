@@ -1,4 +1,4 @@
-import type { ZeitplanAbhaengigkeit, ZeitplanElement, ZeitplanTyp, ZeitplanVerschiebeModus } from "../../../types";
+import type { ZeitplanAbhaengigkeit, ZeitplanAbhaengigkeitArt, ZeitplanElement, ZeitplanTermin, ZeitplanTyp, ZeitplanVerschiebeModus } from "../../../types";
 
 // Reine Logik des Gantt-Zeitplans. Alles wird in KALENDERTAGEN gerechnet:
 // ein Datum "YYYY-MM-DD" ist hier eine ganze Zahl (Tage seit 1970-01-01,
@@ -119,6 +119,11 @@ export function zeitbereich(elemente: ZeitplanElement[], heute: number, minTage 
     if (e.start_am) min = Math.min(min, parseTag(e.start_am));
     if (e.ende_am) max = Math.max(max, parseTag(e.ende_am));
     else if (e.start_am) max = Math.max(max, parseTag(e.start_am));
+    for (const t of e.termine ?? []) {
+      const tag = terminTag(t);
+      min = Math.min(min, tag);
+      max = Math.max(max, tag);
+    }
   }
   const ursprung = montagVon(min - 7);
   let ende = montagVon(max + 21) + 7;
@@ -235,11 +240,12 @@ export function elementAenderung(e: ZeitplanElement, art: ZiehArt, delta: number
   return { start_am: formatTag(z.start), ende_am: formatTag(Math.max(z.start, z.ende + delta)) };
 }
 
-/** Phase verschieben = alle datierten Kinder um dasselbe Delta. */
+/** Phase verschieben = alle datierten, nicht gesperrten Kinder um dasselbe Delta. */
 export function phaseVerschieben(elemente: ZeitplanElement[], phaseId: string, delta: number): Map<string, Aenderung> {
   const out = new Map<string, Aenderung>();
   for (const e of elemente) {
-    if (e.phase_id !== phaseId || e.typ === "phase") continue;
+    // Gesperrte Meilensteine (Datum aus Bestellung) bleiben stehen -- wie im Backend.
+    if (e.phase_id !== phaseId || e.typ === "phase" || e.datum_gesperrt) continue;
     const a = elementAenderung(e, "verschieben", delta);
     if (a) out.set(e.id, a);
   }
@@ -248,8 +254,24 @@ export function phaseVerschieben(elemente: ZeitplanElement[], phaseId: string, d
 
 // --- Abhaengigkeiten: Vorschau-Propagation ------------------------------------
 
-function fruehesterStart(vorgaenger: Zeitraum, vorgaengerTyp: ZeitplanTyp, versatz: number): number {
+/** Frueheste Startposition des Nachfolgers laut einer Verbindung. Bei
+ * Ende -> Ende bestimmt das Ende die Grenze, der Start folgt aus der Dauer. */
+function fruehesterStart(
+  vorgaenger: Zeitraum,
+  vorgaengerTyp: ZeitplanTyp,
+  art: ZeitplanAbhaengigkeitArt,
+  versatz: number,
+  dauerNachfolger: number,
+): number {
+  if (art === "anfang_anfang") return vorgaenger.start + versatz;
+  if (art === "ende_ende") return vorgaenger.ende + versatz - dauerNachfolger;
   return vorgaengerTyp === "meilenstein" ? vorgaenger.start + versatz : vorgaenger.ende + 1 + versatz;
+}
+
+/** Bezugspunkt des Vorgaengers fuer den Modus "immer": Start bei
+ * Anfang -> Anfang, sonst Ende. */
+function bezugspunkt(z: Zeitraum, art: ZeitplanAbhaengigkeitArt): number {
+  return art === "anfang_anfang" ? z.start : z.ende;
 }
 
 /** Live-Vorschau beim Ziehen -- spiegelt die Fachregeln des Backends (das
@@ -258,7 +280,8 @@ function fruehesterStart(vorgaenger: Zeitraum, vorgaengerTyp: ZeitplanTyp, versa
  *  - bei_konflikt: Nachfolger nur nach hinten schieben, wenn er sonst vor
  *    dem fruehesten Start laege (Dauer bleibt).
  *  - immer: Nachfolger um dasselbe Delta wie das Ende des Vorgaengers
- *    (auch nach vorne), danach Konfliktregel.
+ *    (bei Anfang -> Anfang: dessen Start; auch nach vorne), danach Konfliktregel.
+ *  - datum_gesperrt-Elemente bleiben fix (auch als Nachfolger).
  *  - Mehrere Vorgaenger: Maximum der fruehesten Starts; im Modus "immer"
  *    das groesste Delta der bewegten Vorgaenger. */
 export function berechneVorschau(
@@ -276,6 +299,8 @@ export function berechneVorschau(
   }
   const pos = new Map(alt);
   const fix = new Set<string>();
+  // Gesperrte Elemente werden nie verschoben, ihre Nachfolger aber weiter gegen sie geprueft.
+  const gesperrt = new Set(elemente.filter((e) => e.datum_gesperrt).map((e) => e.id));
   for (const [id, a] of direkt) {
     if (typ.get(id) === undefined || typ.get(id) === "phase") continue;
     pos.set(id, { start: parseTag(a.start_am), ende: typ.get(id) === "meilenstein" ? parseTag(a.start_am) : parseTag(a.ende_am) });
@@ -312,7 +337,7 @@ export function berechneVorschau(
   const bereit = [...betroffen].filter((id) => eingang.get(id) === 0);
   while (bereit.length) {
     const n = bereit.shift()!;
-    if (!fix.has(n)) {
+    if (!fix.has(n) && !gesperrt.has(n)) {
       const eigen = pos.get(n)!;
       const dauer = eigen.ende - eigen.start;
       let start = eigen.start;
@@ -321,13 +346,13 @@ export function berechneVorschau(
         for (const d of vorgaenger.get(n) ?? []) {
           const neu = pos.get(d.vorgaenger_id)!;
           const vorher = alt.get(d.vorgaenger_id)!;
-          const dd = neu.ende - vorher.ende;
+          const dd = bezugspunkt(neu, d.art) - bezugspunkt(vorher, d.art);
           if (dd !== 0) delta = delta === null ? dd : Math.max(delta, dd);
         }
         if (delta !== null) start += delta;
       }
       for (const d of vorgaenger.get(n) ?? []) {
-        const frueh = fruehesterStart(pos.get(d.vorgaenger_id)!, typ.get(d.vorgaenger_id)!, d.versatz_tage);
+        const frueh = fruehesterStart(pos.get(d.vorgaenger_id)!, typ.get(d.vorgaenger_id)!, d.art ?? "ende_anfang", d.versatz_tage, dauer);
         if (start < frueh) start = frueh;
       }
       pos.set(n, { start, ende: start + dauer });
@@ -437,6 +462,35 @@ export function verbindungsPunkte(von: Punkt, nach: Punkt, zeilenHoehe = ZEILEN_
   ];
 }
 
+/** Anfang -> Anfang: beide Linienenden liegen links an den Balken, die Linie
+ * laeuft links herum (einen Abstand links vom linkeren Balkenanfang) und
+ * kommt von links in den Nachfolger -- Pfeil zeigt nach rechts. */
+export function verbindungsPunkteAnfangAnfang(von: Punkt, nach: Punkt, abstand = 8): Punkt[] {
+  const xm = Math.min(von.x, nach.x) - abstand;
+  return [von, { x: xm, y: von.y }, { x: xm, y: nach.y }, nach];
+}
+
+/** Ende -> Ende: beide Enden liegen rechts, die Linie laeuft rechts herum
+ * und kommt von rechts in den Nachfolger -- Pfeil zeigt nach links. */
+export function verbindungsPunkteEndeEnde(von: Punkt, nach: Punkt, abstand = 8): Punkt[] {
+  const xm = Math.max(von.x, nach.x) + abstand;
+  return [von, { x: xm, y: von.y }, { x: xm, y: nach.y }, nach];
+}
+
+/** Anschlusspunkte einer Verbindung je Art: Ende/Anfang des Vorgaengers
+ * (EA, EE: rechts; AA: links) und Ziel am Nachfolger (EE: rechts, sonst links). */
+export function verbindungsAnker(art: ZeitplanAbhaengigkeitArt, v: BalkenRechteck, n: BalkenRechteck): { von: Punkt; nach: Punkt } {
+  return {
+    von: { x: art === "anfang_anfang" ? v.links : v.rechts, y: v.cy },
+    nach: { x: art === "ende_ende" ? n.rechts : n.links, y: n.cy },
+  };
+}
+
+/** Pfeilspitze am Ziel: bei Ende -> Ende von rechts kommend (zeigt nach links). */
+export function pfeilZeigtNachLinks(art: ZeitplanAbhaengigkeitArt): boolean {
+  return art === "ende_ende";
+}
+
 /** Polylinie mit kleinen Quadratik-Rundungen an den Ecken als SVG-Pfad. */
 export function rundePfad(punkte: Punkt[], radius = 5): string {
   const p = punkte.filter((q, i) => i === 0 || q.x !== punkte[i - 1].x || q.y !== punkte[i - 1].y);
@@ -458,8 +512,53 @@ export function rundePfad(punkte: Punkt[], radius = 5): string {
   return d;
 }
 
-export function verbindungsPfad(von: Punkt, nach: Punkt): string {
+export function verbindungsPfad(von: Punkt, nach: Punkt, art: ZeitplanAbhaengigkeitArt = "ende_anfang"): string {
+  if (art === "anfang_anfang") return rundePfad(verbindungsPunkteAnfangAnfang(von, nach));
+  if (art === "ende_ende") return rundePfad(verbindungsPunkteEndeEnde(von, nach));
   return rundePfad(verbindungsPunkte(von, nach));
+}
+
+// --- Verbindungsarten / Ziehen -------------------------------------------------------
+
+export const ART_LABEL: Record<ZeitplanAbhaengigkeitArt, string> = {
+  ende_anfang: "Ende → Anfang",
+  anfang_anfang: "Anfang → Anfang",
+  ende_ende: "Ende → Ende",
+};
+
+export const ART_ERKLAERUNG: Record<ZeitplanAbhaengigkeitArt, string> = {
+  ende_anfang: "Nachfolger startet nach dem Ende des Vorgängers",
+  anfang_anfang: "Nachfolger startet frühestens mit dem Vorgänger",
+  ende_ende: "Nachfolger endet frühestens mit dem Vorgänger",
+};
+
+/** Welche Art entsteht beim Ziehen? Vom Ende-Anfasser: linke Haelfte des
+ * Ziels -> Ende -> Anfang, rechte Haelfte -> Ende -> Ende. Vom Anfang-
+ * Anfasser: nur auf den Anfang (linke Haelfte) -> Anfang -> Anfang; Anfang ->
+ * Ende gibt es nicht (null). */
+export function verbindungsArtBeimZiehen(seite: "anfang" | "ende", ziel: BalkenRechteck, x: number): ZeitplanAbhaengigkeitArt | null {
+  const rechteHaelfte = x > ziel.x + ziel.w / 2;
+  if (seite === "anfang") return rechteHaelfte ? null : "anfang_anfang";
+  return rechteHaelfte ? "ende_ende" : "ende_anfang";
+}
+
+// --- Dispo-Termine ---------------------------------------------------------------------
+
+/** Kalendertag (lokale Uhr) eines Termin-Zeitstempels. */
+export function terminTag(t: ZeitplanTermin): number {
+  return heuteTag(new Date(t.start));
+}
+
+export function terminLabel(t: ZeitplanTermin): string {
+  const d = new Date(t.start);
+  const zeit = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `Termin ${formatKurz(terminTag(t))} ${zeit}${t.techniker_name ? ` · ${t.techniker_name}` : ""}`;
+}
+
+/** Termin ausserhalb des Plan-Zeitraums des Schritts (Termin passt nicht zum Plan). */
+export function terminAusserhalb(t: ZeitplanTermin, z: Zeitraum): boolean {
+  const tag = terminTag(t);
+  return tag < z.start || tag > z.ende;
 }
 
 // --- Standardwerte beim Anlegen ------------------------------------------------------
