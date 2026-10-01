@@ -2025,6 +2025,57 @@ export interface Projekt {
   updated_at: string;
 }
 
+export type ZeitplanTyp = "phase" | "schritt" | "meilenstein";
+export type ZeitplanVerschiebeModus = "bei_konflikt" | "immer";
+
+export interface ZeitplanElement {
+  id: string;
+  typ: ZeitplanTyp;
+  titel: string;
+  phase_id: string | null;
+  start_am: string | null;
+  ende_am: string | null;
+  fortschritt: number;
+  plan_reihenfolge: number;
+  zugewiesen_an: string | null;
+  zugewiesen_name: string | null;
+  erledigt: boolean;
+}
+
+export interface ZeitplanAbhaengigkeit {
+  id: string;
+  vorgaenger_id: string;
+  nachfolger_id: string;
+  art: "ende_anfang";
+  versatz_tage: number;
+}
+
+export interface Zeitplan {
+  projekt_id: string;
+  verschiebe_modus: ZeitplanVerschiebeModus;
+  elemente: ZeitplanElement[];
+  abhaengigkeiten: ZeitplanAbhaengigkeit[];
+}
+
+export interface ZeitplanElementCreate {
+  typ: ZeitplanTyp;
+  titel: string;
+  phase_id?: string | null;
+  start_am?: string | null;
+  ende_am?: string | null;
+  zugewiesen_an?: string | null;
+}
+
+export interface ZeitplanElementUpdate {
+  titel?: string;
+  start_am?: string | null;
+  ende_am?: string | null;
+  fortschritt?: number;
+  phase_id?: string | null;
+  plan_reihenfolge?: number;
+  zugewiesen_an?: string | null;
+}
+
 export type AuftragStatus = "offen" | "in_arbeit" | "abgeschlossen" | "storniert";
 
 export interface Auftrag {

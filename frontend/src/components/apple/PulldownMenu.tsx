@@ -60,6 +60,7 @@ export function PulldownMenu({
     const aktuell = itemRefs.current.findIndex((el) => el === document.activeElement);
     if (e.key === "Escape") {
       e.preventDefault();
+      e.stopPropagation(); // Esc im Menue soll ein umgebendes Seitenpanel nicht mitschliessen
       schliessen(true);
     } else if (e.key === "ArrowDown") {
       e.preventDefault();

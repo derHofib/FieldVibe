@@ -159,6 +159,10 @@ import type {
   ZeiterfassungKategorie,
   ZeiterfassungStatistik,
   ZeiterfassungSummenNachStatus,
+  Zeitplan,
+  ZeitplanElementCreate,
+  ZeitplanElementUpdate,
+  ZeitplanVerschiebeModus,
 } from "../types";
 
 export const authApi = {
@@ -1693,6 +1697,41 @@ export const projekteApi = {
     }),
   removeSpalte: (projektId: string, spalteId: string) =>
     apiFetch<void>(`/api/projekte/${projektId}/spalten/${spalteId}`, { method: "DELETE" }),
+};
+
+// Gantt-Zeitplan eines Projekts: jeder mutierende Aufruf liefert den kompletten
+// Zeitplan zurueck (das Backend verschiebt abhaengige Elemente selbst).
+export const zeitplanApi = {
+  get: (projektId: string) => apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan`),
+  createElement: (projektId: string, body: ZeitplanElementCreate) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente`, { method: "POST", body: JSON.stringify(body) }),
+  updateElement: (projektId: string, elementId: string, body: ZeitplanElementUpdate) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente/${elementId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeElement: (projektId: string, elementId: string) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente/${elementId}`, { method: "DELETE" }),
+  createAbhaengigkeit: (
+    projektId: string,
+    body: { vorgaenger_id: string; nachfolger_id: string; versatz_tage?: number },
+  ) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateAbhaengigkeit: (projektId: string, depId: string, body: { versatz_tage: number }) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten/${depId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  removeAbhaengigkeit: (projektId: string, depId: string) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/abhaengigkeiten/${depId}`, { method: "DELETE" }),
+  updateEinstellungen: (projektId: string, body: { verschiebe_modus: ZeitplanVerschiebeModus }) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/einstellungen`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 };
 
 export const auftraegeApi = {

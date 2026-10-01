@@ -30,12 +30,15 @@ export function SeitenPanel({
   onClose,
   titel,
   aktionen,
+  minBreite,
   children,
 }: {
   offen: boolean;
   onClose: () => void;
   titel: string;
   aktionen?: ReactNode;
+  /** Mindestbreite in px (z. B. Gantt-Tab); gewinnt gegen die gemerkte Breite, nicht gegen den Viewport (max-w-full). */
+  minBreite?: number;
   children: ReactNode;
 }) {
   const [breite, setBreite] = useState(gespeicherteBreite);
@@ -89,7 +92,7 @@ export function SeitenPanel({
         aria-modal="true"
         aria-label={titel}
         onClick={(e) => e.stopPropagation()}
-        style={{ width: breite }}
+        style={{ width: Math.max(breite, minBreite ?? 0) }}
         className="ap-sheet-surface relative flex h-full max-w-full flex-col bg-gbg shadow-xl"
       >
         {/* Ziehgriff: 6px breiter Hit-Bereich am linken Rand, damit er auch

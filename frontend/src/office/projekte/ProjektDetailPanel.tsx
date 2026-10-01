@@ -15,6 +15,7 @@ import type { Projekt, Zeiterfassung } from "../../types";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../utils/zeiterfassung";
 import { KennzahlKarte } from "../OfficeUi";
+import { ZeitplanTab } from "./zeitplan/ZeitplanTab";
 
 // Fuer den Termine-Wochenkalender -- gleiche Rechenlogik wie in
 // VorgangDetailPage.tsx (dort Kommentar zu WOCHENTAGE) und
@@ -39,11 +40,12 @@ function tagesSchluessel(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-const TABS: { key: "uebersicht" | "zeit" | "termine" | "positionen"; label: string }[] = [
+const TABS: { key: "uebersicht" | "zeit" | "termine" | "positionen" | "zeitplan"; label: string }[] = [
   { key: "uebersicht", label: "Übersicht" },
   { key: "zeit", label: "Zeit" },
   { key: "termine", label: "Termine" },
   { key: "positionen", label: "Positionen" },
+  { key: "zeitplan", label: "Zeitplan" },
 ];
 
 /** Detailinhalt fuer das rechte SeitenPanel -- echte Tabs (role="tablist",
@@ -128,6 +130,7 @@ export function ProjektDetailPanel({
       offen
       titel={aktuell?.name ?? projekt.name}
       onClose={onClose}
+      minBreite={tab === "zeitplan" ? 1100 : undefined}
       aktionen={
         <button onClick={onKanbanOeffnen} className="btn-ap flex items-center gap-1.5 text-xs">
           <KanbanSquare size={14} strokeWidth={2} aria-hidden="true" />
@@ -450,6 +453,7 @@ export function ProjektDetailPanel({
           onGespeichert={() => queryClient.invalidateQueries({ queryKey: ["zeiterfassung", "projekt", projekt.id] })}
         />
       )}
+      {tab === "zeitplan" && <ZeitplanTab projektId={projekt.id} />}
     </SeitenPanel>
   );
 }
