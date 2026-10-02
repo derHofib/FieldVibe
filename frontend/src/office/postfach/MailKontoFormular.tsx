@@ -8,8 +8,24 @@ import type { MailAccount, MailVerschluesselung } from "../../types";
 const VERSCHLUESSELUNG_OPTIONEN: { wert: MailVerschluesselung; label: string }[] = [
   { wert: "ssl", label: "SSL/TLS" },
   { wert: "starttls", label: "STARTTLS" },
-  { wert: "keine", label: "Keine" },
 ];
+
+// "Keine" (Klartext-Login) wird nur angezeigt, solange das bestehende Konto
+// sie noch hat -- das Backend lehnt sie beim Speichern ab.
+function optionenFuer(aktuell: MailVerschluesselung) {
+  return aktuell === "keine"
+    ? [...VERSCHLUESSELUNG_OPTIONEN, { wert: "keine" as const, label: "Keine (unsicher)" }]
+    : VERSCHLUESSELUNG_OPTIONEN;
+}
+
+function KlartextHinweis({ wert }: { wert: MailVerschluesselung }) {
+  if (wert !== "keine") return null;
+  return (
+    <span className="mt-1 block text-[11px] font-normal text-amber-700 dark:text-amber-300">
+      Unverschlüsselt nicht mehr erlaubt – bitte auf SSL/TLS oder STARTTLS umstellen.
+    </span>
+  );
+}
 
 interface Props {
   bestehendesKonto?: MailAccount;
@@ -169,12 +185,13 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             onChange={(e) => setImapVerschluesselung(e.target.value as MailVerschluesselung)}
             className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
-            {VERSCHLUESSELUNG_OPTIONEN.map((o) => (
+            {optionenFuer(imapVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
           </select>
+          <KlartextHinweis wert={imapVerschluesselung} />
         </label>
         <label className="text-xs font-medium text-label2">
           Benutzername
@@ -213,12 +230,13 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
             onChange={(e) => setSmtpVerschluesselung(e.target.value as MailVerschluesselung)}
             className="mt-1 w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           >
-            {VERSCHLUESSELUNG_OPTIONEN.map((o) => (
+            {optionenFuer(smtpVerschluesselung).map((o) => (
               <option key={o.wert} value={o.wert}>
                 {o.label}
               </option>
             ))}
           </select>
+          <KlartextHinweis wert={smtpVerschluesselung} />
         </label>
         <label className="text-xs font-medium text-label2">
           Benutzername

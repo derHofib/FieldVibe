@@ -89,7 +89,9 @@ class Settings(BaseSettings):
 
     # --- Mail-Postfaecher: Schutz vor SSRF (app/services/mail_netz.py) ------
     # Nur fuer lokale Entwicklung/Tests (z.B. MailHog auf localhost): hebt die
-    # Sperre fuer private/Loopback-/Link-local-Ziele auf. In Produktion aus.
+    # Sperre fuer private/Loopback-/Link-local-Ziele auf und erlaubt
+    # ausserdem unverschluesselte Verbindungen (Verschluesselung "keine",
+    # Klartext-Login) fuer Mail-Konten. In Produktion aus.
     mail_erlaube_private_hosts: bool = Field(
         default=False, validation_alias="FIELDVIBE_MAIL_ERLAUBE_PRIVATE_HOSTS"
     )

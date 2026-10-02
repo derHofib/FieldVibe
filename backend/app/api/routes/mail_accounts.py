@@ -15,6 +15,7 @@ from app.schemas.mail_account import (
     MailAccountUpdate,
     MailAccountVerbindungTest,
 )
+from app.services.mail_netz import klartext_erlaubt
 from app.services.mail_service import (
     ImapZugang,
     MailVerbindungFehler,
@@ -33,6 +34,14 @@ router = APIRouter(
         Depends(require_module("postfach")),
     ],
 )
+
+
+def _lehne_klartext_ab(*verschluesselungen: str | None) -> None:
+    if "keine" in verschluesselungen and not klartext_erlaubt():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unverschlüsselte Verbindungen sind nicht erlaubt (Passwort würde im Klartext übertragen)",
+        )
 
 
 def _pruefe_ziele_blockierend(imap_host: str, imap_port: int, smtp_host: str, smtp_port: int) -> None:
@@ -84,6 +93,7 @@ async def _pruefe_verbindung(
 
 @router.post("/test-verbindung", status_code=status.HTTP_204_NO_CONTENT)
 async def test_verbindung(body: MailAccountVerbindungTest) -> None:
+    _lehne_klartext_ab(body.imap_verschluesselung, body.smtp_verschluesselung)
     try:
         await _pruefe_verbindung(
             imap_host=body.imap_host,
@@ -117,6 +127,7 @@ async def create_mail_account(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> MailAccount:
+    _lehne_klartext_ab(body.imap_verschluesselung, body.smtp_verschluesselung)
     try:
         await _pruefe_verbindung(
             imap_host=body.imap_host,
@@ -178,6 +189,9 @@ async def update_mail_account(
     account = await _get_own_account(session, auth, account_id)
 
     changes = body.model_dump(exclude_unset=True, exclude={"passwort"})
+    # Nur gesetzte Felder: ein Konto mit bestehendem "keine" darf weiter
+    # z.B. umbenannt werden, die Umstellung erfolgt durch den Nutzer.
+    _lehne_klartext_ab(changes.get("imap_verschluesselung"), changes.get("smtp_verschluesselung"))
 
     ziel_felder = {"imap_host", "imap_port", "smtp_host", "smtp_port"}
     if body.passwort is None and ziel_felder & changes.keys():

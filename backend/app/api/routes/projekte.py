@@ -34,7 +34,7 @@ from app.schemas.projekt import (
 )
 from app.services import papierkorb_service
 from app.services.rechte_service import hat_recht
-from app.services.zuweisung_service import erlaubte_kunde_ids
+from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen
 
 # Basisrechte fuer alles unter /api/projekte (Projekte + Spalten -- reine
 # Kanban-Konfiguration, es gibt hier keine private Variante).
@@ -82,13 +82,31 @@ async def _require_spalte(session: AsyncSession, projekt_id: UUID, spalte_id: UU
     return spalte
 
 
-async def _require_aufgabe(session: AsyncSession, aufgabe_id: UUID) -> ProjektAufgabe:
+async def _require_aufgabe(session: AsyncSession, auth: AuthContext, aufgabe_id: UUID) -> ProjektAufgabe:
     aufgabe = await session.get(ProjektAufgabe, aufgabe_id)
     # Phasen/Meilensteine gehoeren dem Zeitplan (app/api/routes/zeitplan.py),
     # nicht der Kanban-/Aufgaben-API.
     if aufgabe is None or aufgabe.geloescht_am is not None or aufgabe.typ in ZEITPLAN_NUR_TYPEN:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
+    await _pruefe_kundenbezug(session, auth, aufgabe)
     return aufgabe
+
+
+async def _pruefe_kundenbezug(session: AsyncSession, auth: AuthContext, aufgabe: ProjektAufgabe) -> None:
+    """Gleiche Sichtbarkeitsregel wie in list_aufgaben(): Bezug auf einen nicht
+    zugewiesenen Kunden (direkt, ueber Vorgang oder Anlage) -> 404."""
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is None:
+        return
+    fremd = aufgabe.kunde_id is not None and aufgabe.kunde_id not in erlaubt
+    if not fremd and aufgabe.vorgang_id is not None:
+        vorgang = await session.get(Vorgang, aufgabe.vorgang_id)
+        fremd = vorgang is not None and vorgang.kunde_id not in erlaubt
+    if not fremd and aufgabe.anlage_id is not None:
+        anlage = await session.get(Anlage, aufgabe.anlage_id)
+        fremd = anlage is not None and anlage.kunde_id is not None and anlage.kunde_id not in erlaubt
+    if fremd:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
 
 
 async def _hat_projekte_recht(session: AsyncSession, auth: AuthContext, aktion: str) -> bool:
@@ -352,7 +370,7 @@ async def list_aufgaben(
     )
 
     if eltern_aufgabe_id is not None:
-        eltern = await _require_aufgabe(session, eltern_aufgabe_id)
+        eltern = await _require_aufgabe(session, auth, eltern_aufgabe_id)
         await _pruefe_zugriff_auf_aufgabe(session, auth, eltern, "sehen")
         bedingung = ProjektAufgabe.eltern_aufgabe_id == eltern_aufgabe_id
     elif mir_zugewiesen:
@@ -446,18 +464,21 @@ async def list_aufgaben(
 
 async def _pruefe_verknuepfungen(
     session: AsyncSession,
+    auth: AuthContext,
     *,
     vorgang_id: UUID | None,
     anlage_id: UUID | None,
     kunde_id: UUID | None,
     standort_id: UUID | None,
 ) -> None:
-    if vorgang_id is not None and await session.get(Vorgang, vorgang_id) is None:
+    vorgang = await session.get(Vorgang, vorgang_id) if vorgang_id is not None else None
+    if vorgang_id is not None and vorgang is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if anlage_id is not None and await session.get(Anlage, anlage_id) is None:
+    anlage = await session.get(Anlage, anlage_id) if anlage_id is not None else None
+    if anlage_id is not None and anlage is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Anlage nicht gefunden oder gehört nicht zum eigenen Mandanten",
@@ -467,6 +488,15 @@ async def _pruefe_verknuepfungen(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    # Erst nach den Existenzpruefungen: 403 wie in vorgaenge.py, der Kunde
+    # ist dem Nutzer bekannt, er darf nur nichts dafuer erfassen.
+    for bezug_kunde_id in (
+        kunde_id,
+        vorgang.kunde_id if vorgang is not None else None,
+        anlage.kunde_id if anlage is not None else None,
+    ):
+        if bezug_kunde_id is not None:
+            await require_kunde_zugewiesen(session, auth, bezug_kunde_id)
     if standort_id is not None and await session.get(Standort, standort_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -481,7 +511,7 @@ async def create_aufgabe(
     session: AsyncSession = Depends(get_db),
 ) -> ProjektAufgabe:
     if body.eltern_aufgabe_id is not None:
-        eltern = await _require_aufgabe(session, body.eltern_aufgabe_id)
+        eltern = await _require_aufgabe(session, auth, body.eltern_aufgabe_id)
         await _pruefe_zugriff_auf_aufgabe(session, auth, eltern, "sehen")
         if eltern.eltern_aufgabe_id is not None:
             raise HTTPException(
@@ -508,6 +538,7 @@ async def create_aufgabe(
 
     await _pruefe_verknuepfungen(
         session,
+        auth,
         vorgang_id=body.vorgang_id,
         anlage_id=body.anlage_id,
         kunde_id=body.kunde_id,
@@ -543,7 +574,7 @@ async def get_aufgabe(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> ProjektAufgabe:
-    aufgabe = await _require_aufgabe(session, aufgabe_id)
+    aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
     await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "sehen")
     return aufgabe
 
@@ -555,7 +586,7 @@ async def update_aufgabe(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> ProjektAufgabe:
-    aufgabe = await _require_aufgabe(session, aufgabe_id)
+    aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
     await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "bearbeiten")
     changes = body.model_dump(exclude_unset=True)
 
@@ -570,7 +601,7 @@ async def update_aufgabe(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Eine Aufgabe kann nicht ihre eigene Elternaufgabe sein"
             )
-        eltern = await _require_aufgabe(session, neue_eltern_id)
+        eltern = await _require_aufgabe(session, auth, neue_eltern_id)
         await _pruefe_zugriff_auf_aufgabe(session, auth, eltern, "sehen")
         if eltern.eltern_aufgabe_id is not None:
             raise HTTPException(
@@ -584,6 +615,7 @@ async def update_aufgabe(
 
     await _pruefe_verknuepfungen(
         session,
+        auth,
         vorgang_id=changes.get("vorgang_id"),
         anlage_id=changes.get("anlage_id"),
         kunde_id=changes.get("kunde_id"),
@@ -612,7 +644,7 @@ async def delete_aufgabe(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    aufgabe = await _require_aufgabe(session, aufgabe_id)
+    aufgabe = await _require_aufgabe(session, auth, aufgabe_id)
     await _pruefe_zugriff_auf_aufgabe(session, auth, aufgabe, "loeschen")
     geloescht = await papierkorb_service.soft_delete(
         session, entity_typ="projekt_aufgabe", entity_id=aufgabe_id, actor_user_id=auth.user_id

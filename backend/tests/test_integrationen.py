@@ -161,3 +161,54 @@ async def test_mandant_isolation_for_integrationen(client, make_mandant, make_us
 
     list_resp = await client.get("/api/integrationen", headers=auth_headers(token2))
     assert list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_smtp_integration_mit_internem_ziel_wird_abgelehnt(client, make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    monkeypatch.setattr("app.services.mail_netz._aufloesen", lambda host, port: ["169.254.169.254"])
+
+    resp = await client.post(
+        "/api/integrationen",
+        headers=auth_headers(token),
+        json={"typ": "smtp", "config": {"host": "intern.example.de", "port": 587, "from_address": "a@b.de"}},
+    )
+    assert resp.status_code == 400
+    assert "nicht erlaubt" in resp.json()["detail"]
+    assert "169.254" not in resp.json()["detail"]
+
+    resp = await client.post(
+        "/api/integrationen",
+        headers=auth_headers(token),
+        json={"typ": "smtp", "config": {"host": "smtp.example.de", "port": 6379}},
+    )
+    assert resp.status_code == 400
+    assert "Port" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_smtp_integration_update_prueft_neues_ziel(client, make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    created = await client.post(
+        "/api/integrationen",
+        headers=auth_headers(token),
+        json={"typ": "smtp", "config": {"host": "smtp.example.de", "port": 587}},
+    )
+    assert created.status_code == 201
+    monkeypatch.setattr("app.services.mail_netz._aufloesen", lambda host, port: ["10.0.0.7"])
+
+    resp = await client.patch(
+        f"/api/integrationen/{created.json()['id']}",
+        headers=auth_headers(token),
+        json={"config": {"host": "intern.example.de", "port": 587}},
+    )
+    assert resp.status_code == 400
+    # "aktiv" allein loest keine Zielpruefung aus
+    resp = await client.patch(
+        f"/api/integrationen/{created.json()['id']}", headers=auth_headers(token), json={"aktiv": False}
+    )
+    assert resp.status_code == 200

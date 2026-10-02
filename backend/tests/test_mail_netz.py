@@ -254,3 +254,26 @@ async def test_route_fehlermeldung_enthaelt_keine_rohdaten(client, make_mandant,
     resp = await client.post("/api/mail-accounts/test-verbindung", headers=auth_headers(token), json=body)
     assert resp.status_code == 400
     assert resp.json()["detail"] == "Verbindung fehlgeschlagen: Server nicht erreichbar"
+
+
+@pytest.mark.parametrize("verbinde", [mail_netz.verbinde_imap, mail_netz.verbinde_smtp])
+def test_klartext_verbindung_wird_abgelehnt_bevor_verbunden_wird(monkeypatch, verbinde):
+    def _nie(*a, **k):
+        raise AssertionError("darf nicht verbinden")
+
+    monkeypatch.setattr(mail_netz, "_verbinde_socket", _nie)
+    port = 143 if verbinde is mail_netz.verbinde_imap else 25
+    with pytest.raises(MailVerbindungFehler) as exc:
+        verbinde("mail.example.de", port, "keine", 5)
+    assert str(exc.value) == mail_netz.UNVERSCHLUESSELT_FEHLER
+
+
+def test_klartext_nur_mit_private_hosts_einstellung_erlaubt(monkeypatch):
+    monkeypatch.setenv("FIELDVIBE_MAIL_ERLAUBE_PRIVATE_HOSTS", "true")
+    get_settings.cache_clear()
+    try:
+        assert mail_netz.klartext_erlaubt() is True
+    finally:
+        monkeypatch.delenv("FIELDVIBE_MAIL_ERLAUBE_PRIVATE_HOSTS")
+        get_settings.cache_clear()
+    assert mail_netz.klartext_erlaubt() is False

@@ -282,7 +282,7 @@ async def test_maengel(client, szenario):
             headers=s["user"],
             json={"vorgang_id": str(s["vorgang_fremd"].id), "beschreibung": "x"},
         )
-    ).status_code == 404
+    ).status_code == 403
     assert (
         await client.get(
             "/api/maengel/protokoll/pdf", headers=s["user"], params={"vorgang_id": str(s["vorgang_fremd"].id)}
@@ -546,6 +546,74 @@ async def test_aufgaben_ansicht_blendet_fremde_kunden_aus(client, szenario):
         "/api/projekt-aufgaben", headers=s["user"], params={"vorgang_id": str(s["vorgang_fremd"].id)}
     )
     assert fremd.json() == []
+
+
+@pytest.mark.asyncio
+async def test_aufgaben_einzelendpunkte_fremder_kunde_404(client, szenario, make_anlage):
+    s = szenario
+    user_id = str(s["eingeschraenkt"].id)
+    anlage_fremd = await make_anlage(mandant=s["mandant"], kunde=s["fremder"])
+    anlage_ohne_kunde = await make_anlage(mandant=s["mandant"], objekttyp="fahrzeug")
+    ids = {}
+    for name, extra in (
+        ("eigen", {"vorgang_id": str(s["vorgang_eigen"].id)}),
+        ("ohne", {}),
+        ("anlage_ohne_kunde", {"anlage_id": str(anlage_ohne_kunde.id)}),
+        ("kunde", {"kunde_id": str(s["fremder"].id)}),
+        ("vorgang", {"vorgang_id": str(s["vorgang_fremd"].id)}),
+        ("anlage", {"anlage_id": str(anlage_fremd.id)}),
+    ):
+        resp = await client.post(
+            "/api/projekt-aufgaben", headers=s["admin"], json={"titel": name, "zugewiesen_an": user_id, **extra}
+        )
+        assert resp.status_code == 201, resp.text
+        ids[name] = resp.json()["id"]
+
+    for name in ("eigen", "ohne", "anlage_ohne_kunde"):
+        assert (await client.get(f"/api/projekt-aufgaben/{ids[name]}", headers=s["user"])).status_code == 200, name
+    for name in ("kunde", "vorgang", "anlage"):
+        url = f"/api/projekt-aufgaben/{ids[name]}"
+        assert (await client.get(url, headers=s["user"])).status_code == 404, name
+        assert (await client.patch(url, headers=s["user"], json={"titel": "x"})).status_code == 404, name
+        assert (await client.delete(url, headers=s["user"])).status_code == 404, name
+        # Elternaufgabe fremd -> ebenfalls nicht auffindbar
+        resp = await client.post(
+            "/api/projekt-aufgaben",
+            headers=s["user"],
+            json={"titel": "Unter", "eltern_aufgabe_id": ids[name]},
+        )
+        assert resp.status_code == 404, name
+        assert (await client.get(url, headers=s["admin"])).status_code == 200, name
+    assert (await client.get(f"/api/projekt-aufgaben/{ids['kunde']}", headers=s["admin"])).json()["titel"] == "kunde"
+
+
+@pytest.mark.asyncio
+async def test_aufgaben_verknuepfung_fremder_kunde_403(client, szenario, make_anlage):
+    s = szenario
+    anlage_fremd = await make_anlage(mandant=s["mandant"], kunde=s["fremder"])
+    fremd_bezuege = (
+        {"kunde_id": str(s["fremder"].id)},
+        {"vorgang_id": str(s["vorgang_fremd"].id)},
+        {"anlage_id": str(anlage_fremd.id)},
+    )
+    for extra in fremd_bezuege:
+        resp = await client.post(
+            "/api/projekt-aufgaben", headers=s["user"], json={"titel": "x", "zugewiesen_an": str(s["eingeschraenkt"].id), **extra}
+        )
+        assert resp.status_code == 403, extra
+
+    eigene = await client.post(
+        "/api/projekt-aufgaben",
+        headers=s["user"],
+        json={"titel": "ok", "vorgang_id": str(s["vorgang_eigen"].id), "kunde_id": str(s["eigener"].id)},
+    )
+    assert eigene.status_code == 201, eigene.text
+    url = f"/api/projekt-aufgaben/{eigene.json()['id']}"
+    for extra in fremd_bezuege:
+        assert (await client.patch(url, headers=s["user"], json=extra)).status_code == 403, extra
+    # Eigener Kunde bleibt aenderbar
+    ok = await client.patch(url, headers=s["user"], json={"kunde_id": str(s["eigener"].id)})
+    assert ok.status_code == 200, ok.text
 
 
 @pytest.mark.asyncio

@@ -235,3 +235,56 @@ async def test_doppelte_email_adresse_fuer_denselben_nutzer_wird_abgelehnt(
 
     second = await client.post("/api/mail-accounts", headers=auth_headers(token), json=_KONTO_PAYLOAD)
     assert second.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_klartext_verschluesselung_wird_beim_anlegen_und_aendern_abgelehnt(
+    client, make_mandant, make_user, monkeypatch
+):
+    _mock_verbindung_ok(monkeypatch)
+    mandant = await make_mandant()
+    user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, user.email, "pw-123456")
+    meldung = "Unverschlüsselte Verbindungen sind nicht erlaubt (Passwort würde im Klartext übertragen)"
+
+    for feld in ("imap_verschluesselung", "smtp_verschluesselung"):
+        resp = await client.post(
+            "/api/mail-accounts", headers=auth_headers(token), json={**_KONTO_PAYLOAD, feld: "keine"}
+        )
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == meldung
+    resp = await client.post(
+        "/api/mail-accounts/test-verbindung",
+        headers=auth_headers(token),
+        json={k: v for k, v in {**_KONTO_PAYLOAD, "imap_verschluesselung": "keine"}.items() if k not in ("name", "email_adresse")},
+    )
+    assert resp.status_code == 400
+
+    angelegt = await client.post("/api/mail-accounts", headers=auth_headers(token), json=_KONTO_PAYLOAD)
+    assert angelegt.status_code == 201
+    resp = await client.patch(
+        f"/api/mail-accounts/{angelegt.json()['id']}",
+        headers=auth_headers(token),
+        json={"smtp_verschluesselung": "keine"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == meldung
+
+
+@pytest.mark.asyncio
+async def test_bestehendes_klartext_konto_bleibt_ohne_umstellung_aenderbar(
+    client, make_mandant, make_user, monkeypatch
+):
+    _mock_verbindung_ok(monkeypatch)
+    mandant = await make_mandant()
+    user = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    token = await login(client, user.email, "pw-123456")
+    angelegt = await client.post("/api/mail-accounts", headers=auth_headers(token), json=_KONTO_PAYLOAD)
+    async with system_session() as session:
+        (await session.get(MailAccount, angelegt.json()["id"])).imap_verschluesselung = "keine"
+
+    resp = await client.patch(
+        f"/api/mail-accounts/{angelegt.json()['id']}", headers=auth_headers(token), json={"name": "Umbenannt"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["imap_verschluesselung"] == "keine"

@@ -42,8 +42,7 @@ async def test_einladungsmail_enthaelt_steckbrief_mit_echten_werten(client, make
     account_typ_id = account_typ_resp.json()["id"]
 
     smtp_instance = MagicMock()
-    smtp_instance.__enter__.return_value = smtp_instance
-    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance):
+    with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance):
         resp = await client.post(
             "/api/users/einladungen",
             headers=auth_headers(token),

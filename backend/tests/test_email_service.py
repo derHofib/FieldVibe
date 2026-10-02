@@ -6,6 +6,7 @@ from app.core.config import get_settings
 from app.db.session import system_session
 from app.models.integration import MandantIntegration
 from app.services.email_service import EmailNichtKonfiguriert, send_email
+from app.services.mail_netz import MailVerbindungFehler
 from tests.conftest import auth_headers, login
 
 
@@ -50,15 +51,14 @@ async def test_send_email_uses_configured_smtp(make_mandant):
     await _make_smtp_integration(mandant)
 
     smtp_instance = MagicMock()
-    smtp_instance.__enter__.return_value = smtp_instance
-    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+    with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance) as verbinde:
         async with system_session() as session:
             await send_email(
                 session, mandant.id, to="kunde@example.de", subject="Test", body="Hallo"
             )
 
-    smtp_cls.assert_called_once_with("smtp.example.de", 587, timeout=10)
-    smtp_instance.starttls.assert_called_once()
+    # Mandanten-Ziel laeuft ueber mail_netz (Zielpruefung, IP-Pinning, TLS).
+    verbinde.assert_called_once_with("smtp.example.de", 587, "starttls", 10)
     smtp_instance.send_message.assert_called_once()
     sent_message = smtp_instance.send_message.call_args[0][0]
     assert sent_message["To"] == "kunde@example.de"
@@ -72,8 +72,7 @@ async def test_send_email_with_html_body_sends_multipart_alternative(make_mandan
     await _make_smtp_integration(mandant)
 
     smtp_instance = MagicMock()
-    smtp_instance.__enter__.return_value = smtp_instance
-    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance):
+    with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance):
         async with system_session() as session:
             await send_email(
                 session,
@@ -142,12 +141,11 @@ async def test_mandanten_eigene_smtp_hat_vorrang_vor_global(global_smtp, make_ma
     await _make_smtp_integration(mandant)
 
     smtp_instance = MagicMock()
-    smtp_instance.__enter__.return_value = smtp_instance
-    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+    with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance) as verbinde:
         async with system_session() as session:
             await send_email(session, mandant.id, to="kunde@example.de", subject="Test", body="Hallo")
 
-    smtp_cls.assert_called_once_with("smtp.example.de", 587, timeout=10)
+    verbinde.assert_called_once_with("smtp.example.de", 587, "starttls", 10)
     sent_message = smtp_instance.send_message.call_args[0][0]
     assert sent_message["From"] == "bot@example.de"
 
@@ -169,9 +167,50 @@ async def test_send_email_logs_in_when_secret_present(client, make_mandant, make
     )
 
     smtp_instance = MagicMock()
-    smtp_instance.__enter__.return_value = smtp_instance
-    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance):
+    with patch("app.services.email_service.verbinde_smtp", return_value=smtp_instance):
         async with system_session() as session:
             await send_email(session, mandant.id, to="kunde@example.de", subject="s", body="b")
 
     smtp_instance.login.assert_called_once_with("bot@example.de", "smtp-passwort")
+
+
+@pytest.mark.asyncio
+async def test_mandanten_smtp_mit_internem_ziel_wird_geblockt(make_mandant, monkeypatch):
+    mandant = await make_mandant()
+    await _make_smtp_integration(mandant, host="intern.example.de")
+    monkeypatch.setattr("app.services.mail_netz._aufloesen", lambda host, port: ["10.0.0.7"])
+
+    with patch("app.services.mail_netz.socket.create_connection") as verbinden:
+        with pytest.raises(MailVerbindungFehler) as exc:
+            async with system_session() as session:
+                await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
+    verbinden.assert_not_called()
+    assert "10.0.0.7" not in str(exc.value)
+
+
+@pytest.mark.asyncio
+async def test_mandanten_smtp_mit_nicht_erlaubtem_port_wird_geblockt(make_mandant):
+    mandant = await make_mandant()
+    await _make_smtp_integration(mandant, port=6379)
+
+    with pytest.raises(MailVerbindungFehler):
+        async with system_session() as session:
+            await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
+
+
+@pytest.mark.asyncio
+async def test_globaler_smtp_bleibt_ohne_zielpruefung(make_mandant, global_smtp, monkeypatch):
+    mandant = await make_mandant()
+    # Plattform-SMTP (z.B. MailHog im Docker-Netz) darf intern liegen und
+    # einen Port ausserhalb der Allowlist nutzen (global_smtp: 2525 ist erlaubt,
+    # daher bewusst ein privater Host + eigener Port).
+    monkeypatch.setattr(global_smtp, "global_smtp_host", "mailhog")
+    monkeypatch.setattr(global_smtp, "global_smtp_port", 1025)
+    monkeypatch.setattr("app.services.mail_netz._aufloesen", lambda host, port: ["10.0.0.7"])
+
+    smtp_instance = MagicMock()
+    smtp_instance.__enter__.return_value = smtp_instance
+    with patch("app.services.email_service.smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+        async with system_session() as session:
+            await send_email(session, mandant.id, to="x@example.de", subject="s", body="b")
+    smtp_cls.assert_called_once_with("mailhog", 1025, timeout=10)

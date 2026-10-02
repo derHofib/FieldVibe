@@ -20,7 +20,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.schemas.mangel import MangelCreate, MangelRead, MangelUpdate
 from app.services import papierkorb_service
 from app.services.pdf_service import generate_maengel_protokoll_pdf
-from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugriff
+from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen, require_kunde_zugriff
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -157,7 +157,7 @@ async def create_mangel(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    await require_kunde_zugriff(session, auth, vorgang.kunde_id, "Vorgang nicht gefunden")
+    await require_kunde_zugewiesen(session, auth, vorgang.kunde_id)
     if body.anlage_id is not None and body.anlage_id != vorgang.anlage_id:
         # Kein Hard-Fail auf Anlagen-Existenz per FK reicht nicht: eine
         # fremde/nicht zum Vorgang passende Anlage waere ein stiller

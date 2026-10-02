@@ -73,6 +73,15 @@ def pruefe_ziel(host: str, port: int, protokoll: Protokoll) -> str:
     return adressen[0]
 
 
+UNVERSCHLUESSELT_FEHLER = "Unverschlüsselte Verbindung nicht mehr erlaubt – bitte auf SSL/TLS oder STARTTLS umstellen"
+
+
+def klartext_erlaubt() -> bool:
+    """Klartext-Login ist nur in der lokalen Entwicklung (MailHog & Co.)
+    zulaessig -- dieselbe Ausnahme-Einstellung wie fuer private Ziele."""
+    return get_settings().mail_erlaube_private_hosts
+
+
 def ssl_kontext() -> ssl.SSLContext:
     return ssl.create_default_context()
 
@@ -122,6 +131,8 @@ class _SmtpSslGepinnt(smtplib.SMTP_SSL):
 
 
 def verbinde_imap(host: str, port: int, verschluesselung: str, timeout: float) -> imaplib.IMAP4:
+    if verschluesselung == "keine" and not klartext_erlaubt():
+        raise MailVerbindungFehler(UNVERSCHLUESSELT_FEHLER)
     ip = pruefe_ziel(host, port, "imap")
     if verschluesselung == "ssl":
         return _ImapSslGepinnt(host, port, ip=ip, timeout=timeout)
@@ -132,6 +143,8 @@ def verbinde_imap(host: str, port: int, verschluesselung: str, timeout: float) -
 
 
 def verbinde_smtp(host: str, port: int, verschluesselung: str, timeout: float) -> smtplib.SMTP:
+    if verschluesselung == "keine" and not klartext_erlaubt():
+        raise MailVerbindungFehler(UNVERSCHLUESSELT_FEHLER)
     ip = pruefe_ziel(host, port, "smtp")
     if verschluesselung == "ssl":
         return _SmtpSslGepinnt(host, port, ip=ip, timeout=timeout)

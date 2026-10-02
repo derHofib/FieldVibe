@@ -15,6 +15,7 @@ from app.models.email_log import EmailLog
 from app.models.integration import MandantIntegration
 from app.models.mandant import Mandant
 from app.models.plattform_integration import PlattformIntegration
+from app.services.mail_netz import uebersetze_fehler, verbinde_smtp
 
 
 class EmailNichtKonfiguriert(Exception):
@@ -105,12 +106,36 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbind
     raise EmailNichtKonfiguriert()
 
 
-def _send_blocking(*, host: str, port: int, user: str | None, password: str | None, message: EmailMessage) -> None:
-    with smtplib.SMTP(host, port, timeout=10) as smtp:
-        smtp.starttls(context=ssl.create_default_context())
+def _send_blocking(
+    *, host: str, port: int, user: str | None, password: str | None, message: EmailMessage,
+    ist_global: bool = True,
+) -> None:
+    if ist_global:
+        # Plattform-SMTP ist vertrauenswuerdige Admin-Konfiguration (z.B.
+        # MailHog im Docker-Netz) -- bewusst ohne Zielpruefung.
+        with smtplib.SMTP(host, port, timeout=10) as smtp:
+            smtp.starttls(context=ssl.create_default_context())
+            if user and password:
+                smtp.login(user, password)
+            smtp.send_message(message)
+        return
+
+    # Mandanten-Ziel ist frei waehlbar: SSRF-Pruefung, IP-Pinning, TLS.
+    try:
+        smtp = verbinde_smtp(host, port, "ssl" if port == 465 else "starttls", 10)
+    except Exception as exc:
+        raise uebersetze_fehler(exc, "smtp") from exc
+    try:
         if user and password:
             smtp.login(user, password)
         smtp.send_message(message)
+    except Exception as exc:
+        raise uebersetze_fehler(exc, "smtp") from exc
+    finally:
+        try:
+            smtp.quit()
+        except Exception:
+            pass
 
 
 async def send_email(
@@ -168,7 +193,7 @@ async def send_email(
     await anyio.to_thread.run_sync(
         lambda: _send_blocking(
             host=verbindung.host, port=verbindung.port, user=verbindung.user,
-            password=verbindung.password, message=message,
+            password=verbindung.password, message=message, ist_global=verbindung.ist_global,
         )
     )
 
