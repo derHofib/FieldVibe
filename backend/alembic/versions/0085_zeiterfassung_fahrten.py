@@ -57,9 +57,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_constraint("ck_zeiterfassung_quelle_valid", "zeiterfassung", type_="check")
+    op.drop_constraint("quelle_valid", "zeiterfassung", type_="check")
     op.drop_column("zeiterfassung", "quelle")
     op.drop_constraint("fk_zeiterfassung_fahrzeug_id_anlagen", "zeiterfassung", type_="foreignkey")
     op.drop_column("zeiterfassung", "fahrzeug_id")
-    op.drop_constraint("ck_zeiterfassung_km_nicht_negativ", "zeiterfassung", type_="check")
+    op.drop_constraint("km_nicht_negativ", "zeiterfassung", type_="check")
     op.drop_column("zeiterfassung", "km")

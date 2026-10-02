@@ -1,5 +1,7 @@
 import os
+import socket
 import uuid
+from urllib.parse import urlparse
 
 os.environ.setdefault(
     "DATABASE_URL",
@@ -10,13 +12,27 @@ os.environ.setdefault(
     "postgresql+psycopg2://fieldvibe:fieldvibe@localhost:5432/fieldvibe_test",
 )
 os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
-# Fixed port (not dynamically chosen) because app.services.storage_service
-# builds its boto3 clients at import time -- these env vars must exist
-# before `from app.main import app` pulls that module in below, so the
-# ThreadedMotoServer fixture further down just has to bind the same port
-# rather than discover and propagate one after the fact.
-os.environ.setdefault("S3_ENDPOINT_URL", "http://localhost:9199")
-os.environ.setdefault("S3_PUBLIC_URL_BASE", "http://localhost:9199")
+
+
+def _moto_port_ermitteln() -> int:
+    # Explizit gesetzt (TEST_MOTO_PORT oder vorhandene S3_ENDPOINT_URL) gewinnt;
+    # sonst einen vom OS vergebenen freien Port nehmen, damit parallele
+    # pytest-Laeufe nicht um denselben Port konkurrieren. Muss vor dem Import
+    # der App passieren: storage_service baut seine boto3-Clients zur
+    # Importzeit gegen S3_ENDPOINT_URL/S3_PUBLIC_URL_BASE.
+    if os.environ.get("TEST_MOTO_PORT"):
+        return int(os.environ["TEST_MOTO_PORT"])
+    vorhanden = urlparse(os.environ.get("S3_ENDPOINT_URL", "")).port
+    if vorhanden:
+        return vorhanden
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+_MOTO_PORT = _moto_port_ermitteln()
+os.environ.setdefault("S3_ENDPOINT_URL", f"http://localhost:{_MOTO_PORT}")
+os.environ.setdefault("S3_PUBLIC_URL_BASE", f"http://localhost:{_MOTO_PORT}")
 os.environ.setdefault("S3_BUCKET_FOTOS", "fieldvibe-fotos-test")
 
 import pytest
@@ -210,9 +226,9 @@ def _s3_test_server():
     intercepts calls to actual AWS hostnames, not a custom endpoint_url like
     ours). storage_service's module-level boto3 clients were already built
     against S3_ENDPOINT_URL/S3_PUBLIC_URL_BASE at import time, so this just
-    has to listen on that same fixed port.
+    has to listen on that same port (_MOTO_PORT).
     """
-    server = ThreadedMotoServer(port=9199)
+    server = ThreadedMotoServer(port=_MOTO_PORT)
     server.start()
     try:
         storage_service._internal_client.create_bucket(Bucket=storage_service.BUCKET)
