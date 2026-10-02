@@ -399,6 +399,31 @@ rein informative Update-Anzeige im Super-Admin-Bereich (Menüpunkt
 auf GitHub, ohne selbst irgendetwas auszuführen. Ohne das `export` bleibt
 die Anzeige auf „unknown" stehen, das Update selbst funktioniert trotzdem.
 
+### Abhängigkeiten aktualisieren (Lockfiles)
+
+Die Images installieren reproduzierbar: Backend aus den hashgepinnten
+`backend/requirements.lock` (Produktion) und `backend/requirements-dev.lock`
+(Tests/CI), Frontend per `npm ci` aus `frontend/package-lock.json`.
+`requirements.txt`/`requirements-dev.txt` bleiben die menschenlesbaren Eingaben;
+die `.lock`-Dateien nie von Hand editieren.
+
+```bash
+# Python 3.12 verwenden (wie das Dockerfile) -- die Aufloesung ist
+# interpreter- und plattformabhaengig, Ziel ist linux/amd64.
+python3.12 -m venv /tmp/piptools && /tmp/piptools/bin/pip install pip-tools
+cd backend
+/tmp/piptools/bin/pip-compile --generate-hashes --strip-extras --allow-unsafe -o requirements.lock requirements.txt
+/tmp/piptools/bin/pip-compile --generate-hashes --strip-extras --allow-unsafe -o requirements-dev.lock requirements-dev.txt
+# Einzelnes Paket anheben: Version in requirements.txt aendern und neu kompilieren,
+# oder -P paketname==x.y.z an pip-compile haengen.
+
+# Frontend: Aenderungen an package.json immer mit package-lock.json committen
+cd ../frontend && npm install && npm audit
+```
+
+Beide Lockfiles gemeinsam committen. `pip install --require-hashes` bricht ab,
+wenn ein Paket nicht gepinnt ist oder der Hash nicht passt.
+
 ## 7. Deinstallieren
 
 `scripts/uninstall.sh` entfernt eine Installation vollständig: alle
