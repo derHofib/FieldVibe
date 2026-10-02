@@ -1,5 +1,7 @@
 services:
   postgres:
+    # Major 16 fest; Minor-Releases (16.x) sind bei Postgres die Sicherheits-
+    # und Fehlerkorrekturen und bleiben bewusst automatisch.
     image: postgres:16-alpine
     restart: unless-stopped
     environment:

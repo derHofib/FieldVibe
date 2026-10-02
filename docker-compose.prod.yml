@@ -18,7 +18,8 @@ services:
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
 
   caddy:
-    image: caddy:2-alpine
+    # Auf 2.11 gepinnt: Patch-Updates (2.11.x) ja, kein ungeplanter Sprung auf 2.12+.
+    image: caddy:2.11-alpine
     restart: unless-stopped
     ports:
       - "80:80"
