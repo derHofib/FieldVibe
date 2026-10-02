@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import system_session
-from app.models.account_typ import AccountTyp, AccountTypRecht
+from app.models.account_typ import AccountTyp, AccountTypRecht, aktionen_fuer_bereich
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
@@ -55,6 +55,7 @@ SEED_ACCOUNT_TYPEN = {
             "abrechnung": {"sehen"},
             "statistik": {"sehen"},
             "mitarbeiterverwaltung": {"sehen"},
+            "projekte": {"zeitplan_sehen", "zeitplan_beantragen"},
         },
     },
 }
@@ -347,7 +348,7 @@ async def _seed_users_and_mandant(session, mandant_data: dict) -> tuple[Mandant,
             session.add(account_typ)
             await session.flush()
             for bereich, aktionen in vorlage["rechte"].items():
-                for aktion in ("sehen", "erstellen", "bearbeiten", "loeschen"):
+                for aktion in aktionen_fuer_bereich(bereich):
                     session.add(
                         AccountTypRecht(
                             account_typ_id=account_typ.id,

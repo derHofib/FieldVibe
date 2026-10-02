@@ -678,7 +678,7 @@ export interface SearchResponse {
   treffer: SearchHit[];
 }
 
-export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot" | "anfrage" | "eingangsrechnung" | "partner_kommentar";
+export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot" | "anfrage" | "eingangsrechnung" | "partner_kommentar" | "zeitplan_antrag";
 
 export interface NotificationEntry {
   id: number;
@@ -1471,7 +1471,14 @@ export type RechteBereich =
   | "formulare"
   | "partner"
   | "projekte";
-export type RechteAktion = "sehen" | "erstellen" | "bearbeiten" | "loeschen";
+export type RechteAktion =
+  | "sehen"
+  | "erstellen"
+  | "bearbeiten"
+  | "loeschen"
+  // Nur im Bereich "projekte": Zeitplan lesen bzw. Änderungen daran beantragen.
+  | "zeitplan_sehen"
+  | "zeitplan_beantragen";
 
 export interface RechteMatrixEintrag {
   bereich: RechteBereich;
@@ -2070,6 +2077,8 @@ export interface ZeitplanElement {
   basis_ende_am: string | null;
   /** Positiv = später als im Basisplan; null ohne Vergleich bzw. ohne Basisplan-Eintrag. */
   abweichung_tage: number | null;
+  /** Anzahl offener Änderungsanträge (Techniker) zu diesem Element. */
+  offene_antraege: number;
 }
 
 export interface ZeitplanVorgangRef {
@@ -2126,6 +2135,49 @@ export interface Zeitplan {
   verschiebe_modus: ZeitplanVerschiebeModus;
   elemente: ZeitplanElement[];
   abhaengigkeiten: ZeitplanAbhaengigkeit[];
+}
+
+export type ZeitplanAntragArt = "verschieben" | "dauer_aendern" | "problem";
+export type ZeitplanAntragStatus = "offen" | "angenommen" | "abgelehnt" | "zurueckgezogen";
+
+export interface ZeitplanAntrag {
+  id: string;
+  element_id: string;
+  element_titel: string;
+  art: ZeitplanAntragArt;
+  gewuenschter_start_am: string | null;
+  gewuenschtes_ende_am: string | null;
+  aktueller_start_am: string | null;
+  aktuelles_ende_am: string | null;
+  begruendung: string;
+  status: ZeitplanAntragStatus;
+  antwort: string | null;
+  erstellt_von: string;
+  erstellt_von_name: string | null;
+  erstellt_am: string;
+  bearbeitet_von_name: string | null;
+  bearbeitet_am: string | null;
+}
+
+export interface ZeitplanAntragCreate {
+  element_id: string;
+  art: ZeitplanAntragArt;
+  gewuenschter_start_am?: string | null;
+  gewuenschtes_ende_am?: string | null;
+  begruendung: string;
+}
+
+/** Antwort von annehmen/ablehnen/zurückziehen: der Antrag mit neuem Status plus der komplette Zeitplan. */
+export interface ZeitplanAntragEntscheidung {
+  antrag: ZeitplanAntrag;
+  zeitplan: Zeitplan;
+}
+
+export interface MeinZeitplan {
+  id: string;
+  name: string;
+  naechster_schritt_titel: string | null;
+  naechster_schritt_start: string | null;
 }
 
 export interface ZeitplanBasisplan {

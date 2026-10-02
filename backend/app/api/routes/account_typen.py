@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
-from app.models.account_typ import AccountTyp, AccountTypRecht
+from app.models.account_typ import AccountTyp, AccountTypRecht, aktionen_fuer_bereich
 from app.models.user import User
 from app.schemas.account_typ import (
     AccountTypCreate,
@@ -154,6 +154,11 @@ async def set_recht(
     typ = await session.get(AccountTyp, account_typ_id)
     if typ is None or typ.mandant_id != auth.mandant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account-Typ nicht gefunden")
+    if body.aktion not in aktionen_fuer_bereich(body.bereich):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Diese Aktion gibt es für diesen Bereich nicht",
+        )
     result = await session.execute(
         select(AccountTypRecht).where(
             AccountTypRecht.account_typ_id == account_typ_id,

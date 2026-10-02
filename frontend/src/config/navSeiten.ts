@@ -2,6 +2,7 @@ import {
   BarChart3,
   Bell,
   CalendarDays,
+  CalendarRange,
   ClipboardList,
   Clock,
   Gauge,
@@ -65,6 +66,9 @@ export interface NavSeite {
   // Nur in der Office-Seitenleiste anwaehlbar, taucht im "Mehr"-Tab der
   // Feld-App nicht auf -- siehe pages/feld/MehrPage.tsx.
   nurOffice?: boolean;
+  // Gegenstueck: nur im "Mehr"-Tab der Feld-App, nicht in der Office-Seitenleiste
+  // (dort fuehrt /projekte auf das Kanban, das ein Nutzer ohne projekte.sehen nicht oeffnen darf).
+  nurFeld?: boolean;
 }
 
 export const NAV_SEITEN: NavSeite[] = [
@@ -116,6 +120,18 @@ export const NAV_SEITEN: NavSeite[] = [
     // Feld-App-Spalte -- siehe office/OfficeProjektePage.tsx.
     nurOffice: true,
     sichtbar: ({ hatRecht }) => hatRecht("projekte", "sehen"),
+  },
+  {
+    key: "zeitplaene",
+    label: "Zeitpläne",
+    icon: CalendarRange,
+    tone: "amber",
+    route: "/projekte",
+    kategorie: "Arbeit",
+    // Techniker ohne projekte.sehen: die Projekte-Seite der Feld-App zeigt dann
+    // "Meine Zeitpläne" statt der Projektliste (pages/feld/ProjektePageMobil.tsx).
+    nurFeld: true,
+    sichtbar: ({ hatRecht }) => hatRecht("projekte", "zeitplan_sehen") && !hatRecht("projekte", "sehen"),
   },
   {
     key: "auftraege",
@@ -374,8 +390,11 @@ export const NAV_SEITEN: NavSeite[] = [
 export function sichtbareNavSeiten(
   currentUser: CurrentUser | undefined,
   hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean,
+  oberflaeche: "office" | "feld" = "office",
 ): NavSeite[] {
-  return NAV_SEITEN.filter((seite) => seite.sichtbar({ currentUser, hatRecht }));
+  return NAV_SEITEN.filter(
+    (seite) => (oberflaeche === "feld" || !seite.nurFeld) && seite.sichtbar({ currentUser, hatRecht }),
+  );
 }
 
 export interface NavGruppe {

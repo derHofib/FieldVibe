@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckSquare, KanbanSquare, Link2, LayoutList, ListTree, Plus, Table2, X } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { projekteApi, projektAufgabenApi } from "../../api/endpoints";
@@ -55,6 +56,21 @@ export function OfficeProjektePage() {
     queryKey: ["projekte"],
     queryFn: () => projekteApi.list(),
   });
+
+  // Deep-Link aus Benachrichtigungen: ?projekt=<id>&tab=zeitplan oeffnet das
+  // Detailpanel direkt im Zeitplan-Tab. Einmal verbrauchen, damit Schliessen wirkt.
+  const [suchParams, setSuchParams] = useSearchParams();
+  const [startTab, setStartTab] = useState<"zeitplan" | undefined>(undefined);
+  useEffect(() => {
+    const id = suchParams.get("projekt");
+    if (!id || !projekte) return;
+    const treffer = projekte.find((p) => p.id === id);
+    if (treffer) {
+      setStartTab(suchParams.get("tab") === "zeitplan" ? "zeitplan" : undefined);
+      setProjektPanel(treffer);
+    }
+    setSuchParams({}, { replace: true });
+  }, [suchParams, projekte, setSuchParams]);
 
   const aktivesProjekt = projektId ?? projekte?.[0]?.id ?? null;
 
@@ -376,6 +392,7 @@ export function OfficeProjektePage() {
       {projektPanel && (
         <ProjektDetailPanel
           projekt={projektPanel}
+          startTab={startTab}
           onClose={() => setProjektPanel(null)}
           onKanbanOeffnen={() => {
             setProjektId(projektPanel.id);

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Gauge, Info, Link2, MoreHorizontal, Package, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import { ChevronDown, ChevronRight, Gauge, Info, Link2, MessageSquareWarning, MoreHorizontal, Package, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import { useRef } from "react";
 
 import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
@@ -237,6 +237,17 @@ export function GanttListe({
                   <span className="truncate">{e.titel}</span>
                   {e.vorgang && <Link2 size={12} strokeWidth={2} className="shrink-0 text-label2" aria-label={`Vorgang ${e.vorgang.vorgangsnummer} verknüpft`} role="img" />}
                   {e.bestellung && <Package size={12} strokeWidth={2} className="shrink-0 text-label2" aria-label={`Bestellung ${e.bestellung.bestellnummer} verknüpft`} role="img" />}
+                  {e.offene_antraege > 0 && (
+                    <span
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-st-arbeit-bg px-1.5 text-[11px] font-semibold text-st-arbeit"
+                      title={`${e.offene_antraege} offene${e.offene_antraege === 1 ? "r Änderungsantrag" : " Änderungsanträge"}`}
+                      role="img"
+                      aria-label={`${e.offene_antraege} offene${e.offene_antraege === 1 ? "r Änderungsantrag" : " Änderungsanträge"}`}
+                    >
+                      <MessageSquareWarning size={10} strokeWidth={2.5} aria-hidden="true" />
+                      {e.offene_antraege}
+                    </span>
+                  )}
                 </span>
                 {kritischText && !zweiteZeile(e) && (
                   <span className={`block w-full truncate text-[11px] leading-[12px] ${kritischHervor ? "text-st-fehlt" : "text-label2"}`}>{kritischText}</span>

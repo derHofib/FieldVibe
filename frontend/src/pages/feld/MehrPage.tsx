@@ -26,7 +26,7 @@ export function MehrPage() {
   const kannVerwaltungSehen = currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
   const vorgemerkteAnzahl = useVorgemerkteZeitenAnzahl();
 
-  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht).filter(
+  const sichtbar = sichtbareNavSeiten(currentUser, hatRecht, "feld").filter(
     (seite) => !seite.nurOffice && seite.key !== "feed",
   );
   const gruppen = NAV_KATEGORIE_REIHENFOLGE.map((kategorie) => ({

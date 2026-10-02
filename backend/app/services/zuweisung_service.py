@@ -114,6 +114,12 @@ async def _verantwortliche_user_ids(
     return set(result.scalars().all())
 
 
+async def projekt_bearbeiter_user_ids(session: AsyncSession, mandant_id: UUID) -> set[UUID]:
+    """Aktive Nutzer mit Schreibrecht auf Projekte (mandant_admin immer) --
+    Empfaenger fuer Zeitplan-Aenderungsantraege und Filter fuer "Office-Nutzer"."""
+    return await _verantwortliche_user_ids(session, mandant_id, bereich="projekte")
+
+
 async def dispo_verantwortliche_user_ids(session: AsyncSession, mandant_id: UUID) -> set[UUID]:
     """Ersetzt das fruehere User.role.in_(("mandant_admin", "disponent")) fuer
     dispositionsbezogene Benachrichtigungs-Empfaenger (z.B. neue Kundenportal-

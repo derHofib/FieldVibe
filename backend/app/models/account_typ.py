@@ -25,6 +25,20 @@ RECHTE_BEREICHE = (
     "projekte",
 )
 RECHTE_AKTIONEN = ("sehen", "erstellen", "bearbeiten", "loeschen")
+# Zusatzaktionen, die nur fuer einen einzelnen Bereich existieren -- sonst
+# bekaeme jeder Bereich der Matrix zwei sinnlose Spalten. Zeitplan: Techniker
+# duerfen den Plan sehen und Aenderungen beantragen, ohne projekte.sehen/
+# bearbeiten (und damit Kanban, Aufgaben, Vorlagen ...) zu bekommen.
+RECHTE_BEREICH_AKTIONEN: dict[str, tuple[str, ...]] = {
+    "projekte": ("zeitplan_sehen", "zeitplan_beantragen"),
+}
+RECHTE_ALLE_AKTIONEN = RECHTE_AKTIONEN + tuple(
+    a for aktionen in RECHTE_BEREICH_AKTIONEN.values() for a in aktionen
+)
+
+
+def aktionen_fuer_bereich(bereich: str) -> tuple[str, ...]:
+    return RECHTE_AKTIONEN + RECHTE_BEREICH_AKTIONEN.get(bereich, ())
 
 
 class AccountTyp(TimestampMixin, Base):
@@ -86,7 +100,7 @@ class AccountTypRecht(Base):
             f"bereich IN {RECHTE_BEREICHE}", name="ck_account_typ_rechte_bereich_valid"
         ),
         CheckConstraint(
-            f"aktion IN {RECHTE_AKTIONEN}", name="ck_account_typ_rechte_aktion_valid"
+            f"aktion IN {RECHTE_ALLE_AKTIONEN}", name="ck_account_typ_rechte_aktion_valid"
         ),
     )
 

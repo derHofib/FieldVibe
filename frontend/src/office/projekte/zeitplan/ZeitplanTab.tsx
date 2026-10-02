@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookmarkPlus, ChartGantt, FileText, FolderCog, Info, LayoutTemplate, MoreHorizontal, Scaling, Settings2, Flag, Check, X } from "lucide-react";
+import { BookmarkPlus, ChartGantt, MessageSquareWarning, FileText, FolderCog, Info, LayoutTemplate, MoreHorizontal, Scaling, Settings2, Flag, Check, X } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +13,8 @@ import { SegmentedControl } from "../../../components/apple/SegmentedControl";
 import { Sheet } from "../../../components/apple/Sheet";
 import { openPdfBlob } from "../../../utils/pdf";
 import type { Zeitplan, ZeitplanAbhaengigkeit, ZeitplanAbhaengigkeitArt, ZeitplanElement, ZeitplanElementUpdate, ZeitplanTyp, ZeitplanVerschiebeModus } from "../../../types";
+import { AntraegeSheet } from "./AntraegeSheet";
+import { offeneAntraegeGesamt } from "./antragLogik";
 import { ElementDetailSheet } from "./ElementDetailSheet";
 import { GanttLegende } from "./GanttLegende";
 import { GanttListe } from "./GanttListe";
@@ -111,7 +113,7 @@ function kritischLesen(projektId: string): boolean {
   }
 }
 
-type DialogArt = "basisplan-speichern" | "basisplaene" | "straffen" | "vorlage-einfuegen" | "vorlage-speichern";
+type DialogArt = "antraege" | "basisplan-speichern" | "basisplaene" | "straffen" | "vorlage-einfuegen" | "vorlage-speichern";
 
 function useSchmalerViewport(): boolean {
   const abfrage = "(max-width: 767px)";
@@ -464,6 +466,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
   if (schmal) return <ZeitplanSchmal elemente={elemente} />;
 
   const leer = elemente.length === 0 && !entwurf;
+  const offeneGesamt = offeneAntraegeGesamt(elemente);
   const ziehAnzeige: GanttZiehAnzeige | null = zieh
     ? {
         id: zieh.id,
@@ -572,6 +575,17 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
             </button>
           )}
         />
+
+        <button
+          type="button"
+          onClick={() => setOffenerDialog("antraege")}
+          className={`btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm ${offeneGesamt > 0 ? "text-st-arbeit" : ""}`}
+          style={offeneGesamt > 0 ? { borderColor: "var(--st-arbeit-dot)" } : undefined}
+          title="Änderungsanträge der Techniker"
+        >
+          <MessageSquareWarning size={14} strokeWidth={2} aria-hidden="true" />
+          Anträge ({offeneGesamt})
+        </button>
 
         <button
           type="button"
@@ -721,6 +735,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
         />
       )}
 
+      {offenerDialog === "antraege" && <AntraegeSheet projektId={projektId} onClose={() => setOffenerDialog(null)} onZeitplan={ersetzen} />}
       {offenerDialog === "basisplan-speichern" && <BasisplanSpeichernSheet projektId={projektId} onClose={() => setOffenerDialog(null)} />}
       {offenerDialog === "basisplaene" && (
         <BasisplaeneVerwaltenSheet

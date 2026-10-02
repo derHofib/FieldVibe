@@ -15,7 +15,9 @@ RechteBereich = Literal[
     "partner",
     "projekte",
 ]
-RechteAktion = Literal["sehen", "erstellen", "bearbeiten", "loeschen"]
+RechteAktion = Literal[
+    "sehen", "erstellen", "bearbeiten", "loeschen", "zeitplan_sehen", "zeitplan_beantragen"
+]
 
 
 class AccountTypCreate(BaseModel):

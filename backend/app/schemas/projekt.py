@@ -204,6 +204,8 @@ class ZeitplanElement(BaseModel):
     basis_start_am: date | None = None
     basis_ende_am: date | None = None
     abweichung_tage: int | None = None
+    # Anzahl offener Aenderungsantraege (Techniker) zu diesem Element.
+    offene_antraege: int = 0
 
 
 class ZeitplanAbhaengigkeit(BaseModel):

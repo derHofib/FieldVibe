@@ -46,7 +46,7 @@ import {
 } from "./zeitplanLogik";
 
 function el(id: string, typ: ZeitplanElement["typ"], start: string | null, ende: string | null, phase: string | null = null): ZeitplanElement {
-  return { id, typ, titel: id, phase_id: phase, start_am: start, ende_am: ende, fortschritt: 0, plan_reihenfolge: 0, zugewiesen_an: null, zugewiesen_name: null, erledigt: false, vorgang: null, termine: [], bestellung: null, datum_gesperrt: false, partner: null, puffer_tage: null, kritisch: false, basis_start_am: null, basis_ende_am: null, abweichung_tage: null };
+  return { id, typ, titel: id, phase_id: phase, start_am: start, ende_am: ende, fortschritt: 0, plan_reihenfolge: 0, zugewiesen_an: null, zugewiesen_name: null, erledigt: false, vorgang: null, termine: [], bestellung: null, datum_gesperrt: false, partner: null, puffer_tage: null, kritisch: false, basis_start_am: null, basis_ende_am: null, abweichung_tage: null, offene_antraege: 0 };
 }
 function dep(v: string, n: string, versatz = 0, art: ZeitplanAbhaengigkeit["art"] = "ende_anfang"): ZeitplanAbhaengigkeit {
   return { id: `${v}>${n}`, vorgaenger_id: v, nachfolger_id: n, art, versatz_tage: versatz, kritisch: false };

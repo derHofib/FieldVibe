@@ -46,7 +46,7 @@ export function OfficeNavKategorienPage() {
       setKategorien(lokale);
       const nameZuLocalId = new Map(lokale.map((k) => [k.name, k.localId]));
       const zu: Record<string, string> = {};
-      for (const seite of NAV_SEITEN) {
+      for (const seite of NAV_SEITEN.filter((s) => !s.nurFeld)) {
         const localId = nameZuLocalId.get(seite.kategorie);
         if (localId) zu[seite.key] = localId;
       }
@@ -200,7 +200,7 @@ export function OfficeNavKategorienPage() {
           Zuordnung
         </h2>
         <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
-          {NAV_SEITEN.map((seite) => (
+          {NAV_SEITEN.filter((s) => !s.nurFeld).map((seite) => (
             <div key={seite.key} className="flex items-center gap-3 p-3">
               <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
               <span className="min-w-0 flex-1 truncate font-medium text-label">

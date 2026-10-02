@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.account_typ import RECHTE_AKTIONEN, RECHTE_BEREICHE, AccountTyp, AccountTypRecht
+from app.models.account_typ import RECHTE_BEREICHE, AccountTyp, AccountTypRecht, aktionen_fuer_bereich
 
 
 async def ist_auf_zugewiesene_kunden_beschraenkt(
@@ -96,7 +96,7 @@ async def rechte_matrix_fuer_account_typ(
     """Vollstaendig aufgeloeste Matrix (jede Bereich/Aktion-Kombination,
     fehlende Zeilen = False) fuer die Account-Typen-Verwaltungsseite."""
     matrix: dict[str, dict[str, bool]] = {
-        bereich: {aktion: False for aktion in RECHTE_AKTIONEN} for bereich in RECHTE_BEREICHE
+        bereich: {aktion: False for aktion in aktionen_fuer_bereich(bereich)} for bereich in RECHTE_BEREICHE
     }
     result = await session.execute(
         select(AccountTypRecht).where(AccountTypRecht.account_typ_id == account_typ_id)

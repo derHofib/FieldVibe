@@ -58,17 +58,19 @@ const TABS: { key: "uebersicht" | "zeit" | "termine" | "positionen" | "zeitplan"
  * und hier bewusst nicht dupliziert wird. */
 export function ProjektDetailPanel({
   projekt,
+  startTab,
   onClose,
   onKanbanOeffnen,
 }: {
   projekt: Projekt;
+  startTab?: "zeitplan";
   onClose: () => void;
   onKanbanOeffnen: () => void;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [name, setName] = useState(projekt.name);
-  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("uebersicht");
+  const [tab, setTab] = useState<(typeof TABS)[number]["key"]>(startTab ?? "uebersicht");
   const [terminWocheOffset, setTerminWocheOffset] = useState(0);
   const [sheetEintrag, setSheetEintrag] = useState<Zeiterfassung | null>(null);
 

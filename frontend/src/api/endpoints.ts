@@ -178,6 +178,11 @@ import type {
   CurrentPartner,
   PartnerStatusSetzbar,
   PartnerVorgang,
+  MeinZeitplan,
+  ZeitplanAntrag,
+  ZeitplanAntragCreate,
+  ZeitplanAntragEntscheidung,
+  ZeitplanAntragStatus,
 } from "../types";
 
 export const authApi = {
@@ -1787,6 +1792,26 @@ export const zeitplanApi = {
     apiFetch<ZeitplanBestellungRef[]>(
       `/api/projekte/${projektId}/zeitplan/auswahl/bestellungen?q=${encodeURIComponent(q)}&limit=${limit}`,
     ),
+  /** Projekte, in denen der Nutzer mitarbeitet (Feld-App-Einstieg für Nutzer ohne projekte.sehen). */
+  meine: () => apiFetch<MeinZeitplan[]>("/api/projekte/meine-zeitplaene"),
+  antraege: (projektId: string, status?: ZeitplanAntragStatus) =>
+    apiFetch<ZeitplanAntrag[]>(`/api/projekte/${projektId}/zeitplan/antraege${status ? `?status=${status}` : ""}`),
+  createAntrag: (projektId: string, body: ZeitplanAntragCreate) =>
+    apiFetch<ZeitplanAntrag>(`/api/projekte/${projektId}/zeitplan/antraege`, { method: "POST", body: JSON.stringify(body) }),
+  antragAnnehmen: (projektId: string, antragId: string, antwort?: string) =>
+    apiFetch<ZeitplanAntragEntscheidung>(`/api/projekte/${projektId}/zeitplan/antraege/${antragId}/annehmen`, {
+      method: "POST",
+      body: JSON.stringify({ antwort: antwort || null }),
+    }),
+  antragAblehnen: (projektId: string, antragId: string, antwort: string) =>
+    apiFetch<ZeitplanAntragEntscheidung>(`/api/projekte/${projektId}/zeitplan/antraege/${antragId}/ablehnen`, {
+      method: "POST",
+      body: JSON.stringify({ antwort }),
+    }),
+  antragZurueckziehen: (projektId: string, antragId: string) =>
+    apiFetch<ZeitplanAntragEntscheidung>(`/api/projekte/${projektId}/zeitplan/antraege/${antragId}/zurueckziehen`, {
+      method: "POST",
+    }),
 };
 
 export const projektVorlagenApi = {

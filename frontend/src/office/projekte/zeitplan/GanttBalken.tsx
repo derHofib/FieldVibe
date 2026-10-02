@@ -220,6 +220,16 @@ export function GanttBalken({
         </>
       )}
 
+      {element.offene_antraege > 0 && !istPhase && (
+        <g pointerEvents="none">
+          <circle cx={rechts} cy={y} r={5.5} strokeWidth={1.5} className="fill-st-arbeit-dot stroke-card" />
+          <text x={rechts} y={y + 3} fontSize={8} fontWeight={700} textAnchor="middle" className="fill-white">
+            !
+          </text>
+          <title>{`${element.offene_antraege} offene${element.offene_antraege === 1 ? "r Änderungsantrag" : " Änderungsanträge"}`}</title>
+        </g>
+      )}
+
       {titelDaneben && (
         <text
           x={labelX}

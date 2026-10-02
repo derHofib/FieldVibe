@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_recht, require_roles
 from app.api.routes.projekte import _require_projekt
 from app.models.mandant import Mandant
+from app.models.user import User
 from app.schemas.projekt import (
     ProjektVorlageAusProjekt,
     ProjektVorlageDetail,
@@ -26,7 +28,18 @@ from app.schemas.projekt import (
     ZeitplanRead,
     ZeitplanVorgangAuswahl,
 )
+from app.schemas.zeitplan_antrag import (
+    ZeitplanAntragAblehnen,
+    ZeitplanAntragAnnehmen,
+    ZeitplanAntragCreate,
+    ZeitplanAntragEntscheidungRead,
+    ZeitplanAntragRead,
+    ZeitplanAntragStatus,
+    ZeitplanMeinRead,
+)
+from app.services import zeitplan_antrag_service as antrag_svc
 from app.services import zeitplan_service as svc
+from app.services.rechte_service import hat_recht
 from app.services.pdf_service import generate_zeitplan_pdf
 from app.services.rechnung_service import logo_bytes_laden
 from app.services.zuweisung_service import erlaubte_kunde_ids
@@ -39,19 +52,57 @@ async def _erlaubte_kunden_merken(
     session.info[svc.ERLAUBTE_KUNDEN_INFO_KEY] = await erlaubte_kunde_ids(session, auth)
 
 
+def _recht_eines_von(*rechte: tuple[str, str]):
+    """Wie require_recht, aber ODER ueber mehrere (bereich, aktion)-Paare --
+    Techniker haben typischerweise nur projekte.zeitplan_sehen statt
+    projekte.sehen."""
+
+    async def checker(
+        auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+    ) -> AuthContext:
+        if auth.role != "custom":
+            return auth
+        for bereich, aktion in rechte:
+            if await hat_recht(session, account_typ_id=auth.account_typ_id, bereich=bereich, aktion=aktion):
+                return auth
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+
+    return checker
+
+
+async def _darf_projekte_sehen(session: AsyncSession, auth: AuthContext) -> bool:
+    return auth.role != "custom" or await hat_recht(
+        session, account_typ_id=auth.account_typ_id, bereich="projekte", aktion="sehen"
+    )
+
+
+async def _darf_bearbeiten(session: AsyncSession, auth: AuthContext) -> bool:
+    return auth.role != "custom" or await hat_recht(
+        session, account_typ_id=auth.account_typ_id, bereich="projekte", aktion="bearbeiten"
+    )
+
+
+# Router-Ebene nur Rolle + Kunden-Schwaerzung; das Recht haengt je Route an
+# _LESEN (Zeitplan ansehen) bzw. _SEHEN (Editor-Hilfslisten, nur projekte.sehen).
 router = APIRouter(
     prefix="/api/projekte/{projekt_id}/zeitplan",
     tags=["projekte"],
     dependencies=[
         Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
-        Depends(require_recht("projekte", "sehen")),
         Depends(_erlaubte_kunden_merken),
     ],
 )
 
+_LESEN = [Depends(_recht_eines_von(("projekte", "sehen"), ("projekte", "zeitplan_sehen")))]
+_SEHEN = [Depends(require_recht("projekte", "sehen"))]
 _SCHREIBEN = [
     Depends(require_roles("mandant_admin", "custom")),
+    Depends(require_recht("projekte", "sehen")),
     Depends(require_recht("projekte", "bearbeiten")),
+]
+_BEANTRAGEN = [
+    Depends(require_roles("mandant_admin", "custom")),
+    Depends(_recht_eines_von(("projekte", "zeitplan_beantragen"), ("projekte", "bearbeiten"))),
 ]
 
 _STATUS = {
@@ -59,7 +110,13 @@ _STATUS = {
     svc.ZeitplanNichtGefunden: status.HTTP_404_NOT_FOUND,
     svc.ZeitplanZyklus: status.HTTP_409_CONFLICT,
     svc.ZeitplanDuplikat: status.HTTP_409_CONFLICT,
+    antrag_svc.AntragKonflikt: status.HTTP_409_CONFLICT,
+    antrag_svc.AntragNichtErlaubt: status.HTTP_403_FORBIDDEN,
 }
+
+
+def _fehler(exc: svc.ZeitplanFehler) -> HTTPException:
+    return HTTPException(status_code=_STATUS[type(exc)], detail=str(exc))
 
 
 async def _ausfuehren(
@@ -80,7 +137,7 @@ async def _lese(session: AsyncSession, projekt, basisplan_id: UUID | None) -> Ze
         raise HTTPException(status_code=_STATUS[type(exc)], detail=str(exc)) from exc
 
 
-@router.get("", response_model=ZeitplanRead)
+@router.get("", response_model=ZeitplanRead, dependencies=_LESEN)
 async def get_zeitplan(
     projekt_id: UUID, basisplan_id: UUID | None = None, session: AsyncSession = Depends(get_db)
 ) -> ZeitplanRead:
@@ -88,7 +145,7 @@ async def get_zeitplan(
     return await _lese(session, projekt, basisplan_id)
 
 
-@router.get("/pdf")
+@router.get("/pdf", dependencies=_LESEN)
 async def get_zeitplan_pdf(
     projekt_id: UUID,
     basisplan_id: UUID | None = None,
@@ -117,7 +174,7 @@ async def get_zeitplan_pdf(
     )
 
 
-@router.get("/basisplaene", response_model=list[ZeitplanBasisplanRead])
+@router.get("/basisplaene", response_model=list[ZeitplanBasisplanRead], dependencies=_LESEN)
 async def list_basisplaene(projekt_id: UUID, session: AsyncSession = Depends(get_db)) -> list[ZeitplanBasisplanRead]:
     projekt = await _require_projekt(session, projekt_id)
     return await svc.basisplaene_lesen(session, projekt)
@@ -189,7 +246,7 @@ async def vorlage_anwenden(
     )
 
 
-@router.get("/auswahl/vorgaenge", response_model=list[ZeitplanVorgangAuswahl])
+@router.get("/auswahl/vorgaenge", response_model=list[ZeitplanVorgangAuswahl], dependencies=_SEHEN)
 async def auswahl_vorgaenge(
     projekt_id: UUID,
     q: str | None = None,
@@ -204,7 +261,11 @@ async def auswahl_vorgaenge(
 @router.get(
     "/auswahl/bestellungen",
     response_model=list[ZeitplanBestellungAuswahl],
-    dependencies=[Depends(require_module("material")), Depends(require_recht("material", "sehen"))],
+    dependencies=[
+        *_SEHEN,
+        Depends(require_module("material")),
+        Depends(require_recht("material", "sehen")),
+    ],
 )
 async def auswahl_bestellungen(
     projekt_id: UUID,
@@ -333,6 +394,138 @@ async def update_einstellungen(
     )
 
 
+# --- Aenderungsantraege (Techniker) -----------------------------------------
+
+
+async def _entscheidung(session: AsyncSession, projekt, antrag_id: UUID) -> ZeitplanAntragEntscheidungRead:
+    return ZeitplanAntragEntscheidungRead(
+        antrag=await antrag_svc.lese_einen(session, projekt.id, antrag_id),
+        zeitplan=await svc.lese_zeitplan(session, projekt),
+    )
+
+
+async def _antrag_ausfuehren(session: AsyncSession, projekt_id: UUID, antrag_id: UUID, aktion):
+    projekt = await _require_projekt(session, projekt_id)
+    try:
+        await aktion(projekt)
+    except svc.ZeitplanFehler as exc:
+        raise _fehler(exc) from exc
+    return await _entscheidung(session, projekt, antrag_id)
+
+
+@router.post(
+    "/antraege",
+    response_model=ZeitplanAntragRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[*_LESEN, *_BEANTRAGEN],
+)
+async def create_antrag(
+    projekt_id: UUID,
+    body: ZeitplanAntragCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ZeitplanAntragRead:
+    projekt = await _require_projekt(session, projekt_id)
+    user = await session.get(User, auth.user_id)
+    try:
+        antrag = await antrag_svc.erstellen(session, projekt, mandant_id=auth.mandant_id, user=user, body=body)
+    except svc.ZeitplanFehler as exc:
+        raise _fehler(exc) from exc
+    return await antrag_svc.lese_einen(session, projekt.id, antrag.id)
+
+
+@router.get("/antraege", response_model=list[ZeitplanAntragRead], dependencies=_LESEN)
+async def list_antraege(
+    projekt_id: UUID,
+    status_filter: ZeitplanAntragStatus | None = Query(default=None, alias="status"),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[ZeitplanAntragRead]:
+    await _require_projekt(session, projekt_id)
+    # Ohne Schreibrecht nur die eigenen Antraege -- die Antworten/Namen anderer
+    # Techniker gehen sie nichts an.
+    nur_von = None if await _darf_bearbeiten(session, auth) else auth.user_id
+    return await antrag_svc.lesen(session, projekt_id, nur_von=nur_von, status=status_filter)
+
+
+@router.post(
+    "/antraege/{antrag_id}/annehmen", response_model=ZeitplanAntragEntscheidungRead, dependencies=_SCHREIBEN
+)
+async def annehmen_antrag(
+    projekt_id: UUID,
+    antrag_id: UUID,
+    body: ZeitplanAntragAnnehmen | None = None,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ZeitplanAntragEntscheidungRead:
+    user = await session.get(User, auth.user_id)
+    erlaubte = await erlaubte_kunde_ids(session, auth)
+    antwort = (body.antwort or "").strip() or None if body else None
+    return await _antrag_ausfuehren(
+        session,
+        projekt_id,
+        antrag_id,
+        lambda projekt: antrag_svc.annehmen(
+            session, projekt, antrag_id, user=user, antwort=antwort, erlaubte_kunden=erlaubte
+        ),
+    )
+
+
+@router.post(
+    "/antraege/{antrag_id}/ablehnen", response_model=ZeitplanAntragEntscheidungRead, dependencies=_SCHREIBEN
+)
+async def ablehnen_antrag(
+    projekt_id: UUID,
+    antrag_id: UUID,
+    body: ZeitplanAntragAblehnen,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ZeitplanAntragEntscheidungRead:
+    user = await session.get(User, auth.user_id)
+    return await _antrag_ausfuehren(
+        session,
+        projekt_id,
+        antrag_id,
+        lambda projekt: antrag_svc.ablehnen(session, projekt, antrag_id, user=user, antwort=body.antwort),
+    )
+
+
+@router.post(
+    "/antraege/{antrag_id}/zurueckziehen", response_model=ZeitplanAntragEntscheidungRead, dependencies=_LESEN
+)
+async def zurueckziehen_antrag(
+    projekt_id: UUID,
+    antrag_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ZeitplanAntragEntscheidungRead:
+    user = await session.get(User, auth.user_id)
+    return await _antrag_ausfuehren(
+        session, projekt_id, antrag_id, lambda projekt: antrag_svc.zurueckziehen(session, projekt, antrag_id, user=user)
+    )
+
+
+# Eigener Router: /api/projekte/meine-zeitplaene muss VOR projekte.router
+# registriert werden (siehe main.py), sonst faengt /{projekt_id} den Pfad ab.
+meine_router = APIRouter(
+    prefix="/api/projekte",
+    tags=["projekte"],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        *_LESEN,
+    ],
+)
+
+
+@meine_router.get("/meine-zeitplaene", response_model=list[ZeitplanMeinRead])
+async def meine_zeitplaene(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> list[ZeitplanMeinRead]:
+    return await antrag_svc.meine_zeitplaene(
+        session, auth.user_id, alle=await _darf_projekte_sehen(session, auth), heute=date.today()
+    )
+
+
 # Projektvorlagen: mandantenweit, daher eigener Router ohne Projekt im Pfad.
 vorlagen_router = APIRouter(
     prefix="/api/projekt-vorlagen",
@@ -342,10 +535,6 @@ vorlagen_router = APIRouter(
         Depends(require_recht("projekte", "sehen")),
     ],
 )
-
-
-def _fehler(exc: svc.ZeitplanFehler) -> HTTPException:
-    return HTTPException(status_code=_STATUS[type(exc)], detail=str(exc))
 
 
 @vorlagen_router.get("", response_model=list[ProjektVorlageListe])

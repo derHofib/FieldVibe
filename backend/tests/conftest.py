@@ -37,7 +37,7 @@ from app.core.rate_limit import (
 from app.core.security import hash_password
 from app.db.session import engine, system_session
 from app.main import app
-from app.models.account_typ import AccountTyp, AccountTypRecht
+from app.models.account_typ import AccountTyp, AccountTypRecht, aktionen_fuer_bereich
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
@@ -76,6 +76,7 @@ _LEGACY_RECHTE: dict[str, dict[str, set[str]]] = {
         "abrechnung": {"sehen"},
         "statistik": {"sehen"},
         "mitarbeiterverwaltung": {"sehen"},
+        "projekte": {"zeitplan_sehen", "zeitplan_beantragen"},
     },
     "controller": {
         "vorgaenge": {"sehen"},
@@ -120,7 +121,7 @@ async def _get_or_create_legacy_account_typ(session, *, mandant_id: uuid.UUID, r
     await session.flush()
     rechte = _LEGACY_RECHTE[rolle]
     for bereich, aktionen in rechte.items():
-        for aktion in ("sehen", "erstellen", "bearbeiten", "loeschen"):
+        for aktion in aktionen_fuer_bereich(bereich):
             session.add(
                 AccountTypRecht(
                     account_typ_id=account_typ.id,

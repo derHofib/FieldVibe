@@ -31,12 +31,23 @@ const BEREICH_LABEL: Record<RechteBereich, string> = {
   projekte: "Projekte",
 };
 const AKTIONEN: RechteAktion[] = ["sehen", "erstellen", "bearbeiten", "loeschen"];
-const AKTION_LABEL: Record<RechteAktion, string> = {
+const AKTION_LABEL: Partial<Record<RechteAktion, string>> = {
   sehen: "Sehen",
   erstellen: "Erstellen",
   bearbeiten: "Bearbeiten",
   loeschen: "Löschen",
 };
+
+// Zusatzaktionen nur im Bereich "projekte" -- eigener Block statt zweier Spalten
+// für alle Bereiche, die dort keinen Sinn ergäben.
+const ZEITPLAN_AKTIONEN: { aktion: RechteAktion; label: string; hinweis: string }[] = [
+  { aktion: "zeitplan_sehen", label: "Zeitplan ansehen", hinweis: "Lesender Zugriff auf Projekt-Zeitpläne, auch ohne „Projekte: Sehen“." },
+  {
+    aktion: "zeitplan_beantragen",
+    label: "Zeitplan-Änderungen beantragen",
+    hinweis: "Verschiebungen, Dauer-Änderungen und Probleme melden; das Büro entscheidet.",
+  },
+];
 
 function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
   const queryClient = useQueryClient();
@@ -100,6 +111,26 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
           ))}
         </tbody>
       </table>
+      <fieldset className="border-t border-sep px-4 py-3">
+        <legend className="px-0 text-xs font-medium text-label2">Zeitplan (Projekte)</legend>
+        <div className="mt-1 space-y-2">
+          {ZEITPLAN_AKTIONEN.map(({ aktion, label, hinweis }) => (
+            <label key={aktion} className="flex items-start gap-2.5 text-sm text-label">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-ind-acc"
+                checked={istErlaubt("projekte", aktion)}
+                disabled={setMutation.isPending}
+                onChange={(e) => setMutation.mutate({ bereich: "projekte", aktion, erlaubt: e.target.checked })}
+              />
+              <span>
+                <span className="font-medium">{label}</span>
+                <span className="block text-xs text-label2">{hinweis}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
     </div>
   );
 }

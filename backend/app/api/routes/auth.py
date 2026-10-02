@@ -13,7 +13,7 @@ from app.core.security import (
     hash_password,
 )
 from app.db.session import system_session
-from app.models.account_typ import RECHTE_AKTIONEN, RECHTE_BEREICHE, AccountTyp
+from app.models.account_typ import RECHTE_BEREICHE, AccountTyp, aktionen_fuer_bereich
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
@@ -166,7 +166,7 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             # ohnehin immer vorbei (siehe app/api/deps.py) -- die Matrix
             # spiegelt das 1:1, damit das Frontend nicht zusaetzlich nach
             # der Rolle unterscheiden muss.
-            rechte = {bereich: list(RECHTE_AKTIONEN) for bereich in RECHTE_BEREICHE}
+            rechte = {bereich: list(aktionen_fuer_bereich(bereich)) for bereich in RECHTE_BEREICHE}
 
         # Defensiv statt user.bottom_nav_items direkt durchzureichen: falls
         # dort noch ein Wert aus der frueheren, flachen Listen-Form steckt

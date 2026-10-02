@@ -40,6 +40,7 @@ from app.models.projekt import (
     ProjektVorlageElement,
 )
 from app.models.user import User
+from app.models.zeitplan_antrag import ZeitplanAenderungsantrag
 from app.schemas.projekt import (
     ProjektVorlageAbhaengigkeitRead,
     ProjektVorlageDetail,
@@ -703,6 +704,20 @@ async def lese_zeitplan(
         for p in (await session.execute(select(Partner.id, Partner.name).where(Partner.id.in_(partner_ids)))).all():
             partner[p[0]] = ZeitplanPartnerRef(id=p[0], name=p[1])
 
+    # Offene Antraege je Element in einer Query (kein N+1).
+    offene_antraege: dict[UUID, int] = dict(
+        (
+            await session.execute(
+                select(ZeitplanAenderungsantrag.element_id, func.count())
+                .where(
+                    ZeitplanAenderungsantrag.projekt_id == projekt.id,
+                    ZeitplanAenderungsantrag.status == "offen",
+                )
+                .group_by(ZeitplanAenderungsantrag.element_id)
+            )
+        ).all()
+    )
+
     ids = {r[0] for r in zeilen}
     deps = [
         d
@@ -748,6 +763,7 @@ async def lese_zeitplan(
                 basis_start_am=basis[r[0]][0] if r[0] in basis else None,
                 basis_ende_am=basis[r[0]][1] if r[0] in basis else None,
                 abweichung_tage=(r[5] - basis[r[0]][1]).days if r[0] in basis and r[5] is not None else None,
+                offene_antraege=offene_antraege.get(r[0], 0),
             )
         )
     # Phasen zuerst (nach plan_reihenfolge), danach die Elemente -- das
