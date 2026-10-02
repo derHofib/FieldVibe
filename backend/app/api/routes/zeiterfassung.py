@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -15,6 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.core.zeit import in_lokal, montag_der_woche, tagesbeginn_utc, tagesende_utc
 from app.models.anlage import Anlage
 from app.models.leistungsverzeichnis import LeistungsverzeichnisKunde, LeistungsverzeichnisPosition
 from app.models.mandant import Mandant
@@ -63,13 +64,7 @@ router = APIRouter(
 
 
 def _montag_dieser_woche(jetzt: datetime) -> datetime:
-    tage_seit_montag = jetzt.weekday()
-    montag_datum = jetzt.date() - timedelta(days=tage_seit_montag)
-    return datetime.combine(montag_datum, time.min, tzinfo=timezone.utc)
-
-
-def _tagesbeginn(d: date) -> datetime:
-    return datetime.combine(d, time.min, tzinfo=timezone.utc)
+    return tagesbeginn_utc(montag_der_woche(in_lokal(jetzt).date()))
 
 
 async def _mit_vorgang_kontext(
@@ -163,9 +158,9 @@ async def list_zeiterfassung(
     if vorgang_id:
         stmt = stmt.where(Zeiterfassung.vorgang_id == vorgang_id)
     if von:
-        stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
+        stmt = stmt.where(Zeiterfassung.start_at >= tagesbeginn_utc(von))
     if bis:
-        stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
+        stmt = stmt.where(Zeiterfassung.start_at < tagesende_utc(bis))
     if laufend is not None:
         stmt = stmt.where(Zeiterfassung.ende_at.is_(None) if laufend else Zeiterfassung.ende_at.is_not(None))
     if vermerkt_aelter_als_tage is not None:
@@ -232,9 +227,9 @@ async def export_zeiterfassung_csv(
     if techniker_id:
         stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
     if von:
-        stmt = stmt.where(Zeiterfassung.start_at >= _tagesbeginn(von))
+        stmt = stmt.where(Zeiterfassung.start_at >= tagesbeginn_utc(von))
     if bis:
-        stmt = stmt.where(Zeiterfassung.start_at < _tagesbeginn(bis + timedelta(days=1)))
+        stmt = stmt.where(Zeiterfassung.start_at < tagesende_utc(bis))
     eintraege = list((await session.execute(stmt)).scalars().all())
 
     technikers_by_id: dict[UUID, User | None] = {}
@@ -260,13 +255,13 @@ async def export_zeiterfassung_csv(
             fahrzeug = fahrzeuge_by_id[e.fahrzeug_id]
         rows.append(
             [
-                e.start_at.strftime("%d.%m.%Y"),
+                in_lokal(e.start_at).strftime("%d.%m.%Y"),
                 techniker.name if techniker else "",
                 vorgang.vorgangsnummer if vorgang else "",
                 ZEITERFASSUNG_KATEGORIE_LABEL.get(e.kategorie, "Vorgang"),
                 e.taetigkeit or "",
-                e.start_at.strftime("%H:%M"),
-                e.ende_at.strftime("%H:%M") if e.ende_at else "",
+                in_lokal(e.start_at).strftime("%H:%M"),
+                in_lokal(e.ende_at).strftime("%H:%M") if e.ende_at else "",
                 f"{dauer_stunden:.2f}".replace(".", ",") if dauer_stunden is not None else "",
                 "Ja" if e.abrechenbar else "Nein",
                 f"{e.km:.1f}".replace(".", ",") if e.km is not None else "",
@@ -315,8 +310,9 @@ async def get_statistik(
 
     jetzt = datetime.now(timezone.utc)
     wochenstart = _montag_dieser_woche(jetzt)
-    monatsstart = datetime(jetzt.year, jetzt.month, 1, tzinfo=timezone.utc)
-    jahresstart = datetime(jetzt.year, 1, 1, tzinfo=timezone.utc)
+    lokal_heute = in_lokal(jetzt).date()
+    monatsstart = tagesbeginn_utc(lokal_heute.replace(day=1))
+    jahresstart = tagesbeginn_utc(lokal_heute.replace(month=1, day=1))
 
     async def _stunden_seit(start: datetime) -> Decimal:
         result = await session.execute(
@@ -420,8 +416,8 @@ async def wochenzettel_pdf(
         select(Zeiterfassung)
         .where(
             Zeiterfassung.techniker_id == ziel_id,
-            Zeiterfassung.start_at >= _tagesbeginn(woche_start),
-            Zeiterfassung.start_at < _tagesbeginn(woche_start + timedelta(days=7)),
+            Zeiterfassung.start_at >= tagesbeginn_utc(woche_start),
+            Zeiterfassung.start_at < tagesbeginn_utc(woche_start + timedelta(days=7)),
             Zeiterfassung.geloescht_am.is_(None),
         )
         .order_by(Zeiterfassung.start_at)

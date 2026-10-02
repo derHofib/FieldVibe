@@ -9,6 +9,7 @@ from fpdf.enums import OutputIntentSubType, XPos, YPos
 from fpdf.output import PDFICCProfile
 from fpdf.util import builtin_srgb2014_bytes
 
+from app.core.zeit import in_lokal
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.form_modul import FormField, FormGroup, FormPresentationElement, FormSubmission, FormViewFieldLayout
@@ -984,7 +985,8 @@ def generate_wochenzettel_pdf(
         gesamt_sekunden += dauer_sekunden
         if eintrag.km is not None:
             gesamt_km += eintrag.km
-        pdf.cell(25, 8, _fmt_datum(eintrag.start_at), border=1)
+        start_lokal = in_lokal(eintrag.start_at)
+        pdf.cell(25, 8, _fmt_datum(start_lokal), border=1)
         vorgang_spalte = (
             vorgang.vorgangsnummer
             if vorgang
@@ -992,11 +994,11 @@ def generate_wochenzettel_pdf(
         )
         pdf.cell(30, 8, vorgang_spalte, border=1)
         pdf.cell(60, 8, (eintrag.taetigkeit or "-")[:36], border=1)
-        pdf.cell(20, 8, eintrag.start_at.strftime("%H:%M"), border=1, align="R")
+        pdf.cell(20, 8, start_lokal.strftime("%H:%M"), border=1, align="R")
         pdf.cell(
             20,
             8,
-            eintrag.ende_at.strftime("%H:%M") if eintrag.ende_at else "läuft",
+            in_lokal(eintrag.ende_at).strftime("%H:%M") if eintrag.ende_at else "läuft",
             border=1,
             align="R",
         )

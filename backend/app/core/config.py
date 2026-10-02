@@ -9,6 +9,10 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
+    # Betriebs-Zeitzone fuer Tagesgrenzen (Zeiterfassung: Tages-/Wochenfilter,
+    # Wochenzettel); siehe app/core/zeit.py. Mandanten haben kein eigenes Feld.
+    zeitzone: str = Field(default="Europe/Berlin", validation_alias="FIELDVIBE_ZEITZONE")
+
     # Notausgang fuer die Startpruefung der DB-Rolle (app/db/rollen_pruefung.py):
     # nur setzen, wenn bewusst eine Superuser-/BYPASSRLS-Rolle genutzt wird und
     # die Mandantentrennung per RLS damit ausser Kraft ist.
