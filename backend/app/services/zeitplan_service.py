@@ -606,9 +606,16 @@ async def _projekt_modus(session: AsyncSession, projekt: Projekt) -> str:
     return projekt.verschiebe_modus
 
 
+# Schluessel in session.info: die Zeitplan-Routen haengen die erlaubten Kunden
+# (None = unbeschraenkt) per Router-Dependency an die Request-Session, damit
+# jede der vielen ZeitplanRead-liefernden Mutationen dieselbe Schwaerzung bekommt.
+ERLAUBTE_KUNDEN_INFO_KEY = "zeitplan_erlaubte_kunden"
+
+
 async def lese_zeitplan(
     session: AsyncSession, projekt: Projekt, basisplan_id: UUID | None = None
 ) -> ZeitplanRead:
+    erlaubte_kunden: set[UUID] | None = session.info.get(ERLAUBTE_KUNDEN_INFO_KEY)
     modus = await _projekt_modus(session, projekt)
     basis: dict[UUID, tuple[date, date]] = {}
     if basisplan_id is not None:
@@ -656,17 +663,21 @@ async def lese_zeitplan(
     if vorgang_ids:
         for v in (
             await session.execute(
-                select(Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel, Vorgang.status).where(
-                    Vorgang.id.in_(vorgang_ids), Vorgang.geloescht_am.is_(None)
-                )
+                select(
+                    Vorgang.id, Vorgang.vorgangsnummer, Vorgang.titel, Vorgang.status, Vorgang.kunde_id
+                ).where(Vorgang.id.in_(vorgang_ids), Vorgang.geloescht_am.is_(None))
             )
         ).all():
+            # Element bleibt sichtbar, der Vorgang eines nicht zugewiesenen
+            # Kunden wird nicht mitgeliefert (damit entfallen auch Termine).
+            if erlaubte_kunden is not None and v[4] not in erlaubte_kunden:
+                continue
             vorgaenge[v[0]] = ZeitplanVorgangRef(id=v[0], vorgangsnummer=v[1], titel=v[2], status=v[3])
         for t in (
             await session.execute(
                 select(Termin.id, Termin.vorgang_id, Termin.start_at, Termin.ende_at, User.name)
                 .outerjoin(User, User.id == Termin.techniker_id)
-                .where(Termin.vorgang_id.in_(vorgang_ids), Termin.geloescht_am.is_(None))
+                .where(Termin.vorgang_id.in_(list(vorgaenge)), Termin.geloescht_am.is_(None))
                 .order_by(Termin.start_at, Termin.id)
             )
         ).all():

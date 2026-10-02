@@ -249,8 +249,12 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "indigo",
     route: "/auswertung",
     kategorie: "Finanzen",
+    // Das Backend sperrt /api/auswertung fuer Nutzer mit Kundeneinschraenkung
+    // komplett (403) -- Menuepunkt gar nicht erst anbieten.
     sichtbar: ({ currentUser, hatRecht }) =>
-      hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung"),
+      hatRecht("abrechnung", "sehen") &&
+      istModulAktiv(currentUser, "abrechnung") &&
+      !currentUser?.nur_zugewiesene_kunden,
   },
   {
     key: "kennzahlen",

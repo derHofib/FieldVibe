@@ -33,12 +33,19 @@ from app.services.zuweisung_service import erlaubte_kunde_ids
 
 # Lesen wie die uebrigen Projekt-Routen; jede Mutation braucht zusaetzlich
 # "bearbeiten" (siehe _SCHREIBEN) und liefert den kompletten Zeitplan zurueck.
+async def _erlaubte_kunden_merken(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> None:
+    session.info[svc.ERLAUBTE_KUNDEN_INFO_KEY] = await erlaubte_kunde_ids(session, auth)
+
+
 router = APIRouter(
     prefix="/api/projekte/{projekt_id}/zeitplan",
     tags=["projekte"],
     dependencies=[
         Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
         Depends(require_recht("projekte", "sehen")),
+        Depends(_erlaubte_kunden_merken),
     ],
 )
 

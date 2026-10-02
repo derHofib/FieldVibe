@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
@@ -11,6 +11,7 @@ from app.models.projekt import Projekt
 from app.models.vorgang import Vorgang
 from app.schemas.auftrag import AuftragCreate, AuftragRead, AuftragUpdate
 from app.services import papierkorb_service
+from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen
 
 # Nutzt bewusst den bestehenden Rechte-Bereich "projekte" (siehe
 # app/models/auftrag.py) -- kein eigener Bereich noetig.
@@ -24,10 +25,17 @@ router = APIRouter(
 )
 
 
-async def _require_auftrag(session: AsyncSession, auftrag_id: UUID) -> Auftrag:
+async def _require_auftrag(session: AsyncSession, auth: AuthContext, auftrag_id: UUID) -> Auftrag:
     auftrag = await session.get(Auftrag, auftrag_id)
     if auftrag is None or auftrag.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auftrag nicht gefunden")
+    # Auftraege ohne Kunde bleiben fuer Eingeschraenkte sichtbar (kein
+    # Kundenbezug, den man schuetzen muesste) -- anders als
+    # require_kunde_zugriff, das kunde_id=None sperrt.
+    if auftrag.kunde_id is not None:
+        erlaubt = await erlaubte_kunde_ids(session, auth)
+        if erlaubt is not None and auftrag.kunde_id not in erlaubt:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auftrag nicht gefunden")
     return auftrag
 
 
@@ -67,6 +75,7 @@ async def list_auftraege(
     projekt_id: UUID | None = Query(default=None),
     kunde_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[AuftragRead]:
     stmt = select(Auftrag).where(Auftrag.geloescht_am.is_(None)).order_by(Auftrag.created_at.desc())
@@ -76,6 +85,9 @@ async def list_auftraege(
         stmt = stmt.where(Auftrag.kunde_id == kunde_id)
     if status_filter:
         stmt = stmt.where(Auftrag.status == status_filter)
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(or_(Auftrag.kunde_id.is_(None), Auftrag.kunde_id.in_(erlaubte_kunden)))
     result = await session.execute(stmt)
     return await _anreichern(session, list(result.scalars().all()))
 
@@ -96,11 +108,13 @@ async def create_auftrag(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if body.kunde_id is not None and await session.get(Kunde, body.kunde_id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
-        )
+    if body.kunde_id is not None:
+        await require_kunde_zugewiesen(session, auth, body.kunde_id)
+        if await session.get(Kunde, body.kunde_id) is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
     auftrag = Auftrag(
         mandant_id=auth.mandant_id,
         projekt_id=body.projekt_id,
@@ -117,8 +131,12 @@ async def create_auftrag(
 
 
 @router.get("/{auftrag_id}", response_model=AuftragRead)
-async def get_auftrag(auftrag_id: UUID, session: AsyncSession = Depends(get_db)) -> AuftragRead:
-    auftrag = await _require_auftrag(session, auftrag_id)
+async def get_auftrag(
+    auftrag_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AuftragRead:
+    auftrag = await _require_auftrag(session, auth, auftrag_id)
     [gelesen] = await _anreichern(session, [auftrag])
     return gelesen
 
@@ -131,20 +149,23 @@ async def get_auftrag(auftrag_id: UUID, session: AsyncSession = Depends(get_db))
 async def update_auftrag(
     auftrag_id: UUID,
     body: AuftragUpdate,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> AuftragRead:
-    auftrag = await _require_auftrag(session, auftrag_id)
+    auftrag = await _require_auftrag(session, auth, auftrag_id)
     changes = body.model_dump(exclude_unset=True)
     if changes.get("projekt_id") is not None and await session.get(Projekt, changes["projekt_id"]) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Projekt nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
-    if changes.get("kunde_id") is not None and await session.get(Kunde, changes["kunde_id"]) is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
-        )
+    if changes.get("kunde_id") is not None:
+        await require_kunde_zugewiesen(session, auth, changes["kunde_id"])
+        if await session.get(Kunde, changes["kunde_id"]) is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
     for feld, wert in changes.items():
         setattr(auftrag, feld, wert)
     await session.flush()
@@ -163,6 +184,7 @@ async def delete_auftrag(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
+    await _require_auftrag(session, auth, auftrag_id)
     auftrag = await papierkorb_service.soft_delete(
         session, entity_typ="auftrag", entity_id=auftrag_id, actor_user_id=auth.user_id
     )

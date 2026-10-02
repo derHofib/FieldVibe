@@ -61,7 +61,7 @@ from app.services.vorgang_completion_service import (
     close_vorgang,
     create_folge_vorgang,
 )
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import assigned_kunde_ids, zuweisbare_user_ids
 
 
 async def _mit_zugewiesenem_namen(session: AsyncSession, vorgang: Vorgang) -> Vorgang:
@@ -662,6 +662,14 @@ async def update_vorgang(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Nutzer nicht gefunden oder gehört nicht zum eigenen Mandanten",
+            )
+        # Unveraenderte Zuweisung (z.B. PATCH mit vollem Formular) bleibt erlaubt.
+        if changes["zugewiesener_user_id"] != vorgang.zugewiesener_user_id and not await zuweisbare_user_ids(
+            session, {changes["zugewiesener_user_id"]}
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Deaktivierte oder gelöschte Nutzer können nicht zugewiesen werden",
             )
 
     alter_zugewiesener_user_id = vorgang.zugewiesener_user_id

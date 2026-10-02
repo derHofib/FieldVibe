@@ -58,32 +58,20 @@ def _kreditorenkonto(lieferant_id: UUID | None, lieferant_name: str) -> str:
     return str(70000 + (zlib.crc32(schluessel) % 9000))
 
 
-async def ust_va_bericht(
-    session: AsyncSession,
-    mandant_id: UUID,
-    von: date,
-    bis: date,
-    kunde_ids: set[UUID] | None = None,
-) -> UstVaBericht:
+async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis: date) -> UstVaBericht:
     """Aggregiert Umsatzsteuer (aus versendeten Ausgangsrechnungen, inkl.
     Storno-Belegen mit negativen Betraegen -- siehe Rechnung.ist_storno)
     und Vorsteuer (aus nicht stornierten Eingangsrechnungen) je Steuersatz
     fuer den angegebenen Zeitraum. Massgeblich ist bei Ausgangsrechnungen
     versendet_am (Soll-Versteuerung: der Zeitpunkt der Leistungserbringung/
     Rechnungsstellung, nicht der Zahlung), bei Eingangsrechnungen das vom
-    Aussteller angegebene rechnungsdatum.
-
-    kunde_ids != None (Nutzer mit nur_zugewiesene_kunden): nur Ausgangs-
-    rechnungen dieser Kunden; Eingangsrechnungen haben keinen Kundenbezug
-    und fallen fuer eingeschraenkte Nutzer ganz weg."""
+    Aussteller angegebene rechnungsdatum."""
     ausgang_stmt = select(Rechnung).where(
         Rechnung.mandant_id == mandant_id,
         Rechnung.versendet_am.isnot(None),
         Rechnung.versendet_am >= _tagesbeginn_utc(von),
         Rechnung.versendet_am < _tagesbeginn_utc(bis + timedelta(days=1)),
     )
-    if kunde_ids is not None:
-        ausgang_stmt = ausgang_stmt.where(Rechnung.kunde_id.in_(kunde_ids))
     ausgangsrechnungen = (await session.execute(ausgang_stmt)).scalars().all()
 
     umsatz_nach_satz: dict[Decimal, Decimal] = {}
@@ -98,9 +86,7 @@ async def ust_va_bericht(
         Eingangsrechnung.rechnungsdatum >= von,
         Eingangsrechnung.rechnungsdatum <= bis,
     )
-    eingangsrechnungen = (
-        [] if kunde_ids is not None else (await session.execute(eingang_stmt)).scalars().all()
-    )
+    eingangsrechnungen = (await session.execute(eingang_stmt)).scalars().all()
 
     vorsteuer_netto_nach_satz: dict[Decimal, Decimal] = {}
     for eingangsrechnung in eingangsrechnungen:
@@ -161,12 +147,7 @@ def _buckets_aus(eintraege: list[OffenerPostenEintrag]) -> list[OffenePostenBuck
     ]
 
 
-async def offene_posten_bericht(
-    session: AsyncSession,
-    mandant_id: UUID,
-    heute: date,
-    kunde_ids: set[UUID] | None = None,
-) -> OffenePostenBericht:
+async def offene_posten_bericht(session: AsyncSession, mandant_id: UUID, heute: date) -> OffenePostenBericht:
     """OP-Liste: fasst offene Debitoren (Ausgangsrechnungen) und Kreditoren
     (Eingangsrechnungen) in einem gemeinsamen Alterungsraster zusammen.
     Entwuerfe zaehlen bewusst nicht mit -- fuer eine noch nicht versendete
@@ -178,8 +159,6 @@ async def offene_posten_bericht(
         Rechnung.faellig_am,
         rechnung_service.offen_sql().label("offen"),
     ).where(Rechnung.mandant_id == mandant_id, Rechnung.status.in_(("versendet", "teilweise_bezahlt")))
-    if kunde_ids is not None:
-        debitoren_stmt = debitoren_stmt.where(Rechnung.kunde_id.in_(kunde_ids))
     debitor_zeilen = [row for row in (await session.execute(debitoren_stmt)).all() if row.offen > 0]
     kunden_namen = await rechnung_service.kunden_namen_fuer(session, [row.kunde_id for row in debitor_zeilen])
 
@@ -199,10 +178,7 @@ async def offene_posten_bericht(
     eingang_stmt = select(Eingangsrechnung).where(
         Eingangsrechnung.mandant_id == mandant_id, Eingangsrechnung.status == "offen"
     )
-    # Kreditoren haben keinen Kundenbezug -> fuer eingeschraenkte Nutzer leer.
-    eingangsrechnungen = (
-        [] if kunde_ids is not None else (await session.execute(eingang_stmt)).scalars().all()
-    )
+    eingangsrechnungen = (await session.execute(eingang_stmt)).scalars().all()
 
     kreditoren: list[OffenerPostenEintrag] = []
     for eingangsrechnung in eingangsrechnungen:
@@ -242,13 +218,7 @@ def _betrag_datev(betrag: Decimal) -> str:
     return f"{abs(betrag):.2f}".replace(".", ",")
 
 
-async def datev_export_csv(
-    session: AsyncSession,
-    mandant_id: UUID,
-    von: date,
-    bis: date,
-    kunde_ids: set[UUID] | None = None,
-) -> Response:
+async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, bis: date) -> Response:
     """Buchungsstapel-CSV im DATEV-EXTF-Format (siehe Modul-Docstring-
     Kommentare zu den Kontenrahmen-Annahmen). Nur als Ausgangspunkt fuer
     den Steuerberater gedacht -- vor dem ersten echten Import unbedingt
@@ -259,8 +229,6 @@ async def datev_export_csv(
         Rechnung.versendet_am >= _tagesbeginn_utc(von),
         Rechnung.versendet_am < _tagesbeginn_utc(bis + timedelta(days=1)),
     ).order_by(Rechnung.versendet_am)
-    if kunde_ids is not None:
-        ausgang_stmt = ausgang_stmt.where(Rechnung.kunde_id.in_(kunde_ids))
     ausgangsrechnungen = (await session.execute(ausgang_stmt)).scalars().all()
 
     eingang_stmt = select(Eingangsrechnung).where(
@@ -269,9 +237,7 @@ async def datev_export_csv(
         Eingangsrechnung.rechnungsdatum >= von,
         Eingangsrechnung.rechnungsdatum <= bis,
     ).order_by(Eingangsrechnung.rechnungsdatum)
-    eingangsrechnungen = (
-        [] if kunde_ids is not None else (await session.execute(eingang_stmt)).scalars().all()
-    )
+    eingangsrechnungen = (await session.execute(eingang_stmt)).scalars().all()
 
     zeilen: list[list[str]] = []
     for rechnung in ausgangsrechnungen:

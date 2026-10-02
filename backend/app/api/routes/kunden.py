@@ -54,7 +54,7 @@ from app.services.einladung_service import (
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids, technik_user_ids
+from app.services.zuweisung_service import assigned_kunde_ids, technik_user_ids, zuweisbare_user_ids
 
 # super_admin is deliberately excluded: fachliche Daten sind immer
 # mandantengebunden, und ein nicht-impersonierender super_admin hat kein
@@ -410,6 +410,15 @@ async def set_kunde_techniker(
         select(KundeZuweisung).where(KundeZuweisung.kunde_id == kunde_id)
     )
     bestehende = {z.user_id: z for z in bestehende_result.scalars().all()}
+
+    # Nur neue Zuweisungen pruefen: ein inzwischen deaktivierter Techniker darf
+    # in der unveraenderten Liste mitgeschickt werden, ohne dass das Speichern scheitert.
+    neue_ids = user_ids - bestehende.keys()
+    if neue_ids and await zuweisbare_user_ids(session, neue_ids) != neue_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Deaktivierte oder gelöschte Nutzer können nicht zugewiesen werden",
+        )
 
     for user_id, zuweisung in bestehende.items():
         if user_id not in user_ids:

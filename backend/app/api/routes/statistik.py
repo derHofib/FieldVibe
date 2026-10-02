@@ -10,6 +10,7 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.schemas.statistik import TechnikerOffeneVorgaenge, VorgangKennzahlen
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
+from app.services.zuweisung_service import erlaubte_kunde_ids
 
 router = APIRouter(
     prefix="/api/statistik",
@@ -37,6 +38,9 @@ async def vorgang_kennzahlen(
     )
     if projekt_id:
         offene_basis = offene_basis.where(Vorgang.projekt_id == projekt_id)
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        offene_basis = offene_basis.where(Vorgang.kunde_id.in_(erlaubte_kunden))
 
     gesamt_stmt = select(func.count()).select_from(offene_basis.subquery())
     gesamt_result = await session.execute(gesamt_stmt)
@@ -56,6 +60,8 @@ async def vorgang_kennzahlen(
     )
     if projekt_id:
         je_techniker_stmt = je_techniker_stmt.where(Vorgang.projekt_id == projekt_id)
+    if erlaubte_kunden is not None:
+        je_techniker_stmt = je_techniker_stmt.where(Vorgang.kunde_id.in_(erlaubte_kunden))
     je_techniker_result = await session.execute(je_techniker_stmt)
     je_techniker = [
         TechnikerOffeneVorgaenge(techniker_id=techniker_id, techniker_name=name, anzahl_offen=anzahl)
@@ -68,6 +74,8 @@ async def vorgang_kennzahlen(
     ).where(Vorgang.geloescht_am.is_(None), Vorgang.abgeschlossen_am.is_not(None))
     if projekt_id:
         durchlaufzeit_stmt = durchlaufzeit_stmt.where(Vorgang.projekt_id == projekt_id)
+    if erlaubte_kunden is not None:
+        durchlaufzeit_stmt = durchlaufzeit_stmt.where(Vorgang.kunde_id.in_(erlaubte_kunden))
     if von:
         durchlaufzeit_stmt = durchlaufzeit_stmt.where(
             Vorgang.abgeschlossen_am >= datetime.combine(von, datetime.min.time(), tzinfo=timezone.utc)

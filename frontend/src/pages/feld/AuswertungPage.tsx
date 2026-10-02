@@ -1,9 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download } from "lucide-react";
+import { Download, Receipt } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { auswertungApi } from "../../api/endpoints";
+import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { istModulAktiv } from "../../utils/module";
@@ -18,6 +19,7 @@ export function AuswertungPage() {
   const navigate = useNavigate();
   const abrechnungAktiv = istModulAktiv(currentUser, "abrechnung");
   const kannSehen = hatRecht("abrechnung", "sehen");
+  const eingeschraenkt = currentUser?.nur_zugewiesene_kunden === true;
 
   const [von, setVon] = useState(ersterTagDesMonats());
   const [bis, setBis] = useState(new Date().toISOString().slice(0, 10));
@@ -31,7 +33,7 @@ export function AuswertungPage() {
   const { data: offenePosten } = useQuery({
     queryKey: ["offene-posten"],
     queryFn: auswertungApi.offenePosten,
-    enabled: abrechnungAktiv && kannSehen,
+    enabled: abrechnungAktiv && kannSehen && !eingeschraenkt,
   });
 
   const datevMutation = useMutation({
@@ -40,6 +42,20 @@ export function AuswertungPage() {
   });
 
   if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
+
+  if (eingeschraenkt) {
+    return (
+      <div className="space-y-4">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
+          ← Zurück
+        </button>
+        <EmptyState
+          icon={Receipt}
+          text="Auswertungen sind für Nutzer mit Kundeneinschränkung nicht verfügbar."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

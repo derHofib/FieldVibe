@@ -20,7 +20,7 @@ from app.schemas.anlage import AnlageRead
 from app.schemas.fahrzeug_zuweisung import FahrzeugZuweisungSetzen, FahrzeugZuweisungUebersicht
 from app.schemas.user import UserRead
 from app.services import papierkorb_service
-from app.services.zuweisung_service import technik_user_ids
+from app.services.zuweisung_service import technik_user_ids, zuweisbare_user_ids
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -113,6 +113,12 @@ async def zuweisung_setzen(
     if techniker is None or user_id not in await technik_user_ids(session, auth.mandant_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Techniker nicht gefunden"
+        )
+    # Entfernen (anlage_id=None) bleibt auch fuer deaktivierte Nutzer moeglich.
+    if body.anlage_id is not None and not await zuweisbare_user_ids(session, {user_id}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Deaktivierte oder gelöschte Nutzer können nicht zugewiesen werden",
         )
 
     bestehende = await _zuweisung_fuer(session, user_id)

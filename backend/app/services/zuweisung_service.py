@@ -9,6 +9,7 @@ from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.user import User
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
+from app.services.user_anonymisierung_service import nicht_anonymisiert
 
 if TYPE_CHECKING:
     from app.api.deps import AuthContext
@@ -76,6 +77,18 @@ async def technik_user_ids(session: AsyncSession, mandant_id: UUID | None) -> se
             User.mandant_id == mandant_id,
             AccountTyp.nur_zugewiesene_kunden.is_(True),
         )
+    )
+    return set(result.scalars().all())
+
+
+async def zuweisbare_user_ids(session: AsyncSession, user_ids: set[UUID]) -> set[UUID]:
+    """Teilmenge der user_ids, die neu zugewiesen werden duerfen: aktiv und
+    nicht anonymisiert (deaktivierte/geloeschte Nutzer erhalten keine neuen
+    Kunden/Vorgaenge/Fahrzeuge; bestehende Zuweisungen bleiben als Historie)."""
+    if not user_ids:
+        return set()
+    result = await session.execute(
+        select(User.id).where(User.id.in_(user_ids), User.aktiv.is_(True), nicht_anonymisiert())
     )
     return set(result.scalars().all())
 

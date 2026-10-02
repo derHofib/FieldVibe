@@ -23,11 +23,11 @@ from app.schemas.kundenportal import (
     KundenAnlageCreate,
     KundenStandortCreate,
     RechnungPortalRead,
+    StandortPortalRead,
     VorgangAnfragePortalRead,
     VorgangEventPortalRead,
     VorgangPortalRead,
 )
-from app.schemas.standort import StandortRead
 from app.schemas.vorgang_anfrage import VorgangAnfrageCreate
 from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
 from app.services.geocoding_service import geocode_falls_modul_aktiv
@@ -278,7 +278,7 @@ async def eigene_rechnung_pdf(
 # --- Standorte (Selfservice: der Kunde legt eigene Standorte an) -----------
 
 
-@router.get("/standorte", response_model=list[StandortRead])
+@router.get("/standorte", response_model=list[StandortPortalRead])
 async def list_eigene_standorte(
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
@@ -291,7 +291,7 @@ async def list_eigene_standorte(
     return list(result.scalars().all())
 
 
-@router.post("/standorte", response_model=StandortRead, status_code=status.HTTP_201_CREATED)
+@router.post("/standorte", response_model=StandortPortalRead, status_code=status.HTTP_201_CREATED)
 async def create_eigenen_standort(
     body: KundenStandortCreate,
     auth: KundenAuthContext = Depends(get_current_kunde),

@@ -8,6 +8,20 @@ from app.schemas.auswertung import OffenePostenBericht, UstVaBericht
 from app.services.auswertung_service import datev_export_csv, offene_posten_bericht, ust_va_bericht
 from app.services.zuweisung_service import erlaubte_kunde_ids
 
+
+async def _nicht_eingeschraenkt(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> None:
+    """Auswertungen aggregieren mandantenweit (inkl. Eingangsrechnungen ohne
+    Kundenbezug) -- eine Teilsicht fuer Nutzer mit nur_zugewiesene_kunden
+    waere unvollstaendig bzw. irrefuehrend, daher komplett gesperrt."""
+    if await erlaubte_kunde_ids(session, auth) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Auswertungen sind für Nutzer mit Kundeneinschränkung nicht verfügbar",
+        )
+
+
 router = APIRouter(
     prefix="/api/auswertung",
     tags=["auswertung"],
@@ -15,6 +29,7 @@ router = APIRouter(
         Depends(require_roles("mandant_admin", "custom")),
         Depends(require_module("abrechnung")),
         Depends(require_recht("abrechnung", "sehen")),
+        Depends(_nicht_eingeschraenkt),
     ],
 )
 
@@ -28,18 +43,14 @@ async def get_ust_va_bericht(
 ) -> UstVaBericht:
     if bis < von:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
-    return await ust_va_bericht(
-        session, auth.mandant_id, von, bis, await erlaubte_kunde_ids(session, auth)
-    )
+    return await ust_va_bericht(session, auth.mandant_id, von, bis)
 
 
 @router.get("/offene-posten", response_model=OffenePostenBericht)
 async def get_offene_posten(
     auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
 ) -> OffenePostenBericht:
-    return await offene_posten_bericht(
-        session, auth.mandant_id, date.today(), await erlaubte_kunde_ids(session, auth)
-    )
+    return await offene_posten_bericht(session, auth.mandant_id, date.today())
 
 
 @router.get("/datev-export")
@@ -51,6 +62,4 @@ async def get_datev_export(
 ) -> Response:
     if bis < von:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
-    return await datev_export_csv(
-        session, auth.mandant_id, von, bis, await erlaubte_kunde_ids(session, auth)
-    )
+    return await datev_export_csv(session, auth.mandant_id, von, bis)

@@ -34,6 +34,7 @@ from app.schemas.projekt import (
 )
 from app.services import papierkorb_service
 from app.services.rechte_service import hat_recht
+from app.services.zuweisung_service import erlaubte_kunde_ids
 
 # Basisrechte fuer alles unter /api/projekte (Projekte + Spalten -- reine
 # Kanban-Konfiguration, es gibt hier keine private Variante).
@@ -428,6 +429,17 @@ async def list_aufgaben(
         )
         .order_by(ProjektAufgabe.created_at)
     )
+    # Aufgaben mit Bezug auf einen nicht zugewiesenen Kunden (direkt, ueber
+    # Vorgang oder Anlage) werden ausgeblendet, statt nur die Namensfelder zu
+    # leeren -- sonst blieben Titel/Beschreibung der Aufgabe als Leck.
+    # Aufgaben ganz ohne Kundenbezug bleiben sichtbar.
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(
+            or_(ProjektAufgabe.kunde_id.is_(None), ProjektAufgabe.kunde_id.in_(erlaubte_kunden)),
+            or_(Vorgang.id.is_(None), Vorgang.kunde_id.in_(erlaubte_kunden)),
+            or_(Anlage.id.is_(None), Anlage.kunde_id.is_(None), Anlage.kunde_id.in_(erlaubte_kunden)),
+        )
     result = await session.execute(stmt)
     return _mit_details(result.all())
 

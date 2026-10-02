@@ -219,6 +219,19 @@ class RechnungPortalRead(BaseModel):
     positionen: list[RechnungPositionPortalRead]
 
 
+class StandortPortalRead(BaseModel):
+    """Whitelist: ohne kunde_id, Geokoordinaten, updated_at und
+    erstellt_von_kundenportal_zugang_id (interne Zugangs-ID)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    bezeichnung: str
+    adresse: dict
+    aktiv: bool
+    created_at: datetime
+
+
 class AnlagePortalRead(BaseModel):
     """Whitelist: ohne notiz, stammdaten (AnlagenFeldDefinition kennt kein
     kundensichtbar-Flag), qr_code, Geokoordinaten, anschaffungsdatum,

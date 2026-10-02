@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import { auswertungApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { useAuth } from "../../context/AuthContext";
 import type { OffenerPostenEintrag } from "../../types";
 import { KennzahlKarte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 
@@ -19,13 +20,28 @@ function euro(betrag: string): string {
  * der Anwendung passt. */
 export function OfficeBuchhaltungPage() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const eingeschraenkt = currentUser?.nur_zugewiesene_kunden === true;
   const { data, isLoading } = useQuery({
     queryKey: ["auswertung", "offene-posten"],
     queryFn: () => auswertungApi.offenePosten(),
+    enabled: !eingeschraenkt,
   });
 
   const ueberfaellig = (data?.debitoren ?? []).filter((d) => d.tage_ueberfaellig > 0);
   const summeUeberfaellig = ueberfaellig.reduce((s, d) => s + Number(d.offener_betrag || 0), 0);
+
+  if (eingeschraenkt) {
+    return (
+      <div>
+        <SeitenKopf titel="Buchhaltung" />
+        <EmptyState
+          icon={Receipt}
+          text="Auswertungen sind für Nutzer mit Kundeneinschränkung nicht verfügbar."
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
