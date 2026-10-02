@@ -8,7 +8,7 @@ Office-Ansicht (Büro/Dispo, Desktop), Kundenportal.
 - Backend: FastAPI, SQLAlchemy (async), Alembic, PostgreSQL mit Row-Level-
   Security (RLS) für Mandanten-Isolation
 - Frontend: React + TypeScript + Vite + Tailwind, React Query, IndexedDB-
-  Offline-Outbox
+  Offline-Outbox; Node 24 (`frontend/.nvmrc`, Docker-Images)
 - Infra: Docker Compose (Postgres, MinIO/S3, Backend, Frontend, Worker,
   optional Caddy für TLS)
 
@@ -47,16 +47,28 @@ zu erfinden.
 
 ## Tests & Dev-Server
 - Backend: `pytest` (`backend/tests/`, `pytest.ini` mit
-  `asyncio_mode = auto`); `requirements-dev.txt` für Testabhängigkeiten
-  (u. a. moto als S3-Mock)
+  `asyncio_mode = auto`); Testabhängigkeiten in `requirements-dev.txt`
+  (u. a. moto als S3-Mock). moto-Port frei bzw. per `TEST_MOTO_PORT`,
+  parallele Läufe brauchen nur eine eigene DB (`DATABASE_URL`/`_SYNC`)
 - Frontend: `npm run dev` / `npm run build` (tsc -b) / `npm run test`
   (vitest) / `npm run lint` (tsc --noEmit)
-- Kein CI vorhanden — Tests laufen nur manuell
+- CI: `.github/workflows/ci.yml` bei jedem Push/PR (Backend-pytest,
+  Frontend lint/test/build, Docker-Build). Lokal vor dem Push trotzdem
+  die betroffenen Tests laufen lassen
+- Abhängigkeiten nur mit Lockfile: Backend `requirements.lock` /
+  `requirements-dev.lock` (pip-compile --generate-hashes, Anleitung in
+  `docs/DEPLOYMENT.md`), Frontend `npm ci`. Nach Änderung an
+  `requirements*.txt` bzw. `package.json` Lockfile neu erzeugen und
+  mitcommitten
 
 ## Docker/Deployment
 - `backend/Dockerfile`: Multi-Stage (`base` → `deps` für Tests/CI,
   `runtime` als Produktions-Default). Produktions-Image enthält kein
   `tests/`, kein `moto`/`pytest`/`httpx`.
+- MinIO-Image ist auf ein Release-Tag gepinnt, das es nur lokal gibt
+  (MinIO veröffentlicht keine Community-Images mehr): `pull_policy:
+  missing`, `deploy.sh` setzt das Tag per `docker tag`. Nicht auf ein
+  anderes Tag umstellen, ohne dessen Verfügbarkeit zu prüfen
 - Compose-Overlays: `docker-compose.override.yml` (lokal), `.prod.yml`
   (Caddy+TLS), `.ip.yml` (ohne Domain) — `.prod.yml` und `.ip.yml` nie
   gemeinsam verwenden.
