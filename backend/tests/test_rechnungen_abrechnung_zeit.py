@@ -143,7 +143,7 @@ async def test_add_position_fahrzeit_sperrt_zeiterfassung(
 
 
 @pytest.mark.asyncio
-async def test_remove_position_ohne_geschwister_setzt_zeit_zurueck(
+async def test_remove_position_gibt_nur_eigenen_anteil_frei(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     mandant = await make_mandant()
@@ -192,17 +192,19 @@ async def test_remove_position_ohne_geschwister_setzt_zeit_zurueck(
         p["id"] for p in fahrtkosten_resp.json()["positionen"] if p["quelle"] == "fahrtkosten"
     )
 
-    # Erste Geschwister-Position entfernen: die andere braucht die Zeilen
-    # noch, also bleibt der Eintrag gesperrt.
+    # Seit der getrennten Abrechnung (Migration 0097) gibt jede Position nur
+    # ihren eigenen Anteil frei: "Fahrzeit" entfernen -> Stunden wieder offen,
+    # km bleiben von "Fahrtkosten" gesperrt.
     remove_1 = await client.delete(
         f"/api/rechnungen/{rechnung_id}/positionen/{fahrzeit_position_id}", headers=auth_headers(token)
     )
     assert remove_1.status_code == 200
     async with system_session() as session:
         zwischenstand = await session.get(Zeiterfassung, eintrag_id)
-        assert zwischenstand.buchungsstatus == "abgerechnet"
+        assert zwischenstand.buchungsstatus == "gebucht"
+        assert zwischenstand.abgerechnet_rechnung_id is None
+        assert str(zwischenstand.km_abgerechnet_rechnung_id) == rechnung_id
 
-    # Letzte verbleibende Position entfernen: jetzt zurueck auf 'gebucht'.
     remove_2 = await client.delete(
         f"/api/rechnungen/{rechnung_id}/positionen/{fahrtkosten_position_id}", headers=auth_headers(token)
     )
@@ -211,6 +213,7 @@ async def test_remove_position_ohne_geschwister_setzt_zeit_zurueck(
         endstand = await session.get(Zeiterfassung, eintrag_id)
         assert endstand.buchungsstatus == "gebucht"
         assert endstand.abgerechnet_rechnung_id is None
+        assert endstand.km_abgerechnet_rechnung_id is None
 
 
 async def _auftrag_eintrag_mit_km(
@@ -277,12 +280,12 @@ async def test_fahrtkosten_vorschlag_zaehlt_km_von_auftrag_zeile(
 
 
 @pytest.mark.asyncio
-async def test_zeit_und_fahrtkosten_sind_geschwister_bei_gemeinsamer_auftrag_zeile(
+async def test_zeit_und_fahrtkosten_sperren_eine_auftrag_zeile_getrennt(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
     """Eine "auftrag"-Zeile mit km ist Grundlage fuer zwei Positionen
-    zugleich ("zeit" und "fahrtkosten") -- das Entfernen einer der beiden
-    darf die Zeile nicht entsperren, solange die andere sie noch braucht."""
+    ("zeit" und "fahrtkosten") -- jede sperrt und entsperrt nur ihren Anteil
+    (Migration 0097), die fruehere Geschwister-Kopplung entfaellt."""
     mandant = await make_mandant()
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
@@ -331,17 +334,20 @@ async def test_zeit_und_fahrtkosten_sind_geschwister_bei_gemeinsamer_auftrag_zei
     async with system_session() as session:
         zwischenstand = await session.get(Zeiterfassung, eintrag_id)
         assert zwischenstand.buchungsstatus == "abgerechnet"
+        assert str(zwischenstand.abgerechnet_rechnung_id) == rechnung_id
+        assert str(zwischenstand.km_abgerechnet_rechnung_id) == rechnung_id
 
-    # "Zeit" entfernen: "Fahrtkosten" braucht die Zeile noch, bleibt gesperrt.
+    # "Zeit" entfernen: nur die Stunden werden frei, km bleiben gesperrt.
     remove_1 = await client.delete(
         f"/api/rechnungen/{rechnung_id}/positionen/{zeit_position_id}", headers=auth_headers(token)
     )
     assert remove_1.status_code == 200
     async with system_session() as session:
         zwischenstand = await session.get(Zeiterfassung, eintrag_id)
-        assert zwischenstand.buchungsstatus == "abgerechnet"
+        assert zwischenstand.buchungsstatus == "gebucht"
+        assert zwischenstand.abgerechnet_rechnung_id is None
+        assert str(zwischenstand.km_abgerechnet_rechnung_id) == rechnung_id
 
-    # Letzte verbleibende Position entfernen: jetzt zurueck auf 'gebucht'.
     remove_2 = await client.delete(
         f"/api/rechnungen/{rechnung_id}/positionen/{fahrtkosten_position_id}", headers=auth_headers(token)
     )
@@ -349,7 +355,7 @@ async def test_zeit_und_fahrtkosten_sind_geschwister_bei_gemeinsamer_auftrag_zei
     async with system_session() as session:
         endstand = await session.get(Zeiterfassung, eintrag_id)
         assert endstand.buchungsstatus == "gebucht"
-        assert endstand.abgerechnet_rechnung_id is None
+        assert endstand.km_abgerechnet_rechnung_id is None
 
 
 @pytest.mark.asyncio

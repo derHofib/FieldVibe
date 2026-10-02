@@ -60,6 +60,10 @@ class Mandant(TimestampMixin, Base):
             "km_satz_netto IS NULL OR km_satz_netto >= 0", name="ck_mandanten_km_satz_netto_nicht_negativ"
         ),
         CheckConstraint(
+            "fahrzeit_satz_netto IS NULL OR fahrzeit_satz_netto >= 0",
+            name="ck_mandanten_fahrzeit_satz_netto_nicht_negativ",
+        ),
+        CheckConstraint(
             f"fahrzeit_abrechnung IN {MANDANT_FAHRZEIT_ABRECHNUNG}",
             name="ck_mandanten_fahrzeit_abrechnung_valid",
         ),
@@ -114,3 +118,6 @@ class Mandant(TimestampMixin, Base):
     # 5.3/8) -- beide NULL/'keine' aendert am bisherigen Verhalten nichts.
     km_satz_netto: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)
     fahrzeit_abrechnung: Mapped[str] = mapped_column(Text, nullable=False, default="keine")
+    # Eigener Stundensatz fuer "fahrzeit"-Vorschlaege; NULL = Preis 0 (der
+    # Nutzer sieht den Hinweis "Fahrzeit-Satz fehlt").
+    fahrzeit_satz_netto: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)

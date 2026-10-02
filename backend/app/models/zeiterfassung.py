@@ -111,3 +111,12 @@ class Zeiterfassung(TimestampMixin, SoftDeleteMixin, Base):
     abgerechnet_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rechnungen.id"), nullable=True
     )
+    # Getrennte Abrechnung (Migration 0097): der km-Anteil einer Zeile wird
+    # ueber eine eigene "fahrtkosten"-Position gesperrt, unabhaengig vom
+    # Stunden-Anteil (buchungsstatus/abgerechnet_rechnung_id). Der Verweis
+    # auf einen im Papierkorb liegenden Entwurf zaehlt als frei (siehe
+    # rechnung_service.km_frei_bedingung) -- Gegenstueck zu "gebucht" mit
+    # behaltenem abgerechnet_rechnung_id beim Stunden-Anteil.
+    km_abgerechnet_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id", ondelete="SET NULL"), nullable=True
+    )

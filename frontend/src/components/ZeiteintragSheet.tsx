@@ -47,6 +47,8 @@ const AKTION_LABEL: Record<string, string> = {
   gebucht: "Gebucht",
   buchung_storniert: "Buchung storniert",
   abgerechnet: "Abgerechnet",
+  km_abgerechnet: "km abgerechnet",
+  km_abrechnung_zurueckgesetzt: "km-Abrechnung zurückgesetzt",
 };
 
 const FORM_ID = "zeiteintrag-formular";
@@ -301,6 +303,9 @@ export function ZeiteintragSheet({
                 <dt className="text-label2">km</dt>
                 <dd className="text-label">
                   {eintrag.km} km
+                  {eintrag.km_abgerechnet_rechnung_id && eintrag.buchungsstatus !== "abgerechnet" && (
+                    <span className="text-xs text-label2"> · km abgerechnet</span>
+                  )}
                   {eintrag.fahrzeug_id &&
                     ` · ${fahrzeuge?.find((f) => f.id === eintrag.fahrzeug_id)?.bezeichnung ?? "—"}`}
                 </dd>

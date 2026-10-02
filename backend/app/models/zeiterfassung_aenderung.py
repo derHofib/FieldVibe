@@ -9,7 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 # Muss mit der CHECK-Constraint ck_zeiterfassung_aenderungen_aktion_valid
-# (Migration 0084) uebereinstimmen.
+# (Migrationen 0084/0086/0097) uebereinstimmen.
 ZEITERFASSUNG_AENDERUNG_AKTIONEN = (
     "angelegt",
     "geaendert",
@@ -21,6 +21,8 @@ ZEITERFASSUNG_AENDERUNG_AKTIONEN = (
     "buchung_storniert",
     "abgerechnet",
     "abrechnung_zurueckgesetzt",
+    "km_abgerechnet",
+    "km_abrechnung_zurueckgesetzt",
 )
 
 

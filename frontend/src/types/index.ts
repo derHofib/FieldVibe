@@ -815,6 +815,9 @@ export interface Zeiterfassung {
   km: string | null;
   fahrzeug_id: string | null;
   quelle: "timer" | "manuell";
+  // km-Anteil getrennt von den Stunden abgerechnet (Migration 0097) -- die
+  // Stunden zeigt buchungsstatus "abgerechnet".
+  km_abgerechnet_rechnung_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1560,6 +1563,8 @@ export interface MandantEinstellungen {
   // 5.3/8) -- km_satz_netto=null heisst "aus", auch wenn fahrzeit_abrechnung
   // km/zeit_und_km waehlt.
   km_satz_netto: string | null;
+  // Eigener Stundensatz fuer "Fahrzeit"-Vorschlaege; null = Preis 0.
+  fahrzeit_satz_netto: string | null;
   fahrzeit_abrechnung: FahrzeitAbrechnung;
 }
 

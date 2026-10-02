@@ -322,8 +322,12 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                     )}{" "}
                     EUR
                   </div>
-                  {p.quelle === "zeit" && Number(p.einzelpreis) === 0 && (
-                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">Stundensatz fehlt</div>
+                  {(p.quelle === "zeit" || p.quelle === "fahrzeit") && Number(p.einzelpreis) === 0 && (
+                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">
+                      {p.quelle === "fahrzeit"
+                        ? "Fahrzeit-Satz fehlt – in den Einstellungen hinterlegen"
+                        : "Stundensatz fehlt"}
+                    </div>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

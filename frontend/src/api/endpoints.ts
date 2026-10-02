@@ -1691,6 +1691,7 @@ export const mandantEinstellungenApi = {
     standard_lohn_gemeinkosten_prozent?: string;
     standard_gewinn_wagnis_prozent?: string;
     km_satz_netto?: string | null;
+    fahrzeit_satz_netto?: string | null;
     fahrzeit_abrechnung?: FahrzeitAbrechnung;
   }) =>
     apiFetch<MandantEinstellungen>("/api/mandant/einstellungen", {

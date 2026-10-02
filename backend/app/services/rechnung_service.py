@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.kunde import Kunde
@@ -31,16 +31,15 @@ _STUNDE = Decimal("3600")
 
 # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): welche Kategorie(n)
 # hinter einer "zeit"/"fahrzeit"/"fahrtkosten"-Rechnungsposition stecken.
-# "fahrzeit" und "fahrtkosten" teilen sich dieselben eigenstaendigen
-# Fahrt-Zeilen (Stunden bzw. km desselben Fahrt-Eintrags). Seit Konzept
-# Abschnitt 11 kann km aber AUCH an einer "auftrag"-Zeile haengen (Fahrt
-# direkt an der Arbeitszeit statt eines eigenen Fahrzeit-Eintrags) --
-# "fahrtkosten" zieht sein km deshalb aus BEIDEN Kategorien, waehrend
-# "zeit" weiterhin alle "auftrag"-Zeilen nach Dauer abrechnet. Eine
-# "auftrag"-Zeile mit km ist damit potenziell Grundlage fuer zwei
-# Positionen zugleich ("zeit" und "fahrtkosten") -- siehe
-# _ZEITERFASSUNG_QUELLE_FILTER und die Geschwister-Pruefung in
-# app/api/routes/rechnungen.py (_GESCHWISTER_QUELLE).
+# Eine Zeile kann Stunden UND km tragen (km auch an "auftrag"-Zeilen, Konzept
+# Abschnitt 11) -- beide Anteile werden getrennt gesperrt: Stunden-Quellen
+# (zeit, fahrzeit, leistung) ueber buchungsstatus/abgerechnet_rechnung_id,
+# "fahrtkosten" nur ueber km_abgerechnet_rechnung_id (Migration 0097).
+# "fahrtkosten" zieht sein km aus BEIDEN Kategorien, "zeit" rechnet alle
+# "auftrag"-Zeilen nach Dauer ab, "fahrzeit" die eigenstaendigen Fahrten.
+STUNDEN_QUELLEN = ("zeit", "fahrzeit", "leistung")
+
+
 def _zeiterfassung_quelle_filter(quelle: str) -> list | None:
     if quelle == "zeit":
         return [Zeiterfassung.kategorie == "auftrag"]
@@ -49,6 +48,28 @@ def _zeiterfassung_quelle_filter(quelle: str) -> list | None:
     if quelle == "fahrtkosten":
         return [Zeiterfassung.kategorie.in_(("auftrag", "fahrzeit")), Zeiterfassung.km.is_not(None)]
     return None
+
+
+def km_frei_bedingung():
+    """km-Anteil noch abrechenbar: kein Verweis -- oder der Verweis zeigt auf
+    einen im Papierkorb liegenden Entwurf (der Verweis bleibt dort fuers
+    Wiederherstellen stehen, vgl. abgerechnet_rechnung_id bei 'gebucht')."""
+    entwurf_im_papierkorb = select(Rechnung.id).where(
+        Rechnung.status == "entwurf", Rechnung.geloescht_am.is_not(None)
+    )
+    return or_(
+        Zeiterfassung.km_abgerechnet_rechnung_id.is_(None),
+        Zeiterfassung.km_abgerechnet_rechnung_id.in_(entwurf_im_papierkorb),
+    )
+
+
+async def km_gesperrt(session: AsyncSession, eintrag: Zeiterfassung) -> bool:
+    """Python-Gegenstueck zu km_frei_bedingung (GoBD-Sperre der Zeile, sobald
+    EIN Anteil abgerechnet ist)."""
+    if eintrag.km_abgerechnet_rechnung_id is None:
+        return False
+    rechnung = await session.get(Rechnung, eintrag.km_abgerechnet_rechnung_id)
+    return not (rechnung is None or (rechnung.status == "entwurf" and rechnung.geloescht_am is not None))
 
 
 async def positionen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[RechnungPosition]:
@@ -141,11 +162,11 @@ async def positionen_vorschlaege_fuer_vorgang(
     # nichts zusaetzlich. "Fahrzeit" (Stunden) bleibt exklusiv fuer
     # eigenstaendige Fahrt-Eintraege (kategorie="fahrzeit") -- Arbeitszeit
     # steckt immer schon in der "Zeit"-Position oben. "Fahrtkosten" (km)
-    # summiert dagegen ueber BEIDE Kategorien, seit km seit Konzept
-    # Abschnitt 11 auch direkt an einer Arbeitszeit-Zeile haengen kann
-    # (siehe _zeiterfassung_quelle_filter) -- "Zeit" und "Fahrtkosten"
-    # koennen sich dadurch dieselbe Zeile teilen, genau wie bisher schon
-    # "Fahrzeit" und "Fahrtkosten".
+    # summiert dagegen ueber BEIDE Kategorien (km kann seit Konzept
+    # Abschnitt 11 auch an einer Arbeitszeit-Zeile haengen) und ist
+    # unabhaengig vom Stunden-Anteil: eine Zeile, deren Stunden schon
+    # abgerechnet sind, liefert ihr km weiter, solange es nicht selbst
+    # gesperrt ist (km_abgerechnet_rechnung_id).
     if mandant.fahrzeit_abrechnung != "keine":
         fahrzeit_stunden_stmt = select(
             func.sum(func.extract("epoch", Zeiterfassung.ende_at - Zeiterfassung.start_at))
@@ -165,7 +186,7 @@ async def positionen_vorschlaege_fuer_vorgang(
                     beschreibung="Fahrzeit",
                     menge=(Decimal(str(fahrzeit_sekunden)) / _STUNDE).quantize(Decimal("0.01")),
                     einheit="Std",
-                    einzelpreis=Decimal("0"),
+                    einzelpreis=mandant.fahrzeit_satz_netto or Decimal("0"),
                 )
             )
 
@@ -175,7 +196,8 @@ async def positionen_vorschlaege_fuer_vorgang(
             Zeiterfassung.km.is_not(None),
             Zeiterfassung.abrechenbar.is_(True),
             Zeiterfassung.ende_at.is_not(None),
-            Zeiterfassung.buchungsstatus == "gebucht",
+            Zeiterfassung.buchungsstatus.in_(("gebucht", "abgerechnet")),
+            km_frei_bedingung(),
             Zeiterfassung.geloescht_am.is_(None),
         )
         fahrtkosten_km = (await session.execute(fahrtkosten_km_stmt)).scalar_one_or_none()
@@ -244,37 +266,59 @@ async def positionen_vorschlaege_fuer_vorgang(
     return vorschlaege
 
 
+def _quelle_bedingungen(quelle: str, lv_position_id: UUID | None) -> list | None:
+    """Kategorie-/Kopplungs-Filter einer Quelle. "leistung" greift nur die
+    SVS-gekoppelte Zeit (lv_position_id) und braucht deshalb den Parameter;
+    "zeit" nur Zeilen ohne SVS-Kopplung (die gehoeren der "leistung").
+    None fuer Quellen ohne Zeiterfassung ("material")."""
+    if quelle == "leistung":
+        if lv_position_id is None:
+            return None
+        return [Zeiterfassung.kategorie == "auftrag", Zeiterfassung.lv_position_id == lv_position_id]
+    bedingungen = _zeiterfassung_quelle_filter(quelle)
+    if bedingungen is not None and quelle == "zeit":
+        bedingungen.append(Zeiterfassung.lv_position_id.is_(None))
+    return bedingungen
+
+
 async def _zeiterfassung_fuer_quelle(
     session: AsyncSession, vorgang_id: UUID, quelle: str, lv_position_id: UUID | None = None
 ) -> list[Zeiterfassung]:
-    """Dieselben Kriterien wie in positionen_vorschlaege_fuer_vorgang (Zweig
-    "zeit" bzw. "fahrzeit"/"fahrtkosten"), aber als tatsaechliche Zeilen
-    statt Summe -- fuer das Sperren beim Uebernehmen einer Rechnungsposition
-    (Konzept Abschnitt 8). "leistung" greift nur die SVS-gekoppelte Zeit
-    (lv_position_id) und braucht deshalb den Parameter, ohne ihn (und fuer
-    "material") kommt eine leere Liste."""
-    if quelle == "leistung":
-        if lv_position_id is None:
-            return []
-        filter_bedingungen = [
-            Zeiterfassung.kategorie == "auftrag",
-            Zeiterfassung.lv_position_id == lv_position_id,
+    """Dieselben Kriterien wie in positionen_vorschlaege_fuer_vorgang, aber
+    als tatsaechliche Zeilen statt Summe -- fuer das Sperren beim Uebernehmen
+    einer Rechnungsposition (Konzept Abschnitt 8). Stunden-Quellen finden nur
+    'gebucht'e Zeilen, "fahrtkosten" jede gebuchte/abgerechnete Zeile mit
+    noch freiem km-Anteil."""
+    bedingungen = _quelle_bedingungen(quelle, lv_position_id)
+    if bedingungen is None:
+        return []
+    if quelle == "fahrtkosten":
+        status_bedingung = [
+            Zeiterfassung.buchungsstatus.in_(("gebucht", "abgerechnet")),
+            km_frei_bedingung(),
         ]
     else:
-        filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
-    if filter_bedingungen is None:
-        return []
+        status_bedingung = [Zeiterfassung.buchungsstatus == "gebucht"]
     stmt = select(Zeiterfassung).where(
         Zeiterfassung.vorgang_id == vorgang_id,
-        *filter_bedingungen,
+        *bedingungen,
         Zeiterfassung.abrechenbar.is_(True),
         Zeiterfassung.ende_at.is_not(None),
-        Zeiterfassung.buchungsstatus == "gebucht",
+        *status_bedingung,
         Zeiterfassung.geloescht_am.is_(None),
     )
-    if quelle == "zeit":
-        stmt = stmt.where(Zeiterfassung.lv_position_id.is_(None))
     return list((await session.execute(stmt)).scalars().all())
+
+
+def _protokoll(session: AsyncSession, eintrag: Zeiterfassung, aktion: str, geaendert_von: UUID | None) -> None:
+    session.add(
+        ZeiterfassungAenderung(
+            mandant_id=eintrag.mandant_id,
+            zeiterfassung_id=eintrag.id,
+            aktion=aktion,
+            geaendert_von=geaendert_von,
+        )
+    )
 
 
 async def zeiterfassung_abrechnen(
@@ -286,26 +330,20 @@ async def zeiterfassung_abrechnen(
     geaendert_von: UUID,
     lv_position_id: UUID | None = None,
 ) -> None:
-    """Sperrt die einer "zeit"/"fahrzeit"/"fahrtkosten"-Position zugrunde
-    liegenden Zeiterfassung-Eintraege, wenn diese Position in eine Rechnung
-    uebernommen wird (Konzept Abschnitt 8/9: gebucht+abgerechnet sind
-    Rechnungsgrundlage und daher GoBD-gesperrt). Nur noch 'gebucht'e
-    Eintraege werden ueberhaupt gefunden (siehe _zeiterfassung_fuer_quelle),
-    ein zweiter Aufruf fuer eine Geschwister-Quelle (z.B. "fahrtkosten"
-    nachdem "fahrzeit" dieselben Zeilen schon gesperrt hat) findet dann
-    keine mehr und ist ein No-op -- die Zeilen zeigen ohnehin schon auf
-    dieselbe Rechnung."""
+    """Sperrt die einer "zeit"/"fahrzeit"/"fahrtkosten"/"leistung"-Position
+    zugrunde liegenden Zeiterfassung-Eintraege (Konzept Abschnitt 8/9:
+    gebucht+abgerechnet sind Rechnungsgrundlage und daher GoBD-gesperrt).
+    Stunden-Quellen setzen nur buchungsstatus/abgerechnet_rechnung_id,
+    "fahrtkosten" nur km_abgerechnet_rechnung_id -- die Anteile einer Zeile
+    sind unabhaengig voneinander."""
     for eintrag in await _zeiterfassung_fuer_quelle(session, vorgang_id, quelle, lv_position_id):
-        eintrag.buchungsstatus = "abgerechnet"
-        eintrag.abgerechnet_rechnung_id = rechnung_id
-        session.add(
-            ZeiterfassungAenderung(
-                mandant_id=eintrag.mandant_id,
-                zeiterfassung_id=eintrag.id,
-                aktion="abgerechnet",
-                geaendert_von=geaendert_von,
-            )
-        )
+        if quelle == "fahrtkosten":
+            eintrag.km_abgerechnet_rechnung_id = rechnung_id
+            _protokoll(session, eintrag, "km_abgerechnet", geaendert_von)
+        else:
+            eintrag.buchungsstatus = "abgerechnet"
+            eintrag.abgerechnet_rechnung_id = rechnung_id
+            _protokoll(session, eintrag, "abgerechnet", geaendert_von)
 
 
 async def zeiterfassung_abrechnung_zuruecksetzen(
@@ -318,51 +356,41 @@ async def zeiterfassung_abrechnung_zuruecksetzen(
     lv_position_id: UUID | None = None,
 ) -> None:
     """Kehrt zeiterfassung_abrechnen beim Entfernen einer Rechnungsposition
-    um -- der Aufrufer (siehe remove_position in app/api/routes/rechnungen.py)
-    prueft vorher, ob noch eine Geschwister-Position (fahrzeit<->fahrtkosten,
-    oder zeit<->fahrtkosten wenn dieselbe "auftrag"-Zeile sowohl Dauer als
-    auch km beisteuert) auf derselben Rechnung besteht und ruft in dem Fall
-    gar nicht erst auf."""
-    if quelle == "leistung":
-        if lv_position_id is None:
-            return
-        filter_bedingungen = [
-            Zeiterfassung.kategorie == "auftrag",
-            Zeiterfassung.lv_position_id == lv_position_id,
-        ]
-    else:
-        filter_bedingungen = _zeiterfassung_quelle_filter(quelle)
-    if filter_bedingungen is None:
+    um -- nur der Anteil dieser Quelle wird frei. Der Aufrufer (remove_position
+    in app/api/routes/rechnungen.py) ruft nicht auf, solange noch eine
+    Position derselben Quelle auf derselben Rechnung dieselben Zeilen
+    braucht."""
+    bedingungen = _quelle_bedingungen(quelle, lv_position_id)
+    if bedingungen is None:
         return
-    stmt = select(Zeiterfassung).where(
-        Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
-        Zeiterfassung.buchungsstatus == "abgerechnet",
-        Zeiterfassung.vorgang_id == vorgang_id,
-        *filter_bedingungen,
-    )
-    if quelle == "zeit":
-        # Spiegelt _zeiterfassung_fuer_quelle: SVS-Zeile gehoert der "leistung".
-        stmt = stmt.where(Zeiterfassung.lv_position_id.is_(None))
-    for eintrag in (await session.execute(stmt)).scalars().all():
-        eintrag.buchungsstatus = "gebucht"
-        eintrag.abgerechnet_rechnung_id = None
-        session.add(
-            ZeiterfassungAenderung(
-                mandant_id=eintrag.mandant_id,
-                zeiterfassung_id=eintrag.id,
-                aktion="abrechnung_zurueckgesetzt",
-                geaendert_von=geaendert_von,
-            )
+    if quelle == "fahrtkosten":
+        verweis_bedingung = Zeiterfassung.km_abgerechnet_rechnung_id == rechnung_id
+    else:
+        verweis_bedingung = (Zeiterfassung.abgerechnet_rechnung_id == rechnung_id) & (
+            Zeiterfassung.buchungsstatus == "abgerechnet"
         )
+    stmt = select(Zeiterfassung).where(verweis_bedingung, Zeiterfassung.vorgang_id == vorgang_id, *bedingungen)
+    for eintrag in (await session.execute(stmt)).scalars().all():
+        if quelle == "fahrtkosten":
+            eintrag.km_abgerechnet_rechnung_id = None
+            _protokoll(session, eintrag, "km_abrechnung_zurueckgesetzt", geaendert_von)
+        else:
+            eintrag.buchungsstatus = "gebucht"
+            eintrag.abgerechnet_rechnung_id = None
+            _protokoll(session, eintrag, "abrechnung_zurueckgesetzt", geaendert_von)
 
 
 async def zeiterfassung_freigeben_fuer_rechnung(
     session: AsyncSession, *, rechnung_id: UUID, geaendert_von: UUID | None, verweis_behalten: bool
 ) -> None:
-    """Gibt alle von dieser Rechnung gesperrten Stunden frei (Loeschen des
-    Entwurfs, Storno). verweis_behalten=True laesst abgerechnet_rechnung_id
-    stehen, damit ein Wiederherstellen aus dem Papierkorb genau diese Zeilen
-    wieder sperren kann (zeiterfassung_wieder_sperren_fuer_rechnung)."""
+    """Gibt alle von dieser Rechnung gesperrten Anteile frei, Stunden wie km
+    (Loeschen des Entwurfs, Storno). verweis_behalten=True laesst die
+    Verweise stehen, damit ein Wiederherstellen aus dem Papierkorb genau
+    diese Zeilen wieder sperren kann (zeiterfassung_wieder_sperren_fuer_
+    rechnung). Beim Stunden-Anteil geschieht das ueber buchungsstatus
+    'gebucht' + Verweis, beim km-Anteil gilt der Verweis auf einen Entwurf im
+    Papierkorb von selbst als frei (km_frei_bedingung) -- dort wird nur
+    protokolliert."""
     stmt = select(Zeiterfassung).where(
         Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
         Zeiterfassung.buchungsstatus == "abgerechnet",
@@ -371,14 +399,13 @@ async def zeiterfassung_freigeben_fuer_rechnung(
         eintrag.buchungsstatus = "gebucht"
         if not verweis_behalten:
             eintrag.abgerechnet_rechnung_id = None
-        session.add(
-            ZeiterfassungAenderung(
-                mandant_id=eintrag.mandant_id,
-                zeiterfassung_id=eintrag.id,
-                aktion="abrechnung_zurueckgesetzt",
-                geaendert_von=geaendert_von,
-            )
-        )
+        _protokoll(session, eintrag, "abrechnung_zurueckgesetzt", geaendert_von)
+
+    km_stmt = select(Zeiterfassung).where(Zeiterfassung.km_abgerechnet_rechnung_id == rechnung_id)
+    for eintrag in (await session.execute(km_stmt)).scalars().all():
+        if not verweis_behalten:
+            eintrag.km_abgerechnet_rechnung_id = None
+        _protokoll(session, eintrag, "km_abrechnung_zurueckgesetzt", geaendert_von)
 
 
 async def zeiterfassung_wieder_sperren_fuer_rechnung(
@@ -388,7 +415,8 @@ async def zeiterfassung_wieder_sperren_fuer_rechnung(
     True) beim Wiederherstellen aus dem Papierkorb. Zeilen, die zwischenzeitlich
     von einer anderen Rechnung gesperrt wurden, zeigen auf diese und werden
     von der Verweis-Bedingung uebergangen; Zeilen mit geleertem Verweis
-    bleiben frei."""
+    bleiben frei. Der km-Anteil ist mit dem Wiederherstellen der Rechnung
+    (geloescht_am=NULL) bereits wieder gesperrt -- nur das Protokoll fehlt."""
     stmt = select(Zeiterfassung).where(
         Zeiterfassung.abgerechnet_rechnung_id == rechnung_id,
         Zeiterfassung.buchungsstatus == "gebucht",
@@ -396,19 +424,20 @@ async def zeiterfassung_wieder_sperren_fuer_rechnung(
     )
     for eintrag in (await session.execute(stmt)).scalars().all():
         eintrag.buchungsstatus = "abgerechnet"
-        session.add(
-            ZeiterfassungAenderung(
-                mandant_id=eintrag.mandant_id,
-                zeiterfassung_id=eintrag.id,
-                aktion="abgerechnet",
-                geaendert_von=geaendert_von,
-            )
-        )
+        _protokoll(session, eintrag, "abgerechnet", geaendert_von)
+
+    km_stmt = select(Zeiterfassung).where(
+        Zeiterfassung.km_abgerechnet_rechnung_id == rechnung_id,
+        Zeiterfassung.geloescht_am.is_(None),
+    )
+    for eintrag in (await session.execute(km_stmt)).scalars().all():
+        _protokoll(session, eintrag, "km_abgerechnet", geaendert_von)
 
 
 async def zeiterfassung_verweis_loesen(session: AsyncSession, *, rechnung_id: UUID) -> None:
     """Vor dem endgueltigen Loeschen einer Rechnung: der behaltene Verweis
-    auf freigegebene ('gebucht'e) Zeilen wuerde sonst am FK scheitern."""
+    auf freigegebene Anteile ('gebucht'e Stunden, km) wuerde sonst am FK
+    scheitern bzw. (km: ON DELETE SET NULL) nur implizit geloest."""
     await session.execute(
         update(Zeiterfassung)
         .where(
@@ -416,6 +445,11 @@ async def zeiterfassung_verweis_loesen(session: AsyncSession, *, rechnung_id: UU
             Zeiterfassung.buchungsstatus == "gebucht",
         )
         .values(abgerechnet_rechnung_id=None)
+    )
+    await session.execute(
+        update(Zeiterfassung)
+        .where(Zeiterfassung.km_abgerechnet_rechnung_id == rechnung_id)
+        .values(km_abgerechnet_rechnung_id=None)
     )
 
 

@@ -43,6 +43,7 @@ from app.services import papierkorb_service
 from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.pdf_service import generate_wochenzettel_pdf
+from app.services.rechnung_service import km_gesperrt
 from app.services.rechte_service import (
     darf_fremde_mitarbeiterdaten_einsehen,
     darf_zeiten_buchen,
@@ -805,7 +806,14 @@ async def manuellen_eintrag_anlegen(
 _BUCHUNGSSTATUS_BEARBEITBAR = "vermerkt"
 
 
-def _pruefe_buchungsstatus_bearbeitbar(eintrag: Zeiterfassung) -> None:
+async def _pruefe_buchungsstatus_bearbeitbar(session: AsyncSession, eintrag: Zeiterfassung) -> None:
+    # Eine Zeile ist gesperrt, sobald EIN Anteil abgerechnet ist -- der km-
+    # Anteil hat keinen eigenen Buchungsstatus, kommt hier also dazu.
+    if await km_gesperrt(session, eintrag):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Die gefahrenen km sind bereits abgerechnet, der Eintrag ist gesperrt",
+        )
     if eintrag.buchungsstatus != _BUCHUNGSSTATUS_BEARBEITBAR:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -872,7 +880,7 @@ async def zeiterfassung_aktualisieren(
         await _mit_vorgang_kontext(session, [eintrag])
         return eintrag
 
-    _pruefe_buchungsstatus_bearbeitbar(eintrag)
+    await _pruefe_buchungsstatus_bearbeitbar(session, eintrag)
     if ist_fremd and (not body.grund or not body.grund.strip()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -958,7 +966,7 @@ async def zeiterfassung_loeschen(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Grund ist beim Löschen eines fremden Eintrags Pflicht",
         )
-    _pruefe_buchungsstatus_bearbeitbar(eintrag)
+    await _pruefe_buchungsstatus_bearbeitbar(session, eintrag)
     if eintrag.vorgang_id is not None:
         vorgang = await session.get(Vorgang, eintrag.vorgang_id)
         if vorgang is not None:
@@ -1173,6 +1181,8 @@ async def zeiterfassung_buchung_stornieren(
             fehler.append(f"{eid} (nicht gefunden)")
         elif e.buchungsstatus != "gebucht":
             fehler.append(f"{eid} (Status: {e.buchungsstatus})")
+        elif await km_gesperrt(session, e):
+            fehler.append(f"{eid} (km bereits abgerechnet)")
     if fehler:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

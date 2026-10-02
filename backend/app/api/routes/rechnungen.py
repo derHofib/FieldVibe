@@ -725,23 +725,11 @@ async def remove_position(
     if position is None or position.rechnung_id != rechnung_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
 
-    # "fahrzeit" und "fahrtkosten" sperren dieselben eigenstaendigen
-    # Fahrt-Zeilen (Stunden bzw. km derselben Fahrt). Seit km auch an einer
-    # "auftrag"-Zeile haengen kann (Konzept Abschnitt 11), teilt sich
-    # "fahrtkosten" solche Zeilen zusaetzlich mit "zeit" -- daher sind
-    # "zeit" und "fahrtkosten" jetzt ebenfalls Geschwister. Erst
-    # zuruecksetzen, wenn keine Geschwister-Position mehr auf derselben
-    # Rechnung besteht, sonst braeuchte die verbleibende Position die
-    # gesperrten Zeilen noch.
-    # "leistung" ist nur Geschwister einer zweiten "leistung"-Position mit
-    # gleicher LV-Position (zusaetzlicher lv_position_id-Vergleich unten);
-    # "zeit" filtert lv_position_id IS NULL und teilt sich nie Zeilen damit.
-    _GESCHWISTER_QUELLEN = {
-        "fahrzeit": ("fahrtkosten",),
-        "fahrtkosten": ("fahrzeit", "zeit"),
-        "zeit": ("fahrtkosten",),
-        "leistung": ("leistung",),
-    }
+    # Stunden- und km-Anteil einer Zeile sind getrennt gesperrt (Migration
+    # 0097), eine Position gibt daher nur ihren eigenen Anteil frei. Geschwister
+    # sind nur noch Positionen derselben Quelle (und bei "leistung" derselben
+    # LV-Position) auf derselben Rechnung und demselben Vorgang -- sie sperren
+    # dieselben Zeilen, also erst bei der letzten freigeben.
     # Der Vorgang haengt an der Position (Sammelrechnung); rechnung.vorgang_id
     # ist nur der Fallback fuer Positionen aus der Zeit vor Migration 0087.
     entsperr_vorgang_id = position.vorgang_id or rechnung.vorgang_id
@@ -749,11 +737,10 @@ async def remove_position(
         position.quelle in ("zeit", "fahrzeit", "fahrtkosten", "leistung")
         and entsperr_vorgang_id is not None
     ):
-        geschwister_quellen = _GESCHWISTER_QUELLEN.get(position.quelle, ())
         rest = await positionen_fuer(session, rechnung_id)
         geschwister_besteht = any(
             p.id != position.id
-            and p.quelle in geschwister_quellen
+            and p.quelle == position.quelle
             and (p.vorgang_id or rechnung.vorgang_id) == entsperr_vorgang_id
             and (position.quelle != "leistung" or p.lv_position_id == position.lv_position_id)
             for p in rest

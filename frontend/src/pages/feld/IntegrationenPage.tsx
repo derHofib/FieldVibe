@@ -323,17 +323,20 @@ const FAHRZEIT_ABRECHNUNG_LABEL: Record<MandantEinstellungen["fahrzeit_abrechnun
 // Fahrzeit-Abrechnung (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt
 // 5.3/8) -- steuert die "Fahrzeit"/"Fahrtkosten"-Rechnungsvorschläge am
 // Vorgang. km_satz_netto bleibt wirkungslos, solange fahrzeit_abrechnung
-// "keine" oder "zeit" ist, wird aber unabhängig davon gespeichert.
+// "keine" oder "zeit" ist, fahrzeit_satz_netto solange es "keine" oder "km"
+// ist -- beide werden unabhängig davon gespeichert.
 function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
   const [modus, setModus] = useState(einstellungen.fahrzeit_abrechnung);
   const [kmSatz, setKmSatz] = useState(einstellungen.km_satz_netto ?? "");
+  const [fahrzeitSatz, setFahrzeitSatz] = useState(einstellungen.fahrzeit_satz_netto ?? "");
 
   const speichernMutation = useMutation({
     mutationFn: () =>
       mandantEinstellungenApi.update({
         fahrzeit_abrechnung: modus,
         km_satz_netto: kmSatz === "" ? null : kmSatz,
+        fahrzeit_satz_netto: fahrzeitSatz === "" ? null : fahrzeitSatz,
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });
@@ -357,6 +360,21 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
             </option>
           ))}
         </select>
+        {(modus === "zeit" || modus === "zeit_und_km") && (
+          <label className="flex items-center gap-1.5 text-sm text-label2">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="55,00"
+              value={fahrzeitSatz}
+              onChange={(e) => setFahrzeitSatz(e.target.value)}
+              aria-label="Fahrzeit-Satz (€/Std, netto)"
+              className="btn-touch w-24 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+            € netto / Std Fahrzeit
+          </label>
+        )}
         {(modus === "km" || modus === "zeit_und_km") && (
           <label className="flex items-center gap-1.5 text-sm text-label2">
             <input

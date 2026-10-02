@@ -155,6 +155,7 @@ class ZeiterfassungRead(BaseModel):
     fahrzeug_id: UUID | None
     quelle: Literal["timer", "manuell"]
     abgerechnet_rechnung_id: UUID | None
+    km_abgerechnet_rechnung_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

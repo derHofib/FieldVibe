@@ -25,6 +25,8 @@ class MandantEinstellungenRead(BaseModel):
     # Fahrzeit-Abrechnung (Stufe 4) -- km_satz_netto=NULL heisst "aus", auch
     # wenn fahrzeit_abrechnung km/zeit_und_km verlangt (siehe rechnung_service).
     km_satz_netto: Decimal | None
+    # Stundensatz fuer Fahrzeit-Vorschlaege; None = Preis 0.
+    fahrzeit_satz_netto: Decimal | None
     fahrzeit_abrechnung: FahrzeitAbrechnung
 
 
@@ -43,6 +45,7 @@ class MandantEinstellungenUpdate(BaseModel):
     standard_gewinn_wagnis_prozent: Decimal | None = Field(default=None, ge=0)
     # None setzt explizit zurueck auf "aus" (wie scheduler_stunde_utc oben).
     km_satz_netto: Decimal | None = Field(default=None, ge=0)
+    fahrzeit_satz_netto: Decimal | None = Field(default=None, ge=0)
     fahrzeit_abrechnung: FahrzeitAbrechnung | None = None
 
 
