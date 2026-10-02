@@ -54,7 +54,9 @@ async def anonymisiere_user(session: AsyncSession, user: User) -> None:
     user.avatar_url = None
     user.bottom_nav_items = None
     user.office_nav_items = None
+    user.token_version = User.token_version + 1
     await session.flush()
+    await session.refresh(user, ["token_version"])
 
     if avatar_key and not avatar_key.startswith(("http://", "https://")):
         try:

@@ -22,6 +22,7 @@ from app.services.einladung_service import (
     to_read_model,
     versende_einladung,
 )
+from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.user_anonymisierung_service import (
     anonymisiere_user,
     ist_anonymisiert,
@@ -362,6 +363,15 @@ async def update_user(
             )
 
     changes = body.model_dump(exclude_unset=True, exclude={"password"})
+    # Vor dem Setzen vergleichen: nur ein tatsaechlicher Wechsel entwertet
+    # Tokens (Rolle/Account-Typ steckt als Claim im Token, Deaktivierung
+    # soll sofort greifen).
+    tokens_widerrufen = (
+        (changes.get("aktiv") is False and user.aktiv)
+        or ("role" in changes and changes["role"] != user.role)
+        or ("account_typ_id" in changes and changes["account_typ_id"] != user.account_typ_id)
+        or bool(body.password)
+    )
     for field, value in changes.items():
         setattr(user, field, value)
     if body.password:
@@ -387,6 +397,8 @@ async def update_user(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
         ) from exc
+    if tokens_widerrufen:
+        await widerrufe_tokens(session, user)
     if changes:
         # See mandanten.update_mandant: UPDATE has no implicit RETURNING for
         # server-computed columns, so refresh before the response is built.
@@ -403,6 +415,44 @@ async def update_user(
             payload=changes,
         )
     return await _to_read(session, user)
+
+
+@router.post(
+    "/{user_id}/abmelden",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
+async def user_abmelden_erzwingen(
+    user_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Entwertet alle Tokens des Nutzers (z. B. bei verlorenem Geraet),
+    ohne den Account zu deaktivieren. Gleiche Rechtegrenzen wie das
+    Deaktivieren per PATCH."""
+    user = await session.get(User, user_id)
+    if user is None or ist_anonymisiert(user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+
+    if auth.role in ("mandant_admin", "loesch_operativ"):
+        if user.mandant_id != auth.mandant_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+        if user.role == "super_admin" or user.role in _PAPIERKORB_ROLLEN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nicht berechtigt für diesen Account",
+            )
+
+    await widerrufe_tokens(session, user)
+    await log_action(
+        session,
+        aktion="user_abgemeldet",
+        mandant_id=user.mandant_id,
+        actor_user_id=auth.user_id,
+        entity_type="user",
+        entity_id=user.id,
+        payload={},
+    )
 
 
 @router.delete(

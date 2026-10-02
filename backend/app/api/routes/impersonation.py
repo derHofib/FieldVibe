@@ -28,7 +28,10 @@ async def impersonate_mandant(
     The resulting token keeps the super_admin's own user id as `sub` so that
     every action taken while impersonating is attributed to the real actor
     in audit_log -- it just downgrades the role and pins the mandant, which
-    is what actually puts RLS in effect for the rest of the session.
+    is what actually puts RLS in effect for the rest of the session. The
+    token carries the super_admin's token_version, so revoking that account
+    (deactivate, password change, "ueberall abmelden") also kills every
+    impersonation token it issued.
     """
     async with system_session() as session:
         mandant = await session.get(Mandant, mandant_id)
@@ -52,6 +55,7 @@ async def impersonate_mandant(
             role="mandant_admin",
             mandant_id=mandant.id,
             impersonated_by=auth.user_id,
+            token_version=auth.token_version,
         )
         return ImpersonateResponse(
             access_token=token,

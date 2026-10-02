@@ -1,6 +1,8 @@
-import { LogOut, Repeat, Timer, Wrench } from "lucide-react";
+import { useState } from "react";
+import { LogOut, MonitorSmartphone, Repeat, Timer, Wrench } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import { authApi } from "../../api/endpoints";
 import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
@@ -9,6 +11,23 @@ import { ROLE_LABEL } from "../UsersPage";
 export function ProfilePage() {
   const { currentUser, hatRecht, logout } = useAuth();
   const navigate = useNavigate();
+  const [abmeldenLaeuft, setAbmeldenLaeuft] = useState(false);
+  const [abmeldenFehler, setAbmeldenFehler] = useState<string | null>(null);
+
+  const ueberallAbmelden = async () => {
+    if (!window.confirm("Auf allen Geräten abmelden? Du musst dich danach überall neu anmelden.")) {
+      return;
+    }
+    setAbmeldenLaeuft(true);
+    setAbmeldenFehler(null);
+    try {
+      await authApi.ueberallAbmelden();
+      logout();
+    } catch {
+      setAbmeldenFehler("Abmelden auf allen Geräten ist fehlgeschlagen.");
+      setAbmeldenLaeuft(false);
+    }
+  };
 
   // "Disponieren" (Techniker einteilen, Dauer-Auftraege verwalten) bleibt
   // hier auf dem Profil, weil es operative Alltagsarbeit ist, nicht
@@ -76,6 +95,15 @@ export function ProfilePage() {
           </span>
         </button>
       )}
+
+      <button
+        onClick={ueberallAbmelden}
+        disabled={abmeldenLaeuft}
+        className="btn-touch btn-ap flex w-full items-center justify-center gap-2 disabled:opacity-40"
+      >
+        <MonitorSmartphone size={16} strokeWidth={1.5} /> Auf allen Geräten abmelden
+      </button>
+      {abmeldenFehler && <p className="text-sm text-st-fehlt">{abmeldenFehler}</p>}
 
       <button
         onClick={logout}

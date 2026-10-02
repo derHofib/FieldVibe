@@ -2,7 +2,7 @@ import base64
 import hashlib
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import jwt
 from argon2 import PasswordHasher
@@ -26,6 +26,7 @@ class TokenType(StrEnum):
     PARTNER_REFRESH = "partner_refresh"
     PARTNER_PASSWORD_RESET = "partner_password_reset"
     EINLADUNG = "einladung"
+    STREAM = "stream"
 
 
 def hash_password(password: str) -> str:
@@ -70,6 +71,7 @@ def _create_token(
     mandant_id: UUID | None,
     token_type: TokenType,
     expires_delta: timedelta,
+    token_version: int,
     account_typ_id: UUID | None = None,
     extra_claims: dict | None = None,
 ) -> str:
@@ -80,6 +82,9 @@ def _create_token(
         "mandant_id": str(mandant_id) if mandant_id else None,
         "account_typ_id": str(account_typ_id) if account_typ_id else None,
         "type": token_type.value,
+        # Widerruf: Token gilt nur, solange der Zaehler am Account noch
+        # diesem Wert entspricht (siehe app/api/deps.py).
+        "tv": token_version,
         "iat": now,
         "exp": now + expires_delta,
     }
@@ -89,38 +94,53 @@ def _create_token(
 
 
 def create_access_token(
-    *, subject: UUID, role: str, mandant_id: UUID | None, account_typ_id: UUID | None = None
+    *,
+    subject: UUID,
+    role: str,
+    mandant_id: UUID | None,
+    token_version: int,
+    account_typ_id: UUID | None = None,
 ) -> str:
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
         account_typ_id=account_typ_id,
+        token_version=token_version,
         token_type=TokenType.ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
     )
 
 
 def create_refresh_token(
-    *, subject: UUID, role: str, mandant_id: UUID | None, account_typ_id: UUID | None = None
+    *,
+    subject: UUID,
+    role: str,
+    mandant_id: UUID | None,
+    token_version: int,
+    account_typ_id: UUID | None = None,
 ) -> str:
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
         account_typ_id=account_typ_id,
+        token_version=token_version,
         token_type=TokenType.REFRESH,
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
     )
 
 
 def create_impersonation_token(
-    *, subject: UUID, role: str, mandant_id: UUID, impersonated_by: UUID
+    *, subject: UUID, role: str, mandant_id: UUID, impersonated_by: UUID, token_version: int
 ) -> str:
+    # token_version ist die des echten Super-Admins (= subject): dessen
+    # Widerruf macht damit auch seine Impersonation-Tokens ungueltig.
     return _create_token(
         subject=subject,
         role=role,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.IMPERSONATION,
         expires_delta=timedelta(minutes=_settings.impersonation_token_expire_minutes),
         extra_claims={"impersonated_by": str(impersonated_by)},
@@ -157,12 +177,13 @@ _KUNDE_PSEUDOROLLE = "kunde"
 
 
 def create_kundenportal_access_token(
-    *, subject: UUID, mandant_id: UUID, kunde_id: UUID
+    *, subject: UUID, mandant_id: UUID, kunde_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_KUNDE_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.KUNDENPORTAL_ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
         extra_claims={"kunde_id": str(kunde_id)},
@@ -170,12 +191,13 @@ def create_kundenportal_access_token(
 
 
 def create_kundenportal_refresh_token(
-    *, subject: UUID, mandant_id: UUID, kunde_id: UUID
+    *, subject: UUID, mandant_id: UUID, kunde_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_KUNDE_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.KUNDENPORTAL_REFRESH,
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
         extra_claims={"kunde_id": str(kunde_id)},
@@ -188,12 +210,13 @@ _PARTNER_PSEUDOROLLE = "partner"
 
 
 def create_partner_access_token(
-    *, subject: UUID, mandant_id: UUID, partner_id: UUID
+    *, subject: UUID, mandant_id: UUID, partner_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_PARTNER_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.PARTNER_ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
         extra_claims={"partner_id": str(partner_id)},
@@ -201,12 +224,13 @@ def create_partner_access_token(
 
 
 def create_partner_refresh_token(
-    *, subject: UUID, mandant_id: UUID, partner_id: UUID
+    *, subject: UUID, mandant_id: UUID, partner_id: UUID, token_version: int
 ) -> str:
     return _create_token(
         subject=subject,
         role=_PARTNER_PSEUDOROLLE,
         mandant_id=mandant_id,
+        token_version=token_version,
         token_type=TokenType.PARTNER_REFRESH,
         expires_delta=timedelta(minutes=_settings.refresh_token_expire_minutes),
         extra_claims={"partner_id": str(partner_id)},
@@ -237,3 +261,30 @@ def create_einladung_token(*, einladung_id: UUID) -> str:
         "exp": now + timedelta(minutes=_settings.einladung_token_expire_minutes),
     }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
+STREAM_TICKET_SEKUNDEN = 60
+
+
+def create_stream_ticket(
+    *, subject: UUID, role: str, mandant_id: UUID, token_version: int
+) -> tuple[str, datetime]:
+    """Kurzlebiges Ticket fuer GET /api/stream (EventSource kann keinen
+    Authorization-Header setzen). Bewusst eigener Typ "stream": weder als
+    Bearer-Token noch als Refresh-Token verwendbar, damit ein im Access-Log
+    gelandetes Ticket nichts ausser dem Stream oeffnet. Bindung an Account
+    (sub) und token_version -- ein Widerruf entwertet auch offene Tickets."""
+    now = datetime.now(timezone.utc)
+    gueltig_bis = now + timedelta(seconds=STREAM_TICKET_SEKUNDEN)
+    payload = {
+        "sub": str(subject),
+        "role": role,
+        "mandant_id": str(mandant_id),
+        "type": TokenType.STREAM.value,
+        "tv": token_version,
+        "jti": uuid4().hex,
+        "iat": now,
+        "exp": gueltig_bis,
+    }
+    token = jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+    return token, gueltig_bis

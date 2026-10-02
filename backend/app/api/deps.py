@@ -5,11 +5,15 @@ from uuid import UUID
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
 from app.db.session import system_session, tenant_session
+from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
+from app.models.partner_zugang import PartnerZugang
+from app.models.user import User
 from app.services.rechte_service import hat_recht
 
 _bearer = HTTPBearer(auto_error=False)
@@ -22,6 +26,37 @@ class AuthContext:
     role: str
     impersonated_by: UUID | None = None
     account_typ_id: UUID | None = None
+    token_version: int = 0
+
+
+def _nicht_authentifiziert(detail: str = "Ungültiges Token") -> HTTPException:
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
+
+async def token_version_gueltig(
+    modell, account_id: UUID, payload: dict, *, tv_pflicht: bool = False
+) -> int:
+    """Prueft den "tv"-Claim gegen den aktuellen Zaehler des Accounts und
+    liefert ihn zurueck. Ein fehlender Claim gilt als 0 (vor Einfuehrung des
+    Widerrufs ausgestellte Tokens bleiben so bis zu ihrem Ablauf gueltig --
+    sonst wuerde der Deploy alle Nutzer ausloggen und die Feld-App die
+    Offline-Outbox leeren); nach dem ersten Widerruf (Zaehler > 0) sind sie
+    sofort ungueltig. tv_pflicht=True (Impersonation, Stream-Tickets, nie im
+    Altbestand) verlangt den Claim. Ueber system_session, weil die
+    Mandanten-RLS-Session erst aus dem Token entstuende, den wir gerade
+    pruefen; gelesen wird ausschliesslich der Zaehler des Token-Subjects."""
+    tv = payload.get("tv")
+    if tv is None and not tv_pflicht:
+        tv = 0
+    if not isinstance(tv, int) or isinstance(tv, bool):
+        raise _nicht_authentifiziert()
+    async with system_session() as session:
+        aktuell = await session.scalar(
+            select(modell.token_version).where(modell.id == account_id)
+        )
+    if aktuell is None or aktuell != tv:
+        raise _nicht_authentifiziert()
+    return tv
 
 
 async def get_current_user(
@@ -51,8 +86,14 @@ async def get_current_user(
     account_typ_id = (
         UUID(payload["account_typ_id"]) if payload.get("account_typ_id") else None
     )
+    user_id = UUID(payload["sub"])
+    # Bei Impersonation ist sub der echte Super-Admin -- dessen Zaehler gilt.
+    token_version = await token_version_gueltig(
+        User, user_id, payload, tv_pflicht=payload.get("type") == "impersonation"
+    )
     return AuthContext(
-        user_id=UUID(payload["sub"]),
+        user_id=user_id,
+        token_version=token_version,
         mandant_id=mandant_id,
         role=payload["role"],
         impersonated_by=impersonated_by,
@@ -177,8 +218,10 @@ async def get_current_kunde(
             detail="Token-Typ nicht für das Kundenportal zulässig",
         )
 
+    zugang_id = UUID(payload["sub"])
+    await token_version_gueltig(KundenportalZugang, zugang_id, payload)
     return KundenAuthContext(
-        zugang_id=UUID(payload["sub"]),
+        zugang_id=zugang_id,
         mandant_id=UUID(payload["mandant_id"]),
         kunde_id=UUID(payload["kunde_id"]),
     )
@@ -246,8 +289,10 @@ async def get_current_partner(
             detail="Token-Typ nicht für das Partnerportal zulässig",
         )
 
+    zugang_id = UUID(payload["sub"])
+    await token_version_gueltig(PartnerZugang, zugang_id, payload)
     return PartnerAuthContext(
-        zugang_id=UUID(payload["sub"]),
+        zugang_id=zugang_id,
         mandant_id=UUID(payload["mandant_id"]),
         partner_id=UUID(payload["partner_id"]),
     )

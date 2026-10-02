@@ -192,11 +192,19 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => apiFetch<CurrentUser>("/api/auth/me"),
+  ueberallAbmelden: () => apiFetch<void>("/api/auth/ueberall-abmelden", { method: "POST" }),
   registrieren: (token: string, name: string, password: string) =>
     apiFetch<TokenPair>("/api/auth/registrieren", {
       method: "POST",
       body: JSON.stringify({ token, name, password }),
     }),
+};
+
+export const streamApi = {
+  // Kurzlebiges Ticket statt Access-Token in der EventSource-URL (siehe
+  // backend/app/api/routes/stream.py).
+  ticket: () =>
+    apiFetch<{ ticket: string; gueltig_bis: string }>("/api/stream/ticket", { method: "POST" }),
 };
 
 export const systemApi = {
@@ -260,6 +268,8 @@ export const usersApi = {
       body: JSON.stringify(body),
     }),
   remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
+  abmeldenErzwingen: (id: string) =>
+    apiFetch<void>(`/api/users/${id}/abmelden`, { method: "POST" }),
   updateOwnBottomNav: (praeferenz: BottomNavPraeferenz) =>
     apiFetch<BottomNavPraeferenz>("/api/users/me/bottom-nav", {
       method: "PATCH",

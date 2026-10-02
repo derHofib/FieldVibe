@@ -31,6 +31,7 @@ from app.schemas.partner import (
     PartnerPasswortVergessenRequest,
 )
 from app.services.email_service import EmailNichtKonfiguriert, send_email
+from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services import storage_service
 from app.services.partner_auth_service import authenticate_partner
@@ -77,12 +78,23 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Zugang nicht gültig"
             )
+        if payload.get("tv", 0) != zugang.token_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
+            )
+        mandant = await session.get(Mandant, zugang.mandant_id)
+        if mandant is None or mandant.status != "aktiv":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Mandant ist nicht aktiv"
+            )
 
         return TokenPair(
             access_token=create_partner_access_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, partner_id=zugang.partner_id
             ),
             refresh_token=create_partner_refresh_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, partner_id=zugang.partner_id
             ),
         )
@@ -112,9 +124,11 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
 
         return TokenPair(
             access_token=create_partner_access_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, partner_id=zugang.partner_id
             ),
             refresh_token=create_partner_refresh_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, partner_id=zugang.partner_id
             ),
         )
@@ -218,5 +232,6 @@ async def passwort_zuruecksetzen(body: PartnerPasswortResetRequest, request: Req
         if zugang is None or not zugang.aktiv:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")
         zugang.password_hash = hash_password(body.new_password)
+        await widerrufe_tokens(session, zugang)
         await session.commit()
     return None

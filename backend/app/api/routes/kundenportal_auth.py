@@ -34,6 +34,7 @@ from app.schemas.kundenportal import (
 )
 from app.services import storage_service
 from app.services.email_service import EmailNichtKonfiguriert, send_email
+from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services.kundenportal_auth_service import authenticate_kunde
 
@@ -119,12 +120,23 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Zugang nicht gültig"
             )
+        if payload.get("tv", 0) != zugang.token_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
+            )
+        mandant = await session.get(Mandant, zugang.mandant_id)
+        if mandant is None or mandant.status != "aktiv":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Mandant ist nicht aktiv"
+            )
 
         return TokenPair(
             access_token=create_kundenportal_access_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
             ),
             refresh_token=create_kundenportal_refresh_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
             ),
         )
@@ -154,9 +166,11 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
 
         return TokenPair(
             access_token=create_kundenportal_access_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
             ),
             refresh_token=create_kundenportal_refresh_token(
+                token_version=zugang.token_version,
                 subject=zugang.id, mandant_id=zugang.mandant_id, kunde_id=zugang.kunde_id
             ),
         )
@@ -268,6 +282,7 @@ async def passwort_zuruecksetzen(body: KundenPasswortResetRequest, request: Requ
             password_reset_ip_limiter.record_failure(ip_key)
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Zugang nicht gültig")
         zugang.password_hash = hash_password(body.new_password)
+        await widerrufe_tokens(session, zugang)
         await session.commit()
     password_reset_ip_limiter.record_success(ip_key)
     return None

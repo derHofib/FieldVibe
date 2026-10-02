@@ -19,6 +19,7 @@ from app.models.user import User
 from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 from app.services.auth_service import authenticate
+from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services.rechte_service import (
     darf_vorgang_selbst_uebernehmen,
@@ -67,21 +68,47 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig"
             )
+        # Fehlender Claim (Altbestand) gilt als 0, siehe token_version_gueltig.
+        if payload.get("tv", 0) != user.token_version:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
+            )
+        if user.mandant_id is not None:
+            mandant = await session.get(Mandant, user.mandant_id)
+            if mandant is None or mandant.status != "aktiv":
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="Mandant ist nicht aktiv"
+                )
 
         return TokenPair(
             access_token=create_access_token(
+                token_version=user.token_version,
                 subject=user.id,
                 role=user.role,
                 mandant_id=user.mandant_id,
                 account_typ_id=user.account_typ_id,
             ),
             refresh_token=create_refresh_token(
+                token_version=user.token_version,
                 subject=user.id,
                 role=user.role,
                 mandant_id=user.mandant_id,
                 account_typ_id=user.account_typ_id,
             ),
         )
+
+
+@router.post("/ueberall-abmelden", status_code=status.HTTP_204_NO_CONTENT)
+async def ueberall_abmelden(auth: AuthContext = Depends(get_current_user)) -> None:
+    """Entwertet alle Tokens des eigenen Accounts (alle Geraete, inkl. des
+    aufrufenden). system_session wie bei /me: bei Impersonation ist die
+    Zeile des Super-Admins unter der Mandanten-RLS nicht sichtbar -- dann
+    trifft der Widerruf bewusst den Super-Admin-Account selbst."""
+    async with system_session() as session:
+        user = await session.get(User, auth.user_id)
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
+        await widerrufe_tokens(session, user)
 
 
 @router.post("/registrieren", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
@@ -109,9 +136,11 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
 
         return TokenPair(
             access_token=create_access_token(
+                token_version=user.token_version,
                 subject=user.id, role=user.role, mandant_id=user.mandant_id, account_typ_id=user.account_typ_id
             ),
             refresh_token=create_refresh_token(
+                token_version=user.token_version,
                 subject=user.id, role=user.role, mandant_id=user.mandant_id, account_typ_id=user.account_typ_id
             ),
         )

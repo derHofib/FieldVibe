@@ -152,6 +152,10 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
+  const abmeldenMutation = useMutation({
+    mutationFn: usersApi.abmeldenErzwingen,
+  });
+
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: usersApi.remove,
@@ -459,6 +463,22 @@ export function UsersPage() {
                         className="btn-touch btn-ap"
                       >
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`${u.name} auf allen Geräten abmelden?`)) {
+                            abmeldenMutation.mutate(u.id);
+                          }
+                        }}
+                        disabled={u.id === currentUser?.id || abmeldenMutation.isPending}
+                        title={
+                          u.id === currentUser?.id
+                            ? "Eigenes Konto: im Profil „Auf allen Geräten abmelden“"
+                            : "Alle Sitzungen dieses Nutzers beenden"
+                        }
+                        className="btn-touch btn-ap disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Abmelden erzwingen
                       </button>
                       <button
                         onClick={() => {

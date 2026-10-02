@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Text
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -54,6 +54,12 @@ class User(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(Text, nullable=False)
     avatar_url: Mapped[str | None] = mapped_column(Text)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Widerruf: Tokens tragen diesen Wert als Claim "tv"; jede Erhoehung
+    # (Sperren, Passwortaenderung, "ueberall abmelden") entwertet alle
+    # bisher ausgestellten Tokens.
+    token_version: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     # Individualisierte Bottom-Nav (siehe frontend/src/config/navSeiten.ts):
     # {"links": [...2 Seiten-Keys...], "rotunde": [...beliebig viele...]}.
     # NULL = Standardauswahl. Form wird von app.schemas.user.BottomNavUpdate

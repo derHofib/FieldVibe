@@ -44,6 +44,7 @@ from app.schemas.user import UserRead
 from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
+from app.services.token_widerruf_service import widerrufe_tokens
 from app.services import angebot_service, papierkorb_service, rechnung_service, storage_service
 from app.services.einladung_service import (
     create_einladung,
@@ -643,6 +644,7 @@ async def update_portal_zugang(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zugang nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True, exclude={"password"})
+    tokens_widerrufen = (changes.get("aktiv") is False and zugang.aktiv) or body.password is not None
     for field, value in changes.items():
         setattr(zugang, field, value)
     if body.password is not None:
@@ -655,6 +657,8 @@ async def update_portal_zugang(
         changes["password_hash"] = zugang.password_hash
 
     await session.flush()
+    if tokens_widerrufen:
+        await widerrufe_tokens(session, zugang)
     if changes:
         await session.refresh(zugang)
     return zugang
