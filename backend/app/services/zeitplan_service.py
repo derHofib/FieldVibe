@@ -11,6 +11,7 @@ DB-Schicht darum herum.
 Gerechnet wird in Kalendertagen, Datumsbereiche sind inklusiv
 (start_am..ende_am).
 """
+import uuid
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -31,11 +32,22 @@ from app.models.projekt import (
     Projekt,
     ProjektAufgabe,
     ProjektAufgabeAbhaengigkeit,
+    ProjektBasisplan,
+    ProjektBasisplanEintrag,
     ProjektSpalte,
+    ProjektVorlage,
+    ProjektVorlageAbhaengigkeit,
+    ProjektVorlageElement,
 )
 from app.models.user import User
 from app.schemas.projekt import (
+    ProjektVorlageAbhaengigkeitRead,
+    ProjektVorlageDetail,
+    ProjektVorlageElementRead,
+    ProjektVorlageListe,
     ZeitplanAbhaengigkeit,
+    ZeitplanAenderung,
+    ZeitplanBasisplanRead,
     ZeitplanBestellungAuswahl,
     ZeitplanBestellungRef,
     ZeitplanElement,
@@ -325,6 +337,137 @@ def verschiebe_phase(
     return bewegt
 
 
+@dataclass
+class KritischerPfad:
+    """Ergebnis der CPM-Rechnung. `puffer` enthaelt nur datierte Schritte/
+    Meilensteine (Phasen und Elemente ohne Datum fehlen -> "kein Puffer")."""
+
+    puffer: dict[UUID, int]
+    kritisch: set[UUID]
+    kritische_kanten: set[tuple[UUID, UUID]]
+
+
+def _topologisch(knoten: Iterable[UUID], kanten: list[PlanKante]) -> list[UUID]:
+    """Kahn; Knoten in einem (eigentlich ausgeschlossenen) Kreis fehlen."""
+    knoten = set(knoten)
+    folgen: dict[UUID, list[UUID]] = defaultdict(list)
+    grad = {n: 0 for n in knoten}
+    for k in kanten:
+        folgen[k.vorgaenger_id].append(k.nachfolger_id)
+        grad[k.nachfolger_id] += 1
+    bereit = deque(n for n, g in grad.items() if g == 0)
+    reihenfolge: list[UUID] = []
+    while bereit:
+        aktuell = bereit.popleft()
+        reihenfolge.append(aktuell)
+        for n in folgen[aktuell]:
+            grad[n] -= 1
+            if grad[n] == 0:
+                bereit.append(n)
+    return reihenfolge
+
+
+def _dauer_diff(el: PlanElement) -> int:
+    assert el.start_am is not None and el.ende_am is not None
+    return (el.ende_am - el.start_am).days
+
+
+def berechne_kritischen_pfad(elemente: Mapping[UUID, PlanElement], kanten: Iterable[PlanKante]) -> KritischerPfad:
+    """CPM ueber alle datierten Schritte/Meilensteine (Phasen und Elemente
+    ohne Datum nehmen nicht teil). Vorwaerts gilt der tatsaechliche Termin
+    (nicht ein neu berechneter frueheste-Lage-Plan), rueckwaerts wird vom
+    Projektende (max ende_am) aus der spaeteste Start/Ende bestimmt:
+    Gesamtpuffer = spaetester Start - tatsaechlicher Start; kritisch =
+    Puffer <= 0 (negativ: eine Verbindung ist bewusst verletzt). Jedes
+    Element muss zudem spaetestens am Projektende enden."""
+    aktiv = _aktive_kanten(elemente, kanten)
+    knoten = {
+        i for i, el in elemente.items() if el.typ != "phase" and _datiert(el)
+    }
+    if not knoten:
+        return KritischerPfad({}, set(), set())
+    projektende = max(elemente[i].ende_am for i in knoten)  # type: ignore[type-var]
+    nachfolger_kanten: dict[UUID, list[PlanKante]] = defaultdict(list)
+    for k in aktiv:
+        nachfolger_kanten[k.vorgaenger_id].append(k)
+
+    # Spaetestes Ende je Element; Senken: Projektende.
+    spaetestes_ende: dict[UUID, date] = {}
+    spaetester_start: dict[UUID, date] = {}
+    for i in reversed(_topologisch(knoten, aktiv)):
+        el = elemente[i]
+        grenzen = [projektende]
+        for k in nachfolger_kanten[i]:
+            n_start = spaetester_start[k.nachfolger_id]
+            n_ende = spaetestes_ende[k.nachfolger_id]
+            if k.art == "anfang_anfang":
+                grenzen.append(n_start - timedelta(days=k.versatz_tage) + timedelta(days=_dauer_diff(el)))
+            elif k.art == "ende_ende":
+                grenzen.append(n_ende - timedelta(days=k.versatz_tage))
+            else:
+                # Gegenstueck zu fruehester_start(): Meilenstein ohne Dauer
+                # darf am selben Tag wie sein Nachfolger liegen.
+                luecke = 0 if el.typ == "meilenstein" else 1
+                grenzen.append(n_start - timedelta(days=luecke + k.versatz_tage))
+        spaetestes_ende[i] = min(grenzen)
+        spaetester_start[i] = spaetestes_ende[i] - timedelta(days=_dauer_diff(el))
+
+    puffer = {i: (spaetester_start[i] - elemente[i].start_am).days for i in spaetester_start}  # type: ignore[operator]
+    kritisch = {i for i, p in puffer.items() if p <= 0}
+    kritische_kanten = {
+        (k.vorgaenger_id, k.nachfolger_id)
+        for k in aktiv
+        if k.vorgaenger_id in kritisch
+        and k.nachfolger_id in kritisch
+        and _verletzung_tage(elemente[k.nachfolger_id], elemente[k.vorgaenger_id], k) == 0
+    }
+    return KritischerPfad(puffer, kritisch, kritische_kanten)
+
+
+def straffe_plan(
+    elemente: dict[UUID, PlanElement],
+    kanten: Iterable[PlanKante],
+    fest: Iterable[UUID] = (),
+    phase_id: UUID | None = None,
+) -> set[UUID]:
+    """Setzt jedes nicht feste Element mit mindestens einem (datierten)
+    Vorgaenger auf seinen fruehestmoeglichen Termin laut aller eingehenden
+    Verbindungen -- auch nach vorne; die Dauer bleibt. Topologisch, damit
+    ein Nachfolger die bereits gestrafften Vorgaenger sieht. Mit `phase_id`
+    werden nur Elemente dieser Phase angefasst, alle anderen (auch
+    Vorgaenger ausserhalb) zaehlen als feste Randbedingung. Aktualisiert die
+    Phasenspannen. Rueckgabe: ids der Elemente (ohne Phasen), deren Termin
+    sich geaendert hat."""
+    fest = set(fest)
+    aktiv = _aktive_kanten(elemente, kanten)
+    eingehend: dict[UUID, list[PlanKante]] = defaultdict(list)
+    for k in aktiv:
+        eingehend[k.nachfolger_id].append(k)
+    knoten = {i for i, el in elemente.items() if el.typ != "phase" and _datiert(el)}
+    geaendert: set[UUID] = set()
+    for i in _topologisch(knoten, aktiv):
+        el = elemente[i]
+        if i in fest or not eingehend[i] or (phase_id is not None and el.phase_id != phase_id):
+            continue
+        d = timedelta(days=_dauer_diff(el))
+        fruehester = max(_fruehester_start_fuer(elemente[k.vorgaenger_id], k, d) for k in eingehend[i])
+        if fruehester != el.start_am:
+            el.start_am, el.ende_am = fruehester, fruehester + d
+            geaendert.add(i)
+    aktualisiere_phasenspannen(elemente)
+    return geaendert
+
+
+def _fruehester_start_fuer(vorgaenger: PlanElement, kante: PlanKante, dauer: timedelta) -> date:
+    assert vorgaenger.start_am is not None and vorgaenger.ende_am is not None
+    if kante.art == "anfang_anfang":
+        return vorgaenger.start_am + timedelta(days=kante.versatz_tage)
+    if kante.art == "ende_ende":
+        return vorgaenger.ende_am + timedelta(days=kante.versatz_tage) - dauer
+    return fruehester_start(vorgaenger, kante.versatz_tage)
+
+
+
 def _normalisiere_zeitraum(typ: str, start: date | None, ende: date | None) -> tuple[date | None, date | None]:
     """Nur ein Datum gesetzt -> Ein-Tages-Zeitraum; Meilenstein: ende = start."""
     if typ == "meilenstein":
@@ -463,8 +606,21 @@ async def _projekt_modus(session: AsyncSession, projekt: Projekt) -> str:
     return projekt.verschiebe_modus
 
 
-async def lese_zeitplan(session: AsyncSession, projekt: Projekt) -> ZeitplanRead:
+async def lese_zeitplan(
+    session: AsyncSession, projekt: Projekt, basisplan_id: UUID | None = None
+) -> ZeitplanRead:
     modus = await _projekt_modus(session, projekt)
+    basis: dict[UUID, tuple[date, date]] = {}
+    if basisplan_id is not None:
+        await _basisplan(session, projekt.id, basisplan_id)
+        basis = {
+            e.element_id: (e.start_am, e.ende_am)
+            for e in (
+                await session.execute(
+                    select(ProjektBasisplanEintrag).where(ProjektBasisplanEintrag.basisplan_id == basisplan_id)
+                )
+            ).scalars()
+        }
     zeilen = (
         await session.execute(
             select(
@@ -536,6 +692,23 @@ async def lese_zeitplan(session: AsyncSession, projekt: Projekt) -> ZeitplanRead
         for p in (await session.execute(select(Partner.id, Partner.name).where(Partner.id.in_(partner_ids)))).all():
             partner[p[0]] = ZeitplanPartnerRef(id=p[0], name=p[1])
 
+    ids = {r[0] for r in zeilen}
+    deps = [
+        d
+        for d in (
+            await session.execute(
+                select(ProjektAufgabeAbhaengigkeit)
+                .where(ProjektAufgabeAbhaengigkeit.projekt_id == projekt.id)
+                .order_by(ProjektAufgabeAbhaengigkeit.created_at)
+            )
+        ).scalars()
+        if d.vorgaenger_id in ids and d.nachfolger_id in ids
+    ]
+    cpm = berechne_kritischen_pfad(
+        {r[0]: PlanElement(id=r[0], typ=r[1], start_am=r[4], ende_am=r[5], phase_id=r[3]) for r in zeilen},
+        _kanten_aus(deps),
+    )
+
     elemente = []
     for r in zeilen:
         vorgang = vorgaenge.get(r[11]) if r[11] is not None else None
@@ -559,19 +732,16 @@ async def lese_zeitplan(session: AsyncSession, projekt: Projekt) -> ZeitplanRead
                 bestellung=bestellung,
                 datum_gesperrt=bestellung is not None,
                 partner=partner.get(r[13]) if r[13] is not None else None,
+                puffer_tage=cpm.puffer.get(r[0]),
+                kritisch=r[0] in cpm.kritisch,
+                basis_start_am=basis[r[0]][0] if r[0] in basis else None,
+                basis_ende_am=basis[r[0]][1] if r[0] in basis else None,
+                abweichung_tage=(r[5] - basis[r[0]][1]).days if r[0] in basis and r[5] is not None else None,
             )
         )
     # Phasen zuerst (nach plan_reihenfolge), danach die Elemente -- das
     # Frontend gruppiert selbst anhand phase_id.
     elemente.sort(key=lambda e: (e.typ != "phase", e.plan_reihenfolge))
-    ids = {e.id for e in elemente}
-    deps = (
-        await session.execute(
-            select(ProjektAufgabeAbhaengigkeit)
-            .where(ProjektAufgabeAbhaengigkeit.projekt_id == projekt.id)
-            .order_by(ProjektAufgabeAbhaengigkeit.created_at)
-        )
-    ).scalars()
     return ZeitplanRead(
         projekt_id=projekt.id,
         verschiebe_modus=modus,  # type: ignore[arg-type]
@@ -583,9 +753,9 @@ async def lese_zeitplan(session: AsyncSession, projekt: Projekt) -> ZeitplanRead
                 nachfolger_id=d.nachfolger_id,
                 art=d.art,  # type: ignore[arg-type]
                 versatz_tage=d.versatz_tage,
+                kritisch=(d.vorgaenger_id, d.nachfolger_id) in cpm.kritische_kanten,
             )
             for d in deps
-            if d.vorgaenger_id in ids and d.nachfolger_id in ids
         ],
     )
 
@@ -985,6 +1155,371 @@ async def liefertermin_uebernehmen(session: AsyncSession, bestellung: Bestellung
         )
         _schreibe_zurueck(orm, plan)
         await session.flush()
+
+
+# --------------------------------------------------------------------------
+# Basisplan (Soll/Ist)
+# --------------------------------------------------------------------------
+
+
+async def _basisplan(session: AsyncSession, projekt_id: UUID, basisplan_id: UUID) -> ProjektBasisplan:
+    b = await session.get(ProjektBasisplan, basisplan_id)
+    if b is None or b.projekt_id != projekt_id:
+        raise ZeitplanNichtGefunden("Basisplan nicht gefunden")
+    return b
+
+
+async def basisplan_erstellen(
+    session: AsyncSession, projekt: Projekt, *, mandant_id: UUID, user_id: UUID, name: str
+) -> ZeitplanBasisplanRead:
+    name = name.strip()
+    if not name:
+        raise ZeitplanRegelverstoss("Name darf nicht leer sein")
+    orm, _ = await _lade(session, projekt.id)
+    basisplan = ProjektBasisplan(mandant_id=mandant_id, projekt_id=projekt.id, name=name, erstellt_von=user_id)
+    session.add(basisplan)
+    await session.flush()
+    datiert = [a for a in orm.values() if a.start_am is not None and a.ende_am is not None]
+    session.add_all(
+        ProjektBasisplanEintrag(
+            mandant_id=mandant_id,
+            basisplan_id=basisplan.id,
+            element_id=a.id,
+            start_am=a.start_am,
+            ende_am=a.ende_am,
+        )
+        for a in datiert
+    )
+    await session.flush()
+    await session.refresh(basisplan, attribute_names=["created_at"])
+    ersteller = await session.get(User, user_id)
+    return ZeitplanBasisplanRead(
+        id=basisplan.id,
+        name=basisplan.name,
+        erstellt_am=basisplan.created_at,
+        erstellt_von_name=ersteller.name if ersteller else None,
+        anzahl_elemente=len(datiert),
+    )
+
+
+async def basisplaene_lesen(session: AsyncSession, projekt: Projekt) -> list[ZeitplanBasisplanRead]:
+    anzahl = (
+        select(ProjektBasisplanEintrag.basisplan_id, func.count().label("n"))
+        .group_by(ProjektBasisplanEintrag.basisplan_id)
+        .subquery()
+    )
+    zeilen = (
+        await session.execute(
+            select(
+                ProjektBasisplan.id,
+                ProjektBasisplan.name,
+                ProjektBasisplan.created_at,
+                User.name,
+                func.coalesce(anzahl.c.n, 0),
+            )
+            .outerjoin(User, User.id == ProjektBasisplan.erstellt_von)
+            .outerjoin(anzahl, anzahl.c.basisplan_id == ProjektBasisplan.id)
+            .where(ProjektBasisplan.projekt_id == projekt.id)
+            .order_by(ProjektBasisplan.created_at.desc(), ProjektBasisplan.id)
+        )
+    ).all()
+    return [
+        ZeitplanBasisplanRead(id=r[0], name=r[1], erstellt_am=r[2], erstellt_von_name=r[3], anzahl_elemente=r[4])
+        for r in zeilen
+    ]
+
+
+async def basisplan_loeschen(session: AsyncSession, projekt: Projekt, basisplan_id: UUID) -> None:
+    await session.delete(await _basisplan(session, projekt.id, basisplan_id))
+    await session.flush()
+
+
+# --------------------------------------------------------------------------
+# Plan straffen
+# --------------------------------------------------------------------------
+
+
+async def straffen(
+    session: AsyncSession, projekt: Projekt, phase_id: UUID | None, vorschau: bool
+) -> list[ZeitplanAenderung]:
+    orm, deps = await _lade(session, projekt.id)
+    _pruefe_phase(orm, phase_id)
+    plan = _plan_aus(orm)
+    geaendert = straffe_plan(plan, _kanten_aus(deps), await _feste_ids(session, orm), phase_id)
+    aenderungen = [
+        ZeitplanAenderung(
+            element_id=i,
+            titel=orm[i].titel,
+            alt_start_am=orm[i].start_am,  # type: ignore[arg-type]
+            alt_ende_am=orm[i].ende_am,  # type: ignore[arg-type]
+            neu_start_am=plan[i].start_am,  # type: ignore[arg-type]
+            neu_ende_am=plan[i].ende_am,  # type: ignore[arg-type]
+        )
+        for i in sorted(geaendert, key=lambda i: (plan[i].start_am, orm[i].titel, i))
+    ]
+    if not vorschau:
+        _schreibe_zurueck(orm, plan)
+        await session.flush()
+    return aenderungen
+
+
+# --------------------------------------------------------------------------
+# Projektvorlagen
+# --------------------------------------------------------------------------
+
+
+async def _vorlage(session: AsyncSession, vorlage_id: UUID) -> ProjektVorlage:
+    # RLS blendet fremde Mandanten aus -> hier "nicht gefunden".
+    v = await session.get(ProjektVorlage, vorlage_id)
+    if v is None:
+        raise ZeitplanNichtGefunden("Vorlage nicht gefunden")
+    return v
+
+
+def _vorlage_kennzahlen(elemente: Iterable[ProjektVorlageElement]) -> tuple[int, int]:
+    """(Anzahl Elemente, Gesamtspanne in Tagen)."""
+    el = list(elemente)
+    if not el:
+        return 0, 0
+    return len(el), max(e.offset_tage + e.dauer_tage for e in el) - min(e.offset_tage for e in el)
+
+
+async def vorlagen_lesen(session: AsyncSession) -> list[ProjektVorlageListe]:
+    vorlagen = (
+        await session.execute(select(ProjektVorlage).order_by(func.lower(ProjektVorlage.name), ProjektVorlage.id))
+    ).scalars().all()
+    elemente: dict[UUID, list[ProjektVorlageElement]] = defaultdict(list)
+    for e in (await session.execute(select(ProjektVorlageElement))).scalars():
+        elemente[e.vorlage_id].append(e)
+    out = []
+    for v in vorlagen:
+        anzahl, dauer = _vorlage_kennzahlen(elemente[v.id])
+        out.append(
+            ProjektVorlageListe(
+                id=v.id, name=v.name, beschreibung=v.beschreibung, anzahl_elemente=anzahl, dauer_tage=dauer
+            )
+        )
+    return out
+
+
+async def vorlage_detail(session: AsyncSession, vorlage_id: UUID) -> ProjektVorlageDetail:
+    v = await _vorlage(session, vorlage_id)
+    elemente = (
+        await session.execute(
+            select(ProjektVorlageElement)
+            .where(ProjektVorlageElement.vorlage_id == v.id)
+            .order_by(ProjektVorlageElement.typ != "phase", ProjektVorlageElement.reihenfolge, ProjektVorlageElement.ref)
+        )
+    ).scalars().all()
+    deps = (
+        await session.execute(
+            select(ProjektVorlageAbhaengigkeit)
+            .where(ProjektVorlageAbhaengigkeit.vorlage_id == v.id)
+            .order_by(ProjektVorlageAbhaengigkeit.vorgaenger_ref, ProjektVorlageAbhaengigkeit.nachfolger_ref)
+        )
+    ).scalars().all()
+    anzahl, dauer = _vorlage_kennzahlen(elemente)
+    return ProjektVorlageDetail(
+        id=v.id,
+        name=v.name,
+        beschreibung=v.beschreibung,
+        anzahl_elemente=anzahl,
+        dauer_tage=dauer,
+        elemente=[
+            ProjektVorlageElementRead(
+                ref=e.ref,
+                typ=e.typ,  # type: ignore[arg-type]
+                titel=e.titel,
+                phase_ref=e.phase_ref,
+                offset_tage=e.offset_tage,
+                dauer_tage=e.dauer_tage,
+                reihenfolge=e.reihenfolge,
+            )
+            for e in elemente
+        ],
+        abhaengigkeiten=[
+            ProjektVorlageAbhaengigkeitRead(
+                vorgaenger_ref=d.vorgaenger_ref,
+                nachfolger_ref=d.nachfolger_ref,
+                art=d.art,  # type: ignore[arg-type]
+                versatz_tage=d.versatz_tage,
+            )
+            for d in deps
+        ],
+    )
+
+
+async def vorlage_aus_projekt(
+    session: AsyncSession,
+    projekt: Projekt,
+    *,
+    mandant_id: UUID,
+    user_id: UUID,
+    name: str,
+    beschreibung: str | None,
+) -> UUID:
+    """Uebernimmt Struktur und Dauern des aktuellen Zeitplans. Offsets sind
+    relativ zum fruehesten Start. Elemente ohne Datum und Phasen ohne
+    datierte Elemente werden weggelassen (ein Offset waere erfunden), samt
+    ihrer Verbindungen. Vorgang/Bestellung/Partner/Zustaendige werden nicht
+    uebernommen -- ein Liefer-Meilenstein wird zum normalen Meilenstein."""
+    name = name.strip()
+    if not name:
+        raise ZeitplanRegelverstoss("Name darf nicht leer sein")
+    orm, deps = await _lade(session, projekt.id)
+    datiert = [a for a in orm.values() if a.typ != "phase" and a.start_am is not None and a.ende_am is not None]
+    if not datiert:
+        raise ZeitplanRegelverstoss("Der Zeitplan hat keine terminierten Elemente für eine Vorlage")
+    null = min(a.start_am for a in datiert)  # type: ignore[type-var]
+    phasen_mit_kindern = {a.plan_phase_id for a in datiert if a.plan_phase_id is not None}
+    uebernommen = [a for a in orm.values() if a in datiert or (a.typ == "phase" and a.id in phasen_mit_kindern)]
+    refs: dict[UUID, str] = {}
+    for a in sorted(uebernommen, key=lambda a: (a.typ != "phase", a.plan_reihenfolge, a.created_at)):
+        refs[a.id] = f"{a.typ[0]}{len(refs) + 1}"
+
+    vorlage = ProjektVorlage(
+        mandant_id=mandant_id, name=name, beschreibung=(beschreibung or "").strip() or None, erstellt_von=user_id
+    )
+    session.add(vorlage)
+    await session.flush()
+    for a in uebernommen:
+        if a.typ == "phase":
+            kinder = [k for k in datiert if k.plan_phase_id == a.id]
+            start = min(k.start_am for k in kinder)  # type: ignore[type-var]
+            ende = max(k.ende_am for k in kinder)  # type: ignore[type-var]
+        else:
+            start, ende = a.start_am, a.ende_am
+        session.add(
+            ProjektVorlageElement(
+                mandant_id=mandant_id,
+                vorlage_id=vorlage.id,
+                ref=refs[a.id],
+                typ=a.typ,
+                titel=a.titel,
+                phase_ref=refs.get(a.plan_phase_id) if a.typ != "phase" and a.plan_phase_id else None,
+                offset_tage=(start - null).days,  # type: ignore[operator]
+                dauer_tage=1 if a.typ == "meilenstein" else (ende - start).days + 1,  # type: ignore[operator]
+                reihenfolge=a.plan_reihenfolge,
+            )
+        )
+    for d in deps:
+        if d.vorgaenger_id in refs and d.nachfolger_id in refs:
+            session.add(
+                ProjektVorlageAbhaengigkeit(
+                    mandant_id=mandant_id,
+                    vorlage_id=vorlage.id,
+                    vorgaenger_ref=refs[d.vorgaenger_id],
+                    nachfolger_ref=refs[d.nachfolger_id],
+                    art=d.art,
+                    versatz_tage=d.versatz_tage,
+                )
+            )
+    await session.flush()
+    return vorlage.id
+
+
+async def vorlage_aendern(session: AsyncSession, vorlage_id: UUID, aenderungen: Mapping[str, Any]) -> None:
+    v = await _vorlage(session, vorlage_id)
+    if "name" in aenderungen:
+        if aenderungen["name"] is None or not aenderungen["name"].strip():
+            raise ZeitplanRegelverstoss("Name darf nicht leer sein")
+        v.name = aenderungen["name"].strip()
+    if "beschreibung" in aenderungen:
+        v.beschreibung = (aenderungen["beschreibung"] or "").strip() or None
+    await session.flush()
+
+
+async def vorlage_loeschen(session: AsyncSession, vorlage_id: UUID) -> None:
+    await session.delete(await _vorlage(session, vorlage_id))
+    await session.flush()
+
+
+async def vorlage_anwenden(
+    session: AsyncSession,
+    projekt: Projekt,
+    *,
+    mandant_id: UUID,
+    user_id: UUID,
+    vorlage_id: UUID,
+    start_am: date,
+) -> None:
+    """Haengt die Vorlage an den bestehenden Plan an (Reihenfolge hinten).
+    Die Termine ergeben sich allein aus Offset/Dauer -- es wird bewusst
+    nicht propagiert, damit Struktur und Abstaende exakt der Vorlage
+    entsprechen."""
+    vorlage = await _vorlage(session, vorlage_id)
+    elemente = sorted(
+        (
+            await session.execute(
+                select(ProjektVorlageElement).where(ProjektVorlageElement.vorlage_id == vorlage.id)
+            )
+        ).scalars(),
+        key=lambda e: (e.reihenfolge, e.ref),
+    )
+    deps = (
+        await session.execute(
+            select(ProjektVorlageAbhaengigkeit).where(ProjektVorlageAbhaengigkeit.vorlage_id == vorlage.id)
+        )
+    ).scalars().all()
+    orm, _ = await _lade(session, projekt.id)
+    spalte_id = (
+        await session.execute(
+            select(ProjektSpalte.id)
+            .where(ProjektSpalte.projekt_id == projekt.id)
+            .order_by(ProjektSpalte.reihenfolge)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
+    ids = {e.ref: uuid.uuid4() for e in elemente}
+    phasen_refs = {e.ref for e in elemente if e.typ == "phase"}
+    zaehler: dict[UUID | None | str, int] = {
+        "phase": _naechste_reihenfolge(orm, "phase", None),
+        None: _naechste_reihenfolge(orm, "schritt", None),
+    }
+    for e in sorted(elemente, key=lambda e: e.typ != "phase"):
+        if e.typ == "phase":
+            gruppe: UUID | None | str = "phase"
+            start = ende = None
+            phase_id = None
+        else:
+            phase_id = ids[e.phase_ref] if e.phase_ref in phasen_refs else None
+            gruppe = phase_id
+            start = start_am + timedelta(days=e.offset_tage)
+            ende = start if e.typ == "meilenstein" else start + timedelta(days=e.dauer_tage - 1)
+        nummer = zaehler.get(gruppe, 0)
+        zaehler[gruppe] = nummer + 1
+        session.add(
+            ProjektAufgabe(
+                id=ids[e.ref],
+                mandant_id=mandant_id,
+                projekt_id=projekt.id,
+                spalte_id=spalte_id if e.typ == "schritt" else None,
+                typ=e.typ,
+                titel=e.titel,
+                start_am=start,
+                ende_am=ende,
+                plan_phase_id=phase_id,
+                plan_reihenfolge=nummer,
+                erstellt_von=user_id,
+            )
+        )
+    await session.flush()
+    for d in deps:
+        if d.vorgaenger_ref in ids and d.nachfolger_ref in ids:
+            session.add(
+                ProjektAufgabeAbhaengigkeit(
+                    mandant_id=mandant_id,
+                    projekt_id=projekt.id,
+                    vorgaenger_id=ids[d.vorgaenger_ref],
+                    nachfolger_id=ids[d.nachfolger_ref],
+                    art=d.art,
+                    versatz_tage=d.versatz_tage,
+                    erstellt_von=user_id,
+                )
+            )
+    await session.flush()
+    await _aktualisiere_phasen(session, projekt.id)
 
 
 def _like_muster(q: str) -> str:

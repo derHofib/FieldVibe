@@ -174,6 +174,7 @@ app.include_router(nav_kategorien.router)
 app.include_router(projekte.router)
 app.include_router(projekte.aufgaben_router)
 app.include_router(zeitplan.router)
+app.include_router(zeitplan.vorlagen_router)
 
 
 @app.get("/healthz")

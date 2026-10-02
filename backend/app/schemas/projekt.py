@@ -196,6 +196,14 @@ class ZeitplanElement(BaseModel):
     # sind nicht direkt editierbar.
     datum_gesperrt: bool = False
     partner: ZeitplanPartnerRef | None = None
+    # Kritischer Pfad (berechnet): null = ohne Datum bzw. Phase.
+    puffer_tage: int | None = None
+    kritisch: bool = False
+    # Nur mit ?basisplan_id=: Soll-Termine und Abweichung des Endes in Tagen
+    # (positiv = spaeter als geplant).
+    basis_start_am: date | None = None
+    basis_ende_am: date | None = None
+    abweichung_tage: int | None = None
 
 
 class ZeitplanAbhaengigkeit(BaseModel):
@@ -204,6 +212,7 @@ class ZeitplanAbhaengigkeit(BaseModel):
     nachfolger_id: UUID
     art: AbhaengigkeitArt
     versatz_tage: int
+    kritisch: bool = False
 
 
 class ZeitplanRead(BaseModel):
@@ -284,3 +293,79 @@ class ZeitplanBestellungAuswahl(BaseModel):
     status: str
     liefertermin: date | None
     lieferant_name: str | None
+
+
+class ZeitplanBasisplanCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+
+
+class ZeitplanBasisplanRead(BaseModel):
+    id: UUID
+    name: str
+    erstellt_am: datetime
+    erstellt_von_name: str | None
+    anzahl_elemente: int
+
+
+class ZeitplanStraffenRequest(BaseModel):
+    phase_id: UUID | None = None
+    vorschau: bool = True
+
+
+class ZeitplanAenderung(BaseModel):
+    element_id: UUID
+    titel: str
+    alt_start_am: date
+    alt_ende_am: date
+    neu_start_am: date
+    neu_ende_am: date
+
+
+class ZeitplanStraffenRead(BaseModel):
+    aenderungen: list[ZeitplanAenderung]
+    zeitplan: ZeitplanRead | None
+
+
+class ProjektVorlageListe(BaseModel):
+    id: UUID
+    name: str
+    beschreibung: str | None
+    anzahl_elemente: int
+    dauer_tage: int
+
+
+class ProjektVorlageElementRead(BaseModel):
+    ref: str
+    typ: ZeitplanTyp
+    titel: str
+    phase_ref: str | None
+    offset_tage: int
+    dauer_tage: int
+    reihenfolge: int
+
+
+class ProjektVorlageAbhaengigkeitRead(BaseModel):
+    vorgaenger_ref: str
+    nachfolger_ref: str
+    art: AbhaengigkeitArt
+    versatz_tage: int
+
+
+class ProjektVorlageDetail(ProjektVorlageListe):
+    elemente: list[ProjektVorlageElementRead]
+    abhaengigkeiten: list[ProjektVorlageAbhaengigkeitRead]
+
+
+class ProjektVorlageAusProjekt(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    beschreibung: str | None = None
+
+
+class ProjektVorlageUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    beschreibung: str | None = None
+
+
+class ZeitplanVorlageAnwenden(BaseModel):
+    vorlage_id: UUID
+    start_am: date

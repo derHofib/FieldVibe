@@ -1,5 +1,5 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
 from uuid import UUID
@@ -1283,4 +1283,472 @@ def generate_form_submission_pdf(
             if not group.repeatable:
                 break
 
+    return bytes(pdf.output())
+
+
+# --- Zeitplan (Gantt) ---------------------------------------------------------
+# Eigenes Querformat-Layout auf der _BelegPDF-Basis (Logo/Fonts/Farben); Kopf
+# und Fuss sind fuer Querformat neu positioniert. Alle Masse in mm.
+
+_ZP_RAND = 10.0
+_ZP_SPALTE_LINKS = 62.0
+_ZP_ZEILE = 7.0
+_ZP_ZEILE_BASIS = 9.0
+_ZP_KOPF_MONAT = 5.0
+_ZP_KOPF_KW = 5.0
+_ZP_KOPF_TAG = 4.0
+_ZP_ROT = (220, 38, 38)
+_ZP_ROT_DUNKEL = (153, 27, 27)
+_ZP_VIOLETT = (124, 58, 237)
+_ZP_VIOLETT_DUNKEL = (76, 29, 149)
+_ZP_AKZENT_DUNKEL = (6, 64, 125)
+_ZP_PHASE = (55, 65, 81)
+_ZP_SCHATTEN = (190, 190, 190)
+_ZP_WOCHENENDE = (244, 244, 245)
+_ZP_RASTER = (232, 232, 235)
+_ZP_HEUTE = (234, 120, 0)
+_ZP_VERBINDUNG = (90, 90, 100)
+_ZP_MONATE = ("Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez")
+_ZP_MONATE_LANG = (
+    "Januar", "Februar", "März", "April", "Mai", "Juni",
+    "Juli", "August", "September", "Oktober", "November", "Dezember",
+)  # fmt: skip
+
+
+class _ZeitplanPDF(_BelegPDF):
+    def __init__(self, mandant: Mandant, projekt_name: str, logo_bytes: bytes | None):
+        super().__init__(mandant, "Zeitplan", projekt_name, logo_bytes)
+        self.set_auto_page_break(False)
+
+    def header(self) -> None:
+        if self.page_no() == 1:
+            logo_ok = False
+            if self._logo_bytes:
+                try:
+                    self.image(BytesIO(self._logo_bytes), x=_ZP_RAND, y=8, h=11)
+                    logo_ok = True
+                except Exception:
+                    logo_ok = False
+            if not logo_ok:
+                self.set_xy(_ZP_RAND, 8)
+                self.set_font("Helvetica", "B", 14)
+                self.set_text_color(60, 60, 60)
+                self.cell(0, 8, _pdf_safe_text(self._mandant.name))
+        else:
+            self.set_xy(_ZP_RAND, 7)
+            self.set_font("Helvetica", "", 8)
+            _set_grau(self)
+            self.cell(
+                0,
+                5,
+                _pdf_safe_text(f"{self._mandant.name} · Zeitplan {self._nummer} · Seite {self.page_no()}"),
+            )
+        _set_text(self)
+
+    def footer(self) -> None:
+        self.set_font("Helvetica", "", 7)
+        _set_grau(self)
+        self.set_xy(_ZP_RAND, self.h - 8)
+        self.cell(self.w / 2, 3.5, _pdf_safe_text(self._mandant.name))
+        self.set_xy(self.w - _ZP_RAND - 40, self.h - 8)
+        self.cell(40, 3.5, f"Seite {self.page_no()} von {{nb}}", align="R")
+        _set_text(self)
+
+
+def _zp_kuerzen(pdf: FPDF, text: str, breite: float) -> str:
+    """Kuerzt (Font gesetzt) auf `breite`; haengt "..." an."""
+    text = _pdf_safe_text(text)
+    if pdf.get_string_width(text) <= breite:
+        return text
+    while text and pdf.get_string_width(text + "...") > breite:
+        text = text[:-1]
+    return text.rstrip() + "..."
+
+
+def _zp_zeilen(zeitplan) -> list:
+    phasen = sorted((e for e in zeitplan.elemente if e.typ == "phase"), key=lambda e: e.plan_reihenfolge)
+    phasen_ids = {p.id for p in phasen}
+    rest = [e for e in zeitplan.elemente if e.typ != "phase"]
+    zeilen: list = []
+    for p in phasen:
+        zeilen.append(p)
+        zeilen.extend(sorted((e for e in rest if e.phase_id == p.id), key=lambda e: e.plan_reihenfolge))
+    zeilen.extend(
+        sorted((e for e in rest if e.phase_id not in phasen_ids), key=lambda e: e.plan_reihenfolge)
+    )
+    return zeilen
+
+
+def _zp_pfeil(pdf: FPDF, x: float, y: float, richtung: int, farbe: tuple[int, int, int]) -> None:
+    """Pfeilspitze an (x, y); richtung +1 = nach rechts zeigend, -1 = links."""
+    pdf.set_fill_color(*farbe)
+    pdf.polygon([(x, y), (x - 1.6 * richtung, y - 0.9), (x - 1.6 * richtung, y + 0.9)], style="F")
+
+
+def _zp_linie_pfad(pdf: FPDF, punkte: list[tuple[float, float]], farbe: tuple[int, int, int]) -> None:
+    pdf.set_draw_color(*farbe)
+    pdf.set_line_width(0.2)
+    for (x1, y1), (x2, y2) in zip(punkte, punkte[1:]):
+        pdf.line(x1, y1, x2, y2)
+    letzte_x, letzte_y = punkte[-1]
+    vorletzte_x = punkte[-2][0]
+    _zp_pfeil(pdf, letzte_x, letzte_y, 1 if letzte_x >= vorletzte_x else -1, farbe)
+
+
+def generate_zeitplan_pdf(
+    mandant: Mandant,
+    projekt_name: str,
+    zeitplan,
+    *,
+    basisplan_name: str | None = None,
+    kritischer_pfad: bool = True,
+    logo_bytes: bytes | None = None,
+    heute: date | None = None,
+) -> bytes:
+    """Gantt-Zeitplan als PDF (Querformat). A4; bei so langen Zeitraeumen,
+    dass eine Woche auf A4 unter ~5 mm schrumpfen wuerde, A3 -- bleibt es
+    auch dort zu eng, wird entsprechend weiter gestaucht (KW-Beschriftung
+    dann nur jede zweite Woche). Verbindungen werden nur gezeichnet, wenn
+    beide Zeilen auf derselben Seite liegen. `zeitplan` ist ein ZeitplanRead."""
+    heute = heute or date.today()
+    zeilen = _zp_zeilen(zeitplan)
+    mit_basis = basisplan_name is not None
+    zeile_h = _ZP_ZEILE_BASIS if mit_basis else _ZP_ZEILE
+
+    daten: list[date] = []
+    for e in zeitplan.elemente:
+        for d in (e.start_am, e.ende_am, e.basis_start_am, e.basis_ende_am):
+            if d is not None:
+                daten.append(d)
+    if not daten:
+        daten = [heute, heute + timedelta(days=27)]
+    erster = min(daten)
+    t0 = erster - timedelta(days=erster.weekday())
+    letzter = max(daten)
+    t1 = letzter + timedelta(days=6 - letzter.weekday())
+    tage = (t1 - t0).days + 1
+    wochen = tage // 7
+    tagesraster = wochen <= 6
+
+    a4_breite = 297 - 2 * _ZP_RAND - _ZP_SPALTE_LINKS
+    if a4_breite / wochen >= 5:
+        format_, seiten_w, seiten_h = "A4", 297.0, 210.0
+    else:
+        format_, seiten_w, seiten_h = "A3", 420.0, 297.0
+    zeit_x0 = _ZP_RAND + _ZP_SPALTE_LINKS
+    zeit_breite = seiten_w - 2 * _ZP_RAND - _ZP_SPALTE_LINKS
+    dpt = zeit_breite / tage
+    wochen_breite = dpt * 7
+
+    kopf_h = _ZP_KOPF_MONAT + _ZP_KOPF_KW + (_ZP_KOPF_TAG if tagesraster else 0)
+    unten = seiten_h - 14
+    legende_h = 12.0
+
+    def x_von(d: date) -> float:
+        return zeit_x0 + (d - t0).days * dpt
+
+    # Seiten-Aufteilung: Seite 1 hat den Titelblock, spaeter nur die Kennzeile.
+    seiten: list[list] = [[]]
+    y_start = [44.0, 16.0]
+    y_ist = y_start[0] + kopf_h
+    for zeile in zeilen:
+        if y_ist + zeile_h > unten:
+            seiten.append([])
+            y_ist = y_start[1] + kopf_h
+        seiten[-1].append(zeile)
+        y_ist += zeile_h
+    if y_ist + legende_h > unten:
+        seiten.append([])
+
+    pdf = _ZeitplanPDF(mandant, projekt_name, logo_bytes)
+
+    def zeichne_kopf(y0: float, y_ende: float) -> None:
+        """Monats-/KW-(Tages-)Kopf plus Raster und Wochenenden bis y_ende."""
+        pdf.set_line_width(0.15)
+        # Wochenenden
+        pdf.set_fill_color(*_ZP_WOCHENENDE)
+        for i in range(tage):
+            if (t0 + timedelta(days=i)).weekday() >= 5:
+                pdf.rect(zeit_x0 + i * dpt, y0 + kopf_h, dpt, y_ende - (y0 + kopf_h), style="F")
+        # Monate
+        pdf.set_font("Helvetica", "B", 7)
+        i = 0
+        while i < tage:
+            tag = t0 + timedelta(days=i)
+            j = i
+            while j < tage and (t0 + timedelta(days=j)).month == tag.month:
+                j += 1
+            breite = (j - i) * dpt
+            pdf.set_fill_color(236, 238, 242)
+            pdf.set_draw_color(*_ZP_RASTER)
+            pdf.rect(zeit_x0 + i * dpt, y0, breite, _ZP_KOPF_MONAT, style="DF")
+            if breite >= 24:
+                beschriftung = f"{_ZP_MONATE_LANG[tag.month - 1]} {tag.year}"
+            elif breite >= 9:
+                beschriftung = f"{_ZP_MONATE[tag.month - 1]} {str(tag.year)[2:]}"
+            else:
+                beschriftung = ""
+            if beschriftung:
+                _set_text(pdf)
+                pdf.set_xy(zeit_x0 + i * dpt, y0)
+                pdf.cell(breite, _ZP_KOPF_MONAT, _pdf_safe_text(beschriftung), align="C")
+            i = j
+        # Kalenderwochen
+        pdf.set_font("Helvetica", "", 6.5)
+        schritt = 1 if wochen_breite >= 5.5 else 2
+        for w in range(wochen):
+            x = zeit_x0 + w * wochen_breite
+            kw = (t0 + timedelta(days=7 * w)).isocalendar()[1]
+            pdf.set_draw_color(*_ZP_RASTER)
+            pdf.set_fill_color(247, 248, 250)
+            pdf.rect(x, y0 + _ZP_KOPF_MONAT, wochen_breite, _ZP_KOPF_KW, style="DF")
+            if w % schritt == 0:
+                _set_grau(pdf)
+                pdf.set_xy(x, y0 + _ZP_KOPF_MONAT)
+                pdf.cell(wochen_breite * schritt, _ZP_KOPF_KW, f"KW {kw}" if wochen_breite >= 9 else str(kw), align="C")
+            pdf.line(x, y0 + kopf_h, x, y_ende)
+        pdf.line(zeit_x0 + tage * dpt, y0 + kopf_h, zeit_x0 + tage * dpt, y_ende)
+        if tagesraster:
+            pdf.set_font("Helvetica", "", 6)
+            for i in range(tage):
+                tag = t0 + timedelta(days=i)
+                x = zeit_x0 + i * dpt
+                pdf.set_draw_color(*_ZP_RASTER)
+                pdf.rect(x, y0 + _ZP_KOPF_MONAT + _ZP_KOPF_KW, dpt, _ZP_KOPF_TAG, style="D")
+                _set_grau(pdf)
+                pdf.set_xy(x, y0 + _ZP_KOPF_MONAT + _ZP_KOPF_KW)
+                pdf.cell(dpt, _ZP_KOPF_TAG, str(tag.day), align="C")
+                pdf.line(x, y0 + kopf_h, x, y_ende)
+        # Linke Spaltenueberschrift
+        pdf.set_font("Helvetica", "B", 7)
+        _set_grau(pdf)
+        pdf.set_xy(_ZP_RAND, y0 + kopf_h - 5)
+        pdf.cell(_ZP_SPALTE_LINKS, 5, "Phase / Arbeitsschritt")
+        pdf.set_draw_color(*_LINIE_KOPF)
+        pdf.set_line_width(0.3)
+        pdf.line(_ZP_RAND, y0 + kopf_h, seiten_w - _ZP_RAND, y0 + kopf_h)
+        _set_text(pdf)
+
+    def balken_rechteck(e, x1: float, x2: float, y: float, hoehe: float) -> None:
+        kritisch = kritischer_pfad and e.kritisch
+        if e.typ == "phase":
+            pdf.set_fill_color(*_ZP_PHASE)
+            pdf.rect(x1, y + hoehe * 0.3, x2 - x1, hoehe * 0.4, style="F")
+            # kleine Enden wie bei klassischen Sammelbalken
+            pdf.polygon([(x1, y + hoehe * 0.7), (x1 + 1.2, y + hoehe * 0.7), (x1, y + hoehe * 1.0)], style="F")
+            pdf.polygon([(x2, y + hoehe * 0.7), (x2 - 1.2, y + hoehe * 0.7), (x2, y + hoehe * 1.0)], style="F")
+            return
+        fremd = e.partner is not None
+        grund = _ZP_VIOLETT if fremd else _AKZENT
+        dunkel = _ZP_VIOLETT_DUNKEL if fremd else _ZP_AKZENT_DUNKEL
+        pdf.set_fill_color(*grund)
+        pdf.rect(x1, y, x2 - x1, hoehe, style="F")
+        if e.fortschritt > 0:
+            pdf.set_fill_color(*dunkel)
+            pdf.rect(x1, y, (x2 - x1) * min(e.fortschritt, 100) / 100, hoehe, style="F")
+        if kritisch:
+            pdf.set_draw_color(*_ZP_ROT)
+            pdf.set_line_width(0.5)
+            pdf.rect(x1, y, x2 - x1, hoehe, style="D")
+
+    def raute(e, mitte_x: float, mitte_y: float, r: float) -> None:
+        kritisch = kritischer_pfad and e.kritisch
+        pdf.set_fill_color(*(_ZP_ROT if kritisch else (30, 30, 30)))
+        pdf.polygon([(mitte_x, mitte_y - r), (mitte_x + r, mitte_y), (mitte_x, mitte_y + r), (mitte_x - r, mitte_y)], style="F")
+        if e.bestellung is not None:
+            pdf.set_fill_color(*(_ZP_ROT_DUNKEL if kritisch else (234, 120, 0)))
+            pdf.rect(mitte_x + r + 0.6, mitte_y - 1.1, 2.2, 2.2, style="F")
+
+    for seiten_nr, sicht in enumerate(seiten):
+        pdf.add_page(orientation="L", format=format_)
+        if seiten_nr == 0:
+            pdf.set_xy(_ZP_RAND, 22)
+            pdf.set_font("Helvetica", "B", 18)
+            _set_text(pdf)
+            pdf.cell(0, 9, "Zeitplan")
+            pdf.set_xy(_ZP_RAND, 31)
+            pdf.set_font("Helvetica", "B", 11)
+            pdf.cell(0, 6, _pdf_safe_text(projekt_name))
+            pdf.set_font("Helvetica", "", 8)
+            _set_grau(pdf)
+            zusatz = [f"Stand: {_fmt_datum(heute)}"]
+            if basisplan_name is not None:
+                zusatz.append(f"Vergleich mit Basisplan: {basisplan_name}")
+            pdf.set_xy(_ZP_RAND, 37.5)
+            pdf.cell(0, 4, _pdf_safe_text(" · ".join(zusatz)))
+            _set_text(pdf)
+        kopf_y = y_start[0] if seiten_nr == 0 else y_start[1]
+        y_ende = kopf_y + kopf_h + len(sicht) * zeile_h
+        if not sicht:
+            y_ende = kopf_y + kopf_h + (8 if not zeilen else 0)
+        zeichne_kopf(kopf_y, y_ende)
+        if not zeilen:
+            pdf.set_font("Helvetica", "", 9)
+            _set_grau(pdf)
+            pdf.set_xy(_ZP_RAND, kopf_y + kopf_h + 2)
+            pdf.cell(100, 5, "Der Zeitplan enthält noch keine Elemente.")
+            _set_text(pdf)
+
+        lage: dict = {}
+        y = kopf_y + kopf_h
+        for e in sicht:
+            lage[e.id] = y
+            # Zeilentrenner
+            pdf.set_draw_color(*_ZP_RASTER)
+            pdf.set_line_width(0.1)
+            pdf.line(_ZP_RAND, y + zeile_h, seiten_w - _ZP_RAND, y + zeile_h)
+            # Beschriftung links
+            einzug = 0.0 if e.typ == "phase" else 3.5
+            sub = []
+            if e.start_am is not None and e.ende_am is not None:
+                sub.append(
+                    e.start_am.strftime("%d.%m.")
+                    if e.start_am == e.ende_am
+                    else f"{e.start_am.strftime('%d.%m.')}-{e.ende_am.strftime('%d.%m.')}"
+                )
+            else:
+                sub.append("ohne Termin")
+            if e.zugewiesen_name:
+                sub.append(e.zugewiesen_name)
+            if e.partner is not None:
+                sub.append(e.partner.name)
+            pdf.set_font("Helvetica", "B" if e.typ == "phase" else "", 7.5)
+            _set_text(pdf)
+            pdf.set_xy(_ZP_RAND + einzug, y + 0.7)
+            pdf.cell(_ZP_SPALTE_LINKS - einzug - 1, 3.2, _zp_kuerzen(pdf, e.titel, _ZP_SPALTE_LINKS - einzug - 2))
+            pdf.set_font("Helvetica", "", 5.8)
+            _set_grau(pdf)
+            pdf.set_xy(_ZP_RAND + einzug, y + 3.9)
+            pdf.cell(
+                _ZP_SPALTE_LINKS - einzug - 1,
+                2.6,
+                _zp_kuerzen(pdf, " · ".join(sub), _ZP_SPALTE_LINKS - einzug - 2),
+            )
+            _set_text(pdf)
+            # Basisplan (Schattenbalken darunter)
+            hoehe = 3.6 if not mit_basis else 3.4
+            bar_y = y + (zeile_h - hoehe) / 2 - (1.0 if mit_basis else 0)
+            if mit_basis and e.basis_start_am is not None and e.basis_ende_am is not None:
+                pdf.set_fill_color(*_ZP_SCHATTEN)
+                if e.typ == "meilenstein":
+                    mx = x_von(e.basis_start_am) + dpt / 2
+                    my = y + zeile_h - 1.6
+                    pdf.polygon([(mx, my - 1.1), (mx + 1.1, my), (mx, my + 1.1), (mx - 1.1, my)], style="F")
+                else:
+                    pdf.rect(
+                        x_von(e.basis_start_am), y + zeile_h - 2.6, x_von(e.basis_ende_am + timedelta(days=1)) - x_von(e.basis_start_am), 1.5, style="F"
+                    )
+            if e.start_am is None or e.ende_am is None:
+                y += zeile_h
+                continue
+            x1, x2 = x_von(e.start_am), x_von(e.ende_am + timedelta(days=1))
+            if e.typ == "meilenstein":
+                raute(e, x1 + dpt / 2, bar_y + hoehe / 2, 2.0)
+            else:
+                balken_rechteck(e, x1, max(x2, x1 + 0.6), bar_y, hoehe)
+            y += zeile_h
+
+        # Heute-Linie
+        if t0 <= heute <= t1:
+            hx = x_von(heute) + dpt / 2
+            pdf.set_draw_color(*_ZP_HEUTE)
+            pdf.set_line_width(0.4)
+            pdf.line(hx, kopf_y + kopf_h - 1, hx, y_ende)
+
+        # Verbindungen (nur innerhalb der Seite)
+        elemente_nach_id = {e.id: e for e in sicht}
+        for a in zeitplan.abhaengigkeiten:
+            v, n = elemente_nach_id.get(a.vorgaenger_id), elemente_nach_id.get(a.nachfolger_id)
+            if v is None or n is None or None in (v.start_am, v.ende_am, n.start_am, n.ende_am):
+                continue
+            hoehe_v = 1.0 if mit_basis else 0.0
+            yv = lage[v.id] + zeile_h / 2 - hoehe_v
+            yn = lage[n.id] + zeile_h / 2 - hoehe_v
+
+            def kante(e, seite: str) -> float:
+                if e.typ == "meilenstein":
+                    mitte = x_von(e.start_am) + dpt / 2
+                    return mitte - 2.0 if seite == "links" else mitte + 2.0 + (2.8 if e.bestellung else 0)
+                return x_von(e.start_am) if seite == "links" else x_von(e.ende_am + timedelta(days=1))
+
+            farbe = _ZP_ROT if kritischer_pfad and a.kritisch else _ZP_VERBINDUNG
+            if a.art == "ende_anfang":
+                xv, xn = kante(v, "rechts"), kante(n, "links")
+                if xn - 2 >= xv + 2:
+                    punkte = [(xv, yv), (xv + 2, yv), (xv + 2, yn), (xn, yn)]
+                else:
+                    ymitte = lage[v.id] + zeile_h if yn > yv else lage[v.id]
+                    punkte = [(xv, yv), (xv + 2, yv), (xv + 2, ymitte), (xn - 2, ymitte), (xn - 2, yn), (xn, yn)]
+            elif a.art == "anfang_anfang":
+                xv, xn = kante(v, "links"), kante(n, "links")
+                x_l = min(xv, xn) - 2
+                punkte = [(xv, yv), (x_l, yv), (x_l, yn), (xn, yn)]
+            else:
+                xv, xn = kante(v, "rechts"), kante(n, "rechts")
+                x_l = max(xv, xn) + 2
+                punkte = [(xv, yv), (x_l, yv), (x_l, yn), (xn, yn)]
+            _zp_linie_pfad(pdf, punkte, farbe)
+
+        # Legende auf der letzten Seite
+        if seiten_nr == len(seiten) - 1:
+            ly = max(y_ende, kopf_y + kopf_h) + 5
+            pdf.set_font("Helvetica", "", 7)
+            x = _ZP_RAND
+            pdf.set_line_width(0.2)
+
+            def eintrag(text: str, zeichen) -> None:
+                nonlocal x
+                zeichen(x, ly)
+                pdf.set_font("Helvetica", "", 7)
+                _set_text(pdf)
+                pdf.set_xy(x + 8, ly - 1.8)
+                breite = pdf.get_string_width(text) + 1
+                pdf.cell(breite, 3.6, _pdf_safe_text(text))
+                x += 8 + breite + 5
+
+            def z_balken(farbe, dunkel=None, rand=None):
+                def zeichne(px: float, py: float) -> None:
+                    pdf.set_fill_color(*farbe)
+                    pdf.rect(px, py - 1.5, 6, 3, style="F")
+                    if dunkel:
+                        pdf.set_fill_color(*dunkel)
+                        pdf.rect(px, py - 1.5, 3, 3, style="F")
+                    if rand:
+                        pdf.set_draw_color(*rand)
+                        pdf.set_line_width(0.5)
+                        pdf.rect(px, py - 1.5, 6, 3, style="D")
+
+                return zeichne
+
+            eintrag("Arbeitsschritt (dunkel = Fortschritt)", z_balken(_AKZENT, _ZP_AKZENT_DUNKEL))
+            eintrag("Fremdgewerk", z_balken(_ZP_VIOLETT, _ZP_VIOLETT_DUNKEL))
+            eintrag("Phase", lambda px, py: (pdf.set_fill_color(*_ZP_PHASE), pdf.rect(px, py - 0.6, 6, 1.2, style="F")))
+            eintrag(
+                "Meilenstein",
+                lambda px, py: (
+                    pdf.set_fill_color(30, 30, 30),
+                    pdf.polygon([(px + 3, py - 2), (px + 5, py), (px + 3, py + 2), (px + 1, py)], style="F"),
+                ),
+            )
+            eintrag(
+                "Lieferung",
+                lambda px, py: (
+                    pdf.set_fill_color(30, 30, 30),
+                    pdf.polygon([(px + 1.5, py - 1.6), (px + 3.1, py), (px + 1.5, py + 1.6), (px - 0.1, py)], style="F"),
+                    pdf.set_fill_color(234, 120, 0),
+                    pdf.rect(px + 3.7, py - 1.1, 2.2, 2.2, style="F"),
+                ),
+            )
+            if mit_basis:
+                eintrag("Basisplan", lambda px, py: (pdf.set_fill_color(*_ZP_SCHATTEN), pdf.rect(px, py - 0.7, 6, 1.5, style="F")))
+            if kritischer_pfad:
+                eintrag("Kritischer Pfad", z_balken(_AKZENT, None, _ZP_ROT))
+            eintrag(
+                "Heute",
+                lambda px, py: (
+                    pdf.set_draw_color(*_ZP_HEUTE),
+                    pdf.set_line_width(0.4),
+                    pdf.line(px + 3, py - 2.5, px + 3, py + 2.5),
+                ),
+            )
     return bytes(pdf.output())

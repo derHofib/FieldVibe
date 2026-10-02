@@ -211,3 +211,96 @@ class ProjektAufgabeAbhaengigkeit(Base):
     erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
+
+
+class ProjektBasisplan(Base):
+    """Eingefrorener Soll-Stand des Zeitplans (Snapshot der Daten aller
+    datierten Elemente) zum Soll/Ist-Vergleich. Unveraenderlich -- es gibt nur
+    Anlegen und Loeschen."""
+
+    __tablename__ = "projekt_basisplaene"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    projekt_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekte.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+
+
+class ProjektBasisplanEintrag(Base):
+    __tablename__ = "projekt_basisplan_eintraege"
+    __table_args__ = (UniqueConstraint("basisplan_id", "element_id", name="uq_projekt_basisplan_eintrag"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    basisplan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekt_basisplaene.id", ondelete="CASCADE"), nullable=False
+    )
+    element_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekt_aufgaben.id", ondelete="CASCADE"), nullable=False
+    )
+    start_am: Mapped[date] = mapped_column(nullable=False)
+    ende_am: Mapped[date] = mapped_column(nullable=False)
+
+
+class ProjektVorlage(TimestampMixin, Base):
+    """Wiederverwendbare Zeitplan-Vorlage (mandantenweit, nicht an ein Projekt
+    gebunden). Hart loeschbar -- reine Konfiguration wie ProjektSpalte."""
+
+    __tablename__ = "projekt_vorlagen"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    beschreibung: Mapped[str | None] = mapped_column(Text, nullable=True)
+    erstellt_von: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+
+
+class ProjektVorlageElement(Base):
+    """ref ist die stabile lokale Kennung innerhalb der Vorlage (Ziel der
+    Abhaengigkeiten und von phase_ref), unabhaengig von echten Element-IDs."""
+
+    __tablename__ = "projekt_vorlage_elemente"
+    __table_args__ = (
+        UniqueConstraint("vorlage_id", "ref", name="uq_projekt_vorlage_element_ref"),
+        CheckConstraint("typ IN ('phase', 'schritt', 'meilenstein')", name="ck_projekt_vorlage_element_typ_valid"),
+        CheckConstraint("dauer_tage >= 1", name="ck_projekt_vorlage_element_dauer_valid"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    vorlage_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekt_vorlagen.id", ondelete="CASCADE"), nullable=False
+    )
+    ref: Mapped[str] = mapped_column(Text, nullable=False)
+    typ: Mapped[str] = mapped_column(Text, nullable=False)
+    titel: Mapped[str] = mapped_column(Text, nullable=False)
+    phase_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    offset_tage: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    dauer_tage: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    reihenfolge: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class ProjektVorlageAbhaengigkeit(Base):
+    __tablename__ = "projekt_vorlage_abhaengigkeiten"
+    __table_args__ = (
+        UniqueConstraint("vorlage_id", "vorgaenger_ref", "nachfolger_ref", name="uq_projekt_vorlage_abh_paar"),
+        CheckConstraint(f"art IN {PROJEKT_ABHAENGIGKEIT_ARTEN}", name="ck_projekt_vorlage_abh_art_valid"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    vorlage_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("projekt_vorlagen.id", ondelete="CASCADE"), nullable=False
+    )
+    vorgaenger_ref: Mapped[str] = mapped_column(Text, nullable=False)
+    nachfolger_ref: Mapped[str] = mapped_column(Text, nullable=False)
+    art: Mapped[str] = mapped_column(Text, nullable=False, default="ende_anfang", server_default="ende_anfang")
+    versatz_tage: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")

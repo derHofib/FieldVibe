@@ -20,6 +20,7 @@ from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
+from app.models.projekt import ProjektVorlage, ProjektVorlageAbhaengigkeit, ProjektVorlageElement
 from app.models.tag import Tag, TagAssignment
 from app.models.user import User
 from app.models.vertrag import Vertrag
@@ -549,6 +550,106 @@ async def _seed_vorgaenge(
     await session.flush()
 
 
+# (ref, typ, titel, phase_ref, offset_tage, dauer_tage); Abhaengigkeiten als
+# (vorgaenger, nachfolger, art, versatz_tage).
+SEED_PROJEKT_VORLAGEN = [
+    {
+        "name": "Wärmepumpe Einfamilienhaus",
+        "beschreibung": "Luft-Wasser-Wärmepumpe inkl. Hydraulik, Elektroanschluss und Inbetriebnahme.",
+        "elemente": [
+            ("p1", "phase", "Planung & Beschaffung", None, 0, 21),
+            ("s1", "schritt", "Heizlastberechnung und Auslegung", "p1", 0, 5),
+            ("s2", "schritt", "Förderantrag vorbereiten", "p1", 3, 5),
+            ("m1", "meilenstein", "Wärmepumpe geliefert", "p1", 20, 1),
+            ("p2", "phase", "Installation", None, 21, 12),
+            ("s3", "schritt", "Fundament und Aufstellung Außengerät", "p2", 21, 2),
+            ("s4", "schritt", "Hydraulik und Pufferspeicher", "p2", 23, 5),
+            ("s5", "schritt", "Elektroanschluss und Absicherung", "p2", 24, 3),
+            ("p3", "phase", "Inbetriebnahme", None, 33, 4),
+            ("s6", "schritt", "Befüllen, Spülen, Dichtheitsprüfung", "p3", 33, 2),
+            ("s7", "schritt", "Inbetriebnahme und Einweisung", "p3", 35, 1),
+            ("m2", "meilenstein", "Abnahme", "p3", 36, 1),
+        ],
+        "abhaengigkeiten": [
+            ("s1", "s2", "anfang_anfang", 3),
+            ("s1", "m1", "ende_anfang", 0),
+            ("m1", "s3", "ende_anfang", 0),
+            ("s3", "s4", "ende_anfang", 0),
+            ("s3", "s5", "ende_anfang", 1),
+            ("s4", "s6", "ende_anfang", 0),
+            ("s5", "s6", "ende_anfang", 0),
+            ("s6", "s7", "ende_anfang", 0),
+            ("s7", "m2", "ende_anfang", 0),
+        ],
+    },
+    {
+        "name": "Elektro-Sanierung Wohnung",
+        "beschreibung": "Komplette Erneuerung der Elektroinstallation in einer Etagenwohnung.",
+        "elemente": [
+            ("p1", "phase", "Vorbereitung", None, 0, 5),
+            ("s1", "schritt", "Bestandsaufnahme und Planung", "p1", 0, 3),
+            ("m1", "meilenstein", "Material geliefert", "p1", 4, 1),
+            ("p2", "phase", "Rohinstallation", None, 5, 8),
+            ("s2", "schritt", "Stemmarbeiten und Leerrohre", "p2", 5, 3),
+            ("s3", "schritt", "Kabel einziehen", "p2", 8, 3),
+            ("s4", "schritt", "Zählerschrank erneuern", "p2", 10, 3),
+            ("p3", "phase", "Fertigstellung", None, 15, 6),
+            ("s5", "schritt", "Schalter, Steckdosen, Verteiler", "p3", 15, 3),
+            ("s6", "schritt", "Prüfung nach VDE und Protokoll", "p3", 18, 2),
+            ("m2", "meilenstein", "Übergabe an Kunden", "p3", 20, 1),
+        ],
+        "abhaengigkeiten": [
+            ("s1", "m1", "ende_anfang", 0),
+            ("m1", "s2", "ende_anfang", 0),
+            ("s2", "s3", "ende_anfang", 0),
+            ("s3", "s4", "anfang_anfang", 2),
+            ("s3", "s5", "ende_anfang", 0),
+            ("s4", "s6", "ende_ende", 0),
+            ("s5", "s6", "ende_anfang", 0),
+            ("s6", "m2", "ende_anfang", 0),
+        ],
+    },
+]
+
+
+async def _seed_projekt_vorlagen(session, mandant: Mandant, admin_user: User) -> None:
+    for daten in SEED_PROJEKT_VORLAGEN:
+        if await _get_or_none(session, ProjektVorlage, mandant_id=mandant.id, name=daten["name"]):
+            continue
+        vorlage = ProjektVorlage(
+            mandant_id=mandant.id, name=daten["name"], beschreibung=daten["beschreibung"], erstellt_von=admin_user.id
+        )
+        session.add(vorlage)
+        await session.flush()
+        for reihenfolge, (ref, typ, titel, phase_ref, offset, dauer) in enumerate(daten["elemente"]):
+            session.add(
+                ProjektVorlageElement(
+                    mandant_id=mandant.id,
+                    vorlage_id=vorlage.id,
+                    ref=ref,
+                    typ=typ,
+                    titel=titel,
+                    phase_ref=phase_ref,
+                    offset_tage=offset,
+                    dauer_tage=dauer,
+                    reihenfolge=reihenfolge,
+                )
+            )
+        for vorgaenger, nachfolger, art, versatz in daten["abhaengigkeiten"]:
+            session.add(
+                ProjektVorlageAbhaengigkeit(
+                    mandant_id=mandant.id,
+                    vorlage_id=vorlage.id,
+                    vorgaenger_ref=vorgaenger,
+                    nachfolger_ref=nachfolger,
+                    art=art,
+                    versatz_tage=versatz,
+                )
+            )
+        print(f"[seed]   Projektvorlage angelegt: {daten['name']}")
+    await session.flush()
+
+
 async def seed() -> None:
     async with system_session() as session:
         super_admin = await _get_or_none(session, User, email=SUPER_ADMIN_EMAIL)
@@ -572,6 +673,7 @@ async def seed() -> None:
             await _seed_system_tags(session, mandant)
             await _seed_kunden(session, mandant, mandant_data["kunden"])
             await _seed_vorgaenge(session, mandant, mandant_data["vorgaenge"], admin_user)
+            await _seed_projekt_vorlagen(session, mandant, admin_user)
 
     print("\n[seed] Fertig.")
     print(f"[seed] super_admin Passwort: {SUPER_ADMIN_PASSWORD}")
