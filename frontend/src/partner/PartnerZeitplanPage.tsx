@@ -1,6 +1,3 @@
-// Wartet auf das Partnerportal-Frontend (docs/BACKLOG.md 1.2): bis dahin in
-// keiner Route verlinkt. partnerPortalApi braucht dann das Partner-Token statt
-// des Mitarbeiter-Tokens.
 import { useQuery } from "@tanstack/react-query";
 import { CalendarRange, Check } from "lucide-react";
 
@@ -28,10 +25,8 @@ export function liegtDieseWoche(e: PartnerZeitplanEintrag, heute: number): boole
   return start <= montag + 6 && ende >= montag;
 }
 
-/** Zeitplan des Partnerportals: die dem Partner zugewiesenen Schritte
- * (Fremdgewerk) je Projekt, rein lesend. Die Partner-Anmeldung und die
- * Navigation der Portal-Oberflaeche fehlen im Frontend noch (docs/BACKLOG.md
- * 1.2) -- diese Seite ist bereit zum Einhaengen, sobald es sie gibt. */
+/** Zeitplan des Partnerportals (Route /partnerportal/zeitplan): die dem
+ * Partner zugewiesenen Schritte (Fremdgewerk) je Projekt, rein lesend. */
 export function PartnerZeitplanPage() {
   const { data, isLoading, error } = useQuery({ queryKey: ["partnerportal-zeitplan"], queryFn: () => partnerPortalApi.zeitplan() });
   const heute = heuteTag();

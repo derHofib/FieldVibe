@@ -8,6 +8,12 @@ import {
   dauerTage,
   diffTage,
   elementAenderung,
+  formatAbweichung,
+  formatStraffenDelta,
+  kritischInfo,
+  schattenRechteck,
+  standardBasisplanName,
+  standardVorlagenStart,
   formatBereich,
   formatTag,
   heuteTag,
@@ -40,10 +46,10 @@ import {
 } from "./zeitplanLogik";
 
 function el(id: string, typ: ZeitplanElement["typ"], start: string | null, ende: string | null, phase: string | null = null): ZeitplanElement {
-  return { id, typ, titel: id, phase_id: phase, start_am: start, ende_am: ende, fortschritt: 0, plan_reihenfolge: 0, zugewiesen_an: null, zugewiesen_name: null, erledigt: false, vorgang: null, termine: [], bestellung: null, datum_gesperrt: false, partner: null };
+  return { id, typ, titel: id, phase_id: phase, start_am: start, ende_am: ende, fortschritt: 0, plan_reihenfolge: 0, zugewiesen_an: null, zugewiesen_name: null, erledigt: false, vorgang: null, termine: [], bestellung: null, datum_gesperrt: false, partner: null, puffer_tage: null, kritisch: false, basis_start_am: null, basis_ende_am: null, abweichung_tage: null };
 }
 function dep(v: string, n: string, versatz = 0, art: ZeitplanAbhaengigkeit["art"] = "ende_anfang"): ZeitplanAbhaengigkeit {
-  return { id: `${v}>${n}`, vorgaenger_id: v, nachfolger_id: n, art, versatz_tage: versatz };
+  return { id: `${v}>${n}`, vorgaenger_id: v, nachfolger_id: n, art, versatz_tage: versatz, kritisch: false };
 }
 const direkt = (id: string, s: string, e: string) => new Map<string, Aenderung>([[id, { start_am: s, ende_am: e }]]);
 
@@ -598,5 +604,54 @@ describe("Gesperrte Elemente (Datum aus Bestellung)", () => {
     const v = phaseVerschieben([s1, m], "P", 3);
     expect(v.get("S")).toEqual({ start_am: "2026-10-15", ende_am: "2026-10-17" });
     expect(v.has("M")).toBe(false);
+  });
+});
+
+describe("Basisplan-Vergleich und Vorlagen", () => {
+  it("formatAbweichung: Vorzeichen, Minuszeichen und Ton", () => {
+    expect(formatAbweichung(3)).toEqual({ text: "+3 T", ton: "spaet" });
+    expect(formatAbweichung(-2)).toEqual({ text: "\u22122 T", ton: "frueh" });
+    expect(formatAbweichung(0)).toEqual({ text: "0", ton: "gleich" });
+    expect(formatAbweichung(null)).toBeNull();
+  });
+
+  it("schattenRechteck liegt am Basis-Zeitraum, unter dem Balken, Mindestbreite ein Tag", () => {
+    const ursprung = parseTag("2026-01-01");
+    const s = schattenRechteck("schritt", "2026-01-05", "2026-01-07", 2, "tag", ursprung);
+    expect(s.x).toBe(tagZuX(parseTag("2026-01-05"), ursprung, "tag"));
+    expect(s.w).toBe(3 * PX_PRO_TAG.tag);
+    const b = balkenRechteck("schritt", { start: parseTag("2026-01-05"), ende: parseTag("2026-01-07") }, 2, "tag", ursprung);
+    expect(s.y).toBeGreaterThanOrEqual(b.y + b.h);
+    expect(s.y + s.h).toBeLessThanOrEqual(3 * 36);
+    expect(schattenRechteck("schritt", "2026-01-05", "2026-01-05", 0, "monat", ursprung).w).toBe(PX_PRO_TAG.monat);
+  });
+
+  it("schattenRechteck Meilenstein: ein Quadrat mittig auf dem Basistag", () => {
+    const ursprung = parseTag("2026-01-01");
+    const s = schattenRechteck("meilenstein", "2026-01-05", "2026-01-09", 0, "tag", ursprung);
+    expect(s.x + s.w / 2).toBe(tagZuX(parseTag("2026-01-05"), ursprung, "tag") + PX_PRO_TAG.tag / 2);
+  });
+
+  it("standardBasisplanName: TT.MM.JJJJ mit fuehrenden Nullen", () => {
+    expect(standardBasisplanName(parseTag("2026-03-04"))).toBe("Basisplan 04.03.2026");
+  });
+
+  it("standardVorlagenStart: heute bei leerem Plan, sonst Tag nach Planende", () => {
+    const heute = parseTag("2026-05-10");
+    expect(standardVorlagenStart([], heute)).toBe("2026-05-10");
+    expect(standardVorlagenStart([el("a", "schritt", null, null)], heute)).toBe("2026-05-10");
+    expect(standardVorlagenStart([el("a", "schritt", "2026-06-01", "2026-06-04"), el("m", "meilenstein", "2026-06-02", "2026-06-02")], heute)).toBe("2026-06-05");
+  });
+
+  it("kritischInfo: kritisch vor Puffer; Singular; null ohne Puffer", () => {
+    expect(kritischInfo({ kritisch: true, puffer_tage: 0 })).toMatch(/^Kritisch/);
+    expect(kritischInfo({ kritisch: false, puffer_tage: 3 })).toBe("Puffer: 3 Tage");
+    expect(kritischInfo({ kritisch: false, puffer_tage: 1 })).toBe("Puffer: 1 Tag");
+    expect(kritischInfo({ kritisch: false, puffer_tage: null })).toBeNull();
+  });
+
+  it("formatStraffenDelta: Start massgeblich, sonst Ende", () => {
+    expect(formatStraffenDelta({ alt_start_am: "2026-01-10", alt_ende_am: "2026-01-12", neu_start_am: "2026-01-06", neu_ende_am: "2026-01-08" })).toBe("\u22124 Tage");
+    expect(formatStraffenDelta({ alt_start_am: "2026-01-10", alt_ende_am: "2026-01-12", neu_start_am: "2026-01-10", neu_ende_am: "2026-01-11" })).toBe("\u22121 Tag");
   });
 });

@@ -67,6 +67,7 @@ import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
 import { ZeitenBuchenPage } from "./pages/feld/ZeitenBuchenPage";
 import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
+import { PartnerPortalApp } from "./partner/PartnerPortalApp";
 
 // Nachgeladen statt fest importiert: Handy-Nutzer sollen den Desktop-Code nie
 // herunterladen. Gleiches Muster wie das lazy MapboxFeedMap im Feed.
@@ -108,6 +109,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
   return (
     <Routes>
       <Route path="/portal/*" element={<KundenPortalApp />} />
+      <Route path="/partnerportal/*" element={<PartnerPortalApp />} />
 
       <Route
         path="/login"

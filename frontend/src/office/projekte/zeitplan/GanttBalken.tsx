@@ -10,6 +10,7 @@ import {
   formatBereich,
   formatKurz,
   formatTag,
+  kritischInfo,
   terminAusserhalb,
   terminLabel,
   terminTag,
@@ -55,6 +56,7 @@ export function GanttBalken({
   aktiv,
   verbindenAktiv,
   istZiel,
+  kritischModus,
   onZiehStart,
   onVerbindenStart,
   onTaste,
@@ -66,6 +68,8 @@ export function GanttBalken({
   aktiv: boolean;
   verbindenAktiv: boolean;
   istZiel: boolean;
+  /** Kritischer Pfad hervorheben: kritische Elemente in Fehlerfarbe, uebrige gedaempft. */
+  kritischModus: boolean;
   onZiehStart: (e: ReactPointerEvent, art: ZiehArt) => void;
   onVerbindenStart: (e: ReactPointerEvent, seite: "anfang" | "ende") => void;
   onTaste: (e: ReactKeyboardEvent) => void;
@@ -78,6 +82,11 @@ export function GanttBalken({
   const istPartner = element.typ === "schritt" && !!element.partner;
   const istLieferung = istMeilenstein && !!element.bestellung;
   const gesperrt = element.datum_gesperrt;
+  const kritischHervor = kritischModus && element.kritisch;
+  const gedaempft = kritischModus && !element.kritisch;
+  const kritischText = kritischModus ? kritischInfo(element) : null;
+  const phaseFuellung = kritischHervor ? "fill-st-fehlt-dot" : "fill-tone-indigo";
+  const amberFuellung = kritischHervor ? "fill-st-fehlt-dot" : "fill-tone-amber";
   const sperrText = gesperrt && element.bestellung ? `Datum aus Bestellung ${element.bestellung.bestellnummer} (Liefertermin)` : null;
   const vorgangDot = element.typ === "schritt" && element.vorgang && w >= 28 ? vorgangStatusZuToken(element.vorgang.status) : null;
   const titelVersatz = vorgangDot ? 14 : 0;
@@ -110,9 +119,10 @@ export function GanttBalken({
           : "Pfeiltasten links und rechts verschieben um einen Tag, mit Umschalt um eine Woche, mit Umschalt und Alt wird die Dauer geändert."
       }
       onKeyDown={gesperrt ? undefined : onTaste}
-      opacity={element.erledigt ? 0.55 : 1}
+      opacity={element.erledigt ? 0.55 : gedaempft ? 0.5 : 1}
       style={{ touchAction: "none" }}
     >
+      {kritischText && <title>{`${element.titel}: ${kritischText}`}</title>}
       {/* Fokusring: stroke statt outline, SVG-Elemente bekommen keinen CSS-Outline-Ring. */}
       <rect
         x={x - 3}
@@ -133,11 +143,11 @@ export function GanttBalken({
             width={w}
             height={7}
             rx={2}
-            className="cursor-grab fill-tone-indigo"
+            className={`cursor-grab ${phaseFuellung}`}
             onPointerDown={(e) => ziehStart(e, "verschieben")}
           />
-          <polygon points={`${x},${cy + 1} ${x + 8},${cy + 1} ${x},${cy + 8}`} className="fill-tone-indigo" pointerEvents="none" />
-          <polygon points={`${x + w},${cy + 1} ${x + w - 8},${cy + 1} ${x + w},${cy + 8}`} className="fill-tone-indigo" pointerEvents="none" />
+          <polygon points={`${x},${cy + 1} ${x + 8},${cy + 1} ${x},${cy + 8}`} className={phaseFuellung} pointerEvents="none" />
+          <polygon points={`${x + w},${cy + 1} ${x + w - 8},${cy + 1} ${x + w},${cy + 8}`} className={phaseFuellung} pointerEvents="none" />
         </>
       ) : istLieferung ? (
         <>
@@ -147,18 +157,18 @@ export function GanttBalken({
             width={w}
             height={h}
             rx={4}
-            className={`${ziehCursor} ${istZiel ? "fill-tone-amber stroke-tint" : "fill-tone-amber"}`}
+            className={`${ziehCursor} ${istZiel ? `${amberFuellung} stroke-tint` : amberFuellung}`}
             strokeWidth={istZiel ? 2 : 0}
             onPointerDown={(e) => ziehStart(e, "verschieben")}
           >
             {sperrText && <title>{sperrText}</title>}
           </rect>
-          <Package x={x + 3} y={y + 3} width={h - 6} height={h - 6} strokeWidth={2.2} color="#1c1c1e" pointerEvents="none" aria-hidden="true" />
+          <Package x={x + 3} y={y + 3} width={h - 6} height={h - 6} strokeWidth={2.2} color={kritischHervor ? "#fff" : "#1c1c1e"} pointerEvents="none" aria-hidden="true" />
         </>
       ) : istMeilenstein ? (
         <polygon
           points={`${x + w / 2},${y} ${x + w},${cy} ${x + w / 2},${y + h} ${x},${cy}`}
-          className={`${ziehCursor} ${istZiel ? "fill-tone-amber stroke-tint" : "fill-tone-amber"}`}
+          className={`${ziehCursor} ${istZiel ? `${amberFuellung} stroke-tint` : amberFuellung}`}
           strokeWidth={istZiel ? 2 : 0}
           onPointerDown={(e) => ziehStart(e, "verschieben")}
         />
@@ -173,7 +183,7 @@ export function GanttBalken({
             width={w}
             height={h}
             rx={6}
-            className={`cursor-grab ${istPartner ? "fill-tone-violet" : "fill-tint-solid"} ${istZiel ? "stroke-label" : ""}`}
+            className={`cursor-grab ${kritischHervor ? "fill-st-fehlt-dot" : istPartner ? "fill-tone-violet" : "fill-tint-solid"} ${istZiel ? "stroke-label" : ""}`}
             strokeWidth={istZiel ? 2 : 0}
             onPointerDown={(e) => onZiehStart(e, "verschieben")}
           />

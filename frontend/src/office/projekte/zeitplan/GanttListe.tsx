@@ -4,9 +4,13 @@ import { useRef } from "react";
 import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
 import type { ZeitplanElement, ZeitplanTyp } from "../../../types";
 import { KOPF_HOEHE } from "./GanttZeitleiste";
-import { ZEILEN_HOEHE, formatKurz, parseTag, type Zeile } from "./zeitplanLogik";
+import { ZEILEN_HOEHE, formatAbweichung, formatKurz, kritischInfo, parseTag, type Zeile } from "./zeitplanLogik";
 
 export const LISTE_BREITE = 280;
+/** Zusatzbreite der "Δ"-Spalte, solange ein Basisplan-Vergleich aktiv ist. */
+export const DELTA_BREITE = 48;
+
+const DELTA_KLASSE = { spaet: "text-st-fehlt", frueh: "text-st-erledigt", gleich: "text-label3" } as const;
 
 const TYP_NEU_LABEL: Record<ZeitplanTyp, string> = { phase: "Phase", schritt: "Schritt", meilenstein: "Meilenstein" };
 
@@ -79,6 +83,8 @@ export function GanttListe({
   zeilen,
   eingeklappt,
   bearbeiteId,
+  kritischModus,
+  vergleich,
   onToggle,
   onBearbeiteStart,
   onUmbenennen,
@@ -93,6 +99,9 @@ export function GanttListe({
   zeilen: Zeile[];
   eingeklappt: Set<string>;
   bearbeiteId: string | null;
+  kritischModus: boolean;
+  /** Basisplan-Vergleich aktiv: schmale Spalte "Δ" rechts. */
+  vergleich: boolean;
   onToggle: (phaseId: string) => void;
   onBearbeiteStart: (id: string) => void;
   onUmbenennen: (id: string, titel: string) => void;
@@ -132,9 +141,14 @@ export function GanttListe({
   }
 
   return (
-    <div className="sticky left-0 z-20 shrink-0 bg-card" style={{ width: LISTE_BREITE }}>
+    <div className="sticky left-0 z-20 shrink-0 bg-card" style={{ width: LISTE_BREITE + (vergleich ? DELTA_BREITE : 0) }}>
       <div className="sticky top-0 z-10 flex items-end bg-card px-3 pb-1.5" style={{ height: KOPF_HOEHE }}>
-        <span className="text-[11px] font-bold tracking-wide text-label3 uppercase">Phasen &amp; Schritte</span>
+        <span className="flex-1 text-[11px] font-bold tracking-wide text-label3 uppercase">Phasen &amp; Schritte</span>
+        {vergleich && (
+          <span className="text-right text-[11px] font-bold text-label3" style={{ width: DELTA_BREITE - 12 }} title="Abweichung zum Basisplan in Tagen (positiv = später)">
+            Δ
+          </span>
+        )}
       </div>
       {zeilen.map((z, i) => {
         const stil = { height: ZEILEN_HOEHE };
@@ -172,6 +186,9 @@ export function GanttListe({
         const e = z.element;
         const istPhase = e.typ === "phase";
         const zugeklappt = eingeklappt.has(e.id);
+        const kritischHervor = kritischModus && e.kritisch;
+        const kritischText = kritischModus ? kritischInfo(e) : null;
+        const abweichung = vergleich ? formatAbweichung(e.abweichung_tage) : null;
         return (
           <div
             key={e.id}
@@ -189,9 +206,9 @@ export function GanttListe({
                 {zugeklappt ? <ChevronRight size={15} strokeWidth={2} /> : <ChevronDown size={15} strokeWidth={2} />}
               </button>
             ) : e.typ === "meilenstein" ? (
-              <span aria-hidden="true" className="mx-1 h-2.5 w-2.5 shrink-0 rotate-45 bg-tone-amber" />
+              <span aria-hidden="true" className={`mx-1 h-2.5 w-2.5 shrink-0 rotate-45 ${kritischHervor ? "bg-st-fehlt-dot" : "bg-tone-amber"}`} />
             ) : (
-              <span aria-hidden="true" className="h-2.5 w-3.5 shrink-0 rounded-[3px] bg-tint-solid" />
+              <span aria-hidden="true" className={`h-2.5 w-3.5 shrink-0 rounded-[3px] ${kritischHervor ? "bg-st-fehlt-dot" : "bg-tint-solid"}`} />
             )}
 
             {bearbeiteId === e.id ? (
@@ -209,7 +226,7 @@ export function GanttListe({
                 type="button"
                 onClick={() => einfachKlick(e)}
                 onDoubleClick={() => doppelKlick(e)}
-                title={`${e.titel} – Details öffnen`}
+                title={`${e.titel} – Details öffnen${kritischText ? `\n${kritischText}` : ""}`}
                 className="flex min-w-0 flex-1 flex-col items-start text-left"
               >
                 <span
@@ -221,6 +238,9 @@ export function GanttListe({
                   {e.vorgang && <Link2 size={12} strokeWidth={2} className="shrink-0 text-label2" aria-label={`Vorgang ${e.vorgang.vorgangsnummer} verknüpft`} role="img" />}
                   {e.bestellung && <Package size={12} strokeWidth={2} className="shrink-0 text-label2" aria-label={`Bestellung ${e.bestellung.bestellnummer} verknüpft`} role="img" />}
                 </span>
+                {kritischText && !zweiteZeile(e) && (
+                  <span className={`block w-full truncate text-[11px] leading-[12px] ${kritischHervor ? "text-st-fehlt" : "text-label2"}`}>{kritischText}</span>
+                )}
                 {zweiteZeile(e) && (
                   <span className={`block w-full truncate text-[11px] leading-[12px] ${zweiteZeile(e)!.warn ? "text-st-arbeit" : "text-label2"}`}>
                     {zweiteZeile(e)!.text}
@@ -249,6 +269,15 @@ export function GanttListe({
                 </button>
               )}
             />
+            {vergleich && (
+              <span
+                className={`shrink-0 text-right text-[12px] font-semibold tabular-nums ${abweichung ? DELTA_KLASSE[abweichung.ton] : "text-label3"}`}
+                style={{ width: DELTA_BREITE - 12 }}
+                aria-label={abweichung ? `Abweichung zum Basisplan ${abweichung.text}` : "Kein Basisplan-Eintrag"}
+              >
+                {abweichung?.text ?? "–"}
+              </span>
+            )}
           </div>
         );
       })}

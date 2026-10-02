@@ -280,6 +280,7 @@ export function ElementDetailSheet({
   projektId,
   element,
   zeitraumText,
+  planInfo,
   fehler,
   busy,
   onPatch,
@@ -288,6 +289,8 @@ export function ElementDetailSheet({
   projektId: string;
   element: ZeitplanElement;
   zeitraumText: string;
+  /** Zusatzzeilen zu Kritischer Pfad / Basisplan-Vergleich (leer ohne aktive Anzeige). */
+  planInfo?: string[];
   fehler: string | null;
   busy: boolean;
   onPatch: (body: ZeitplanElementUpdate) => void;
@@ -317,6 +320,14 @@ export function ElementDetailSheet({
           )}
           <GroupedListValueRow label="Zuständig" wert={element.zugewiesen_name ?? "Nicht zugewiesen"} last />
         </GroupedList>
+
+        {planInfo && planInfo.length > 0 && (
+          <ul className="space-y-0.5 rounded-[10px] bg-fill px-3 py-2 text-[13px] text-label2">
+            {planInfo.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        )}
 
         {fehler && (
           <div role="alert" className="rounded-[10px] bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">

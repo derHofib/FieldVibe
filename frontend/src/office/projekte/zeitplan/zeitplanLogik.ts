@@ -617,3 +617,79 @@ export function baueZeilen(elemente: ZeitplanElement[], eingeklappt: Set<string>
   zeilen.push({ art: "neu", phaseId: null });
   return zeilen;
 }
+
+// --- Kritischer Pfad, Basisplan-Vergleich, Vorlagen ---------------------------------
+
+export type AbweichungTon = "spaet" | "frueh" | "gleich";
+
+/** Δ-Spalte: "+3 T" (spaeter als Basisplan), "−2 T" (frueher; echtes Minuszeichen), "0". null ohne Vergleichswert. */
+export function formatAbweichung(tage: number | null): { text: string; ton: AbweichungTon } | null {
+  if (tage === null || tage === undefined) return null;
+  if (tage > 0) return { text: `+${tage} T`, ton: "spaet" };
+  if (tage < 0) return { text: `−${-tage} T`, ton: "frueh" };
+  return { text: "0", ton: "gleich" };
+}
+
+export interface SchattenRechteck {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Duenner grauer Balken direkt unter dem echten Balken bzw. der Raute/Phase. Beim Meilenstein
+ * ein kleines Quadrat unter der Raute (gleiche Breite wie die Raute, damit es nicht ueberlaeuft). */
+export function schattenRechteck(
+  typ: ZeitplanTyp,
+  basisStart: string,
+  basisEnde: string,
+  zeile: number,
+  zoom: Zoom,
+  ursprung: number,
+): SchattenRechteck {
+  const px = PX_PRO_TAG[zoom];
+  const start = parseTag(basisStart);
+  const ende = typ === "meilenstein" ? start : parseTag(basisEnde);
+  const hoehe = 4;
+  const zeileY = zeile * ZEILEN_HOEHE;
+  const y = zeileY + ZEILEN_HOEHE - hoehe - 2;
+  const x = tagZuX(start, ursprung, zoom);
+  if (typ === "meilenstein") {
+    const breite = Math.min(RAUTE_GROESSE, Math.max(px, 6));
+    return { x: x + px / 2 - breite / 2, y, w: breite, h: hoehe };
+  }
+  return { x, y, w: Math.max(px, (ende - start + 1) * px), h: hoehe };
+}
+
+/** Vorbelegung fuer "Basisplan speichern": "Basisplan TT.MM.JJJJ". */
+export function standardBasisplanName(heute: number): string {
+  const { jahr, monat, tag } = ymd(heute);
+  return `Basisplan ${String(tag).padStart(2, "0")}.${String(monat).padStart(2, "0")}.${jahr}`;
+}
+
+/** Vorbelegtes Startdatum fuer eine Vorlage: heute bei leerem Plan, sonst der Tag nach dem Planende. */
+export function standardVorlagenStart(elemente: ZeitplanElement[], heute: number): string {
+  let ende: number | null = null;
+  for (const e of elemente) {
+    const z = elementZeitraum(e);
+    if (z && (ende === null || z.ende > ende)) ende = z.ende;
+  }
+  return formatTag(ende === null ? heute : ende + 1);
+}
+
+/** Infozeile je Element beim kritischen Pfad. null: keine Aussage moeglich (z. B. Phase ohne Puffer). */
+export function kritischInfo(e: Pick<ZeitplanElement, "kritisch" | "puffer_tage">): string | null {
+  if (e.kritisch) return "Kritisch – jede Verzögerung verschiebt das Projektende";
+  if (e.puffer_tage === null || e.puffer_tage === undefined) return null;
+  return `Puffer: ${e.puffer_tage} ${e.puffer_tage === 1 ? "Tag" : "Tage"}`;
+}
+
+/** Tage-Aenderung fuer die Straffen-Vorschau: "−4 Tage" (frueher). Massgeblich ist der Start, bei
+ * unverändertem Start das Ende (reine Dauer-Aenderung). */
+export function formatStraffenDelta(a: { alt_start_am: string; alt_ende_am: string; neu_start_am: string; neu_ende_am: string }): string {
+  const ds = diffTage(a.alt_start_am, a.neu_start_am);
+  const d = ds !== 0 ? ds : diffTage(a.alt_ende_am, a.neu_ende_am);
+  const betrag = Math.abs(d);
+  const einheit = betrag === 1 ? "Tag" : "Tage";
+  return d < 0 ? `\u2212${betrag} ${einheit}` : d > 0 ? `+${betrag} ${einheit}` : "0 Tage";
+}

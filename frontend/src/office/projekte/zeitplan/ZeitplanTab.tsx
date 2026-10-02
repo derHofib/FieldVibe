@@ -1,19 +1,23 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChartGantt, Info, X } from "lucide-react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookmarkPlus, ChartGantt, FileText, FolderCog, Info, LayoutTemplate, MoreHorizontal, Scaling, Settings2, Flag, Check, X } from "lucide-react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../../api/client";
 import { usersApi, zeitplanApi } from "../../../api/endpoints";
 import { EmptyState } from "../../../components/EmptyState";
 import { SearchableSelect } from "../../../components/SearchableSelect";
+import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
 import { SegmentedControl } from "../../../components/apple/SegmentedControl";
 import { Sheet } from "../../../components/apple/Sheet";
+import { openPdfBlob } from "../../../utils/pdf";
 import type { Zeitplan, ZeitplanAbhaengigkeit, ZeitplanAbhaengigkeitArt, ZeitplanElement, ZeitplanElementUpdate, ZeitplanTyp, ZeitplanVerschiebeModus } from "../../../types";
 import { ElementDetailSheet } from "./ElementDetailSheet";
 import { GanttLegende } from "./GanttLegende";
 import { GanttListe } from "./GanttListe";
 import { GanttZeitleiste, type GanttZiehAnzeige } from "./GanttZeitleiste";
+import { BasisplanSpeichernSheet, BasisplaeneVerwaltenSheet, StraffenSheet, VorlageEinfuegenSheet, VorlageSpeichernSheet } from "./ZeitplanDialoge";
 import { VerbindungsPopover } from "./VerbindungsPopover";
 import {
   ART_ERKLAERUNG,
@@ -31,6 +35,8 @@ import {
   formatTag,
   heuteTag,
   istGueltigesVerbindungsziel,
+  formatAbweichung,
+  kritischInfo,
   parseTag,
   phaseVerschieben,
   pixelZuTagen,
@@ -95,6 +101,18 @@ function vorschauAnwenden(zp: Zeitplan, vorschau: Map<string, Aenderung>): Zeitp
   };
 }
 
+const kritischSchluessel = (projektId: string) => `zeitplan.kritischerPfad.${projektId}`;
+
+function kritischLesen(projektId: string): boolean {
+  try {
+    return window.localStorage.getItem(kritischSchluessel(projektId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+type DialogArt = "basisplan-speichern" | "basisplaene" | "straffen" | "vorlage-einfuegen" | "vorlage-speichern";
+
 function useSchmalerViewport(): boolean {
   const abfrage = "(max-width: 767px)";
   const [schmal, setSchmal] = useState(() => typeof window !== "undefined" && window.matchMedia(abfrage).matches);
@@ -115,11 +133,20 @@ function useSchmalerViewport(): boolean {
  * Ziehen (zeitplanLogik.ts) spiegelt sie nur fuer sofortiges Feedback. */
 export function ZeitplanTab({ projektId }: { projektId: string }) {
   const queryClient = useQueryClient();
-  const queryKey = useMemo(() => ["projekt-zeitplan", projektId], [projektId]);
+  const navigate = useNavigate();
+  const [basisplanId, setBasisplanId] = useState<string | null>(null);
+  // Der Basisplan gehoert zum Query-Key, damit der Vergleich nicht mit dem normalen Stand kollidiert.
+  const queryKey = useMemo(() => ["projekt-zeitplan", projektId, basisplanId], [projektId, basisplanId]);
   const schmal = useSchmalerViewport();
 
-  const { data: zeitplan, isLoading, error } = useQuery({ queryKey, queryFn: () => zeitplanApi.get(projektId) });
+  // keepPreviousData: beim Wechsel des Vergleichs bleibt der Plan stehen (kein Flackern, Scrollposition bleibt).
+  const {
+    data: zeitplan,
+    isLoading,
+    error,
+  } = useQuery({ queryKey, queryFn: () => zeitplanApi.get(projektId, basisplanId), placeholderData: keepPreviousData });
   const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: basisplaene } = useQuery({ queryKey: ["projekt-basisplaene", projektId], queryFn: () => zeitplanApi.basisplaene(projektId) });
 
   const [zoom, setZoom] = useState<Zoom>("tag");
   const [fehler, setFehler] = useState<string | null>(null);
@@ -130,6 +157,11 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
   const [depPopover, setDepPopover] = useState<{ depId: string; x: number; y: number } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [zieh, setZieh] = useState<ZiehZustand | null>(null);
+  // Kritisch/Puffer/Basisplan-Werte kommen nur vom Server und werden NICHT lokal neu berechnet: beim Ziehen
+  // bleibt die Hervorhebung auf dem Stand vor dem Ziehen stehen (Vorschau verschiebt nur die Balken) und
+  // aktualisiert sich mit der Server-Antwort nach dem Loslassen.
+  const [kritischModus, setKritischModus] = useState(() => kritischLesen(projektId));
+  const [offenerDialog, setOffenerDialog] = useState<DialogArt | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -153,7 +185,33 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
 
   // --- Mutationen ---------------------------------------------------------
 
-  const ersetzen = useCallback((zp: Zeitplan) => queryClient.setQueryData(queryKey, zp), [queryClient, queryKey]);
+  // Mutations-Antworten kommen ohne Basisplan-Daten (kein basisplan_id im Aufruf). Bei aktivem
+  // Vergleich daher: Basiswerte aus dem Cache uebernehmen (kein Flackern) und neu laden.
+  const ersetzen = useCallback(
+    (zp: Zeitplan) => {
+      if (!basisplanId) {
+        queryClient.setQueryData(queryKey, zp);
+        return;
+      }
+      const alt = queryClient.getQueryData<Zeitplan>(queryKey);
+      const altNachId = new Map((alt?.elemente ?? []).map((e) => [e.id, e]));
+      queryClient.setQueryData(queryKey, {
+        ...zp,
+        elemente: zp.elemente.map((e) => {
+          const a = altNachId.get(e.id);
+          return a ? { ...e, basis_start_am: a.basis_start_am, basis_ende_am: a.basis_ende_am, abweichung_tage: a.abweichung_tage } : e;
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey });
+    },
+    [queryClient, queryKey, basisplanId],
+  );
+
+  const pdfExport = useMutation({
+    mutationFn: () => zeitplanApi.pdf(projektId, basisplanId, kritischModus),
+    onSuccess: openPdfBlob,
+    onError: (e) => setFehler(fehlerText(e)),
+  });
 
   const aendern = useMutation({
     mutationFn: (aufruf: () => Promise<Zeitplan>) => aufruf(),
@@ -383,6 +441,15 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     }
   }, [zoom, bereich.ursprung]);
 
+  function kritischUmschalten(neu: boolean) {
+    setKritischModus(neu);
+    try {
+      window.localStorage.setItem(kritischSchluessel(projektId), neu ? "1" : "0");
+    } catch {
+      /* Speicher nicht verfuegbar (privates Fenster): Zustand gilt nur fuer diese Sitzung. */
+    }
+  }
+
   // --- Darstellung ------------------------------------------------------------------
 
   if (isLoading) return <p className="p-4 text-sm text-label2">Zeitplan wird geladen …</p>;
@@ -421,6 +488,33 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
 
   const depTitel = (id: string) => elemente.find((e) => e.id === id)?.titel ?? "";
 
+  const aktiverBasisplan = basisplanId ? basisplaene?.find((b) => b.id === basisplanId) ?? null : null;
+  const vergleichAktiv = !!basisplanId && !!aktiverBasisplan;
+  const vergleichItems: PulldownItem[] = [
+    { label: `${basisplanId ? "" : "✓ "}Kein Vergleich`, onSelect: () => setBasisplanId(null) },
+    ...((basisplaene ?? []).length ? (["trenner"] as const) : []),
+    ...(basisplaene ?? []).map((b) => ({ label: `${b.id === basisplanId ? "✓ " : ""}${b.name}`, onSelect: () => setBasisplanId(b.id) })),
+  ];
+  const weitereItems: PulldownItem[] = [
+    ...(leer ? [] : [{ label: "Basisplan speichern …", icon: BookmarkPlus, onSelect: () => setOffenerDialog("basisplan-speichern") }]),
+    { label: "Basispläne verwalten …", icon: Settings2, onSelect: () => setOffenerDialog("basisplaene") },
+    "trenner",
+    { label: "Aus Vorlage einfügen …", icon: LayoutTemplate, onSelect: () => setOffenerDialog("vorlage-einfuegen") },
+    ...(leer ? [] : [{ label: "Als Vorlage speichern …", icon: LayoutTemplate, onSelect: () => setOffenerDialog("vorlage-speichern") }]),
+    { label: "Vorlagen verwalten …", icon: FolderCog, onSelect: () => navigate("/projekte/vorlagen") },
+    ...(leer ? [] : (["trenner", { label: "PDF exportieren", icon: FileText, onSelect: () => pdfExport.mutate() }] as PulldownItem[])),
+  ];
+  const planInfo = [
+    ...(kritischModus && detailElement ? [kritischInfo(detailElement)] : []),
+    ...(vergleichAktiv && detailElement?.basis_start_am && detailElement.basis_ende_am
+      ? [
+          `Basisplan „${aktiverBasisplan!.name}“: ${
+            detailElement.typ === "meilenstein" ? formatKurz(parseTag(detailElement.basis_start_am)) : formatBereich(detailElement.basis_start_am, detailElement.basis_ende_am)
+          }${formatAbweichung(detailElement.abweichung_tage) ? ` (${formatAbweichung(detailElement.abweichung_tage)!.text})` : ""}`,
+        ]
+      : []),
+  ].filter((t): t is string => !!t);
+
   return (
     <div id="projekt-tabpanel-zeitplan" role="tabpanel" aria-labelledby="projekt-tab-zeitplan" className="space-y-3 p-4 pt-0">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -440,9 +534,73 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           <Info size={15} strokeWidth={2} className="text-label2" aria-label={MODUS_ERKLAERUNG} role="img" />
         </div>
         {/* Immer im Fluss vorhanden (leer = unsichtbar), damit die Zeile beim Ziehen nicht springt. */}
-        <p aria-live="polite" className="ml-auto min-h-5 text-xs text-label2">
+        <p aria-live="polite" className="min-h-5 min-w-0 flex-1 text-right text-xs text-label2">
           {zieh?.art === "verbinden" ? hinweisText(zieh) : ""}
         </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="Zeitplan-Werkzeuge">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={kritischModus}
+          onClick={() => kritischUmschalten(!kritischModus)}
+          className={`btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm ${kritischModus ? "text-st-fehlt" : ""}`}
+          style={kritischModus ? { borderColor: "var(--st-fehlt-dot)" } : undefined}
+          title="Hebt Schritte hervor, deren Verzögerung das Projektende verschiebt"
+        >
+          <Flag size={14} strokeWidth={2} aria-hidden="true" />
+          Kritischer Pfad
+          {kritischModus && <Check size={14} strokeWidth={2.5} aria-hidden="true" />}
+        </button>
+
+        <PulldownMenu
+          ariaLabel="Vergleich mit Basisplan"
+          items={vergleichItems}
+          trigger={({ offen, toggeln, triggerRef }) => (
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={toggeln}
+              aria-haspopup="menu"
+              aria-expanded={offen}
+              className="btn-ap flex items-center gap-1.5 px-3 py-1.5 text-sm"
+            >
+              <Scaling size={14} strokeWidth={2} aria-hidden="true" />
+              <span>Vergleich:</span>
+              <span className="max-w-[160px] truncate font-semibold">{aktiverBasisplan?.name ?? "—"}</span>
+            </button>
+          )}
+        />
+
+        <button
+          type="button"
+          onClick={() => setOffenerDialog("straffen")}
+          disabled={leer}
+          className="btn-ap px-3 py-1.5 text-sm disabled:opacity-50"
+          title="Schritte auf den frühesten möglichen Termin ziehen"
+        >
+          Plan straffen
+        </button>
+
+        <PulldownMenu
+          ariaLabel="Weitere Zeitplan-Aktionen"
+          items={weitereItems}
+          trigger={({ offen, toggeln, triggerRef }) => (
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={toggeln}
+              aria-haspopup="menu"
+              aria-expanded={offen}
+              aria-label="Weitere Aktionen"
+              className="btn-ap-toolbar"
+            >
+              <MoreHorizontal size={16} strokeWidth={2} aria-hidden="true" />
+            </button>
+          )}
+        />
+        {pdfExport.isPending && <span className="text-xs text-label2">PDF wird erstellt …</span>}
       </div>
 
       {fehler && (
@@ -459,9 +617,14 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           icon={ChartGantt}
           text="Noch kein Zeitplan — lege die erste Phase an"
           action={
-            <button type="button" onClick={() => setEntwurf({ typ: "phase", phaseId: null })} className="btn-ap btn-ap-primary px-3 py-1.5 text-sm">
-              + Phase
-            </button>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setEntwurf({ typ: "phase", phaseId: null })} className="btn-ap btn-ap-primary px-3 py-1.5 text-sm">
+                + Phase
+              </button>
+              <button type="button" onClick={() => setOffenerDialog("vorlage-einfuegen")} className="btn-ap px-3 py-1.5 text-sm">
+                Aus Vorlage starten
+              </button>
+            </div>
           }
         />
       ) : (
@@ -471,6 +634,8 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
               zeilen={zeilen}
               eingeklappt={eingeklappt}
               bearbeiteId={bearbeiteId}
+              kritischModus={kritischModus}
+              vergleich={vergleichAktiv}
               onToggle={(id) =>
                 setEingeklappt((s) => {
                   const n = new Set(s);
@@ -497,6 +662,8 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
               heute={heute}
               zieh={ziehAnzeige}
               ausgewaehltDepId={depPopover?.depId ?? null}
+              kritischModus={kritischModus}
+              vergleich={vergleichAktiv}
               svgRef={svgRef}
               onZiehStart={ziehStart}
               onVerbindenStart={verbindenStart}
@@ -543,6 +710,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
                 : formatBereich(formatTag(detailZeitraum.start), formatTag(detailZeitraum.ende))
               : "Ohne Datum"
           }
+          planInfo={planInfo}
           fehler={fehler}
           busy={aendern.isPending}
           onPatch={(body) => patch(detailElement.id, body)}
@@ -552,6 +720,27 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
           }}
         />
       )}
+
+      {offenerDialog === "basisplan-speichern" && <BasisplanSpeichernSheet projektId={projektId} onClose={() => setOffenerDialog(null)} />}
+      {offenerDialog === "basisplaene" && (
+        <BasisplaeneVerwaltenSheet
+          projektId={projektId}
+          onClose={() => setOffenerDialog(null)}
+          onGeloescht={(id) => setBasisplanId((aktuellId) => (aktuellId === id ? null : aktuellId))}
+        />
+      )}
+      {offenerDialog === "straffen" && (
+        <StraffenSheet
+          projektId={projektId}
+          phasen={elemente.filter((e) => e.typ === "phase")}
+          onClose={() => setOffenerDialog(null)}
+          onUebernommen={ersetzen}
+        />
+      )}
+      {offenerDialog === "vorlage-einfuegen" && (
+        <VorlageEinfuegenSheet projektId={projektId} elemente={elemente} onClose={() => setOffenerDialog(null)} onAngewendet={ersetzen} />
+      )}
+      {offenerDialog === "vorlage-speichern" && <VorlageSpeichernSheet projektId={projektId} onClose={() => setOffenerDialog(null)} />}
 
       {dialog && (
         <ZeilenDialog

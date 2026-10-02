@@ -8,11 +8,13 @@ export function GanttVerbindungen({
   abhaengigkeiten,
   geometrie,
   ausgewaehltId,
+  kritischModus,
   onKlick,
 }: {
   abhaengigkeiten: ZeitplanAbhaengigkeit[];
   geometrie: Map<string, BalkenRechteck>;
   ausgewaehltId: string | null;
+  kritischModus: boolean;
   /** Position in Viewport-Koordinaten (Klickpunkt bzw. Mitte bei Tastatur). */
   onKlick: (dep: ZeitplanAbhaengigkeit, position: { x: number; y: number }) => void;
 }) {
@@ -27,11 +29,14 @@ export function GanttVerbindungen({
         const pfad = verbindungsPfad(von, nach, art);
         const dx = pfeilZeigtNachLinks(art) ? 6 : -6;
         const gewaehlt = d.id === ausgewaehltId;
-        const farbe = gewaehlt ? "stroke-tint" : "stroke-label2 group-hover:stroke-tint";
+        const kritischHervor = kritischModus && d.kritisch;
+        const farbe = gewaehlt ? "stroke-tint" : kritischHervor ? "stroke-st-fehlt-dot" : "stroke-label2 group-hover:stroke-tint";
+        const pfeilFarbe = gewaehlt ? "fill-tint" : kritischHervor ? "fill-st-fehlt-dot" : "fill-label2 group-hover:fill-tint";
         return (
           <g
             key={d.id}
             className="group cursor-pointer"
+            opacity={kritischModus && !d.kritisch ? 0.45 : 1}
             role="button"
             tabIndex={0}
             aria-label={`Verbindung bearbeiten, ${ART_LABEL[art]}, Versatz ${d.versatz_tage} Tage`}
@@ -45,10 +50,10 @@ export function GanttVerbindungen({
             }}
           >
             <path d={pfad} fill="none" stroke="transparent" strokeWidth={10} />
-            <path d={pfad} fill="none" strokeWidth={gewaehlt ? 2 : 1.5} className={farbe} />
+            <path d={pfad} fill="none" strokeWidth={gewaehlt || kritischHervor ? 2 : 1.5} className={farbe} />
             <polygon
               points={`${nach.x},${nach.y} ${nach.x + dx},${nach.y - 3.5} ${nach.x + dx},${nach.y + 3.5}`}
-              className={gewaehlt ? "fill-tint" : "fill-label2 group-hover:fill-tint"}
+              className={pfeilFarbe}
             />
           </g>
         );

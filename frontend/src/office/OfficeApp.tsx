@@ -52,6 +52,7 @@ import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
+import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
 import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 
@@ -81,6 +82,7 @@ export function OfficeApp() {
         <Route path="/boards" element={<OfficeBoardsPage />} />
         <Route path="/boards/:id" element={<OfficeBoardPage />} />
         <Route path="/projekte" element={<OfficeProjektePage />} />
+        <Route path="/projekte/vorlagen" element={<OfficeProjektVorlagenPage />} />
         <Route path="/auftraege" element={<OfficeAuftraegePage />} />
         {/* "Ganze Seite" aus der Split-Ansicht (VorgaengeListe.tsx) -- volle
             Desktop-Breite statt der schmalen Inspektor-Spalte, deshalb

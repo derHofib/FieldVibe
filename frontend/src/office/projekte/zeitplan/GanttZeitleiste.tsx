@@ -8,8 +8,10 @@ import {
   PX_PRO_TAG,
   ZEILEN_HOEHE,
   balkenRechteck,
+  formatBereich,
   istWochenende,
   kopfSegmente,
+  schattenRechteck,
   tagZuX,
   type BalkenRechteck,
   type Zeile,
@@ -50,6 +52,8 @@ export function GanttZeitleiste({
   heute,
   zieh,
   ausgewaehltDepId,
+  kritischModus,
+  vergleich,
   svgRef,
   onZiehStart,
   onVerbindenStart,
@@ -64,6 +68,9 @@ export function GanttZeitleiste({
   heute: number;
   zieh: GanttZiehAnzeige | null;
   ausgewaehltDepId: string | null;
+  kritischModus: boolean;
+  /** Basisplan-Vergleich aktiv: graue Schattenbalken aus basis_start_am/basis_ende_am. */
+  vergleich: boolean;
   svgRef: RefObject<SVGSVGElement | null>;
   onZiehStart: (e: ReactPointerEvent, id: string, art: ZiehArt) => void;
   onVerbindenStart: (e: ReactPointerEvent, id: string, seite: "anfang" | "ende") => void;
@@ -160,7 +167,18 @@ export function GanttZeitleiste({
 
         {heuteSichtbar && <line x1={heuteX} x2={heuteX} y1={0} y2={hoehe} className="stroke-tint" strokeWidth={1.5} pointerEvents="none" />}
 
-        <GanttVerbindungen abhaengigkeiten={abhaengigkeiten} geometrie={geometrie} ausgewaehltId={ausgewaehltDepId} onKlick={onDepKlick} />
+        {vergleich &&
+          zeilen.map((z, i) => {
+            if (z.art !== "element" || !z.element.basis_start_am || !z.element.basis_ende_am) return null;
+            const r = schattenRechteck(z.element.typ, z.element.basis_start_am, z.element.basis_ende_am, i, zoom, bereich.ursprung);
+            return (
+              <rect key={`basis-${z.element.id}`} x={r.x} y={r.y} width={r.w} height={r.h} rx={2} className="fill-label3" opacity={0.55} pointerEvents="none">
+                <title>{`Basisplan: ${formatBereich(z.element.basis_start_am, z.element.basis_ende_am)}`}</title>
+              </rect>
+            );
+          })}
+
+        <GanttVerbindungen abhaengigkeiten={abhaengigkeiten} geometrie={geometrie} ausgewaehltId={ausgewaehltDepId} kritischModus={kritischModus} onKlick={onDepKlick} />
 
         {zeilen.map((z) => {
           if (z.art !== "element") return null;
@@ -177,6 +195,7 @@ export function GanttZeitleiste({
               zoom={zoom}
               aktiv={zieh?.id === z.element.id}
               verbindenAktiv={verbinden && zieh?.id === z.element.id}
+              kritischModus={kritischModus}
               istZiel={verbinden && zieh?.zielId === z.element.id}
               onZiehStart={(e, art) => onZiehStart(e, z.element.id, art)}
               onVerbindenStart={(e, seite) => onVerbindenStart(e, z.element.id, seite)}

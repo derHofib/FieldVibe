@@ -1,5 +1,6 @@
 import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
+import { partnerApiFetch } from "./partnerClient";
 import type {
   AccountTyp,
   AccountTypCreate,
@@ -160,6 +161,10 @@ import type {
   ZeiterfassungStatistik,
   ZeiterfassungSummenNachStatus,
   Zeitplan,
+  ZeitplanBasisplan,
+  ZeitplanStraffenAntwort,
+  ProjektVorlage,
+  ProjektVorlageDetail,
   ZeitplanElementCreate,
   ZeitplanElementUpdate,
   ZeitplanAbhaengigkeitArt,
@@ -167,6 +172,9 @@ import type {
   ZeitplanVerschiebeModus,
   ZeitplanVorgangAuswahl,
   PartnerZeitplanEintrag,
+  CurrentPartner,
+  PartnerStatusSetzbar,
+  PartnerVorgang,
 } from "../types";
 
 export const authApi = {
@@ -1707,7 +1715,21 @@ export const projekteApi = {
 // Gantt-Zeitplan eines Projekts: jeder mutierende Aufruf liefert den kompletten
 // Zeitplan zurueck (das Backend verschiebt abhaengige Elemente selbst).
 export const zeitplanApi = {
-  get: (projektId: string) => apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan`),
+  get: (projektId: string, basisplanId?: string | null) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan${basisplanId ? `?basisplan_id=${encodeURIComponent(basisplanId)}` : ""}`),
+  basisplaene: (projektId: string) => apiFetch<ZeitplanBasisplan[]>(`/api/projekte/${projektId}/zeitplan/basisplaene`),
+  createBasisplan: (projektId: string, name: string) =>
+    apiFetch<ZeitplanBasisplan>(`/api/projekte/${projektId}/zeitplan/basisplaene`, { method: "POST", body: JSON.stringify({ name }) }),
+  removeBasisplan: (projektId: string, basisplanId: string) =>
+    apiFetch<void>(`/api/projekte/${projektId}/zeitplan/basisplaene/${basisplanId}`, { method: "DELETE" }),
+  straffen: (projektId: string, body: { phase_id: string | null; vorschau: boolean }) =>
+    apiFetch<ZeitplanStraffenAntwort>(`/api/projekte/${projektId}/zeitplan/straffen`, { method: "POST", body: JSON.stringify(body) }),
+  vorlageAnwenden: (projektId: string, body: { vorlage_id: string; start_am: string }) =>
+    apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/vorlage-anwenden`, { method: "POST", body: JSON.stringify(body) }),
+  pdf: (projektId: string, basisplanId: string | null, kritischerPfad: boolean) =>
+    apiFetchBlob(
+      `/api/projekte/${projektId}/zeitplan/pdf?kritischer_pfad=${kritischerPfad}${basisplanId ? `&basisplan_id=${encodeURIComponent(basisplanId)}` : ""}`,
+    ),
   createElement: (projektId: string, body: ZeitplanElementCreate) =>
     apiFetch<Zeitplan>(`/api/projekte/${projektId}/zeitplan/elemente`, { method: "POST", body: JSON.stringify(body) }),
   updateElement: (projektId: string, elementId: string, body: ZeitplanElementUpdate) =>
@@ -1747,10 +1769,61 @@ export const zeitplanApi = {
     ),
 };
 
-// Token-Handling fuer Partner-Logins gibt es im Frontend noch nicht (siehe
-// docs/BACKLOG.md 1.2) -- apiFetch sendet vorerst den Mitarbeiter-Token.
+export const projektVorlagenApi = {
+  list: () => apiFetch<ProjektVorlage[]>("/api/projekt-vorlagen"),
+  get: (id: string) => apiFetch<ProjektVorlageDetail>(`/api/projekt-vorlagen/${id}`),
+  ausProjekt: (projektId: string, body: { name: string; beschreibung?: string | null }) =>
+    apiFetch<ProjektVorlage>(`/api/projekt-vorlagen/aus-projekt/${projektId}`, { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: { name?: string; beschreibung?: string | null }) =>
+    apiFetch<ProjektVorlage>(`/api/projekt-vorlagen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  remove: (id: string) => apiFetch<void>(`/api/projekt-vorlagen/${id}`, { method: "DELETE" }),
+};
+
+// Partnerportal: eigener Token-Typ ("partner_access"), daher eigener Client
+// (partnerClient.ts) -- nie apiFetch, sonst ginge der Mitarbeiter-Token raus.
+export const partnerPortalAuthApi = {
+  login: (email: string, password: string) =>
+    partnerApiFetch<TokenPair>("/api/partnerportal/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => partnerApiFetch<CurrentPartner>("/api/partnerportal/auth/me"),
+  passwortVergessen: (email: string) =>
+    partnerApiFetch<void>("/api/partnerportal/auth/passwort-vergessen", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  passwortZuruecksetzen: (token: string, newPassword: string) =>
+    partnerApiFetch<void>("/api/partnerportal/auth/passwort-zuruecksetzen", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+  registrieren: (token: string, name: string, password: string) =>
+    partnerApiFetch<TokenPair>("/api/partnerportal/auth/registrieren", {
+      method: "POST",
+      body: JSON.stringify({ token, name, password }),
+    }),
+};
+
 export const partnerPortalApi = {
-  zeitplan: () => apiFetch<PartnerZeitplanEintrag[]>("/api/partnerportal/zeitplan"),
+  zeitplan: () => partnerApiFetch<PartnerZeitplanEintrag[]>("/api/partnerportal/zeitplan"),
+  auftraege: () => partnerApiFetch<PartnerVorgang[]>("/api/partnerportal/auftraege"),
+  auftrag: (id: string) => partnerApiFetch<PartnerVorgang>(`/api/partnerportal/auftraege/${id}`),
+  antworten: (id: string, status: "angenommen" | "abgelehnt", ablehnungGrund?: string) =>
+    partnerApiFetch<PartnerVorgang>(`/api/partnerportal/auftraege/${id}/antwort`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, ablehnung_grund: ablehnungGrund || null }),
+    }),
+  statusSetzen: (id: string, status: PartnerStatusSetzbar) =>
+    partnerApiFetch<PartnerVorgang>(`/api/partnerportal/auftraege/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  kommentieren: (id: string, body: string) =>
+    partnerApiFetch<VorgangEvent>(`/api/partnerportal/auftraege/${id}/kommentare`, {
+      method: "POST",
+      body: JSON.stringify({ body }),
+    }),
 };
 
 export const auftraegeApi = {

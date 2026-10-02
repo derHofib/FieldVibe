@@ -2052,6 +2052,14 @@ export interface ZeitplanElement {
   datum_gesperrt: boolean;
   /** Nur Schritte: Fremdgewerk / Nachunternehmer. */
   partner: { id: string; name: string } | null;
+  /** Gesamtpuffer in Tagen (null: nicht berechenbar, z. B. ohne Datum). */
+  puffer_tage: number | null;
+  /** Liegt auf dem kritischen Pfad (jede Verzögerung verschiebt das Projektende). */
+  kritisch: boolean;
+  basis_start_am: string | null;
+  basis_ende_am: string | null;
+  /** Positiv = später als im Basisplan; null ohne Vergleich bzw. ohne Basisplan-Eintrag. */
+  abweichung_tage: number | null;
 }
 
 export interface ZeitplanVorgangRef {
@@ -2082,7 +2090,7 @@ export interface ZeitplanVorgangAuswahl extends ZeitplanVorgangRef {
 
 export type ZeitplanAbhaengigkeitArt = "ende_anfang" | "anfang_anfang" | "ende_ende";
 
-/** Eigener Zeitplan-Eintrag des Partnerportals (GET /api/partner-portal/zeitplan). */
+/** Eigener Zeitplan-Eintrag des Partnerportals (GET /api/partnerportal/zeitplan). */
 export interface PartnerZeitplanEintrag {
   id: string;
   titel: string;
@@ -2100,6 +2108,7 @@ export interface ZeitplanAbhaengigkeit {
   nachfolger_id: string;
   art: ZeitplanAbhaengigkeitArt;
   versatz_tage: number;
+  kritisch: boolean;
 }
 
 export interface Zeitplan {
@@ -2107,6 +2116,59 @@ export interface Zeitplan {
   verschiebe_modus: ZeitplanVerschiebeModus;
   elemente: ZeitplanElement[];
   abhaengigkeiten: ZeitplanAbhaengigkeit[];
+}
+
+export interface ZeitplanBasisplan {
+  id: string;
+  name: string;
+  erstellt_am: string;
+  erstellt_von_name: string | null;
+  anzahl_elemente: number;
+}
+
+export interface ZeitplanStraffenAenderung {
+  element_id: string;
+  titel: string;
+  alt_start_am: string;
+  alt_ende_am: string;
+  neu_start_am: string;
+  neu_ende_am: string;
+}
+
+export interface ZeitplanStraffenAntwort {
+  aenderungen: ZeitplanStraffenAenderung[];
+  /** Nur bei vorschau=false. */
+  zeitplan: Zeitplan | null;
+}
+
+export interface ProjektVorlage {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  anzahl_elemente: number;
+  dauer_tage: number;
+}
+
+export interface ProjektVorlageElement {
+  ref: string;
+  typ: ZeitplanTyp;
+  titel: string;
+  phase_ref: string | null;
+  offset_tage: number;
+  dauer_tage: number;
+  reihenfolge: number;
+}
+
+export interface ProjektVorlageAbhaengigkeit {
+  vorgaenger_ref: string;
+  nachfolger_ref: string;
+  art: ZeitplanAbhaengigkeitArt;
+  versatz_tage: number;
+}
+
+export interface ProjektVorlageDetail extends ProjektVorlage {
+  elemente: ProjektVorlageElement[];
+  abhaengigkeiten: ProjektVorlageAbhaengigkeit[];
 }
 
 export interface ZeitplanElementCreate {
@@ -2194,3 +2256,34 @@ export interface ProjektAufgabe {
   unteraufgaben_gesamt?: number;
   unteraufgaben_erledigt?: number;
 }
+
+// --- Partnerportal (eigener Token-Typ, siehe api/partnerAuthStore.ts) -------
+
+export interface CurrentPartner {
+  zugang_id: string;
+  partner_id: string;
+  partner_name: string;
+  name: string;
+  email: string;
+}
+
+/** Auftrag aus Sicht des Partners (PartnerVorgangRead) -- bewusst ohne
+ * interne Felder; Honorar ist die netto vereinbarte Vergütung des Partners. */
+export interface PartnerVorgang {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
+  beschreibung: string | null;
+  leistungstyp: string;
+  status: VorgangStatus;
+  partner_freigabe_status: PartnerFreigabeStatus | null;
+  partner_ablehnung_grund: string | null;
+  partner_honorar_netto: string | null;
+  kunde_name: string;
+  anlage_bezeichnung: string | null;
+  anlage_adresse: Adresse | null;
+  last_activity_at: string;
+  created_at: string;
+}
+
+export type PartnerStatusSetzbar = "in_arbeit" | "wartet_kunde" | "abgeschlossen";
