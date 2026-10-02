@@ -290,52 +290,68 @@ async def _melde_entscheidung(
     )
 
 
+async def _mitarbeit_bedingung(session: AsyncSession, user_id: UUID):
+    """Eine einzige Definition von "arbeitet im Projekt mit" (Bezug: Projekt):
+    Zustaendiger eines Elements, zugewiesener Techniker/Termin eines
+    verknuepften Vorgangs oder ein dem Nutzer zugewiesener Kunde am Projekt
+    (Auftrag, Vorgang oder Vertrag)."""
+    kunden = await assigned_kunde_ids(session, user_id)
+    pa = ProjektAufgabe
+    mitarbeit = [
+        exists().where(
+            pa.projekt_id == Projekt.id,
+            pa.typ.in_(zp.ZEITPLAN_TYPEN),
+            pa.geloescht_am.is_(None),
+            pa.zugewiesen_an == user_id,
+        ),
+        exists()
+        .where(pa.projekt_id == Projekt.id, pa.geloescht_am.is_(None), pa.typ.in_(zp.ZEITPLAN_TYPEN))
+        .where(
+            exists().where(
+                Vorgang.id == pa.vorgang_id,
+                Vorgang.geloescht_am.is_(None),
+                or_(
+                    Vorgang.zugewiesener_user_id == user_id,
+                    exists().where(
+                        Termin.vorgang_id == Vorgang.id,
+                        Termin.techniker_id == user_id,
+                        Termin.geloescht_am.is_(None),
+                    ),
+                ),
+            )
+        ),
+    ]
+    if kunden:
+        mitarbeit += [
+            exists().where(
+                Auftrag.projekt_id == Projekt.id, Auftrag.geloescht_am.is_(None), Auftrag.kunde_id.in_(kunden)
+            ),
+            exists().where(
+                Vorgang.projekt_id == Projekt.id, Vorgang.geloescht_am.is_(None), Vorgang.kunde_id.in_(kunden)
+            ),
+            exists().where(and_(Vertrag.id == Projekt.vertrag_id, Vertrag.kunde_id.in_(kunden))),
+        ]
+    return or_(*mitarbeit)
+
+
+async def hat_mitarbeit(session: AsyncSession, user_id: UUID, projekt_id: UUID) -> bool:
+    """Gleiche Definition wie meine_zeitplaene (Feld-App-Liste)."""
+    stmt = select(Projekt.id).where(
+        Projekt.id == projekt_id,
+        Projekt.geloescht_am.is_(None),
+        await _mitarbeit_bedingung(session, user_id),
+    )
+    return (await session.execute(stmt)).first() is not None
+
+
 async def meine_zeitplaene(
     session: AsyncSession, user_id: UUID, *, alle: bool, heute: date
 ) -> list[ZeitplanMeinRead]:
     """Projekte fuer die Feld-App-Liste. alle=False (nur zeitplan_sehen): nur
-    Projekte, in denen der Nutzer mitarbeitet -- Zustaendiger eines Elements,
-    zugewiesener Techniker/Termin eines verknuepften Vorgangs oder ein dem
-    Nutzer zugewiesener Kunde am Projekt (Auftrag, Vorgang oder Vertrag)."""
+    Projekte mit Mitarbeit (siehe _mitarbeit_bedingung)."""
     stmt = select(Projekt.id, Projekt.name).where(Projekt.geloescht_am.is_(None), Projekt.archiviert.is_(False))
     if not alle:
-        kunden = await assigned_kunde_ids(session, user_id)
-        pa = ProjektAufgabe
-        mitarbeit = [
-            exists().where(
-                pa.projekt_id == Projekt.id,
-                pa.typ.in_(zp.ZEITPLAN_TYPEN),
-                pa.geloescht_am.is_(None),
-                pa.zugewiesen_an == user_id,
-            ),
-            exists()
-            .where(pa.projekt_id == Projekt.id, pa.geloescht_am.is_(None), pa.typ.in_(zp.ZEITPLAN_TYPEN))
-            .where(
-                exists().where(
-                    Vorgang.id == pa.vorgang_id,
-                    Vorgang.geloescht_am.is_(None),
-                    or_(
-                        Vorgang.zugewiesener_user_id == user_id,
-                        exists().where(
-                            Termin.vorgang_id == Vorgang.id,
-                            Termin.techniker_id == user_id,
-                            Termin.geloescht_am.is_(None),
-                        ),
-                    ),
-                )
-            ),
-        ]
-        if kunden:
-            mitarbeit += [
-                exists().where(
-                    Auftrag.projekt_id == Projekt.id, Auftrag.geloescht_am.is_(None), Auftrag.kunde_id.in_(kunden)
-                ),
-                exists().where(
-                    Vorgang.projekt_id == Projekt.id, Vorgang.geloescht_am.is_(None), Vorgang.kunde_id.in_(kunden)
-                ),
-                exists().where(and_(Vertrag.id == Projekt.vertrag_id, Vertrag.kunde_id.in_(kunden))),
-            ]
-        stmt = stmt.where(or_(*mitarbeit))
+        stmt = stmt.where(await _mitarbeit_bedingung(session, user_id))
     projekte = (await session.execute(stmt.order_by(Projekt.name))).all()
     if not projekte:
         return []

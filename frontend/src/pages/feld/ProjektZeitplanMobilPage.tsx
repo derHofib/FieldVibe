@@ -48,7 +48,7 @@ export function ProjektZeitplanMobilPage() {
     queryKey: ["projekt-zeitplan", id],
     queryFn: () => zeitplanApi.get(id!),
     enabled: !!id,
-    retry: (n, e) => !(e instanceof ApiError && e.status === 403) && n < 2,
+    retry: (n, e) => !(e instanceof ApiError && (e.status === 403 || e.status === 404)) && n < 2,
   });
   // Eigene Antraege (Server liefert ohne Schreibrecht ohnehin nur die eigenen; Admins sehen alle, hier nur ihre).
   const { data: antraege } = useQuery({
@@ -157,7 +157,9 @@ export function ProjektZeitplanMobilPage() {
           <SkeletonList count={4} />
         ) : error ? (
           <p role="alert" className="text-sm text-st-fehlt">
-            Zeitplan konnte nicht geladen werden.
+            {error instanceof ApiError && error.status === 404
+              ? "Kein Zugriff auf diesen Zeitplan"
+              : "Zeitplan konnte nicht geladen werden."}
           </p>
         ) : gruppen.length === 0 ? (
           <EmptyState icon={CalendarRange} text="Für dieses Projekt gibt es noch keinen Zeitplan." />

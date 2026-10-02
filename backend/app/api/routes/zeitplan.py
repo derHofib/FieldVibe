@@ -94,6 +94,20 @@ router = APIRouter(
 )
 
 _LESEN = [Depends(_recht_eines_von(("projekte", "sehen"), ("projekte", "zeitplan_sehen")))]
+
+
+async def _mitarbeit_noetig(
+    projekt_id: UUID, auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> None:
+    """Ohne projekte.sehen nur Projekte mit Mitarbeit; 404 statt 403, damit die
+    Existenz fremder Projekte nicht verraten wird."""
+    if await _darf_projekte_sehen(session, auth):
+        return
+    if not await antrag_svc.hat_mitarbeit(session, auth.user_id, projekt_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Projekt nicht gefunden")
+
+
+_PROJEKT_LESEN = [*_LESEN, Depends(_mitarbeit_noetig)]
 _SEHEN = [Depends(require_recht("projekte", "sehen"))]
 _SCHREIBEN = [
     Depends(require_roles("mandant_admin", "custom")),
@@ -137,7 +151,7 @@ async def _lese(session: AsyncSession, projekt, basisplan_id: UUID | None) -> Ze
         raise HTTPException(status_code=_STATUS[type(exc)], detail=str(exc)) from exc
 
 
-@router.get("", response_model=ZeitplanRead, dependencies=_LESEN)
+@router.get("", response_model=ZeitplanRead, dependencies=_PROJEKT_LESEN)
 async def get_zeitplan(
     projekt_id: UUID, basisplan_id: UUID | None = None, session: AsyncSession = Depends(get_db)
 ) -> ZeitplanRead:
@@ -145,7 +159,7 @@ async def get_zeitplan(
     return await _lese(session, projekt, basisplan_id)
 
 
-@router.get("/pdf", dependencies=_LESEN)
+@router.get("/pdf", dependencies=_PROJEKT_LESEN)
 async def get_zeitplan_pdf(
     projekt_id: UUID,
     basisplan_id: UUID | None = None,
@@ -174,7 +188,7 @@ async def get_zeitplan_pdf(
     )
 
 
-@router.get("/basisplaene", response_model=list[ZeitplanBasisplanRead], dependencies=_LESEN)
+@router.get("/basisplaene", response_model=list[ZeitplanBasisplanRead], dependencies=_PROJEKT_LESEN)
 async def list_basisplaene(projekt_id: UUID, session: AsyncSession = Depends(get_db)) -> list[ZeitplanBasisplanRead]:
     projekt = await _require_projekt(session, projekt_id)
     return await svc.basisplaene_lesen(session, projekt)
@@ -417,7 +431,7 @@ async def _antrag_ausfuehren(session: AsyncSession, projekt_id: UUID, antrag_id:
     "/antraege",
     response_model=ZeitplanAntragRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[*_LESEN, *_BEANTRAGEN],
+    dependencies=[*_PROJEKT_LESEN, *_BEANTRAGEN],
 )
 async def create_antrag(
     projekt_id: UUID,
@@ -434,7 +448,7 @@ async def create_antrag(
     return await antrag_svc.lese_einen(session, projekt.id, antrag.id)
 
 
-@router.get("/antraege", response_model=list[ZeitplanAntragRead], dependencies=_LESEN)
+@router.get("/antraege", response_model=list[ZeitplanAntragRead], dependencies=_PROJEKT_LESEN)
 async def list_antraege(
     projekt_id: UUID,
     status_filter: ZeitplanAntragStatus | None = Query(default=None, alias="status"),
@@ -491,7 +505,7 @@ async def ablehnen_antrag(
 
 
 @router.post(
-    "/antraege/{antrag_id}/zurueckziehen", response_model=ZeitplanAntragEntscheidungRead, dependencies=_LESEN
+    "/antraege/{antrag_id}/zurueckziehen", response_model=ZeitplanAntragEntscheidungRead, dependencies=_PROJEKT_LESEN
 )
 async def zurueckziehen_antrag(
     projekt_id: UUID,

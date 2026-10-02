@@ -37,6 +37,11 @@ async def _techniker(client, make_user, mandant, name="Tom Techniker"):
     return user, auth_headers(await login(client, user.email, PW))
 
 
+async def _mitarbeit(client, h, pid, user) -> None:
+    """Macht user zum Zustaendigen eines eigenen Elements -> Mitarbeit im Projekt."""
+    await _element(client, h, pid, titel=f"Einsatz {user.id}", zugewiesen_an=str(user.id))
+
+
 async def _projekt(client, h, name="Neubau") -> str:
     return (await client.post("/api/projekte", headers=h, json={"name": name})).json()["id"]
 
@@ -57,7 +62,8 @@ async def test_techniker_sieht_zeitplan_aendert_aber_nicht_und_beantragt(client,
     mandant, _, h = await _admin(client, make_mandant, make_user)
     pid = await _projekt(client, h)
     el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(4))
-    _, th = await _techniker(client, make_user, mandant)
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
 
     assert (await client.get(_url(pid), headers=th)).status_code == 200
     assert (await client.get(_url(pid, "/basisplaene"), headers=th)).status_code == 200
@@ -98,6 +104,7 @@ async def test_nur_zeitplan_sehen_darf_nicht_beantragen(client, make_mandant, ma
     user = await _make_custom_user(mandant, typ)
     uh = auth_headers(await login(client, user.email, "hunter2!!"))
 
+    await _mitarbeit(client, h, pid, user)
     assert (await client.get(_url(pid), headers=uh)).status_code == 200
     assert (await _antrag(client, uh, pid, el["id"], art="problem")).status_code == 403
 
@@ -138,7 +145,8 @@ async def test_antrag_validierungen(client, make_mandant, make_user):
     schritt = await _element(client, h, pid, titel="Schritt", start_am=_d(0), ende_am=_d(4))
     meilenstein = await _element(client, h, pid, typ="meilenstein", titel="MS", start_am=_d(2))
     phase = await _element(client, h, pid, typ="phase", titel="Phase")
-    _, th = await _techniker(client, make_user, mandant)
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
 
     # verschieben braucht Start; Ende = Start + bisherige Dauer (5 Tage inkl.)
     assert (await _antrag(client, th, pid, schritt["id"])).status_code == 400
@@ -171,8 +179,10 @@ async def test_doppelantrag_409_aber_anderer_nutzer_ok(client, make_mandant, mak
     mandant, _, h = await _admin(client, make_mandant, make_user)
     pid = await _projekt(client, h)
     el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(4))
-    _, th = await _techniker(client, make_user, mandant)
-    _, th2 = await _techniker(client, make_user, mandant, name="Zweite")
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
+    u_th2, th2 = await _techniker(client, make_user, mandant, name="Zweite")
+    await _mitarbeit(client, h, pid, u_th2)
 
     assert (await _antrag(client, th, pid, el["id"], art="problem")).status_code == 201
     assert (await _antrag(client, th, pid, el["id"], art="problem")).status_code == 409
@@ -192,7 +202,8 @@ async def test_liefer_meilenstein_nur_problem(client, make_mandant, make_user):
         await session.flush()
         bid = str(b.id)
     ms = await _element(client, h, pid, typ="meilenstein", titel="Lieferung", bestellung_id=bid)
-    _, th = await _techniker(client, make_user, mandant)
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
 
     assert (await _antrag(client, th, pid, ms["id"], gewuenschter_start_am=_d(9))).status_code == 400
     assert (await _antrag(client, th, pid, ms["id"], art="problem")).status_code == 201
@@ -209,7 +220,8 @@ async def test_annehmen_verschiebt_inkl_nachfolger_und_offene_antraege(client, m
             _url(pid, "/abhaengigkeiten"), headers=h, json={"vorgaenger_id": a["id"], "nachfolger_id": b["id"]}
         )
     ).status_code == 200
-    _, th = await _techniker(client, make_user, mandant)
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
 
     antrag = (await _antrag(client, th, pid, a["id"], gewuenschter_start_am=_d(5))).json()
     zp = (await client.get(_url(pid), headers=h)).json()
@@ -251,7 +263,8 @@ async def test_annehmen_geloeschtes_element_409(client, make_mandant, make_user)
     mandant, _, h = await _admin(client, make_mandant, make_user)
     pid = await _projekt(client, h)
     el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(2))
-    _, th = await _techniker(client, make_user, mandant)
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
     antrag = (await _antrag(client, th, pid, el["id"], gewuenschter_start_am=_d(3))).json()
     assert (await client.delete(_url(pid, f"/elemente/{el['id']}"), headers=h)).status_code == 200
     resp = await client.post(_url(pid, f"/antraege/{antrag['id']}/annehmen"), headers=h, json={})
@@ -263,8 +276,10 @@ async def test_ablehnen_braucht_antwort_und_zurueckziehen_nur_ersteller(client, 
     mandant, _, h = await _admin(client, make_mandant, make_user)
     pid = await _projekt(client, h)
     el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(2))
-    _, th = await _techniker(client, make_user, mandant)
-    _, th2 = await _techniker(client, make_user, mandant, name="Zweite")
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
+    u_th2, th2 = await _techniker(client, make_user, mandant, name="Zweite")
+    await _mitarbeit(client, h, pid, u_th2)
     antrag = (await _antrag(client, th, pid, el["id"], art="problem")).json()
     base = _url(pid, f"/antraege/{antrag['id']}")
 
@@ -297,8 +312,10 @@ async def test_listen_sichtbarkeit_und_statusfilter(client, make_mandant, make_u
     mandant, _, h = await _admin(client, make_mandant, make_user)
     pid = await _projekt(client, h)
     el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(2))
-    _, th = await _techniker(client, make_user, mandant)
-    _, th2 = await _techniker(client, make_user, mandant, name="Zweite")
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
+    u_th2, th2 = await _techniker(client, make_user, mandant, name="Zweite")
+    await _mitarbeit(client, h, pid, u_th2)
     a1 = (await _antrag(client, th, pid, el["id"], art="problem")).json()
     await _antrag(client, th2, pid, el["id"], art="problem")
 
@@ -319,7 +336,8 @@ async def test_mandantentrennung(client, make_mandant, make_user):
     m2, _, h2 = await _admin(client, make_mandant, make_user)
     pid = await _projekt(client, h1)
     el = await _element(client, h1, pid, start_am=_d(0), ende_am=_d(2))
-    _, th = await _techniker(client, make_user, m1)
+    u_th, th = await _techniker(client, make_user, m1)
+    await _mitarbeit(client, h1, pid, u_th)
     antrag = (await _antrag(client, th, pid, el["id"], art="problem")).json()
 
     assert (await client.get(_url(pid, "/antraege"), headers=h2)).status_code == 404
@@ -335,6 +353,7 @@ async def test_notifications(client, make_mandant, make_user):
     pid = await _projekt(client, h)  # Ersteller = admin
     el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(2))
     techniker, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, techniker)
     antrag = (await _antrag(client, th, pid, el["id"], art="problem")).json()
 
     async with system_session() as session:
@@ -356,7 +375,8 @@ async def test_notification_zustaendiger_office_nutzer(client, make_mandant, mak
     dispo = await make_user(mandant=mandant, role="mandant_admin", password=PW, name="Zweiter Admin")
     pid = await _projekt(client, h)
     el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(2), zugewiesen_an=str(dispo.id))
-    _, th = await _techniker(client, make_user, mandant)
+    u_th, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, u_th)
     await _antrag(client, th, pid, el["id"], art="problem")
     async with system_session() as session:
         ids = {
@@ -364,6 +384,130 @@ async def test_notification_zustaendiger_office_nutzer(client, make_mandant, mak
             for n in (await session.execute(select(Notification).where(Notification.typ == "zeitplan_antrag"))).scalars()
         }
     assert ids == {admin.id, dispo.id}
+
+
+async def _alle_lese_endpunkte(client, th, pid, element_id) -> dict[str, int]:
+    """Status aller Lese-/Antrags-Endpunkte fuer die Mitarbeits-Tests."""
+    antrag = await _antrag(client, th, pid, element_id, art="problem")
+    antrag_id = antrag.json().get("id", str(uuid.uuid4()))
+    return {
+        "zeitplan": (await client.get(_url(pid), headers=th)).status_code,
+        "pdf": (await client.get(_url(pid, "/pdf"), headers=th)).status_code,
+        "basisplaene": (await client.get(_url(pid, "/basisplaene"), headers=th)).status_code,
+        "antraege": (await client.get(_url(pid, "/antraege"), headers=th)).status_code,
+        "antrag_anlegen": antrag.status_code,
+        "zurueckziehen": (await client.post(_url(pid, f"/antraege/{antrag_id}/zurueckziehen"), headers=th)).status_code,
+    }
+
+
+@pytest.mark.asyncio
+async def test_lesen_ohne_mitarbeit_404(client, make_mandant, make_user):
+    mandant, _, h = await _admin(client, make_mandant, make_user)
+    pid = await _projekt(client, h)
+    el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(4))
+    _, th = await _techniker(client, make_user, mandant)
+
+    assert set((await _alle_lese_endpunkte(client, th, pid, el["id"])).values()) == {404}
+    # Antrag, den ein Mitarbeiter stellt, ist fuer Fremde ebenfalls nicht erreichbar
+    u2, th2 = await _techniker(client, make_user, mandant, name="Zweite")
+    await _mitarbeit(client, h, pid, u2)
+    antrag = (await _antrag(client, th2, pid, el["id"], art="problem")).json()
+    assert (await client.post(_url(pid, f"/antraege/{antrag['id']}/zurueckziehen"), headers=th)).status_code == 404
+    # unbekanntes Projekt: gleiche Antwort wie ohne Mitarbeit
+    assert (await client.get(_url(uuid.uuid4()), headers=th)).status_code == 404
+    assert (await client.get("/api/projekte/meine-zeitplaene", headers=th)).json() == []
+
+
+@pytest.mark.asyncio
+async def test_lesen_mit_mitarbeit_als_element_zustaendiger(client, make_mandant, make_user):
+    mandant, _, h = await _admin(client, make_mandant, make_user)
+    pid = await _projekt(client, h)
+    el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(4))
+    user, th = await _techniker(client, make_user, mandant)
+    await _mitarbeit(client, h, pid, user)
+    assert await _alle_lese_endpunkte(client, th, pid, el["id"]) == {
+        "zeitplan": 200, "pdf": 200, "basisplaene": 200, "antraege": 200, "antrag_anlegen": 201, "zurueckziehen": 200,
+    }
+
+
+@pytest.mark.asyncio
+async def test_lesen_mit_mitarbeit_als_vorgang_techniker_und_termin(
+    client, make_mandant, make_user, make_kunde, make_vorgang
+):
+    from datetime import datetime, timezone
+
+    from app.models.termin import Termin
+
+    mandant, admin, h = await _admin(client, make_mandant, make_user)
+    kunde = await make_kunde(mandant=mandant)
+    p_vorgang = await _projekt(client, h, "Per Vorgang")
+    p_termin = await _projekt(client, h, "Per Termin")
+    user, th = await _techniker(client, make_user, mandant)
+    v1 = await make_vorgang(mandant=mandant, kunde=kunde, zugewiesener_user_id=user.id)
+    v2 = await make_vorgang(mandant=mandant, kunde=kunde)
+    async with system_session() as session:
+        start = datetime.now(timezone.utc)
+        session.add(
+            Termin(
+                mandant_id=mandant.id, vorgang_id=v2.id, techniker_id=user.id, erstellt_von=admin.id,
+                titel="Einsatz", start_at=start, ende_at=start + timedelta(hours=2),
+            )
+        )
+    e1 = await _element(client, h, p_vorgang, start_am=_d(0), ende_am=_d(2), vorgang_id=str(v1.id))
+    e2 = await _element(client, h, p_termin, start_am=_d(0), ende_am=_d(2), vorgang_id=str(v2.id))
+
+    assert (await client.get(_url(p_vorgang), headers=th)).status_code == 200
+    assert (await _antrag(client, th, p_vorgang, e1["id"], art="problem")).status_code == 201
+    assert (await client.get(_url(p_termin), headers=th)).status_code == 200
+    assert (await _antrag(client, th, p_termin, e2["id"], art="problem")).status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_lesen_mit_mitarbeit_als_zugewiesener_kunde(
+    client, make_mandant, make_user, make_kunde, make_vorgang, make_vertrag, make_kunde_zuweisung
+):
+    from app.models.auftrag import Auftrag
+
+    mandant, admin, h = await _admin(client, make_mandant, make_user)
+    kunde = await make_kunde(mandant=mandant)
+    fremder_kunde = await make_kunde(mandant=mandant)
+    user, th = await _techniker(client, make_user, mandant)
+    p_auftrag = await _projekt(client, h, "Per Auftrag")
+    p_vorgang = await _projekt(client, h, "Per Kunden-Vorgang")
+    p_vertrag = await _projekt(client, h, "Per Vertrag")
+    p_fremd = await _projekt(client, h, "Fremder Kunde")
+
+    # Vor der Zuweisung: kein Zugriff, auch wenn die Projekte schon am Kunden haengen.
+    async with system_session() as session:
+        session.add(
+            Auftrag(mandant_id=mandant.id, projekt_id=uuid.UUID(p_auftrag), kunde_id=kunde.id, titel="A", erstellt_von=admin.id)
+        )
+        session.add(
+            Auftrag(mandant_id=mandant.id, projekt_id=uuid.UUID(p_fremd), kunde_id=fremder_kunde.id, titel="F", erstellt_von=admin.id)
+        )
+    await make_vorgang(mandant=mandant, kunde=kunde, projekt_id=uuid.UUID(p_vorgang))
+    vertrag = await make_vertrag(mandant=mandant, kunde=kunde)
+    assert (await client.patch(f"/api/projekte/{p_vertrag}", headers=h, json={"vertrag_id": str(vertrag.id)})).status_code == 200
+    assert (await client.get(_url(p_auftrag), headers=th)).status_code == 404
+
+    await make_kunde_zuweisung(mandant=mandant, kunde=kunde, techniker=user)
+    for pid in (p_auftrag, p_vorgang, p_vertrag):
+        assert (await client.get(_url(pid), headers=th)).status_code == 200, pid
+    assert (await client.get(_url(p_fremd), headers=th)).status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_projekte_sehen_liest_ohne_mitarbeit(client, make_mandant, make_user):
+    mandant, _, h = await _admin(client, make_mandant, make_user)
+    pid = await _projekt(client, h)
+    el = await _element(client, h, pid, start_am=_d(0), ende_am=_d(4))
+    typ = await _make_custom_mit_projekte_recht(mandant, aktionen={"sehen", "zeitplan_beantragen"})
+    user = await _make_custom_user(mandant, typ)
+    uh = auth_headers(await login(client, user.email, "hunter2!!"))
+
+    assert await _alle_lese_endpunkte(client, uh, pid, el["id"]) == {
+        "zeitplan": 200, "pdf": 200, "basisplaene": 200, "antraege": 200, "antrag_anlegen": 201, "zurueckziehen": 200,
+    }
 
 
 @pytest.mark.asyncio
