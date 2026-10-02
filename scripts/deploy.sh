@@ -238,6 +238,20 @@ log "Richte die Datenbank-Rolle für die Anwendung ein (Voraussetzung für wirks
 ./scripts/app_rolle_einrichten.sh --nur-rolle --compose "${COMPOSE[*]}" \
   || err "Einrichtung der App-Rolle fehlgeschlagen -- Row-Level-Security wäre sonst wirkungslos, Deployment abgebrochen."
 
+# --- 8a. MinIO-Image bereitstellen -------------------------------------------
+# Das in docker-compose.yml gepinnte MinIO-Tag gibt es auf Docker Hub nicht
+# (MinIO liefert keine Community-Images mehr) -- es wird lokal aus dem
+# bisherigen :latest erzeugt, damit `up` nicht am Pull scheitert.
+MINIO_IMAGE="$(grep -oE 'minio/minio:RELEASE[^[:space:]]+' docker-compose.yml | head -n1)"
+if [[ -n "$MINIO_IMAGE" ]] && ! docker image inspect "$MINIO_IMAGE" &>/dev/null; then
+  if docker image inspect minio/minio:latest &>/dev/null || docker pull minio/minio:latest; then
+    log "Setze lokales MinIO-Tag $MINIO_IMAGE (aus minio/minio:latest)..."
+    docker tag minio/minio:latest "$MINIO_IMAGE"
+  else
+    err "MinIO-Image $MINIO_IMAGE nicht verfügbar und minio/minio:latest nicht ladbar."
+  fi
+fi
+
 # --- 8b. Stack starten ------------------------------------------------------
 # GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken -- rein fuer die
 # informative Update-Anzeige im Super-Admin-Bereich (aktueller vs. neuester
