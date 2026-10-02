@@ -255,11 +255,16 @@ function EventBubble({
           <span>{new Date(event.created_at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })}</span>
           {event.event_type === "kommentar" && <VerlaufTypTag>Kommentar</VerlaufTypTag>}
         </div>
-        {event.kundensichtbar && (
-          <span className="border border-tint px-2 py-0.5 text-tint">
-            Kundensichtbar
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {event.partner_sichtbar && event.author_user_id !== null && (
+            <span className="border border-tint px-2 py-0.5 text-tint">Partner sieht das</span>
+          )}
+          {event.kundensichtbar && (
+            <span className="border border-tint px-2 py-0.5 text-tint">
+              Kundensichtbar
+            </span>
+          )}
+        </div>
       </div>
       {event.event_type === "foto" && event.foto_url && (
         <>
@@ -473,6 +478,7 @@ export function VorgangDetailPage({
 
   const [comment, setComment] = useState("");
   const [kundensichtbar, setKundensichtbar] = useState(false);
+  const [anPartner, setAnPartner] = useState(false);
   const [kundenansicht, setKundenansicht] = useState(false);
   // Verlauf-Filter: "system" = Statuswechsel/automatische Eintraege,
   // "kommentare" = alles Nutzergenerierte (Kommentar/Foto/Unterschrift/
@@ -904,8 +910,9 @@ export function VorgangDetailPage({
   const { data: zugewiesenerPartner } = useQuery({
     queryKey: ["partner", vorgang?.partner_id],
     queryFn: () => partnerApi.get(vorgang!.partner_id!),
-    enabled: kannPartnerVerwalten && !!vorgang?.partner_id,
+    enabled: istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "sehen") && !!vorgang?.partner_id,
   });
+  const partnerKommentarMoeglich = istModulAktiv(currentUser, "nachunternehmer") && !!vorgang?.partner_id;
 
   const partnerZuweisenMutation = useMutation({
     mutationFn: () => vorgaengeApi.partnerZuweisen(id!, partnerAuswahl, partnerHonorar || undefined),
@@ -1070,17 +1077,19 @@ export function VorgangDetailPage({
           event_type: "kommentar",
           body: comment,
           kundensichtbar,
+          partner_sichtbar: partnerKommentarMoeglich && anPartner,
           client_uuid: crypto.randomUUID(),
         });
       } catch (err) {
         if (err instanceof ApiError) throw err; // echte Ablehnung, nicht queuen
-        await queueKommentar(id!, comment, kundensichtbar); // Netzwerkfehler -> offline
+        await queueKommentar(id!, comment, kundensichtbar, partnerKommentarMoeglich && anPartner); // Netzwerkfehler -> offline
         return null;
       }
     },
     onSuccess: () => {
       setComment("");
       setKundensichtbar(false);
+      setAnPartner(false);
       queryClient.invalidateQueries({ queryKey: ["vorgang-events", id] });
       queryClient.invalidateQueries({ queryKey: ["outbox", id] });
     },
@@ -1816,6 +1825,17 @@ export function VorgangDetailPage({
               e.target.value = "";
             }}
           />
+          {partnerKommentarMoeglich && (
+            <label className="mb-2 flex items-center gap-2 text-sm text-label2">
+              <input
+                type="checkbox"
+                checked={anPartner}
+                onChange={(e) => setAnPartner(e.target.checked)}
+                className="h-4 w-4 accent-tint"
+              />
+              Auch an Partner {zugewiesenerPartner?.name ?? ""}
+            </label>
+          )}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5">
               <button

@@ -19,6 +19,7 @@ export async function queueKommentar(
   vorgangId: string,
   body: string,
   kundensichtbar: boolean,
+  partnerSichtbar = false,
 ): Promise<string> {
   const clientUuid = crypto.randomUUID();
   const db = await getDb();
@@ -28,6 +29,7 @@ export async function queueKommentar(
     kind: "kommentar",
     body,
     kundensichtbar,
+    partnerSichtbar,
     created_at: new Date().toISOString(),
   });
   notify();
@@ -202,6 +204,7 @@ async function sendOutboxItem(item: OutboxItem): Promise<VorgangEvent | Vorgang>
         event_type: "kommentar",
         body: item.body,
         kundensichtbar: item.kundensichtbar,
+        partner_sichtbar: item.partnerSichtbar ?? false,
         client_uuid: item.client_uuid,
       }),
     });

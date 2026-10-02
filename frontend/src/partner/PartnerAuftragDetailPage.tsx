@@ -11,7 +11,7 @@ import { Sheet } from "../components/apple/Sheet";
 import { StatusPille } from "../components/apple/StatusPille";
 import { LEISTUNGSTYP_LABEL } from "../config/vorgangDarstellung";
 import { SkeletonList } from "../components/Skeleton";
-import type { Adresse, PartnerStatusSetzbar, PartnerVorgang, VorgangEvent } from "../types";
+import type { Adresse, PartnerKommentar, PartnerStatusSetzbar, PartnerVorgang } from "../types";
 import { formatDatum, formatEuro } from "../utils/format";
 import { auftragsPille, istBearbeitbar } from "./partnerStatus";
 
@@ -24,6 +24,30 @@ const STATUS_AKTIONEN: { status: PartnerStatusSetzbar; label: string }[] = [
   { status: "wartet_kunde", label: "Wartet auf Kunde" },
 ];
 
+function KommentarBlase({ kommentar }: { kommentar: PartnerKommentar }) {
+  const eigene = kommentar.autor === "partner";
+  return (
+    <li className={`flex flex-col ${eigene ? "items-end" : "items-start"}`}>
+      <div
+        className={`max-w-[85%] rounded-[var(--radius-ap-card)] px-3.5 py-2.5 ${
+          eigene ? "bg-tintbg text-label" : "bg-cell text-label"
+        }`}
+      >
+        <p className="text-[12px] font-semibold text-label2">{kommentar.autor_name}</p>
+        <p className="text-[15px] whitespace-pre-wrap">{kommentar.text}</p>
+      </div>
+      <p className="px-1 pt-0.5 text-[11px] text-label3">
+        {new Date(kommentar.erstellt_am).toLocaleString("de-DE", {
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
+    </li>
+  );
+}
+
 export function PartnerAuftragDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -32,13 +56,16 @@ export function PartnerAuftragDetailPage() {
   const [grund, setGrund] = useState("");
   const [abschliessenOffen, setAbschliessenOffen] = useState(false);
   const [kommentar, setKommentar] = useState("");
-  // Das Partner-API hat keinen Lese-Endpunkt fuer den Verlauf -- hier stehen
-  // nur die in dieser Sitzung gesendeten Kommentare.
-  const [gesendet, setGesendet] = useState<VorgangEvent[]>([]);
 
   const { data: auftrag, isLoading, error } = useQuery({
     queryKey: ["partnerportal-auftrag", id],
     queryFn: () => partnerPortalApi.auftrag(id),
+    enabled: !!id,
+  });
+
+  const { data: kommentare } = useQuery({
+    queryKey: ["partnerportal-kommentare", id],
+    queryFn: () => partnerPortalApi.kommentare(id),
     enabled: !!id,
   });
 
@@ -75,10 +102,10 @@ export function PartnerAuftragDetailPage() {
   });
   const senden = useMutation({
     mutationFn: (text: string) => partnerPortalApi.kommentieren(id, text),
-    onSuccess: (event) => {
+    onSuccess: () => {
       setFehler(null);
       setKommentar("");
-      setGesendet((alt) => [event, ...alt]);
+      void queryClient.invalidateQueries({ queryKey: ["partnerportal-kommentare", id] });
     },
     onError: bei,
   });
@@ -212,6 +239,17 @@ export function PartnerAuftragDetailPage() {
         </>
       )}
 
+      {kommentare && kommentare.length > 0 && (
+        <>
+          <AbschnittskopfB titel="Nachrichten" />
+          <ul className="space-y-2 px-4" aria-label="Nachrichtenverlauf">
+            {kommentare.map((k) => (
+              <KommentarBlase key={k.id} kommentar={k} />
+            ))}
+          </ul>
+        </>
+      )}
+
       {bearbeitbar && (
         <>
           <AbschnittskopfB titel="Kommentar an den Betrieb" />
@@ -241,19 +279,6 @@ export function PartnerAuftragDetailPage() {
               <Send size={16} aria-hidden="true" /> Senden
             </button>
           </form>
-          {gesendet.length > 0 && (
-            <div className="px-4 pt-3">
-              <GroupedList>
-                {gesendet.map((k, i) => (
-                  <div key={k.id} className="relative px-4 py-2.5">
-                    <p className="text-[15px] whitespace-pre-wrap text-label">{k.body}</p>
-                    <p className="text-[12px] text-label3">Gesendet {new Date(k.created_at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}</p>
-                    {i < gesendet.length - 1 && <span className="absolute right-0 bottom-0 left-4 h-px bg-sep" aria-hidden="true" />}
-                  </div>
-                ))}
-              </GroupedList>
-            </div>
-          )}
         </>
       )}
 

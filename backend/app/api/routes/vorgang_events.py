@@ -95,6 +95,12 @@ async def create_event(
             response.status_code = status.HTTP_200_OK
             return _to_read_model(existing_event)
 
+    if body.partner_sichtbar and (body.event_type != "kommentar" or vorgang.partner_id is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nur Kommentare an Vorgängen mit zugewiesenem Partner können für den Partner freigegeben werden",
+        )
+
     event = VorgangEvent(
         mandant_id=auth.mandant_id,
         vorgang_id=vorgang_id,
@@ -105,6 +111,7 @@ async def create_event(
         ref_entity_type=body.ref_entity_type,
         ref_entity_id=body.ref_entity_id,
         kundensichtbar=body.kundensichtbar,
+        partner_sichtbar=body.partner_sichtbar,
         client_uuid=body.client_uuid,
     )
     session.add(event)

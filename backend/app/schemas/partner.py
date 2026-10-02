@@ -125,6 +125,8 @@ class CurrentPartner(BaseModel):
     partner_name: str
     name: str
     email: str
+    mandant_name: str
+    mandant_logo_url: str | None = None
 
 
 class PartnerPasswortVergessenRequest(BaseModel):
@@ -143,6 +145,14 @@ class PartnerPasswortResetRequest(BaseModel):
 
 class PartnerVorgangKommentar(BaseModel):
     body: str
+
+
+class PartnerKommentarRead(BaseModel):
+    id: int
+    text: str
+    erstellt_am: datetime
+    autor: Literal["partner", "betrieb"]
+    autor_name: str
 
 
 class PartnerVorgangStatusUpdate(BaseModel):

@@ -351,6 +351,15 @@ export interface Standort {
   updated_at: string;
 }
 
+// Whitelist des Kundenportals (siehe StandortPortalRead im Backend).
+export interface PortalStandort {
+  id: string;
+  bezeichnung: string;
+  adresse: Adresse;
+  aktiv: boolean;
+  created_at: string;
+}
+
 export type VorgangStatus =
   | "neu"
   | "geplant"
@@ -464,6 +473,7 @@ export interface VorgangEvent {
   author_user_id: string | null;
   is_system: boolean;
   kundensichtbar: boolean;
+  partner_sichtbar?: boolean;
   body: string | null;
   payload: Record<string, unknown>;
   ref_entity_type: string | null;
@@ -668,7 +678,7 @@ export interface SearchResponse {
   treffer: SearchHit[];
 }
 
-export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot";
+export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot" | "anfrage" | "eingangsrechnung" | "partner_kommentar";
 
 export interface NotificationEntry {
   id: number;
@@ -2265,6 +2275,28 @@ export interface CurrentPartner {
   partner_name: string;
   name: string;
   email: string;
+  mandant_name: string;
+  mandant_logo_url: string | null;
+}
+
+/** Eintrag im Partnerportal-Verlauf (Backend: PartnerKommentarRead) -- nur
+ * eigene und vom Betrieb ausdrücklich freigegebene Kommentare. */
+export interface PartnerKommentar {
+  id: number;
+  text: string;
+  erstellt_am: string;
+  autor: "partner" | "betrieb";
+  autor_name: string;
+}
+
+export interface PartnerZugang {
+  id: string;
+  partner_id: string;
+  email: string;
+  name: string;
+  aktiv: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Auftrag aus Sicht des Partners (PartnerVorgangRead) -- bewusst ohne

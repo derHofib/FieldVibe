@@ -21,6 +21,7 @@ from app.core.security import (
     hash_password,
 )
 from app.db.session import system_session
+from app.models.mandant import Mandant
 from app.models.partner import Partner
 from app.models.partner_zugang import PartnerZugang
 from app.schemas.auth import LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
@@ -31,6 +32,7 @@ from app.schemas.partner import (
 )
 from app.services.email_service import EmailNichtKonfiguriert, send_email
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
+from app.services import storage_service
 from app.services.partner_auth_service import authenticate_partner
 
 router = APIRouter(prefix="/api/partnerportal/auth", tags=["partnerportal"])
@@ -130,12 +132,20 @@ async def me(
     if partner is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner nicht gefunden")
 
+    mandant = await session.get(Mandant, auth.mandant_id)
+
     return CurrentPartner(
         zugang_id=zugang.id,
         partner_id=partner.id,
         partner_name=partner.name,
         name=zugang.name,
         email=zugang.email,
+        mandant_name=mandant.name if mandant else "",
+        mandant_logo_url=(
+            storage_service.presigned_get_url(mandant.logo_object_key)
+            if mandant and mandant.logo_object_key
+            else None
+        ),
     )
 
 

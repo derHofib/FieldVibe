@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Text, func
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Text, false, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -46,6 +46,11 @@ class VorgangEvent(Base):
     )
     is_system: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     kundensichtbar: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Nur fuer Kommentare: im Partnerportal-Verlauf sichtbar (eigene
+    # Partner-Kommentare immer, Office-Kommentare nur bei Freigabe).
+    partner_sichtbar: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     body: Mapped[str | None] = mapped_column(Text)
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     ref_entity_type: Mapped[str | None] = mapped_column(Text)

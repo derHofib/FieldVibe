@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Briefcase, ShieldAlert } from "lucide-react";
+import { Briefcase, Link2, ShieldAlert } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
+import { einladungFehlerText, partnerPortalLink, portalZugangStatus } from "../../utils/partnerZugang";
 import type { Adresse, PartnerFreigabeStatus, PartnerNachweisTyp } from "../../types";
 
 const NACHWEIS_TYP_LABEL: Record<PartnerNachweisTyp, string> = {
@@ -384,6 +385,236 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
   );
 }
 
+function datumKurz(iso: string): string {
+  return new Date(iso).toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" });
+}
+
+function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerEmail: string | null }) {
+  const queryClient = useQueryClient();
+  const { hatRecht } = useAuth();
+  const [formOffen, setFormOffen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [kopiert, setKopiert] = useState(false);
+
+  const { data: zugaenge } = useQuery({
+    queryKey: ["partner-zugaenge", partnerId],
+    queryFn: () => partnerApi.zugaenge(partnerId),
+  });
+  const { data: einladungen } = useQuery({
+    queryKey: ["partner-einladungen", partnerId],
+    queryFn: () => partnerApi.einladungen(partnerId),
+  });
+
+  function neuLaden() {
+    void queryClient.invalidateQueries({ queryKey: ["partner-zugaenge", partnerId] });
+    void queryClient.invalidateQueries({ queryKey: ["partner-einladungen", partnerId] });
+  }
+  function bei(err: unknown) {
+    setFehler(
+      err instanceof ApiError
+        ? einladungFehlerText(err.status, err.message)
+        : "Verbindung fehlgeschlagen — bitte erneut versuchen.",
+    );
+  }
+
+  const einladen = useMutation({
+    mutationFn: () => partnerApi.einladen(partnerId, email.trim()),
+    onSuccess: () => {
+      setFehler(null);
+      setFormOffen(false);
+      neuLaden();
+    },
+    onError: bei,
+  });
+  const erneut = useMutation({
+    mutationFn: (einladungId: string) => partnerApi.einladungErneutSenden(partnerId, einladungId),
+    onSuccess: () => {
+      setFehler(null);
+      neuLaden();
+    },
+    onError: bei,
+  });
+  const widerrufen = useMutation({
+    mutationFn: (einladungId: string) => partnerApi.einladungWiderrufen(partnerId, einladungId),
+    onSuccess: () => {
+      setFehler(null);
+      neuLaden();
+    },
+    onError: bei,
+  });
+  const sperren = useMutation({
+    mutationFn: (v: { zugangId: string; aktiv: boolean }) =>
+      partnerApi.zugangAktivSetzen(partnerId, v.zugangId, v.aktiv),
+    onSuccess: () => {
+      setFehler(null);
+      neuLaden();
+    },
+    onError: bei,
+  });
+
+  if (!zugaenge || !einladungen) return null;
+  const status = portalZugangStatus(zugaenge, einladungen);
+  const kannEinladen = hatRecht("partner", "erstellen");
+  const kannWiderrufen = hatRecht("partner", "loeschen");
+  const kannSperren = hatRecht("partner", "bearbeiten");
+  const arbeitet = einladen.isPending || erneut.isPending || widerrufen.isPending || sperren.isPending;
+  const portalLink = partnerPortalLink(window.location.origin);
+
+  const einladungKopf = status.art === "offen" || status.art === "abgelaufen" ? status.einladung : null;
+
+  return (
+    <div className="card-ap p-4">
+      <h2 className="mb-2 text-sm font-semibold text-label2">Portal-Zugang</h2>
+
+      {status.art === "keiner" && <p className="text-sm text-label">Kein Zugang eingerichtet.</p>}
+      {(status.art === "aktiv" || status.art === "gesperrt") && (
+        <div className="text-sm">
+          <p className="text-label">
+            <span
+              className={`mr-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                status.art === "aktiv" ? "bg-st-erledigt-bg text-st-erledigt" : "bg-st-fehlt-bg text-st-fehlt"
+              }`}
+            >
+              {status.art === "aktiv" ? "Aktiv" : "Gesperrt"}
+            </span>
+            seit {datumKurz(status.zugang.created_at)}
+          </p>
+          <p className="mt-1 break-all text-label2">
+            {status.zugang.name} · {status.zugang.email}
+          </p>
+        </div>
+      )}
+      {einladungKopf && (
+        <div className="text-sm">
+          <p className="text-label">
+            <span className="mr-2 rounded-full bg-st-arbeit-bg px-2 py-0.5 text-xs font-semibold text-st-arbeit">
+              {status.art === "abgelaufen" ? "Einladung abgelaufen" : "Einladung offen"}
+            </span>
+            seit {datumKurz(einladungKopf.created_at)}
+          </p>
+          <p className="mt-1 break-all text-label2">{einladungKopf.email}</p>
+        </div>
+      )}
+
+      {fehler && (
+        <p role="alert" className="mt-3 rounded-md bg-st-fehlt-bg px-3 py-2 text-sm text-st-fehlt">
+          {fehler}
+        </p>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {einladungKopf && kannEinladen && (
+          <button
+            onClick={() => erneut.mutate(einladungKopf.id)}
+            disabled={arbeitet}
+            className="btn-touch btn-ap px-3 py-1.5 text-xs font-semibold"
+          >
+            Einladung erneut senden
+          </button>
+        )}
+        {einladungKopf?.registrierungslink && (
+          <button
+            onClick={async () => {
+              await navigator.clipboard.writeText(einladungKopf.registrierungslink!);
+              setKopiert(true);
+              setTimeout(() => setKopiert(false), 1500);
+            }}
+            className="btn-touch btn-ap px-3 py-1.5 text-xs font-semibold"
+          >
+            {kopiert ? "Kopiert ✓" : "Link kopieren"}
+          </button>
+        )}
+        {einladungKopf && kannWiderrufen && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Einladung an ${einladungKopf.email} widerrufen?`)) widerrufen.mutate(einladungKopf.id);
+            }}
+            disabled={arbeitet}
+            className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt"
+          >
+            Einladung widerrufen
+          </button>
+        )}
+        {(status.art === "aktiv" || status.art === "gesperrt") && kannSperren && (
+          <button
+            onClick={() => {
+              if (
+                status.art === "gesperrt" ||
+                window.confirm("Zugang sperren? Der Partner kann sich danach nicht mehr anmelden.")
+              ) {
+                sperren.mutate({ zugangId: status.zugang.id, aktiv: status.art === "gesperrt" });
+              }
+            }}
+            disabled={arbeitet}
+            className="btn-touch btn-ap px-3 py-1.5 text-xs font-semibold"
+          >
+            {status.art === "gesperrt" ? "Zugang entsperren" : "Zugang sperren"}
+          </button>
+        )}
+        {(status.art === "keiner" || status.art === "abgelaufen") && kannEinladen && !formOffen && (
+          <button
+            onClick={() => {
+              setEmail(partnerEmail ?? "");
+              setFormOffen(true);
+            }}
+            className="btn-touch btn-ap-primary rounded-md px-3 py-1.5 text-xs font-semibold"
+          >
+            Zugang einladen
+          </button>
+        )}
+      </div>
+
+      {formOffen && (
+        <form
+          className="mt-3 space-y-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setFehler(null);
+            einladen.mutate();
+          }}
+        >
+          <label htmlFor="partner-einladung-email" className="block text-xs text-label2">
+            E-Mail-Adresse des Partners
+          </label>
+          <input
+            id="partner-einladung-email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
+          />
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={einladen.isPending || !email.trim()}
+              className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
+            >
+              Einladung senden
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormOffen(false)}
+              className="btn-touch flex-1 rounded-md border border-sep py-2 text-sm font-medium text-label"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </form>
+      )}
+
+      <p className="mt-3 flex items-start gap-1.5 text-xs text-label2">
+        <Link2 size={13} strokeWidth={2} className="mt-0.5 shrink-0" aria-hidden="true" />
+        <span>
+          Der Partner meldet sich im Partnerportal an:{" "}
+          <span className="font-medium break-all text-label">{portalLink}</span>
+        </span>
+      </p>
+    </div>
+  );
+}
+
 function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
   const navigate = useNavigate();
   const { data: vorgaenge } = useQuery({
@@ -482,6 +713,7 @@ export function PartnerProfilePage() {
           queryClient.invalidateQueries({ queryKey: ["partner", id] });
         }}
       />
+      <PortalZugang partnerId={id!} partnerEmail={partner.email} />
       <NachweiseVerwaltung partnerId={id!} kannVerwalten={kannVerwalten} />
       <ZugewieseneVorgaenge partnerId={id!} />
     </div>

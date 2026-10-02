@@ -14,6 +14,7 @@ export interface OutboxItem {
   // "kommentar": JSON-Body fuer POST .../events
   body?: string;
   kundensichtbar?: boolean;
+  partnerSichtbar?: boolean;
   // "foto": Blob wird lokal gehalten, bis online gesendet werden kann
   fotoBlob?: Blob;
   fotoName?: string;

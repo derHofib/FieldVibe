@@ -9,11 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import PartnerAuthContext, get_current_partner, get_partner_db, require_module_partner
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.notification import Notification
+from app.models.partner import Partner
 from app.models.projekt import Projekt, ProjektAufgabe
 from app.models.vorgang import Vorgang
+from app.models.user import User
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.partner import (
     PartnerAntwort,
+    PartnerKommentarRead,
     PartnerVorgangKommentar,
     PartnerVorgangRead,
     PartnerVorgangStatusUpdate,
@@ -21,6 +25,7 @@ from app.schemas.partner import (
 )
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.event_bus import event_bus
+from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 from app.services.partner_service import apply_partner_status_transition
 from app.services.zeitplan_service import VORGANG_ERLEDIGT
 from app.services.vorgang_completion_service import (
@@ -237,6 +242,47 @@ async def auftrag_status_aendern(
     return await _to_partner_read(session, vorgang)
 
 
+@router.get("/auftraege/{vorgang_id}/kommentare", response_model=list[PartnerKommentarRead])
+async def list_kommentare(
+    vorgang_id: UUID,
+    auth: PartnerAuthContext = Depends(get_current_partner),
+    session: AsyncSession = Depends(get_partner_db),
+) -> list[PartnerKommentarRead]:
+    """Nur eigene Partner-Kommentare und im Office ausdruecklich freigegebene
+    (partner_sichtbar) -- alles andere im Verlauf ist intern. Bewusst kein
+    VorgangEventRead: autor_name statt User-ID, keine Payloads."""
+    vorgang = await _require_eigener_vorgang(session, auth, vorgang_id)
+    zeilen = (
+        await session.execute(
+            select(VorgangEvent, User.name)
+            .outerjoin(User, User.id == VorgangEvent.author_user_id)
+            .where(
+                VorgangEvent.vorgang_id == vorgang.id,
+                VorgangEvent.event_type == "kommentar",
+                VorgangEvent.partner_sichtbar.is_(True),
+                VorgangEvent.body.is_not(None),
+                # Kommentare eines frueher zugewiesenen anderen Partners
+                # bleiben ausgeblendet.
+                (VorgangEvent.author_user_id.is_not(None))
+                | (VorgangEvent.payload["partner_id"].astext == str(auth.partner_id)),
+            )
+            .order_by(VorgangEvent.id.asc())
+        )
+    ).all()
+    return [
+        PartnerKommentarRead(
+            id=e.id,
+            text=e.body or "",
+            erstellt_am=e.created_at,
+            autor="betrieb" if e.author_user_id is not None else "partner",
+            autor_name=(user_name or "Ihr Ansprechpartner")
+            if e.author_user_id is not None
+            else "Sie",
+        )
+        for e, user_name in zeilen
+    ]
+
+
 @router.post("/auftraege/{vorgang_id}/kommentare", response_model=VorgangEventRead, status_code=status.HTTP_201_CREATED)
 async def kommentar_erstellen(
     vorgang_id: UUID,
@@ -262,12 +308,35 @@ async def kommentar_erstellen(
         event_type="kommentar",
         author_user_id=None,
         body=body.body,
+        partner_sichtbar=True,
         payload={"partner_id": str(auth.partner_id), "partner_zugang_id": str(auth.zugang_id)},
     )
     session.add(event)
     vorgang.last_activity_at = datetime.now(timezone.utc)
     await session.flush()
     await session.refresh(event)
+
+    empfaenger = (
+        {vorgang.zugewiesener_user_id}
+        if vorgang.zugewiesener_user_id is not None
+        else await dispo_verantwortliche_user_ids(session, vorgang.mandant_id)
+    )
+    partner = await session.get(Partner, auth.partner_id)
+    for user_id in empfaenger:
+        session.add(
+            Notification(
+                mandant_id=vorgang.mandant_id,
+                user_id=user_id,
+                typ="partner_kommentar",
+                titel=(
+                    f"Neuer Kommentar von {partner.name if partner else 'Partner'} "
+                    f"zu {vorgang.vorgangsnummer}: {vorgang.titel}"
+                ),
+                ref_entity_type="vorgang",
+                ref_entity_id=vorgang.id,
+            )
+        )
+    await session.flush()
     await event_bus.publish(
         vorgang.mandant_id, "feed_update", {"vorgang_id": str(vorgang.id), "reason": "geaendert"}
     )

@@ -104,6 +104,8 @@ import type {
   PapierkorbEintrag,
   PapierkorbEntityTyp,
   Partner,
+  PartnerKommentar,
+  PartnerZugang,
   PartnerNachweis,
   PartnerNachweisTyp,
   PlanSymbol,
@@ -144,6 +146,7 @@ import type {
   PortalAngebot,
   PortalAnlage,
   PortalRechnung,
+  PortalStandort,
   PortalVorgang,
   PortalVorgangAnfrage,
   PortalVorgangEvent,
@@ -456,6 +459,22 @@ export const partnerApi = {
   },
   nachweisUrl: (id: string, nachweisId: string) =>
     apiFetch<{ url: string }>(`/api/partner/${id}/nachweise/${nachweisId}/url`),
+  zugaenge: (id: string) => apiFetch<PartnerZugang[]>(`/api/partner/${id}/zugaenge`),
+  zugangAktivSetzen: (id: string, zugangId: string, aktiv: boolean) =>
+    apiFetch<PartnerZugang>(`/api/partner/${id}/zugaenge/${zugangId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ aktiv }),
+    }),
+  einladungen: (id: string) => apiFetch<Einladung[]>(`/api/partner/${id}/einladungen`),
+  einladen: (id: string, email: string) =>
+    apiFetch<Einladung>(`/api/partner/${id}/einladungen`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  einladungErneutSenden: (id: string, einladungId: string) =>
+    apiFetch<Einladung>(`/api/partner/${id}/einladungen/${einladungId}/erneut-senden`, { method: "POST" }),
+  einladungWiderrufen: (id: string, einladungId: string) =>
+    apiFetch<void>(`/api/partner/${id}/einladungen/${einladungId}`, { method: "DELETE" }),
 };
 
 export const technikerZuweisungenApi = {
@@ -738,6 +757,7 @@ export const vorgangEventsApi = {
       event_type: VorgangEventType;
       body?: string;
       kundensichtbar?: boolean;
+      partner_sichtbar?: boolean;
       client_uuid?: string;
     },
   ) =>
@@ -1819,6 +1839,8 @@ export const partnerPortalApi = {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
+  kommentare: (id: string) =>
+    partnerApiFetch<PartnerKommentar[]>(`/api/partnerportal/auftraege/${id}/kommentare`),
   kommentieren: (id: string, body: string) =>
     partnerApiFetch<VorgangEvent>(`/api/partnerportal/auftraege/${id}/kommentare`, {
       method: "POST",
@@ -1994,9 +2016,9 @@ export const kundenportalApi = {
   angebotPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/angebote/${id}/pdf`),
   rechnungen: () => kundenApiFetch<PortalRechnung[]>("/api/kundenportal/rechnungen"),
   rechnungPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/rechnungen/${id}/pdf`),
-  standorte: () => kundenApiFetch<Standort[]>("/api/kundenportal/standorte"),
+  standorte: () => kundenApiFetch<PortalStandort[]>("/api/kundenportal/standorte"),
   standortAnlegen: (body: { bezeichnung: string; adresse?: Adresse }) =>
-    kundenApiFetch<Standort>("/api/kundenportal/standorte", {
+    kundenApiFetch<PortalStandort>("/api/kundenportal/standorte", {
       method: "POST",
       body: JSON.stringify(body),
     }),

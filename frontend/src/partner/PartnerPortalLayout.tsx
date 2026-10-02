@@ -12,15 +12,21 @@ const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
 ];
 
 // Mobil: Bottom-Nav (wie Feld-App); ab md: Navigation in der Kopfleiste.
-// Das Backend liefert dem Partner keinen Mandantennamen/-logo, daher die
-// FieldVibe-Wortmarke plus Firmenname des Partners.
+// Kopfleiste zeigt den Betrieb (Logo bzw. Name), der den Partner beauftragt --
+// die FieldVibe-Wortmarke steht nur klein im Footer.
 export function PartnerPortalLayout() {
   const { currentPartner } = usePartnerAuth();
 
   return (
     <div className="min-h-screen bg-gbg text-label" style={{ paddingBottom: "calc(61px + env(safe-area-inset-bottom))" }}>
       <header className="sticky top-0 z-30 flex items-center gap-3 border-b-[0.5px] border-sep bg-bar px-4 py-2.5 backdrop-blur-xl">
-        <Logo variante="wortmarke" hoehe={22} />
+        {currentPartner?.mandant_logo_url ? (
+          <img src={currentPartner.mandant_logo_url} alt={currentPartner.mandant_name} className="h-7 max-w-[140px] object-contain" />
+        ) : (
+          <span className="max-w-[160px] truncate text-[17px] font-bold text-label">
+            {currentPartner?.mandant_name ?? <Logo variante="wortmarke" hoehe={22} />}
+          </span>
+        )}
         <span className="hidden text-[13px] font-semibold tracking-wide text-label2 uppercase sm:inline">Partnerportal</span>
         <nav aria-label="Hauptnavigation" className="ml-4 hidden items-center gap-1 md:flex">
           {NAV_ITEMS.map((item) => (
@@ -44,6 +50,10 @@ export function PartnerPortalLayout() {
       </header>
 
       <Outlet />
+
+      <footer className="flex items-center justify-center gap-1.5 pt-2 pb-4 text-[11px] text-label3">
+        via <Logo variante="wortmarke" hoehe={12} />
+      </footer>
 
       <nav
         aria-label="Hauptnavigation mobil"

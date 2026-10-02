@@ -31,6 +31,8 @@ class VorgangEventCreate(BaseModel):
     ref_entity_type: str | None = None
     ref_entity_id: UUID | None = None
     kundensichtbar: bool = False
+    # Nur fuer Kommentare an Vorgaengen mit zugewiesenem Partner erlaubt.
+    partner_sichtbar: bool = False
     client_uuid: UUID | None = None
 
 
@@ -43,6 +45,7 @@ class VorgangEventRead(BaseModel):
     author_user_id: UUID | None
     is_system: bool
     kundensichtbar: bool
+    partner_sichtbar: bool = False
     body: str | None
     payload: dict
     ref_entity_type: str | None
