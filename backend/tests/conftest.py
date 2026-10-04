@@ -49,6 +49,8 @@ from app.core.rate_limit import (
     login_account_limiter,
     login_ip_limiter,
     password_reset_ip_limiter,
+    fehlerbericht_user_limiter,
+    fehlerbericht_service_ip_limiter,
 )
 from app.core.security import hash_password
 from app.db.session import engine, system_session
@@ -256,6 +258,8 @@ def _reset_rate_limiters():
     login_account_limiter._failures.clear()
     login_ip_limiter._failures.clear()
     password_reset_ip_limiter._failures.clear()
+    fehlerbericht_user_limiter._failures.clear()
+    fehlerbericht_service_ip_limiter._failures.clear()
     yield
 
 

@@ -104,6 +104,10 @@ def new_plan_symbol_key(mandant_id: uuid.UUID, filename: str) -> str:
     return f"mandanten/{mandant_id}/plan-symbole/{uuid.uuid4()}.{suffix}"
 
 
+def new_fehlerbericht_screenshot_key(mandant_id: uuid.UUID, bericht_id: uuid.UUID, art: str) -> str:
+    return f"mandanten/{mandant_id}/fehlerberichte/{bericht_id}/{art}-{uuid.uuid4()}"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) verschluesselt
     # Kundenfotos/Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der

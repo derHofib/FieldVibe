@@ -11,6 +11,7 @@ from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.einladung import Einladung
 from app.models.email_log import EmailLog
 from app.models.fahrzeug_zuweisung import FahrzeugZuweisung
+from app.models.fehlerbericht import Fehlerbericht
 from app.models.form_modul import (
     FormAuftragstypZuordnung,
     FormField,
@@ -96,6 +97,7 @@ __all__ = [
     "Einladung",
     "EmailLog",
     "FahrzeugZuweisung",
+    "Fehlerbericht",
     "FormAuftragstypZuordnung",
     "FormField",
     "FormGroup",

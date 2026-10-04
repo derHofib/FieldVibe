@@ -149,6 +149,19 @@ class Settings(BaseSettings):
     # Koordinaten), auch wenn ein Mandant das Modul aktiviert hat.
     mapbox_access_token: str | None = None
 
+    # --- In-App-Fehlerberichte (app/services/fehlerbericht_service.py) ------
+    # Berichte enthalten Netzwerk-/Konsolenkontext -- deshalb nach X Tagen
+    # automatisch loeschen (inkl. Screenshots), Standard 90.
+    fehlerbericht_aufbewahrung_tage: int = Field(
+        default=90, validation_alias="FIELDVIBE_FEHLERBERICHT_AUFBEWAHRUNG_TAGE"
+    )
+    # sha256-Hex des Bearer-Tokens fuer die Service-API (/api/service/
+    # fehlerberichte, fuer Claude). None = Service-API komplett aus (404).
+    # Erzeugen: python -m app.cli fehlerbericht-token
+    fehlerbericht_service_token_hash: str | None = Field(
+        default=None, validation_alias="FIELDVIBE_FEHLERBERICHT_TOKEN_HASH"
+    )
+
     # --- Update-Anzeige im Super-Admin-Bereich (rein informativ, kein
     # automatisches Ausfuehren von Updates aus der Web-App heraus -- siehe
     # app/services/version_service.py). git_commit wird beim Docker-Build

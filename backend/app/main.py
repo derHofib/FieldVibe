@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.routes import (
+    fehlerberichte,
     account_typen,
     angebote,
     anlagen,
@@ -176,6 +177,8 @@ app.include_router(projekte.router)
 app.include_router(projekte.aufgaben_router)
 app.include_router(zeitplan.router)
 app.include_router(zeitplan.vorlagen_router)
+app.include_router(fehlerberichte.router)
+app.include_router(fehlerberichte.service_router)
 
 
 @app.get("/healthz")

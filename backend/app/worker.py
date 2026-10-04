@@ -19,9 +19,11 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
+from app.core.config import get_settings
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine, system_session
 from app.services.email_ingest_service import run_email_ingest
+from app.services.fehlerbericht_service import loesche_abgelaufene_fehlerberichte
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
 from app.services.mail_sync_service import run_mail_sync
@@ -69,6 +71,16 @@ async def _run_hourly_tick() -> None:
             logger.info("E-Mail-Rechnungseingang-Import abgeschlossen: %s", email_ergebnis)
         except Exception:
             logger.exception("E-Mail-Rechnungseingang-Import fehlgeschlagen")
+
+        # Einmal taeglich zur Standard-Scheduler-Stunde -- unabhaengig davon,
+        # ob gerade ein Mandant faellig ist (Aufbewahrung gilt plattformweit).
+        if jetzt.hour == get_settings().scheduler_default_stunde_utc:
+            try:
+                geloescht = await loesche_abgelaufene_fehlerberichte()
+                if geloescht:
+                    logger.info("Fehlerbericht-Aufbewahrung: %d abgelaufene(r) Bericht(e) gelöscht", geloescht)
+            except Exception:
+                logger.exception("Fehlerbericht-Aufbewahrungslauf fehlgeschlagen")
 
         if not mandant_ids:
             logger.info("Keine Mandanten für Stunde %02d:00 UTC fällig", jetzt.hour)

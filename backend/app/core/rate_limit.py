@@ -55,6 +55,12 @@ class SlidingWindowRateLimiter:
             bucket = self._failures[key]
         bucket.append(now)
 
+    def hit(self, key: str) -> None:
+        """Zaehlt jeden Aufruf (nicht nur Fehlversuche) und wirft 429, sobald
+        das Fenster voll ist -- fuer Mengenbegrenzung statt Brute-Force-Schutz."""
+        self.check(key)
+        self.record_failure(key)
+
     def record_success(self, key: str) -> None:
         self._failures.pop(key, None)
 
@@ -68,6 +74,10 @@ login_account_limiter = SlidingWindowRateLimiter(max_attempts=5, window_seconds=
 login_ip_limiter = SlidingWindowRateLimiter(max_attempts=20, window_seconds=15 * 60)
 
 password_reset_ip_limiter = SlidingWindowRateLimiter(max_attempts=5, window_seconds=60 * 60)
+
+# Fehlerberichte: Mengenbegrenzung je Nutzer; Fehlversuche am Service-Token je IP.
+fehlerbericht_user_limiter = SlidingWindowRateLimiter(max_attempts=10, window_seconds=60 * 60)
+fehlerbericht_service_ip_limiter = SlidingWindowRateLimiter(max_attempts=10, window_seconds=15 * 60)
 
 
 def client_ip(request) -> str:  # type: ignore[no-untyped-def]

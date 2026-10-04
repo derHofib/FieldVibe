@@ -23,6 +23,8 @@ RECHTE_BEREICHE = (
     "formulare",
     "partner",
     "projekte",
+    # In-App-Fehlerberichte; "erstellen" bedeutet melden.
+    "fehlerberichte",
 )
 RECHTE_AKTIONEN = ("sehen", "erstellen", "bearbeiten", "loeschen")
 # Zusatzaktionen, die nur fuer einen einzelnen Bereich existieren -- sonst
