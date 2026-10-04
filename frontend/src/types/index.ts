@@ -1,3 +1,5 @@
+import type { FehlerberichtKontext } from "../bugreport/typen";
+
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
 
 // Antwort von GET /healthz (unauthentifiziert, fuer Infra-Monitoring UND
@@ -2377,3 +2379,65 @@ export interface PartnerVorgang {
 }
 
 export type PartnerStatusSetzbar = "in_arbeit" | "wartet_kunde" | "abgeschlossen";
+
+export type FehlerberichtStatus = "neu" | "gesichtet" | "in_arbeit" | "behoben" | "abgelehnt" | "duplikat";
+export type FehlerberichtSchweregrad = "niedrig" | "mittel" | "hoch" | "blockierend";
+
+export interface FehlerberichtListItem {
+  id: string;
+  mandant_id: string;
+  mandant_name: string | null;
+  melder_name: string | null;
+  titel: string;
+  schweregrad: FehlerberichtSchweregrad;
+  status: FehlerberichtStatus;
+  route: string | null;
+  app_version: string | null;
+  commit_sha: string | null;
+  duplikat_von_id: string | null;
+  hat_screenshot: boolean;
+  erledigt_am: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FehlerberichtDetail extends FehlerberichtListItem {
+  beschreibung: string;
+  erwartet: string | null;
+  schritte: string | null;
+  // Jede Kategorie kann fehlen (Melder waehlt aus, was mitgeschickt wird).
+  kontext: FehlerberichtKontext;
+  screenshot_original_url: string | null;
+  screenshot_annotiert_url: string | null;
+  loesungsnotiz: string | null;
+  fix_commit: string | null;
+  fix_pr_url: string | null;
+}
+
+export interface FehlerberichtUpdate {
+  status?: FehlerberichtStatus;
+  loesungsnotiz?: string | null;
+  fix_commit?: string | null;
+  fix_pr_url?: string | null;
+  duplikat_von_id?: string | null;
+}
+
+export interface FehlerberichtZaehler {
+  neu: number;
+  gesichtet: number;
+  in_arbeit: number;
+  behoben: number;
+  abgelehnt: number;
+  duplikat: number;
+  gesamt: number;
+}
+
+export interface FehlerberichtListenFilter {
+  status?: FehlerberichtStatus;
+  schweregrad?: FehlerberichtSchweregrad;
+  seit?: string;
+  q?: string;
+  mandant_id?: string;
+  limit?: number;
+  offset?: number;
+}

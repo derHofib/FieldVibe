@@ -50,6 +50,7 @@ import { OfficeAuftraegePage } from "./auftraege/OfficeAuftraegePage";
 import { OfficeBoardsPage } from "./boards/OfficeBoardsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
+import { OfficeFehlerberichtDetailPage, OfficeFehlerberichtePage } from "./fehlerberichte/OfficeFehlerberichtePage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
@@ -66,7 +67,8 @@ import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
  * Migrationsplan), also keine Breite noetig, die eine eigene Desktop-Seite
  * rechtfertigen wuerde. */
 export function OfficeApp() {
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
+  const hatFehlerberichtRecht = hatRecht("fehlerberichte", "sehen");
   const startseite = currentUser?.role === "loesch_ansicht" ? "/papierkorb" : "/vorgaenge";
 
   return (
@@ -84,6 +86,12 @@ export function OfficeApp() {
         <Route path="/projekte" element={<OfficeProjektePage />} />
         <Route path="/projekte/vorlagen" element={<OfficeProjektVorlagenPage />} />
         <Route path="/auftraege" element={<OfficeAuftraegePage />} />
+        {hatFehlerberichtRecht && (
+          <>
+            <Route path="/fehlerberichte" element={<OfficeFehlerberichtePage />} />
+            <Route path="/fehlerberichte/:id" element={<OfficeFehlerberichtDetailPage />} />
+          </>
+        )}
         {/* "Ganze Seite" aus der Split-Ansicht (VorgaengeListe.tsx) -- volle
             Desktop-Breite statt der schmalen Inspektor-Spalte, deshalb
             bewusst NICHT in <SchmaleSpalte> unten. layout="dicht" fuer

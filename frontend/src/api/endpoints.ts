@@ -41,6 +41,11 @@ import type {
   EmailLog,
   FahrzeugZuweisungUebersicht,
   FeedResponse,
+  FehlerberichtDetail,
+  FehlerberichtListenFilter,
+  FehlerberichtListItem,
+  FehlerberichtUpdate,
+  FehlerberichtZaehler,
   FormAuftragstypZuordnungV2,
   FormField,
   FormFeldTyp,
@@ -332,6 +337,19 @@ export const auditLogApi = {
 export const fehlerberichteApi = {
   melden: (formData: FormData) =>
     apiFetchForm<{ id: string; duplikat_von_id: string | null }>("/api/fehlerberichte", formData),
+  liste: (filter: FehlerberichtListenFilter = {}) => {
+    const eintraege = Object.entries(filter).filter(([, v]) => v !== undefined && v !== "");
+    const qs = new URLSearchParams(eintraege.map(([k, v]) => [k, String(v)])).toString();
+    return apiFetch<FehlerberichtListItem[]>(`/api/fehlerberichte${qs ? `?${qs}` : ""}`);
+  },
+  // Das Backend nimmt hier nur mandant_id (kein Status-/Zeitfilter).
+  zaehler: (mandantId?: string) =>
+    apiFetch<FehlerberichtZaehler>(`/api/fehlerberichte/zaehler${mandantId ? `?mandant_id=${mandantId}` : ""}`),
+  detail: (id: string) => apiFetch<FehlerberichtDetail>(`/api/fehlerberichte/${id}`),
+  aendern: (id: string, body: FehlerberichtUpdate) =>
+    apiFetch<FehlerberichtDetail>(`/api/fehlerberichte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  loeschen: (id: string) => apiFetch<void>(`/api/fehlerberichte/${id}`, { method: "DELETE" }),
+  aiBundle: async (id: string) => (await apiFetchBlob(`/api/fehlerberichte/${id}/ai-bundle`)).text(),
 };
 
 export const dsgvoApi = {

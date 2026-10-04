@@ -7,6 +7,7 @@ import { FeldLayout } from "./components/FeldLayout";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
+import { BugfixDetailPage, BugfixesPage } from "./pages/BugfixesPage";
 import { DsgvoPage } from "./pages/DsgvoPage";
 import { EinstellungenPage } from "./pages/EinstellungenPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -138,6 +139,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/mandanten/:id" element={<MandantDetailPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/bugfixes" element={<BugfixesPage />} />
+          <Route path="/bugfixes/:id" element={<BugfixDetailPage />} />
           <Route path="/dsgvo" element={<DsgvoPage />} />
           <Route path="/update" element={<UpdatePage />} />
           <Route path="/einstellungen" element={<EinstellungenPage />} />

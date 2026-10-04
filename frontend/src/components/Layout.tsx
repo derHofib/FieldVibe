@@ -1,6 +1,8 @@
-import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle, Settings } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { LayoutDashboard, Building2, Users, ScrollText, ShieldCheck, ArrowUpCircle, Settings, Bug } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
+import { fehlerberichteApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "./brand/Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -10,6 +12,7 @@ const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard }[] =
   { to: "/mandanten", label: "Mandanten", icon: Building2 },
   { to: "/accounts", label: "Accounts", icon: Users },
   { to: "/audit-log", label: "Audit-Log", icon: ScrollText },
+  { to: "/bugfixes", label: "Bugfixes", icon: Bug },
   { to: "/dsgvo", label: "DSGVO", icon: ShieldCheck },
   { to: "/update", label: "Update", icon: ArrowUpCircle },
   { to: "/einstellungen", label: "Einstellungen", icon: Settings },
@@ -18,6 +21,7 @@ const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard }[] =
 function useSeitentitel(): string {
   const { pathname } = useLocation();
   if (pathname.startsWith("/mandanten/")) return "Mandant bearbeiten";
+  if (pathname.startsWith("/bugfixes/")) return "Fehlerbericht";
   const treffer = NAV_ITEMS.find((item) => pathname.startsWith(item.to));
   return treffer?.label ?? "";
 }
@@ -25,6 +29,13 @@ function useSeitentitel(): string {
 export function Layout() {
   const { currentUser, logout } = useAuth();
   const seitentitel = useSeitentitel();
+  // Gleicher Query-Key wie die Zaehler-Kacheln der Bugfixes-Seite (ohne Mandantenfilter).
+  const { data: zaehler } = useQuery({
+    queryKey: ["fehlerberichte", "zaehler", ""],
+    queryFn: () => fehlerberichteApi.zaehler(),
+    refetchInterval: 60_000,
+  });
+  const offeneBugfixes = zaehler ? zaehler.neu + zaehler.gesichtet + zaehler.in_arbeit : 0;
 
   return (
     <div className="min-h-screen bg-card text-label">
@@ -52,6 +63,14 @@ export function Layout() {
                     />
                     <item.icon size={16} strokeWidth={1.5} className="shrink-0" />
                     <span className="hidden sm:inline">{item.label}</span>
+                    {item.to === "/bugfixes" && offeneBugfixes > 0 && (
+                      <span
+                        aria-label={`${offeneBugfixes} offene Fehlerberichte`}
+                        className="absolute top-0.5 right-0.5 min-w-4 rounded-full bg-tint-solid px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums sm:static sm:ml-auto"
+                      >
+                        {offeneBugfixes}
+                      </span>
+                    )}
                   </>
                 )}
               </NavLink>

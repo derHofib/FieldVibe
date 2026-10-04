@@ -3,6 +3,7 @@ import {
   Bug,
   CalendarDays,
   ChevronDown,
+  ClipboardList,
   Clock,
   Flag,
   FolderCog,
@@ -326,6 +327,20 @@ export function OfficeLayout() {
               <FolderCog size={14} strokeWidth={2} className="shrink-0" />
               {!eingeklappt && "Menü-Kategorien"}
             </button>
+          )}
+          {hatRecht("fehlerberichte", "sehen") && (
+            <NavLink
+              to="/fehlerberichte"
+              title={eingeklappt ? "Fehlerberichte" : undefined}
+              className={({ isActive }) =>
+                `flex h-[30px] items-center rounded-[7px] text-xs font-medium hover:bg-fill hover:text-label ${
+                  isActive ? "bg-fill text-label" : "text-label2"
+                } ${eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"}`
+              }
+            >
+              <ClipboardList size={14} strokeWidth={2} className="shrink-0" />
+              {!eingeklappt && "Fehlerberichte"}
+            </NavLink>
           )}
           {fehlerbericht.verfuegbar && (
             <button
