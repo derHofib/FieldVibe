@@ -424,6 +424,11 @@ cd ../frontend && npm install && npm audit
 Beide Lockfiles gemeinsam committen. `pip install --require-hashes` bricht ab,
 wenn ein Paket nicht gepinnt ist oder der Hash nicht passt.
 
+## 6b. Fehlerberichte-Service-Token (optional)
+
+Zugriff für Claude auf In-App-Fehlerberichte (Token, `.env`, Netzwerk):
+siehe `docs/FEHLERBERICHTE.md`.
+
 ## 7. Deinstallieren
 
 `scripts/uninstall.sh` entfernt eine Installation vollständig: alle
