@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Repeat, Star, UserPlus, X } from "lucide-react";
+import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, Star, UserPlus, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -261,7 +261,7 @@ const LEER_FILTER: Record<string, string> = {};
 
 export function FeedPage() {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   // Einstiegsfilter aus der URL (z. B. von der mobilen Projekte-Uebersicht
   // per Tippen auf ein Projekt, oder vom "Heute"-Tab der Tab-Bar) -- nur
   // beim ersten Rendern gelesen, danach lebt der Filter ausschliesslich im
@@ -384,6 +384,16 @@ export function FeedPage() {
           />
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {hatRecht("vorgaenge", "erstellen") && (
+            <button
+              onClick={() => navigate("/neu")}
+              title="Neuer Vorgang"
+              aria-label="Neuer Vorgang"
+              className="btn-ap-toolbar text-tint"
+            >
+              <Plus size={14} strokeWidth={2} aria-hidden="true" />
+            </button>
+          )}
           <button
             onClick={() => setZeigeFilter((v) => !v)}
             title="Filter"
