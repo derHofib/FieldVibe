@@ -9,3 +9,7 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Per `define` in vite.config.ts ersetzt (package.json-Version bzw. GIT_COMMIT beim Build).
+declare const __APP_VERSION__: string;
+declare const __GIT_COMMIT__: string;
