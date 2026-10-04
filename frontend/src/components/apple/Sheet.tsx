@@ -14,6 +14,7 @@ export function Sheet({
   titel,
   links,
   rechts,
+  vollbild = false,
   children,
 }: {
   offen: boolean;
@@ -21,6 +22,9 @@ export function Sheet({
   titel: string;
   links?: ReactNode;
   rechts?: ReactNode;
+  /** Mobil bildschirmfuellend statt 92vh-Sheet -- fuer lange Formulare, bei
+   * denen der freie Streifen oben nur Platz kostet. Desktop unveraendert. */
+  vollbild?: boolean;
   children: ReactNode;
 }) {
   useEffect(() => {
@@ -44,11 +48,15 @@ export function Sheet({
         aria-modal="true"
         aria-label={titel}
         onClick={(e) => e.stopPropagation()}
-        className="ap-sheet-surface flex max-h-[92vh] w-full flex-col rounded-t-[12px] bg-gbg md:max-h-[85vh] md:w-[540px] md:rounded-[12px]"
+        className={`ap-sheet-surface flex w-full flex-col bg-gbg md:max-h-[85vh] md:w-[540px] md:rounded-[12px] ${
+          vollbild ? "h-[100dvh] pt-[env(safe-area-inset-top)] md:h-auto md:pt-0" : "max-h-[92vh] rounded-t-[12px]"
+        }`}
       >
-        <div className="flex justify-center pt-2 md:hidden">
-          <span className="h-[5px] w-9 rounded-full bg-label3" aria-hidden="true" />
-        </div>
+        {!vollbild && (
+          <div className="flex justify-center pt-2 md:hidden">
+            <span className="h-[5px] w-9 rounded-full bg-label3" aria-hidden="true" />
+          </div>
+        )}
         <div className="flex items-center border-b-[0.5px] border-sep px-4 py-3">
           <div className="flex min-w-16 flex-1 justify-start">{links}</div>
           <h2 className="shrink-0 px-2 text-[17px] font-semibold text-label">{titel}</h2>

@@ -276,6 +276,7 @@ export function NewVorgangPage() {
   return (
     <Sheet
       offen
+      vollbild
       onClose={schliessen}
       titel="Neuer Vorgang"
       links={
