@@ -33,10 +33,11 @@ melden oder einsehen soll, braucht das jeweilige Recht.
 
 ## Service-Token einrichten
 
-1. Token erzeugen: `docker compose run --rm backend python -m app.cli fehlerbericht-token`.
+1. Token erzeugen: `docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend python -m app.cli fehlerbericht-token`
+   (bzw. mit `docker-compose.ip.yml` statt `.prod.yml`).
    Die Ausgabe enthält Klartext-Token (nur einmal sichtbar) und Hash.
 2. Hash in die `.env` des Servers: `FIELDVIBE_FEHLERBERICHT_TOKEN_HASH=<hash>`.
-3. Backend neu starten (`docker compose up -d backend`). Ohne Hash antwortet
+3. Backend neu starten (`docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend`). Ohne Hash antwortet
    die Service-API mit 404.
 4. Klartext-Token als Umgebungsvariable `FIELDVIBE_BUGREPORT_TOKEN` (zusammen
    mit `FIELDVIBE_API_URL`, z. B. `https://api.fieldvibe.de`) in der
@@ -46,7 +47,8 @@ melden oder einsehen soll, braucht das jeweilige Recht.
    (presigned URLs), sonst kommen nur URLs statt Bilder.
 6. Test: `scripts/fehlerberichte.sh liste`.
 
-Rate-Limit: 10 Anfragen je IP und 15 Minuten (429).
+Sperre: 10 Fehlversuche (falsches Token) je IP und 15 Minuten führen zu 429 --
+in der Zeit wird auch das richtige Token abgewiesen.
 
 ## Geplante Claude-Code-Routine
 
