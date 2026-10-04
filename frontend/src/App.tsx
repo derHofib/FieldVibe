@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AccountTypenPage } from "./pages/AccountTypenPage";
+import { FehlerberichtAnbindung } from "./components/FehlerberichtAnbindung";
 import { FeldLayout } from "./components/FeldLayout";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
@@ -107,6 +108,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
   const standardStartseite = currentUser?.role === "loesch_ansicht" ? "/papierkorb" : "/feed";
 
   return (
+    <FehlerberichtAnbindung>
     <Routes>
       <Route path="/portal/*" element={<KundenPortalApp />} />
       <Route path="/partnerportal/*" element={<PartnerPortalApp />} />
@@ -205,5 +207,6 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
         </Route>
       )}
     </Routes>
+    </FehlerberichtAnbindung>
   );
 }

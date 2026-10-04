@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  Bug,
   CalendarDays,
   ChevronDown,
   Clock,
@@ -18,6 +19,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { navKategorienApi, projekteApi, statistikApi } from "../api/endpoints";
+import { useFehlerbericht } from "../bugreport/ui";
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { Monogramm } from "../components/apple/Monogramm";
 import { Logo } from "../components/brand/Logo";
@@ -93,6 +95,7 @@ function SchnellfilterKachel({
 export function OfficeLayout() {
   const { currentUser, hatRecht, logout } = useAuth();
   const navigate = useNavigate();
+  const fehlerbericht = useFehlerbericht();
   const { outboxCount, isOnline } = useAppLiveDaten();
   const vorgemerkteAnzahl = useVorgemerkteZeitenAnzahl();
   // In localStorage gemerkt (nicht im Backend wie office_nav_items) -- ist
@@ -322,6 +325,18 @@ export function OfficeLayout() {
             >
               <FolderCog size={14} strokeWidth={2} className="shrink-0" />
               {!eingeklappt && "Menü-Kategorien"}
+            </button>
+          )}
+          {fehlerbericht.verfuegbar && (
+            <button
+              onClick={fehlerbericht.aufnehmen}
+              title={eingeklappt ? "Fehler melden (Strg+Umschalt+B)" : "Strg+Umschalt+B (Mac: Cmd+Umschalt+B)"}
+              className={`flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
+                eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
+              }`}
+            >
+              <Bug size={14} strokeWidth={2} className="shrink-0" />
+              {!eingeklappt && "Fehler melden"}
             </button>
           )}
           <button

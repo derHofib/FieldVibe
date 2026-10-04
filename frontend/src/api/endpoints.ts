@@ -329,6 +329,11 @@ export const auditLogApi = {
   },
 };
 
+export const fehlerberichteApi = {
+  melden: (formData: FormData) =>
+    apiFetchForm<{ id: string; duplikat_von_id: string | null }>("/api/fehlerberichte", formData),
+};
+
 export const dsgvoApi = {
   list: () => apiFetch<DsgvoDokument[]>("/api/admin/dsgvo-dokumente"),
   upload: (typ: DsgvoDokumentTyp, file: File) => {

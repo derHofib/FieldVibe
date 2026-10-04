@@ -1,9 +1,10 @@
-import { LogOut, Search, Settings, User } from "lucide-react";
+import { Bug, LogOut, Search, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { AbschnittskopfA, AbschnittskopfB } from "../../components/apple/AbschnittsKopf";
 import { GroupedList, GroupedListRow } from "../../components/apple/GroupedList";
 import { Monogramm } from "../../components/apple/Monogramm";
+import { useFehlerbericht } from "../../bugreport/ui";
 import { AppearancePicker } from "../../components/AppearancePicker";
 import { NAV_KATEGORIE_REIHENFOLGE, sichtbareNavSeiten } from "../../config/navSeiten";
 import { useAuth } from "../../context/AuthContext";
@@ -24,6 +25,7 @@ export function MehrPage() {
   // Mandanten-Verwaltung -- nur fuer die Rollen sichtbar, die sie vorher
   // auch sahen.
   const kannVerwaltungSehen = currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
+  const fehlerbericht = useFehlerbericht();
   const vorgemerkteAnzahl = useVorgemerkteZeitenAnzahl();
 
   const sichtbar = sichtbareNavSeiten(currentUser, hatRecht, "feld").filter(
@@ -100,6 +102,12 @@ export function MehrPage() {
             <GroupedListRow onClick={() => navigate("/einstellungen")} navigierbar>
               <Settings size={20} strokeWidth={2} className="shrink-0 text-tint" />
               <span className="flex-1 text-[17px] text-label">Verwaltung</span>
+            </GroupedListRow>
+          )}
+          {fehlerbericht.verfuegbar && (
+            <GroupedListRow onClick={fehlerbericht.aufnahmemodusStarten} navigierbar>
+              <Bug size={20} strokeWidth={2} className="shrink-0 text-tint" />
+              <span className="flex-1 text-[17px] text-label">Fehler melden</span>
             </GroupedListRow>
           )}
           <GroupedListRow onClick={logout} last>

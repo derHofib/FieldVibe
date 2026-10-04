@@ -1473,7 +1473,8 @@ export type RechteBereich =
   | "mitarbeiterverwaltung"
   | "formulare"
   | "partner"
-  | "projekte";
+  | "projekte"
+  | "fehlerberichte";
 export type RechteAktion =
   | "sehen"
   | "erstellen"
