@@ -64,6 +64,7 @@ from app.models.projekt import (
     ProjektVorlageAbhaengigkeit,
     ProjektVorlageElement,
 )
+from app.models.organigramm import OrgEinheit, Position, PositionBesetzung, PositionRecht, UserRecht
 from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
@@ -89,6 +90,11 @@ __all__ = [
     "ZeitplanAenderungsantrag",
     "AccountTyp",
     "AccountTypRecht",
+    "OrgEinheit",
+    "Position",
+    "PositionBesetzung",
+    "PositionRecht",
+    "UserRecht",
     "Angebot",
     "AngebotPosition",
     "Anlage",

@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 from app.api.routes import (
     fehlerberichte,
+    rechte,
     account_typen,
     abwesenheiten,
     arbeitszeit,
@@ -113,6 +114,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(account_typen.router)
+app.include_router(rechte.router)
 app.include_router(angebote.router)
 app.include_router(mandanten.router)
 app.include_router(users.router)

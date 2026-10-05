@@ -351,6 +351,7 @@ async def _seed_users_and_mandant(session, mandant_data: dict) -> tuple[Mandant,
                 for aktion in aktionen_fuer_bereich(bereich):
                     session.add(
                         AccountTypRecht(
+                            mandant_id=mandant.id,
                             account_typ_id=account_typ.id,
                             bereich=bereich,
                             aktion=aktion,

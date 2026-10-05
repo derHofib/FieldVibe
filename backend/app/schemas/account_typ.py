@@ -1,24 +1,27 @@
-from typing import Literal
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict, model_validator
 
-RechteBereich = Literal[
-    "vorgaenge",
-    "kunden",
-    "material",
-    "dispo",
-    "abrechnung",
-    "statistik",
-    "mitarbeiterverwaltung",
-    "formulare",
-    "partner",
-    "projekte",
-    "fehlerberichte",
-]
-RechteAktion = Literal[
-    "sehen", "erstellen", "bearbeiten", "loeschen", "zeitplan_sehen", "zeitplan_beantragen"
-]
+from app.core.rechte_registry import alle_aktionen, alle_bereich_keys, ist_gueltig
+
+
+def _bereich_pruefen(wert: str) -> str:
+    if wert not in alle_bereich_keys():
+        raise ValueError("Unbekannter Bereich")
+    return wert
+
+
+def _aktion_pruefen(wert: str) -> str:
+    if wert not in alle_aktionen():
+        raise ValueError("Unbekannte Aktion")
+    return wert
+
+
+# Gueltigkeit kommt aus der Registry (app/core/rechte_registry.py), nicht aus
+# einem Literal -- neue Bereiche/Aktionen brauchen so nur einen Registry-Eintrag.
+RechteBereich = Annotated[str, AfterValidator(_bereich_pruefen)]
+RechteAktion = Annotated[str, AfterValidator(_aktion_pruefen)]
 
 
 class AccountTypCreate(BaseModel):
@@ -67,3 +70,9 @@ class RechtSetzen(BaseModel):
     bereich: RechteBereich
     aktion: RechteAktion
     erlaubt: bool
+
+    @model_validator(mode="after")
+    def _kombination_pruefen(self) -> "RechtSetzen":
+        if not ist_gueltig(self.bereich, self.aktion):
+            raise ValueError("Diese Aktion gibt es für diesen Bereich nicht")
+        return self

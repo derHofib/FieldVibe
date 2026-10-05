@@ -31,6 +31,7 @@ const BEREICH_LABEL: Record<RechteBereich, string> = {
   partner: "Partner & Nachunternehmer",
   projekte: "Projekte",
   fehlerberichte: "Fehlerberichte",
+  organigramm: "Organigramm",
 };
 const AKTIONEN: RechteAktion[] = ["sehen", "erstellen", "bearbeiten", "loeschen"];
 const AKTION_LABEL: Partial<Record<RechteAktion, string>> = {

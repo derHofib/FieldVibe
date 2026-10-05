@@ -1,12 +1,13 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.account_typ import AccountTyp, AccountTypRecht, aktionen_fuer_bereich
+from app.models.organigramm import Position
 from app.models.user import User
 from app.schemas.account_typ import (
     AccountTypCreate,
@@ -122,6 +123,17 @@ async def delete_account_typ(
             status_code=status.HTTP_409_CONFLICT,
             detail="Diesem Account-Typ sind noch Nutzer zugeordnet",
         )
+    # Positionen des Typs (aus Migration 0102) haengen per RESTRICT daran: Kinder
+    # an den Elternknoten umhaengen, dann Position loeschen (Besetzungen: CASCADE;
+    # Nutzer gibt es keine mehr, siehe Pruefung oben).
+    for position in (
+        await session.execute(select(Position).where(Position.account_typ_id == account_typ_id))
+    ).scalars().all():
+        await session.execute(
+            update(Position).where(Position.parent_id == position.id).values(parent_id=position.parent_id)
+        )
+        await session.delete(position)
+    await session.flush()
     await session.execute(
         AccountTypRecht.__table__.delete().where(AccountTypRecht.account_typ_id == account_typ_id)
     )
@@ -172,6 +184,7 @@ async def set_recht(
     if eintrag is None:
         session.add(
             AccountTypRecht(
+                mandant_id=typ.mandant_id,
                 account_typ_id=account_typ_id,
                 bereich=body.bereich,
                 aktion=body.aktion,

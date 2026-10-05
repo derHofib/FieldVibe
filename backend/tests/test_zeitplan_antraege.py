@@ -602,6 +602,11 @@ async def test_migration_0095_up_down_up_mit_rechte_backfill(make_mandant):
         command.upgrade(cfg, "head")
         with engine.begin() as conn:
             conn.execute(sqlalchemy.text("SELECT set_config('app.is_super_admin', 'true', true)"))
+            # Migration 0102 legt je Account-Typ eine Position an (FK RESTRICT).
+            for bedingung in ("AND parent_id IS NOT NULL", ""):
+                conn.execute(
+                    sqlalchemy.text(f"DELETE FROM positionen WHERE mandant_id = :m {bedingung}"), {"m": mandant.id}
+                )
             conn.execute(
                 sqlalchemy.text(
                     "DELETE FROM account_typ_rechte WHERE account_typ_id IN (SELECT id FROM account_typen WHERE mandant_id = :m)"

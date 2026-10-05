@@ -1482,12 +1482,17 @@ export type RechteBereich =
   | "formulare"
   | "partner"
   | "projekte"
-  | "fehlerberichte";
+  | "fehlerberichte"
+  | "organigramm";
 export type RechteAktion =
   | "sehen"
   | "erstellen"
   | "bearbeiten"
   | "loeschen"
+  | "exportieren"
+  // Nur in einzelnen Bereichen (siehe GET /api/rechte/registry).
+  | "freigeben"
+  | "rechte_verwalten"
   // Nur im Bereich "projekte": Zeitplan lesen bzw. Änderungen daran beantragen.
   | "zeitplan_sehen"
   | "zeitplan_beantragen";
