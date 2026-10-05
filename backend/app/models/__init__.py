@@ -76,11 +76,14 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_abhaengigkeit import VorgangAbhaengigkeit
 from app.models.vorgang_anfrage import VorgangAnfrage
 from app.models.zeitplan_antrag import ZeitplanAenderungsantrag
+from app.models.abwesenheit import Abwesenheitsantrag, Urlaubsanspruch
 from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 
 __all__ = [
+    "Abwesenheitsantrag",
+    "Urlaubsanspruch",
     "ArbeitszeitSoll",
     "Feiertag",
     "ZeitplanAenderungsantrag",

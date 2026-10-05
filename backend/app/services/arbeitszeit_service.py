@@ -106,6 +106,9 @@ def soll_fuer_tag(tag: date, soll_zeilen: Iterable[SollZeileLike], feiertage: It
     return Decimal(getattr(zeile, ARBEITSZEIT_WOCHENTAG_SPALTEN[tag.weekday()])).quantize(_ZWEI_STELLEN)
 
 
+_ABWESENHEIT_RANG = {"freizeitausgleich": 1, "urlaub": 2, "krankheit": 3}
+
+
 @dataclass(frozen=True)
 class ZeitEintrag:
     start_at: datetime
@@ -145,14 +148,25 @@ def berechne_saldo(
     bestehende Zeiterfassung (Statistik/Liste filtern nach start_at), auch
     ueber Mitternacht hinweg. Laufende Eintraege zaehlen bis jetzt.
     Urlaub/Krankheit machen den Tag zum erfuellten Soll (saldo 0, ist = soll);
-    Pausen zaehlen wie in der Statistik nicht als Arbeitszeit."""
+    Freizeitausgleich nicht: sein Eintrag zaehlt nicht als Arbeitszeit und
+    zieht seine Stunden vom Saldo ab. Ein ganzer Ausgleichstag ohne Arbeit hat
+    ist 0 / saldo -soll; bei einem halben Tag gilt der uebrige Teil als erfuellt
+    (ist = soll minus Ausgleichsstunden, saldo -Ausgleichsstunden), echte
+    Mehrarbeit darueber zaehlt. Pausen zaehlen wie in der Statistik nicht als
+    Arbeitszeit."""
     sekunden: dict[date, float] = {}
     abwesenheit: dict[date, str] = {}
+    ausgleich_sekunden: dict[date, float] = {}
     for e in eintraege:
         tag = in_lokal(e.start_at).date()
-        if e.kategorie in ("urlaub", "krankheit"):
-            # krankheit hat Vorrang, falls beides am selben Tag vorkommt.
-            if abwesenheit.get(tag) != "krankheit":
+        if e.kategorie == "freizeitausgleich" and e.ende_at is not None:
+            dauer = max((e.ende_at - e.start_at).total_seconds(), 0.0)
+            ausgleich_sekunden[tag] = ausgleich_sekunden.get(tag, 0.0) + dauer
+        if e.kategorie in _ABWESENHEIT_RANG:
+            # Bei mehreren am selben Tag gewinnt der hoechste Rang
+            # (krankheit vor urlaub vor freizeitausgleich).
+            bisher = abwesenheit.get(tag)
+            if bisher is None or _ABWESENHEIT_RANG[e.kategorie] > _ABWESENHEIT_RANG[bisher]:
                 abwesenheit[tag] = e.kategorie
         if e.kategorie in ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT:
             continue
@@ -166,10 +180,15 @@ def berechne_saldo(
         ist_feiertag = tag in feiertage
         soll = soll_fuer_tag(tag, soll_zeilen, feiertage)
         grund = abwesenheit.get(tag)
-        if grund is not None:
+        if grund in ("urlaub", "krankheit"):
             ist = soll
         else:
             ist = (Decimal(sekunden.get(tag, 0.0)) / Decimal(3600)).quantize(_ZWEI_STELLEN)
+            if grund == "freizeitausgleich":
+                ausgleich = min(
+                    (Decimal(ausgleich_sekunden.get(tag, 0.0)) / Decimal(3600)).quantize(_ZWEI_STELLEN), soll
+                )
+                ist = max(ist, soll - ausgleich)
         tage.append(SaldoTag(tag, soll, ist, ist - soll, ist_feiertag, grund))
         summe_soll += soll
         summe_ist += ist

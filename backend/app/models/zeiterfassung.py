@@ -30,6 +30,7 @@ ZEITERFASSUNG_KATEGORIEN = (
     "pause",
     "urlaub",
     "krankheit",
+    "freizeitausgleich",
     "sonstiges",
 )
 
@@ -119,4 +120,10 @@ class Zeiterfassung(TimestampMixin, SoftDeleteMixin, Base):
     # behaltenem abgerechnet_rechnung_id beim Stunden-Anteil.
     km_abgerechnet_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("rechnungen.id", ondelete="SET NULL"), nullable=True
+    )
+    # Migration 0101: automatisch erzeugter Eintrag einer genehmigten
+    # Abwesenheit (Urlaub/Krankheit/Freizeitausgleich); verschwindet mit
+    # Storno/Zurueckziehen des Antrags wieder.
+    abwesenheit_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("abwesenheitsantraege.id", ondelete="SET NULL"), nullable=True, index=True
     )

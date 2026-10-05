@@ -13,7 +13,7 @@ _ZUKUNFT_TOLERANZ = timedelta(minutes=2)
 # Muss mit ZEITERFASSUNG_KATEGORIEN in app/models/zeiterfassung.py
 # uebereinstimmen.
 ZeiterfassungKategorie = Literal[
-    "auftrag", "verwaltung", "fahrzeit", "schulung", "pause", "urlaub", "krankheit", "sonstiges"
+    "auftrag", "verwaltung", "fahrzeit", "schulung", "pause", "urlaub", "krankheit", "freizeitausgleich", "sonstiges"
 ]
 
 # Muss mit ZEITERFASSUNG_BUCHUNGSSTATUS in app/models/zeiterfassung.py
@@ -22,8 +22,8 @@ ZeiterfassungBuchungsstatus = Literal["vermerkt", "vorgemerkt", "gebucht", "abge
 
 # Kategorien, die nicht als geleistete Arbeitszeit zaehlen (siehe
 # get_statistik in app/api/routes/zeiterfassung.py) -- Pause/Urlaub/
-# Krankheit sind Abwesenheit von der eigentlichen Arbeit.
-ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT = ("pause", "urlaub", "krankheit")
+# Krankheit/Freizeitausgleich sind Abwesenheit von der eigentlichen Arbeit.
+ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT = ("pause", "urlaub", "krankheit", "freizeitausgleich")
 
 # Fuer PDF/CSV-Export (app/services/pdf_service.py, app/api/routes/
 # zeiterfassung.py) -- "auftrag" hat bewusst kein Label, dort steht die
@@ -35,6 +35,7 @@ ZEITERFASSUNG_KATEGORIE_LABEL: dict[str, str] = {
     "pause": "Pause",
     "urlaub": "Urlaub",
     "krankheit": "Krankheit",
+    "freizeitausgleich": "Freizeitausgleich",
     "sonstiges": "Sonstiges",
 }
 

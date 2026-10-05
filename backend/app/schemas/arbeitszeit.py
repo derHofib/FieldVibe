@@ -75,7 +75,7 @@ class SaldoTagRead(BaseModel):
     ist: Decimal
     saldo: Decimal
     feiertag: bool
-    abwesenheit: Literal["urlaub", "krankheit"] | None
+    abwesenheit: Literal["urlaub", "krankheit", "freizeitausgleich"] | None
 
 
 class SaldoRead(BaseModel):
