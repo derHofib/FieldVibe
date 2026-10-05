@@ -157,6 +157,9 @@ class ZeiterfassungRead(BaseModel):
     quelle: Literal["timer", "manuell"]
     abgerechnet_rechnung_id: UUID | None
     km_abgerechnet_rechnung_id: UUID | None
+    # Gesetzt bei automatisch erzeugten Eintraegen aus einem Abwesenheitsantrag
+    # (nur lesbar in der UI).
+    abwesenheit_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 

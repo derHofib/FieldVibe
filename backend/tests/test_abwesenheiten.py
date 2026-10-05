@@ -552,3 +552,16 @@ def test_migration_0101_up_down_up():
         assert "abwesenheit_id" in spalten()
     finally:
         engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_zeiterfassung_liste_enthaelt_abwesenheit_id(client, make_mandant, make_user):
+    s = await _setup(client, make_mandant, make_user)
+    antrag = (await client.post("/api/abwesenheiten", headers=s.h_ma, json=_antrag())).json()
+    await client.post(f"/api/abwesenheiten/{antrag['id']}/genehmigen", headers=s.h_buero)
+    r = await client.get(
+        "/api/zeiterfassung", headers=s.h_admin, params={"techniker_id": str(s.ma.id), "von": "2026-03-01", "bis": "2026-03-31"}
+    )
+    assert r.status_code == 200, r.text
+    urlaub = [e for e in r.json() if e["kategorie"] == "urlaub"]
+    assert len(urlaub) == 4 and all(e["abwesenheit_id"] == antrag["id"] for e in urlaub)
