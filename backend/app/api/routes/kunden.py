@@ -54,8 +54,13 @@ from app.services.einladung_service import (
 )
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_kundennummer
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids, technik_user_ids, zuweisbare_user_ids
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    require_kunde_zugriff,
+    scope_cache_leeren,
+    technik_user_ids,
+    zuweisbare_user_ids,
+)
 
 # super_admin is deliberately excluded: fachliche Daten sind immer
 # mandantengebunden, und ein nicht-impersonierender super_admin hat kein
@@ -82,10 +87,9 @@ async def list_kunden(
     stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
-        stmt = stmt.where(Kunde.id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is not None:
+        stmt = stmt.where(Kunde.id.in_(erlaubt))
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -130,13 +134,9 @@ async def create_kunde(
 
 
 async def _require_kunde_zugriff(
-    session: AsyncSession, auth: AuthContext, kunde_id: UUID
+    session: AsyncSession, auth: AuthContext, kunde_id: UUID, aktion: str = "sehen"
 ) -> None:
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    if beschraenkt and kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await require_kunde_zugriff(session, auth, kunde_id, "Kunde nicht gefunden", aktion)
 
 
 @router.get(
@@ -191,7 +191,7 @@ async def send_kunde_email(
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None or kunde.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
-    await _require_kunde_zugriff(session, auth, kunde_id)
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     log = await send_email_and_log(
         session,
@@ -397,6 +397,7 @@ async def set_kunde_techniker(
 ) -> list[User]:
     if await session.get(Kunde, kunde_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     user_ids = set(body.user_ids)
     if user_ids:
@@ -429,6 +430,7 @@ async def set_kunde_techniker(
             KundeZuweisung(mandant_id=auth.mandant_id, kunde_id=kunde_id, user_id=user_id)
         )
     await session.flush()
+    scope_cache_leeren(session)
 
     result = await session.execute(
         select(User)
@@ -449,11 +451,15 @@ async def set_kunde_techniker(
     ],
 )
 async def update_kunde(
-    kunde_id: UUID, body: KundeUpdate, session: AsyncSession = Depends(get_db)
+    kunde_id: UUID,
+    body: KundeUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> Kunde:
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     # mode="json" statt des Standard-model_dump(): ansprechpartner enthaelt
     # verschachtelte AnsprechpartnerEintrag-Objekte, deren id ein UUID-Objekt
@@ -487,6 +493,7 @@ async def delete_kunde(
     # kaskadierend in den Papierkorb (siehe app/services/papierkorb_service.py).
     # Portal-Zugaenge/Tag-Zuordnungen bleiben unangetastet stehen, da der
     # Kunden-Datensatz selbst nicht mehr geloescht, sondern nur markiert wird.
+    await _require_kunde_zugriff(session, auth, kunde_id, "loeschen")
     kunde = await papierkorb_service.soft_delete(
         session, entity_typ="kunde", entity_id=kunde_id, actor_user_id=auth.user_id
     )

@@ -19,8 +19,7 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.feed import FeedCard, FeedResponse
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import vorgang_scope_filter
 
 router = APIRouter(
     prefix="/api/feed",
@@ -165,10 +164,9 @@ async def get_feed(
             Vorgang.faelligkeit_am
             < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         )
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
-        stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    scope_klausel = await vorgang_scope_filter(session, auth)
+    if scope_klausel is not None:
+        stmt = stmt.where(scope_klausel)
     if tag:
         stmt = stmt.where(
             Vorgang.id.in_(

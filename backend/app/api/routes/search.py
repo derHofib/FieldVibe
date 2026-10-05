@@ -11,8 +11,8 @@ from app.models.tag import Tag
 from app.models.vorgang import Vorgang
 from app.schemas.search import SearchHit, SearchResponse
 from app.services.rechnung_service import kunden_namen_fuer
-from app.services.rechte_service import hat_recht, ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.rechte_service import hat_recht
+from app.services.zuweisung_service import erlaubte_kunde_ids, vorgang_scope_filter
 
 router = APIRouter(
     prefix="/api/search",
@@ -48,10 +48,8 @@ async def search(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SearchResponse:
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    kunde_ids = await assigned_kunde_ids(session, auth.user_id) if beschraenkt else None
+    kunde_ids = await erlaubte_kunde_ids(session, auth)
+    vorgang_klausel = await vorgang_scope_filter(session, auth)
 
     # Ein führendes '#' durchsucht ausschließlich Tags (Abschnitt 5.3).
     if q.startswith("#"):
@@ -116,8 +114,8 @@ async def search(
         .params(q=q)
         .limit(HITS_PER_KATEGORIE)
     )
-    if kunde_ids is not None:
-        vorgaenge_stmt = vorgaenge_stmt.where(Vorgang.kunde_id.in_(kunde_ids))
+    if vorgang_klausel is not None:
+        vorgaenge_stmt = vorgaenge_stmt.where(vorgang_klausel)
     vorgaenge_result = await session.execute(vorgaenge_stmt)
     treffer += [
         SearchHit(kategorie="vorgang", id=v.id, titel=f"{v.vorgangsnummer}: {v.titel}", subtitel=v.status)

@@ -13,13 +13,12 @@ from app.services import storage_service
 from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
 from app.services.photo_service import make_thumbnail
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
 )
 from app.services.vorgang_event_service import to_read_model as _to_read_model
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import require_vorgang_zugriff
 
 router = APIRouter(
     prefix="/api/vorgaenge/{vorgang_id}/events",
@@ -39,11 +38,7 @@ async def _require_own_vorgang(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    if beschraenkt and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await require_vorgang_zugriff(session, auth, vorgang)
     return vorgang
 
 

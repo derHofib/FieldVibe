@@ -25,8 +25,7 @@ from app.schemas.kunde import KundeRead
 from app.schemas.profile import AnlageProfil
 from app.services import papierkorb_service
 from app.services.geocoding_service import geocode_falls_modul_aktiv
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import erlaubte_kunde_ids
 
 router = APIRouter(
     prefix="/api/anlagen",
@@ -87,13 +86,11 @@ async def list_anlagen(
         stmt = stmt.where(Anlage.objekttyp == objekttyp)
     if aktiv is not None:
         stmt = stmt.where(Anlage.aktiv == aktiv)
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
+    zugewiesene = await erlaubte_kunde_ids(session, auth)
+    if zugewiesene is not None:
         # Interne Objekte (Fahrzeuge/Lager/Baustellen, kunde_id NULL) sind
         # keine Kundendaten und daher unabhaengig von der Kunde-Zuweisung
         # immer sichtbar -- nur echte Kundenanlagen werden eingeschraenkt.
-        zugewiesene = await assigned_kunde_ids(session, auth.user_id)
         stmt = stmt.where(or_(Anlage.kunde_id.is_(None), Anlage.kunde_id.in_(zugewiesene)))
     result = await session.execute(stmt)
     return list(result.scalars().all())
@@ -153,15 +150,11 @@ async def create_anlage(
     return anlage
 
 
-async def _require_anlage_zugriff(session: AsyncSession, auth: AuthContext, anlage: Anlage) -> None:
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    if (
-        beschraenkt
-        and anlage.kunde_id is not None
-        and anlage.kunde_id not in await assigned_kunde_ids(session, auth.user_id)
-    ):
+async def _require_anlage_zugriff(
+    session: AsyncSession, auth: AuthContext, anlage: Anlage, aktion: str = "sehen"
+) -> None:
+    erlaubt = await erlaubte_kunde_ids(session, auth, aktion)
+    if erlaubt is not None and anlage.kunde_id is not None and anlage.kunde_id not in erlaubt:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
 
 
@@ -182,14 +175,8 @@ async def get_anlage_by_qr(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
         )
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    if (
-        beschraenkt
-        and anlage.kunde_id is not None
-        and anlage.kunde_id not in await assigned_kunde_ids(session, auth.user_id)
-    ):
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is not None and anlage.kunde_id is not None and anlage.kunde_id not in erlaubt:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
         )
@@ -279,11 +266,15 @@ async def get_anlage_profil(
     ],
 )
 async def update_anlage(
-    anlage_id: UUID, body: AnlageUpdate, session: AsyncSession = Depends(get_db)
+    anlage_id: UUID,
+    body: AnlageUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> Anlage:
     anlage = await session.get(Anlage, anlage_id)
     if anlage is None or anlage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anlage nicht gefunden")
+    await _require_anlage_zugriff(session, auth, anlage, "bearbeiten")
 
     changes = body.model_dump(exclude_unset=True)
     if changes.get("standort_id") is not None:
@@ -323,6 +314,9 @@ async def delete_anlage(
     # Maengel, Pruefzyklen, Fahrzeug-Zuweisung, Inventurzyklus dieser Anlage
     # (siehe app/services/papierkorb_service.py). Tag-Zuordnungen bleiben
     # unangetastet stehen, da die Anlage selbst nicht mehr geloescht wird.
+    vorab = await session.get(Anlage, anlage_id)
+    if vorab is not None:
+        await _require_anlage_zugriff(session, auth, vorab, "loeschen")
     anlage = await papierkorb_service.soft_delete(
         session, entity_typ="anlage", entity_id=anlage_id, actor_user_id=auth.user_id
     )

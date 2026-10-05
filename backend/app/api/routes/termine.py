@@ -21,7 +21,7 @@ from app.services import papierkorb_service
 from app.services.dispo_service import compute_warnungen
 from app.services.event_bus import event_bus
 from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import assigned_kunde_ids, erlaubte_user_ids, require_user_scope
 
 router = APIRouter(
     prefix="/api/termine",
@@ -79,9 +79,13 @@ async def list_termine(
     projekt_id: UUID | None = Query(default=None),
     von: datetime | None = Query(default=None),
     bis: datetime | None = Query(default=None),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Termin]:
     stmt = select(Termin).where(Termin.geloescht_am.is_(None)).order_by(Termin.start_at.asc())
+    erlaubt = await erlaubte_user_ids(session, auth, "dispo")
+    if erlaubt is not None:
+        stmt = stmt.where(Termin.techniker_id.in_(erlaubt))
     if techniker_id:
         stmt = stmt.where(Termin.techniker_id == techniker_id)
     if vorgang_id:
@@ -100,10 +104,15 @@ async def list_termine(
 
 
 @router.get("/{termin_id}", response_model=TerminRead)
-async def get_termin(termin_id: UUID, session: AsyncSession = Depends(get_db)) -> Termin:
+async def get_termin(
+    termin_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> Termin:
     termin = await session.get(Termin, termin_id)
     if termin is None or termin.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Termin nicht gefunden")
+    await require_user_scope(session, auth, "dispo", "sehen", termin.techniker_id, "Termin nicht gefunden")
     return termin
 
 
@@ -172,6 +181,9 @@ async def update_termin(
     termin = await session.get(Termin, termin_id)
     if termin is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Termin nicht gefunden")
+    await require_user_scope(
+        session, auth, "dispo", "bearbeiten", termin.techniker_id, "Termin nicht gefunden"
+    )
 
     changes = body.model_dump(exclude_unset=True)
     if "status" in changes and changes["status"] not in (
@@ -232,6 +244,11 @@ async def delete_termin(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
+    vorab = await session.get(Termin, termin_id)
+    if vorab is not None:
+        await require_user_scope(
+            session, auth, "dispo", "loeschen", vorab.techniker_id, "Termin nicht gefunden"
+        )
     termin = await papierkorb_service.soft_delete(
         session, entity_typ="termin", entity_id=termin_id, actor_user_id=auth.user_id
     )

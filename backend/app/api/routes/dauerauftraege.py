@@ -26,8 +26,7 @@ from app.schemas.dauerauftrag import (
     DauerauftragZielRead,
 )
 from app.services import papierkorb_service
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import erlaubte_kunde_ids
 
 # loesch_operativ hat ueberall dieselben Rechte wie mandant_admin (siehe
 # app/api/deps.py:require_roles()) und braucht daher wie dieser Zugriff auf
@@ -88,10 +87,9 @@ async def list_dauerauftraege(
     )
     if kunde_id:
         stmt = stmt.where(Dauerauftrag.kunde_id == kunde_id)
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
-        stmt = stmt.where(Dauerauftrag.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is not None:
+        stmt = stmt.where(Dauerauftrag.kunde_id.in_(erlaubt))
     dauerauftraege = list((await session.execute(stmt)).scalars().all())
 
     reads = []
@@ -171,14 +169,10 @@ async def create_dauerauftrag(
 
 
 async def _require_dauerauftrag_zugriff(
-    session: AsyncSession, auth: AuthContext, dauerauftrag: Dauerauftrag
+    session: AsyncSession, auth: AuthContext, dauerauftrag: Dauerauftrag, aktion: str = "sehen"
 ) -> None:
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    if beschraenkt and dauerauftrag.kunde_id not in await assigned_kunde_ids(
-        session, auth.user_id
-    ):
+    erlaubt = await erlaubte_kunde_ids(session, auth, aktion)
+    if erlaubt is not None and dauerauftrag.kunde_id not in erlaubt:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Dauerauftrag nicht gefunden"
         )

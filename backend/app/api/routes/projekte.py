@@ -34,7 +34,11 @@ from app.schemas.projekt import (
 )
 from app.services import papierkorb_service
 from app.services.rechte_service import hat_recht
-from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugewiesen
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    erlaubte_user_ids,
+    require_kunde_zugewiesen,
+)
 
 # Basisrechte fuer alles unter /api/projekte (Projekte + Spalten -- reine
 # Kanban-Konfiguration, es gibt hier keine private Variante).
@@ -130,6 +134,30 @@ async def _pruefe_zugriff_auf_aufgabe(
         return
     if not await _hat_projekte_recht(session, auth, aktion):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+    await _pruefe_aufgaben_scope(session, auth, aufgabe, aktion)
+
+
+async def _pruefe_aufgaben_scope(
+    session: AsyncSession, auth: AuthContext, aufgabe: ProjektAufgabe, aktion: str
+) -> None:
+    """Scope von projekte.<aktion> (zustaendig = zugewiesen_an): ausserhalb des
+    Scopes nur sichtbar, wenn die Aufgabe an einen Kunden des Kunden-Scopes
+    gebunden ist (gleiche Regel wie list_aufgaben) -> sonst 404."""
+    users = await erlaubte_user_ids(session, auth, "projekte", aktion)
+    if users is None or aufgabe.zugewiesen_an in users:
+        return
+    kunden = await erlaubte_kunde_ids(session, auth)
+    if kunden is not None:
+        bezug = {aufgabe.kunde_id}
+        if aufgabe.vorgang_id is not None:
+            vorgang = await session.get(Vorgang, aufgabe.vorgang_id)
+            bezug.add(vorgang.kunde_id if vorgang is not None else None)
+        if aufgabe.anlage_id is not None:
+            anlage = await session.get(Anlage, aufgabe.anlage_id)
+            bezug.add(anlage.kunde_id if anlage is not None else None)
+        if bezug & kunden:
+            return
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aufgabe nicht gefunden")
 
 
 @router.get("", response_model=list[ProjektRead])
@@ -458,6 +486,16 @@ async def list_aufgaben(
             or_(Vorgang.id.is_(None), Vorgang.kunde_id.in_(erlaubte_kunden)),
             or_(Anlage.id.is_(None), Anlage.kunde_id.is_(None), Anlage.kunde_id.in_(erlaubte_kunden)),
         )
+    aufgaben_users = await erlaubte_user_ids(session, auth, "projekte", "sehen")
+    if aufgaben_users is not None:
+        kanban_sichtbar = [ProjektAufgabe.zugewiesen_an.in_(aufgaben_users)]
+        if erlaubte_kunden is not None:
+            kanban_sichtbar += [
+                ProjektAufgabe.kunde_id.in_(erlaubte_kunden),
+                Vorgang.kunde_id.in_(erlaubte_kunden),
+                Anlage.kunde_id.in_(erlaubte_kunden),
+            ]
+        stmt = stmt.where(or_(ProjektAufgabe.projekt_id.is_(None), *kanban_sichtbar))
     result = await session.execute(stmt)
     return _mit_details(result.all())
 

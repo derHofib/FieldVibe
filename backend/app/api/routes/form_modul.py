@@ -74,9 +74,8 @@ from app.services import form_modul_service, photo_service, storage_service
 from app.services.event_bus import event_bus
 from app.services.form_logic_engine import FormLogicCycleError, detect_cycles
 from app.services.pdf_service import generate_form_submission_pdf
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import require_vorgang_zugriff
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 # "datei" erlaubt zusaetzlich PDFs (siehe datei_hochladen) -- foto/
@@ -686,11 +685,7 @@ async def _require_own_vorgang(session: AsyncSession, auth: AuthContext, vorgang
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    if beschraenkt and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await require_vorgang_zugriff(session, auth, vorgang)
     return vorgang
 
 

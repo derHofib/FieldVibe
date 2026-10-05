@@ -14,8 +14,7 @@ from app.schemas.profile import StandortProfil
 from app.schemas.standort import StandortCreate, StandortRead, StandortUpdate
 from app.services import papierkorb_service
 from app.services.geocoding_service import geocode_falls_modul_aktiv
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import erlaubte_kunde_ids
 
 router = APIRouter(
     prefix="/api/standorte",
@@ -48,10 +47,9 @@ async def list_standorte(
         stmt = stmt.where(Standort.kunde_id == kunde_id)
     if aktiv is not None:
         stmt = stmt.where(Standort.aktiv == aktiv)
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
-        stmt = stmt.where(Standort.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    erlaubt = await erlaubte_kunde_ids(session, auth)
+    if erlaubt is not None:
+        stmt = stmt.where(Standort.kunde_id.in_(erlaubt))
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
@@ -91,11 +89,11 @@ async def create_standort(
     return standort
 
 
-async def _require_standort_zugriff(session: AsyncSession, auth: AuthContext, standort: Standort) -> None:
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    )
-    if beschraenkt and standort.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
+async def _require_standort_zugriff(
+    session: AsyncSession, auth: AuthContext, standort: Standort, aktion: str = "sehen"
+) -> None:
+    erlaubt = await erlaubte_kunde_ids(session, auth, aktion)
+    if erlaubt is not None and standort.kunde_id not in erlaubt:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
 
 
@@ -168,11 +166,15 @@ async def get_standort_profil(
     ],
 )
 async def update_standort(
-    standort_id: UUID, body: StandortUpdate, session: AsyncSession = Depends(get_db)
+    standort_id: UUID,
+    body: StandortUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> Standort:
     standort = await session.get(Standort, standort_id)
     if standort is None or standort.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")
+    await _require_standort_zugriff(session, auth, standort, "bearbeiten")
 
     changes = body.model_dump(exclude_unset=True)
     if "adresse" in changes and "geo_lat" not in changes and "geo_lng" not in changes:
@@ -202,6 +204,9 @@ async def delete_standort(
 ) -> None:
     # Papierkorb statt Hard-Delete: kaskadiert auf Anlagen und Vorgaenge
     # dieses Standorts (siehe app/services/papierkorb_service.py).
+    vorab = await session.get(Standort, standort_id)
+    if vorab is not None:
+        await _require_standort_zugriff(session, auth, vorab, "loeschen")
     standort = await papierkorb_service.soft_delete(
         session, entity_typ="standort", entity_id=standort_id, actor_user_id=auth.user_id
     )
