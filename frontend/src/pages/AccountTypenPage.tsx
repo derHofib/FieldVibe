@@ -151,6 +151,7 @@ export function AccountTypenPage() {
   const [nurZugewieseneKunden, setNurZugewieseneKunden] = useState(false);
   const [darfSelbstUebernehmen, setDarfSelbstUebernehmen] = useState(false);
   const [darfZeitenBuchen, setDarfZeitenBuchen] = useState(false);
+  const [darfAbwesenheiten, setDarfAbwesenheiten] = useState(false);
 
   const createMutation = useMutation({
     mutationFn: accountTypenApi.create,
@@ -161,6 +162,7 @@ export function AccountTypenPage() {
       setNurZugewieseneKunden(false);
       setDarfSelbstUebernehmen(false);
       setDarfZeitenBuchen(false);
+      setDarfAbwesenheiten(false);
       setExpandedId(typ.id);
     },
     onError: (err) => setFormError(err instanceof ApiError ? err.message : "Fehler"),
@@ -174,6 +176,7 @@ export function AccountTypenPage() {
       id: string;
       darf_vorgaenge_selbst_uebernehmen?: boolean;
       darf_zeiten_buchen?: boolean;
+      darf_abwesenheiten_verwalten?: boolean;
     }) => accountTypenApi.update(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["account-typen"] }),
   });
@@ -197,6 +200,7 @@ export function AccountTypenPage() {
       nur_zugewiesene_kunden: nurZugewieseneKunden,
       darf_vorgaenge_selbst_uebernehmen: darfSelbstUebernehmen,
       darf_zeiten_buchen: darfZeitenBuchen,
+      darf_abwesenheiten_verwalten: darfAbwesenheiten,
     });
   }
 
@@ -265,6 +269,15 @@ export function AccountTypenPage() {
             />
             Darf Zeiten buchen
           </label>
+          <label className="flex items-center gap-2 text-sm text-label">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-ind-acc"
+              checked={darfAbwesenheiten}
+              onChange={(e) => setDarfAbwesenheiten(e.target.checked)}
+            />
+            Abwesenheiten verwalten
+          </label>
           <button
             type="submit"
             disabled={createMutation.isPending}
@@ -298,6 +311,7 @@ export function AccountTypenPage() {
                     {typ.nur_zugewiesene_kunden && " · nur zugewiesene Kunden"}
                     {typ.darf_vorgaenge_selbst_uebernehmen && " · darf Aufträge selbst übernehmen"}
                     {typ.darf_zeiten_buchen && " · darf Zeiten buchen"}
+                    {typ.darf_abwesenheiten_verwalten && " · verwaltet Abwesenheiten"}
                   </span>
                 </span>
                 <button
@@ -355,6 +369,20 @@ export function AccountTypenPage() {
                       }
                     />
                     Darf Zeiten buchen (Vormerken/Buchen im Zeit-Tab, unabhängig von Rolle/Gerät)
+                  </label>
+                  <label className="flex items-center gap-2 border-t border-sep px-4 py-3 text-sm text-label">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-ind-acc"
+                      checked={typ.darf_abwesenheiten_verwalten}
+                      onChange={(e) =>
+                        updateMutation.mutate({
+                          id: typ.id,
+                          darf_abwesenheiten_verwalten: e.target.checked,
+                        })
+                      }
+                    />
+                    Abwesenheiten verwalten (Soll-Zeit, Feiertage und Bundesland pflegen, Saldo anderer einsehen)
                   </label>
                   <RechteMatrixEditor accountTypId={typ.id} />
                 </>

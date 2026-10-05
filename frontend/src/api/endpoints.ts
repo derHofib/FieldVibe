@@ -165,6 +165,12 @@ import type {
   VorgangKennzahlen,
   VorgangPartnerZuweisungResponse,
   Zeiterfassung,
+  ArbeitszeitSoll,
+  ArbeitszeitSollSetzen,
+  Bundesland,
+  Feiertag,
+  FeiertageGenerierenErgebnis,
+  Saldo,
   ZeiterfassungAenderung,
   ZeiterfassungKategorie,
   ZeiterfassungStatistik,
@@ -1020,6 +1026,39 @@ export const statistikApi = {
     const entries = Object.entries(filter).filter(([, v]) => v);
     const qs = new URLSearchParams(entries as [string, string][]).toString();
     return apiFetch<VorgangKennzahlen>(`/api/statistik/vorgang-kennzahlen${qs ? `?${qs}` : ""}`);
+  },
+};
+
+export const arbeitszeitApi = {
+  soll: (userId?: string) =>
+    apiFetch<ArbeitszeitSoll[]>(`/api/arbeitszeit/soll${userId ? `?user_id=${userId}` : ""}`),
+  sollSetzen: (userId: string, body: ArbeitszeitSollSetzen) =>
+    apiFetch<ArbeitszeitSoll>(`/api/arbeitszeit/soll/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  feiertage: (jahr: number) => apiFetch<Feiertag[]>(`/api/arbeitszeit/feiertage?jahr=${jahr}`),
+  feiertagAnlegen: (body: { datum: string; bezeichnung: string }) =>
+    apiFetch<Feiertag>("/api/arbeitszeit/feiertage", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  feiertagLoeschen: (id: string) =>
+    apiFetch<void>(`/api/arbeitszeit/feiertage/${id}`, { method: "DELETE" }),
+  feiertageGenerieren: (jahr: number) =>
+    apiFetch<FeiertageGenerierenErgebnis>("/api/arbeitszeit/feiertage/generieren", {
+      method: "POST",
+      body: JSON.stringify({ jahr }),
+    }),
+  bundesland: () => apiFetch<{ bundesland: Bundesland | null }>("/api/arbeitszeit/bundesland"),
+  bundeslandSetzen: (bundesland: Bundesland | null) =>
+    apiFetch<{ bundesland: Bundesland | null }>("/api/arbeitszeit/bundesland", {
+      method: "PATCH",
+      body: JSON.stringify({ bundesland }),
+    }),
+  saldo: (params: { von: string; bis: string; user_id?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString();
+    return apiFetch<Saldo>(`/api/arbeitszeit/saldo?${qs}`);
   },
 };
 

@@ -234,6 +234,9 @@ export interface CurrentUser {
   // app/services/rechte_service.py:darf_zeiten_buchen) -- Auswahl/
   // Aktionsleiste im Zeit-Tab, Seite "Zeiten buchen", fremden Timer beenden.
   darf_zeiten_buchen: boolean;
+  // Soll-Zeit, Feiertage, Bundesland pflegen und fremdes Soll/Saldo lesen
+  // (app/services/rechte_service.py, Konzept ZEITERFASSUNG.md Abschnitt 12).
+  darf_abwesenheiten_verwalten: boolean;
   name: string;
   email: string;
   impersonated_by: string | null;
@@ -1500,6 +1503,7 @@ export interface AccountTyp {
   nur_zugewiesene_kunden: boolean;
   darf_vorgaenge_selbst_uebernehmen: boolean;
   darf_zeiten_buchen: boolean;
+  darf_abwesenheiten_verwalten: boolean;
   reihenfolge: number;
   anzahl_nutzer: number;
 }
@@ -1511,6 +1515,7 @@ export interface AccountTypCreate {
   nur_zugewiesene_kunden?: boolean;
   darf_vorgaenge_selbst_uebernehmen?: boolean;
   darf_zeiten_buchen?: boolean;
+  darf_abwesenheiten_verwalten?: boolean;
 }
 
 export interface AccountTypUpdate {
@@ -1520,6 +1525,7 @@ export interface AccountTypUpdate {
   nur_zugewiesene_kunden?: boolean;
   darf_vorgaenge_selbst_uebernehmen?: boolean;
   darf_zeiten_buchen?: boolean;
+  darf_abwesenheiten_verwalten?: boolean;
   reihenfolge?: number;
 }
 
@@ -2445,4 +2451,60 @@ export interface FehlerberichtListenFilter {
   mandant_id?: string;
   limit?: number;
   offset?: number;
+}
+
+// --- Arbeitszeit: Soll, Feiertage, Saldo (Konzept ZEITERFASSUNG.md 12) -----
+
+// Stunden kommen als Strings mit 2 Nachkommastellen (Decimal) vom Backend.
+export type Bundesland =
+  | "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV"
+  | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH";
+
+export const SOLL_WOCHENTAG_FELDER = [
+  "stunden_mo",
+  "stunden_di",
+  "stunden_mi",
+  "stunden_do",
+  "stunden_fr",
+  "stunden_sa",
+  "stunden_so",
+] as const;
+export type SollWochentagFeld = (typeof SOLL_WOCHENTAG_FELDER)[number];
+
+export type ArbeitszeitSollSetzen = { gueltig_ab: string } & Record<SollWochentagFeld, string>;
+
+export type ArbeitszeitSoll = ArbeitszeitSollSetzen & {
+  id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export interface Feiertag {
+  id: string;
+  datum: string;
+  bezeichnung: string;
+}
+
+export interface FeiertageGenerierenErgebnis {
+  angelegt: number;
+  uebersprungen: number;
+  feiertage: Feiertag[];
+}
+
+export type SaldoAbwesenheit = "urlaub" | "krankheit";
+
+export interface SaldoTag {
+  datum: string;
+  soll: string;
+  ist: string;
+  saldo: string;
+  feiertag: boolean;
+  abwesenheit: SaldoAbwesenheit | null;
+}
+
+export interface Saldo {
+  soll_stunden: string;
+  ist_stunden: string;
+  saldo_stunden: string;
+  tage: SaldoTag[];
 }
