@@ -787,6 +787,7 @@ export type ZeiterfassungKategorie =
   | "pause"
   | "urlaub"
   | "krankheit"
+  | "freizeitausgleich"
   | "sonstiges";
 
 // Muss mit ZeiterfassungBuchungsstatus in backend/app/schemas/zeiterfassung.py
@@ -820,6 +821,8 @@ export interface Zeiterfassung {
   km: string | null;
   fahrzeug_id: string | null;
   quelle: "timer" | "manuell";
+  // Gesetzt bei automatisch aus einem Abwesenheitsantrag erzeugten Eintraegen.
+  abwesenheit_id?: string | null;
   // km-Anteil getrennt von den Stunden abgerechnet (Migration 0097) -- die
   // Stunden zeigt buchungsstatus "abgerechnet".
   km_abgerechnet_rechnung_id: string | null;
@@ -2491,7 +2494,7 @@ export interface FeiertageGenerierenErgebnis {
   feiertage: Feiertag[];
 }
 
-export type SaldoAbwesenheit = "urlaub" | "krankheit";
+export type SaldoAbwesenheit = "urlaub" | "krankheit" | "freizeitausgleich";
 
 export interface SaldoTag {
   datum: string;
@@ -2507,4 +2510,77 @@ export interface Saldo {
   ist_stunden: string;
   saldo_stunden: string;
   tage: SaldoTag[];
+}
+
+// --- Abwesenheiten (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 13) ---------
+// Decimal-Felder kommen als String vom Backend.
+
+export type AbwesenheitArt = "urlaub" | "krankheit" | "freizeitausgleich";
+export type AbwesenheitStatus = "offen" | "genehmigt" | "abgelehnt" | "zurueckgezogen";
+
+export interface Abwesenheit {
+  id: string;
+  user_id: string;
+  user_name: string;
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  halber_tag_von: boolean;
+  halber_tag_bis: boolean;
+  tage: string;
+  status: AbwesenheitStatus;
+  notiz: string | null;
+  antwort: string | null;
+  erstellt_von: string;
+  erstellt_am: string;
+  bearbeitet_von: string | null;
+  bearbeitet_am: string | null;
+}
+
+export interface AbwesenheitCreate {
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  halber_tag_von?: boolean;
+  halber_tag_bis?: boolean;
+  notiz?: string | null;
+  user_id?: string;
+}
+
+export interface Urlaubskonto {
+  user_id: string;
+  jahr: number;
+  anspruch: string;
+  resturlaub: string;
+  resturlaub_verfaellt_am: string | null;
+  resturlaub_verfallen: string;
+  genommen: string;
+  beantragt: string;
+  verbleibend: string;
+}
+
+export interface UrlaubsanspruchSetzen {
+  tage: string;
+  resturlaub_tage: string;
+  resturlaub_verfaellt_am?: string | null;
+}
+
+export interface Urlaubsanspruch {
+  user_id: string;
+  jahr: number;
+  tage: string;
+  resturlaub_tage: string;
+  resturlaub_verfaellt_am: string | null;
+}
+
+export interface AbwesenheitKalenderEintrag {
+  id: string;
+  user_id: string;
+  user_name: string;
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  halber_tag_von: boolean;
+  halber_tag_bis: boolean;
+  tage: string;
 }

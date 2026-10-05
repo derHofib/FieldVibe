@@ -11,6 +11,7 @@ export const ZEITERFASSUNG_KATEGORIE_LABEL: Partial<Record<ZeiterfassungKategori
   pause: "Pause",
   urlaub: "Urlaub",
   krankheit: "Krankheit",
+  freizeitausgleich: "Freizeitausgleich",
   sonstiges: "Sonstiges",
 };
 
@@ -20,6 +21,7 @@ export const ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT: ZeiterfassungKategorie[]
   "pause",
   "urlaub",
   "krankheit",
+  "freizeitausgleich",
 ];
 
 export function formatDauer(startAt: string, endeAt: string | null): number {
@@ -136,7 +138,7 @@ export function eintraegeJeTag<T extends MitZeitraum>(eintraege: T[]): Map<strin
   return map;
 }
 
-/** Arbeitsstunden ohne Pause/Urlaub/Krankheit; laufende Eintraege zaehlen 0. */
+/** Arbeitsstunden ohne Pause/Urlaub/Krankheit/Freizeitausgleich; laufende Eintraege zaehlen 0. */
 export function arbeitsstunden(eintraege: MitZeitraum[]): number {
   return eintraege.reduce(
     (summe, e) =>

@@ -37,6 +37,13 @@ const KATEGORIE_OPTIONEN: { wert: ZeiterfassungKategorie; label: string }[] = [
   { wert: "sonstiges", label: "Sonstiges" },
 ];
 
+// Freizeitausgleich entsteht nur ueber Abwesenheitsantraege -- nur anzeigen, wenn der
+// Eintrag schon einer ist, damit das Select ihn korrekt darstellt.
+const KATEGORIE_OPTIONEN_MIT_FZA = [
+  ...KATEGORIE_OPTIONEN,
+  { wert: "freizeitausgleich" as ZeiterfassungKategorie, label: "Freizeitausgleich" },
+];
+
 const AKTION_LABEL: Record<string, string> = {
   angelegt: "Angelegt",
   geaendert: "Geändert",
@@ -355,7 +362,7 @@ export function ZeiteintragSheet({
               onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
               className="field-ap"
             >
-              {KATEGORIE_OPTIONEN.map((opt) => (
+              {(eintrag?.kategorie === "freizeitausgleich" ? KATEGORIE_OPTIONEN_MIT_FZA : KATEGORIE_OPTIONEN).map((opt) => (
                 <option key={opt.wert} value={opt.wert}>
                   {opt.label}
                 </option>

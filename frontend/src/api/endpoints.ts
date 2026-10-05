@@ -2,6 +2,13 @@ import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import { partnerApiFetch } from "./partnerClient";
 import type {
+  Abwesenheit,
+  AbwesenheitCreate,
+  AbwesenheitKalenderEintrag,
+  AbwesenheitStatus,
+  Urlaubsanspruch,
+  UrlaubsanspruchSetzen,
+  Urlaubskonto,
   AccountTyp,
   AccountTypCreate,
   AccountTypUpdate,
@@ -2145,4 +2152,41 @@ export const kundenportalApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+};
+
+export const abwesenheitenApi = {
+  anlegen: (body: AbwesenheitCreate) =>
+    apiFetch<Abwesenheit>("/api/abwesenheiten", { method: "POST", body: JSON.stringify(body) }),
+  liste: (params: {
+    user_id?: string;
+    alle?: boolean;
+    status?: AbwesenheitStatus;
+    von?: string;
+    bis?: string;
+    nur_offene?: boolean;
+  } = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== false) qs.set(k, String(v));
+    return apiFetch<Abwesenheit[]>(`/api/abwesenheiten${qs.size ? `?${qs}` : ""}`);
+  },
+  genehmigen: (id: string) => apiFetch<Abwesenheit>(`/api/abwesenheiten/${id}/genehmigen`, { method: "POST" }),
+  ablehnen: (id: string, antwort?: string | null) =>
+    apiFetch<Abwesenheit>(`/api/abwesenheiten/${id}/ablehnen`, {
+      method: "POST",
+      body: JSON.stringify({ antwort: antwort || null }),
+    }),
+  zurueckziehen: (id: string) =>
+    apiFetch<Abwesenheit>(`/api/abwesenheiten/${id}/zurueckziehen`, { method: "POST" }),
+  konto: (params: { user_id?: string; jahr?: number } = {}) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v !== undefined) qs.set(k, String(v));
+    return apiFetch<Urlaubskonto>(`/api/abwesenheiten/konto${qs.size ? `?${qs}` : ""}`);
+  },
+  anspruchSetzen: (userId: string, jahr: number, body: UrlaubsanspruchSetzen) =>
+    apiFetch<Urlaubsanspruch>(`/api/abwesenheiten/anspruch/${userId}/${jahr}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  kalender: (von: string, bis: string) =>
+    apiFetch<AbwesenheitKalenderEintrag[]>(`/api/abwesenheiten/kalender?von=${von}&bis=${bis}`),
 };
