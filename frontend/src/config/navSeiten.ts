@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bell,
+  CalendarCheck,
   CalendarDays,
   CalendarRange,
   ClipboardList,
@@ -337,6 +338,16 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/techniker-zuweisungen",
     kategorie: "Verwaltung",
     sichtbar: ({ hatRecht }) => hatRecht("dispo", "bearbeiten"),
+  },
+  {
+    key: "abwesenheiten",
+    label: "Abwesenheiten",
+    icon: CalendarCheck,
+    tone: "cyan",
+    route: "/abwesenheiten",
+    kategorie: "Verwaltung",
+    sichtbar: ({ currentUser }) =>
+      !!currentUser?.darf_abwesenheiten_verwalten && istModulAktiv(currentUser, "zeiterfassung"),
   },
   {
     key: "team_zeiten",

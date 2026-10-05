@@ -626,7 +626,7 @@ fremdes Soll und fremden Saldo nur mit dem Recht.
 ## 13. Abwesenheiten, Urlaubskonto, Freizeitausgleich
 
 Status: Backend umgesetzt (Migration 0101, `app/api/routes/abwesenheiten.py`,
-`app/services/abwesenheit_service.py`), Frontend folgt. Anlass: Fehlerbericht
+`app/services/abwesenheit_service.py`), Frontend umgesetzt (Monatsliste `/statistik`, Seite `/abwesenheiten`). Anlass: Fehlerbericht
 9854bb09, Stufe 3+4.
 
 **Anträge.** Tabelle `abwesenheitsantraege`: Betroffener (`user_id`), `art`

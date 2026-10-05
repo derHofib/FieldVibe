@@ -19,6 +19,7 @@ import { HighlightsPage } from "../pages/feld/HighlightsPage";
 import { InsightsPage } from "../pages/feld/InsightsPage";
 import { IntegrationenPage } from "../pages/feld/IntegrationenPage";
 import { OfficeArbeitszeitEinstellungenPage } from "./zeit/OfficeArbeitszeitEinstellungenPage";
+import { OfficeAbwesenheitenPage } from "./zeit/OfficeAbwesenheitenPage";
 import { OfficeArbeitszeitPage } from "./zeit/OfficeArbeitszeitPage";
 import { LeistungsverzeichnisDetailPage } from "../pages/feld/LeistungsverzeichnisDetailPage";
 import { LeistungsverzeichnisPage } from "../pages/feld/LeistungsverzeichnisPage";
@@ -180,6 +181,7 @@ export function OfficeApp() {
         <Route path="/einstellungen" element={<SettingsPage />} />
         <Route path="/einstellungen/seitenleiste" element={<OfficeNavSettingsPage />} />
         <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
+        <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
         <Route path="/einstellungen/kategorien" element={<OfficeNavKategorienPage />} />
         <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
         <Route path="/team-zeiten" element={<TeamZeitenPage />} />
