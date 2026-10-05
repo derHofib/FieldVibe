@@ -1,26 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bug, Copy, Image as BildIcon } from "lucide-react";
+import { Bug, Copy, Image as BildIcon, Lightbulb } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { fehlerberichteApi, mandantenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { FehlerberichtListItem, FehlerberichtSchweregrad, FehlerberichtZaehler } from "../../types";
 import { EmptyState } from "../EmptyState";
 import { SearchField } from "../apple/SearchField";
+import { SegmentedControl } from "../apple/SegmentedControl";
 import { STATUS_KREIS_KLASSE } from "../apple/status";
 import { FehlerStatusPille, SchweregradBadge } from "./Badges";
 import {
   FEHLER_STATUS,
-  FEHLER_STATUS_LABEL,
   FEHLER_STATUS_TOKEN,
   OFFENE_STATUS,
   SCHWEREGRADE,
   SCHWEREGRAD_LABEL,
   istDringend,
   relativeZeit,
+  statusLabel,
 } from "./darstellung";
-import { STANDARD_FILTER, ladeBerichte, type ListenFilter, type StatusFilter, type Zeitraum } from "./liste";
+import { STANDARD_FILTER, ladeBerichte, type ArtReiter, type ListenFilter, type StatusFilter, type Zeitraum } from "./liste";
 
 function offenAnzahl(z: FehlerberichtZaehler): number {
   return OFFENE_STATUS.reduce((summe, s) => summe + z[s], 0);
@@ -62,6 +63,16 @@ function Kachel({
   );
 }
 
+const REITER: { wert: ArtReiter; label: string }[] = [
+  { wert: "fehler", label: "Fehler" },
+  { wert: "idee", label: "Ideen" },
+  { wert: "alle", label: "Alle" },
+];
+
+function leseReiter(wert: string | null): ArtReiter {
+  return wert === "idee" || wert === "alle" ? wert : "fehler";
+}
+
 function Zeile({ b, zeigeMandant, detailPfad }: { b: FehlerberichtListItem; zeigeMandant: boolean; detailPfad: (id: string) => string }) {
   const dringend = istDringend(b.schweregrad);
   const meta = [zeigeMandant ? b.mandant_name : null, b.melder_name].filter(Boolean).join(" · ");
@@ -77,14 +88,21 @@ function Zeile({ b, zeigeMandant, detailPfad }: { b: FehlerberichtListItem; zeig
       )}
       <Link to={detailPfad(b.id)} className="flex flex-col gap-1.5 px-4 py-3 hover:bg-fill">
         <div className="flex items-start justify-between gap-3">
-          <p className={`min-w-0 text-[15px] text-label ${dringend ? "font-bold" : "font-semibold"}`}>{b.titel}</p>
+          <p className={`flex min-w-0 items-start gap-2 text-[15px] text-label ${dringend ? "font-bold" : "font-semibold"}`}>
+            {b.art === "idee" ? (
+              <Lightbulb size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-tone-amber" aria-label="Idee" role="img" />
+            ) : (
+              <Bug size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-label2" aria-label="Fehler" role="img" />
+            )}
+            <span className="min-w-0">{b.titel}</span>
+          </p>
           <span className="shrink-0 text-xs text-label2" title={new Date(b.created_at).toLocaleString("de-DE")}>
             {relativeZeit(b.created_at)}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <SchweregradBadge schweregrad={b.schweregrad} />
-          <FehlerStatusPille status={b.status} />
+          <FehlerStatusPille status={b.status} art={b.art} />
           {b.duplikat_von_id && (
             <span className="inline-flex items-center gap-1 text-xs text-label2">
               <Copy size={12} strokeWidth={2} aria-hidden="true" />
@@ -120,8 +138,26 @@ export function FehlerberichtListe({
   detailPfad: (id: string) => string;
 }) {
   const { isImpersonating } = useAuth();
-  const [filter, setFilter] = useState<ListenFilter>(STANDARD_FILTER);
-  const setze = (teil: Partial<ListenFilter>) => setFilter((f) => ({ ...f, ...teil }));
+  // Der Reiter steckt in der URL (?art=), damit Zurück aus dem Detail ihn behält.
+  const [suchParameter, setSuchParameter] = useSearchParams();
+  const art = leseReiter(suchParameter.get("art"));
+  const [lokal, setFilter] = useState<Omit<ListenFilter, "art">>(STANDARD_FILTER);
+  const filter: ListenFilter = { ...lokal, art };
+  const setze = (teil: Partial<Omit<ListenFilter, "art">>) => setFilter((f) => ({ ...f, ...teil }));
+  const reiterWaehlen = (neu: ArtReiter) => {
+    setSuchParameter(
+      (alt) => {
+        const naechste = new URLSearchParams(alt);
+        if (neu === "fehler") naechste.delete("art");
+        else naechste.set("art", neu);
+        return naechste;
+      },
+      { replace: true },
+    );
+    setFilter((f) => ({ ...f, status: "offen" }));
+  };
+  const artFilter = art === "alle" ? undefined : art;
+  const textArt = art === "idee" ? "idee" : "fehler";
 
   const { data: mandanten } = useQuery({
     queryKey: ["mandanten"],
@@ -130,8 +166,8 @@ export function FehlerberichtListe({
   });
   const mandantId = mitMandantFilter ? filter.mandantId : "";
   const { data: zaehler } = useQuery({
-    queryKey: ["fehlerberichte", "zaehler", mandantId],
-    queryFn: () => fehlerberichteApi.zaehler(mandantId || undefined),
+    queryKey: ["fehlerberichte", "zaehler", mandantId, art],
+    queryFn: () => fehlerberichteApi.zaehler(mandantId || undefined, artFilter),
   });
   const { data: berichte, isLoading, isError } = useQuery({
     queryKey: ["fehlerberichte", "liste", { ...filter, mandantId }],
@@ -140,11 +176,11 @@ export function FehlerberichtListe({
 
   // Erneuter Klick auf die aktive Kachel kehrt zum Standard "offen" zurueck.
   const kachelKlick = (status: StatusFilter) => setze({ status: filter.status === status ? "offen" : status });
-  const abweichend =
-    filter.status !== "offen" || filter.schweregrad || filter.mandantId || filter.q || filter.zeitraum;
+  const abweichend = lokal.status !== "offen" || lokal.schweregrad || lokal.mandantId || lokal.q || lokal.zeitraum;
 
   return (
     <div className="space-y-4">
+      <SegmentedControl<ArtReiter> ariaLabel="Art" wert={art} onChange={reiterWaehlen} optionen={REITER} />
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
         <Kachel
           label="Offen"
@@ -155,7 +191,7 @@ export function FehlerberichtListe({
         {FEHLER_STATUS.map((s) => (
           <Kachel
             key={s}
-            label={FEHLER_STATUS_LABEL[s]}
+            label={statusLabel(s, textArt)}
             anzahl={zaehler?.[s]}
             punktKlasse={STATUS_KREIS_KLASSE[FEHLER_STATUS_TOKEN[s]]}
             aktiv={filter.status === s}
@@ -175,7 +211,7 @@ export function FehlerberichtListe({
           value={filter.q}
           onChange={(q) => setze({ q })}
           placeholder="Titel oder Beschreibung"
-          ariaLabel="Fehlerberichte durchsuchen"
+          ariaLabel={art === "idee" ? "Ideen durchsuchen" : art === "alle" ? "Fehler und Ideen durchsuchen" : "Fehlerberichte durchsuchen"}
           className="sm:col-span-2 lg:col-span-1"
         />
         <select
@@ -184,7 +220,7 @@ export function FehlerberichtListe({
           onChange={(e) => setze({ schweregrad: e.target.value as FehlerberichtSchweregrad | "" })}
           className="field-ap"
         >
-          <option value="">Alle Schweregrade</option>
+          <option value="">{art === "idee" ? "Alle Prioritäten" : "Alle Schweregrade"}</option>
           {SCHWEREGRADE.map((s) => (
             <option key={s} value={s}>
               {SCHWEREGRAD_LABEL[s]}
@@ -227,7 +263,7 @@ export function FehlerberichtListe({
       {isLoading ? (
         <p className="text-label2">Lädt…</p>
       ) : isError ? (
-        <p className="text-st-fehlt">Fehlerberichte konnten nicht geladen werden.</p>
+        <p className="text-st-fehlt">Meldungen konnten nicht geladen werden.</p>
       ) : berichte && berichte.length > 0 ? (
         <ul className="divide-y divide-sep overflow-hidden rounded-[var(--radius-ap-card)] bg-cell">
           {berichte.map((b) => (
@@ -235,7 +271,10 @@ export function FehlerberichtListe({
           ))}
         </ul>
       ) : (
-        <EmptyState icon={Bug} text="Keine Fehlerberichte für diese Auswahl." />
+        <EmptyState
+          icon={art === "idee" ? Lightbulb : Bug}
+          text={art === "idee" ? "Keine Ideen für diese Auswahl." : art === "alle" ? "Keine Meldungen für diese Auswahl." : "Keine Fehlerberichte für diese Auswahl."}
+        />
       )}
     </div>
   );

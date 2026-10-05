@@ -16,6 +16,7 @@ import { fehlerberichteApi, mandantenApi } from "../../../api/endpoints";
 import { FehlerberichtListe } from "../FehlerberichtListe";
 
 const basis = {
+  art: "fehler" as const,
   mandant_id: "m1",
   mandant_name: "Elektro Muster",
   melder_name: "Max",
@@ -31,11 +32,11 @@ function bericht(id: string, status: FehlerberichtListItem["status"], created_at
   return { ...basis, id, titel: `Titel ${id}`, schweregrad: "mittel", status, created_at, ...extra };
 }
 
-function rendere(mitMandantFilter = true) {
+function rendere(mitMandantFilter = true, url = "/") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>
         <FehlerberichtListe mitMandantFilter={mitMandantFilter} detailPfad={(id) => `/x/${id}`} />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -93,7 +94,7 @@ describe("FehlerberichtListe", () => {
     rendere();
     await waitFor(() => expect(screen.getByText("Titel a")).toBeTruthy());
     vi.mocked(fehlerberichteApi.liste).mockClear();
-    fireEvent.click(screen.getByRole("button", { name: /Alle/ }));
+    fireEvent.click(screen.getByRole("button", { name: /\dAlle/ }));
     await waitFor(() => expect(fehlerberichteApi.liste).toHaveBeenCalled());
     expect(vi.mocked(fehlerberichteApi.liste).mock.calls[0][0]?.status).toBeUndefined();
 
@@ -109,5 +110,29 @@ describe("FehlerberichtListe", () => {
     expect(screen.queryByLabelText("Mandant")).toBeNull();
     expect(mandantenApi.list).not.toHaveBeenCalled();
     expect(screen.queryByText("Elektro Muster")).toBeNull();
+  });
+
+  it("lädt standardmäßig nur Fehler und setzt beim Reiter 'Ideen' den art-Filter inkl. Ideen-Labels", async () => {
+    rendere();
+    await waitFor(() => expect(screen.getByText("Titel a")).toBeTruthy());
+    expect(vi.mocked(fehlerberichteApi.liste).mock.calls.every(([f]) => f?.art === "fehler")).toBe(true);
+    expect(vi.mocked(fehlerberichteApi.zaehler).mock.calls.at(-1)?.[1]).toBe("fehler");
+    expect(screen.getByRole("button", { name: "Fehler" }).getAttribute("aria-pressed")).toBe("true");
+
+    vi.mocked(fehlerberichteApi.liste).mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Ideen" }));
+    await waitFor(() => expect(fehlerberichteApi.liste).toHaveBeenCalled());
+    expect(vi.mocked(fehlerberichteApi.liste).mock.calls.every(([f]) => f?.art === "idee")).toBe(true);
+    expect(vi.mocked(fehlerberichteApi.zaehler).mock.calls.at(-1)?.[1]).toBe("idee");
+    expect(screen.getByRole("button", { name: /Freigegeben/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Umgesetzt/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Gesichtet/ })).toBeNull();
+  });
+
+  it("'Alle'-Reiter fragt ohne art-Filter ab; der Reiter kommt aus der URL", async () => {
+    rendere(true, "/?art=alle");
+    await waitFor(() => expect(fehlerberichteApi.liste).toHaveBeenCalled());
+    expect(vi.mocked(fehlerberichteApi.liste).mock.calls.every(([f]) => f?.art === undefined)).toBe(true);
+    expect(screen.getByRole("button", { name: "Alle", pressed: true })).toBeTruthy();
   });
 });

@@ -1,11 +1,15 @@
 import { fehlerberichteApi } from "../../api/endpoints";
-import type { FehlerberichtListItem, FehlerberichtSchweregrad, FehlerberichtStatus } from "../../types";
+import type { FehlerberichtArt, FehlerberichtListItem, FehlerberichtSchweregrad, FehlerberichtStatus } from "../../types";
 import { OFFENE_STATUS } from "./darstellung";
 
 export type StatusFilter = FehlerberichtStatus | "offen" | "alle";
 export type Zeitraum = "" | "24h" | "7d" | "30d";
 
+/** Reiter der Liste; "alle" lädt ohne art-Filter. */
+export type ArtReiter = FehlerberichtArt | "alle";
+
 export interface ListenFilter {
+  art: ArtReiter;
   status: StatusFilter;
   schweregrad: FehlerberichtSchweregrad | "";
   mandantId: string;
@@ -13,7 +17,7 @@ export interface ListenFilter {
   zeitraum: Zeitraum;
 }
 
-export const STANDARD_FILTER: ListenFilter = { status: "offen", schweregrad: "", mandantId: "", q: "", zeitraum: "" };
+export const STANDARD_FILTER: ListenFilter = { art: "fehler", status: "offen", schweregrad: "", mandantId: "", q: "", zeitraum: "" };
 
 const ZEITRAUM_STUNDEN: Record<Exclude<Zeitraum, "">, number> = { "24h": 24, "7d": 24 * 7, "30d": 24 * 30 };
 const SEITENGROESSE = 100;
@@ -28,6 +32,7 @@ function seitIso(zeitraum: Zeitraum): string | undefined {
  * clientseitig nach Datum zusammengefuehrt. */
 export async function ladeBerichte(filter: ListenFilter): Promise<FehlerberichtListItem[]> {
   const basis = {
+    art: filter.art === "alle" ? undefined : filter.art,
     schweregrad: filter.schweregrad || undefined,
     mandant_id: filter.mandantId || undefined,
     q: filter.q.trim() || undefined,

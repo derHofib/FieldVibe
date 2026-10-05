@@ -2381,10 +2381,12 @@ export interface PartnerVorgang {
 export type PartnerStatusSetzbar = "in_arbeit" | "wartet_kunde" | "abgeschlossen";
 
 export type FehlerberichtStatus = "neu" | "gesichtet" | "in_arbeit" | "behoben" | "abgelehnt" | "duplikat";
+export type FehlerberichtArt = "fehler" | "idee";
 export type FehlerberichtSchweregrad = "niedrig" | "mittel" | "hoch" | "blockierend";
 
 export interface FehlerberichtListItem {
   id: string;
+  art: FehlerberichtArt;
   mandant_id: string;
   mandant_name: string | null;
   melder_name: string | null;
@@ -2412,6 +2414,8 @@ export interface FehlerberichtDetail extends FehlerberichtListItem {
   loesungsnotiz: string | null;
   fix_commit: string | null;
   fix_pr_url: string | null;
+  // Zeitpunkt der Freigabe einer Idee (Status gesichtet); fehlt bei Fehlern.
+  freigegeben_am?: string | null;
 }
 
 export interface FehlerberichtUpdate {
@@ -2433,6 +2437,7 @@ export interface FehlerberichtZaehler {
 }
 
 export interface FehlerberichtListenFilter {
+  art?: FehlerberichtArt;
   status?: FehlerberichtStatus;
   schweregrad?: FehlerberichtSchweregrad;
   seit?: string;

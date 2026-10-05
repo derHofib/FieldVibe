@@ -1,4 +1,4 @@
-import { Bug, ChevronDown, ImagePlus, Monitor } from "lucide-react";
+import { Bug, ChevronDown, Lightbulb, ImagePlus, Monitor } from "lucide-react";
 import { useEffect, useId, useState, type ChangeEvent, type ComponentType, type FormEvent, type ReactNode } from "react";
 
 import type { FehlerberichtKontext, Kategorie } from "../index";
@@ -9,6 +9,8 @@ import {
   baueFormular,
   fehlerText,
   KATEGORIEN,
+  standardKategorien,
+  type Art,
   type FormularWerte,
   type ScreenshotDateien,
   type Schweregrad,
@@ -35,7 +37,14 @@ export interface BerichtStart {
   kontext: FehlerberichtKontext;
   original: Blob | null;
   aufnahmeFehlgeschlagen: boolean;
+  /** Vorbelegte Art; im Dialog umschaltbar. Fehlt sie, gilt "fehler". */
+  art?: Art;
 }
+
+const ARTEN: { wert: Art; label: string }[] = [
+  { wert: "fehler", label: "Fehler" },
+  { wert: "idee", label: "Idee" },
+];
 
 const SCHWEREGRADE: { wert: Schweregrad; label: string }[] = [
   { wert: "niedrig", label: "Niedrig" },
@@ -43,6 +52,41 @@ const SCHWEREGRADE: { wert: Schweregrad; label: string }[] = [
   { wert: "hoch", label: "Hoch" },
   { wert: "blockierend", label: "Blockierend" },
 ];
+const PRIORITAETEN = SCHWEREGRADE.filter((s) => s.wert !== "blockierend");
+
+// Gleiche Optik für beide Umschalter (Art, Schweregrad/Priorität).
+function Umschalter<T extends string>({
+  label,
+  optionen,
+  wert,
+  onChange,
+}: {
+  label: string;
+  optionen: { wert: T; label: string }[];
+  wert: T;
+  onChange: (w: T) => void;
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex w-full rounded-[9px] bg-fill p-0.5">
+      {optionen.map((o) => {
+        const aktiv = wert === o.wert;
+        return (
+          <button
+            key={o.wert}
+            type="button"
+            aria-pressed={aktiv}
+            onClick={() => onChange(o.wert)}
+            className={`h-8 flex-1 rounded-[7px] px-1 text-[13px] ${
+              aktiv ? "bg-thumb font-semibold text-label shadow-[0_1px_3px_rgba(0,0,0,.14)]" : "font-medium text-label"
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function kurzinfo(key: Kategorie, kontext: FehlerberichtKontext): string {
   const wert = kontext[key];
@@ -81,15 +125,14 @@ export function FehlerberichtDialog({
   const [formen, setFormen] = useState<Form[]>([]);
   const [mitScreenshot, setMitScreenshot] = useState(true);
   const [werte, setWerte] = useState<FormularWerte>({
+    art: start.art ?? "fehler",
     titel: "",
     beschreibung: "",
     erwartet: "",
     schritte: "",
     schweregrad: "mittel",
   });
-  const [auswahl, setAuswahl] = useState<Set<Kategorie>>(
-    () => new Set(KATEGORIEN.filter((k) => start.kontext[k.key] !== undefined).map((k) => k.key)),
-  );
+  const [auswahl, setAuswahl] = useState<Set<Kategorie>>(() => standardKategorien(start.art ?? "fehler", start.kontext));
   const [vorschau, setVorschau] = useState<Set<Kategorie>>(new Set());
   const [schritteOffen, setSchritteOffen] = useState(false);
   const [bildFehler, setBildFehler] = useState<string | null>(null);
@@ -110,6 +153,14 @@ export function FehlerberichtDialog({
       aktiv = false;
     };
   }, [original]);
+
+  const idee = werte.art === "idee";
+
+  function artWechseln(art: Art) {
+    if (art === werte.art) return;
+    setWerte({ ...werte, art, schweregrad: art === "idee" && werte.schweregrad === "blockierend" ? "hoch" : werte.schweregrad });
+    setAuswahl(standardKategorien(art, start.kontext));
+  }
 
   function neuesBild(blob: Blob) {
     setOriginal(blob);
@@ -173,7 +224,7 @@ export function FehlerberichtDialog({
     <Rahmen
       offen
       onClose={onClose}
-      titel="Fehler melden"
+      titel={idee ? "Idee einreichen" : "Fehler melden"}
       vollbild
       links={schliessen}
       rechts={
@@ -187,8 +238,14 @@ export function FehlerberichtDialog({
       <div data-fehlerbericht-ignorieren className="px-4 py-4">
         {ergebnis ? (
           <div className="py-8 text-center" role="status">
-            <Bug size={32} strokeWidth={2} className="mx-auto mb-3 text-tint" aria-hidden="true" />
-            <p className="text-[17px] font-semibold text-label">Danke! Fehler #{String(ergebnis.id)} gemeldet.</p>
+            {idee ? (
+              <Lightbulb size={32} strokeWidth={2} className="mx-auto mb-3 text-tint" aria-hidden="true" />
+            ) : (
+              <Bug size={32} strokeWidth={2} className="mx-auto mb-3 text-tint" aria-hidden="true" />
+            )}
+            <p className="text-[17px] font-semibold text-label">
+              {idee ? `Danke! Deine Idee #${String(ergebnis.id)} wurde eingereicht.` : `Danke! Fehler #${String(ergebnis.id)} gemeldet.`}
+            </p>
             {ergebnis.duplikat_von_id != null && (
               <p className="mt-2 text-[15px] text-label2">
                 Dieses Problem ist bereits bekannt (#{String(ergebnis.duplikat_von_id)}). Deine Meldung wurde zugeordnet.
@@ -200,6 +257,7 @@ export function FehlerberichtDialog({
           </div>
         ) : (
           <form id={formId} onSubmit={senden} className="space-y-5">
+            <Umschalter label="Art der Meldung" optionen={ARTEN} wert={werte.art} onChange={artWechseln} />
             <section aria-label="Screenshot">
               {original && bild ? (
                 <>
@@ -213,6 +271,9 @@ export function FehlerberichtDialog({
                     />
                     Screenshot mitsenden
                   </label>
+                  {mitScreenshot && idee && (
+                    <p className="mb-2 text-[13px] text-label2">Markiere die Stelle, die sich ändern soll.</p>
+                  )}
                   {mitScreenshot && <AnnotationEditor bild={bild} formen={formen} onFormen={setFormen} />}
                 </>
               ) : (
@@ -258,20 +319,20 @@ export function FehlerberichtDialog({
             </div>
             <div>
               <label htmlFor={`${formId}-beschreibung`} className={labelKlasse}>
-                Beschreibung
+                {idee ? "Was soll sich ändern?" : "Beschreibung"}
               </label>
               <textarea
                 id={`${formId}-beschreibung`}
                 className="field-ap min-h-24"
                 required
-                placeholder="Was ist passiert?"
+                placeholder={idee ? undefined : "Was ist passiert?"}
                 value={werte.beschreibung}
                 onChange={(e) => setWerte({ ...werte, beschreibung: e.target.value })}
               />
             </div>
             <div>
               <label htmlFor={`${formId}-erwartet`} className={labelKlasse}>
-                Was hast du erwartet?
+                {idee ? "Warum / Nutzen" : "Was hast du erwartet?"}
               </label>
               <textarea
                 id={`${formId}-erwartet`}
@@ -282,27 +343,16 @@ export function FehlerberichtDialog({
             </div>
 
             <fieldset>
-              <legend className={labelKlasse}>Schweregrad</legend>
-              <div role="group" aria-label="Schweregrad" className="flex w-full rounded-[9px] bg-fill p-0.5">
-                {SCHWEREGRADE.map((s) => {
-                  const aktiv = werte.schweregrad === s.wert;
-                  return (
-                    <button
-                      key={s.wert}
-                      type="button"
-                      aria-pressed={aktiv}
-                      onClick={() => setWerte({ ...werte, schweregrad: s.wert })}
-                      className={`h-8 flex-1 rounded-[7px] px-1 text-[13px] ${
-                        aktiv ? "bg-thumb font-semibold text-label shadow-[0_1px_3px_rgba(0,0,0,.14)]" : "font-medium text-label"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <legend className={labelKlasse}>{idee ? "Priorität" : "Schweregrad"}</legend>
+              <Umschalter
+                label={idee ? "Priorität" : "Schweregrad"}
+                optionen={idee ? PRIORITAETEN : SCHWEREGRADE}
+                wert={werte.schweregrad}
+                onChange={(schweregrad) => setWerte({ ...werte, schweregrad })}
+              />
             </fieldset>
 
+            {!idee && (
             <div>
               <button
                 type="button"
@@ -323,11 +373,13 @@ export function FehlerberichtDialog({
                 />
               )}
             </div>
+            )}
 
             <section aria-label="Mitgesendete technische Daten">
               <h3 className="mb-1 text-[13px] font-semibold tracking-wide text-label2 uppercase">Mitgesendete technische Daten</h3>
               <p className="mb-2 text-[13px] text-label2">
-                Diese Daten helfen bei der Fehlersuche. Passwörter, Tokens und Kontodaten sind bereits entfernt. Du siehst
+                {idee ? "Standardmäßig wird nur die Umgebung (Seite und App-Version) mitgesendet; weitere Daten kannst du anhaken." : "Diese Daten helfen bei der Fehlersuche."}{" "}
+                Passwörter, Tokens und Kontodaten sind bereits entfernt. Du siehst
                 hier genau, was gesendet wird.
               </p>
               <div className="overflow-hidden rounded-[var(--radius-ap-card)] bg-cell">
@@ -376,7 +428,7 @@ export function FehlerberichtDialog({
               </p>
             )}
             <button type="submit" disabled={!kannSenden} className="btn-ap-capsule btn-ap-capsule-primary w-full">
-              {sendet ? "Sendet…" : "Fehler senden"}
+              {sendet ? "Sendet…" : idee ? "Idee senden" : "Fehler senden"}
             </button>
           </form>
         )}

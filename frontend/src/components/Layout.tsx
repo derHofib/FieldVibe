@@ -12,7 +12,7 @@ const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard }[] =
   { to: "/mandanten", label: "Mandanten", icon: Building2 },
   { to: "/accounts", label: "Accounts", icon: Users },
   { to: "/audit-log", label: "Audit-Log", icon: ScrollText },
-  { to: "/bugfixes", label: "Bugfixes", icon: Bug },
+  { to: "/bugfixes", label: "Bugs & Ideen", icon: Bug },
   { to: "/dsgvo", label: "DSGVO", icon: ShieldCheck },
   { to: "/update", label: "Update", icon: ArrowUpCircle },
   { to: "/einstellungen", label: "Einstellungen", icon: Settings },
@@ -21,7 +21,7 @@ const NAV_ITEMS: { to: string; label: string; icon: typeof LayoutDashboard }[] =
 function useSeitentitel(): string {
   const { pathname } = useLocation();
   if (pathname.startsWith("/mandanten/")) return "Mandant bearbeiten";
-  if (pathname.startsWith("/bugfixes/")) return "Fehlerbericht";
+  if (pathname.startsWith("/bugfixes/")) return "Bericht";
   const treffer = NAV_ITEMS.find((item) => pathname.startsWith(item.to));
   return treffer?.label ?? "";
 }
@@ -29,13 +29,20 @@ function useSeitentitel(): string {
 export function Layout() {
   const { currentUser, logout } = useAuth();
   const seitentitel = useSeitentitel();
-  // Gleicher Query-Key wie die Zaehler-Kacheln der Bugfixes-Seite (ohne Mandantenfilter).
-  const { data: zaehler } = useQuery({
-    queryKey: ["fehlerberichte", "zaehler", ""],
-    queryFn: () => fehlerberichteApi.zaehler(),
+  // Gleiche Query-Keys wie die Zaehler-Kacheln der Bugfixes-Seite (ohne Mandantenfilter).
+  const { data: fehlerZaehler } = useQuery({
+    queryKey: ["fehlerberichte", "zaehler", "", "fehler"],
+    queryFn: () => fehlerberichteApi.zaehler(undefined, "fehler"),
     refetchInterval: 60_000,
   });
-  const offeneBugfixes = zaehler ? zaehler.neu + zaehler.gesichtet + zaehler.in_arbeit : 0;
+  const { data: ideenZaehler } = useQuery({
+    queryKey: ["fehlerberichte", "zaehler", "", "idee"],
+    queryFn: () => fehlerberichteApi.zaehler(undefined, "idee"),
+    refetchInterval: 60_000,
+  });
+  // Offene Fehler plus noch ungeprüfte Ideen; freigegebene Ideen warten nur auf Claude.
+  const offeneBugfixes =
+    (fehlerZaehler ? fehlerZaehler.neu + fehlerZaehler.gesichtet + fehlerZaehler.in_arbeit : 0) + (ideenZaehler?.neu ?? 0);
 
   return (
     <div className="min-h-screen bg-card text-label">
@@ -65,7 +72,7 @@ export function Layout() {
                     <span className="hidden sm:inline">{item.label}</span>
                     {item.to === "/bugfixes" && offeneBugfixes > 0 && (
                       <span
-                        aria-label={`${offeneBugfixes} offene Fehlerberichte`}
+                        aria-label={`${offeneBugfixes} offene Fehler und neue Ideen`}
                         className="absolute top-0.5 right-0.5 min-w-4 rounded-full bg-tint-solid px-1 text-center text-[10px] leading-4 font-semibold text-white tabular-nums sm:static sm:ml-auto"
                       >
                         {offeneBugfixes}

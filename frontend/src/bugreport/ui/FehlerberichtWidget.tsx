@@ -2,6 +2,7 @@ import { Camera, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { sammleKontext } from "../index";
+import type { Art } from "./payload";
 import { FehlerberichtDialog, type BerichtStart, type MeldeErgebnis, type RahmenKomponente } from "./FehlerberichtDialog";
 import { IGNORIEREN_ATTRIBUT, nimmScreenshot } from "./screenshot";
 
@@ -9,9 +10,9 @@ export interface FehlerberichtSteuerung {
   /** Ob der Nutzer melden darf -- steuert auch, ob Menü-Einträge angezeigt werden. */
   verfuegbar: boolean;
   /** Sofort-Screenshot der aktuellen Ansicht, dann Editor (Tastenkürzel, Office-Menü). */
-  aufnehmen: () => void;
+  aufnehmen: (optionen?: { art?: Art }) => void;
   /** Für Seiten, die selbst nicht der fehlerhafte Bildschirm sind (Feld-App "Mehr"). */
-  aufnahmemodusStarten: () => void;
+  aufnahmemodusStarten: (optionen?: { art?: Art }) => void;
 }
 
 const Kein: FehlerberichtSteuerung = { verfuegbar: false, aufnehmen: () => undefined, aufnahmemodusStarten: () => undefined };
@@ -52,16 +53,16 @@ export function FehlerberichtProvider({
   schwebenderButton = false,
   children,
 }: FehlerberichtWidgetProps) {
-  const [modus, setModus] = useState(false);
+  const [modus, setModus] = useState<Art | null>(null);
   const [bericht, setBericht] = useState<BerichtStart | null>(null);
   const laeuft = useRef(false);
   const offen = useRef(false);
   offen.current = bericht !== null;
 
-  const aufnehmen = useCallback(async () => {
+  const aufnehmen = useCallback(async (art: Art = "fehler") => {
     if (!darfMelden || laeuft.current || offen.current) return;
     laeuft.current = true;
-    setModus(false);
+    setModus(null);
     try {
       // Snapshot einmalig beim Öffnen: Vorschau und Versand zeigen denselben Stand.
       const kontext = sammleKontext();
@@ -75,15 +76,15 @@ export function FehlerberichtProvider({
       } catch {
         aufnahmeFehlgeschlagen = true;
       }
-      setBericht({ kontext, original, aufnahmeFehlgeschlagen });
+      setBericht({ kontext, original, aufnahmeFehlgeschlagen, art });
     } finally {
       laeuft.current = false;
     }
   }, [darfMelden]);
 
-  const aufnahmemodusStarten = useCallback(() => {
+  const aufnahmemodusStarten = useCallback((optionen?: { art?: Art }) => {
     if (!darfMelden) return;
-    setModus(true);
+    setModus(optionen?.art ?? "fehler");
     zurueck?.();
   }, [darfMelden, zurueck]);
 
@@ -101,7 +102,7 @@ export function FehlerberichtProvider({
   useEffect(() => {
     if (!modus) return;
     function aufEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setModus(false);
+      if (e.key === "Escape") setModus(null);
     }
     window.addEventListener("keydown", aufEscape);
     return () => window.removeEventListener("keydown", aufEscape);
@@ -110,34 +111,34 @@ export function FehlerberichtProvider({
   // Verliert der Nutzer das Recht (Logout/Impersonation-Ende), sofort alles schließen.
   useEffect(() => {
     if (!darfMelden) {
-      setModus(false);
+      setModus(null);
       setBericht(null);
     }
   }, [darfMelden]);
 
   const steuerung = useMemo<FehlerberichtSteuerung>(
-    () => ({ verfuegbar: darfMelden, aufnehmen: () => void aufnehmen(), aufnahmemodusStarten }),
+    () => ({ verfuegbar: darfMelden, aufnehmen: (optionen) => void aufnehmen(optionen?.art), aufnahmemodusStarten }),
     [darfMelden, aufnehmen, aufnahmemodusStarten],
   );
 
   return (
     <Kontext.Provider value={steuerung}>
       {children}
-      {darfMelden && modus && (
+      {darfMelden && modus !== null && (
         <div
           {...{ [IGNORIEREN_ATTRIBUT]: "" }}
           className="fixed left-1/2 z-40 flex max-w-[calc(100vw-24px)] -translate-x-1/2 items-center gap-1 rounded-full bg-tint-solid py-1 pr-1 pl-4 text-white shadow-[0_4px_16px_rgba(0,0,0,.3)]"
           style={{ bottom: "calc(76px + env(safe-area-inset-bottom))" }}
           role="region"
-          aria-label="Fehler melden – Aufnahmemodus"
+          aria-label={modus === "idee" ? "Idee einreichen – Aufnahmemodus" : "Fehler melden – Aufnahmemodus"}
         >
-          <button type="button" onClick={() => void aufnehmen()} className="flex min-h-10 items-center gap-2 text-left text-[13px] font-semibold">
+          <button type="button" onClick={() => void aufnehmen(modus)} className="flex min-h-10 items-center gap-2 text-left text-[13px] font-semibold">
             <Camera size={16} strokeWidth={2} className="shrink-0" aria-hidden="true" />
-            <span>Zum Fehler wechseln, dann hier tippen · Aufnehmen</span>
+            <span>{modus === "idee" ? "Zur betroffenen Stelle wechseln, dann hier tippen · Aufnehmen" : "Zum Fehler wechseln, dann hier tippen · Aufnehmen"}</span>
           </button>
           <button
             type="button"
-            onClick={() => setModus(false)}
+            onClick={() => setModus(null)}
             aria-label="Abbrechen"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
           >
@@ -145,7 +146,7 @@ export function FehlerberichtProvider({
           </button>
         </div>
       )}
-      {darfMelden && schwebenderButton && !modus && !bericht && (
+      {darfMelden && schwebenderButton && modus === null && !bericht && (
         <button
           {...{ [IGNORIEREN_ATTRIBUT]: "" }}
           type="button"

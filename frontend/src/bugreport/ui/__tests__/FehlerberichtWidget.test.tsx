@@ -21,7 +21,7 @@ function Rahmen({ offen, titel, children }: { offen: boolean; titel: string; chi
 
 function MenueEintrag() {
   const f = useFehlerbericht();
-  return f.verfuegbar ? <button onClick={f.aufnahmemodusStarten}>Fehler melden</button> : null;
+  return f.verfuegbar ? <button onClick={() => f.aufnahmemodusStarten()}>Fehler melden</button> : null;
 }
 
 function rendere(darfMelden: boolean, zurueck = vi.fn()) {

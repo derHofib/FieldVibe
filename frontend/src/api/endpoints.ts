@@ -41,6 +41,7 @@ import type {
   EmailLog,
   FahrzeugZuweisungUebersicht,
   FeedResponse,
+  FehlerberichtArt,
   FehlerberichtDetail,
   FehlerberichtListenFilter,
   FehlerberichtListItem,
@@ -343,8 +344,13 @@ export const fehlerberichteApi = {
     return apiFetch<FehlerberichtListItem[]>(`/api/fehlerberichte${qs ? `?${qs}` : ""}`);
   },
   // Das Backend nimmt hier nur mandant_id (kein Status-/Zeitfilter).
-  zaehler: (mandantId?: string) =>
-    apiFetch<FehlerberichtZaehler>(`/api/fehlerberichte/zaehler${mandantId ? `?mandant_id=${mandantId}` : ""}`),
+  zaehler: (mandantId?: string, art?: FehlerberichtArt) => {
+    const qs = new URLSearchParams();
+    if (mandantId) qs.set("mandant_id", mandantId);
+    if (art) qs.set("art", art);
+    const text = qs.toString();
+    return apiFetch<FehlerberichtZaehler>(`/api/fehlerberichte/zaehler${text ? `?${text}` : ""}`);
+  },
   detail: (id: string) => apiFetch<FehlerberichtDetail>(`/api/fehlerberichte/${id}`),
   aendern: (id: string, body: FehlerberichtUpdate) =>
     apiFetch<FehlerberichtDetail>(`/api/fehlerberichte/${id}`, { method: "PATCH", body: JSON.stringify(body) }),

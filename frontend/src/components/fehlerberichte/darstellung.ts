@@ -1,6 +1,6 @@
 import type { StatusKey } from "../apple/status";
 import type { NetzwerkEintrag } from "../../bugreport/typen";
-import type { FehlerberichtSchweregrad, FehlerberichtStatus } from "../../types";
+import type { FehlerberichtArt, FehlerberichtSchweregrad, FehlerberichtStatus } from "../../types";
 
 export const FEHLER_STATUS: FehlerberichtStatus[] = ["neu", "gesichtet", "in_arbeit", "behoben", "abgelehnt", "duplikat"];
 export const OFFENE_STATUS: FehlerberichtStatus[] = ["neu", "gesichtet", "in_arbeit"];
@@ -14,6 +14,19 @@ export const FEHLER_STATUS_LABEL: Record<FehlerberichtStatus, string> = {
   abgelehnt: "Abgelehnt",
   duplikat: "Duplikat",
 };
+
+export const IDEE_STATUS_LABEL: Record<FehlerberichtStatus, string> = {
+  neu: "Neu",
+  gesichtet: "Freigegeben",
+  in_arbeit: "In Umsetzung",
+  behoben: "Umgesetzt",
+  abgelehnt: "Abgelehnt",
+  duplikat: "Duplikat",
+};
+
+export function statusLabel(status: FehlerberichtStatus, art: FehlerberichtArt = "fehler"): string {
+  return (art === "idee" ? IDEE_STATUS_LABEL : FEHLER_STATUS_LABEL)[status];
+}
 
 // Eigene Farbtoken gibt es fuer Fehlerberichte nicht -- Mapping auf die
 // sechs Status-Token; abgelehnt/duplikat teilen sich bewusst das neutrale Grau.

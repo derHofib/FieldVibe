@@ -8,6 +8,7 @@ import {
   Flag,
   FolderCog,
   Inbox,
+  Lightbulb,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
@@ -331,7 +332,7 @@ export function OfficeLayout() {
           {hatRecht("fehlerberichte", "sehen") && (
             <NavLink
               to="/fehlerberichte"
-              title={eingeklappt ? "Fehlerberichte" : undefined}
+              title={eingeklappt ? "Fehler & Ideen" : undefined}
               className={({ isActive }) =>
                 `flex h-[30px] items-center rounded-[7px] text-xs font-medium hover:bg-fill hover:text-label ${
                   isActive ? "bg-fill text-label" : "text-label2"
@@ -339,12 +340,12 @@ export function OfficeLayout() {
               }
             >
               <ClipboardList size={14} strokeWidth={2} className="shrink-0" />
-              {!eingeklappt && "Fehlerberichte"}
+              {!eingeklappt && "Fehler & Ideen"}
             </NavLink>
           )}
           {fehlerbericht.verfuegbar && (
             <button
-              onClick={fehlerbericht.aufnehmen}
+              onClick={() => fehlerbericht.aufnehmen()}
               title={eingeklappt ? "Fehler melden (Strg+Umschalt+B)" : "Strg+Umschalt+B (Mac: Cmd+Umschalt+B)"}
               className={`flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
                 eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
@@ -352,6 +353,18 @@ export function OfficeLayout() {
             >
               <Bug size={14} strokeWidth={2} className="shrink-0" />
               {!eingeklappt && "Fehler melden"}
+            </button>
+          )}
+          {fehlerbericht.verfuegbar && (
+            <button
+              onClick={() => fehlerbericht.aufnehmen({ art: "idee" })}
+              title={eingeklappt ? "Idee einreichen" : undefined}
+              className={`flex h-[30px] items-center rounded-[7px] text-xs font-medium text-label2 hover:bg-fill hover:text-label ${
+                eingeklappt ? "justify-center px-0" : "gap-2 px-2.5"
+              }`}
+            >
+              <Lightbulb size={14} strokeWidth={2} className="shrink-0" />
+              {!eingeklappt && "Idee einreichen"}
             </button>
           )}
           <button

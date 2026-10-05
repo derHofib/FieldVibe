@@ -1,4 +1,4 @@
-import { Bug, LogOut, Search, Settings, User } from "lucide-react";
+import { Bug, Lightbulb, LogOut, Search, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { AbschnittskopfA, AbschnittskopfB } from "../../components/apple/AbschnittsKopf";
@@ -105,9 +105,15 @@ export function MehrPage() {
             </GroupedListRow>
           )}
           {fehlerbericht.verfuegbar && (
-            <GroupedListRow onClick={fehlerbericht.aufnahmemodusStarten} navigierbar>
+            <GroupedListRow onClick={() => fehlerbericht.aufnahmemodusStarten()} navigierbar>
               <Bug size={20} strokeWidth={2} className="shrink-0 text-tint" />
               <span className="flex-1 text-[17px] text-label">Fehler melden</span>
+            </GroupedListRow>
+          )}
+          {fehlerbericht.verfuegbar && (
+            <GroupedListRow onClick={() => fehlerbericht.aufnahmemodusStarten({ art: "idee" })} navigierbar>
+              <Lightbulb size={20} strokeWidth={2} className="shrink-0 text-tint" />
+              <span className="flex-1 text-[17px] text-label">Idee einreichen</span>
             </GroupedListRow>
           )}
           <GroupedListRow onClick={logout} last>

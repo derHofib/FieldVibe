@@ -10,7 +10,7 @@ const detailPfad = (id: string) => `/fehlerberichte/${id}`;
 export function OfficeFehlerberichtePage() {
   return (
     <div className="mx-auto max-w-5xl">
-      <SeitenKopf titel="Fehlerberichte" />
+      <SeitenKopf titel="Fehler & Ideen" />
       <FehlerberichtListe mitMandantFilter={false} detailPfad={detailPfad} />
     </div>
   );
@@ -22,7 +22,7 @@ export function OfficeFehlerberichtDetailPage() {
   if (!id) return null;
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="sr-only">Fehlerbericht</h1>
+      <h1 className="sr-only">Fehler oder Idee</h1>
       <FehlerberichtDetailAnsicht
         key={id}
         id={id}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ClipboardCopy, Download, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, ClipboardCopy, Download, ExternalLink, Lightbulb, Trash2, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -9,7 +9,7 @@ import { downloadBlob } from "../../utils/download";
 import { SegmentedControl } from "../apple/SegmentedControl";
 import { FehlerStatusPille, SchweregradBadge } from "./Badges";
 import { KontextTabs } from "./KontextTabs";
-import { FEHLER_STATUS, FEHLER_STATUS_LABEL, datumZeit, istHttpUrl, kurzCommit } from "./darstellung";
+import { FEHLER_STATUS, datumZeit, istHttpUrl, kurzCommit, statusLabel } from "./darstellung";
 
 function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
   return (
@@ -157,8 +157,8 @@ function DuplikatBereich({
   const [eingabe, setEingabe] = useState("");
   // Auswahl aus den juengsten Berichten (datalist) ODER freie ID-Eingabe.
   const { data: kandidaten } = useQuery({
-    queryKey: ["fehlerberichte", "duplikat-kandidaten", detail.mandant_id],
-    queryFn: () => fehlerberichteApi.liste({ mandant_id: detail.mandant_id, limit: 100 }),
+    queryKey: ["fehlerberichte", "duplikat-kandidaten", detail.mandant_id, detail.art],
+    queryFn: () => fehlerberichteApi.liste({ mandant_id: detail.mandant_id, art: detail.art, limit: 100 }),
     enabled: kannBearbeiten,
   });
   const id = eingabe.trim();
@@ -225,6 +225,7 @@ export function FehlerberichtDetailAnsicht({
   mitMandant,
   kannBearbeiten,
   kannLoeschen,
+  ideenVerwalten = false,
   listenPfad,
   detailPfad,
 }: {
@@ -232,6 +233,8 @@ export function FehlerberichtDetailAnsicht({
   mitMandant: boolean;
   kannBearbeiten: boolean;
   kannLoeschen: boolean;
+  /** Status/Lösung von Ideen darf nur das FieldVibe-Team (Super-Admin) ändern. */
+  ideenVerwalten?: boolean;
   listenPfad: string;
   detailPfad: (id: string) => string;
 }) {
@@ -289,10 +292,13 @@ export function FehlerberichtDetailAnsicht({
     if (text !== null) downloadBlob(new Blob([text], { type: "text/markdown;charset=utf-8" }), `fehlerbericht-${id.slice(0, 8)}.md`);
   }
 
+  const idee = detail?.art === "idee";
+  const darfAendern = kannBearbeiten && (!idee || ideenVerwalten);
+
   const zurueck = (
-    <Link to={listenPfad} className="inline-flex items-center gap-1 text-sm font-medium text-tint-text">
+    <Link to={idee ? `${listenPfad}?art=idee` : listenPfad} className="inline-flex items-center gap-1 text-sm font-medium text-tint-text">
       <ArrowLeft size={14} strokeWidth={2} aria-hidden="true" />
-      Alle Fehlerberichte
+      {idee ? "Alle Ideen" : "Alle Fehlerberichte"}
     </Link>
   );
 
@@ -301,16 +307,17 @@ export function FehlerberichtDetailAnsicht({
     return (
       <div className="space-y-2">
         {zurueck}
-        <p className="text-st-fehlt">Fehlerbericht nicht gefunden.</p>
+        <p className="text-st-fehlt">Bericht nicht gefunden.</p>
       </div>
     );
   }
 
   const felder: [string, ReactNode][] = [
-    ["Schweregrad", <SchweregradBadge key="s" schweregrad={detail.schweregrad} />],
+    [idee ? "Priorität" : "Schweregrad", <SchweregradBadge key="s" schweregrad={detail.schweregrad} />],
     ...(mitMandant ? ([["Mandant", detail.mandant_name ?? "–"]] as [string, ReactNode][]) : []),
     ["Melder", detail.melder_name ?? "–"],
     ["Gemeldet am", datumZeit(detail.created_at)],
+    ...(detail.freigegeben_am ? ([["Freigegeben am", datumZeit(detail.freigegeben_am)]] as [string, ReactNode][]) : []),
     ["App-Version", detail.app_version ?? "–"],
     ["Commit", <span key="c" className="font-mono" title={detail.commit_sha ?? undefined}>{kurzCommit(detail.commit_sha)}</span>],
     ["Route", <span key="r" className="font-mono break-all">{detail.route ?? "–"}</span>],
@@ -321,18 +328,49 @@ export function FehlerberichtDetailAnsicht({
       {zurueck}
 
       <header className="card-ap space-y-3 p-4">
-        <h2 className="text-xl font-semibold break-words text-label">{detail.titel}</h2>
-        {kannBearbeiten ? (
+        <h2 className="flex items-start gap-2 text-xl font-semibold break-words text-label">
+          {idee && <Lightbulb size={20} strokeWidth={2} className="mt-1 shrink-0 text-tone-amber" aria-label="Idee" role="img" />}
+          <span className="min-w-0">{detail.titel}</span>
+        </h2>
+        {darfAendern ? (
           <div className="overflow-x-auto">
             <SegmentedControl<FehlerberichtStatus>
               ariaLabel="Status"
               wert={detail.status}
               onChange={(status) => aendern.mutate({ status })}
-              optionen={FEHLER_STATUS.map((s) => ({ wert: s, label: FEHLER_STATUS_LABEL[s] }))}
+              optionen={FEHLER_STATUS.map((s) => ({ wert: s, label: statusLabel(s, detail.art) }))}
             />
           </div>
         ) : (
-          <FehlerStatusPille status={detail.status} />
+          <FehlerStatusPille status={detail.status} art={detail.art} />
+        )}
+        {idee && darfAendern && detail.status === "neu" && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={aendern.isPending}
+              onClick={() => aendern.mutate({ status: "gesichtet" })}
+              className="btn-touch btn-ap btn-ap-primary inline-flex items-center gap-1.5 px-4 py-2"
+            >
+              <Check size={16} strokeWidth={2} aria-hidden="true" />
+              Freigeben
+            </button>
+            <button
+              type="button"
+              disabled={aendern.isPending}
+              onClick={() => aendern.mutate({ status: "abgelehnt" })}
+              className="btn-touch btn-ap inline-flex items-center gap-1.5 px-4 py-2"
+            >
+              <X size={16} strokeWidth={2} aria-hidden="true" />
+              Ablehnen
+            </button>
+          </div>
+        )}
+        {idee && darfAendern && (
+          <p className="text-sm text-label2">Freigegebene Ideen setzt Claude beim nächsten Lauf als Pull Request um.</p>
+        )}
+        {idee && !darfAendern && (
+          <p className="text-sm text-label2">Ideen werden vom FieldVibe-Team geprüft und freigegeben.</p>
         )}
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
           {felder.map(([label, wert]) => (
@@ -355,7 +393,7 @@ export function FehlerberichtDetailAnsicht({
             <button
               type="button"
               onClick={() => {
-                if (window.confirm(`Fehlerbericht "${detail.titel}" endgültig löschen?`)) loeschen.mutate();
+                if (window.confirm(`${idee ? "Idee" : "Fehlerbericht"} "${detail.titel}" endgültig löschen?`)) loeschen.mutate();
               }}
               className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sm text-st-fehlt hover:bg-st-fehlt-bg"
             >
@@ -371,9 +409,9 @@ export function FehlerberichtDetailAnsicht({
         )}
       </header>
 
-      <Text titel="Beschreibung" text={detail.beschreibung} />
-      <Text titel="Erwartet" text={detail.erwartet} />
-      <Text titel="Schritte" text={detail.schritte} />
+      <Text titel={idee ? "Was soll sich ändern?" : "Beschreibung"} text={detail.beschreibung} />
+      <Text titel={idee ? "Warum / Nutzen" : "Erwartet"} text={detail.erwartet} />
+      {!idee && <Text titel="Schritte" text={detail.schritte} />}
       <Screenshots detail={detail} />
 
       <Abschnitt titel="Kontext">
@@ -384,14 +422,14 @@ export function FehlerberichtDetailAnsicht({
       <Loesung
         key={detail.updated_at}
         detail={detail}
-        kannBearbeiten={kannBearbeiten}
+        kannBearbeiten={darfAendern}
         speichern={(body) => aendern.mutate(body)}
         speichertGerade={aendern.isPending}
       />
       <DuplikatBereich
         key={`d-${detail.updated_at}`}
         detail={detail}
-        kannBearbeiten={kannBearbeiten}
+        kannBearbeiten={darfAendern}
         speichern={(body) => aendern.mutate(body)}
         detailPfad={detailPfad}
       />

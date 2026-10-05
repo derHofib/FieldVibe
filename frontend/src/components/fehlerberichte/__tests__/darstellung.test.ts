@@ -6,9 +6,11 @@ import {
   FEHLER_STATUS_TOKEN,
   SCHWEREGRADE,
   SCHWEREGRAD_KLASSE,
+  IDEE_STATUS_LABEL,
   istDringend,
   netzwerkFehlgeschlagen,
   relativeZeit,
+  statusLabel,
 } from "../darstellung";
 
 describe("Status-Mapping", () => {
@@ -55,5 +57,17 @@ describe("relativeZeit", () => {
     expect(relativeZeit("2026-10-04T10:00:00Z", jetzt)).toBe("vor 2 Std.");
     expect(relativeZeit("2026-10-03T12:00:00Z", jetzt)).toBe("vor 1 Tag");
     expect(relativeZeit("2026-10-01T12:00:00Z", jetzt)).toBe("vor 3 Tagen");
+  });
+});
+
+describe("statusLabel je Art", () => {
+  it("nutzt für Ideen die Ideen-Labels, sonst die Fehler-Labels", () => {
+    expect(statusLabel("gesichtet", "idee")).toBe("Freigegeben");
+    expect(statusLabel("in_arbeit", "idee")).toBe("In Umsetzung");
+    expect(statusLabel("behoben", "idee")).toBe("Umgesetzt");
+    expect(statusLabel("neu", "idee")).toBe("Neu");
+    expect(statusLabel("gesichtet", "fehler")).toBe("Gesichtet");
+    expect(statusLabel("behoben")).toBe("Behoben");
+    expect(Object.keys(IDEE_STATUS_LABEL).sort()).toEqual([...FEHLER_STATUS].sort());
   });
 });

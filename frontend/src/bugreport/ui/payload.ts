@@ -1,6 +1,7 @@
 import type { FehlerberichtKontext, Kategorie } from "../index";
 
 export type Schweregrad = "niedrig" | "mittel" | "hoch" | "blockierend";
+export type Art = "fehler" | "idee";
 
 export const KATEGORIEN: { key: Kategorie; label: string }[] = [
   { key: "netzwerk", label: "Netzwerk" },
@@ -11,7 +12,16 @@ export const KATEGORIEN: { key: Kategorie; label: string }[] = [
   { key: "app_state", label: "App-Zustand" },
 ];
 
+/** Bei Ideen sind nur die Umgebungsdaten (Route/Version) vorausgewählt -- Konsole,
+ * Netzwerk & Co. helfen bei Änderungswünschen nicht und bleiben opt-in. */
+export function standardKategorien(art: Art, kontext: FehlerberichtKontext): Set<Kategorie> {
+  return new Set(
+    KATEGORIEN.filter((k) => kontext[k.key] !== undefined && (art === "fehler" || k.key === "umgebung")).map((k) => k.key),
+  );
+}
+
 export interface FormularWerte {
+  art: Art;
   titel: string;
   beschreibung: string;
   erwartet: string;
@@ -43,12 +53,15 @@ export function baueFormular(args: {
 }): FormData {
   const { werte, screenshot } = args;
   const nurGefuellt = (s: string) => (s.trim() ? s.trim() : undefined);
+  const idee = werte.art === "idee";
   const payload = {
+    art: werte.art,
     titel: werte.titel.trim(),
     beschreibung: werte.beschreibung.trim(),
     erwartet: nurGefuellt(werte.erwartet),
-    schritte: nurGefuellt(werte.schritte),
-    schweregrad: werte.schweregrad,
+    schritte: idee ? undefined : nurGefuellt(werte.schritte),
+    // Das Backend lehnt "blockierend" bei Ideen ab.
+    schweregrad: idee && werte.schweregrad === "blockierend" ? "hoch" : werte.schweregrad,
     kontext: filtereKontext(args.kontext, args.auswahl),
     route: args.route,
     app_version: args.appVersion,

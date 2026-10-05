@@ -23,6 +23,7 @@ export function BugfixDetailPage() {
         mitMandant
         kannBearbeiten
         kannLoeschen
+        ideenVerwalten
         listenPfad="/bugfixes"
         detailPfad={detailPfad}
       />
