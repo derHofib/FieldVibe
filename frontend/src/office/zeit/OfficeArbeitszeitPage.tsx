@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight, Clock, Lock, Plus } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarCheck, ChevronDown, ChevronRight, Clock, Lock, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { arbeitszeitApi, zeiterfassungApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import { abwesenheitenApi, arbeitszeitApi, zeiterfassungApi } from "../../api/endpoints";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
@@ -11,6 +12,7 @@ import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
 import { TeamKennzahlen } from "../../pages/feld/StatistikPage";
 import type { Zeiterfassung } from "../../types";
+import { ABWESENHEIT_ART_LABEL } from "../../utils/abwesenheit";
 import {
   SALDO_TON_KLASSE,
   formatSaldo,
@@ -35,6 +37,8 @@ import {
   toDateInput,
 } from "../../utils/zeiterfassung";
 import { KennzahlKarte, Karte, SeitenKopf } from "../OfficeUi";
+import { AbwesenheitSheet } from "./AbwesenheitSheet";
+import { AbwesenheitZeile, UrlaubskontoKacheln } from "./AbwesenheitUi";
 
 const WOCHENTAG_KURZ = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
@@ -50,6 +54,9 @@ export function OfficeArbeitszeitPage() {
   const [offeneTage, setOffeneTage] = useState<Set<string>>(() => new Set([heuteTag]));
   const [neuAm, setNeuAm] = useState<string | null>(null);
   const [bearbeitet, setBearbeitet] = useState<Zeiterfassung | null>(null);
+  const [abwesenheitAm, setAbwesenheitAm] = useState<string | null>(null);
+  const [abwesenheitFehler, setAbwesenheitFehler] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { von, bis } = monatsGrenzen(jahr, monat0);
   const tage = useMemo(() => tageDesMonats(jahr, monat0), [jahr, monat0]);
@@ -97,6 +104,30 @@ export function OfficeArbeitszeitPage() {
     () => new Map((feiertage ?? []).map((f) => [f.datum, f.bezeichnung])),
     [feiertage],
   );
+
+  const { data: meineAbwesenheiten } = useQuery({
+    queryKey: ["abwesenheiten", "eigene", currentUser?.id, von],
+    queryFn: () => abwesenheitenApi.liste({ von, bis }),
+    enabled: kannErfassen && !!currentUser,
+    retry: false,
+  });
+  const { data: konto } = useQuery({
+    queryKey: ["abwesenheiten", "konto", currentUser?.id, jahr],
+    queryFn: () => abwesenheitenApi.konto({ jahr }),
+    enabled: kannErfassen && !!currentUser,
+    retry: false,
+  });
+  const zurueckziehen = useMutation({
+    mutationFn: (id: string) => abwesenheitenApi.zurueckziehen(id),
+    onSuccess: () => {
+      setAbwesenheitFehler(null);
+      void queryClient.invalidateQueries({ queryKey: ["abwesenheiten"] });
+      void queryClient.invalidateQueries({ queryKey: ["arbeitszeit-saldo"] });
+      neuLaden();
+    },
+    onError: (err) => setAbwesenheitFehler(err instanceof ApiError ? err.message : "Fehler"),
+  });
+  const darfVerwalten = !!currentUser?.darf_abwesenheiten_verwalten;
 
   const jeTag = useMemo(() => eintraegeJeTag(eintraege ?? []), [eintraege]);
   const monatssumme = arbeitsstunden(eintraege ?? []);
@@ -147,6 +178,16 @@ export function OfficeArbeitszeitPage() {
         >
           Heute
         </button>
+        {kannErfassen && (
+          <button type="button" onClick={() => setAbwesenheitAm(heuteTag)} className="btn-ap btn-ap-primary px-3 py-1.5">
+            Abwesenheit beantragen
+          </button>
+        )}
+        {kannErfassen && darfVerwalten && (
+          <Link to="/abwesenheiten" className="btn-ap inline-flex items-center gap-1 px-3 py-1.5">
+            <CalendarCheck size={14} strokeWidth={2} aria-hidden="true" /> Abwesenheiten
+          </Link>
+        )}
       </SeitenKopf>
 
       {kannAuswerten && hatRecht("statistik", "sehen") && <TeamKennzahlen />}
@@ -201,6 +242,41 @@ export function OfficeArbeitszeitPage() {
         </p>
       )}
 
+      {kannErfassen && konto && (
+        <section aria-label={`Urlaubskonto ${jahr}`} className="space-y-2">
+          <h2 className="text-sm font-semibold text-label">Urlaubskonto {jahr}</h2>
+          <UrlaubskontoKacheln konto={konto} />
+        </section>
+      )}
+
+      {kannErfassen && meineAbwesenheiten && meineAbwesenheiten.length > 0 && (
+        <section aria-label="Meine Abwesenheiten" className="space-y-2">
+          <h2 className="text-sm font-semibold text-label">Meine Abwesenheiten</h2>
+          <Karte className="p-1">
+            <ul className="divide-y divide-sep">
+              {meineAbwesenheiten.map((a) => (
+                <AbwesenheitZeile key={a.id} a={a}>
+                  {a.status === "offen" && (
+                    <button
+                      type="button"
+                      className="text-sm font-medium text-tint-text disabled:opacity-50"
+                      disabled={zurueckziehen.isPending}
+                      onClick={() => zurueckziehen.mutate(a.id)}
+                    >
+                      Zurückziehen
+                    </button>
+                  )}
+                  {a.status === "genehmigt" && !darfVerwalten && (
+                    <span className="text-xs text-label2">Stornierung über das Büro</span>
+                  )}
+                </AbwesenheitZeile>
+              ))}
+            </ul>
+          </Karte>
+          {abwesenheitFehler && <p className="text-sm text-st-fehlt">{abwesenheitFehler}</p>}
+        </section>
+      )}
+
       {kannErfassen && (
         <Karte className="space-y-1 p-2">
           {tage.map((t) => {
@@ -234,7 +310,7 @@ export function OfficeArbeitszeitPage() {
                     )}
                     {saldoTag?.abwesenheit && (
                       <span className="rounded-full bg-st-neu-bg px-2 py-0.5 font-medium text-st-neu">
-                        {saldoTag.abwesenheit === "urlaub" ? "Urlaub" : "Krankheit"}
+                        {ABWESENHEIT_ART_LABEL[saldoTag.abwesenheit]}
                       </span>
                     )}
                   </span>
@@ -270,18 +346,28 @@ export function OfficeArbeitszeitPage() {
                         </thead>
                         <tbody>
                           {tagesEintraege.map((e) => (
-                            <tr key={e.id} onClick={() => setBearbeitet(e)} className="cursor-pointer hover:bg-fill">
+                            <tr
+                              key={e.id}
+                              onClick={e.abwesenheit_id ? undefined : () => setBearbeitet(e)}
+                              className={e.abwesenheit_id ? "" : "cursor-pointer hover:bg-fill"}
+                            >
                               <td className="py-1.5 pr-3 tabular-nums">
-                                <button
-                                  type="button"
-                                  onClick={(ev) => {
-                                    ev.stopPropagation();
-                                    setBearbeitet(e);
-                                  }}
-                                  className="text-tint-text"
-                                >
-                                  {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
-                                </button>
+                                {e.abwesenheit_id ? (
+                                  <span>
+                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      setBearbeitet(e);
+                                    }}
+                                    className="text-tint-text"
+                                  >
+                                    {formatUhrzeit(e.start_at)}–{e.ende_at ? formatUhrzeit(e.ende_at) : "läuft"}
+                                  </button>
+                                )}
                               </td>
                               <td className="py-1.5 pr-3 text-right tabular-nums text-label">
                                 {formatStundenAlsHHMM(formatDauer(e.start_at, e.ende_at))}
@@ -299,7 +385,9 @@ export function OfficeArbeitszeitPage() {
                                   (ZEITERFASSUNG_KATEGORIE_LABEL[e.kategorie] ?? e.kategorie)
                                 )}
                               </td>
-                              <td className="max-w-xs truncate py-1.5 pr-3 text-label2">{e.taetigkeit ?? "—"}</td>
+                              <td className="max-w-xs truncate py-1.5 pr-3 text-label2">
+                                {e.abwesenheit_id ? "aus Abwesenheitsantrag" : (e.taetigkeit ?? "—")}
+                              </td>
                               <td className="py-1.5">
                                 <span className="inline-flex items-center gap-1">
                                   <StatusPille
@@ -316,13 +404,22 @@ export function OfficeArbeitszeitPage() {
                         </tbody>
                       </table>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setNeuAm(t.tag)}
-                      className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-tint-text"
-                    >
-                      <Plus size={14} strokeWidth={2} /> Zeit eintragen
-                    </button>
+                    <div className="mt-2 flex flex-wrap gap-4">
+                      <button
+                        type="button"
+                        onClick={() => setNeuAm(t.tag)}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-tint-text"
+                      >
+                        <Plus size={14} strokeWidth={2} /> Zeit eintragen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAbwesenheitAm(t.tag)}
+                        className="inline-flex items-center gap-1 text-sm font-medium text-tint-text"
+                      >
+                        <Plus size={14} strokeWidth={2} /> Abwesenheit beantragen
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -345,6 +442,18 @@ export function OfficeArbeitszeitPage() {
             />
           </div>
         </div>
+      )}
+
+      {abwesenheitAm && (
+        <AbwesenheitSheet
+          key={abwesenheitAm}
+          vorbelegtesDatum={abwesenheitAm}
+          onClose={() => setAbwesenheitAm(null)}
+          onGespeichert={() => {
+            setAbwesenheitAm(null);
+            neuLaden();
+          }}
+        />
       )}
 
       {bearbeitet && (
