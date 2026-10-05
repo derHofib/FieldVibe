@@ -106,6 +106,26 @@ export function OfficeApp() {
           }
         />
 
+        {/* Leistungsverzeichnis nutzt die Desktop-Breite (Tabelle, Seitenspalte)
+            statt der schmalen Lesespalte; layout="dicht" schaltet die
+            Feld-App-Seiten darauf um, ohne die Feld-App zu veraendern. */}
+        <Route
+          path="/leistungsverzeichnis"
+          element={
+            <div className="mx-auto max-w-[1400px]">
+              <LeistungsverzeichnisPage layout="dicht" />
+            </div>
+          }
+        />
+        <Route
+          path="/leistungsverzeichnis/:id"
+          element={
+            <div className="mx-auto max-w-[1400px]">
+              <LeistungsverzeichnisDetailPage layout="dicht" />
+            </div>
+          }
+        />
+
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>
         <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
@@ -143,8 +163,6 @@ export function OfficeApp() {
         <Route path="/highlights" element={<HighlightsPage />} />
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/integrationen" element={<IntegrationenPage />} />
-        <Route path="/leistungsverzeichnis" element={<LeistungsverzeichnisPage />} />
-        <Route path="/leistungsverzeichnis/:id" element={<LeistungsverzeichnisDetailPage />} />
         <Route path="/accounts" element={<UsersPage />} />
         <Route path="/account-typen" element={<AccountTypenPage />} />
         <Route path="/einstellungen" element={<SettingsPage />} />

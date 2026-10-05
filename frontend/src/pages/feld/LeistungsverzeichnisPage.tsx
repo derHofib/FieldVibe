@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
+import { SeitenKopf, TabellenRahmen } from "../../office/OfficeUi";
 import type { Leistungsverzeichnis } from "../../types";
 
 /** Mehrfachauswahl von Kunden -- SearchableSelect kennt nur Einzelauswahl,
@@ -131,25 +132,81 @@ function LvFormular({ onClose }: { onClose: () => void }) {
   );
 }
 
-function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalten: boolean }) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
+function useLvKundenBadge(lv: Leistungsverzeichnis): string {
   const { data: kunden } = useQuery({
     queryKey: ["kunden-alle"],
     queryFn: () => kundenApi.list(),
     enabled: lv.kunden_ids.length > 0,
   });
-  const kundenBadge =
-    lv.kunden_ids.length === 0
-      ? "Alle Kunden"
-      : lv.kunden_ids.length === 1
-        ? (kunden?.find((k) => k.id === lv.kunden_ids[0])?.name ?? "1 Kunde")
-        : `${lv.kunden_ids.length} Kunden`;
+  return lv.kunden_ids.length === 0
+    ? "Alle Kunden"
+    : lv.kunden_ids.length === 1
+      ? (kunden?.find((k) => k.id === lv.kunden_ids[0])?.name ?? "1 Kunde")
+      : `${lv.kunden_ids.length} Kunden`;
+}
 
-  const duplizieren = useMutation({
+function useLvDuplizieren(lv: Leistungsverzeichnis) {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: () => leistungsverzeichnisseApi.duplizieren(lv.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnisse"] }),
   });
+}
+
+function LvTabellenZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalten: boolean }) {
+  const navigate = useNavigate();
+  const kundenBadge = useLvKundenBadge(lv);
+  const duplizieren = useLvDuplizieren(lv);
+
+  return (
+    <tr
+      onClick={() => navigate(`/leistungsverzeichnis/${lv.id}`)}
+      className="cursor-pointer border-b border-sep last:border-b-0 hover:bg-fill"
+    >
+      <td className="px-3 py-2 font-semibold text-label">{lv.name}</td>
+      <td className="max-w-md truncate px-3 py-2 text-label2">{lv.beschreibung ?? "–"}</td>
+      <td
+        className={`px-3 py-2 ${
+          lv.kunden_ids.length === 0 ? "text-label2" : "font-medium text-violet-700 dark:text-violet-300"
+        }`}
+      >
+        {kundenBadge}
+      </td>
+      <td className="px-3 py-2">
+        <div className="flex items-center justify-end gap-1">
+          {kannVerwalten && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                duplizieren.mutate();
+              }}
+              disabled={duplizieren.isPending}
+              title="Duplizieren"
+              className="btn-touch flex h-8 w-8 items-center justify-center rounded-md text-label2 hover:bg-fill disabled:opacity-50"
+            >
+              <Copy size={15} strokeWidth={2} />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/leistungsverzeichnis/${lv.id}`);
+            }}
+            title="Öffnen"
+            className="btn-touch flex h-8 w-8 items-center justify-center rounded-md text-label2 hover:bg-fill"
+          >
+            <ChevronRight size={16} strokeWidth={2} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalten: boolean }) {
+  const navigate = useNavigate();
+  const kundenBadge = useLvKundenBadge(lv);
+  const duplizieren = useLvDuplizieren(lv);
 
   return (
     <div className="card-interactive flex items-center gap-2 rounded-lg bg-card p-3 shadow-xs dark:shadow-none dark:ring-1 ">
@@ -188,7 +245,7 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
   );
 }
 
-function StandardKalkulation() {
+function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
   const queryClient = useQueryClient();
   const { data: einstellungen } = useQuery({
     queryKey: ["mandant-einstellungen"],
@@ -237,8 +294,8 @@ function StandardKalkulation() {
             Vorbelegung für neu angelegte Positionen im Modus "Berechnet". Gilt nicht rückwirkend für bereits
             angelegte Positionen.
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
+          <div className={layout === "dicht" ? "flex flex-wrap items-end gap-3" : "grid grid-cols-2 gap-2"}>
+            <div className={layout === "dicht" ? "w-48" : undefined}>
               <label className="mb-1 block text-[10.5px] font-medium text-label2">
                 Lohn-Gemeinkosten (%)
               </label>
@@ -250,7 +307,7 @@ function StandardKalkulation() {
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
-            <div>
+            <div className={layout === "dicht" ? "w-48" : undefined}>
               <label className="mb-1 block text-[10.5px] font-medium text-label2">Gewinn/Wagnis (%)</label>
               <input
                 type="number"
@@ -279,7 +336,7 @@ function StandardKalkulation() {
  * LeistungsverzeichnisDetailPage.tsx) und traegt selbst die
  * Kunden-Zuweisung -- eine Position kennt ihren Kunden nur noch indirekt
  * ueber ihr LV (siehe app/models/leistungsverzeichnis.py). */
-export function LeistungsverzeichnisPage() {
+export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kompakt" | "dicht" } = {}) {
   const { hatRecht } = useAuth();
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
   const [neuesLv, setNeuesLv] = useState(false);
@@ -289,27 +346,57 @@ export function LeistungsverzeichnisPage() {
     queryFn: () => leistungsverzeichnisseApi.list(),
   });
 
+  const neuKnopf = kannVerwalten && (
+    <button
+      onClick={() => setNeuesLv(true)}
+      className="btn-touch flex items-center gap-1.5 rounded-lg btn-ap-primary px-3 py-2 text-xs font-semibold"
+    >
+      <Plus size={14} strokeWidth={2.5} />
+      Neues Leistungsverzeichnis
+    </button>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-label">Leistungsverzeichnisse</h1>
-        {kannVerwalten && (
-          <button
-            onClick={() => setNeuesLv(true)}
-            className="btn-touch flex items-center gap-1.5 rounded-lg btn-ap-primary px-3 py-2 text-xs font-semibold"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            Neues Leistungsverzeichnis
-          </button>
-        )}
-      </div>
+      {layout === "dicht" ? (
+        <SeitenKopf titel="Leistungsverzeichnisse" anzahl={lvs?.length}>
+          {neuKnopf}
+        </SeitenKopf>
+      ) : (
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-label">Leistungsverzeichnisse</h1>
+          {neuKnopf}
+        </div>
+      )}
 
-      {kannVerwalten && <StandardKalkulation />}
+      {kannVerwalten && <StandardKalkulation layout={layout} />}
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-label2">Lädt…</p>
       ) : !lvs || lvs.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Leistungsverzeichnisse angelegt." />
+      ) : layout === "dicht" ? (
+        <TabellenRahmen>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-sepstrong">
+                {["Name", "Beschreibung", "Kunden-Zuweisung"].map((k) => (
+                  <th key={k} className="px-3 py-2 text-left text-xs font-medium tracking-wide text-label2 uppercase">
+                    {k}
+                  </th>
+                ))}
+                <th className="px-3 py-2 text-right text-xs font-medium tracking-wide text-label2 uppercase">
+                  Aktionen
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {lvs.map((lv) => (
+                <LvTabellenZeile key={lv.id} lv={lv} kannVerwalten={kannVerwalten} />
+              ))}
+            </tbody>
+          </table>
+        </TabellenRahmen>
       ) : (
         <div className="space-y-2">
           {lvs.map((lv) => (

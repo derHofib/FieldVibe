@@ -574,7 +574,15 @@ function UnterpunktZeileAufklappbar({
  * Detail-/Bearbeiten-Panel (SeitenPanel) statt eines zentrierten Modals;
  * Unterpositionen erscheinen darin, nicht mehr als eigenes Akkordeon in
  * der Liste. */
-function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverzeichnisId: string; position: LeistungsverzeichnisPosition }) {
+function LvHauptpunktZeile({
+  leistungsverzeichnisId,
+  position,
+  layout,
+}: {
+  leistungsverzeichnisId: string;
+  position: LeistungsverzeichnisPosition;
+  layout: "kompakt" | "dicht";
+}) {
   const [offen, setOffen] = useState(false);
 
   return (
@@ -592,13 +600,23 @@ function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverz
               </span>
             )}
           </p>
-          {position.kalkulationsmodus === "berechnet" && (
+          {position.kalkulationsmodus === "berechnet" && layout !== "dicht" && (
             <p className="text-[11.5px] text-label2">
               Lohn {euro(position.lohn_gesamt)} · Material {euro(position.material_gesamt)}
             </p>
           )}
         </div>
-        <span className="shrink-0 text-sm font-bold text-label">
+        {layout === "dicht" && position.kalkulationsmodus === "berechnet" && (
+          <>
+            <span className="w-32 shrink-0 text-right text-xs text-label2 tabular-nums">
+              Lohn {euro(position.lohn_gesamt)}
+            </span>
+            <span className="w-36 shrink-0 text-right text-xs text-label2 tabular-nums">
+              Material {euro(position.material_gesamt)}
+            </span>
+          </>
+        )}
+        <span className="shrink-0 text-sm font-bold text-label tabular-nums">
           {euro(position.einzelpreis)} / {position.einheit}
         </span>
         <ChevronRight size={16} strokeWidth={1.5} className="shrink-0 text-label2" />
@@ -621,7 +639,7 @@ function LvHauptpunktZeile({ leistungsverzeichnisId, position }: { leistungsverz
  * Kunden-Zuweisung (M:N, siehe KundenZuweisung), Positionen/Unterpunkte
  * (eine Ebene tief) und "Duplizieren" -- kopiert das LV samt Positionen mit
  * eigener, zunaechst leerer Kunden-Zuweisung. */
-export function LeistungsverzeichnisDetailPage() {
+export function LeistungsverzeichnisDetailPage({ layout = "kompakt" }: { layout?: "kompakt" | "dicht" } = {}) {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -662,6 +680,8 @@ export function LeistungsverzeichnisDetailPage() {
   if (lvLaedt) return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
   if (!lv) return <EmptyState icon={ClipboardList} text="Leistungsverzeichnis nicht gefunden." />;
 
+  const dicht = layout === "dicht";
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
@@ -672,7 +692,9 @@ export function LeistungsverzeichnisDetailPage() {
           <ArrowLeft size={16} strokeWidth={1.5} />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-lg font-bold text-label">{lv.name}</h1>
+          <h1 className={dicht ? "ap-heading truncate text-2xl font-semibold text-label" : "truncate text-lg font-bold text-label"}>
+            {lv.name}
+          </h1>
           {lv.beschreibung && <p className="truncate text-xs text-label2">{lv.beschreibung}</p>}
         </div>
         {kannVerwalten && (
@@ -697,6 +719,9 @@ export function LeistungsverzeichnisDetailPage() {
         )}
       </div>
 
+      {/* Desktop: Zuweisung als schmale Seitenspalte, Positionen bekommen die
+          restliche Breite. */}
+      <div className={dicht ? "grid items-start gap-4 lg:grid-cols-[320px_minmax(0,1fr)]" : "space-y-4"}>
       {kannVerwalten ? (
         <div className="card-ap p-3">
           <KundenZuweisung kundenIds={lv.kunden_ids} onChange={(ids) => kundenSpeichern.mutate(ids)} />
@@ -707,6 +732,7 @@ export function LeistungsverzeichnisDetailPage() {
         )
       )}
 
+      <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-label2">Positionen</h2>
         {kannVerwalten && (
@@ -727,10 +753,13 @@ export function LeistungsverzeichnisDetailPage() {
       ) : (
         <div className="space-y-2">
           {positionen.map((p) => (
-            <LvHauptpunktZeile key={p.id} leistungsverzeichnisId={id!} position={p} />
+            <LvHauptpunktZeile key={p.id} leistungsverzeichnisId={id!} position={p} layout={layout} />
           ))}
         </div>
       )}
+
+      </div>
+      </div>
 
       {neuePosition && (
         <SeitenPanel title="Neue Position" onClose={() => setNeuePosition(false)}>
