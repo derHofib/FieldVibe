@@ -24,6 +24,13 @@ from app.db.base import Base, TimestampMixin
 # Rechnungsvorschlaege (siehe rechnung_service.positionen_vorschlaege_fuer_vorgang).
 MANDANT_FAHRZEIT_ABRECHNUNG = ("keine", "zeit", "km", "zeit_und_km")
 
+# Muss mit der CHECK-Constraint ck_mandanten_bundesland_valid (Migration 0100)
+# uebereinstimmen (ISO-3166-2:DE ohne "DE-"-Praefix).
+MANDANT_BUNDESLAENDER = (
+    "BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV",
+    "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH",
+)
+
 MANDANT_MODULE = (
     "kundenverwaltung",
     "dispo",
@@ -62,6 +69,10 @@ class Mandant(TimestampMixin, Base):
         CheckConstraint(
             "fahrzeit_satz_netto IS NULL OR fahrzeit_satz_netto >= 0",
             name="ck_mandanten_fahrzeit_satz_netto_nicht_negativ",
+        ),
+        CheckConstraint(
+            f"bundesland IS NULL OR bundesland IN {MANDANT_BUNDESLAENDER}",
+            name="ck_mandanten_bundesland_valid",
         ),
         CheckConstraint(
             f"fahrzeit_abrechnung IN {MANDANT_FAHRZEIT_ABRECHNUNG}",
@@ -121,3 +132,6 @@ class Mandant(TimestampMixin, Base):
     # Eigener Stundensatz fuer "fahrzeit"-Vorschlaege; NULL = Preis 0 (der
     # Nutzer sieht den Hinweis "Fahrzeit-Satz fehlt").
     fahrzeit_satz_netto: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
+    # Steuert die Feiertagsgenerierung (app/services/arbeitszeit_service.py);
+    # NULL = nur bundesweite Feiertage.
+    bundesland: Mapped[str | None] = mapped_column(Text, nullable=True)

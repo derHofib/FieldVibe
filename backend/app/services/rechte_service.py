@@ -58,6 +58,21 @@ async def darf_zeiten_buchen(
     return account_typ is not None and account_typ.darf_zeiten_buchen
 
 
+async def darf_abwesenheiten_verwalten(
+    session: AsyncSession, *, role: str, account_typ_id: UUID | None
+) -> bool:
+    """Einzelrecht "Abwesenheiten verwalten" -- Soll-Arbeitszeit, Feiertage und
+    Bundesland pflegen sowie fremdes Soll/Saldo lesen (app/api/routes/
+    arbeitszeit.py). Gleiches Muster wie darf_zeiten_buchen: Nicht-custom-
+    Rollen duerfen immer, custom nur per Schalter am Account-Typ."""
+    if role != "custom":
+        return True
+    if account_typ_id is None:
+        return False
+    account_typ = await session.get(AccountTyp, account_typ_id)
+    return account_typ is not None and account_typ.darf_abwesenheiten_verwalten
+
+
 async def darf_fremde_mitarbeiterdaten_einsehen(
     session: AsyncSession, *, role: str, account_typ_id: UUID | None
 ) -> bool:

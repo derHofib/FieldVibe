@@ -60,6 +60,10 @@ class CurrentUser(BaseModel):
     # Frontend die gesamte Buchungs-Oberflaeche (Auswahl/Aktionsleiste im
     # Zeit-Tab, Seite "Zeiten buchen", fremden Timer beenden).
     darf_zeiten_buchen: bool = False
+    # Gespiegelt aus AccountTyp.darf_abwesenheiten_verwalten (siehe
+    # app/services/rechte_service.py) -- Soll-Zeit/Feiertage pflegen,
+    # fremdes Soll/Saldo lesen.
+    darf_abwesenheiten_verwalten: bool = False
     name: str
     email: str
     impersonated_by: UUID | None = None

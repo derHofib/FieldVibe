@@ -42,6 +42,7 @@ def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
         km_satz_netto=mandant.km_satz_netto,
         fahrzeit_satz_netto=mandant.fahrzeit_satz_netto,
         fahrzeit_abrechnung=mandant.fahrzeit_abrechnung,
+        bundesland=mandant.bundesland,
     )
 
 
@@ -86,6 +87,8 @@ async def update_einstellungen(
         mandant.fahrzeit_satz_netto = updates["fahrzeit_satz_netto"]
     if updates.get("fahrzeit_abrechnung") is not None:
         mandant.fahrzeit_abrechnung = updates["fahrzeit_abrechnung"]
+    if "bundesland" in updates:
+        mandant.bundesland = updates["bundesland"]
     await session.flush()
     await session.refresh(mandant)
     return _to_read_model(mandant)

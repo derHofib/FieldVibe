@@ -23,6 +23,7 @@ from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services.rechte_service import (
     darf_vorgang_selbst_uebernehmen,
+    darf_abwesenheiten_verwalten,
     darf_zeiten_buchen,
     rechte_matrix_fuer_account_typ,
 )
@@ -184,6 +185,10 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             session, role=auth.role, account_typ_id=auth.account_typ_id
         )
 
+        abwesenheiten_verwalten = await darf_abwesenheiten_verwalten(
+            session, role=auth.role, account_typ_id=auth.account_typ_id
+        )
+
         if auth.role == "custom" and auth.account_typ_id is not None:
             matrix = await rechte_matrix_fuer_account_typ(session, auth.account_typ_id)
             rechte = {
@@ -223,6 +228,7 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             nur_zugewiesene_kunden=nur_zugewiesene_kunden,
             darf_vorgaenge_selbst_uebernehmen=selbst_uebernehmen,
             darf_zeiten_buchen=zeiten_buchen,
+            darf_abwesenheiten_verwalten=abwesenheiten_verwalten,
             name=user.name,
             email=user.email,
             impersonated_by=auth.impersonated_by,

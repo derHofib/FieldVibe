@@ -3,6 +3,7 @@ from app.models.angebot import Angebot, AngebotPosition
 from app.models.anlage import Anlage
 from app.models.anlagen_feld_definition import AnlagenFeldDefinition
 from app.models.audit_log import AuditLog
+from app.models.arbeitszeit import ArbeitszeitSoll, Feiertag
 from app.models.auftrag import Auftrag
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.board import Board
@@ -80,6 +81,8 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 
 __all__ = [
+    "ArbeitszeitSoll",
+    "Feiertag",
     "ZeitplanAenderungsantrag",
     "AccountTyp",
     "AccountTypRecht",

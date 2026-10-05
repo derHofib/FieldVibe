@@ -28,6 +28,7 @@ class AccountTypCreate(BaseModel):
     nur_zugewiesene_kunden: bool = False
     darf_vorgaenge_selbst_uebernehmen: bool = False
     darf_zeiten_buchen: bool = False
+    darf_abwesenheiten_verwalten: bool = False
 
 
 class AccountTypUpdate(BaseModel):
@@ -37,6 +38,7 @@ class AccountTypUpdate(BaseModel):
     nur_zugewiesene_kunden: bool | None = None
     darf_vorgaenge_selbst_uebernehmen: bool | None = None
     darf_zeiten_buchen: bool | None = None
+    darf_abwesenheiten_verwalten: bool | None = None
     reihenfolge: int | None = None
 
 
@@ -50,6 +52,7 @@ class AccountTypRead(BaseModel):
     nur_zugewiesene_kunden: bool
     darf_vorgaenge_selbst_uebernehmen: bool
     darf_zeiten_buchen: bool
+    darf_abwesenheiten_verwalten: bool
     reihenfolge: int
     anzahl_nutzer: int = 0
 

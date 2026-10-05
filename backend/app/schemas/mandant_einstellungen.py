@@ -7,6 +7,11 @@ from pydantic import BaseModel, Field
 # uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 5.3/8).
 FahrzeitAbrechnung = Literal["keine", "zeit", "km", "zeit_und_km"]
 
+# Muss mit MANDANT_BUNDESLAENDER in app/models/mandant.py uebereinstimmen.
+Bundesland = Literal[
+    "BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"
+]
+
 
 class MandantEinstellungenRead(BaseModel):
     scheduler_stunde_utc: int | None
@@ -28,6 +33,7 @@ class MandantEinstellungenRead(BaseModel):
     # Stundensatz fuer Fahrzeit-Vorschlaege; None = Preis 0.
     fahrzeit_satz_netto: Decimal | None
     fahrzeit_abrechnung: FahrzeitAbrechnung
+    bundesland: Bundesland | None = None
 
 
 class MandantEinstellungenUpdate(BaseModel):
@@ -47,6 +53,8 @@ class MandantEinstellungenUpdate(BaseModel):
     km_satz_netto: Decimal | None = Field(default=None, ge=0)
     fahrzeit_satz_netto: Decimal | None = Field(default=None, ge=0)
     fahrzeit_abrechnung: FahrzeitAbrechnung | None = None
+    # None setzt zurueck (nur bundesweite Feiertage).
+    bundesland: Bundesland | None = None
 
 
 class MandantLogoUrl(BaseModel):

@@ -84,6 +84,11 @@ class AccountTyp(TimestampMixin, Base):
     # darf_zeiten_buchen). mandant_admin/super_admin duerfen immer buchen,
     # unabhaengig von diesem Schalter.
     darf_zeiten_buchen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Einzelrecht "Abwesenheiten verwalten": Soll-Arbeitszeit, Feiertage und
+    # Bundesland pflegen sowie fremdes Soll/Saldo lesen (app/api/routes/
+    # arbeitszeit.py). Gleiches Muster wie darf_zeiten_buchen; mandant_admin/
+    # super_admin duerfen immer.
+    darf_abwesenheiten_verwalten: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class AccountTypRecht(Base):
