@@ -52,6 +52,7 @@ import { OfficeAuftraegePage } from "./auftraege/OfficeAuftraegePage";
 import { OfficeBoardsPage } from "./boards/OfficeBoardsPage";
 import { OfficeBuchhaltungPage } from "./buchhaltung/OfficeBuchhaltungPage";
 import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
+import { OrganigrammPage } from "./organigramm/OrganigrammPage";
 import { OfficeFehlerberichtDetailPage, OfficeFehlerberichtePage } from "./fehlerberichte/OfficeFehlerberichtePage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
@@ -71,6 +72,7 @@ import { OfficeVorgaengePage } from "./vorgaenge/OfficeVorgaengePage";
 export function OfficeApp() {
   const { currentUser, hatRecht } = useAuth();
   const hatFehlerberichtRecht = hatRecht("fehlerberichte", "sehen");
+  const hatOrganigrammRecht = hatRecht("organigramm", "sehen");
   const startseite = currentUser?.role === "loesch_ansicht" ? "/papierkorb" : "/vorgaenge";
 
   return (
@@ -88,6 +90,7 @@ export function OfficeApp() {
         <Route path="/projekte" element={<OfficeProjektePage />} />
         <Route path="/projekte/vorlagen" element={<OfficeProjektVorlagenPage />} />
         <Route path="/auftraege" element={<OfficeAuftraegePage />} />
+        {hatOrganigrammRecht && <Route path="/organigramm" element={<OrganigrammPage />} />}
         {hatFehlerberichtRecht && (
           <>
             <Route path="/fehlerberichte" element={<OfficeFehlerberichtePage />} />
@@ -139,6 +142,16 @@ export function OfficeApp() {
           }
         />
 
+        {/* Rechte-Matrix je Account-Typ braucht die Desktop-Breite (Bereich x 9 Aktionen). */}
+        <Route
+          path="/account-typen"
+          element={
+            <div className="mx-auto max-w-[1400px]">
+              <AccountTypenPage />
+            </div>
+          }
+        />
+
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>
         <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
@@ -177,7 +190,6 @@ export function OfficeApp() {
         <Route path="/insights" element={<InsightsPage />} />
         <Route path="/integrationen" element={<IntegrationenPage />} />
         <Route path="/accounts" element={<UsersPage />} />
-        <Route path="/account-typen" element={<AccountTypenPage />} />
         <Route path="/einstellungen" element={<SettingsPage />} />
         <Route path="/einstellungen/seitenleiste" element={<OfficeNavSettingsPage />} />
         <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />

@@ -2,6 +2,19 @@ import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import { partnerApiFetch } from "./partnerClient";
 import type {
+  EffektivRead as OrgEffektivRead,
+  BesetzungCreate as OrgBesetzungCreate,
+  BesetzungErgebnis as OrgBesetzungErgebnis,
+  OrgEinheit,
+  Position as OrgPosition,
+  PositionCreate as OrgPositionCreate,
+  PositionDetail as OrgPositionDetail,
+  PositionUpdate as OrgPositionUpdate,
+  RechteRegistry,
+  RechtOverride as OrgRechtOverride,
+  RechtOverrideIn as OrgRechtOverrideIn,
+} from "../types/organigramm";
+import type {
   Abwesenheit,
   AbwesenheitCreate,
   AbwesenheitKalenderEintrag,
@@ -137,8 +150,6 @@ import type {
   RechnungPositionVorschlag,
   AbrechenbarerVorgang,
   RechnungZahlungCreate,
-  RechteAktion,
-  RechteBereich,
   RechteMatrixEintrag,
   SearchResponse,
   Standort,
@@ -333,11 +344,50 @@ export const accountTypenApi = {
   remove: (id: string) => apiFetch<void>(`/api/account-typen/${id}`, { method: "DELETE" }),
   getRechte: (id: string) =>
     apiFetch<RechteMatrixEintrag[]>(`/api/account-typen/${id}/rechte`),
-  setRecht: (id: string, bereich: RechteBereich, aktion: RechteAktion, erlaubt: boolean) =>
+  // bereich/aktion als string: gueltige Werte kommen aus der Registry (GET /api/rechte/registry).
+  setRecht: (id: string, bereich: string, aktion: string, erlaubt: boolean) =>
     apiFetch<RechteMatrixEintrag[]>(`/api/account-typen/${id}/rechte`, {
       method: "PUT",
       body: JSON.stringify({ bereich, aktion, erlaubt }),
     }),
+};
+
+export const organigrammApi = {
+  positionen: (archivierte = false) =>
+    apiFetch<OrgPosition[]>(`/api/organigramm/positionen${archivierte ? "?archivierte=true" : ""}`),
+  position: (id: string) => apiFetch<OrgPositionDetail>(`/api/organigramm/positionen/${id}`),
+  orgEinheiten: () => apiFetch<OrgEinheit[]>("/api/organigramm/org-einheiten"),
+  createPosition: (body: OrgPositionCreate) =>
+    apiFetch<OrgPosition>("/api/organigramm/positionen", { method: "POST", body: JSON.stringify(body) }),
+  updatePosition: (id: string, body: OrgPositionUpdate) =>
+    apiFetch<OrgPosition>(`/api/organigramm/positionen/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  duplizieren: (id: string) =>
+    apiFetch<OrgPosition>(`/api/organigramm/positionen/${id}/duplizieren`, { method: "POST" }),
+  archivieren: (id: string) =>
+    apiFetch<OrgPosition>(`/api/organigramm/positionen/${id}/archivieren`, { method: "POST" }),
+  loeschen: (id: string) => apiFetch<void>(`/api/organigramm/positionen/${id}`, { method: "DELETE" }),
+  besetzen: (positionId: string, body: OrgBesetzungCreate) =>
+    apiFetch<OrgBesetzungErgebnis>(`/api/organigramm/positionen/${positionId}/besetzungen`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  // Ohne gueltig_bis endet die Besetzung "jetzt" (Freistellung).
+  besetzungBeenden: (besetzungId: string, gueltigBis?: string | null) =>
+    apiFetch<OrgBesetzungErgebnis>(`/api/organigramm/besetzungen/${besetzungId}`, {
+      method: "PATCH",
+      body: JSON.stringify(gueltigBis ? { gueltig_bis: gueltigBis } : {}),
+    }),
+  setPositionRechte: (positionId: string, overrides: OrgRechtOverrideIn[]) =>
+    apiFetch<OrgRechtOverride[]>(`/api/organigramm/positionen/${positionId}/rechte`, {
+      method: "PUT",
+      body: JSON.stringify(overrides),
+    }),
+  effektiv: (ziel: { user_id: string } | { position_id: string }) =>
+    apiFetch<OrgEffektivRead>(`/api/organigramm/effektiv?${new URLSearchParams(ziel).toString()}`),
+};
+
+export const rechteApi = {
+  registry: () => apiFetch<RechteRegistry>("/api/rechte/registry"),
 };
 
 export const auditLogApi = {

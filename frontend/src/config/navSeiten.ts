@@ -15,6 +15,7 @@ import {
   ListChecks,
   type LucideIcon,
   Mail,
+  Network,
   Package,
   Plug,
   Receipt,
@@ -329,6 +330,17 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/account-typen",
     kategorie: "Verwaltung",
     sichtbar: () => true,
+  },
+  {
+    key: "organigramm",
+    label: "Organigramm",
+    icon: Network,
+    tone: "indigo",
+    route: "/organigramm",
+    kategorie: "Verwaltung",
+    // Diagramm mit Drag&Drop und breiter Rechte-Matrix: nur am Desktop (Office).
+    nurOffice: true,
+    sichtbar: ({ hatRecht }) => hatRecht("organigramm", "sehen"),
   },
   {
     key: "techniker_zuweisungen",
