@@ -18,6 +18,7 @@ from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT
 from app.services.abwesenheit_service import abwesenheitstage, berechne_konto, summe_tage
 from app.services.arbeitszeit_service import ZeitEintrag, berechne_saldo
 from tests.conftest import auth_headers, login
+from app.services.organigramm_sync_service import besetzung_pflegen
 
 BERLIN = ZoneInfo("Europe/Berlin")
 D = Decimal
@@ -164,6 +165,7 @@ async def _custom_user(mandant, name, *, verwalten):
         )
         session.add(user)
         await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
         await session.refresh(user)
         return user
 

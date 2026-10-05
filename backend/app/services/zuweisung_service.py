@@ -36,7 +36,7 @@ async def erlaubte_kunde_ids(session: AsyncSession, auth: "AuthContext") -> set[
     Gemeinsamer Einstieg fuer Listen/Aggregationen, die nach
     kunde_id.in_(...) filtern (Muster wie kunden.py/vorgaenge.py)."""
     if not await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         return None
     return await assigned_kunde_ids(session, auth.user_id)

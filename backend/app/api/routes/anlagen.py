@@ -88,7 +88,7 @@ async def list_anlagen(
     if aktiv is not None:
         stmt = stmt.where(Anlage.aktiv == aktiv)
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         # Interne Objekte (Fahrzeuge/Lager/Baustellen, kunde_id NULL) sind
         # keine Kundendaten und daher unabhaengig von der Kunde-Zuweisung
@@ -155,7 +155,7 @@ async def create_anlage(
 
 async def _require_anlage_zugriff(session: AsyncSession, auth: AuthContext, anlage: Anlage) -> None:
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     if (
         beschraenkt
@@ -183,7 +183,7 @@ async def get_anlage_by_qr(
             status_code=status.HTTP_404_NOT_FOUND, detail="Keine Anlage mit diesem QR-Code gefunden"
         )
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     if (
         beschraenkt

@@ -8,6 +8,7 @@ from app.models.auftrag import Auftrag
 from app.core.security import hash_password
 from app.models.user import User
 from tests.conftest import auth_headers, login
+from app.services.organigramm_sync_service import besetzung_pflegen
 
 
 async def _make_custom_mit_projekte_recht(mandant, *, aktionen: set[str]) -> AccountTyp:
@@ -38,6 +39,7 @@ async def _make_custom_user(mandant, account_typ, *, password="hunter2!!"):
         )
         session.add(user)
         await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
         await session.refresh(user)
         return user
 

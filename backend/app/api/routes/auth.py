@@ -13,7 +13,7 @@ from app.core.security import (
     hash_password,
 )
 from app.db.session import system_session
-from app.models.account_typ import RECHTE_BEREICHE, AccountTyp, aktionen_fuer_bereich
+from app.models.account_typ import AccountTyp
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
@@ -21,12 +21,9 @@ from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 from app.services.auth_service import authenticate
 from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
-from app.services.rechte_service import (
-    darf_vorgang_selbst_uebernehmen,
-    darf_abwesenheiten_verwalten,
-    darf_zeiten_buchen,
-    rechte_matrix_fuer_account_typ,
-)
+from app.services import berechtigung_service
+from app.services.berechtigung_service import effektive_rechte_gecacht
+from app.services.organigramm_sync_service import besetzung_pflegen
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -133,6 +130,7 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
         )
         session.add(user)
         await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
         await als_angenommen_markieren(session, einladung)
 
         return TokenPair(
@@ -171,36 +169,24 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
                 deaktivierte_module = mandant.deaktivierte_module
 
         account_typ_name: str | None = None
-        nur_zugewiesene_kunden = False
         if auth.account_typ_id is not None:
             account_typ = await session.get(AccountTyp, auth.account_typ_id)
             if account_typ is not None:
                 account_typ_name = account_typ.name
-                nur_zugewiesene_kunden = account_typ.nur_zugewiesene_kunden
 
-        selbst_uebernehmen = await darf_vorgang_selbst_uebernehmen(
-            session, role=auth.role, account_typ_id=auth.account_typ_id
+        # Alles aus der Rechte-Engine (aktive Besetzungen), ein Aufloesungslauf.
+        effektiv = await effektive_rechte_gecacht(session, user_id=auth.user_id, rolle=auth.role)
+        nur_zugewiesene_kunden = await berechtigung_service.ist_auf_zugewiesene_kunden_beschraenkt(
+            session, user_id=auth.user_id, rolle=auth.role
         )
-        zeiten_buchen = await darf_zeiten_buchen(
-            session, role=auth.role, account_typ_id=auth.account_typ_id
-        )
-
-        abwesenheiten_verwalten = await darf_abwesenheiten_verwalten(
-            session, role=auth.role, account_typ_id=auth.account_typ_id
-        )
-
-        if auth.role == "custom" and auth.account_typ_id is not None:
-            matrix = await rechte_matrix_fuer_account_typ(session, auth.account_typ_id)
-            rechte = {
-                bereich: [aktion for aktion, erlaubt in aktionen.items() if erlaubt]
-                for bereich, aktionen in matrix.items()
-            }
-        else:
-            # mandant_admin/super_admin/loesch_* kommen an require_recht()
-            # ohnehin immer vorbei (siehe app/api/deps.py) -- die Matrix
-            # spiegelt das 1:1, damit das Frontend nicht zusaetzlich nach
-            # der Rolle unterscheiden muss.
-            rechte = {bereich: list(aktionen_fuer_bereich(bereich)) for bereich in RECHTE_BEREICHE}
+        selbst_uebernehmen = effektiv.flag(berechtigung_service.FLAG_SELBST_UEBERNEHMEN)
+        zeiten_buchen = effektiv.flag(berechtigung_service.FLAG_ZEITEN_BUCHEN)
+        abwesenheiten_verwalten = effektiv.flag(berechtigung_service.FLAG_ABWESENHEITEN_VERWALTEN)
+        # mandant_admin/super_admin/loesch_* haben alle Rechte (kommen an
+        # require_recht() immer vorbei, siehe app/api/deps.py) -- die Matrix
+        # spiegelt das 1:1, damit das Frontend nicht nach der Rolle unterscheiden muss.
+        rechte = effektiv.als_matrix()
+        rechte_scopes = effektiv.als_scopes()
 
         # Defensiv statt user.bottom_nav_items direkt durchzureichen: falls
         # dort noch ein Wert aus der frueheren, flachen Listen-Form steckt
@@ -237,4 +223,5 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             bottom_nav_items=bottom_nav_items,
             office_nav_items=office_nav_items,
             rechte=rechte,
+            rechte_scopes=rechte_scopes,
         )

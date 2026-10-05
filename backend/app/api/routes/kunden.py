@@ -83,7 +83,7 @@ async def list_kunden(
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         stmt = stmt.where(Kunde.id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
@@ -133,7 +133,7 @@ async def _require_kunde_zugriff(
     session: AsyncSession, auth: AuthContext, kunde_id: UUID
 ) -> None:
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     if beschraenkt and kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")

@@ -60,7 +60,7 @@ async def _load_vorgang_and_techniker(
     # fuer ihn 404 liefert (Sackgasse). Frueh mit klarer Meldung ablehnen,
     # statt diesen kaputten Zustand ueberhaupt erst entstehen zu lassen.
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=techniker.role, account_typ_id=techniker.account_typ_id
+        session, role=techniker.role, account_typ_id=techniker.account_typ_id, user_id=techniker.id
     ) and vorgang.kunde_id not in await assigned_kunde_ids(session, techniker.id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

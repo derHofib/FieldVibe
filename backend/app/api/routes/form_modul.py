@@ -687,7 +687,7 @@ async def _require_own_vorgang(session: AsyncSession, auth: AuthContext, vorgang
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     if beschraenkt and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")

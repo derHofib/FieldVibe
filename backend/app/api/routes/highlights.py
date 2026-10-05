@@ -137,7 +137,7 @@ async def delete_highlight(
     darf_alle_loeschen = auth.role == "mandant_admin" or (
         auth.role == "custom"
         and await hat_recht(
-            session, account_typ_id=auth.account_typ_id, bereich="vorgaenge", aktion="loeschen"
+            session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="vorgaenge", aktion="loeschen"
         )
     )
     if not darf_alle_loeschen and highlight.erstellt_von != auth.user_id:

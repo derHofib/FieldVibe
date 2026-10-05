@@ -133,7 +133,7 @@ async def list_vorgaenge(
             < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         )
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
@@ -171,7 +171,7 @@ async def _validate_references(
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ) and body.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -317,7 +317,7 @@ async def _require_vorgang_zugriff(
     session: AsyncSession, auth: AuthContext, vorgang: Vorgang
 ) -> None:
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     if beschraenkt and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
@@ -578,7 +578,7 @@ async def update_vorgang(
                 detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
             )
         if await ist_auf_zugewiesene_kunden_beschraenkt(
-            session, role=auth.role, account_typ_id=auth.account_typ_id
+            session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
         ) and neuer_kunde_id not in await assigned_kunde_ids(session, auth.user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -832,7 +832,7 @@ async def uebernehmen(
             detail="Vorgang ist abgeschlossen und kann nicht mehr geändert werden",
         )
     if not await darf_vorgang_selbst_uebernehmen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

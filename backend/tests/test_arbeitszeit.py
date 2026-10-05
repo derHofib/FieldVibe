@@ -21,6 +21,7 @@ from app.services.arbeitszeit_service import (
     soll_fuer_tag,
 )
 from tests.conftest import auth_headers, login
+from app.services.organigramm_sync_service import besetzung_pflegen
 
 BERLIN = ZoneInfo("Europe/Berlin")
 D = Decimal
@@ -178,6 +179,7 @@ async def _custom_user(mandant, name, *, verwalten):
         )
         session.add(user)
         await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
         await session.refresh(user)
         return user
 

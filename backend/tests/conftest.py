@@ -56,6 +56,12 @@ from app.core.security import hash_password
 from app.db.session import engine, system_session
 from app.main import app
 from app.models.account_typ import AccountTyp, AccountTypRecht, aktionen_fuer_bereich
+from app.services.organigramm_sync_service import (
+    besetzung_pflegen,
+    position_fuer_account_typ_anlegen,
+    scope_fuer_neues_recht,
+    wurzel_fuer_mandant_anlegen,
+)
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.kunde_zuweisung import KundeZuweisung
@@ -146,9 +152,11 @@ async def _get_or_create_legacy_account_typ(session, *, mandant_id: uuid.UUID, r
                     bereich=bereich,
                     aktion=aktion,
                     erlaubt=aktion in aktionen,
+                    scope=scope_fuer_neues_recht(account_typ, bereich),
                 )
             )
     await session.flush()
+    await position_fuer_account_typ_anlegen(session, account_typ)
     return account_typ
 
 
@@ -299,6 +307,7 @@ async def make_mandant():
             mandant = Mandant(name=name, slug=f"{name.lower()}-{uuid.uuid4().hex[:8]}", status=status)
             session.add(mandant)
             await session.flush()
+            await wurzel_fuer_mandant_anlegen(session, mandant.id)
             # Spiegelt app/api/routes/mandanten.py:create_mandant -- jeder
             # Mandant bekommt sofort einen Lagerort fuer die Materialwirtschaft.
             session.add(
@@ -351,6 +360,7 @@ async def make_user():
             )
             session.add(user)
             await session.flush()
+            await besetzung_pflegen(session, user, neu=True)
             await session.refresh(user)
             user._plaintext_password = password  # convenience for tests
             return user

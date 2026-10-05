@@ -81,6 +81,10 @@ class CurrentUser(BaseModel):
     # das Frontend kann so unconditionell auf dieser Matrix pruefen, statt
     # Rollennamen fest zu verdrahten.
     rechte: dict[str, list[str]] = {}
+    # Reichweite je Recht (Bereich -> Aktion -> Scope, siehe
+    # app/core/rechte_registry.py); nur vorhandene Rechte, role != "custom"
+    # bekommt "mandant". Noch ohne UI-Auswertung.
+    rechte_scopes: dict[str, dict[str, str]] = {}
 
 
 class ImpersonateResponse(BaseModel):

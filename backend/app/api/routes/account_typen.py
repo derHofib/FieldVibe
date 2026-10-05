@@ -16,6 +16,12 @@ from app.schemas.account_typ import (
     RechteMatrixEintrag,
     RechtSetzen,
 )
+from app.services.organigramm_sync_service import (
+    account_typ_flag_in_scope_uebersetzen,
+    position_fuer_account_typ_anlegen,
+    scope_fuer_neues_recht,
+    typ_position_umbenennen,
+)
 from app.services.rechte_service import rechte_matrix_fuer_account_typ
 
 router = APIRouter(
@@ -84,6 +90,8 @@ async def create_account_typ(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ein Account-Typ mit diesem Namen existiert bereits",
         ) from exc
+    # Jeder Typ ist zugleich Vorlage-Position im Organigramm (unter der Wurzel).
+    await position_fuer_account_typ_anlegen(session, typ)
     return await _to_read(session, typ)
 
 
@@ -97,6 +105,7 @@ async def update_account_typ(
     typ = await session.get(AccountTyp, account_typ_id)
     if typ is None or typ.mandant_id != auth.mandant_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account-Typ nicht gefunden")
+    alter_name, altes_flag = typ.name, typ.nur_zugewiesene_kunden
     for feld, wert in body.model_dump(exclude_unset=True).items():
         setattr(typ, feld, wert.strip() if feld == "name" and isinstance(wert, str) else wert)
     try:
@@ -106,6 +115,11 @@ async def update_account_typ(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ein Account-Typ mit diesem Namen existiert bereits",
         ) from exc
+    await typ_position_umbenennen(session, typ, alter_name=alter_name)
+    if typ.nur_zugewiesene_kunden != altes_flag:
+        await account_typ_flag_in_scope_uebersetzen(
+            session, typ, nur_zugewiesene_kunden=typ.nur_zugewiesene_kunden
+        )
     return await _to_read(session, typ)
 
 
@@ -189,6 +203,7 @@ async def set_recht(
                 bereich=body.bereich,
                 aktion=body.aktion,
                 erlaubt=body.erlaubt,
+                scope=scope_fuer_neues_recht(typ, body.bereich),
             )
         )
     else:

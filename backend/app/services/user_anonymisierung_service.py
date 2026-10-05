@@ -12,6 +12,7 @@ from app.models.mail_account import MailAccount
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.services import storage_service
+from app.services.organigramm_sync_service import alle_besetzungen_beenden
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ async def anonymisiere_user(session: AsyncSession, user: User) -> None:
 
     # Wie beim echten Loeschen (ON DELETE CASCADE) entfallen diese Zuweisungen;
     # sonst erschiene "Gelöschter Nutzer" als Betreuer/Fahrer.
+    await alle_besetzungen_beenden(session, user.id)
     await session.execute(delete(KundeZuweisung).where(KundeZuweisung.user_id == user.id))
     await session.execute(delete(FahrzeugZuweisung).where(FahrzeugZuweisung.user_id == user.id))
     await session.execute(

@@ -16,6 +16,7 @@ from app.models.user import User
 from tests.conftest import auth_headers, login
 from tests.test_partner import _make_zugang, _partner_login
 from tests.test_zeitplan_api import _admin, _element, _finde, _projekt, _url, _verbinde
+from app.services.organigramm_sync_service import besetzung_pflegen
 
 
 async def _bestellung(mandant, admin, *, liefertermin=None, nummer=None, lieferant_name=None, **kw) -> Bestellung:
@@ -236,6 +237,7 @@ async def test_vorgang_auswahl_sortierung_filter_und_zuweisung(client, make_mand
         )
         session.add(user)
         await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
         email = user.email
     token = await login(client, email, "pw-123456")
     h2 = auth_headers(token)

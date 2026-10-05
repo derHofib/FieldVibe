@@ -12,6 +12,7 @@ from app.models.anlage import Anlage
 from app.models.mandant import Mandant
 from app.schemas.mandant import MandantCreate, MandantRead, MandantUpdate
 from app.services.audit_service import log_action
+from app.services.organigramm_sync_service import wurzel_fuer_mandant_anlegen
 
 router = APIRouter(
     prefix="/api/admin/mandanten",
@@ -61,6 +62,7 @@ async def create_mandant(
         )
     )
     await session.flush()
+    await wurzel_fuer_mandant_anlegen(session, mandant.id)
 
     await log_action(
         session,

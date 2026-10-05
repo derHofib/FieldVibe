@@ -38,7 +38,7 @@ async def _darf_rechnungen_sehen(session: AsyncSession, auth: AuthContext) -> bo
     if auth.role != "custom":
         return True
     return await hat_recht(
-        session, account_typ_id=auth.account_typ_id, bereich="abrechnung", aktion="sehen"
+        session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="abrechnung", aktion="sehen"
     )
 
 
@@ -49,7 +49,7 @@ async def search(
     session: AsyncSession = Depends(get_db),
 ) -> SearchResponse:
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     kunde_ids = await assigned_kunde_ids(session, auth.user_id) if beschraenkt else None
 

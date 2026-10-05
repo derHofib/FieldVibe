@@ -49,7 +49,7 @@ async def list_standorte(
     if aktiv is not None:
         stmt = stmt.where(Standort.aktiv == aktiv)
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         stmt = stmt.where(Standort.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     result = await session.execute(stmt)
@@ -93,7 +93,7 @@ async def create_standort(
 
 async def _require_standort_zugriff(session: AsyncSession, auth: AuthContext, standort: Standort) -> None:
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     if beschraenkt and standort.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Standort nicht gefunden")

@@ -11,6 +11,7 @@ from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.user import User
 from app.models.zeiterfassung import Zeiterfassung
 from tests.conftest import auth_headers, login
+from app.services.organigramm_sync_service import besetzung_pflegen
 
 # Volles "vorgaenge"/"abrechnung"-Recht fuer alle in diesem Modul erstellten
 # Account-Typen -- die eigentlich interessante Rechte-Variable in diesen
@@ -55,6 +56,7 @@ async def _erstellen(mandant, name, *, darf_buchen):
         )
         session.add(user)
         await session.flush()
+        await besetzung_pflegen(session, user, neu=True)
         await session.refresh(user)
         user._plaintext_password = "pw-123456"
         return user

@@ -89,7 +89,7 @@ async def list_dauerauftraege(
     if kunde_id:
         stmt = stmt.where(Dauerauftrag.kunde_id == kunde_id)
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         stmt = stmt.where(Dauerauftrag.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
     dauerauftraege = list((await session.execute(stmt)).scalars().all())
@@ -174,7 +174,7 @@ async def _require_dauerauftrag_zugriff(
     session: AsyncSession, auth: AuthContext, dauerauftrag: Dauerauftrag
 ) -> None:
     beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     )
     if beschraenkt and dauerauftrag.kunde_id not in await assigned_kunde_ids(
         session, auth.user_id

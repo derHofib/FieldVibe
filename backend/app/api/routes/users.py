@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -16,6 +17,7 @@ from app.models.user import User
 from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserCreate, UserRead, UserUpdate
 from app.services.audit_service import log_action
+from app.services.organigramm_sync_service import besetzung_pflegen
 from app.services.einladung_service import (
     create_einladung,
     registrierungslink_erzeugen,
@@ -316,6 +318,7 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
         ) from exc
+    await besetzung_pflegen(session, user, neu=True)
 
     await log_action(
         session,
@@ -372,6 +375,7 @@ async def update_user(
         or ("account_typ_id" in changes and changes["account_typ_id"] != user.account_typ_id)
         or bool(body.password)
     )
+    alte_rolle, alter_account_typ_id, war_aktiv = user.role, user.account_typ_id, user.aktiv
     for field, value in changes.items():
         setattr(user, field, value)
     if body.password:
@@ -397,6 +401,13 @@ async def update_user(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
         ) from exc
+    await besetzung_pflegen(
+        session,
+        user,
+        alte_rolle=alte_rolle,
+        alter_account_typ_id=alter_account_typ_id,
+        war_aktiv=war_aktiv,
+    )
     if tokens_widerrufen:
         await widerrufe_tokens(session, user)
     if changes:
@@ -412,7 +423,8 @@ async def update_user(
             actor_user_id=auth.user_id,
             entity_type="user",
             entity_id=user.id,
-            payload=changes,
+            # UUID (account_typ_id) ist nicht JSON-serialisierbar.
+            payload=jsonable_encoder(changes),
         )
     return await _to_read(session, user)
 

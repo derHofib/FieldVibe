@@ -238,13 +238,16 @@ async def test_rls_mandant_b_sieht_nichts_von_a(make_mandant, make_user):
         await session.flush()
         session.add(PositionBesetzung(mandant_id=a.id, position_id=pos.id, user_id=user.id))
 
+    # Wurzel und Typ-Position/Besetzungen entstehen schon durch make_mandant/make_user (Sync).
     async with tenant_session(mandant_id=a.id, is_super_admin=False) as session:
-        assert len((await session.execute(select(Position))).scalars().all()) == 1
-        assert len((await session.execute(select(PositionBesetzung))).scalars().all()) == 1
+        positionen = (await session.execute(select(Position))).scalars().all()
+        assert pos.id in {p.id for p in positionen} and {p.mandant_id for p in positionen} == {a.id}
+        besetzungen = (await session.execute(select(PositionBesetzung))).scalars().all()
+        assert {x.mandant_id for x in besetzungen} == {a.id}
         assert len((await session.execute(select(AccountTypRecht))).scalars().all()) > 0
 
     async with tenant_session(mandant_id=b.id, is_super_admin=False) as session:
-        assert (await session.execute(select(Position))).scalars().all() == []
+        assert {p.mandant_id for p in (await session.execute(select(Position))).scalars().all()} == {b.id}
         assert (await session.execute(select(PositionBesetzung))).scalars().all() == []
         assert (await session.execute(select(AccountTypRecht))).scalars().all() == []
 

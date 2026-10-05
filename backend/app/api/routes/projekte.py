@@ -115,7 +115,7 @@ async def _hat_projekte_recht(session: AsyncSession, auth: AuthContext, aktion: 
     entscheidet, ob das Recht ueberhaupt gefragt ist."""
     if auth.role != "custom":
         return True
-    return await hat_recht(session, account_typ_id=auth.account_typ_id, bereich="projekte", aktion=aktion)
+    return await hat_recht(session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="projekte", aktion=aktion)
 
 
 async def _pruefe_zugriff_auf_aufgabe(

@@ -252,7 +252,12 @@ export interface CurrentUser {
   // app/api/routes/auth.py:me) -- role != "custom" bekommt immer alle
   // Bereiche/Aktionen.
   rechte: Partial<Record<RechteBereich, RechteAktion[]>>;
+  // Reichweite je Recht (Bereich -> Aktion -> Scope, siehe
+  // backend/app/core/rechte_registry.py); noch ohne UI-Auswertung.
+  rechte_scopes?: Partial<Record<RechteBereich, Partial<Record<RechteAktion, RechteScope>>>>;
 }
+
+export type RechteScope = "eigene" | "team" | "teilbaum" | "bereich" | "mandant";
 
 export interface TokenPair {
   access_token: string;

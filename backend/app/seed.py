@@ -26,6 +26,12 @@ from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
+from app.services.organigramm_sync_service import (
+    besetzung_pflegen,
+    position_fuer_account_typ_anlegen,
+    scope_fuer_neues_recht,
+    wurzel_fuer_mandant_anlegen,
+)
 
 # Nur zur Veranschaulichung der Account-Typen-Rechte-Matrix im Seed-Datensatz
 # gedacht -- der mandant_admin kann diese ueber die Account-Verwaltung
@@ -327,6 +333,7 @@ async def _seed_users_and_mandant(session, mandant_data: dict) -> tuple[Mandant,
         )
         session.add(mandant)
         await session.flush()
+        await wurzel_fuer_mandant_anlegen(session, mandant.id)
         print(f"[seed] Mandant angelegt: {mandant.name} ({mandant.slug})")
     else:
         print(f"[seed] Mandant bereits vorhanden: {mandant.name}")
@@ -356,9 +363,11 @@ async def _seed_users_and_mandant(session, mandant_data: dict) -> tuple[Mandant,
                             bereich=bereich,
                             aktion=aktion,
                             erlaubt=aktion in aktionen,
+                            scope=scope_fuer_neues_recht(account_typ, bereich),
                         )
                     )
             await session.flush()
+            await position_fuer_account_typ_anlegen(session, account_typ)
             print(f"[seed]   Account-Typ angelegt: {name} ({mandant.name})")
         account_typen_by_name[name] = account_typ
         return account_typ
@@ -382,6 +391,7 @@ async def _seed_users_and_mandant(session, mandant_data: dict) -> tuple[Mandant,
             )
             session.add(user)
             await session.flush()
+            await besetzung_pflegen(session, user, neu=True)
             print(f"[seed]   User angelegt: {email} ({rolle_oder_typ})")
         else:
             print(f"[seed]   User bereits vorhanden: {email}")

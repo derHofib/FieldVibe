@@ -14,7 +14,7 @@ from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
 from app.models.partner_zugang import PartnerZugang
 from app.models.user import User
-from app.services.rechte_service import hat_recht
+from app.services import berechtigung_service
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -167,21 +167,18 @@ def require_module(*modules: str):
 def require_recht(bereich: str, aktion: str = "sehen"):
     """Zusaetzlich zu require_roles: schraenkt frei vom mandant_admin
     definierte Account-Typen (role == 'custom', siehe app/models/account_typ.py)
-    gemaess ihrer individuellen Rechte-Matrix ein (siehe
-    app/services/rechte_service.py). super_admin/mandant_admin sind hier immer
-    erlaubt -- deren Zugriff wird ausschliesslich ueber require_roles an der
-    jeweiligen Route gesteuert und bleibt von dieser Matrix unberuehrt."""
+    gemaess ihrer effektiven Rechte ein -- aufgeloest von der Rechte-Engine
+    (app/services/berechtigung_service.py: aktive Besetzungen im Organigramm,
+    Typ-Basis, Overrides). Alle anderen Rollen (super_admin, mandant_admin,
+    loesch_*) sind hier immer erlaubt; deren Zugriff wird ausschliesslich ueber
+    require_roles an der jeweiligen Route gesteuert. Die Aufloesung ist pro
+    Request gecacht (mehrere require_recht an einer Route = eine Aufloesung)."""
 
     async def checker(
         auth: AuthContext = Depends(get_current_user),
         session: AsyncSession = Depends(get_db),
     ) -> AuthContext:
-        if auth.role != "custom":
-            return auth
-        erlaubt = await hat_recht(
-            session, account_typ_id=auth.account_typ_id, bereich=bereich, aktion=aktion
-        )
-        if not erlaubt:
+        if not await berechtigung_service.hat_recht(session, auth, bereich, aktion):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Keine Berechtigung für diese Aktion",

@@ -63,7 +63,7 @@ def _recht_eines_von(*rechte: tuple[str, str]):
         if auth.role != "custom":
             return auth
         for bereich, aktion in rechte:
-            if await hat_recht(session, account_typ_id=auth.account_typ_id, bereich=bereich, aktion=aktion):
+            if await hat_recht(session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich=bereich, aktion=aktion):
                 return auth
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
 
@@ -72,13 +72,13 @@ def _recht_eines_von(*rechte: tuple[str, str]):
 
 async def _darf_projekte_sehen(session: AsyncSession, auth: AuthContext) -> bool:
     return auth.role != "custom" or await hat_recht(
-        session, account_typ_id=auth.account_typ_id, bereich="projekte", aktion="sehen"
+        session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="projekte", aktion="sehen"
     )
 
 
 async def _darf_bearbeiten(session: AsyncSession, auth: AuthContext) -> bool:
     return auth.role != "custom" or await hat_recht(
-        session, account_typ_id=auth.account_typ_id, bereich="projekte", aktion="bearbeiten"
+        session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="projekte", aktion="bearbeiten"
     )
 
 
