@@ -575,3 +575,48 @@ Jede Stufe ist für sich nutzbar und wird einzeln committet und getestet.
 7. **Fahrzeug erfassen:** nötig, oder reichen km?
 8. **Reihenfolge:** Stufe 1 (Bearbeiten, ohne Migration) zuerst und direkt
    danach Stufe 2 (Buchen)? Oder Buchen zuerst?
+
+---
+
+## 12. Soll-Zeit, Feiertage, Überstundensaldo
+
+Status: Backend umgesetzt (Migration 0100, `app/api/routes/arbeitszeit.py`,
+`app/services/arbeitszeit_service.py`), Frontend folgt. Anlass: Fehlerbericht
+9854bb09.
+
+**Soll-Zeit.** Je Mitarbeiter Stunden je Wochentag (Mo–So,
+`arbeitszeit_soll`) mit `gueltig_ab`. Eine Zeile gilt ab ihrem Datum bis zur
+nächsten Zeile des Mitarbeiters, Änderungen wirken also nie rückwirkend. Eine
+Zeile mit demselben `gueltig_ab` wird ersetzt. Ohne Zeile ist das Soll 0.
+
+**Feiertage.** Pro Mandant als normale, bearbeitbare Zeilen (`feiertage`,
+eindeutig je Mandant und Datum). Das Bundesland steht am Mandanten
+(`mandanten.bundesland`, nullable; ohne Bundesland entstehen nur die
+bundesweiten Feiertage). Ein Service erzeugt die gesetzlichen Feiertage je
+Bundesland und Jahr (bewegliche über die Osterformel, ohne neue
+Abhängigkeit). Die Generierung ist idempotent und lässt vorhandene Tage
+unberührt, auch umbenannte oder manuell angelegte. Regional begrenzte
+Feiertage (z. B. Mariä Himmelfahrt in Teilen Bayerns, Fronleichnam in Teilen
+Sachsens/Thüringens, Augsburger Friedensfest) werden nicht erzeugt, der
+Mandant ergänzt sie manuell. An Feiertagen ist das Soll 0.
+
+**Überstundensaldo** = Ist minus Soll je Kalendertag, aufsummiert.
+
+- Ist = Arbeitszeit wie in der Statistik: Pause, Urlaub und Krankheit zählen
+  nicht, Fahrzeit schon, kein automatischer Pausenabzug (nur erfasste
+  Pausen). Laufende Einträge zählen bis „jetzt“.
+- Tageszuordnung wie in der bestehenden Zeiterfassung: Kalendertag in
+  Europe/Berlin (`app/core/zeit.py`), maßgeblich ist der **Start** des
+  Eintrags. Ein Eintrag über Mitternacht zählt vollständig am Starttag.
+- Ein Tag mit einem Eintrag der Kategorie `urlaub` oder `krankheit` zählt als
+  Soll erfüllt: Differenz 0 (`ist` wird auf das Soll gesetzt), unabhängig von
+  sonst erfasster Arbeitszeit. Bei beidem am selben Tag gewinnt `krankheit`.
+- Auf einem Feiertag ist das Soll 0, gearbeitete Zeit ist Überstunde.
+- Der Zeitraum ist auf 366 Tage begrenzt. Zukünftige Tage im Zeitraum haben
+  Soll, aber noch kein Ist; wer einen laufenden Saldo will, fragt bis heute ab.
+
+**Rechte.** Neuer Schalter `darf_abwesenheiten_verwalten` am Account-Typ
+(wie `darf_zeiten_buchen`; Mandanten-Admin hat ihn immer). Soll, Feiertage und
+Bundesland pflegen darf nur, wer ihn hat, auch für das eigene Soll. Das eigene
+Soll und den eigenen Saldo sowie Feiertage und Bundesland lesen darf jeder,
+fremdes Soll und fremden Saldo nur mit dem Recht.
