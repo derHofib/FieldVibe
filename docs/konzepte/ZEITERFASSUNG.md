@@ -620,3 +620,78 @@ Mandant ergänzt sie manuell. An Feiertagen ist das Soll 0.
 Bundesland pflegen darf nur, wer ihn hat, auch für das eigene Soll. Das eigene
 Soll und den eigenen Saldo sowie Feiertage und Bundesland lesen darf jeder,
 fremdes Soll und fremden Saldo nur mit dem Recht.
+
+---
+
+## 13. Abwesenheiten, Urlaubskonto, Freizeitausgleich
+
+Status: Backend umgesetzt (Migration 0101, `app/api/routes/abwesenheiten.py`,
+`app/services/abwesenheit_service.py`), Frontend folgt. Anlass: Fehlerbericht
+9854bb09, Stufe 3+4.
+
+**Anträge.** Tabelle `abwesenheitsantraege`: Betroffener (`user_id`), `art`
+(`urlaub` | `krankheit` | `freizeitausgleich`), `von`/`bis` (inklusiv),
+`halber_tag_von`/`halber_tag_bis` (erster bzw. letzter Tag nur halber Tag),
+`status` (`offen` | `genehmigt` | `abgelehnt` | `zurueckgezogen`), `notiz`,
+`antwort`, Ersteller und Bearbeiter. Die Zahl der betroffenen Tage wird nie
+gespeichert, sondern bei jedem Lesen aus Soll und Feiertagen berechnet.
+
+**Arbeitstag** = Soll des Tages > 0 und kein Feiertag (Abschnitt 12). Urlaubs-
+tage sind also Arbeitstage nach persönlichem Soll, ein halber Tag zählt 0,5.
+Ein Antrag ohne einen einzigen Arbeitstag wird mit 422 abgelehnt, ein Antrag
+über mehr als 366 Tage ebenfalls. Vergangene Zeiträume und die Jahresgrenze
+sind erlaubt. Überschneidet sich der Zeitraum mit einem offenen oder
+genehmigten Antrag desselben Mitarbeiters (egal welche Art), gibt es 409;
+angrenzende Zeiträume sind in Ordnung.
+
+**Workflow.**
+
+- Urlaub und Freizeitausgleich: Der Mitarbeiter beantragt (`offen`). Genehmigen
+  und Ablehnen darf nur, wer „Abwesenheiten verwalten“ hat. Wer das Recht hat,
+  trägt für sich und andere direkt als `genehmigt` ein.
+- Krankheit braucht keine Genehmigung und ist sofort `genehmigt`
+  (Mitarbeiter für sich, Berechtigte auch für andere).
+- Der Mitarbeiter darf eigene `offene` Anträge zurückziehen. Eine genehmigte
+  Abwesenheit stornieren (`zurueckgezogen`) darf nur, wer das Recht hat; der
+  Mitarbeiter bittet das Büro. `abgelehnt` und `zurueckgezogen` sind final.
+- Lesen eigener Anträge und des eigenen Kontos darf jeder. Fremde Anträge
+  lesen, für andere anlegen, genehmigen, ablehnen, stornieren, Anspruch
+  pflegen und die Abwesenheitsübersicht (Kalender) nur mit dem Recht
+  (`mandant_admin` immer). Fremde Mandanten liefern 404.
+
+**Zeiteinträge.** Bei Genehmigung (auch Direkteintrag) entsteht je Arbeitstag
+ein Eintrag der Kategorie `urlaub`, `krankheit` bzw. `freizeitausgleich`
+(neue Kategorie, CHECK-Constraint in Migration 0101 erweitert): Dauer = Soll
+des Tages (halber Tag: halbes Soll), Beginn 08:00 Europe/Berlin, damit
+`lokalerTag` am richtigen Kalendertag landet. Nicht abrechenbar, ohne Vorgang,
+verknüpft über `zeiterfassung.abwesenheit_id` (`ON DELETE SET NULL`: Anträge
+werden nie gelöscht, aber falls doch, bleiben die Einträge als Historie).
+Hat der Mitarbeiter an einem Tag schon einen nicht gelöschten Eintrag
+derselben Kategorie, wird dort nichts doppelt angelegt. Beim Stornieren oder
+Zurückziehen werden die verknüpften Einträge per Papierkorb-Konvention
+(`geloescht_am`/`geloescht_von`) entfernt; selbst nachgetragene Einträge
+bleiben unangetastet.
+
+**Urlaubskonto.** `urlaubsanspruch` je Mitarbeiter und Jahr: `tage`,
+`resturlaub_tage`, `resturlaub_verfaellt_am`. Das Konto (je Jahr) zeigt
+Anspruch, Resturlaub, `genommen` (genehmigte Urlaubstage im Jahr),
+`beantragt` (offene), `verbleibend`. Ein Antrag über die Jahresgrenze wird
+tageweise den Jahren zugeordnet.
+
+*Resturlaub-Regel:* Urlaub bis einschließlich `resturlaub_verfaellt_am`
+verbraucht zuerst den Resturlaub. Was bis dahin nicht verbraucht wurde,
+verfällt nach dem Stichtag (`resturlaub_verfallen`). Vor dem Stichtag gilt der
+Resturlaub noch voll als verfügbar. Ohne Stichtag verfällt er nie.
+`verbleibend` = Anspruch + Resturlaub − verfallen − genommen − beantragt.
+Überschreitet ein Antrag den Anspruch, wird er nicht blockiert; das Konto
+zeigt das Minus (das Frontend warnt). Krankheit und Freizeitausgleich
+berühren das Konto nicht.
+
+**Saldo.** `abwesenheit` im Saldo kennt zusätzlich `freizeitausgleich`.
+Urlaub, Krankheit und Feiertage unverändert. Der Freizeitausgleich-Eintrag
+zählt nicht als Arbeitszeit (auch nicht in Statistik/Wochenstunden): Ein
+ganzer Ausgleichstag ohne Arbeit hat `ist` 0 und `saldo` = −Soll. Bei einem
+halben Tag gilt die andere Hälfte als erfüllt (`ist` = Soll − Ausgleichs-
+stunden, `saldo` = −Ausgleichsstunden); echte Mehrarbeit darüber zählt.
+Treffen mehrere Abwesenheitsarten auf denselben Tag, gewinnt `krankheit`
+vor `urlaub` vor `freizeitausgleich`.
