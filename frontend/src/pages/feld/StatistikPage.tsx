@@ -29,7 +29,7 @@ function TechnikerBalken({ name, anzahl, max }: { name: string; anzahl: number; 
   );
 }
 
-function TeamKennzahlen() {
+export function TeamKennzahlen() {
   const [projektId, setProjektId] = useState("");
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
   const { data: kennzahlen, isLoading } = useQuery({

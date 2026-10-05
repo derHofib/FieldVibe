@@ -230,8 +230,10 @@ behalten ihre eigene Rundung/Farbe. Nur die Bedienelemente drumherum
 - Listen mit Detailansicht als zweispaltiges Panel (Liste links, die
   bestehende Detailseite rechts eingebettet)
 - Übernommene Feld-App-Seiten laufen im Office in einer begrenzten
-  Lesespalte (`max-w-3xl`); Ausnahme Leistungsverzeichnis (Übersicht als
-  Tabelle, Detail mit Seitenspalte): `layout="dicht"` in `max-w-[1400px]`
+  Lesespalte (`max-w-3xl`); Ausnahmen in `max-w-[1400px]`: Leistungsverzeichnis (Übersicht als
+  Tabelle, Detail mit Seitenspalte, `layout="dicht"`) und `/statistik`
+  (eigene Office-Seite `office/zeit/OfficeArbeitszeitPage.tsx`: Monatsliste
+  mit allen Kalendertagen statt der Feld-Wochenansicht)
 
 ## Was offen bleibt (ehrlich dokumentiert, siehe `docs/ui-redesign/REVIEW.md`)
 

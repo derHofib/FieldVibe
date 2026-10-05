@@ -18,6 +18,7 @@ import { FormSubmissionAusfuellenPage } from "../pages/feld/FormSubmissionAusfue
 import { HighlightsPage } from "../pages/feld/HighlightsPage";
 import { InsightsPage } from "../pages/feld/InsightsPage";
 import { IntegrationenPage } from "../pages/feld/IntegrationenPage";
+import { OfficeArbeitszeitPage } from "./zeit/OfficeArbeitszeitPage";
 import { LeistungsverzeichnisDetailPage } from "../pages/feld/LeistungsverzeichnisDetailPage";
 import { LeistungsverzeichnisPage } from "../pages/feld/LeistungsverzeichnisPage";
 import { KundenPage } from "../pages/feld/KundenPage";
@@ -37,7 +38,6 @@ import { RechnungseingangPage } from "../pages/feld/RechnungseingangPage";
 import { SearchPage } from "../pages/feld/SearchPage";
 import { SettingsPage } from "../pages/feld/SettingsPage";
 import { StandortDetailPage } from "../pages/feld/StandortDetailPage";
-import { StatistikPage } from "../pages/feld/StatistikPage";
 import { TeamZeitenPage } from "../pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "../pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "../pages/feld/VorgangDetailPage";
@@ -126,6 +126,17 @@ export function OfficeApp() {
           }
         />
 
+        {/* Monatsliste mit allen Kalendertagen braucht die Desktop-Breite;
+            die Feld-App behaelt ihre Wochenansicht (StatistikPage). */}
+        <Route
+          path="/statistik"
+          element={
+            <div className="mx-auto max-w-[1400px]">
+              <OfficeArbeitszeitPage />
+            </div>
+          }
+        />
+
         {/* Aus der Feld-App uebernommen, in begrenzter Lesespalte */}
         <Route element={<SchmaleSpalte />}>
         <Route path="/feed" element={<Navigate to="/vorgaenge" replace />} />
@@ -169,7 +180,6 @@ export function OfficeApp() {
         <Route path="/einstellungen/seitenleiste" element={<OfficeNavSettingsPage />} />
         <Route path="/einstellungen/kategorien" element={<OfficeNavKategorienPage />} />
         <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
-        <Route path="/statistik" element={<StatistikPage />} />
         <Route path="/team-zeiten" element={<TeamZeitenPage />} />
         <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
         <Route path="/papierkorb" element={<PapierkorbPage />} />
