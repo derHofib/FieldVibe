@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Clock, Lock, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { zeiterfassungApi } from "../../api/endpoints";
+import { arbeitszeitApi, zeiterfassungApi } from "../../api/endpoints";
 import { StatusPille } from "../../components/apple/StatusPille";
 import { EmptyState } from "../../components/EmptyState";
 import { ZeiterfassungManuellForm } from "../../components/ZeiterfassungManuellForm";
@@ -11,6 +11,14 @@ import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
 import { TeamKennzahlen } from "../../pages/feld/StatistikPage";
 import type { Zeiterfassung } from "../../types";
+import {
+  SALDO_TON_KLASSE,
+  formatSaldo,
+  parseStunden,
+  saldoBis,
+  saldoTageNachDatum,
+  saldoTon,
+} from "../../utils/arbeitszeit";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import {
@@ -57,6 +65,38 @@ export function OfficeArbeitszeitPage() {
     queryFn: () => zeiterfassungApi.listFuerZeitraum({ techniker_id: currentUser!.id, von, bis }),
     enabled: kannErfassen,
   });
+
+  // Saldo nur bis heute: Zukunftstage haben Soll, aber noch kein Ist.
+  const saldoBisTag = saldoBis(von, bis, heuteTag);
+  const jahresStart = `${heute.getFullYear()}-01-01`;
+  // Fehler/403 bewusst nicht weiterreichen: die Seite funktioniert ohne Saldo.
+  const { data: monatsSaldo } = useQuery({
+    queryKey: ["arbeitszeit-saldo", currentUser?.id, von, saldoBisTag],
+    queryFn: () => arbeitszeitApi.saldo({ von, bis: saldoBisTag!, user_id: currentUser!.id }),
+    enabled: kannErfassen && !!currentUser && saldoBisTag !== null,
+    retry: false,
+  });
+  const { data: jahresSaldo } = useQuery({
+    queryKey: ["arbeitszeit-saldo", currentUser?.id, jahresStart, heuteTag],
+    queryFn: () => arbeitszeitApi.saldo({ von: jahresStart, bis: heuteTag, user_id: currentUser!.id }),
+    enabled: kannErfassen && !!currentUser,
+    retry: false,
+  });
+  const saldoJeTag = useMemo(() => saldoTageNachDatum(monatsSaldo?.tage ?? []), [monatsSaldo]);
+  const hatSoll = parseStunden(jahresSaldo?.soll_stunden) > 0 || parseStunden(monatsSaldo?.soll_stunden) > 0;
+  const keinSoll = !!jahresSaldo && !hatSoll;
+
+  // Feiertagsname je Datum; Saldo-Tage tragen nur das Flag.
+  const { data: feiertage } = useQuery({
+    queryKey: ["arbeitszeit-feiertage", jahr],
+    queryFn: () => arbeitszeitApi.feiertage(jahr),
+    enabled: kannErfassen && hatSoll,
+    retry: false,
+  });
+  const feiertagsName = useMemo(
+    () => new Map((feiertage ?? []).map((f) => [f.datum, f.bezeichnung])),
+    [feiertage],
+  );
 
   const jeTag = useMemo(() => eintraegeJeTag(eintraege ?? []), [eintraege]);
   const monatssumme = arbeitsstunden(eintraege ?? []);
@@ -122,6 +162,45 @@ export function OfficeArbeitszeitPage() {
         )}
       </div>
 
+      {kannErfassen && hatSoll && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <KennzahlKarte
+            label="Überstunden-Saldo (Monat)"
+            wert={monatsSaldo ? formatSaldo(monatsSaldo.saldo_stunden) : "—"}
+            wertKlasse={monatsSaldo ? SALDO_TON_KLASSE[saldoTon(monatsSaldo.saldo_stunden)] : "text-label"}
+            zusatz={saldoBisTag && saldoBisTag < bis ? "bis heute" : undefined}
+          />
+          <KennzahlKarte
+            label="Soll / Ist (Monat)"
+            wert={
+              monatsSaldo
+                ? `${formatStundenAlsHHMM(parseStunden(monatsSaldo.soll_stunden))} / ${formatStundenAlsHHMM(parseStunden(monatsSaldo.ist_stunden))}`
+                : "—"
+            }
+            zusatz="in Std."
+          />
+          <KennzahlKarte
+            label="Saldo seit Jahresbeginn"
+            wert={jahresSaldo ? formatSaldo(jahresSaldo.saldo_stunden) : "—"}
+            wertKlasse={jahresSaldo ? SALDO_TON_KLASSE[saldoTon(jahresSaldo.saldo_stunden)] : "text-label"}
+            zusatz="bis heute"
+          />
+        </div>
+      )}
+      {kannErfassen && keinSoll && (
+        <p className="text-sm text-label2">
+          Keine Soll-Zeit hinterlegt.
+          {currentUser?.darf_abwesenheiten_verwalten && (
+            <>
+              {" "}
+              <Link to="/einstellungen/arbeitszeit" className="font-medium text-tint-text hover:underline">
+                Soll-Zeit in den Einstellungen anlegen
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
       {kannErfassen && (
         <Karte className="space-y-1 p-2">
           {tage.map((t) => {
@@ -129,6 +208,8 @@ export function OfficeArbeitszeitPage() {
             const offen = offeneTage.has(t.tag);
             const istHeute = t.tag === heuteTag;
             const flaeche = istHeute ? "bg-tintbg" : t.istWochenende ? "bg-fill" : "";
+            const saldoTag = hatSoll ? saldoJeTag.get(t.tag) : undefined;
+            const hatSollTag = !!saldoTag && parseStunden(saldoTag.soll) > 0;
             const textFarbe = t.istWochenende && !istHeute ? "text-label2" : "text-label";
             return (
               <div key={t.tag} className={`rounded-[var(--radius-ap-md)] ${flaeche}`}>
@@ -143,10 +224,32 @@ export function OfficeArbeitszeitPage() {
                   <span className="w-14 tabular-nums">
                     {String(t.tagNr).padStart(2, "0")}.{String(monat0 + 1).padStart(2, "0")}.
                   </span>
-                  <span className="flex-1 text-xs text-label2">
+                  <span className="flex flex-1 flex-wrap items-center gap-2 text-xs text-label2">
                     {tagesEintraege.length > 0 &&
                       `${tagesEintraege.length} ${tagesEintraege.length === 1 ? "Eintrag" : "Einträge"}`}
+                    {saldoTag?.feiertag && (
+                      <span className="rounded-full bg-st-wartet-bg px-2 py-0.5 font-medium text-st-wartet">
+                        {feiertagsName.get(t.tag) ?? "Feiertag"}
+                      </span>
+                    )}
+                    {saldoTag?.abwesenheit && (
+                      <span className="rounded-full bg-st-neu-bg px-2 py-0.5 font-medium text-st-neu">
+                        {saldoTag.abwesenheit === "urlaub" ? "Urlaub" : "Krankheit"}
+                      </span>
+                    )}
                   </span>
+                  {saldoTag && (hatSollTag || saldoTag.feiertag || saldoTag.abwesenheit) && (
+                    <>
+                      <span className="w-24 text-right text-xs tabular-nums text-label2">
+                        {hatSollTag ? `Soll ${formatStundenAlsHHMM(parseStunden(saldoTag.soll))}` : ""}
+                      </span>
+                      <span
+                        className={`w-16 text-right text-xs font-medium tabular-nums ${SALDO_TON_KLASSE[saldoTon(saldoTag.saldo)]}`}
+                      >
+                        {hatSollTag || saldoTon(saldoTag.saldo) !== "null" ? formatSaldo(saldoTag.saldo) : ""}
+                      </span>
+                    </>
+                  )}
                   <span className="font-medium tabular-nums">
                     {tagesEintraege.length > 0 ? `${formatStundenAlsHHMM(arbeitsstunden(tagesEintraege))} Std.` : "—"}
                   </span>

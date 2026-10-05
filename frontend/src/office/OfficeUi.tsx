@@ -94,12 +94,14 @@ export function KennzahlKarte({
   zusatz,
   ton = "neutral",
   icon: Icon,
+  wertKlasse = "text-label",
 }: {
   label: string;
   wert: string;
   zusatz?: string;
   ton?: "neutral" | "warnung" | "gut";
   icon?: LucideIcon;
+  wertKlasse?: string;
 }) {
   const zusatzKlasse =
     ton === "warnung"
@@ -114,7 +116,7 @@ export function KennzahlKarte({
         {Icon && <Icon size={13} strokeWidth={2} aria-hidden="true" />}
         {label}
       </p>
-      <p className="ap-heading text-2xl font-semibold tabular-nums text-label">{wert}</p>
+      <p className={`ap-heading text-2xl font-semibold tabular-nums ${wertKlasse}`}>{wert}</p>
       {zusatz && <p className={`mt-1 text-xs ${zusatzKlasse}`}>{zusatz}</p>}
     </Karte>
   );
