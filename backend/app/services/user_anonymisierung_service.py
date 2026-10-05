@@ -42,7 +42,9 @@ def nicht_anonymisiert() -> ColumnElement[bool]:
     return ~User.email.like(_ANONYM_EMAIL_LIKE)
 
 
-async def anonymisiere_user(session: AsyncSession, user: User) -> None:
+async def anonymisiere_user(
+    session: AsyncSession, user: User, actor_user_id: uuid.UUID | None = None
+) -> None:
     """Entfernt alle personenbezogenen Daten, behaelt aber die Zeile, damit
     Fremdschluessel (Zeiterfassung, Rechnungen, Verlauf ...) intakt bleiben."""
     avatar_key = user.avatar_url
@@ -67,7 +69,7 @@ async def anonymisiere_user(session: AsyncSession, user: User) -> None:
 
     # Wie beim echten Loeschen (ON DELETE CASCADE) entfallen diese Zuweisungen;
     # sonst erschiene "Gelöschter Nutzer" als Betreuer/Fahrer.
-    await alle_besetzungen_beenden(session, user.id)
+    await alle_besetzungen_beenden(session, user.id, actor_user_id)
     await session.execute(delete(KundeZuweisung).where(KundeZuweisung.user_id == user.id))
     await session.execute(delete(FahrzeugZuweisung).where(FahrzeugZuweisung.user_id == user.id))
     await session.execute(

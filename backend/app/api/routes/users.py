@@ -16,7 +16,8 @@ from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserCreate, UserRead, UserUpdate
-from app.services.audit_service import log_action
+from app.services import eskalation_service as esk
+from app.services.audit_service import log_action, log_aenderung
 from app.services.organigramm_sync_service import besetzung_pflegen
 from app.services.einladung_service import (
     create_einladung,
@@ -68,6 +69,35 @@ async def _to_read(session: AsyncSession, user: User) -> UserRead:
         created_at=user.created_at,
         updated_at=user.updated_at,
     )
+
+
+async def _custom_account_typ_pruefen(
+    session: AsyncSession, auth: AuthContext, user: User, body: UserUpdate
+) -> None:
+    if user.mandant_id != auth.mandant_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+    if set(body.model_dump(exclude_unset=True)) - {"account_typ_id"}:
+        raise esk.verboten("Mit Ihrer Berechtigung kann nur der Account-Typ geändert werden")
+    akteur = await esk.akteur_laden(session, auth)
+    esk.rechte_verwalten_pflicht(akteur)
+    if user.role != "custom":
+        raise esk.verboten("Die Rolle dieses Accounts kann mit Ihrer Berechtigung nicht geändert werden")
+    await esk.user_im_scope_pruefen(session, akteur, esk.RECHTE_VERWALTEN, user.id)
+    typ = await session.get(AccountTyp, body.account_typ_id) if body.account_typ_id else None
+    if typ is not None and typ.mandant_id == user.mandant_id:
+        esk.mehr_rechte_pruefen(akteur, await esk.typ_rechte_map(session, typ.id))
+        esk.flags_pruefen(
+            akteur,
+            [
+                f
+                for f in (
+                    "darf_vorgaenge_selbst_uebernehmen",
+                    "darf_zeiten_buchen",
+                    "darf_abwesenheiten_verwalten",
+                )
+                if getattr(typ, f)
+            ],
+        )
 
 
 @router.get(
@@ -318,7 +348,7 @@ async def create_user(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
         ) from exc
-    await besetzung_pflegen(session, user, neu=True)
+    await besetzung_pflegen(session, user, neu=True, actor_user_id=auth.user_id)
 
     await log_action(
         session,
@@ -335,7 +365,9 @@ async def create_user(
 @router.patch(
     "/{user_id}",
     response_model=UserRead,
-    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+    # custom nur fuer das Setzen des Account-Typs mit rechte_verwalten (Eskalationsschutz,
+    # siehe _custom_account_typ_pruefen); alle anderen Felder bleiben Admin-Sache.
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin", "custom"))],
 )
 async def update_user(
     user_id: UUID,
@@ -349,6 +381,8 @@ async def update_user(
             status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
         )
 
+    if auth.role == "custom":
+        await _custom_account_typ_pruefen(session, auth, user, body)
     if auth.role in ("mandant_admin", "loesch_operativ"):
         if user.mandant_id != auth.mandant_id:
             raise HTTPException(
@@ -366,6 +400,9 @@ async def update_user(
             )
 
     changes = body.model_dump(exclude_unset=True, exclude={"password"})
+    if changes.get("aktiv") is False or ("role" in changes and changes["role"] != "mandant_admin"):
+        await esk.letzten_admin_pruefen(session, user)
+    vorher_audit = {"role": user.role, "account_typ_id": user.account_typ_id, "aktiv": user.aktiv}
     # Vor dem Setzen vergleichen: nur ein tatsaechlicher Wechsel entwertet
     # Tokens (Rolle/Account-Typ steckt als Claim im Token, Deaktivierung
     # soll sofort greifen).
@@ -375,39 +412,41 @@ async def update_user(
         or ("account_typ_id" in changes and changes["account_typ_id"] != user.account_typ_id)
         or bool(body.password)
     )
-    alte_rolle, alter_account_typ_id, war_aktiv = user.role, user.account_typ_id, user.aktiv
-    for field, value in changes.items():
-        setattr(user, field, value)
-    if body.password:
-        user.password_hash = hash_password(body.password)
-        changes["password"] = "***"
-    if user.role == "custom":
-        if user.account_typ_id is None:
+    async with esk.verwaltung_bleibt_erhalten(session, user.mandant_id):
+        alte_rolle, alter_account_typ_id, war_aktiv = user.role, user.account_typ_id, user.aktiv
+        for field, value in changes.items():
+            setattr(user, field, value)
+        if body.password:
+            user.password_hash = hash_password(body.password)
+            changes["password"] = "***"
+        if user.role == "custom":
+            if user.account_typ_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="account_typ_id ist für role='custom' erforderlich",
+                )
+            account_typ = await session.get(AccountTyp, user.account_typ_id)
+            if account_typ is None or account_typ.mandant_id != user.mandant_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Account-Typ nicht gefunden oder gehört nicht zum eigenen Mandanten",
+                )
+        else:
+            user.account_typ_id = None
+        try:
+            await session.flush()
+        except IntegrityError as exc:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="account_typ_id ist für role='custom' erforderlich",
-            )
-        account_typ = await session.get(AccountTyp, user.account_typ_id)
-        if account_typ is None or account_typ.mandant_id != user.mandant_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Account-Typ nicht gefunden oder gehört nicht zum eigenen Mandanten",
-            )
-    else:
-        user.account_typ_id = None
-    try:
-        await session.flush()
-    except IntegrityError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
-        ) from exc
-    await besetzung_pflegen(
-        session,
-        user,
-        alte_rolle=alte_rolle,
-        alter_account_typ_id=alter_account_typ_id,
-        war_aktiv=war_aktiv,
-    )
+                status_code=status.HTTP_409_CONFLICT, detail=_integrity_error_detail(exc)
+            ) from exc
+        await besetzung_pflegen(
+            session,
+            user,
+            alte_rolle=alte_rolle,
+            alter_account_typ_id=alter_account_typ_id,
+            war_aktiv=war_aktiv,
+            actor_user_id=auth.user_id,
+        )
     if tokens_widerrufen:
         await widerrufe_tokens(session, user)
     if changes:
@@ -426,6 +465,17 @@ async def update_user(
             # UUID (account_typ_id) ist nicht JSON-serialisierbar.
             payload=jsonable_encoder(changes),
         )
+        if {"role", "account_typ_id", "aktiv"} & changes.keys():
+            await log_aenderung(
+                session,
+                aktion="user_rolle_geaendert",
+                mandant_id=user.mandant_id,
+                actor_user_id=auth.user_id,
+                entity_type="user",
+                entity_id=user.id,
+                vorher=vorher_audit,
+                nachher={"role": user.role, "account_typ_id": user.account_typ_id, "aktiv": user.aktiv},
+            )
     return await _to_read(session, user)
 
 
@@ -540,7 +590,7 @@ async def delete_user(
         async with session.begin_nested():
             await session.execute(sa_delete(User).where(User.id == user_id))
     except IntegrityError:
-        await anonymisiere_user(session, user)
+        await anonymisiere_user(session, user, auth.user_id)
         # DSGVO: keine alte E-Mail im Audit-Log, nur ID + Rolle + Akteur.
         await log_action(
             session,

@@ -35,7 +35,7 @@ router = APIRouter(
 
 async def _verwalten_pruefen(auth: AuthContext, session: AsyncSession) -> None:
     if not await darf_abwesenheiten_verwalten(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -184,14 +184,14 @@ async def list_zeiterfassung(
         # Fall (kein techniker_id, z.B. Zeiterfassungen zu EINEM Vorgang)
         # gedacht.
         if techniker_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
-            session, role=auth.role, account_typ_id=auth.account_typ_id
+            session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Zeiterfassungen einsehbar"
             )
         stmt = stmt.where(Zeiterfassung.techniker_id == techniker_id)
     elif await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         stmt = stmt.where(
             Zeiterfassung.vorgang_id.in_(
@@ -302,7 +302,7 @@ async def get_statistik(
 ) -> ZeiterfassungStatistik:
     ziel_id = techniker_id or auth.user_id
     if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Statistik einsehbar"
@@ -400,7 +400,7 @@ async def wochenzettel_pdf(
 ) -> Response:
     ziel_id = techniker_id or auth.user_id
     if ziel_id != auth.user_id and not await darf_fremde_mitarbeiterdaten_einsehen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigener Wochenzettel abrufbar"
@@ -478,7 +478,7 @@ async def start_timer(
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ) and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
@@ -552,7 +552,7 @@ async def stop_timer(
         # Recht "Zeiten buchen", sonst wie gehabt "nicht gefunden" statt
         # 403, um nicht zu verraten, dass fuer diese ID ein fremder Eintrag
         # existiert.
-        if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id):
+        if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
             )
@@ -716,7 +716,7 @@ async def _vorgang_pruefen_fuer_manuellen_eintrag(
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
     if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ) and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Dieser Kunde ist dir nicht zugewiesen"
@@ -748,7 +748,7 @@ async def manuellen_eintrag_anlegen(
         # "Fuer einen anderen nachtragen" (Konzept 6.2) -- nur mit dem Recht
         # "Zeiten buchen". Der neue Eintrag startet trotzdem als 'vermerkt',
         # nachtragen ersetzt das Vormerken/Buchen nicht.
-        if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id):
+        if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nur mit dem Recht 'Zeiten buchen' für andere nachtragbar",
@@ -835,7 +835,7 @@ async def zeiterfassung_aktualisieren(
 
     ist_fremd = eintrag.techniker_id != auth.user_id
     if ist_fremd and not await darf_zeiten_buchen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
@@ -952,7 +952,7 @@ async def zeiterfassung_loeschen(
         )
     ist_fremd = eintrag.techniker_id != auth.user_id
     if ist_fremd and not await darf_zeiten_buchen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
@@ -1006,7 +1006,7 @@ async def zeiterfassung_vormerken(
     """vermerkt -> vorgemerkt (Konzept 6.1). Jeder fuer eigene Eintraege,
     Buchungsberechtigte fuer beliebige. Alles oder nichts: scheitert die
     Pruefung bei einem Eintrag, wird keiner vorgemerkt."""
-    berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id)
+    berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id)
     eintraege = await _eintraege_laden(session, body.ids)
     fehler: list[str] = []
     for eid in body.ids:
@@ -1060,7 +1060,7 @@ async def zeiterfassung_vormerkung_zurueckziehen(
 ) -> list[Zeiterfassung]:
     """vorgemerkt -> vermerkt (Konzept 6.1). Jeder fuer eigene Eintraege,
     Buchungsberechtigte fuer beliebige."""
-    berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id)
+    berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id)
     eintraege = await _eintraege_laden(session, body.ids)
     fehler: list[str] = []
     for eid in body.ids:
@@ -1107,7 +1107,7 @@ async def zeiterfassung_buchen(
     """vermerkt|vorgemerkt -> gebucht (Konzept 6.1) -- direktes Buchen aus
     'vermerkt' erspart das Vormerken, auch fuer eigene Eintraege. Nur mit
     dem Recht 'Zeiten buchen'."""
-    if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id):
+    if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Recht 'Zeiten buchen' erforderlich"
         )
@@ -1163,7 +1163,7 @@ async def zeiterfassung_buchung_stornieren(
     """gebucht -> vermerkt (Konzept 6.1) -- Grund ist Pflicht. Nur mit dem
     Recht 'Zeiten buchen', auch fuer selbst gebuchte Eintraege (die sind
     sonst fuer niemanden mehr aenderbar, siehe Konzept 6.2)."""
-    if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id):
+    if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Recht 'Zeiten buchen' erforderlich"
         )
@@ -1221,7 +1221,7 @@ async def zeiterfassung_verlauf(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
     if eintrag.techniker_id != auth.user_id and not await darf_zeiten_buchen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
+        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
     ):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"

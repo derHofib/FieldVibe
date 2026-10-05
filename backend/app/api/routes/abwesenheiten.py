@@ -31,7 +31,7 @@ router = APIRouter(
 
 
 async def _darf_verwalten(auth: AuthContext, session: AsyncSession) -> bool:
-    return await darf_abwesenheiten_verwalten(session, role=auth.role, account_typ_id=auth.account_typ_id)
+    return await darf_abwesenheiten_verwalten(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id)
 
 
 async def _verwalten_pruefen(auth: AuthContext, session: AsyncSession, detail: str) -> None:
