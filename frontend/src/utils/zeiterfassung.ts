@@ -88,3 +88,61 @@ export function buchungsstatusZuToken(status: ZeiterfassungBuchungsstatus): Stat
 export function buchungsstatusGesperrt(status: ZeiterfassungBuchungsstatus): boolean {
   return status !== "vermerkt";
 }
+
+// --- Monatsansicht (Office, /statistik) ---------------------------------
+
+export interface MonatsTag {
+  /** Lokaler Kalendertag als YYYY-MM-DD, identisch zu lokalerTag(). */
+  tag: string;
+  tagNr: number;
+  /** 0 = Montag ... 6 = Sonntag (Wochenanzeige beginnt in DE am Montag). */
+  wochentag: number;
+  istWochenende: boolean;
+}
+
+/** Alle Kalendertage eines Monats (monat0 = 0..11). Ueber Date(jahr, monat+1, 0)
+ * statt fester Tabellen, damit Schaltjahre automatisch stimmen. */
+export function tageDesMonats(jahr: number, monat0: number): MonatsTag[] {
+  const anzahl = new Date(jahr, monat0 + 1, 0).getDate();
+  const tage: MonatsTag[] = [];
+  for (let tagNr = 1; tagNr <= anzahl; tagNr++) {
+    const d = new Date(jahr, monat0, tagNr);
+    const wochentag = (d.getDay() + 6) % 7;
+    tage.push({ tag: toDateInput(d), tagNr, wochentag, istWochenende: wochentag >= 5 });
+  }
+  return tage;
+}
+
+/** Erster und letzter Tag des Monats als YYYY-MM-DD fuer von/bis-Filter. */
+export function monatsGrenzen(jahr: number, monat0: number): { von: string; bis: string } {
+  return {
+    von: toDateInput(new Date(jahr, monat0, 1)),
+    bis: toDateInput(new Date(jahr, monat0 + 1, 0)),
+  };
+}
+
+type MitZeitraum = { start_at: string; ende_at: string | null; kategorie: ZeiterfassungKategorie };
+
+/** Gruppiert nach lokalem Kalendertag, je Tag nach Startzeit sortiert. */
+export function eintraegeJeTag<T extends MitZeitraum>(eintraege: T[]): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const e of eintraege) {
+    const tag = lokalerTag(e.start_at);
+    const liste = map.get(tag);
+    if (liste) liste.push(e);
+    else map.set(tag, [e]);
+  }
+  for (const liste of map.values()) liste.sort((a, b) => a.start_at.localeCompare(b.start_at));
+  return map;
+}
+
+/** Arbeitsstunden ohne Pause/Urlaub/Krankheit; laufende Eintraege zaehlen 0. */
+export function arbeitsstunden(eintraege: MitZeitraum[]): number {
+  return eintraege.reduce(
+    (summe, e) =>
+      ZEITERFASSUNG_KATEGORIEN_OHNE_ARBEITSZEIT.includes(e.kategorie)
+        ? summe
+        : summe + formatDauer(e.start_at, e.ende_at),
+    0,
+  );
+}

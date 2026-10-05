@@ -31,11 +31,14 @@ function alsIso(datum: string, uhrzeit: string): string {
 export function ZeiterfassungManuellForm({
   onClose,
   onGespeichert,
+  vorbelegtesDatum,
 }: {
   onClose: () => void;
   onGespeichert: () => void;
+  /** YYYY-MM-DD; ohne Angabe wie bisher "heute". */
+  vorbelegtesDatum?: string;
 }) {
-  const [datum, setDatum] = useState(heuteAlsInput());
+  const [datum, setDatum] = useState(vorbelegtesDatum ?? heuteAlsInput());
   const [startZeit, setStartZeit] = useState("08:00");
   const [endeZeit, setEndeZeit] = useState("16:00");
   const [kategorie, setKategorie] = useState<ZeiterfassungKategorie>("verwaltung");
