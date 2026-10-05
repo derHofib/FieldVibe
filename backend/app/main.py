@@ -8,6 +8,7 @@ from sqlalchemy import text
 from app.api.routes import (
     fehlerberichte,
     account_typen,
+    arbeitszeit,
     angebote,
     anlagen,
     anlagen_feld_definitionen,
@@ -141,6 +142,7 @@ app.include_router(statistik.router)
 app.include_router(notifications.router)
 app.include_router(stream.router)
 app.include_router(zeiterfassung.router)
+app.include_router(arbeitszeit.router)
 app.include_router(termine.router)
 app.include_router(pruefzyklen.router)
 app.include_router(pruefmittel.router)
