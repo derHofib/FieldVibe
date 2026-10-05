@@ -1,4 +1,5 @@
 import {
+  CalendarClock,
   ClipboardList,
   Clock,
   type LucideIcon,
@@ -88,6 +89,15 @@ export function SettingsPage() {
             label="Team-Zeiten"
             beschreibung="Arbeitszeiten je Mitarbeiter einsehen und als PDF exportieren"
             onClick={() => navigate("/team-zeiten")}
+          />
+        )}
+        {currentUser?.darf_abwesenheiten_verwalten && istModulAktiv(currentUser, "zeiterfassung") && (
+          <SettingsLink
+            icon={CalendarClock}
+            tone="cyan"
+            label="Arbeitszeit"
+            beschreibung="Soll-Zeit je Mitarbeiter, Feiertage und Bundesland"
+            onClick={() => navigate("/einstellungen/arbeitszeit")}
           />
         )}
       </section>

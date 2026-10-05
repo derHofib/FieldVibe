@@ -60,6 +60,7 @@ import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { RechnungenPage } from "./pages/feld/RechnungenPage";
 import { RechnungseingangPage } from "./pages/feld/RechnungseingangPage";
 import { SearchPage } from "./pages/feld/SearchPage";
+import { OfficeArbeitszeitEinstellungenPage } from "./office/zeit/OfficeArbeitszeitEinstellungenPage";
 import { SettingsPage } from "./pages/feld/SettingsPage";
 import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
 import { StatistikPage } from "./pages/feld/StatistikPage";
@@ -201,6 +202,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/account-typen" element={<AccountTypenPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
+          <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
           <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
           <Route path="/statistik" element={<StatistikPage />} />
           <Route path="/team-zeiten" element={<TeamZeitenPage />} />
