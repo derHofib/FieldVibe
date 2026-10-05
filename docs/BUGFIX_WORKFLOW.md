@@ -18,7 +18,9 @@ Zugriff: `scripts/fehlerberichte.sh` (Env `FIELDVIBE_API_URL`,
 
 ## Ablauf
 
-1. **Laden.** `scripts/fehlerberichte.sh liste neu` (danach ggf. `gesichtet`).
+0. **Art beachten.** Berichte haben `art` = `fehler` oder `idee`. Fehler
+   laufen wie unten beschrieben. Ideen nur nach Abschnitt „Ideen“.
+1. **Laden.** `scripts/fehlerberichte.sh liste neu fehler` (danach ggf. `gesichtet`).
    Reihenfolge: blockierend > hoch > mittel > niedrig, innerhalb älteste
    zuerst (das Skript sortiert so, bei der MCP-Liste selbst sortieren).
    Je Bericht `aehnliche <id>`: gleicher Fingerprint und bereits behoben oder
@@ -46,6 +48,29 @@ Zugriff: `scripts/fehlerberichte.sh` (Env `FIELDVIBE_API_URL`,
      (die Service-API kann `duplikat_von_id` nicht setzen, daher in der Notiz)
    - Nicht fertig geworden: Status bei `in_arbeit` lassen, Notiz mit
      Zwischenstand setzen (`status <id> in_arbeit --notiz "..."`).
+
+## Ideen (Änderungswünsche)
+
+Ideen sind Produktwünsche, keine Fehler. **Nur der Betreiber (Super-Admin)
+gibt Ideen frei**: Status `gesichtet` bei `art=idee` bedeutet „Freigegeben“,
+`behoben` bedeutet „Umgesetzt“.
+
+- Nur Ideen mit Status `gesichtet` bearbeiten
+  (`scripts/fehlerberichte.sh liste gesichtet - idee`). Nie `neu`
+  (nicht freigegeben) oder `abgelehnt`. Die Service-API erzwingt das: `in_arbeit`/
+  `behoben` auf nicht freigegebene Ideen ergibt 409, `gesichtet`, `abgelehnt`
+  und `duplikat` auf Ideen 403. Ideen nie selbst freigeben oder ablehnen.
+- Ablauf wie bei Fehlern (claimen mit `in_arbeit`, Bundle lesen, umsetzen mit
+  Tests nach CLAUDE.md, Sicherheitsregeln beachten), aber Branch
+  `feature/idee-<erste 8 Zeichen der ID>` und PR als Feature. Nicht mergen.
+- Danach `status <id> behoben --notiz "<was umgesetzt wurde>" --commit <sha> --pr <pr-url>`.
+- Ist die Idee unklar oder zu groß: nicht raten. Nur eine Rückfrage als
+  Notiz setzen (`scripts/fehlerberichte.sh notiz <id> "Rückfrage: ..."`, ohne
+  Statuswechsel), Status bleibt `gesichtet`, weiter mit der nächsten Idee.
+  Wurde die Idee schon auf `in_arbeit` gesetzt, bleibt sie dort mit Notiz.
+
+**Reihenfolge pro Lauf:** zuerst Fehler (blockierend/hoch), danach freigegebene
+Ideen.
 
 ## Fehlerbehandlung
 

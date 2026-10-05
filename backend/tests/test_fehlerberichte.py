@@ -481,3 +481,157 @@ async def test_loeschjob_entfernt_alte_berichte_und_s3_objekte(make_mandant, mon
     assert ids == [neu_id]
     with pytest.raises(ClientError):
         await storage_service.download_bytes(key)
+
+
+# --- Ideen / Änderungswünsche ----------------------------------------------
+
+
+async def _super_token(client, make_user):
+    super_admin = await make_user(mandant=None, role="super_admin", password="pw-123456")
+    return await login(client, super_admin.email, "pw-123456")
+
+
+async def _idee(client, token, **extra) -> str:
+    resp = await client.post(
+        "/api/fehlerberichte", headers=auth_headers(token),
+        data=_payload(art="idee", titel="Export als PDF", schweregrad="mittel", erwartet="Spart Zeit", **extra),
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_idee_anlegen_ohne_fingerprint_default_art_fehler(client, make_mandant, make_user):
+    _, token = await _admin_token(client, make_mandant, make_user)
+    h = auth_headers(token)
+    fehler_id = (await client.post("/api/fehlerberichte", headers=h, data=_payload())).json()["id"]
+    assert (await client.get(f"/api/fehlerberichte/{fehler_id}", headers=h)).json()["art"] == "fehler"
+
+    # Gleicher Kontext/Route wie der offene Fehler -> bei Fehler waere es ein Duplikat.
+    resp = await client.post("/api/fehlerberichte", headers=h, data=_payload(art="idee", schweregrad="niedrig"))
+    assert resp.status_code == 201 and resp.json()["duplikat_von_id"] is None
+    detail = (await client.get(f"/api/fehlerberichte/{resp.json()['id']}", headers=h)).json()
+    assert detail["art"] == "idee" and detail["freigegeben_am"] is None
+    async with system_session() as session:
+        b = await session.get(Fehlerbericht, uuid.UUID(resp.json()["id"]))
+        assert b.fingerprint is None and b.duplikat_von_id is None
+
+
+@pytest.mark.asyncio
+async def test_idee_blockierend_422_und_ungueltige_art_422(client, make_mandant, make_user):
+    _, token = await _admin_token(client, make_mandant, make_user)
+    h = auth_headers(token)
+    assert (await client.post("/api/fehlerberichte", headers=h, data=_payload(art="idee", schweregrad="blockierend"))).status_code == 422
+    assert (await client.post("/api/fehlerberichte", headers=h, data=_payload(art="sonstiges"))).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_filter_art_in_liste_und_zaehler(client, make_mandant, make_user):
+    _, token = await _admin_token(client, make_mandant, make_user)
+    h = auth_headers(token)
+    await client.post("/api/fehlerberichte", headers=h, data=_payload(kontext={}))
+    await _idee(client, token)
+    await _idee(client, token)
+    assert len((await client.get("/api/fehlerberichte?art=idee", headers=h)).json()) == 2
+    assert len((await client.get("/api/fehlerberichte?art=fehler", headers=h)).json()) == 1
+    assert len((await client.get("/api/fehlerberichte", headers=h)).json()) == 3
+    assert (await client.get("/api/fehlerberichte/zaehler?art=idee", headers=h)).json()["gesamt"] == 2
+    assert (await client.get("/api/fehlerberichte/zaehler?art=fehler", headers=h)).json()["gesamt"] == 1
+    assert (await client.get("/api/fehlerberichte/zaehler", headers=h)).json()["gesamt"] == 3
+
+
+@pytest.mark.asyncio
+async def test_idee_mandant_admin_darf_nicht_patchen_fehler_schon(client, make_mandant, make_user):
+    _, token = await _admin_token(client, make_mandant, make_user)
+    h = auth_headers(token)
+    idee_id = await _idee(client, token)
+    fehler_id = (await client.post("/api/fehlerberichte", headers=h, data=_payload())).json()["id"]
+
+    for body in ({"status": "gesichtet"}, {"loesungsnotiz": "x"}, {"duplikat_von_id": fehler_id}):
+        resp = await client.patch(f"/api/fehlerberichte/{idee_id}", headers=h, json=body)
+        assert resp.status_code == 403, body
+        assert "Betreiber" in resp.json()["detail"]
+    assert (await client.patch(f"/api/fehlerberichte/{fehler_id}", headers=h, json={"status": "gesichtet"})).status_code == 200
+    # Lesen und Loeschen bleiben moeglich.
+    assert (await client.get(f"/api/fehlerberichte/{idee_id}", headers=h)).status_code == 200
+    assert (await client.delete(f"/api/fehlerberichte/{idee_id}", headers=h)).status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_super_admin_gibt_idee_frei(client, make_mandant, make_user):
+    _, token = await _admin_token(client, make_mandant, make_user)
+    idee_id = await _idee(client, token)
+    hs = auth_headers(await _super_token(client, make_user))
+    resp = await client.patch(f"/api/fehlerberichte/{idee_id}", headers=hs, json={"status": "gesichtet"})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "gesichtet" and resp.json()["freigegeben_am"] is not None
+    resp = await client.patch(f"/api/fehlerberichte/{idee_id}", headers=hs, json={"status": "abgelehnt"})
+    assert resp.json()["freigegeben_am"] is None
+
+
+@pytest.mark.asyncio
+async def test_service_idee_freigabe_regeln(client, make_mandant, make_user, service_token):
+    _, token = await _admin_token(client, make_mandant, make_user)
+    idee_id = await _idee(client, token)
+    url = f"/api/service/fehlerberichte/{idee_id}"
+
+    for verboten in ("gesichtet", "abgelehnt", "duplikat"):
+        assert (await client.patch(url, headers=service_token, json={"status": verboten})).status_code == 403
+    for ziel in ("in_arbeit", "behoben"):
+        resp = await client.patch(url, headers=service_token, json={"status": ziel})
+        assert resp.status_code == 409 and resp.json()["detail"] == "Idee nicht freigegeben"
+    # Notiz (Rueckfrage) ohne Statuswechsel ist erlaubt.
+    assert (await client.patch(url, headers=service_token, json={"loesungsnotiz": "Frage"})).status_code == 200
+
+    hs = auth_headers(await _super_token(client, make_user))
+    await client.patch(f"/api/fehlerberichte/{idee_id}", headers=hs, json={"status": "gesichtet"})
+    assert (await client.patch(url, headers=service_token, json={"status": "in_arbeit"})).status_code == 200
+    resp = await client.patch(url, headers=service_token, json={"status": "behoben", "fix_pr_url": "https://x/pr/2"})
+    assert resp.status_code == 200 and resp.json()["erledigt_am"] is not None
+
+    liste = (await client.get("/api/service/fehlerberichte?art=idee", headers=service_token)).json()
+    assert [b["id"] for b in liste] == [idee_id]
+    assert (await client.get("/api/service/fehlerberichte?art=fehler", headers=service_token)).json() == []
+
+
+@pytest.mark.asyncio
+async def test_ai_bundle_idee_und_fehler_art(client, make_mandant, make_user):
+    _, token = await _admin_token(client, make_mandant, make_user)
+    h = auth_headers(token)
+    idee_id = await _idee(client, token)
+    md = (await client.get(f"/api/fehlerberichte/{idee_id}/ai-bundle", headers=h)).text
+    assert "Idee / Änderungswunsch (nicht freigegeben)" in md
+    assert "## Was soll sich ändern?" in md and "## Warum / Nutzen" in md and "Spart Zeit" in md
+    assert "Priorität" in md and "Schweregrad" not in md and "Klickpfad" not in md
+
+    hs = auth_headers(await _super_token(client, make_user))
+    await client.patch(f"/api/fehlerberichte/{idee_id}", headers=hs, json={"status": "gesichtet"})
+    md = (await client.get(f"/api/fehlerberichte/{idee_id}/ai-bundle", headers=hs)).text
+    assert "freigegeben am " in md and "nicht freigegeben" not in md
+
+    fehler_id = (await client.post("/api/fehlerberichte", headers=h, data=_payload())).json()["id"]
+    assert "**Art:** Fehler" in (await client.get(f"/api/fehlerberichte/{fehler_id}/ai-bundle", headers=h)).text
+
+
+def test_migration_0099_up_down_up():
+    import os
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import create_engine, inspect
+
+    backend = os.path.dirname(os.path.dirname(__file__))
+    cfg = Config(os.path.join(backend, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(backend, "alembic"))
+    engine = create_engine(os.environ.get("DATABASE_URL_SYNC") or get_settings().database_url_sync)
+
+    def spalten():
+        return {c["name"] for c in inspect(engine).get_columns("fehlerberichte")}
+
+    try:
+        command.downgrade(cfg, "0098")
+        assert not {"art", "freigegeben_am"} & spalten()
+        command.upgrade(cfg, "head")
+        assert {"art", "freigegeben_am"} <= spalten()
+        assert "ix_fehlerberichte_art_status" in {i["name"] for i in inspect(engine).get_indexes("fehlerberichte")}
+    finally:
+        engine.dispose()

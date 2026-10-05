@@ -7,6 +7,7 @@ set -euo pipefail
 
 STATI="neu gesichtet in_arbeit behoben abgelehnt duplikat"
 SCHWEREGRADE="niedrig mittel hoch blockierend"
+ARTEN="fehler idee"
 
 fehler() { echo "Fehler: $*" >&2; exit 1; }
 
@@ -14,10 +15,13 @@ hilfe() {
   cat >&2 <<'HILFE'
 Aufruf: fehlerberichte.sh <befehl> [argumente]
 
-  liste [status] [schweregrad]   Berichte auflisten (ohne Filter: alle; "-" = kein Filter)
+  liste [status] [schweregrad] [art]   Berichte auflisten (ohne Filter: alle; "-" = kein Filter)
+                                 art: fehler | idee; alternativ --art <art> an beliebiger Stelle
+                                 (Ideen: Status "gesichtet" = vom Betreiber freigegeben)
   zeige <id>                     Detail als JSON
   bundle <id>                    AI-Bundle (Markdown)
   aehnliche <id>                 Berichte mit gleichem Fingerprint
+  notiz <id> "<text>"            nur Loesungsnotiz setzen, Status unveraendert
   status <id> <status> [--notiz "..."] [--commit sha] [--pr url]
 
 Env: FIELDVIBE_API_URL, FIELDVIBE_BUGREPORT_TOKEN
@@ -73,7 +77,15 @@ json_string() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1
 
 case "$befehl" in
   liste)
-    st="${1:--}"; sg="${2:--}"
+    pos=(); ar="-"
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --art) [[ $# -ge 2 ]] || fehler "Option --art braucht einen Wert"; ar="$2"; shift 2 ;;
+        *) pos+=("$1"); shift ;;
+      esac
+    done
+    st="${pos[0]:--}"; sg="${pos[1]:--}"
+    [[ "${pos[2]:-}" ]] && ar="${pos[2]}"
     query=""
     if [[ "$st" != "-" ]]; then
       enthalten "$st" "$STATI" || fehler "ungueltiger Status '$st' (erlaubt: $STATI)"
@@ -83,13 +95,17 @@ case "$befehl" in
       enthalten "$sg" "$SCHWEREGRADE" || fehler "ungueltiger Schweregrad '$sg' (erlaubt: $SCHWEREGRADE)"
       query="${query:+$query&}schweregrad=$sg"
     fi
+    if [[ "$ar" != "-" ]]; then
+      enthalten "$ar" "$ARTEN" || fehler "ungueltige Art '$ar' (erlaubt: $ARTEN)"
+      query="${query:+$query&}art=$ar"
+    fi
     antwort="$(anfrage GET "$BASIS?${query:+$query&}limit=200")"
     if command -v jq >/dev/null; then
       # Prioritaet: blockierend > hoch > mittel > niedrig, innerhalb aelteste zuerst.
       echo "$antwort" | jq -r '
         {"blockierend":0,"hoch":1,"mittel":2,"niedrig":3} as $p
         | sort_by([$p[.schweregrad], .created_at])
-        | .[] | [.id, .schweregrad, .status, (.created_at[:10]), .titel] | @tsv'
+        | .[] | [.id, (.art // "fehler"), .schweregrad, .status, (.created_at[:10]), .titel] | @tsv'
     else
       echo "$antwort"
     fi
@@ -111,6 +127,12 @@ case "$befehl" in
     else
       echo "$antwort"
     fi
+    ;;
+  notiz)
+    pruefe_id "${1:-}"
+    [[ -n "${2:-}" ]] || hilfe
+    anfrage PATCH "$BASIS/$1" "{\"loesungsnotiz\": $(json_string "$2")}" >/dev/null
+    echo "Bericht $1: Notiz gesetzt"
     ;;
   status)
     pruefe_id "${1:-}"

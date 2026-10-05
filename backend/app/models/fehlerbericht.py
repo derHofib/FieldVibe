@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 FEHLERBERICHT_STATUS = ("neu", "gesichtet", "in_arbeit", "behoben", "abgelehnt", "duplikat")
+FEHLERBERICHT_ARTEN = ("fehler", "idee")
 FEHLERBERICHT_SCHWEREGRADE = ("niedrig", "mittel", "hoch", "blockierend")
 # Erledigt = kein Kandidat mehr fuer die Duplikat-Erkennung.
 FEHLERBERICHT_ERLEDIGT_STATUS = ("behoben", "abgelehnt", "duplikat")
@@ -18,6 +19,8 @@ class Fehlerbericht(Base):
     __table_args__ = (
         CheckConstraint(f"schweregrad IN {FEHLERBERICHT_SCHWEREGRADE}", name="schweregrad_valid"),
         CheckConstraint(f"status IN {FEHLERBERICHT_STATUS}", name="status_valid"),
+        CheckConstraint(f"art IN {FEHLERBERICHT_ARTEN}", name="art_valid"),
+        Index("ix_fehlerberichte_art_status", "art", "status"),
         Index("ix_fehlerberichte_mandant_status", "mandant_id", "status"),
         Index("ix_fehlerberichte_fingerprint", "fingerprint"),
         Index("ix_fehlerberichte_created_at", "created_at"),
@@ -30,6 +33,7 @@ class Fehlerbericht(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    art: Mapped[str] = mapped_column(Text, nullable=False, default="fehler", server_default="fehler")
     titel: Mapped[str] = mapped_column(Text, nullable=False)
     beschreibung: Mapped[str] = mapped_column(Text, nullable=False)
     erwartet: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -53,6 +57,8 @@ class Fehlerbericht(Base):
     fix_commit: Mapped[str | None] = mapped_column(Text, nullable=True)
     fix_pr_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     erledigt_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Nur bei art='idee': Zeitpunkt, an dem der Super-Admin sie freigegeben hat.
+    freigegeben_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Explizit timezone=True statt TimestampMixin: Aufbewahrungsjob und
     # seit-Filter vergleichen mit tz-aware datetimes (asyncpg lehnt sie sonst
     # fuer TIMESTAMP WITHOUT TIME ZONE ab).

@@ -1,6 +1,8 @@
 export const STATI = ["neu", "gesichtet", "in_arbeit", "behoben", "abgelehnt", "duplikat"] as const;
 export const SCHWEREGRADE = ["niedrig", "mittel", "hoch", "blockierend"] as const;
+export const ARTEN = ["fehler", "idee"] as const;
 export type Status = (typeof STATI)[number];
+export type Art = (typeof ARTEN)[number];
 export type Schweregrad = (typeof SCHWEREGRADE)[number];
 
 export const SCREENSHOT_MAX_BYTES = 2 * 1024 * 1024;
@@ -43,6 +45,10 @@ export function meldungFuerStatus(status: number, detail: string): string {
       return "Token ungueltig (FIELDVIBE_BUGREPORT_TOKEN pruefen).";
     case 404:
       return "Nicht gefunden (Bericht-ID falsch oder Service-API serverseitig nicht aktiviert).";
+    case 403:
+      return `Nicht erlaubt: ${detail}`;
+    case 409:
+      return `Konflikt: ${detail}`;
     case 422:
       return `Eingabe abgelehnt: ${detail}`;
     case 429:
@@ -94,10 +100,11 @@ export class BugreportClient {
     return res;
   }
 
-  async liste(f: { status?: Status; severity?: Schweregrad; since?: string; limit?: number }): Promise<unknown[]> {
+  async liste(f: { status?: Status; severity?: Schweregrad; kind?: Art; since?: string; limit?: number }): Promise<unknown[]> {
     const q = new URLSearchParams();
     if (f.status) q.set("status", f.status);
     if (f.severity) q.set("schweregrad", f.severity);
+    if (f.kind) q.set("art", f.kind);
     if (f.since) q.set("seit", f.since);
     if (f.limit) q.set("limit", String(f.limit));
     const qs = q.toString();

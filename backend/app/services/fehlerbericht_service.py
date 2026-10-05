@@ -229,6 +229,7 @@ def _list_felder(b: Fehlerbericht, mandanten: dict, users: dict) -> dict:
         id=b.id,
         mandant_id=b.mandant_id,
         mandant_name=mandanten.get(b.mandant_id),
+        art=b.art,
         melder_name=users.get(b.user_id) if b.user_id else None,
         titel=b.titel,
         schweregrad=b.schweregrad,
@@ -260,6 +261,7 @@ def zu_detail(b: Fehlerbericht, mandanten: dict, users: dict) -> FehlerberichtDe
         loesungsnotiz=b.loesungsnotiz,
         fix_commit=b.fix_commit,
         fix_pr_url=b.fix_pr_url,
+        freigegeben_am=b.freigegeben_am,
     )
 
 
@@ -277,6 +279,13 @@ def wende_update_an(bericht: Fehlerbericht, daten: dict) -> None:
         bericht.erledigt_am = (
             datetime.now(timezone.utc) if daten["status"] in FEHLERBERICHT_ERLEDIGT_STATUS else None
         )
+        if bericht.art == "idee":
+            if daten["status"] == "gesichtet":
+                if bericht.freigegeben_am is None:
+                    bericht.freigegeben_am = datetime.now(timezone.utc)
+            elif daten["status"] in ("neu", "abgelehnt", "duplikat"):
+                # Freigabe zurueckgenommen bzw. nie erteilt.
+                bericht.freigegeben_am = None
 
 
 # --- Loeschjob -------------------------------------------------------------
@@ -305,8 +314,12 @@ async def loesche_abgelaufene_fehlerberichte(jetzt: datetime | None = None) -> i
     return len(treffer)
 
 
-async def zaehler_je_status(session: AsyncSession, mandant_id: uuid.UUID | None) -> dict[str, int]:
+async def zaehler_je_status(
+    session: AsyncSession, mandant_id: uuid.UUID | None, art: str | None = None
+) -> dict[str, int]:
     stmt = select(Fehlerbericht.status, func.count()).group_by(Fehlerbericht.status)
+    if art is not None:
+        stmt = stmt.where(Fehlerbericht.art == art)
     if mandant_id is not None:
         stmt = stmt.where(Fehlerbericht.mandant_id == mandant_id)
     rows = await session.execute(stmt)
@@ -364,7 +377,58 @@ def _body_block(titel: str, wert) -> list[str]:
     return [f"{titel}:", _block(text, sprache)]
 
 
+def _idee_freigabe_text(bericht: Fehlerbericht) -> str:
+    if bericht.status in ("gesichtet", "in_arbeit", "behoben") and bericht.freigegeben_am:
+        return f"freigegeben am {bericht.freigegeben_am.isoformat()}"
+    if bericht.status in ("gesichtet", "in_arbeit", "behoben"):
+        return "freigegeben"
+    return "nicht freigegeben"
+
+
+def _ai_bundle_idee(bericht: Fehlerbericht) -> str:
+    kontext = _dict(bericht.kontext)
+    gemeldet = bericht.created_at.isoformat() if bericht.created_at else "unbekannt"
+    z: list[str] = [f"# Idee / Änderungswunsch: {bericht.titel}", ""]
+    z += [
+        f"- **ID:** {bericht.id}",
+        f"- **Art:** Idee / Änderungswunsch ({_idee_freigabe_text(bericht)})",
+        f"- **Mandant-ID:** {bericht.mandant_id}",
+        f"- **Status:** {bericht.status}",
+        f"- **Priorität:** {bericht.schweregrad}",
+        f"- **Gemeldet am:** {gemeldet}",
+    ]
+    if bericht.route:
+        z.append(f"- **Route:** {bericht.route}")
+    if bericht.app_version:
+        z.append(f"- **App-Version:** {bericht.app_version}")
+    if bericht.commit_sha:
+        z.append(f"- **Commit:** {bericht.commit_sha}")
+    z += ["", "## Was soll sich ändern?", bericht.beschreibung or "", ""]
+    if bericht.erwartet:
+        z += ["## Warum / Nutzen", bericht.erwartet, ""]
+    if bericht.schritte:
+        z += ["## Hinweise laut Melder", bericht.schritte, ""]
+    if bericht.loesungsnotiz:
+        z += ["## Notiz", bericht.loesungsnotiz, ""]
+    for titel, schluessel in (("Umgebung", "umgebung"), ("Sitzung", "sitzung"), ("App-State", "app_state")):
+        wert = kontext.get(schluessel)
+        if wert:
+            z += [f"## {titel}", _block(_text(wert, 4000), "json"), ""]
+    original = _url(bericht.screenshot_original_key)
+    annotiert = _url(bericht.screenshot_annotiert_key)
+    if original or annotiert:
+        z.append("## Screenshots")
+        if annotiert:
+            z.append(f"- Annotiert (1 h gültig): {annotiert}")
+        if original:
+            z.append(f"- Original (1 h gültig): {original}")
+        z.append("")
+    return "\n".join(z)
+
+
 def ai_bundle_markdown(bericht: Fehlerbericht) -> str:
+    if bericht.art == "idee":
+        return _ai_bundle_idee(bericht)
     kontext = _dict(bericht.kontext)
     netzwerk = _liste(kontext.get("netzwerk"))
     konsole = _liste(kontext.get("konsole"))
@@ -374,6 +438,7 @@ def ai_bundle_markdown(bericht: Fehlerbericht) -> str:
     z: list[str] = [f"# Fehlerbericht: {bericht.titel}", ""]
     z += [
         f"- **ID:** {bericht.id}",
+        "- **Art:** Fehler",
         f"- **Mandant-ID:** {bericht.mandant_id}",
         f"- **Status:** {bericht.status}",
         f"- **Schweregrad:** {bericht.schweregrad}",

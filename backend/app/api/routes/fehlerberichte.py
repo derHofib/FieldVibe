@@ -18,6 +18,7 @@ from app.core.rate_limit import client_ip, fehlerbericht_service_ip_limiter, feh
 from app.db.session import system_session
 from app.models.fehlerbericht import Fehlerbericht
 from app.schemas.fehlerbericht import (
+    FehlerberichtArt,
     FehlerberichtCreate,
     FehlerberichtCreated,
     FehlerberichtDetail,
@@ -42,6 +43,7 @@ def _gefiltert(
     *,
     status_: str | None,
     schweregrad: str | None,
+    art: str | None = None,
     seit: datetime | None,
     q: str | None = None,
 ):
@@ -49,6 +51,8 @@ def _gefiltert(
         stmt = stmt.where(Fehlerbericht.status == status_)
     if schweregrad:
         stmt = stmt.where(Fehlerbericht.schweregrad == schweregrad)
+    if art:
+        stmt = stmt.where(Fehlerbericht.art == art)
     if seit is not None:
         stmt = stmt.where(Fehlerbericht.created_at >= (seit if seit.tzinfo else seit.replace(tzinfo=timezone.utc)))
     if q:
@@ -117,6 +121,11 @@ async def _lege_an(
         daten = FehlerberichtCreate.model_validate(json.loads(payload))
     except (ValueError, ValidationError) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=f"Ungültiger Payload: {exc}")
+    if daten.art == "idee" and daten.schweregrad == "blockierend":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Ideen können nicht „blockierend“ sein",
+        )
     fehlerbericht_service.pruefe_kontext_groesse(daten.kontext)
 
     bilder: dict[str, tuple[bytes, str]] = {}
@@ -126,7 +135,8 @@ async def _lege_an(
 
     kontext = fehlerbericht_service.schwaerze(daten.kontext)
     bericht_id = uuid.uuid4()
-    fingerprint = fehlerbericht_service.berechne_fingerprint(kontext, daten.route)
+    # Ideen haben keinen Fehlerkontext -> keine Duplikaterkennung.
+    fingerprint = None if daten.art == "idee" else fehlerbericht_service.berechne_fingerprint(kontext, daten.route)
     duplikat_von_id = await fehlerbericht_service.finde_offenes_duplikat(
         session, mandant_id=auth.mandant_id, fingerprint=fingerprint
     )
@@ -140,6 +150,7 @@ async def _lege_an(
             id=bericht_id,
             mandant_id=auth.mandant_id,
             user_id=auth.user_id,
+            art=daten.art,
             titel=daten.titel,
             beschreibung=daten.beschreibung,
             erwartet=daten.erwartet,
@@ -166,6 +177,7 @@ async def _lege_an(
 async def list_fehlerberichte(
     status_: FehlerberichtStatus | None = Query(default=None, alias="status"),
     schweregrad: FehlerberichtSchweregrad | None = None,
+    art: FehlerberichtArt | None = None,
     seit: datetime | None = None,
     q: str | None = Query(default=None, max_length=200),
     mandant_id: uuid.UUID | None = None,
@@ -175,7 +187,7 @@ async def list_fehlerberichte(
     _recht: AuthContext = Depends(require_recht("fehlerberichte", "sehen")),
     session: AsyncSession = Depends(get_db),
 ) -> list[FehlerberichtListItem]:
-    stmt = _gefiltert(select(Fehlerbericht), status_=status_, schweregrad=schweregrad, seit=seit, q=q)
+    stmt = _gefiltert(select(Fehlerbericht), status_=status_, schweregrad=schweregrad, art=art, seit=seit, q=q)
     # Der Mandantenfilter ist nur fuer super_admin relevant; alle anderen sind
     # per RLS ohnehin auf den eigenen Mandanten festgenagelt.
     if mandant_id is not None and auth.role == "super_admin":
@@ -187,12 +199,13 @@ async def list_fehlerberichte(
 @router.get("/zaehler", response_model=FehlerberichtZaehler)
 async def zaehler_fehlerberichte(
     mandant_id: uuid.UUID | None = None,
+    art: FehlerberichtArt | None = None,
     auth: AuthContext = Depends(require_roles(*_ROLLEN)),
     _recht: AuthContext = Depends(require_recht("fehlerberichte", "sehen")),
     session: AsyncSession = Depends(get_db),
 ) -> FehlerberichtZaehler:
     filter_mandant = mandant_id if auth.role == "super_admin" else None
-    je_status = await fehlerbericht_service.zaehler_je_status(session, filter_mandant)
+    je_status = await fehlerbericht_service.zaehler_je_status(session, filter_mandant, art)
     return FehlerberichtZaehler(**je_status, gesamt=sum(je_status.values()))
 
 
@@ -223,12 +236,14 @@ async def get_fehlerbericht_ai_bundle(
 async def update_fehlerbericht(
     bericht_id: uuid.UUID,
     body: FehlerberichtUpdate,
-    _auth: AuthContext = Depends(require_roles(*_ROLLEN)),
+    auth: AuthContext = Depends(require_roles(*_ROLLEN)),
     _recht: AuthContext = Depends(require_recht("fehlerberichte", "bearbeiten")),
     session: AsyncSession = Depends(get_db),
 ) -> FehlerberichtDetail:
     bericht = await _hole(session, bericht_id)
     daten = body.model_dump(exclude_unset=True)
+    if bericht.art == "idee" and auth.role != "super_admin" and daten:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Ideen werden vom Betreiber freigegeben")
     if daten.get("duplikat_von_id") is not None:
         if daten["duplikat_von_id"] == bericht.id:
             raise HTTPException(
@@ -310,11 +325,12 @@ async def service_list(
     request: Request,
     status_: FehlerberichtStatus | None = Query(default=None, alias="status"),
     schweregrad: FehlerberichtSchweregrad | None = None,
+    art: FehlerberichtArt | None = None,
     seit: datetime | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     session: AsyncSession = Depends(_service_db),
 ) -> list[FehlerberichtListItem]:
-    stmt = _gefiltert(select(Fehlerbericht), status_=status_, schweregrad=schweregrad, seit=seit)
+    stmt = _gefiltert(select(Fehlerbericht), status_=status_, schweregrad=schweregrad, art=art, seit=seit)
     stmt = stmt.order_by(Fehlerbericht.created_at.desc()).limit(limit)
     antwort = await _liste_antwort(session, stmt)
     await _audit(session, request, payload={"anzahl": len(antwort)})
@@ -367,6 +383,14 @@ async def service_update(
 ) -> FehlerberichtDetail:
     bericht = await _hole(session, bericht_id)
     daten = body.model_dump(exclude_unset=True)
+    if bericht.art == "idee":
+        neu = daten.get("status")
+        if neu in ("gesichtet", "abgelehnt", "duplikat", "neu"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Ideen werden vom Betreiber freigegeben bzw. abgelehnt"
+            )
+        if neu in ("in_arbeit", "behoben") and bericht.status not in ("gesichtet", "in_arbeit"):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Idee nicht freigegeben")
     fehlerbericht_service.wende_update_an(bericht, daten)
     await session.flush()
     await session.refresh(bericht)

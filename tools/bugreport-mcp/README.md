@@ -18,7 +18,7 @@ Das Token wird nie ausgegeben oder geloggt.
 
 | Tool | Zweck |
 | --- | --- |
-| `list_bug_reports(status?, severity?, since?, limit?)` | Liste, neueste zuerst |
+| `list_bug_reports(status?, severity?, kind?, since?, limit?)` | Liste, neueste zuerst |
 | `get_bug_report(id)` | Detail inkl. Kontext; Screenshots als Bild (≤ 2 MB), sonst URL |
 | `get_ai_bundle(id)` | Markdown-Bundle |
 | `update_bug_report(id, status, resolution_note?, fix_commit?, fix_pr_url?)` | Status/Lösung setzen |
@@ -26,6 +26,8 @@ Das Token wird nie ausgegeben oder geloggt.
 
 `status`: `neu`, `gesichtet`, `in_arbeit`, `behoben`, `abgelehnt`, `duplikat`.
 `severity`: `niedrig`, `mittel`, `hoch`, `blockierend`.
+`kind`: `fehler`, `idee`. Ideen dürfen nur nach Freigabe durch den Betreiber
+(Status `gesichtet`) bearbeitet werden.
 
 ## Bauen und testen (Node 24)
 

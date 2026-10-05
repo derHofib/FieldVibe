@@ -11,6 +11,29 @@ Duplikate markiert. Super-Admin und Mandanten-Admin sehen die Berichte in der
 App; Claude greift über die Service-API (`/api/service/fehlerberichte`) zu,
 siehe `docs/BUGFIX_WORKFLOW.md`.
 
+## Ideen und Änderungswünsche
+
+Neben Fehlern können Mitarbeiter Ideen melden (`art` = `idee`; gleiches Recht
+`fehlerberichte.erstellen`). Ideen sind Produktwünsche: „Was soll sich ändern?“
+(Beschreibung) und „Warum / Nutzen“ (erwartet), Priorität statt Schweregrad
+(`blockierend` ist für Ideen nicht erlaubt). Es gibt keine Fingerprint-/
+Duplikaterkennung. Die Statuswerte sind dieselben; für Ideen heißen sie:
+`neu` = Eingegangen, `gesichtet` = **Freigegeben**, `in_arbeit` = In Umsetzung,
+`behoben` = **Umgesetzt**, `abgelehnt`, `duplikat`.
+
+**Freigabe-Ablauf:** Ideen werden nur umgesetzt, wenn der Super-Admin sie
+freigegeben hat.
+
+1. Mitarbeiter meldet die Idee (Status `neu`).
+2. Nur der Super-Admin ändert Status/Duplikat/Notiz einer Idee (Mandanten-
+   Admins erhalten 403). Freigabe = Status `gesichtet`; dabei wird
+   `freigegeben_am` gesetzt, ablehnen oder zurück auf `neu` löscht es wieder.
+3. Claude bearbeitet nur freigegebene Ideen (`gesichtet`/`in_arbeit`). Die
+   Service-API erzwingt das: `in_arbeit`/`behoben` auf nicht freigegebene Ideen
+   ergibt 409, `gesichtet`/`neu`/`abgelehnt`/`duplikat` auf Ideen 403.
+4. Umsetzung als PR (nicht gemergt), danach `behoben` mit PR-Link. Details:
+   `docs/BUGFIX_WORKFLOW.md`.
+
 ## Recht „Fehlerberichte"
 
 Rechte-Bereich `fehlerberichte` (sehen, erstellen, bearbeiten, löschen) in der
@@ -25,7 +48,7 @@ melden oder einsehen soll, braucht das jeweilige Recht.
 - Aufbewahrung: `FIELDVIBE_FEHLERBERICHT_AUFBEWAHRUNG_TAGE` (Standard 90).
   Danach löscht der Worker Berichte samt Screenshots.
 - Der Service-Zugriff ist lesend über alle Mandanten und schreibend nur für
-  Status, Lösungsnotiz, Fix-Commit und PR-URL; jeder Zugriff wird im Audit-Log
+  Status (bei Ideen eingeschränkt, s. o.), Lösungsnotiz, Fix-Commit und PR-URL; jeder Zugriff wird im Audit-Log
   protokolliert (`fehlerbericht.service_zugriff`).
 - Berichte können Kundendaten enthalten. Der Workflow verbietet, sie in
   Commits/PRs zu übernehmen. Prüfen, ob die Weitergabe an Claude zu eurer
@@ -55,7 +78,11 @@ in der Zeit wird auch das richtige Token abgewiesen.
 Beispiel-Prompt:
 
 > Arbeite offene Fehlerberichte gemäß docs/BUGFIX_WORKFLOW.md ab, max. 3 pro
-> Lauf. Starte mit `scripts/fehlerberichte.sh liste neu`. Nichts mergen.
+> Lauf. Starte mit `scripts/fehlerberichte.sh liste neu fehler` (blockierend/
+> hoch zuerst). Danach, falls noch Kapazität: freigegebene Ideen
+> (`scripts/fehlerberichte.sh liste gesichtet - idee`), nie `neu` oder
+> `abgelehnt`. Unklare Ideen nicht raten, sondern per `notiz` rückfragen.
+> Nichts mergen.
 
 ## Token-Rotation
 

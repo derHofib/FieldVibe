@@ -23,7 +23,7 @@ describe("baueUpdateBody", () => {
 });
 
 describe("meldungFuerStatus", () => {
-  it.each([401, 404, 429])("liefert deutsche Meldung fuer %i", (s) => {
+  it.each([401, 403, 404, 409, 429])("liefert deutsche Meldung fuer %i", (s) => {
     expect(meldungFuerStatus(s, "")).not.toMatch(/^HTTP/);
   });
   it("faellt auf HTTP-Code zurueck", () => {
@@ -40,6 +40,13 @@ describe("BugreportClient", () => {
       "https://api.example.de/api/service/fehlerberichte?status=neu&schweregrad=hoch&seit=2026-01-01T00%3A00%3A00Z&limit=5",
     );
     expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("uebersetzt kind in den Query-Parameter art", async () => {
+    const f = vi.fn(async () => antwort([]));
+    await mk(f as unknown as typeof fetch).liste({ kind: "idee", status: "gesichtet" });
+    const [url] = f.mock.calls[0] as unknown as [string];
+    expect(url).toBe("https://api.example.de/api/service/fehlerberichte?status=gesichtet&art=idee");
   });
 
   it("sendet PATCH mit deutschem JSON-Body", async () => {

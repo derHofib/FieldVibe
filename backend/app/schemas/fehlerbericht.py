@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 FehlerberichtStatus = Literal["neu", "gesichtet", "in_arbeit", "behoben", "abgelehnt", "duplikat"]
+FehlerberichtArt = Literal["fehler", "idee"]
 FehlerberichtSchweregrad = Literal["niedrig", "mittel", "hoch", "blockierend"]
 
 
@@ -14,6 +15,7 @@ class FehlerberichtCreate(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    art: FehlerberichtArt = "fehler"
     titel: str = Field(min_length=1, max_length=200)
     beschreibung: str = Field(min_length=1, max_length=20000)
     erwartet: str | None = Field(default=None, max_length=20000)
@@ -34,6 +36,7 @@ class FehlerberichtListItem(BaseModel):
     id: UUID
     mandant_id: UUID
     mandant_name: str | None
+    art: FehlerberichtArt
     melder_name: str | None
     titel: str
     schweregrad: FehlerberichtSchweregrad
@@ -58,6 +61,7 @@ class FehlerberichtDetail(FehlerberichtListItem):
     loesungsnotiz: str | None
     fix_commit: str | None
     fix_pr_url: str | None
+    freigegeben_am: datetime | None
 
 
 class FehlerberichtUpdate(BaseModel):
