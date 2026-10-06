@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "../../api/client";
 import type { Position } from "../../types/organigramm";
 import {
+  menueNachOeffnen,
   besetzungText,
   istUnterbesetzt,
   knotenDarstellung,
@@ -141,5 +142,21 @@ describe("neuePositionBody", () => {
       soll_besetzung: 2,
     });
     expect(neuePositionBody("stabsstelle", "p", { titel: "QM" })).toMatchObject({ typ: "stabsstelle", geplant: false });
+  });
+});
+
+describe("menueNachOeffnen", () => {
+  const a: Position = { id: "a", parent_id: null, titel: "A", typ: "linie" };
+  const b: Position = { id: "b", parent_id: "a", titel: "B", typ: "linie" };
+  const anker = { x: 1, y: 2 };
+
+  it("schliesst bei erneutem Klick auf den Button derselben Position", () => {
+    expect(menueNachOeffnen({ position: a, anker }, a, anker, true)).toBeNull();
+  });
+
+  it("wechselt bei anderer Position und oeffnet neu bei Rechtsklick auf dieselbe", () => {
+    expect(menueNachOeffnen({ position: a, anker }, b, anker, true)?.position.id).toBe("b");
+    expect(menueNachOeffnen({ position: a, anker }, a, { x: 5, y: 5 })?.anker).toEqual({ x: 5, y: 5 });
+    expect(menueNachOeffnen(null, a, anker, true)?.position.id).toBe("a");
   });
 });

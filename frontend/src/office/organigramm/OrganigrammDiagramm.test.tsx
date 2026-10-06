@@ -86,6 +86,13 @@ describe("OrganigrammDiagramm", () => {
     fireEvent.click(screen.getByTitle("Technik"));
     expect(onWaehlen).toHaveBeenCalledWith("t");
     fireEvent.click(screen.getByLabelText("Aktionen für Technik"));
-    expect(onMenue).toHaveBeenCalledWith(expect.objectContaining({ id: "t" }), expect.any(Object));
+    expect(onMenue).toHaveBeenCalledWith(expect.objectContaining({ id: "t" }), expect.any(Object), true);
+  });
+
+  it("laesst Buttons auch auf nicht ziehbaren Knoten (Wurzel, ohne Umhaengen-Recht) klickbar", () => {
+    const { container } = rendere({ darfUmhaengen: false });
+    const knoten = container.querySelectorAll<HTMLElement>(".react-flow__node");
+    expect(knoten.length).toBe(4);
+    knoten.forEach((k) => expect(k.style.pointerEvents).toBe("all"));
   });
 });

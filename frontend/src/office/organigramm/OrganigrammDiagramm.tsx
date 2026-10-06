@@ -91,7 +91,7 @@ export interface OrganigrammDiagrammProps {
   ausgewaehltId: string | null;
   darfUmhaengen: boolean;
   onWaehlen: (id: string) => void;
-  onMenue: (position: Position, anker: { x: number; y: number }) => void;
+  onMenue: (position: Position, anker: { x: number; y: number }, umschalten?: boolean) => void;
   onUmschalten: (id: string) => void;
   onUmhaengen: (id: string, neuerParentId: string) => void;
   // Meldung, wenn das Umhaengen schon clientseitig als unmoeglich erkannt wird
@@ -121,6 +121,8 @@ function Flaeche(props: OrganigrammDiagrammProps) {
         position: layout.positionen.get(p.id)!,
         draggable: darfUmhaengen && !p.kontext && p.parent_id !== null,
         selectable: false,
+        // React Flow setzt sonst pointer-events:none auf nicht ziehbare Knoten (Wurzel, Pfadknoten, ohne Recht) -- ihre Buttons waeren tot.
+        style: { pointerEvents: "all" as const },
         data: {
           position: p,
           kinder: layout.kinderAnzahl.get(p.id) ?? 0,

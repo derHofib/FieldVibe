@@ -41,7 +41,7 @@ export function OrganigrammListe({
   richtung: SortRichtung;
   onSortieren: (schluessel: SortSchluessel) => void;
   onWaehlen: (id: string) => void;
-  onMenue: (position: Position, anker: { x: number; y: number }) => void;
+  onMenue: (position: Position, anker: { x: number; y: number }, umschalten?: boolean) => void;
   ausgewaehltId: string | null;
 }) {
   return (
@@ -114,9 +114,10 @@ export function OrganigrammListe({
                       type="button"
                       aria-label={`Aktionen für ${p.titel}`}
                       aria-haspopup="menu"
+                      data-menue-ausloeser
                       onClick={(e) => {
                         const r = e.currentTarget.getBoundingClientRect();
-                        onMenue(p, { x: r.left - 200, y: r.bottom + 4 });
+                        onMenue(p, { x: r.left - 200, y: r.bottom + 4 }, true);
                       }}
                       className="rounded-full p-1 text-label2 hover:bg-fill2 hover:text-label"
                     >

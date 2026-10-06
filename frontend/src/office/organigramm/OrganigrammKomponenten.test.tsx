@@ -99,6 +99,43 @@ describe("PositionKontextMenue", () => {
     fireEvent.click(screen.getByRole("menuitem", { name: "Platzhalter anlegen" }));
     expect(onWahl).toHaveBeenCalledWith("platzhalter");
   });
+
+  function mitMenue() {
+    const onClose = vi.fn();
+    render(
+      <div>
+        <button type="button" aria-haspopup="menu" data-menue-ausloeser>
+          Ausloeser
+        </button>
+        <div data-testid="flaeche" />
+        <PositionKontextMenue anker={{ x: 0, y: 0 }} aktionen={["details"]} onWahl={() => {}} onClose={onClose} />
+      </div>,
+    );
+    return onClose;
+  }
+
+  it("schliesst auch, wenn das Ziel mousedown nicht bubbeln laesst (React Flow)", () => {
+    const onClose = mitMenue();
+    // Wie d3-zoom/d3-drag auf Flaeche und Knoten: der Bubbling-Weg zum document ist abgeschnitten.
+    screen.getByTestId("flaeche").addEventListener("mousedown", (e) => e.stopPropagation());
+    fireEvent.mouseDown(screen.getByTestId("flaeche"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("schliesst nicht bei Klick im Menue und nicht beim mousedown auf den Ausloeser (Umschalten)", () => {
+    const onClose = mitMenue();
+    fireEvent.mouseDown(screen.getByRole("menuitem"));
+    fireEvent.mouseDown(screen.getByText("Ausloeser"));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("schliesst bei Escape, Mausrad ausserhalb und Fenstergroessenaenderung", () => {
+    const onClose = mitMenue();
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.wheel(screen.getByTestId("flaeche"));
+    fireEvent(window, new Event("resize"));
+    expect(onClose).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("OrganigrammListe", () => {

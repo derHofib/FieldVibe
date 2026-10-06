@@ -10,7 +10,8 @@ export interface DiagrammKontextWert {
   ausgewaehltId: string | null;
   dropZielId: string | null;
   onWaehlen: (id: string) => void;
-  onMenue: (position: Position, anker: { x: number; y: number }) => void;
+  // umschalten: Klick auf den "..."-Button schliesst ein bereits offenes Menue derselben Position
+  onMenue: (position: Position, anker: { x: number; y: number }, umschalten?: boolean) => void;
   onUmschalten: (id: string) => void;
 }
 
@@ -34,7 +35,7 @@ export type PositionKnotenTyp = Node<PositionKnotenDaten, "position">;
 
 const UNSICHTBAR = { opacity: 0, pointerEvents: "none" as const };
 
-export function PositionKnoten({ data }: NodeProps<PositionKnotenTyp>) {
+export function PositionKnoten({ data, draggable }: NodeProps<PositionKnotenTyp>) {
   const { ausgewaehltId, dropZielId, onWaehlen, onMenue, onUmschalten } = useContext(DiagrammKontext);
   const { position: p, kinder, zugeklappt, gedimmt } = data;
   const d = knotenDarstellung(p);
@@ -60,7 +61,7 @@ export function PositionKnoten({ data }: NodeProps<PositionKnotenTyp>) {
       <Handle id="r" type="source" position={HandlePosition.Right} style={UNSICHTBAR} isConnectable={false} />
 
       <div
-        className={`card-ap flex flex-col justify-between px-3 py-2 ${deckkraft} ${kontext ? "grayscale" : ""}`}
+        className={`card-ap flex flex-col justify-between px-3 py-2 ${deckkraft} ${kontext ? "grayscale" : ""} ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
         style={stil}
         data-testid={`org-knoten-${p.id}`}
       >
@@ -71,7 +72,7 @@ export function PositionKnoten({ data }: NodeProps<PositionKnotenTyp>) {
             <button
               type="button"
               onClick={() => onWaehlen(p.id)}
-              className="nodrag nopan min-w-0 flex-1 truncate text-left text-[14px] font-semibold text-label hover:underline focus-visible:outline-2 focus-visible:outline-tint"
+              className="nopan min-w-0 flex-1 truncate text-left text-[14px] font-semibold text-label hover:underline focus-visible:outline-2 focus-visible:outline-tint"
               title={p.titel}
             >
               {p.titel}
@@ -82,9 +83,10 @@ export function PositionKnoten({ data }: NodeProps<PositionKnotenTyp>) {
               type="button"
               aria-label={`Aktionen für ${p.titel}`}
               aria-haspopup="menu"
+              data-menue-ausloeser
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect();
-                onMenue(p, { x: r.left, y: r.bottom + 4 });
+                onMenue(p, { x: r.left, y: r.bottom + 4 }, true);
               }}
               className="nodrag nopan -mt-0.5 -mr-1 shrink-0 rounded-full p-1 text-label2 hover:bg-fill hover:text-label"
             >

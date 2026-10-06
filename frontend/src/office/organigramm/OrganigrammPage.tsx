@@ -13,6 +13,7 @@ import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
 import { AnzeigenAlsDialog } from "./AnzeigenAlsDialog";
 import {
   kontextAktionen,
+  menueNachOeffnen,
   POSITION_STATUS_LABEL,
   POSITION_STATUS_TOKEN,
   verstaendlicherFehler,
@@ -161,7 +162,11 @@ export function OrganigrammPage() {
     [standard],
   );
   const waehlen = useCallback((id: string) => setPanel({ id, tab: "stammdaten" }), []);
-  const menueOeffnen = useCallback((position: Position, anker: { x: number; y: number }) => setMenue({ position, anker }), []);
+  const menueOeffnen = useCallback(
+    (position: Position, anker: { x: number; y: number }, umschalten?: boolean) =>
+      setMenue((alt) => menueNachOeffnen(alt, position, anker, umschalten)),
+    [],
+  );
   const umhaengenAnfordern = useCallback(
     (id: string, parentId: string) => {
       const q = alle.find((p) => p.id === id);

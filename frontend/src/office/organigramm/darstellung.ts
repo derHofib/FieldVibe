@@ -124,6 +124,21 @@ export function kontextAktionen(p: Position, darf: (aktion: string) => boolean, 
   return aktionen;
 }
 
+export interface MenueZustand {
+  position: Position;
+  anker: { x: number; y: number };
+}
+
+/** Neuer Menuezustand beim Klick auf "...": derselbe Knoten schliesst (umschalten), ein anderer wechselt. */
+export function menueNachOeffnen(
+  alt: MenueZustand | null,
+  position: Position,
+  anker: { x: number; y: number },
+  umschalten = false,
+): MenueZustand | null {
+  return umschalten && alt?.position.id === position.id ? null : { position, anker };
+}
+
 export const KONTEXT_AKTION_LABEL: Record<KontextAktion, string> = {
   details: "Details öffnen",
   darunter: "Position darunter anlegen",

@@ -46,8 +46,20 @@ export function PositionKontextMenue({
 
   useEffect(() => {
     itemRefs.current[0]?.focus();
-    function aufKlick(e: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
+    // Capture-Phase: React Flow (d3-zoom/d3-drag) stoppt mousedown auf Flaeche/Knoten, im Bubbling
+    // wuerde dieser Listener dort nie ankommen und das Menue offen bleiben.
+    function aufKlick(e: Event) {
+      const ziel = e.target as Element | null;
+      if (panelRef.current?.contains(ziel as Node)) return;
+      // Der "..."-Button schaltet das Menue selbst um; schlosse es hier schon beim mousedown,
+      // oeffnete der folgende click es sofort wieder.
+      if (ziel?.closest?.("[data-menue-ausloeser]")) return;
+      onClose();
+    }
+    // Menue ist am Bildschirm verankert und waere nach Zoomen/Scrollen/Skalieren an falscher Stelle.
+    function aufBewegung(e: Event) {
+      if (panelRef.current?.contains(e.target as Node)) return;
+      onClose();
     }
     function aufTaste(e: KeyboardEvent) {
       if (e.key === "Escape") {
@@ -55,10 +67,16 @@ export function PositionKontextMenue({
         onClose();
       }
     }
-    document.addEventListener("mousedown", aufKlick);
+    document.addEventListener("mousedown", aufKlick, true);
+    document.addEventListener("wheel", aufBewegung, { capture: true, passive: true });
+    document.addEventListener("scroll", aufBewegung, true);
+    window.addEventListener("resize", onClose);
     document.addEventListener("keydown", aufTaste, true);
     return () => {
-      document.removeEventListener("mousedown", aufKlick);
+      document.removeEventListener("mousedown", aufKlick, true);
+      document.removeEventListener("wheel", aufBewegung, true);
+      document.removeEventListener("scroll", aufBewegung, true);
+      window.removeEventListener("resize", onClose);
       document.removeEventListener("keydown", aufTaste, true);
     };
   }, [onClose]);
