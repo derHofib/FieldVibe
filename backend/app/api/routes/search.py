@@ -10,8 +10,8 @@ from app.models.rechnung import Rechnung
 from app.models.tag import Tag
 from app.models.vorgang import Vorgang
 from app.schemas.search import SearchHit, SearchResponse
+from app.services import berechtigung_service
 from app.services.rechnung_service import kunden_namen_fuer
-from app.services.rechte_service import hat_recht
 from app.services.zuweisung_service import erlaubte_kunde_ids, vorgang_scope_filter
 
 router = APIRouter(
@@ -29,17 +29,13 @@ async def _darf_rechnungen_sehen(session: AsyncSession, auth: AuthContext) -> bo
     kein require_recht/require_module -- ohne dieses Gate wuerde jeder
     Mitarbeiter Rechnungsnummern, Kundennamen und Betraege sehen. Dieselben
     zwei Bedingungen wie dort: das Modul 'abrechnung' und das Recht
-    abrechnung:sehen (nur 'custom'-Rollen werden gegen die Matrix geprueft,
-    siehe require_recht in app/api/deps.py)."""
+    abrechnung:sehen (aufgeloest von der Rechte-Engine, siehe
+    require_recht in app/api/deps.py)."""
     if auth.mandant_id is not None:
         mandant = await session.get(Mandant, auth.mandant_id)
         if mandant is not None and "abrechnung" in mandant.deaktivierte_module:
             return False
-    if auth.role != "custom":
-        return True
-    return await hat_recht(
-        session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="abrechnung", aktion="sehen"
-    )
+    return await berechtigung_service.hat_recht(session, auth, "abrechnung", "sehen")
 
 
 @router.get("", response_model=SearchResponse)

@@ -14,6 +14,7 @@ from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from app.api.deps import AuthContext, get_db, require_recht, require_roles
 from app.core.config import get_settings
+from app.core.rollen import ist_plattform_admin
 from app.core.rate_limit import client_ip, fehlerbericht_service_ip_limiter, fehlerbericht_user_limiter
 from app.db.session import system_session
 from app.models.fehlerbericht import Fehlerbericht
@@ -190,7 +191,7 @@ async def list_fehlerberichte(
     stmt = _gefiltert(select(Fehlerbericht), status_=status_, schweregrad=schweregrad, art=art, seit=seit, q=q)
     # Der Mandantenfilter ist nur fuer super_admin relevant; alle anderen sind
     # per RLS ohnehin auf den eigenen Mandanten festgenagelt.
-    if mandant_id is not None and auth.role == "super_admin":
+    if mandant_id is not None and ist_plattform_admin(auth):
         stmt = stmt.where(Fehlerbericht.mandant_id == mandant_id)
     stmt = stmt.order_by(Fehlerbericht.created_at.desc()).limit(limit).offset(offset)
     return await _liste_antwort(session, stmt)
@@ -204,7 +205,7 @@ async def zaehler_fehlerberichte(
     _recht: AuthContext = Depends(require_recht("fehlerberichte", "sehen")),
     session: AsyncSession = Depends(get_db),
 ) -> FehlerberichtZaehler:
-    filter_mandant = mandant_id if auth.role == "super_admin" else None
+    filter_mandant = mandant_id if ist_plattform_admin(auth) else None
     je_status = await fehlerbericht_service.zaehler_je_status(session, filter_mandant, art)
     return FehlerberichtZaehler(**je_status, gesamt=sum(je_status.values()))
 
@@ -242,7 +243,7 @@ async def update_fehlerbericht(
 ) -> FehlerberichtDetail:
     bericht = await _hole(session, bericht_id)
     daten = body.model_dump(exclude_unset=True)
-    if bericht.art == "idee" and auth.role != "super_admin" and daten:
+    if bericht.art == "idee" and not ist_plattform_admin(auth) and daten:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Ideen werden vom Betreiber freigegeben")
     if daten.get("duplikat_von_id") is not None:
         if daten["duplikat_von_id"] == bericht.id:

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sse_starlette.sse import EventSourceResponse
 
 from app.api.deps import AuthContext, get_current_user, token_version_gueltig
+from app.core.rollen import MITARBEITER_ROLLEN, ist_mitarbeiter_account
 from app.core.security import TokenType, create_stream_ticket, decode_token
 from app.db.session import system_session
 from app.models.user import User
@@ -18,7 +19,6 @@ from app.services.event_bus import event_bus
 router = APIRouter(prefix="/api/stream", tags=["stream"])
 
 
-_STREAM_ROLLEN = ("mandant_admin", "custom")
 
 
 _PRUEFINTERVALL_SEKUNDEN = 15
@@ -46,7 +46,7 @@ async def stream_ticket(auth: AuthContext = Depends(get_current_user)) -> Stream
     verwendung wird bewusst nicht erzwungen (bei Mehr-Worker-Betrieb braeuchte
     sie gemeinsamen Speicher); das Ticket oeffnet nur den Stream, ist 60 s
     gueltig und an User + token_version gebunden."""
-    if auth.role not in _STREAM_ROLLEN:
+    if not ist_mitarbeiter_account(auth):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung")
     if auth.mandant_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Mandant im Token")
@@ -76,7 +76,7 @@ async def stream(request: Request, ticket: str | None = Query(None)) -> EventSou
 
     if payload.get("type") != TokenType.STREAM.value:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Ticket")
-    if payload.get("role") not in _STREAM_ROLLEN:
+    if payload.get("role") not in MITARBEITER_ROLLEN:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung")
     if not payload.get("mandant_id"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Kein Mandant im Ticket")

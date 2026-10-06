@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import decode_token
+from app.core.rollen import ist_plattform_admin
 from app.db.session import system_session, tenant_session
 from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
@@ -107,7 +108,7 @@ async def get_db(
     """Tenant-scoped DB session. super_admin gets an RLS-bypassing session
     reserved for cross-tenant platform administration; every other role is
     hard-pinned to its own mandant_id via Row Level Security."""
-    is_super_admin = auth.role == "super_admin"
+    is_super_admin = ist_plattform_admin(auth)
     ctx = (
         system_session()
         if is_super_admin

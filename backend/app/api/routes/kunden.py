@@ -521,15 +521,19 @@ async def list_portal_zugaenge(
     "/{kunde_id}/einladungen",
     response_model=list[EinladungRead],
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
 async def list_kunde_einladungen(
-    kunde_id: UUID, session: AsyncSession = Depends(get_db)
+    kunde_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> list[EinladungRead]:
     if await session.get(Kunde, kunde_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
     result = await session.execute(
         select(Einladung)
         .where(Einladung.art == "kunde", Einladung.kunde_id == kunde_id)
@@ -564,6 +568,7 @@ async def kunde_einladen(
     kunde = await session.get(Kunde, kunde_id)
     if kunde is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kunde nicht gefunden")
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
 
     einladender = await session.get(User, auth.user_id)
     einladung = await create_einladung(
@@ -588,7 +593,8 @@ async def kunde_einladen(
     "/{kunde_id}/einladungen/{einladung_id}/erneut-senden",
     response_model=EinladungRead,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
@@ -598,6 +604,7 @@ async def kunde_einladung_erneut_senden(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> EinladungRead:
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
     einladung = await session.get(Einladung, einladung_id)
     if einladung is None or einladung.art != "kunde" or einladung.kunde_id != kunde_id or einladung.status != "offen":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")
@@ -617,13 +624,18 @@ async def kunde_einladung_erneut_senden(
     "/{kunde_id}/einladungen/{einladung_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("kunden", "bearbeiten")),
         Depends(require_module("kundenportal")),
     ],
 )
 async def kunde_einladung_widerrufen(
-    kunde_id: UUID, einladung_id: UUID, session: AsyncSession = Depends(get_db)
+    kunde_id: UUID,
+    einladung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> None:
+    await _require_kunde_zugriff(session, auth, kunde_id, "bearbeiten")
     einladung = await session.get(Einladung, einladung_id)
     if einladung is None or einladung.art != "kunde" or einladung.kunde_id != kunde_id or einladung.status != "offen":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Einladung nicht gefunden")

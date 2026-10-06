@@ -37,7 +37,7 @@ export function AbwesenheitSheet({
   const [userId, setUserId] = useState(vorbelegterUserId ?? currentUser?.id ?? "");
   const [fehler, setFehler] = useState<string | null>(null);
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list, enabled: darfVerwalten });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: darfVerwalten });
 
   const eintagig = von === bis;
 

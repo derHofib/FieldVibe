@@ -126,6 +126,11 @@ export interface User {
   updated_at: string;
 }
 
+export type UserAuswahl = Pick<
+  User,
+  "id" | "name" | "avatar_url" | "role" | "account_typ_id" | "account_typ_name" | "nur_zugewiesene_kunden" | "aktiv"
+>;
+
 // Nur "mandant_admin"/"custom" -- fuer super_admin und die Papierkorb-Rollen
 // gibt es keinen Einladungsweg (siehe app/schemas/einladung.py), die bleiben
 // bei direkter Anlage mit Passwort.

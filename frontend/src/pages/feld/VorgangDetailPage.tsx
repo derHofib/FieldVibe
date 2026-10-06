@@ -717,7 +717,7 @@ export function VorgangDetailPage({
     queryFn: () => getOutboxItems(id!),
     enabled: !!id,
   });
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   const { data: laufenderTimer } = useQuery({
     queryKey: ["zeiterfassung-laufend"],
     queryFn: zeiterfassungApi.laufend,

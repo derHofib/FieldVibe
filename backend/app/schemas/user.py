@@ -92,3 +92,16 @@ class UserRead(BaseModel):
     aktiv: bool
     created_at: datetime
     updated_at: datetime
+
+
+class UserAuswahl(BaseModel):
+    """Auswahllisten-Eintrag (Zuweisung, @-Erwaehnung): ohne E-Mail/Zeitstempel."""
+
+    id: UUID
+    role: Role
+    account_typ_id: UUID | None = None
+    account_typ_name: str | None = None
+    nur_zugewiesene_kunden: bool = False
+    name: str
+    avatar_url: str | None
+    aktiv: bool

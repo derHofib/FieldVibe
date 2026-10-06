@@ -128,7 +128,7 @@ export function ProjektAufgabeDetailPanel({
   const [neuerPunkt, setNeuerPunkt] = useState("");
   const [neueUnteraufgabe, setNeueUnteraufgabe] = useState("");
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: () => usersApi.list() });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: () => usersApi.auswahl() });
   const { data: alleVorgaenge } = useQuery({ queryKey: ["vorgaenge-alle"], queryFn: () => vorgaengeApi.list() });
   const { data: alleKunden } = useQuery({ queryKey: ["kunden-alle"], queryFn: () => kundenApi.list() });
   const { data: alleAnlagen } = useQuery({ queryKey: ["anlagen-alle"], queryFn: () => anlagenApi.list() });

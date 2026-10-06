@@ -147,7 +147,7 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     isLoading,
     error,
   } = useQuery({ queryKey, queryFn: () => zeitplanApi.get(projektId, basisplanId), placeholderData: keepPreviousData });
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   const { data: basisplaene } = useQuery({ queryKey: ["projekt-basisplaene", projektId], queryFn: () => zeitplanApi.basisplaene(projektId) });
 
   const [zoom, setZoom] = useState<Zoom>("tag");

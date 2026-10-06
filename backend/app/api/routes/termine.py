@@ -13,6 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.core.rollen import ist_mitarbeiter_account
 from app.models.termin import Termin
 from app.models.user import User
 from app.models.vorgang import Vorgang
@@ -47,7 +48,7 @@ async def _load_vorgang_and_techniker(
     if (
         techniker is None
         or techniker.mandant_id != vorgang.mandant_id
-        or techniker.role not in ("mandant_admin", "custom")
+        or not ist_mitarbeiter_account(techniker)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

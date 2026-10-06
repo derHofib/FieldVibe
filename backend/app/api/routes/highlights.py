@@ -17,8 +17,7 @@ from app.models.highlight import Highlight
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.highlight import HighlightCreate, HighlightRead
-from app.services import storage_service
-from app.services.rechte_service import hat_recht
+from app.services import berechtigung_service, storage_service
 from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugriff
 
 router = APIRouter(
@@ -134,12 +133,7 @@ async def delete_highlight(
     )
     # Account-Typen mit vorgaenge:loeschen duerfen jedes Highlight entfernen
     # (Moderation); alle anderen nur ihr eigenes.
-    darf_alle_loeschen = auth.role == "mandant_admin" or (
-        auth.role == "custom"
-        and await hat_recht(
-            session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="vorgaenge", aktion="loeschen"
-        )
-    )
+    darf_alle_loeschen = await berechtigung_service.hat_recht(session, auth, "vorgaenge", "loeschen")
     if not darf_alle_loeschen and highlight.erstellt_von != auth.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Highlights können entfernt werden"

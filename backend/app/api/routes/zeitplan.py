@@ -37,9 +37,9 @@ from app.schemas.zeitplan_antrag import (
     ZeitplanAntragStatus,
     ZeitplanMeinRead,
 )
+from app.services import berechtigung_service
 from app.services import zeitplan_antrag_service as antrag_svc
 from app.services import zeitplan_service as svc
-from app.services.rechte_service import hat_recht
 from app.services.pdf_service import generate_zeitplan_pdf
 from app.services.rechnung_service import logo_bytes_laden
 from app.services.zuweisung_service import erlaubte_kunde_ids
@@ -60,10 +60,8 @@ def _recht_eines_von(*rechte: tuple[str, str]):
     async def checker(
         auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
     ) -> AuthContext:
-        if auth.role != "custom":
-            return auth
         for bereich, aktion in rechte:
-            if await hat_recht(session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich=bereich, aktion=aktion):
+            if await berechtigung_service.hat_recht(session, auth, bereich, aktion):
                 return auth
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
 
@@ -71,15 +69,11 @@ def _recht_eines_von(*rechte: tuple[str, str]):
 
 
 async def _darf_projekte_sehen(session: AsyncSession, auth: AuthContext) -> bool:
-    return auth.role != "custom" or await hat_recht(
-        session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="projekte", aktion="sehen"
-    )
+    return await berechtigung_service.hat_recht(session, auth, "projekte", "sehen")
 
 
 async def _darf_bearbeiten(session: AsyncSession, auth: AuthContext) -> bool:
-    return auth.role != "custom" or await hat_recht(
-        session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="projekte", aktion="bearbeiten"
-    )
+    return await berechtigung_service.hat_recht(session, auth, "projekte", "bearbeiten")
 
 
 # Router-Ebene nur Rolle + Kunden-Schwaerzung; das Recht haengt je Route an

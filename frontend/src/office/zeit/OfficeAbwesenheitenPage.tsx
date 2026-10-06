@@ -363,7 +363,7 @@ function AnspruchAbschnitt() {
   const [verfall, setVerfall] = useState("");
   const [meldung, setMeldung] = useState<{ fehler: boolean; text: string } | null>(null);
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   const { data: konto, isLoading } = useQuery({
     queryKey: ["abwesenheiten", "konto", userId, jahr],
     queryFn: () => abwesenheitenApi.konto({ user_id: userId, jahr }),

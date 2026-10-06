@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.account_typ import AccountTyp, AccountTypRecht
+from app.core.rollen import MITARBEITER_ROLLEN
 from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.user import User
 from app.services import berechtigung_service
@@ -193,19 +193,19 @@ async def require_kunde_zugewiesen(
 
 
 async def technik_user_ids(session: AsyncSession, mandant_id: UUID | None) -> set[UUID]:
-    """Ersetzt das fruehere User.role == 'techniker' fuer
-    Zuweisungs-Dropdowns: alle Nutzer, deren Account-Typ auf zugewiesene
-    Kunden beschraenkt ist."""
+    """Zuweisungs-Dropdowns ("Techniker"): alle Nutzer, die ueber die Rechte-Engine
+    nur zugewiesene Kunden sehen (kunden.sehen mit Scope eigene bzw. Typ-Flag
+    nur_zugewiesene_kunden)."""
     result = await session.execute(
-        select(User.id)
-        .join(AccountTyp, AccountTyp.id == User.account_typ_id)
-        .where(
-            User.role == "custom",
-            User.mandant_id == mandant_id,
-            AccountTyp.nur_zugewiesene_kunden.is_(True),
-        )
+        select(User.id).where(User.role == "custom", User.mandant_id == mandant_id)
     )
-    return set(result.scalars().all())
+    return {
+        user_id
+        for user_id in result.scalars().all()
+        if await berechtigung_service.ist_auf_zugewiesene_kunden_beschraenkt(
+            session, user_id=user_id, rolle="custom"
+        )
+    }
 
 
 async def zuweisbare_user_ids(session: AsyncSession, user_ids: set[UUID]) -> set[UUID]:
@@ -223,22 +223,21 @@ async def zuweisbare_user_ids(session: AsyncSession, user_ids: set[UUID]) -> set
 async def _verantwortliche_user_ids(
     session: AsyncSession, mandant_id: UUID, *, bereich: str, aktion: str = "bearbeiten"
 ) -> set[UUID]:
+    # Ueber die Engine statt ueber users.account_typ_id: Besetzungen, Overrides und
+    # Vertretungen im Organigramm zaehlen mit; ungecacht, weil Worker-Sessions lange leben.
     result = await session.execute(
-        select(User.id)
-        .outerjoin(AccountTyp, AccountTyp.id == User.account_typ_id)
-        .outerjoin(
-            AccountTypRecht,
-            (AccountTypRecht.account_typ_id == AccountTyp.id)
-            & (AccountTypRecht.bereich == bereich)
-            & (AccountTypRecht.aktion == aktion),
-        )
-        .where(
+        select(User.id, User.role).where(
             User.mandant_id == mandant_id,
             User.aktiv.is_(True),
-            or_(User.role == "mandant_admin", AccountTypRecht.erlaubt.is_(True)),
+            User.role.in_(MITARBEITER_ROLLEN),
         )
     )
-    return set(result.scalars().all())
+    verantwortliche: set[UUID] = set()
+    for user_id, rolle in result.all():
+        rechte = await berechtigung_service.effektive_rechte(session, user_id=user_id, rolle=rolle)
+        if rechte.hat(bereich, aktion):
+            verantwortliche.add(user_id)
+    return verantwortliche
 
 
 async def projekt_bearbeiter_user_ids(session: AsyncSession, mandant_id: UUID) -> set[UUID]:
@@ -251,8 +250,8 @@ async def dispo_verantwortliche_user_ids(session: AsyncSession, mandant_id: UUID
     """Ersetzt das fruehere User.role.in_(("mandant_admin", "disponent")) fuer
     dispositionsbezogene Benachrichtigungs-Empfaenger (z.B. neue Kundenportal-
     Auftragsanfragen, faellige Pruefzyklen/Dauerauftraege): mandant_admin
-    immer, dazu Nutzer mit einem Account-Typ, dessen Rechte-Matrix
-    dispo.bearbeiten erlaubt (die disponent-aequivalente Berechtigung)."""
+    immer, dazu Nutzer, die laut Rechte-Engine
+    dispo.bearbeiten haben (die disponent-aequivalente Berechtigung)."""
     return await _verantwortliche_user_ids(session, mandant_id, bereich="dispo")
 
 

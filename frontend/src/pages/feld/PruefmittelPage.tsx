@@ -48,7 +48,7 @@ export function PruefmittelPage() {
     queryKey: ["pruefmittel"],
     queryFn: () => pruefmittelApi.list(),
   });
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   const zuweisbareNutzer = (users ?? []).filter((u) => u.aktiv);
 
   const createMutation = useMutation({

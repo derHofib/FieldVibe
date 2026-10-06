@@ -107,7 +107,7 @@ export function OfficeDispoPage() {
   const ende = useMemo(() => tagsEnde(tag), [tag]);
   const heute = istGleicherTag(tag, new Date());
 
-  const { data: technikerListe } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
   // aktive mandant_admin/custom-Account kann als Techniker eingeplant werden.
   const technikers: Techniker[] = (technikerListe ?? []).filter(

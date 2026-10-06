@@ -100,7 +100,7 @@ export function ZeitenBuchenPage() {
   const meldeAktionsFehler = (err: unknown) =>
     setAktionsFehler(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.");
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list, enabled: darfZeitenBuchen });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: darfZeitenBuchen });
   const techniker = (users ?? []).filter((u) => u.nur_zugewiesene_kunden);
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: darfZeitenBuchen });
   const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list(), enabled: darfZeitenBuchen });

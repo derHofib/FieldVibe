@@ -277,7 +277,7 @@ function SollAbschnitt() {
   const [form, setForm] = useState<SollFormular>(() => leeresFormular());
   const [fehler, setFehler] = useState<string | null>(null);
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   const { data: historie, isLoading } = useQuery({
     queryKey: ["arbeitszeit-soll", userId],
     queryFn: () => arbeitszeitApi.soll(userId),

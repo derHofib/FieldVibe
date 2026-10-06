@@ -33,7 +33,7 @@ export function AnzeigenAlsDialog({
   const [userId, setUserId] = useState("");
   const [positionId, setPositionId] = useState(startPositionId ?? "");
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list, enabled: darfPersonen });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: darfPersonen });
 
   const ziel = modus === "user" ? (userId ? { user_id: userId } : null) : positionId ? { position_id: positionId } : null;
   const { data, error, isFetching } = useQuery({
@@ -46,7 +46,7 @@ export function AnzeigenAlsDialog({
     () => positionen.filter((p) => !p.kontext).map((p) => ({ value: p.id, label: p.titel, sublabel: p.account_typ?.name })),
     [positionen],
   );
-  const userOptionen = (users ?? []).filter((u) => u.aktiv).map((u) => ({ value: u.id, label: u.name, sublabel: u.email }));
+  const userOptionen = (users ?? []).filter((u) => u.aktiv).map((u) => ({ value: u.id, label: u.name, sublabel: u.account_typ_name ?? undefined }));
   const positionTitel = (id: string) => positionen.find((p) => p.id === id)?.titel;
 
   return (

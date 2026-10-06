@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.core.rollen import PAPIERKORB_ROLLEN, hat_admin_rechte_im_mandant, ist_mandant_admin, ist_plattform_admin
 from app.core.security import hash_password
 from app.db.session import system_session
 from app.models.account_typ import AccountTyp
@@ -15,7 +16,7 @@ from app.models.einladung import Einladung
 from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
-from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserCreate, UserRead, UserUpdate
+from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserAuswahl, UserCreate, UserRead, UserUpdate
 from app.services import eskalation_service as esk
 from app.services.audit_service import log_action, log_aenderung
 from app.services.organigramm_sync_service import besetzung_pflegen
@@ -31,6 +32,7 @@ from app.services.user_anonymisierung_service import (
     ist_anonymisiert,
     nicht_anonymisiert,
 )
+from app.services.zuweisung_service import erlaubte_user_ids
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -39,7 +41,7 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 # loesch_operativ (das via app/api/deps.py:require_roles() ansonsten
 # ueberall dieselben Rechte wie mandant_admin hat) sollen sich diese
 # Berechtigung selbst zuweisen bzw. sie weiterreichen koennen.
-_PAPIERKORB_ROLLEN = ("loesch_ansicht", "loesch_operativ")
+_PAPIERKORB_ROLLEN = PAPIERKORB_ROLLEN
 
 
 def _integrity_error_detail(exc: IntegrityError) -> str:
@@ -135,7 +137,7 @@ async def mitarbeiter_einladen(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> EinladungRead:
-    if auth.role == "mandant_admin":
+    if ist_mandant_admin(auth):
         if body.mandant_id is not None and body.mandant_id != auth.mandant_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -232,6 +234,71 @@ async def einladung_widerrufen(
     await session.flush()
 
 
+async def _nutzer_laden(
+    session: AsyncSession, auth: AuthContext, *, versteckte: bool, nur_im_scope: bool
+) -> list[User]:
+    # RLS restricts a mandant_admin's session to their own mandant already;
+    # super_admin sessions bypass RLS and therefore see every account.
+    # Anonymisierte Nutzer (siehe user_anonymisierung_service) sind nie
+    # auswaehlbar. `versteckte` ist kein Sicherheitsmerkmal, nur eine
+    # Ausblendung der Papierkorb-Accounts in der Standardansicht.
+    stmt = select(User).where(nicht_anonymisiert())
+    if auth.mandant_id is not None:
+        # Mandanten-Kontext (auch Impersonation): Plattform-Admins gehoeren
+        # nicht in die Nutzerliste des Mandanten.
+        stmt = stmt.where(User.role != "super_admin")
+    if not versteckte:
+        stmt = stmt.where(User.role.not_in(_PAPIERKORB_ROLLEN))
+    if nur_im_scope:
+        erlaubt = await erlaubte_user_ids(session, auth, "mitarbeiterverwaltung", "sehen")
+        if erlaubt is not None:
+            stmt = stmt.where(User.id.in_(erlaubt))
+    return list((await session.execute(stmt.order_by(User.name))).scalars().all())
+
+
+async def _typen_zu(session: AsyncSession, users: list[User]) -> dict[UUID, AccountTyp]:
+    account_typ_ids = {u.account_typ_id for u in users if u.account_typ_id is not None}
+    if not account_typ_ids:
+        return {}
+    typen_result = await session.execute(select(AccountTyp).where(AccountTyp.id.in_(account_typ_ids)))
+    return {t.id: t for t in typen_result.scalars().all()}
+
+
+@router.get(
+    "/auswahl",
+    response_model=list[UserAuswahl],
+    dependencies=[
+        Depends(require_roles("super_admin", "mandant_admin", "custom")),
+        Depends(require_recht("mitarbeiterverwaltung", "sehen")),
+    ],
+)
+async def list_users_auswahl(
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> list[UserAuswahl]:
+    """Schlanke Auswahlliste (Zuweisung, @-Erwaehnung, Dispo) ueber den ganzen
+    Mandanten, bewusst NICHT nach Scope gefiltert: ein Teamleiter muss auch
+    Personen ausserhalb seines Teilbaums zuweisen/erwaehnen koennen. Ohne E-Mail
+    und Zeitstempel -- die vollstaendige Liste GET /api/users ist scope-gefiltert."""
+    users = await _nutzer_laden(session, auth, versteckte=False, nur_im_scope=False)
+    typen = await _typen_zu(session, users)
+    return [
+        UserAuswahl(
+            id=u.id,
+            role=u.role,
+            account_typ_id=u.account_typ_id,
+            account_typ_name=typen[u.account_typ_id].name if u.account_typ_id in typen else None,
+            nur_zugewiesene_kunden=typen[u.account_typ_id].nur_zugewiesene_kunden
+            if u.account_typ_id in typen
+            else False,
+            name=u.name,
+            avatar_url=u.avatar_url,
+            aktiv=u.aktiv,
+        )
+        for u in users
+    ]
+
+
 @router.get(
     "",
     response_model=list[UserRead],
@@ -245,31 +312,11 @@ async def list_users(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[UserRead]:
-    # RLS restricts a mandant_admin's session to their own mandant already;
-    # super_admin sessions bypass RLS and therefore see every account.
-    # Read-only for custom account types too: colleagues' names are needed
-    # for the @-mention picker in the Vorgangs-Chat (Phase 3) and aren't
-    # sensitive the way account management (create/patch below) is.
-    # Anonymisierte Nutzer (siehe user_anonymisierung_service) sind nie
-    # auswaehlbar. `versteckte` ist kein Sicherheitsmerkmal, nur eine
-    # Ausblendung der Papierkorb-Accounts in der Standardansicht.
-    stmt = select(User).where(nicht_anonymisiert())
-    if auth.mandant_id is not None:
-        # Mandanten-Kontext (auch Impersonation): Plattform-Admins gehoeren
-        # nicht in die Nutzerliste des Mandanten.
-        stmt = stmt.where(User.role != "super_admin")
-    if not versteckte:
-        stmt = stmt.where(User.role.not_in(_PAPIERKORB_ROLLEN))
-    result = await session.execute(stmt.order_by(User.name))
-    users = list(result.scalars().all())
-
-    account_typ_ids = {u.account_typ_id for u in users if u.account_typ_id is not None}
-    account_typen: dict[UUID, AccountTyp] = {}
-    if account_typ_ids:
-        typen_result = await session.execute(
-            select(AccountTyp).where(AccountTyp.id.in_(account_typ_ids))
-        )
-        account_typen = {t.id: t for t in typen_result.scalars().all()}
+    # Mit E-Mail/Rolle sensibel: custom-Nutzer sehen nur Personen im Scope von
+    # mitarbeiterverwaltung.sehen (mandant_admin/super_admin alle). Auswahllisten
+    # fuer Zuweisungen laufen ueber /auswahl.
+    users = await _nutzer_laden(session, auth, versteckte=versteckte, nur_im_scope=True)
+    account_typen = await _typen_zu(session, users)
 
     return [
         UserRead(
@@ -303,7 +350,7 @@ async def create_user(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> UserRead:
-    if auth.role in ("mandant_admin", "loesch_operativ"):
+    if hat_admin_rechte_im_mandant(auth):
         if body.role == "super_admin":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -383,12 +430,12 @@ async def update_user(
 
     if auth.role == "custom":
         await _custom_account_typ_pruefen(session, auth, user, body)
-    if auth.role in ("mandant_admin", "loesch_operativ"):
+    if hat_admin_rechte_im_mandant(auth):
         if user.mandant_id != auth.mandant_id:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden"
             )
-        if body.role == "super_admin" or user.role == "super_admin":
+        if body.role == "super_admin" or ist_plattform_admin(user):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nicht berechtigt für super_admin-Accounts",
@@ -496,10 +543,10 @@ async def user_abmelden_erzwingen(
     if user is None or ist_anonymisiert(user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
 
-    if auth.role in ("mandant_admin", "loesch_operativ"):
+    if hat_admin_rechte_im_mandant(auth):
         if user.mandant_id != auth.mandant_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
-        if user.role == "super_admin" or user.role in _PAPIERKORB_ROLLEN:
+        if ist_plattform_admin(user) or user.role in _PAPIERKORB_ROLLEN:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nicht berechtigt für diesen Account",
@@ -531,10 +578,10 @@ async def delete_user(
     if user is None or ist_anonymisiert(user):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
 
-    if auth.role in ("mandant_admin", "loesch_operativ"):
+    if hat_admin_rechte_im_mandant(auth):
         if user.mandant_id != auth.mandant_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
-        if user.role == "super_admin":
+        if ist_plattform_admin(user):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Nicht berechtigt für super_admin-Accounts",
@@ -550,7 +597,7 @@ async def delete_user(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Der eigene Account kann nicht gelöscht werden"
         )
 
-    if user.role == "mandant_admin":
+    if ist_mandant_admin(user):
         # Ein Mandant ohne jeden mandant_admin waere von niemandem mehr
         # verwaltbar -- der letzte muss also erhalten bleiben. Anonymisierte
         # Admins zaehlen nicht mit (Zeile bleibt als Rolle mandant_admin bestehen).
@@ -568,7 +615,7 @@ async def delete_user(
                 detail="Der letzte Mandanten-Admin kann nicht gelöscht werden",
             )
 
-    if user.role == "super_admin":
+    if ist_plattform_admin(user):
         andere_super_admins = await session.scalar(
             select(func.count()).select_from(User).where(
                 User.role == "super_admin", User.id != user.id, nicht_anonymisiert()

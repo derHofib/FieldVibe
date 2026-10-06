@@ -872,7 +872,8 @@ async def uebernehmen(
     "/{vorgang_id}/partner-zuweisung",
     response_model=VorgangPartnerZuweisungResponse,
     dependencies=[
-        Depends(require_roles("mandant_admin", "disponent")),
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("vorgaenge", "bearbeiten")),
         Depends(require_module("nachunternehmer")),
     ],
 )
@@ -890,6 +891,7 @@ async def vorgang_partner_zuweisen(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await _require_vorgang_zugriff(session, auth, vorgang, "bearbeiten")
 
     warnung = False
     if body.partner_id is None:

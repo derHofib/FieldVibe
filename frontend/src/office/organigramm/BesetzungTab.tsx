@@ -50,7 +50,7 @@ export function BesetzungTab({
   onGeaendert: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list, enabled: darfBearbeiten });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: darfBearbeiten });
   const [userId, setUserId] = useState("");
   const [art, setArt] = useState<BesetzungArt>("regulaer");
   const [von, setVon] = useState("");
@@ -100,7 +100,7 @@ export function BesetzungTab({
 
   const optionen = (users ?? [])
     .filter((u) => u.aktiv && u.role !== "super_admin")
-    .map((u) => ({ value: u.id, label: u.name, sublabel: u.email }));
+    .map((u) => ({ value: u.id, label: u.name, sublabel: u.account_typ_name ?? undefined }));
 
   function absenden(e: FormEvent) {
     e.preventDefault();

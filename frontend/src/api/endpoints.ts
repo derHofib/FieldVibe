@@ -166,6 +166,7 @@ import type {
   TokenPair,
   UstVaBericht,
   User,
+  UserAuswahl,
   VersionInfo,
   PortalAngebot,
   PortalAnlage,
@@ -275,6 +276,8 @@ export const mandantenApi = {
 
 export const usersApi = {
   list: () => apiFetch<User[]>("/api/users"),
+  // Schlanke, mandantenweite Liste fuer Zuweisungen/Erwaehnungen (ohne E-Mail); list ist scope-gefiltert.
+  auswahl: () => apiFetch<UserAuswahl[]>("/api/users/auswahl"),
   // Eigene Funktion statt Parameter an list: die wird vielerorts direkt als queryFn uebergeben.
   listMitVersteckten: () => apiFetch<User[]>("/api/users?versteckte=1"),
   create: (body: {

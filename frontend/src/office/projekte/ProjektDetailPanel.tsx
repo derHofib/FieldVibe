@@ -90,7 +90,7 @@ export function ProjektDetailPanel({
     queryFn: () => vorgaengeApi.list({ projekt_id: projekt.id }),
   });
 
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list, enabled: tab === "zeit" });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: tab === "zeit" });
 
   const { data: zeiterfassungListe } = useQuery({
     queryKey: ["zeiterfassung", "projekt", projekt.id],

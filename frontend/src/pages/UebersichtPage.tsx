@@ -149,7 +149,7 @@ export function UebersichtPage() {
     queryFn: mandantenApi.list,
     enabled: !isImpersonating,
   });
-  const { data: users } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   const { data: letzteEintraege } = useQuery({
     queryKey: ["audit-log", { limit: 5 }],
     queryFn: () => auditLogApi.list({ limit: 5 }),

@@ -183,8 +183,8 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
   const [auswahl, setAuswahl] = useState<string[]>([]);
 
   const { data: alleUser } = useQuery({
-    queryKey: ["users"],
-    queryFn: usersApi.list,
+    queryKey: ["users", "auswahl"],
+    queryFn: usersApi.auswahl,
     enabled: bearbeiten,
   });
   const techniker = alleUser?.filter((u) => u.nur_zugewiesene_kunden) ?? [];

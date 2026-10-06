@@ -68,7 +68,7 @@ export function DispoBoardPage() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const weekEnd = addDays(weekStart, 7);
 
-  const { data: technikerListe } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
   // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
   // aktive mandant_admin/custom-Account kann als Techniker fuer einen
   // Termin eingeplant werden, seit die vier festen Rollen entfallen sind.

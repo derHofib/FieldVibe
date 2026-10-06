@@ -32,8 +32,7 @@ from app.schemas.projekt import (
     ProjektSpalteUpdate,
     ProjektUpdate,
 )
-from app.services import papierkorb_service
-from app.services.rechte_service import hat_recht
+from app.services import berechtigung_service, papierkorb_service
 from app.services.zuweisung_service import (
     erlaubte_kunde_ids,
     erlaubte_user_ids,
@@ -117,9 +116,7 @@ async def _hat_projekte_recht(session: AsyncSession, auth: AuthContext, aktion: 
     """Gleiche Logik wie require_recht(), aber als Bool statt als Dependency
     -- gebraucht, weil sich hier erst zur Laufzeit (anhand der Aufgabe)
     entscheidet, ob das Recht ueberhaupt gefragt ist."""
-    if auth.role != "custom":
-        return True
-    return await hat_recht(session, account_typ_id=auth.account_typ_id, user_id=auth.user_id, bereich="projekte", aktion=aktion)
+    return await berechtigung_service.hat_recht(session, auth, "projekte", aktion)
 
 
 async def _pruefe_zugriff_auf_aufgabe(
