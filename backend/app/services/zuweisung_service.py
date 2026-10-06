@@ -1,4 +1,5 @@
-from typing import TYPE_CHECKING
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -272,3 +273,99 @@ async def darf_mitarbeiterdaten_einsehen(
         return True
     erlaubt = await erlaubte_user_ids(session, auth, "mitarbeiterverwaltung", aktion)
     return erlaubt is None or ziel_user_id in erlaubt
+
+
+ZeitenAbwesenheitenFlag = Literal["darf_zeiten_buchen", "darf_abwesenheiten_verwalten"]
+
+
+async def _handlungsbereich(
+    session: AsyncSession, user_id: UUID, rolle: str, flag: ZeitenAbwesenheitenFlag
+) -> tuple[set[UUID] | None, bool]:
+    """(Bereich, hat_mitarbeiterverwaltung_recht). Bereich None = mandantweit.
+    Ohne Flag bleibt nur die leere Menge. Ohne mitarbeiterverwaltung-Recht bleibt es
+    beim Verhalten vor dem Organigramm (mandantweit), damit niemand ausgesperrt wird.
+    Mit Recht gilt der groessere Scope von bearbeiten/sehen (Vereinigung)."""
+    rechte = await berechtigung_service.effektive_rechte_gecacht(session, user_id=user_id, rolle=rolle)
+    if not rechte.flag(flag):
+        return set(), False
+    ziel = SimpleNamespace(user_id=user_id, role=rolle)
+    ergebnis: set[UUID] = set()
+    hat_recht = False
+    for aktion in ("bearbeiten", "sehen"):
+        if not rechte.hat("mitarbeiterverwaltung", aktion):
+            continue
+        hat_recht = True
+        teil = await berechtigung_service.user_ids_fuer_recht(
+            session, ziel, "mitarbeiterverwaltung", aktion
+        )
+        if teil is None:
+            return None, True
+        ergebnis |= teil
+    if not hat_recht:
+        return None, False
+    return ergebnis | {user_id}, True
+
+
+async def mitarbeiter_im_handlungsbereich(
+    session: AsyncSession, auth: "AuthContext", flag: ZeitenAbwesenheitenFlag
+) -> set[UUID] | None:
+    """None = alle Mitarbeiter des Mandanten, sonst die Nutzer, fuer die der Nutzer
+    Zeiten buchen bzw. Abwesenheiten verwalten darf (inkl. er selbst; die
+    Selbstgenehmigungs-Sperre greift nur in darf_fuer_mitarbeiter_handeln).
+    Fuer Listen (offene Antraege, Team-Kalender)."""
+    cache = await _scope_cache(session, auth)
+    key = ("handlungsbereich", auth.user_id, flag)
+    if key not in cache:
+        cache[key] = await _handlungsbereich(session, auth.user_id, auth.role, flag)
+    return cache[key][0]
+
+
+async def _gibt_anderen_freigeber(
+    session: AsyncSession, mandant_id: UUID, ziel_user_id: UUID, flag: ZeitenAbwesenheitenFlag
+) -> bool:
+    kandidaten = await session.execute(
+        select(User.id, User.role).where(
+            User.mandant_id == mandant_id,
+            User.id != ziel_user_id,
+            User.aktiv.is_(True),
+            User.role.in_(MITARBEITER_ROLLEN),
+        )
+    )
+    for user_id, rolle in kandidaten.all():
+        bereich, _ = await _handlungsbereich(session, user_id, rolle, flag)
+        if bereich is None or ziel_user_id in bereich:
+            return True
+    return False
+
+
+async def darf_fuer_mitarbeiter_handeln(
+    session: AsyncSession,
+    auth: "AuthContext",
+    ziel_user_id: UUID,
+    flag: ZeitenAbwesenheitenFlag,
+    selbst_erlaubt: bool,
+) -> bool:
+    """Darf der Nutzer fuer ziel_user_id Zeiten buchen bzw. Abwesenheiten verwalten?
+    Voraussetzung bleibt das Account-Typ-Flag; zusaetzlich begrenzt ein
+    mitarbeiterverwaltung-Recht die Reichweite auf dessen Scope (Teilbaum der
+    gewaehrenden Position, also auch Vorgesetzte fuer ihre Untergebenen bis
+    einschliesslich des Teamleiters selbst). selbst_erlaubt=False (Genehmigen,
+    Stornieren, Anspruch): eigene Daten nur fuer mandant_admin/alle_rechte, ohne
+    mitarbeiterverwaltung-Recht (altes Verhalten) oder wenn im Mandanten sonst
+    niemand fuer den Nutzer freigeben kann (nichts darf haengen bleiben).
+    selbst_erlaubt=True: eigene Daten immer (bestehende Logik der Aufrufer)."""
+    if ziel_user_id == auth.user_id and selbst_erlaubt:
+        return True
+    bereich, hat_recht = await _handlungsbereich(session, auth.user_id, auth.role, flag)
+    if bereich is not None and not bereich:
+        return False
+    if ziel_user_id != auth.user_id:
+        return bereich is None or ziel_user_id in bereich
+    rechte = await berechtigung_service.effektive_rechte_gecacht(
+        session, user_id=auth.user_id, rolle=auth.role
+    )
+    if rechte.alle_rechte or not hat_recht:
+        return True
+    if auth.mandant_id is None:
+        return False
+    return not await _gibt_anderen_freigeber(session, auth.mandant_id, auth.user_id, flag)

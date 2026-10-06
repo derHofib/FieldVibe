@@ -25,6 +25,7 @@ from app.schemas.arbeitszeit import (
 )
 from app.services import arbeitszeit_service
 from app.services.rechte_service import darf_abwesenheiten_verwalten
+from app.services.zuweisung_service import darf_fuer_mitarbeiter_handeln
 
 router = APIRouter(
     prefix="/api/arbeitszeit",
@@ -56,6 +57,13 @@ async def _ziel_user(
         user = await session.get(User, ziel_id)
         if user is None or user.mandant_id != auth.mandant_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nutzer nicht gefunden")
+    if (schreiben or ziel_id != auth.user_id) and not await darf_fuer_mitarbeiter_handeln(
+        session, auth, ziel_id, "darf_abwesenheiten_verwalten", selbst_erlaubt=not schreiben
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Keine Berechtigung für diesen Mitarbeiter",
+        )
     return ziel_id
 
 

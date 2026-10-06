@@ -22,6 +22,9 @@ from app.schemas.abwesenheit import (
 )
 from app.services import abwesenheit_service as svc
 from app.services.rechte_service import darf_abwesenheiten_verwalten
+from app.services.zuweisung_service import darf_fuer_mitarbeiter_handeln, mitarbeiter_im_handlungsbereich
+
+_FLAG = "darf_abwesenheiten_verwalten"
 
 router = APIRouter(
     prefix="/api/abwesenheiten",
@@ -36,6 +39,13 @@ async def _darf_verwalten(auth: AuthContext, session: AsyncSession) -> bool:
 
 async def _verwalten_pruefen(auth: AuthContext, session: AsyncSession, detail: str) -> None:
     if not await _darf_verwalten(auth, session):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+
+
+async def _bereich_pruefen(
+    auth: AuthContext, session: AsyncSession, ziel_id: UUID, detail: str, *, selbst_erlaubt: bool = False
+) -> None:
+    if not await darf_fuer_mitarbeiter_handeln(session, auth, ziel_id, _FLAG, selbst_erlaubt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
 
@@ -54,6 +64,7 @@ async def _ziel_user(user_id: UUID | None, auth: AuthContext, session: AsyncSess
     if ziel_id != auth.user_id:
         await _verwalten_pruefen(auth, session, detail)
         await _user_pruefen(ziel_id, auth, session)
+        await _bereich_pruefen(auth, session, ziel_id, detail, selbst_erlaubt=True)
     return ziel_id
 
 
@@ -131,8 +142,9 @@ async def antrag_stellen(
             detail="Im gewählten Zeitraum existiert bereits ein offener oder genehmigter Antrag",
         )
 
-    verwaltet = await _darf_verwalten(auth, session)
-    # Krankheit braucht keine Genehmigung; sonst nur, wer verwalten darf.
+    # Krankheit braucht keine Genehmigung; sonst nur, wer fuer diese Person verwalten
+    # darf (eigener Antrag: nur ohne Selbstgenehmigungs-Sperre).
+    verwaltet = await darf_fuer_mitarbeiter_handeln(session, auth, ziel_id, _FLAG, False)
     direkt = body.art == "krankheit" or verwaltet
     jetzt = datetime.now(timezone.utc)
     antrag = Abwesenheitsantrag(
@@ -172,7 +184,15 @@ async def antraege_auflisten(
         await _verwalten_pruefen(auth, session, "Keine Berechtigung, Abwesenheiten aller Mitarbeiter zu sehen")
         if user_id is not None:
             await _user_pruefen(user_id, auth, session)
+            await _bereich_pruefen(
+                auth, session, user_id, "Keine Berechtigung, Abwesenheiten dieses Mitarbeiters zu sehen",
+                selbst_erlaubt=True,
+            )
             stmt = stmt.where(Abwesenheitsantrag.user_id == user_id)
+        else:
+            bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
+            if bereich is not None:
+                stmt = stmt.where(Abwesenheitsantrag.user_id.in_(bereich))
     else:
         ziel_id = await _ziel_user(user_id, auth, session, "Keine Berechtigung, fremde Abwesenheiten zu sehen")
         stmt = stmt.where(Abwesenheitsantrag.user_id == ziel_id)
@@ -200,6 +220,7 @@ async def genehmigen(
 ) -> AbwesenheitRead:
     await _verwalten_pruefen(auth, session, "Keine Berechtigung zum Genehmigen von Abwesenheiten")
     antrag = await _antrag_laden(antrag_id, session)
+    await _bereich_pruefen(auth, session, antrag.user_id, "Keine Berechtigung zum Genehmigen dieses Antrags")
     if antrag.status != "offen":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nur offene Anträge können genehmigt werden")
     antrag.status = "genehmigt"
@@ -219,6 +240,7 @@ async def ablehnen(
 ) -> AbwesenheitRead:
     await _verwalten_pruefen(auth, session, "Keine Berechtigung zum Ablehnen von Abwesenheiten")
     antrag = await _antrag_laden(antrag_id, session)
+    await _bereich_pruefen(auth, session, antrag.user_id, "Keine Berechtigung zum Ablehnen dieses Antrags")
     if antrag.status != "offen":
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Nur offene Anträge können abgelehnt werden")
     antrag.status = "abgelehnt"
@@ -237,7 +259,7 @@ async def zurueckziehen(
     session: AsyncSession = Depends(get_db),
 ) -> AbwesenheitRead:
     antrag = await _antrag_laden(antrag_id, session)
-    verwaltet = await _darf_verwalten(auth, session)
+    verwaltet = await darf_fuer_mitarbeiter_handeln(session, auth, antrag.user_id, _FLAG, False)
     if antrag.user_id != auth.user_id and not verwaltet:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Abwesenheitsantrag nicht gefunden")
     if antrag.status == "genehmigt":
@@ -330,6 +352,7 @@ async def anspruch_setzen(
     if not 2000 <= jahr <= 2100:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Ungültiges Jahr")
     await _user_pruefen(user_id, auth, session)
+    await _bereich_pruefen(auth, session, user_id, "Keine Berechtigung zum Pflegen des Urlaubsanspruchs dieses Mitarbeiters")
     zeile = (
         await session.execute(
             select(Urlaubsanspruch).where(Urlaubsanspruch.user_id == user_id, Urlaubsanspruch.jahr == jahr)
@@ -361,20 +384,16 @@ async def kalender(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Zeitraum darf höchstens {svc.KALENDER_MAX_TAGE} Tage umfassen",
         )
+    stmt = select(Abwesenheitsantrag).where(
+        Abwesenheitsantrag.status == "genehmigt",
+        Abwesenheitsantrag.von <= bis,
+        Abwesenheitsantrag.bis >= von,
+    )
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
+    if bereich is not None:
+        stmt = stmt.where(Abwesenheitsantrag.user_id.in_(bereich))
     antraege = list(
-        (
-            await session.execute(
-                select(Abwesenheitsantrag)
-                .where(
-                    Abwesenheitsantrag.status == "genehmigt",
-                    Abwesenheitsantrag.von <= bis,
-                    Abwesenheitsantrag.bis >= von,
-                )
-                .order_by(Abwesenheitsantrag.von, Abwesenheitsantrag.user_id)
-            )
-        )
-        .scalars()
-        .all()
+        (await session.execute(stmt.order_by(Abwesenheitsantrag.von, Abwesenheitsantrag.user_id))).scalars().all()
     )
     tage = await svc.tage_je_antrag(session, antraege)
     namen = await _namen(session, {a.user_id for a in antraege})

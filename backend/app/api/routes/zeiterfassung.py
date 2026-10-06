@@ -48,11 +48,20 @@ from app.services.rechnung_service import km_gesperrt
 from app.services.rechte_service import darf_zeiten_buchen
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 from app.services.zuweisung_service import (
+    darf_fuer_mitarbeiter_handeln,
     darf_mitarbeiterdaten_einsehen,
+    mitarbeiter_im_handlungsbereich,
     erlaubte_kunde_ids,
     erlaubte_user_ids,
     require_kunde_zugewiesen,
 )
+
+_FLAG = "darf_zeiten_buchen"
+
+
+async def _darf_fuer(session: AsyncSession, auth: AuthContext, techniker_id: UUID) -> bool:
+    return await darf_fuer_mitarbeiter_handeln(session, auth, techniker_id, _FLAG, selbst_erlaubt=True)
+
 
 router = APIRouter(
     prefix="/api/zeiterfassung",
@@ -559,7 +568,7 @@ async def stop_timer(
         # Recht "Zeiten buchen", sonst wie gehabt "nicht gefunden" statt
         # 403, um nicht zu verraten, dass fuer diese ID ein fremder Eintrag
         # existiert.
-        if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
+        if not await _darf_fuer(session, auth, eintrag.techniker_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
             )
@@ -750,10 +759,10 @@ async def manuellen_eintrag_anlegen(
         # "Fuer einen anderen nachtragen" (Konzept 6.2) -- nur mit dem Recht
         # "Zeiten buchen". Der neue Eintrag startet trotzdem als 'vermerkt',
         # nachtragen ersetzt das Vormerken/Buchen nicht.
-        if not await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id):
+        if not await _darf_fuer(session, auth, body.techniker_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Nur mit dem Recht 'Zeiten buchen' für andere nachtragbar",
+                detail="Nur mit dem Recht 'Zeiten buchen' für Mitarbeiter in deinem Zuständigkeitsbereich nachtragbar",
             )
         ziel_user = await session.get(User, body.techniker_id)
         if ziel_user is None:
@@ -836,9 +845,7 @@ async def zeiterfassung_aktualisieren(
         )
 
     ist_fremd = eintrag.techniker_id != auth.user_id
-    if ist_fremd and not await darf_zeiten_buchen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
+    if ist_fremd and not await _darf_fuer(session, auth, eintrag.techniker_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
@@ -953,9 +960,7 @@ async def zeiterfassung_loeschen(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
     ist_fremd = eintrag.techniker_id != auth.user_id
-    if ist_fremd and not await darf_zeiten_buchen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
+    if ist_fremd and not await _darf_fuer(session, auth, eintrag.techniker_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
@@ -1009,13 +1014,14 @@ async def zeiterfassung_vormerken(
     Buchungsberechtigte fuer beliebige. Alles oder nichts: scheitert die
     Pruefung bei einem Eintrag, wird keiner vorgemerkt."""
     berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
     eintraege = await _eintraege_laden(session, body.ids)
     fehler: list[str] = []
     for eid in body.ids:
         e = eintraege.get(eid)
         if e is None:
             fehler.append(f"{eid} (nicht gefunden)")
-        elif not berechtigt and e.techniker_id != auth.user_id:
+        elif e.techniker_id != auth.user_id and not (berechtigt and (bereich is None or e.techniker_id in bereich)):
             fehler.append(f"{eid} (nicht deine Zeit)")
         elif e.buchungsstatus != "vermerkt":
             fehler.append(f"{eid} (Status: {e.buchungsstatus})")
@@ -1063,13 +1069,14 @@ async def zeiterfassung_vormerkung_zurueckziehen(
     """vorgemerkt -> vermerkt (Konzept 6.1). Jeder fuer eigene Eintraege,
     Buchungsberechtigte fuer beliebige."""
     berechtigt = await darf_zeiten_buchen(session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
     eintraege = await _eintraege_laden(session, body.ids)
     fehler: list[str] = []
     for eid in body.ids:
         e = eintraege.get(eid)
         if e is None:
             fehler.append(f"{eid} (nicht gefunden)")
-        elif not berechtigt and e.techniker_id != auth.user_id:
+        elif e.techniker_id != auth.user_id and not (berechtigt and (bereich is None or e.techniker_id in bereich)):
             fehler.append(f"{eid} (nicht deine Zeit)")
         elif e.buchungsstatus != "vorgemerkt":
             fehler.append(f"{eid} (Status: {e.buchungsstatus})")
@@ -1114,11 +1121,14 @@ async def zeiterfassung_buchen(
             status_code=status.HTTP_403_FORBIDDEN, detail="Recht 'Zeiten buchen' erforderlich"
         )
     eintraege = await _eintraege_laden(session, body.ids)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
     fehler: list[str] = []
     for eid in body.ids:
         e = eintraege.get(eid)
         if e is None:
             fehler.append(f"{eid} (nicht gefunden)")
+        elif bereich is not None and e.techniker_id not in bereich:
+            fehler.append(f"{eid} (außerhalb deines Zuständigkeitsbereichs)")
         elif e.buchungsstatus not in ("vermerkt", "vorgemerkt"):
             fehler.append(f"{eid} (Status: {e.buchungsstatus})")
         elif e.ende_at is None:
@@ -1172,11 +1182,14 @@ async def zeiterfassung_buchung_stornieren(
     if not body.grund.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Grund ist Pflicht")
     eintraege = await _eintraege_laden(session, body.ids)
+    bereich = await mitarbeiter_im_handlungsbereich(session, auth, _FLAG)
     fehler: list[str] = []
     for eid in body.ids:
         e = eintraege.get(eid)
         if e is None:
             fehler.append(f"{eid} (nicht gefunden)")
+        elif bereich is not None and e.techniker_id not in bereich:
+            fehler.append(f"{eid} (außerhalb deines Zuständigkeitsbereichs)")
         elif e.buchungsstatus != "gebucht":
             fehler.append(f"{eid} (Status: {e.buchungsstatus})")
         elif await km_gesperrt(session, e):
@@ -1222,9 +1235,7 @@ async def zeiterfassung_verlauf(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
-    if eintrag.techniker_id != auth.user_id and not await darf_zeiten_buchen(
-        session, role=auth.role, account_typ_id=auth.account_typ_id, user_id=auth.user_id
-    ):
+    if eintrag.techniker_id != auth.user_id and not await _darf_fuer(session, auth, eintrag.techniker_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Zeiterfassung nicht gefunden"
         )
