@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import { authApi } from "../api/endpoints";
 import Blueprint from "../components/Blueprint";
 import { Logo } from "../components/brand/Logo";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -102,6 +103,7 @@ export function ResetPasswordPage() {
             Zurück zur Anmeldung
           </Link>
         </Blueprint>
+        <RechtlicheLinks className="mt-6" />
       </div>
     </div>
   );

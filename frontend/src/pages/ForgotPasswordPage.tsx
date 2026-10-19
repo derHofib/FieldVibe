@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { authApi } from "../api/endpoints";
 import Blueprint from "../components/Blueprint";
 import { Logo } from "../components/brand/Logo";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -71,6 +72,7 @@ export function ForgotPasswordPage() {
             Zurück zur Anmeldung
           </Link>
         </Blueprint>
+        <RechtlicheLinks className="mt-6" />
       </div>
     </div>
   );
