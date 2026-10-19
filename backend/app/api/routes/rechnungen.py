@@ -1021,7 +1021,9 @@ async def _auf_bezahlt_setzen(
     beiden Faellen identisch ist und NIE bei teilweise_bezahlt feuert."""
     rechnung.status = "bezahlt"
     rechnung.bezahlt_am = bezahlt_am
-    if rechnung.vorgang_id is not None:
+    # Ein bezahlter Abschlag schliesst den Vorgang nicht ab -- die Leistung
+    # ist erst mit der Schlussrechnung abgerechnet.
+    if rechnung.vorgang_id is not None and rechnung.rechnungsart != "abschlag":
         vorgang = await session.get(Vorgang, rechnung.vorgang_id)
         if vorgang is not None and vorgang.status != "abgerechnet":
             vorgang.status = "abgerechnet"

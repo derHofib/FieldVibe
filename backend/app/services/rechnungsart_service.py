@@ -11,7 +11,7 @@ USt der Abschlaege wurde bereits mit diesen Rechnungen ausgewiesen.
 Papierkorb und kein Storno-Beleg. Entwuerfe zaehlen mit -- ein Abschlag im
 Entwurf belegt sein Kontingent, bis er versendet oder geloescht wird."""
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -32,6 +32,7 @@ from app.services import angebot_service, rechnung_service, steuer_service
 from app.services.numbering_service import next_rechnungsnummer
 
 _NULL = Decimal("0")
+_MENGE_SCHRITT = Decimal("0.01")
 ABSCHLAG_EINHEIT = "psch"
 # Abschlaege, die schon beim Kunden sind -- nur diese duerfen angerechnet werden.
 _ANRECHENBARE_STATUS = ("versendet", "teilweise_bezahlt", "bezahlt")
@@ -503,13 +504,17 @@ async def erstelle_gutschrift(
             if wahl.position_id in gesehen:
                 raise _unverarbeitbar(f"Position {position.position} ist mehrfach angegeben")
             gesehen.add(wahl.position_id)
+            # Die Spalte hat zwei Nachkommastellen -- weitere wuerden still abgeschnitten.
+            menge = wahl.menge.quantize(_MENGE_SCHRITT, rounding=ROUND_HALF_UP)
+            if menge <= 0:
+                raise _unverarbeitbar(f"Position {position.position}: Die Gutschriftsmenge muss mindestens 0,01 betragen")
             rest = position.menge - gutgeschrieben.get(position.id, _NULL)
-            if wahl.menge > rest:
+            if menge > rest:
                 raise _unverarbeitbar(
-                    f"Position {position.position}: Gutschriftsmenge {wahl.menge:f} übersteigt die noch "
+                    f"Position {position.position}: Gutschriftsmenge {menge:f} übersteigt die noch "
                     f"gutschreibbare Menge {max(rest, _NULL):f}"
                 )
-            auswahl.append((position, wahl.menge))
+            auswahl.append((position, menge))
         auswahl.sort(key=lambda a: a[0].position)
 
     rechnungsnummer = await next_rechnungsnummer(session, original.mandant_id)

@@ -1230,3 +1230,57 @@ async def test_migration_0108_up_down_up(make_mandant, make_user, make_kunde):
     finally:
         await _migrieren("upgrade", "head")
         engine.dispose()
+
+
+# --- Nachtraege ---------------------------------------------------------------------------
+
+
+async def test_bezahlter_abschlag_schliesst_den_vorgang_nicht_ab(client, make_mandant, make_user, make_kunde):
+    from app.models.vorgang import Vorgang
+
+    _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    angebot = await _angebot(client, h, kunde)
+    vorgang_id = uuid.UUID(angebot["auftrag_vorgang_id"])
+    abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="40")
+    bezahlt = await _zahlung(client, h, abschlag["id"], abschlag["betrag_brutto"])
+    assert bezahlt["status"] == "bezahlt" and bezahlt["vorgang_id"] == str(vorgang_id)
+    async with system_session() as session:
+        assert (await session.get(Vorgang, vorgang_id)).status != "abgerechnet"
+
+    schluss = await _versenden(client, h, (await _ok(await _aus_angebot(client, h, angebot["id"], "schluss")))["id"])
+    await _zahlung(client, h, schluss["id"], schluss["offener_betrag"])
+    async with system_session() as session:
+        assert (await session.get(Vorgang, vorgang_id)).status == "abgerechnet"
+
+
+async def test_gutschriftsmenge_wird_auf_zwei_nachkommastellen_geprueft(client, make_mandant, make_user, make_kunde):
+    _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    position_id = original["positionen"][0]["id"]
+    zu_klein = await _gutschrift(client, h, original["id"], positionen=[{"position_id": position_id, "menge": "0.004"}])
+    assert zu_klein.status_code == 422 and "mindestens 0,01" in zu_klein.json()["detail"]
+    gutschrift = await _ok(
+        await _gutschrift(client, h, original["id"], positionen=[{"position_id": position_id, "menge": "0.005"}])
+    )
+    assert gutschrift["positionen"][0]["menge"] == "0.01"
+
+
+async def test_schluss_versand_prueft_die_angerechneten_abschlaege(client, make_mandant, make_user, make_kunde):
+    """Wird ein Abschlag zwischen Entwurf und Versand anderswo angerechnet (z. B. nach Wiederherstellung
+    aus dem Papierkorb), darf die Schlussrechnung nicht versendet werden."""
+    _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    angebot = await _angebot(client, h, kunde)
+    abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="30")
+    erster = await _ok(await _aus_angebot(client, h, angebot["id"], "schluss"))
+    # Der erste Entwurf geht in den Papierkorb, ein zweiter rechnet den Abschlag an ...
+    assert (await client.delete(f"/api/rechnungen/{erster['id']}", headers=h)).status_code == 204
+    zweiter = await _ok(await _aus_angebot(client, h, angebot["id"], "schluss"))
+    assert [a["rechnung_id"] for a in zweiter["angerechnete_abschlaege"]] == [abschlag["id"]]
+    # ... und der erste wird wiederhergestellt: nun stehen beide im Entwurf, der Versand des ersten scheitert.
+    async with system_session() as session:
+        wieder = await session.get(Rechnung, uuid.UUID(erster["id"]))
+        wieder.geloescht_am = None
+        await session.commit()
+    resp = await client.patch(f"/api/rechnungen/{erster['id']}", headers=h, json={"status": "versendet"})
+    assert resp.status_code == 422
+    assert f"Abschlag {abschlag['rechnungsnummer']} ist bereits in Rechnung {zweiter['rechnungsnummer']}" in resp.json()["detail"]
