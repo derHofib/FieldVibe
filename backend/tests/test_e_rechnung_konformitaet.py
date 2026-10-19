@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -23,6 +24,19 @@ from tests.test_steuer_freischaltung import (
     _POS_Z,
     _rechnung,
     _versenden,
+)
+from tests.test_rechnungsarten import (
+    EINZEL_POSITION,
+    GRUPPEN_POSITIONEN,
+    MISCH_POSITIONEN,
+    _abschlag_versendet,
+    _angebot,
+    _aus_angebot,
+    _gutschrift,
+    _ok,
+    _rechnung_direkt,
+    _versenden as _versenden_mit_headers,
+    _versendete_rechnung,
 )
 from tests.test_steuer_je_position import _admin
 
@@ -242,3 +256,120 @@ async def test_rechnung_ohne_positionen(client, make_mandant, make_user, make_ku
     assert (await _versenden(client, token, rechnung.json()["id"])).status_code == 200
     xml = await client.get(f"/api/rechnungen/{rechnung.json()['id']}/xml", headers=auth_headers(token))
     _pruefe_en16931(xml.content, tmp_path, "ohne_positionen")
+
+
+# --- Rechnungsarten (Migration 0108): Abschlag, Schlussrechnung, Gutschrift ---------------------
+
+
+async def _xml_von(client, h, rechnung) -> bytes:
+    assert rechnung["xml_object_key"] is not None
+    antwort = await client.get(f"/api/rechnungen/{rechnung['id']}/xml", headers=h)
+    assert antwort.status_code == 200
+    return antwort.content
+
+
+@pytest.mark.asyncio
+async def test_abschlag(client, make_mandant, make_user, make_kunde, tmp_path):
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    h = auth_headers(token)
+    angebot = await _angebot(client, h, kunde)
+    abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="33.33")
+    _pruefe_en16931(await _xml_von(client, h, abschlag), tmp_path, "abschlag")
+
+
+@pytest.mark.asyncio
+async def test_schluss_mit_zwei_abschlaegen(client, make_mandant, make_user, make_kunde, tmp_path):
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    h = auth_headers(token)
+    angebot = await _angebot(client, h, kunde)
+    await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="30")
+    await _abschlag_versendet(client, h, angebot["id"], abschlag_netto="199.99")
+    schluss = await _ok(await _aus_angebot(client, h, angebot["id"], "schluss"))
+    schluss = await _versenden_mit_headers(client, h, schluss["id"])
+    assert len([p for p in schluss["positionen"] if p["abschlag_rechnung_id"]]) == 2
+    _pruefe_en16931(await _xml_von(client, h, schluss), tmp_path, "schluss_zwei_abschlaege")
+
+
+@pytest.mark.asyncio
+async def test_schluss_mit_zwei_abschlaegen_mischsteuer(
+    client, make_mandant, make_user, make_kunde, make_vorgang, tmp_path
+):
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    h = auth_headers(token)
+    vorgang = await make_vorgang(mandant=SimpleNamespace(id=kunde.mandant_id), kunde=kunde, titel="Umbau")
+    for position in (
+        {"beschreibung": "Abschlag 19", "einzelpreis": "500"},
+        {"beschreibung": "Abschlag 7", "einzelpreis": "300", "steuer_satz": "7"},
+    ):
+        abschlag = await _rechnung_direkt(client, h, kunde, [position], rechnungsart="abschlag", vorgang_id=str(vorgang.id))
+        await _versenden_mit_headers(client, h, abschlag["id"])
+    schluss = await _rechnung_direkt(client, h, kunde, MISCH_POSITIONEN, vorgang_id=str(vorgang.id))
+    await _ok(await client.post(f"/api/rechnungen/{schluss['id']}/abschlaege-anrechnen", headers=h), 200)
+    schluss = await _versenden_mit_headers(client, h, schluss["id"])
+    # Die 7-%-Gruppe ist durch den Abschlag negativ (-100 netto), die 19-%-Gruppe positiv.
+    assert {g["satz"]: g["netto"] for g in schluss["steuergruppen"]} == {"19.00": "500.00", "7.00": "-100.00"}
+    _pruefe_en16931(await _xml_von(client, h, schluss), tmp_path, "schluss_mischsteuer")
+
+
+@pytest.mark.asyncio
+async def test_gutschrift_teilweise_mehrere_steuergruppen(client, make_mandant, make_user, make_kunde, tmp_path):
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    h = auth_headers(token)
+    original = await _versendete_rechnung(client, h, kunde, GRUPPEN_POSITIONEN)
+    leistung, material, pv = original["positionen"]
+    gutschrift = await _ok(
+        await _gutschrift(
+            client,
+            h,
+            original["id"],
+            positionen=[
+                {"position_id": leistung["id"], "menge": "1.5"},
+                {"position_id": material["id"], "menge": "2"},
+                {"position_id": pv["id"], "menge": "1"},
+            ],
+        )
+    )
+    _pruefe_en16931(await _xml_von(client, h, gutschrift), tmp_path, "gutschrift_teilweise")
+
+
+@pytest.mark.asyncio
+async def test_gutschrift_auf_rechnung_ohne_storno(client, make_mandant, make_user, make_kunde, tmp_path):
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    h = auth_headers(token)
+    original = await _versendete_rechnung(client, h, kunde, EINZEL_POSITION)
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True))
+    xml = await _xml_von(client, h, gutschrift)
+    assert b"<ram:InvoiceReferencedDocument>" in xml and original["rechnungsnummer"].encode() in xml
+    _pruefe_en16931(xml, tmp_path, "gutschrift_voll")
+
+
+@pytest.mark.asyncio
+async def test_gutschrift_auf_schlussrechnung_mit_gemischten_vorzeichen(
+    client, make_mandant, make_user, make_kunde, tmp_path
+):
+    # Die Abzugszeile ist negativ, die Gutschrift darauf positiv: Zeilen mit beiden Vorzeichen (BR-27).
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    h = auth_headers(token)
+    angebot = await _angebot(client, h, kunde)
+    await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="40")
+    schluss = await _ok(await _aus_angebot(client, h, angebot["id"], "schluss"))
+    schluss = await _versenden_mit_headers(client, h, schluss["id"])
+    gutschrift = await _ok(await _gutschrift(client, h, schluss["id"], alle=True))
+    _pruefe_en16931(await _xml_von(client, h, gutschrift), tmp_path, "gutschrift_auf_schluss")
+
+
+@pytest.mark.asyncio
+async def test_gutschrift_kleinunternehmer(client, make_mandant, make_user, make_kunde, tmp_path):
+    token, kunde = await _admin_e_rechnung(
+        client,
+        make_mandant,
+        make_user,
+        make_kunde,
+        firmendaten={**_E_RECHNUNG, "ist_kleinunternehmer": True, "ust_idnr": None, "steuernummer": "12/345/67890"},
+    )
+    h = auth_headers(token)
+    original = await _versendete_rechnung(client, h, kunde, EINZEL_POSITION)
+    gutschrift = await _ok(
+        await _gutschrift(client, h, original["id"], positionen=[{"position_id": original["positionen"][0]["id"], "menge": "2.5"}])
+    )
+    _pruefe_en16931(await _xml_von(client, h, gutschrift), tmp_path, "gutschrift_kleinunternehmer")

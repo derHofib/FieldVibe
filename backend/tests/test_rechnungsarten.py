@@ -1,26 +1,23 @@
 """Rechnungsarten (Migration 0108): Rechnung aus Angebot, Abschlag, Schlussrechnung
 mit Anrechnung der Abschlaege, Gutschrift und die Offene-Posten-Regel."""
 import asyncio
-import os
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
 
 import pymupdf
 import pytest
-from alembic import command
-from alembic.config import Config
+from lxml import etree
 from sqlalchemy import select, text
 
 from app.db.session import system_session
 from app.models.angebot import Angebot
-from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.services import mahnwesen_service, rechnung_service
 from tests.conftest import auth_headers, login
-from tests.test_steuer_je_position import _checks, _sync_engine, _spalten
-
-_BACKEND = os.path.dirname(os.path.dirname(__file__))
+from tests.test_kundenportal import _kunden_login, _make_zugang
+from tests.test_steuer_freischaltung import _E_RECHNUNG, _KUNDE_E_RECHNUNG
+from tests.test_steuer_je_position import _migrieren, _spalten, _sync_engine
 
 # Angebot-Netto 1500,00 (19 %): zwei Positionen.
 ANGEBOT_POSITIONEN = [
@@ -1003,3 +1000,233 @@ async def test_op_regel_mahnwesen_mahnt_nur_den_unverrechneten_rest(client, make
         assert (await session.get(Rechnung, uuid.UUID(teil["id"]))).mahnstufe == 1
         assert (await session.get(Rechnung, uuid.UUID(voll["id"]))).mahnstufe == 0
         assert (await session.get(Rechnung, uuid.UUID(voll_gs["id"]))).mahnstufe == 0
+
+
+# --- PDF und E-Rechnung ------------------------------------------------------------------
+
+HINWEIS_ABSCHLAEGE = (
+    "Bereits gestellte Abschlagsrechnungen wurden netto angerechnet; die Umsatzsteuer der Abschläge "
+    "wurde bereits mit diesen Rechnungen ausgewiesen."
+)
+
+
+async def _pdf_text(client, h, rechnung_id) -> str:
+    resp = await client.get(f"/api/rechnungen/{rechnung_id}/pdf", headers=h)
+    assert resp.status_code == 200
+    with pymupdf.open(stream=resp.content, filetype="pdf") as dokument:
+        return " ".join(" ".join(seite.get_text() for seite in dokument).split())
+
+
+async def test_pdf_ueberschrift_je_rechnungsart(client, make_mandant, make_user, make_kunde):
+    _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    normal = await _versendete_rechnung(client, h, kunde)
+    text = await _pdf_text(client, h, normal["id"])
+    assert "Rechnung Nr. " + normal["rechnungsnummer"] in text
+    assert "Abschlagsrechnung" not in text and "Gutschrift" not in text and "Bereits gestellte" not in text
+
+    angebot = await _angebot(client, h, kunde)
+    abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="30")
+    assert "Abschlagsrechnung Nr. " + abschlag["rechnungsnummer"] in await _pdf_text(client, h, abschlag["id"])
+
+    schluss = await _versenden(client, h, (await _ok(await _aus_angebot(client, h, angebot["id"], "schluss")))["id"])
+    text = await _pdf_text(client, h, schluss["id"])
+    assert "Schlussrechnung Nr. " + schluss["rechnungsnummer"] in text
+    assert f"Abzüglich Abschlagsrechnung {abschlag['rechnungsnummer']} vom" in text
+    assert HINWEIS_ABSCHLAEGE in text
+    assert "-450,00" in text or "-450.00" in text  # negative Abzugszeile
+
+    gutschrift = await _ok(await _gutschrift(client, h, schluss["id"], alle=True, grund="Kulanz nach Reklamation"))
+    text = await _pdf_text(client, h, gutschrift["id"])
+    assert "Gutschrift Nr. " + gutschrift["rechnungsnummer"] in text
+    assert f"Bezug: Rechnung {schluss['rechnungsnummer']} vom {date.today().strftime('%d.%m.%Y')}" in text
+    assert "Grund: Kulanz nach Reklamation" in text
+    # Die Gutschrift ueber die Schlussrechnung enthaelt auch die Abzugszeile -> Hinweis nur, wenn Abzuege vorkommen.
+    assert "Bitte überweisen" not in text
+
+
+async def test_pdf_schluss_ohne_abzuege_hat_keinen_hinweis(client, make_mandant, make_user, make_kunde):
+    _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    angebot = await _angebot(client, h, kunde)
+    schluss = await _versenden(client, h, (await _ok(await _aus_angebot(client, h, angebot["id"], "schluss")))["id"])
+    text = await _pdf_text(client, h, schluss["id"])
+    assert "Schlussrechnung Nr." in text and "Bereits gestellte" not in text
+
+
+async def test_email_betreff_nennt_die_rechnungsart(client, make_mandant, make_user, make_kunde):
+    _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True))
+    resp = await client.post(
+        f"/api/rechnungen/{gutschrift['id']}/email", headers=h, json={"empfaenger": "kunde@example.de"}
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["betreff"] == f"Gutschrift {gutschrift['rechnungsnummer']}"
+    assert gutschrift["rechnungsnummer"] in resp.json()["inhalt"] and "unsere Gutschrift" in resp.json()["inhalt"]
+
+
+def _cii(xml: bytes):
+    return etree.fromstring(xml)
+
+
+async def _xml(client, h, rechnung_id) -> bytes:
+    resp = await client.get(f"/api/rechnungen/{rechnung_id}/xml", headers=h)
+    assert resp.status_code == 200, resp.text
+    return resp.content
+
+
+async def test_e_rechnung_typcodes_und_referenzen(client, make_mandant, make_user, make_kunde):
+    _, kunde, h = await _admin(
+        client, make_mandant, make_user, make_kunde, firmendaten=_E_RECHNUNG, **_KUNDE_E_RECHNUNG
+    )
+    ns = {"rsm": "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100", "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"}
+
+    def typcode(xml):
+        return _cii(xml).findtext(".//rsm:ExchangedDocument/ram:TypeCode", namespaces=ns)
+
+    normal = await _versendete_rechnung(client, h, kunde)
+    assert typcode(await _xml(client, h, normal["id"])) == "380"
+
+    angebot = await _angebot(client, h, kunde)
+    abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="30")
+    assert typcode(await _xml(client, h, abschlag["id"])) == "386"
+
+    schluss = await _versenden(client, h, (await _ok(await _aus_angebot(client, h, angebot["id"], "schluss")))["id"])
+    xml = await _xml(client, h, schluss["id"])
+    assert typcode(xml) == "380"
+    # Mehrere Abschlaege lassen sich im EN16931-Profil nicht als Referenz ausdruecken -> Rechnungsvermerk.
+    vermerke = [n.text for n in _cii(xml).findall(".//ram:IncludedNote/ram:Content", namespaces=ns)]
+    assert any(abschlag["rechnungsnummer"] in v and v.startswith("Netto angerechnete") for v in vermerke)
+    # Negative Abzugszeile: das Vorzeichen steckt in der Menge (BR-27), der Preis bleibt positiv.
+    abzug_zeile = [z for z in _cii(xml).findall(".//ram:IncludedSupplyChainTradeLineItem", namespaces=ns) if "Abzüglich" in etree.tostring(z, encoding="unicode")]
+    assert len(abzug_zeile) == 1
+    assert abzug_zeile[0].findtext(".//ram:NetPriceProductTradePrice/ram:ChargeAmount", namespaces=ns) == "450.00"
+    assert abzug_zeile[0].findtext(".//ram:BilledQuantity", namespaces=ns) == "-1.00"
+
+    gutschrift = await _ok(await _gutschrift(client, h, normal["id"], alle=True, grund="Falsche Menge berechnet"))
+    xml = await _xml(client, h, gutschrift["id"])
+    assert typcode(xml) == "381"
+    referenz = _cii(xml).find(".//ram:ApplicableHeaderTradeSettlement/ram:InvoiceReferencedDocument", namespaces=ns)
+    assert referenz.findtext("ram:IssuerAssignedID", namespaces=ns) == normal["rechnungsnummer"]
+    vermerke = [n.text for n in _cii(xml).findall(".//ram:IncludedNote/ram:Content", namespaces=ns)]
+    assert "Grund der Gutschrift: Falsche Menge berechnet" in vermerke
+
+    storno_original = await _versendete_rechnung(client, h, kunde)
+    storno = await _ok(await client.post(f"/api/rechnungen/{storno_original['id']}/storno", headers=h))
+    assert typcode(await _xml(client, h, storno["id"])) == "384"
+
+
+# --- Rechte, Mandantentrennung, Portal --------------------------------------------------
+
+
+async def test_neue_endpunkte_brauchen_das_recht_abrechnung_erstellen(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    angebot = await _angebot(client, h, kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    entwurf = await _rechnung_direkt(client, h, kunde, EINZEL_POSITION)
+    for rolle in ("mitarbeiter", "controller"):  # keine Abrechnung bzw. nur "sehen"
+        user = await make_user(mandant=mandant, role=rolle, password="pw-123456")
+        kopf = auth_headers(await login(client, user.email, "pw-123456"))
+        assert (await _aus_angebot(client, kopf, angebot["id"], "rechnung")).status_code == 403, rolle
+        assert (await _gutschrift(client, kopf, original["id"], alle=True)).status_code == 403, rolle
+        resp = await client.post(f"/api/rechnungen/{entwurf['id']}/abschlaege-anrechnen", headers=kopf)
+        assert resp.status_code == 403, rolle
+    # Der Disponent (abrechnung erstellen) darf.
+    dispo = await make_user(mandant=mandant, role="disponent", password="pw-123456")
+    kopf = auth_headers(await login(client, dispo.email, "pw-123456"))
+    await _ok(await _aus_angebot(client, kopf, angebot["id"], "rechnung"))
+
+
+async def test_fremde_rechnungen_und_abschlaege_sind_404_bzw_unzulaessig(client, make_mandant, make_user, make_kunde):
+    _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    _, fremder_kunde, fremd_h = await _admin(client, make_mandant, make_user, make_kunde)
+    fremd = await _versendete_rechnung(client, fremd_h, fremder_kunde)
+    fremd_entwurf = await _rechnung_direkt(client, fremd_h, fremder_kunde, EINZEL_POSITION)
+    assert (await _gutschrift(client, h, fremd["id"], alle=True)).status_code == 404
+    assert (await client.post(f"/api/rechnungen/{fremd_entwurf['id']}/abschlaege-anrechnen", headers=h)).status_code == 404
+
+    # Ein Abschlag eines anderen Mandanten laesst sich nicht anrechnen.
+    fremdes_angebot = await _angebot(client, fremd_h, fremder_kunde)
+    fremder_abschlag = await _abschlag_versendet(client, fremd_h, fremdes_angebot["id"], abschlag_prozent="10")
+    eigener = await _rechnung_direkt(client, h, kunde, EINZEL_POSITION)
+    resp = await client.post(
+        f"/api/rechnungen/{eigener['id']}/abschlaege-anrechnen",
+        headers=h,
+        json={"abschlag_rechnung_ids": [fremder_abschlag["id"]]},
+    )
+    assert resp.status_code in (409, 422)
+
+
+async def test_portal_zeigt_gutschrift_und_rechnungsart(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True, grund="Kulanz Portal"))
+    await _make_zugang(mandant, kunde, email="portal-gutschrift@example.de")
+    tokens = await _kunden_login(client, "portal-gutschrift@example.de", "kunden-pw-123")
+    kopf = auth_headers(tokens["access_token"])
+
+    liste = (await client.get("/api/kundenportal/rechnungen", headers=kopf)).json()
+    nach_id = {r["id"]: r for r in liste}
+    assert nach_id[gutschrift["id"]]["rechnungsart"] == "gutschrift"
+    assert nach_id[gutschrift["id"]]["gutschrift_grund"] == "Kulanz Portal"
+    assert nach_id[gutschrift["id"]]["betrag_brutto"] == "-1190.00"
+    assert nach_id[original["id"]]["offener_betrag"] == "0.00"  # durch Gutschrift verrechnet
+    assert nach_id[original["id"]]["status"] == "bezahlt"
+    for r in liste:  # keine internen Bezuege nach aussen
+        assert "bezug_rechnung_id" not in r and "angebot_id" not in r and "gutschriften" not in r
+
+    pdf = await client.get(f"/api/kundenportal/rechnungen/{gutschrift['id']}/pdf", headers=kopf)
+    assert pdf.status_code == 200
+    with pymupdf.open(stream=pdf.content, filetype="pdf") as dokument:
+        text = " ".join(" ".join(seite.get_text() for seite in dokument).split())
+    assert f"Bezug: Rechnung {original['rechnungsnummer']}" in text and "Grund: Kulanz Portal" in text
+
+
+# --- Migration 0108 ------------------------------------------------------------------------
+
+
+async def test_migration_0108_up_down_up(make_mandant, make_user, make_kunde):
+    mandant = await make_mandant()
+    user = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    kunde = await make_kunde(mandant=mandant)
+    engine = _sync_engine()
+    rechnung_id = uuid.uuid4()
+    try:
+        await _migrieren("downgrade", "0107")
+        assert not {"rechnungsart", "angebot_id", "bezug_rechnung_id", "gutschrift_grund"} & set(
+            _spalten(engine, "rechnungen")
+        )
+        assert not {"abschlag_rechnung_id", "bezug_position_id"} & set(_spalten(engine, "rechnung_positionen"))
+        with engine.begin() as conn:
+            conn.execute(text("SELECT set_config('app.is_super_admin', 'true', true)"))
+            conn.execute(
+                text(
+                    "INSERT INTO rechnungen (id, mandant_id, kunde_id, rechnungsnummer, betrag_netto, mwst_satz, "
+                    "erstellt_von, ist_storno) VALUES (:id, :m, :k, 'R-MIG-0108', 0, 19, :u, true)"
+                ),
+                {"id": rechnung_id, "m": mandant.id, "k": kunde.id, "u": user.id},
+            )
+
+        await _migrieren("upgrade", "head")
+
+        spalten = _spalten(engine, "rechnungen")
+        assert spalten["rechnungsart"]["nullable"] is False
+        assert {"angebot_id", "bezug_rechnung_id", "gutschrift_grund"} <= set(spalten)
+        assert {"abschlag_rechnung_id", "bezug_position_id"} <= set(_spalten(engine, "rechnung_positionen"))
+        with engine.begin() as conn:
+            conn.execute(text("SELECT set_config('app.is_super_admin', 'true', true)"))
+            # Bestand (auch Storno-Belege) bleibt 'rechnung'.
+            assert conn.execute(
+                text("SELECT rechnungsart, ist_storno FROM rechnungen WHERE id = :id"), {"id": rechnung_id}
+            ).one() == ("rechnung", True)
+            with pytest.raises(Exception, match="ck_rechnungen_rechnungsart_valid"):
+                conn.execute(text("UPDATE rechnungen SET rechnungsart = 'quatsch' WHERE id = :id"), {"id": rechnung_id})
+        with engine.begin() as conn:
+            conn.execute(text("SELECT set_config('app.is_super_admin', 'true', true)"))
+            for tabelle in ("rechnungen", "rechnung_positionen"):
+                relrls, relforce = conn.execute(
+                    text("SELECT relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = :t"), {"t": tabelle}
+                ).one()
+                assert relrls and relforce, tabelle
+    finally:
+        await _migrieren("upgrade", "head")
+        engine.dispose()
