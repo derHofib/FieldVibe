@@ -5,12 +5,15 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.zeit import in_lokal
 from app.db.session import system_session
+from app.models.angebot import Angebot
 from app.models.anlage import Anlage
 from app.models.audit_log import AuditLog
 from app.models.dauerauftrag import Dauerauftrag
 from app.models.dauerauftrag_ziel import DauerauftragZiel
 from app.models.inventurzyklus import InventurZyklus
+from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.notification import Notification
 from app.models.pruefmittel import Pruefmittel
@@ -18,6 +21,7 @@ from app.models.pruefzyklus import Pruefzyklus
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
+from app.services.angebot_service import positionen_fuer, summen
 from app.services.event_bus import event_bus
 from app.services.fahrzeug_zuweisung_service import technikern_zugewiesen
 from app.services.numbering_service import next_vorgangsnummer
@@ -490,6 +494,96 @@ async def run_wiedervorlage_scheduler(mandant_ids: list[UUID] | None = None) -> 
                 mandant_id=None,
                 actor_user_id=None,
                 aktion=WIEDERVORLAGE_SCHEDULER_AKTION,
+                entity_type="scheduler",
+                payload=ergebnis,
+            )
+        )
+        await session.flush()
+
+    return ergebnis
+
+
+ANGEBOT_NACHFASSEN_SCHEDULER_AKTION = "angebot_nachfassen_scheduler_run"
+ANGEBOT_ABLAUF_VORLAUF_TAGE = 2
+
+
+def _euro(betrag) -> str:
+    return f"{betrag:,.2f}".replace(",", "#").replace(".", ",").replace("#", ".") + " €"
+
+
+async def run_angebot_nachfassen(mandant_ids: list[UUID] | None = None) -> dict:
+    """Taeglicher Lauf: erinnert den Ersteller einmalig an ein versendetes,
+    unbeantwortetes Angebot -- wenn der Versand mindestens
+    `angebot_nachfass_tage` zurueckliegt oder die Gueltigkeit in den naechsten
+    zwei Tagen ablaeuft (bzw. schon abgelaufen ist). Kein eigener Status:
+    `nachgefasst_am` macht den Lauf idempotent, eine Erinnerung pro Angebot."""
+    settings = get_settings()
+    jetzt = datetime.now(timezone.utc)
+    heute = in_lokal(jetzt).date()
+    versandt_vor = jetzt - timedelta(days=settings.angebot_nachfass_tage)
+    ablauf_grenze = heute + timedelta(days=ANGEBOT_ABLAUF_VORLAUF_TAGE)
+    benachrichtigt = 0
+
+    async with system_session() as session:
+        stmt = select(Angebot).where(
+            Angebot.status == "versendet",
+            Angebot.nachgefasst_am.is_(None),
+            Angebot.geloescht_am.is_(None),
+            (Angebot.versendet_am <= versandt_vor)
+            | (Angebot.gueltig_bis.is_not(None) & (Angebot.gueltig_bis <= ablauf_grenze)),
+        )
+        if mandant_ids is not None:
+            stmt = stmt.where(Angebot.mandant_id.in_(mandant_ids))
+        faellige = (await session.execute(stmt)).scalars().all()
+
+        for angebot in faellige:
+            kunde = await session.get(Kunde, angebot.kunde_id)
+            _, brutto = summen(await positionen_fuer(session, angebot.id), angebot.mwst_satz)
+
+            if angebot.gueltig_bis is not None and angebot.gueltig_bis < heute:
+                grund = "ist abgelaufen"
+            elif angebot.gueltig_bis is not None and angebot.gueltig_bis <= ablauf_grenze:
+                grund = f"läuft am {angebot.gueltig_bis.strftime('%d.%m.%Y')} ab"
+            else:
+                tage = (jetzt - angebot.versendet_am).days
+                grund = f"seit {tage} Tagen unbeantwortet"
+
+            # Ist der Ersteller nicht mehr aktiv, sieht sonst niemand die
+            # Erinnerung -- dann wie bei den anderen Frist-Laeufen Admin/Dispo.
+            ersteller = await session.get(User, angebot.erstellt_von)
+            if ersteller is not None and ersteller.aktiv:
+                empfaenger_liste = [ersteller]
+            else:
+                empfaenger_liste = list(await _admins_und_disponenten(session, angebot.mandant_id))
+
+            for empfaenger in empfaenger_liste:
+                session.add(
+                    Notification(
+                        mandant_id=angebot.mandant_id,
+                        user_id=empfaenger.id,
+                        typ="angebot",
+                        titel=(
+                            f"Angebot {angebot.angebotsnummer} nachfassen: {kunde.name if kunde else 'Kunde'}, "
+                            f"{_euro(brutto)} brutto – {grund}"
+                        ),
+                        ref_entity_type="angebot",
+                        ref_entity_id=angebot.id,
+                    )
+                )
+                await event_bus.publish(
+                    angebot.mandant_id,
+                    "notification",
+                    {"typ": "angebot", "user_id": str(empfaenger.id), "angebot_id": str(angebot.id)},
+                )
+            angebot.nachgefasst_am = jetzt
+            benachrichtigt += 1
+
+        ergebnis = {"angebote_benachrichtigt": benachrichtigt}
+        session.add(
+            AuditLog(
+                mandant_id=None,
+                actor_user_id=None,
+                aktion=ANGEBOT_NACHFASSEN_SCHEDULER_AKTION,
                 entity_type="scheduler",
                 payload=ergebnis,
             )

@@ -1,9 +1,10 @@
 """Hintergrund-Worker: prueft stuendlich, welche Mandanten gerade ihre
 konfigurierte taegliche Scheduler-Stunde erreicht haben, und fuehrt fuer
-genau diese den Pruefzyklen-Scheduler, die Mahnwesen-Eskalation und den
-Kreditorenbuchhaltung-Faelligkeits-Check aus. Der E-Mail-Rechnungseingang-
-Import (siehe email_ingest_service.py) laeuft dagegen unabhaengig von der
-mandantenindividuellen Scheduler-Stunde bei jedem stuendlichen Tick fuer
+genau diese den Pruefzyklen-Scheduler, die Mahnwesen-Eskalation, das
+Angebot-Nachfassen und den Kreditorenbuchhaltung-Faelligkeits-Check aus.
+Der E-Mail-Rechnungseingang-Import (siehe email_ingest_service.py) laeuft
+dagegen unabhaengig von der mandantenindividuellen Scheduler-Stunde bei jedem
+stuendlichen Tick fuer
 alle Mandanten mit aktiver IMAP-Integration -- ein neuer Beleg soll nicht
 bis zu 24 Stunden auf die naechste Verarbeitung warten.
 
@@ -29,6 +30,7 @@ from app.services.mahnwesen_service import run_mahnwesen_eskalation
 from app.services.mail_sync_service import run_mail_sync
 from app.services.scheduler_service import (
     mandanten_faellig_um,
+    run_angebot_nachfassen,
     run_dauerauftraege_scheduler,
     run_prioritaet_scheduler,
     run_pruefzyklen_scheduler,
@@ -121,6 +123,15 @@ async def _run_hourly_tick() -> None:
             )
         except Exception:
             logger.exception("Wiedervorlage-Lauf fehlgeschlagen")
+
+        try:
+            angebot_ergebnis = await run_angebot_nachfassen(mandant_ids)
+            logger.info(
+                "Angebot-Nachfassen-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
+                jetzt.hour, len(mandant_ids), angebot_ergebnis,
+            )
+        except Exception:
+            logger.exception("Angebot-Nachfassen-Lauf fehlgeschlagen")
 
         try:
             mahn_ergebnis = await run_mahnwesen_eskalation(mandant_ids)

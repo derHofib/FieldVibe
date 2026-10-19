@@ -133,6 +133,12 @@ class Settings(BaseSettings):
     # keine automatisierte Anbindung dafuer gibt.
     basiszinssatz_prozent: float = 1.52
 
+    # --- Angebote: nach so vielen Tagen ohne Antwort (seit dem Versand) erinnert
+    # der Worker den Ersteller einmalig ans Nachfassen (siehe
+    # scheduler_service.run_angebot_nachfassen). Zusaetzlich unabhaengig davon,
+    # wenn die Gueltigkeit in den naechsten 2 Tagen ablaeuft.
+    angebot_nachfass_tage: int = 7
+
     # --- Kreditorenbuchhaltung: Vorlaufzeit in Tagen fuer die interne
     # Faelligkeits-/Skonto-Erinnerung (siehe kreditorenbuchhaltung_service.py)
     # -- gleiches Prinzip wie bei den Mahnstufen: feste, env-konfigurierbare
