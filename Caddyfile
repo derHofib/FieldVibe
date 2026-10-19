@@ -27,6 +27,11 @@
 # Skript in frontend/index.html und muss bei dessen Aenderung mitgezogen
 # werden (frontend/src/csp.test.ts prueft das). Kein 'unsafe-inline' fuer
 # Skripte; style-src braucht es wegen React-style-Props und Mapbox.
+# Mapbox-Telemetrie (events.mapbox.com) steht bewusst NICHT in connect-src.
+# Die Sperre garantiert der Client (frontend/src/components/mapboxSetup.ts);
+# diese Policy meldet im Report-Only-Modus nur, falls doch ein Request an den
+# Host geht (Regression nach mapbox-gl-Update). Blockieren wuerde erst die
+# scharf geschaltete Policy -- und die Feld-App im IP-Betrieb hat keine CSP.
 # Permissions-Policy: Kamera (QR-Scanner) und Geolocation (Standort-Feld)
 # nur fuer die eigene Origin, alles andere aus.
 (header_frontend) {
@@ -34,7 +39,7 @@
 	header {
 		X-Frame-Options "DENY"
 		Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()"
-		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-nDT144fgOivlgAAuKSOvAgN4HN/tZUXQQXkqZhl7Ycs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com; font-src 'self' data:; connect-src 'self' https://{$DOMAIN_API} https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src https://{$DOMAIN_S3}; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-nDT144fgOivlgAAuKSOvAgN4HN/tZUXQQXkqZhl7Ycs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com; font-src 'self' data:; connect-src 'self' https://{$DOMAIN_API} https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src https://{$DOMAIN_S3}; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	}
 }
 

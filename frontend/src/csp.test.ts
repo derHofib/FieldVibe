@@ -16,4 +16,12 @@ describe("CSP-Hash des Inline-Skripts", () => {
     const caddyfile = readFileSync(path.resolve(__dirname, "../../Caddyfile"), "utf-8");
     expect(caddyfile).toContain(`'sha256-${hash}'`);
   });
+
+  it("erlaubt die Mapbox-Telemetrie (events.mapbox.com) nicht", () => {
+    const caddyfile = readFileSync(path.resolve(__dirname, "../../Caddyfile"), "utf-8");
+    const zeile = caddyfile.split("\n").find((l) => l.trim().startsWith("Content-Security-Policy-Report-Only "));
+    expect(zeile).toBeDefined();
+    expect(zeile).not.toContain("events.mapbox");
+    expect(zeile).toContain("https://api.mapbox.com");
+  });
 });

@@ -327,6 +327,35 @@ Voraussetzung: ein Mapbox-Account mit einem Access-Token (der Standard
    Neue Standorte/Anlagen werden ab aktiviertem Modul automatisch beim
    Anlegen/Ändern der Adresse geocodiert.
 
+### Datenschutz: Mapbox-Telemetrie
+
+mapbox-gl 3.x sendet von sich aus Nutzungsdaten (Ereignisse `style.load`,
+`appUserTurnstile`, `gljs.performance`, `map.load` samt anonymer
+Nutzer-ID) an `events.mapbox.com` (USA). Das SDK bietet keine Option zum
+Abschalten (geprüft an 3.28.1: `config.EVENTS_URL` ist ein Getter aus
+`API_URL`, `"enabled.telemetry"` ist im Payload fest `false`). FieldVibe
+verwirft diese Requests deshalb clientseitig in
+`frontend/src/components/mapboxSetup.ts` (Fetch-Filter nur für den
+Events-Host); Style-, Tile- und Session-Requests an `api.mapbox.com`
+laufen unverändert. Das gilt auch im IP-Betrieb ohne Caddy. Die CSP im
+`Caddyfile` führt den Host bewusst nicht in `connect-src` und meldet im
+Report-Only-Modus einen Verstoß, falls doch ein Request an ihn geht.
+
+Prüfen nach einem Update von mapbox-gl: im Browser unter Netzwerk nach
+`events.mapbox` filtern (Kartenansicht öffnen) – es darf kein Eintrag
+erscheinen. Automatisiert: `npx playwright test mapbox-telemetrie` in
+`frontend/` (Dev-Stack mit Seed und Dummy-Token, siehe Kopfkommentar der
+Spec).
+
+Offen für den Betreiber: Die Mapbox-Lizenz schließt Änderungen an
+Abrechnungs- und Datenerfassungscode aus (`node_modules/mapbox-gl/LICENSE.txt`);
+ob der Fetch-Filter mit den Mapbox-Bedingungen vereinbar ist, ist
+vertraglich zu klären. Unabhängig davon verarbeitet Mapbox Inc. (USA) für
+Geocoding (Adressen, vom Backend) und Kartenkacheln (IP-Adresse und
+Kartenausschnitt der Nutzer) personenbezogene Daten: Mapbox braucht einen
+AV-Vertrag mit Standardvertragsklauseln und gehört in die Liste der
+Unterauftragsverarbeiter.
+
 ## 5. Backups
 
 `scripts/backup.sh` sichert täglich per Host-Cron einen `pg_dump` der
