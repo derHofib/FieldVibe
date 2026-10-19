@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { kundenportalAuthApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
+import { RechtlicheLinks } from "../../components/RechtlicheLinks";
 
 export function PortalForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -65,6 +66,7 @@ export function PortalForgotPasswordPage() {
           Zurück zur Anmeldung
         </Link>
       </Blueprint>
+      <RechtlicheLinks className="mt-6" />
     </div>
   );
 }

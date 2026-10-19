@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { kundenportalAuthApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
+import { RechtlicheLinks } from "../../components/RechtlicheLinks";
 
 export function PortalResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -87,6 +88,7 @@ export function PortalResetPasswordPage() {
           Zurück zur Anmeldung
         </Link>
       </Blueprint>
+      <RechtlicheLinks className="mt-6" />
     </div>
   );
 }

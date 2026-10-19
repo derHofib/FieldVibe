@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { useKundenAuth } from "../context/KundenAuthContext";
 import { ThemeToggle } from "./ThemeToggle";
+import { RechtlicheLinks } from "./RechtlicheLinks";
 
 const NAV_ITEMS = [
   { to: "/portal/vorgaenge", label: "Aufträge" },
@@ -39,6 +40,7 @@ export function PortalLayout() {
       <main className="mx-auto max-w-2xl px-3 py-4">
         <Outlet />
       </main>
+      <RechtlicheLinks className="px-3 pb-4" />
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-sep bg-card/90 backdrop-blur-md">
         {NAV_ITEMS.map((item) => (
           <NavLink

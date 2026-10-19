@@ -7,6 +7,7 @@ import { kundenportalAuthApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import Blueprint from "../../components/Blueprint";
 import { useKundenAuth } from "../../context/KundenAuthContext";
+import { RechtlicheLinks } from "../../components/RechtlicheLinks";
 
 export function PortalLoginPage() {
   const { login } = useKundenAuth();
@@ -120,6 +121,7 @@ export function PortalLoginPage() {
             Passwort vergessen?
           </Link>
         </Blueprint>
+        <RechtlicheLinks className="mt-6" />
       </form>
     </div>
   );

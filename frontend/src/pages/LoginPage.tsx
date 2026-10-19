@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import Blueprint from "../components/Blueprint";
 import { Logo } from "../components/brand/Logo";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -74,6 +75,7 @@ export function LoginPage() {
             {submitting ? "Anmelden…" : "Anmelden"}
           </button>
         </Blueprint>
+        <RechtlicheLinks className="mt-6" />
       </form>
     </div>
   );

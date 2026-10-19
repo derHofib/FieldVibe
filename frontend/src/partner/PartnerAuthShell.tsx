@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Logo } from "../components/brand/Logo";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 /** Gemeinsamer Rahmen der Partnerportal-Seiten ohne Anmeldung (Login,
  * Passwort vergessen/zuruecksetzen, Einladung). */
@@ -18,6 +19,7 @@ export function PartnerAuthShell({ titel, untertitel, children }: { titel: strin
           {!untertitel && <div className="mb-5" />}
           {children}
         </div>
+        <RechtlicheLinks className="mt-6" />
       </div>
     </main>
   );

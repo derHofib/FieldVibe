@@ -4,6 +4,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { Logo } from "../components/brand/Logo";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { usePartnerAuth } from "../context/PartnerAuthContext";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 const NAV_ITEMS: { to: string; label: string; icon: LucideIcon }[] = [
   { to: "/partnerportal/auftraege", label: "Aufträge", icon: ClipboardList },
@@ -50,6 +51,8 @@ export function PartnerPortalLayout() {
       </header>
 
       <Outlet />
+
+      <RechtlicheLinks className="pt-2" />
 
       <footer className="flex items-center justify-center gap-1.5 pt-2 pb-4 text-[11px] text-label3">
         via <Logo variante="wortmarke" hoehe={12} />

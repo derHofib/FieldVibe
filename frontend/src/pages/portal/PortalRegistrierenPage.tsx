@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { kundenportalAuthApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { useKundenAuth } from "../../context/KundenAuthContext";
+import { RechtlicheLinks } from "../../components/RechtlicheLinks";
 
 export function PortalRegistrierenPage() {
   const [searchParams] = useSearchParams();
@@ -88,6 +89,7 @@ export function PortalRegistrierenPage() {
           </button>
         </form>
       </Blueprint>
+      <RechtlicheLinks className="mt-6" />
     </div>
   );
 }

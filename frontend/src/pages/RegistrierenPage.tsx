@@ -6,6 +6,7 @@ import { ApiError } from "../api/client";
 import Blueprint from "../components/Blueprint";
 import { Logo } from "../components/brand/Logo";
 import { useAuth } from "../context/AuthContext";
+import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 export function RegistrierenPage() {
   const [searchParams] = useSearchParams();
@@ -84,6 +85,7 @@ export function RegistrierenPage() {
             </button>
           </form>
         </Blueprint>
+        <RechtlicheLinks className="mt-6" />
       </div>
     </div>
   );
