@@ -1013,6 +1013,16 @@ export type RechnungZahlungsart = "ueberweisung" | "bar" | "karte" | "lastschrif
 // eingetragenen Positionen.
 export type RechnungPositionQuelle = "material" | "zeit" | "fahrzeit" | "fahrtkosten" | "leistung";
 
+// Steuerkategorien nach EN 16931 (Steuer je Position, Migration 0104).
+export type RechnungSteuerKategorie = "S" | "Z" | "E" | "AE";
+
+export interface RechnungSteuerGruppe {
+  kategorie: RechnungSteuerKategorie;
+  satz: string;
+  netto: string;
+  steuer: string;
+}
+
 export interface RechnungPosition {
   id: string;
   position: number;
@@ -1025,6 +1035,8 @@ export interface RechnungPosition {
   vorgang_id: string | null;
   lv_position_id?: string | null;
   material_id?: string | null;
+  steuer_kategorie?: RechnungSteuerKategorie;
+  steuer_satz?: string;
 }
 
 // Offene, noch nicht abgerechnete Stunden eines Vorgangs (Einzelposten-
@@ -1098,6 +1110,8 @@ export interface Rechnung {
   positionen: RechnungPosition[];
   vorgaenge: RechnungVorgangRef[];
   betrag_brutto: string;
+  betrag_steuer?: string;
+  steuergruppen?: RechnungSteuerGruppe[];
   ist_ueberfaellig: boolean;
   tage_ueberfaellig: number;
   zahlungen: RechnungZahlung[];
