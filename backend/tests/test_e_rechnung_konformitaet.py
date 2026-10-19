@@ -4,8 +4,9 @@ Geschaeftsregeln (Schematron, kompiliert als XSLT) -- ueber die echte Pipeline
 
 Braucht das Pruefwerkzeug aus scripts/e-rechnung/installieren.sh (Java + Cache
 unter .cache/e-rechnung bzw. EN16931_CACHE_DIR); ohne wird uebersprungen, damit die
-normale Backend-CI nicht davon abhaengt. Geprueft wird NUR EN 16931 -- nicht das
-XRechnung-Profil, nicht Peppol (siehe docs/konzepte/E_RECHNUNG_PRUEFUNG.md)."""
+normale Backend-CI nicht davon abhaengt. Geprueft werden die EN-16931-Regeln und, fuer
+XRechnung-Dokumente, die BR-DE-Regeln des KoSIT-Schematrons -- nicht Peppol und nicht der
+KoSIT-Validator selbst (siehe docs/konzepte/E_RECHNUNG_PRUEFUNG.md)."""
 import os
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from lxml import etree
 
 from tests.conftest import auth_headers
 from tests.test_steuer_freischaltung import (
@@ -51,7 +53,7 @@ def _werkzeug_vorhanden():
         pytest.skip("Prüfwerkzeug nicht installiert (scripts/e-rechnung/installieren.sh ausführen, Java nötig)")
 
 
-def _pruefe_en16931(xml: bytes, tmp_path: Path, name: str) -> None:
+def _pruefe_en16931(xml: bytes, tmp_path: Path, name: str) -> str:
     datei = tmp_path / f"{name}.xml"
     datei.write_bytes(xml)
     if os.environ.get("E_RECHNUNG_XML_DIR"):  # erzeugte XML zur Fehlersuche ablegen
@@ -61,6 +63,7 @@ def _pruefe_en16931(xml: bytes, tmp_path: Path, name: str) -> None:
     )
     print(ergebnis.stdout)  # Warnungen der Regeln sichtbar machen (pytest -s)
     assert ergebnis.returncode == 0, f"EN-16931-Regelverstoesse in '{name}':\n{ergebnis.stdout}{ergebnis.stderr}"
+    return ergebnis.stdout
 
 
 async def _versendet_xml(client, token, kunde, positionen, **extra) -> bytes:
@@ -373,3 +376,172 @@ async def test_gutschrift_kleinunternehmer(client, make_mandant, make_user, make
         await _gutschrift(client, h, original["id"], positionen=[{"position_id": original["positionen"][0]["id"], "menge": "2.5"}])
     )
     _pruefe_en16931(await _xml_von(client, h, gutschrift), tmp_path, "gutschrift_kleinunternehmer")
+
+
+# --- XRechnung (Migration 0109): CEN-Regeln plus BR-DE-* des KoSIT-Schematrons -----------------------
+
+_XR_FIRMA = {
+    **_E_RECHNUNG,
+    "telefon": "+49 30 1234567",
+    "email": "buero@mueller.example",
+    "iban": "DE89 3704 0044 0532 0130 00",
+    "bic": "COBADEFFXXX",
+    "geschaeftsfuehrung": "Erika Mustermann",
+}
+_LEITWEG_ID = "04011000-1234512345-06"
+_XR_KUNDE = {"typ": "oeffentlich", "leitweg_id": _LEITWEG_ID}
+
+
+def _pruefe_xrechnung(xml: bytes, tmp_path: Path, name: str) -> None:
+    """Wie _pruefe_en16931, aber das Dokument muss sich als XRechnung ausgeben: sonst lief
+    pruefen.sh nur mit den CEN-Regeln und die BR-DE-Regeln waeren nie angewendet worden."""
+    assert b"urn:xeinkauf.de:kosit:xrechnung_3.0" in xml
+    bericht = _pruefe_en16931(xml, tmp_path, f"xrechnung_{name}")
+    # Auch Warnungen (z. B. BR-DE-17 Typcode, BR-DE-26 Storno ohne Referenz) sollen nicht vorkommen.
+    assert "Warnung" not in bericht, bericht
+
+
+@pytest.fixture
+def _xrechnung_regeln_vorhanden():
+    if not (_CACHE / "XRechnung-CII-validation.xslt").is_file():
+        pytest.skip("XRechnung-Regeln nicht installiert (scripts/e-rechnung/installieren.sh erneut ausführen)")
+
+
+async def _admin_xrechnung(client, make_mandant, make_user, make_kunde, firmendaten=None, **kunde_kw):
+    return await _admin_e_rechnung(
+        client, make_mandant, make_user, make_kunde, firmendaten=firmendaten or _XR_FIRMA, **{**_XR_KUNDE, **kunde_kw}
+    )
+
+
+def _schlaegt_an(xml: bytes, tmp_path: Path, name: str) -> str:
+    datei = tmp_path / f"{name}.xml"
+    datei.write_bytes(xml)
+    ergebnis = subprocess.run(["bash", str(_SKRIPT), str(datei)], capture_output=True, text=True, timeout=180)
+    assert ergebnis.returncode == 1, ergebnis.stdout + ergebnis.stderr
+    return ergebnis.stdout
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_regeln_schlagen_bei_verstoss_an(
+    client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden
+):
+    # Negativkontrollen: ohne sie faerbte ein nicht angewendeter Regelsatz alles gruen.
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde)
+    xml = await _versendet_xml(client, token, kunde, [_POS_S])
+    _pruefe_xrechnung(xml, tmp_path, "negativkontrolle_original")
+
+    ns = {"ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"}
+    faelle = (
+        ("//ram:BuyerReference", "BR-DE-15"),
+        ("//ram:SellerTradeParty/ram:DefinedTradeContact", "BR-DE-2"),
+        ("//ram:SellerTradeParty/ram:DefinedTradeContact/ram:TelephoneUniversalCommunication", "BR-DE-6"),
+        ("//ram:SellerTradeParty/ram:DefinedTradeContact/ram:EmailURIUniversalCommunication", "BR-DE-7"),
+        ("//ram:SpecifiedTradeSettlementPaymentMeans", "BR-DE-1"),
+        ("//ram:SpecifiedTradeSettlementPaymentMeans/ram:PayeePartyCreditorFinancialAccount", "BR-DE-23-a"),
+        ("//ram:BuyerTradeParty/ram:PostalTradeAddress/ram:CityName", "BR-DE-8"),
+    )
+    for index, (xpath, regel) in enumerate(faelle):
+        wurzel = etree.fromstring(xml)
+        [knoten] = wurzel.xpath(xpath, namespaces=ns)
+        knoten.getparent().remove(knoten)
+        bericht = _schlaegt_an(etree.tostring(wurzel, xml_declaration=True, encoding="UTF-8"), tmp_path, f"kaputt{index}")
+        assert f"[{regel}]" in bericht, f"{regel} nicht gemeldet:\n{bericht}"
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_einzelsatz(client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden):
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde)
+    xml = await _versendet_xml(client, token, kunde, [_POS_S])
+    _pruefe_xrechnung(xml, tmp_path, "einzelsatz")
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_ohne_ust_idnr_der_behoerde(
+    client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden
+):
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde, ust_idnr=None)
+    xml = await _versendet_xml(client, token, kunde, [_POS_S])
+    _pruefe_xrechnung(xml, tmp_path, "behoerde_ohne_ust_idnr")
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_mischsatz_mit_faelligkeit(
+    client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden
+):
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde)
+    positionen = [
+        {"beschreibung": "Material 19", "menge": "1", "einzelpreis": "10.10"},
+        {"beschreibung": "Material 7", "menge": "3", "einzelpreis": "19.99", "steuer_satz": "7"},
+        {"beschreibung": "Halb-Cent", "menge": "0.5", "einzelpreis": "10.01"},
+    ]
+    xml = await _versendet_xml(client, token, kunde, positionen, faellig_am="2026-09-10")
+    _pruefe_xrechnung(xml, tmp_path, "mischsatz_faellig")
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_alle_kategorien(
+    client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden
+):
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde, typ="gewerbe")
+    xml = await _versendet_xml(client, token, kunde, [_POS_S, _POS_Z, _POS_AE, _POS_E])
+    _pruefe_xrechnung(xml, tmp_path, "alle_kategorien")
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_kleinunternehmer(
+    client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden
+):
+    firma = {**_XR_FIRMA, "ist_kleinunternehmer": True, "ust_idnr": None, "steuernummer": "12/345/67890"}
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde, firmendaten=firma)
+    xml = await _versendet_xml(client, token, kunde, [_POS_S])
+    _pruefe_xrechnung(xml, tmp_path, "kleinunternehmer")
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_storno(client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden):
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde)
+    positionen = [_POS_S, {"beschreibung": "M7", "menge": "2", "einzelpreis": "3.50", "steuer_satz": "7"}]
+    original = await _rechnung(client, token, kunde, positionen)
+    assert (await _versenden(client, token, original["id"])).status_code == 200
+    storno = await client.post(f"/api/rechnungen/{original['id']}/storno", headers=auth_headers(token))
+    assert storno.status_code == 201
+    assert storno.json()["e_rechnung_profil"] == "xrechnung"
+    xml = await client.get(f"/api/rechnungen/{storno.json()['id']}/xml", headers=auth_headers(token))
+    _pruefe_xrechnung(xml.content, tmp_path, "storno")
+
+
+@pytest.mark.asyncio
+async def test_xrechnung_gutschrift_abschlag_und_schluss(
+    client, make_mandant, make_user, make_kunde, tmp_path, _xrechnung_regeln_vorhanden
+):
+    token, kunde = await _admin_xrechnung(client, make_mandant, make_user, make_kunde)
+    h = auth_headers(token)
+    original = await _versendete_rechnung(client, h, kunde, EINZEL_POSITION)
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True))
+    _pruefe_xrechnung(await _xml_von(client, h, gutschrift), tmp_path, "gutschrift")
+
+    angebot = await _angebot(client, h, kunde)
+    abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="33.33")
+    _pruefe_xrechnung(await _xml_von(client, h, abschlag), tmp_path, "abschlag")
+    schluss = await _ok(await _aus_angebot(client, h, angebot["id"], "schluss"))
+    schluss = await _versenden_mit_headers(client, h, schluss["id"])
+    _pruefe_xrechnung(await _xml_von(client, h, schluss), tmp_path, "schluss")
+
+
+@pytest.mark.asyncio
+async def test_zugferd_privatkunde_mit_hinweisen_und_arbeitskosten(
+    client, make_mandant, make_user, make_kunde, tmp_path
+):
+    # Rechnungsvermerke nach § 14 Abs. 4 Nr. 9 UStG / § 35a EStG duerfen die EN-16931-Regeln nicht verletzen.
+    token, kunde = await _admin_e_rechnung(
+        client, make_mandant, make_user, make_kunde, typ="privat", ust_idnr=None, ust_13b_nachweis_bis=None
+    )
+    positionen = [
+        {"beschreibung": "Arbeitszeit", "menge": "2.5", "einzelpreis": "55", "quelle": "zeit"},
+        {"beschreibung": "Anfahrt", "menge": "18", "einzelpreis": "0.42", "quelle": "fahrtkosten", "einheit": "km"},
+        {"beschreibung": "Kabel", "menge": "1", "einzelpreis": "23.45", "quelle": "material", "steuer_satz": "7"},
+    ]
+    xml = await _versendet_xml(client, token, kunde, positionen)
+    text_ = xml.decode()
+    assert "aufzubewahren" in text_ and "§ 35a EStG" in text_
+    _pruefe_en16931(xml, tmp_path, "privatkunde_hinweise")

@@ -72,7 +72,7 @@ for datei in "${DATEIEN[@]}"; do
   fi
   regelsaetze=("$REGELN")
   # Die XRechnung-Regeln gelten nur fuer Dokumente, die sich als XRechnung ausgeben.
-  if grep -q 'urn:xoev-de:kosit:standard:xrechnung' "$datei"; then
+  if grep -qE "kosit:(standard:)?xrechnung" "$datei"; then
     if [[ ! -f "$XR_REGELN" ]]; then
       fehler "XRechnung-Regeln nicht installiert ($XR_REGELN fehlt) -- zuerst scripts/e-rechnung/installieren.sh ausfuehren"
       exit 2

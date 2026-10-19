@@ -1228,7 +1228,7 @@ def _rechnung_dokument_bytes(
             positionen,
             netto,
             brutto,
-            bezug_rechnung=bezug_rechnung,
+            bezug_rechnung=storniert_rechnung if rechnung.ist_storno else bezug_rechnung,
             angerechnete_abschlaege=angerechnete_abschlaege,
             profil=profil,
             hinweise=hinweise.texte() if hinweise is not None else None,

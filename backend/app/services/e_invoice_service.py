@@ -51,9 +51,13 @@ _KUNDE_TYPEN_MIT_UST_IDNR_PFLICHT = ("gewerbe", "oeffentlich")
 _TYPE_CODE_NACH_ART = {"rechnung": "380", "schluss": "380", "abschlag": "386", "gutschrift": "381"}
 
 
-def type_code_fuer(rechnung: Rechnung) -> str:
+def type_code_fuer(rechnung: Rechnung, profil: str = "en16931") -> str:
     if rechnung.ist_storno:
         return "384"
+    # BR-DE-17: die XRechnung kennt 386 nicht; Abschlagsrechnungen laufen dort als
+    # Teilrechnung (326).
+    if profil == "xrechnung" and rechnung.rechnungsart == "abschlag":
+        return "326"
     return _TYPE_CODE_NACH_ART.get(rechnung.rechnungsart, "380")
 
 
@@ -246,7 +250,7 @@ def baue_cii_dokument(
     ist_xrechnung = profil == XRECHNUNG_PROFIL
     doc.context.guideline_parameter.id = XRECHNUNG_KENNUNG if ist_xrechnung else EN16931_KENNUNG
     doc.header.id = rechnung.rechnungsnummer
-    doc.header.type_code = type_code_fuer(rechnung)
+    doc.header.type_code = type_code_fuer(rechnung, profil)
     doc.header.issue_date_time = rechnung.created_at.date()
     # drafthorse-Eigenheit: das Feld "Name" existiert in KEINER der
     # tatsaechlichen Factur-X/EN16931-XSD-Varianten, wird aber von der
@@ -293,11 +297,13 @@ def baue_cii_dokument(
     for text in hinweise or []:
         doc.header.notes.add(IncludedNote(content=text))
 
+    # BR-DE-26: ein Stornobeleg (384) soll die korrigierte Rechnung referenzieren; das
+    # verlangt nur die XRechnung, das ZUGFeRD-Profil laesst die Referenz weg.
+    if bezug_rechnung is not None and (rechnung.rechnungsart == "gutschrift" or (ist_xrechnung and rechnung.ist_storno)):
+        bezug = doc.trade.settlement.invoice_referenced_document
+        bezug.issuer_assigned_id = bezug_rechnung.rechnungsnummer
+        bezug.issue_date_time = bezug_rechnung.created_at.date()
     if rechnung.rechnungsart == "gutschrift":
-        if bezug_rechnung is not None:
-            bezug = doc.trade.settlement.invoice_referenced_document
-            bezug.issuer_assigned_id = bezug_rechnung.rechnungsnummer
-            bezug.issue_date_time = bezug_rechnung.created_at.date()
         if rechnung.gutschrift_grund:
             doc.header.notes.add(IncludedNote(content=f"Grund der Gutschrift: {rechnung.gutschrift_grund}"))
     if angerechnete_abschlaege:
