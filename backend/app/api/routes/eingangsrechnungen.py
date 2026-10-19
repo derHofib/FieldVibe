@@ -24,6 +24,7 @@ from app.schemas.eingangsrechnung import (
     EingangsrechnungUpdate,
     EingangsrechnungZahlungCreate,
 )
+from app.services import e_rechnung_empfang_service as empfang
 from app.services import papierkorb_service, storage_service
 from app.services.csv_service import csv_response
 from app.services.eingangsrechnung_service import (
@@ -225,6 +226,48 @@ async def create_eingangsrechnung(
     for p in _neue_positionen(eingangsrechnung.id, auth.mandant_id, body.positionen):
         session.add(p)
     await session.flush()
+    await session.refresh(eingangsrechnung)
+    return await to_read_model(session, eingangsrechnung)
+
+
+@router.post(
+    "/e-rechnung",
+    response_model=EingangsrechnungRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "erstellen")),
+    ],
+)
+async def import_e_rechnung(
+    file: UploadFile,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EingangsrechnungRead:
+    """Neue Eingangsrechnung aus einer E-Rechnung (XRechnung-XML oder
+    ZUGFeRD/Factur-X-Hybrid-PDF). Die Datei wird nur bis zur Obergrenze
+    gelesen, damit ein Riesen-Upload nicht erst komplett im Speicher landet."""
+    daten = await file.read(empfang.PDF_MAX_BYTES + 1)
+    if len(daten) > empfang.PDF_MAX_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="Datei zu groß (max. 10 MB)")
+    try:
+        eingangsrechnung = await empfang.importiere_e_rechnung(
+            session,
+            mandant_id=auth.mandant_id,
+            erstellt_von=auth.user_id,
+            daten=daten,
+            dateiname=file.filename,
+        )
+    except empfang.ERechnungDuplikat as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from None
+    except empfang.ERechnungFehler as exc:
+        if exc.grund == "zu_gross":
+            raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from None
+        # Form wie Pydantic-422 ({msg}-Liste): der Frontend-Client fuegt sie zu einer Meldung zusammen.
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=[{"msg": m, "type": f"e_rechnung_{exc.grund}"} for m in exc.meldungen],
+        ) from None
     await session.refresh(eingangsrechnung)
     return await to_read_model(session, eingangsrechnung)
 
@@ -471,6 +514,12 @@ async def upload_beleg(
     eingangsrechnung = await session.get(Eingangsrechnung, eingangsrechnung_id)
     if eingangsrechnung is None or eingangsrechnung.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eingangsrechnung nicht gefunden")
+    if (file.filename or "").lower().endswith(".xml") or file.content_type in ("application/xml", "text/xml"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="XML-Dateien (E-Rechnung) bitte über „E-Rechnung importieren“ hochladen "
+            "(POST /api/eingangsrechnungen/e-rechnung)",
+        )
     if not file.content_type or not (
         file.content_type.startswith("image/") or file.content_type == "application/pdf"
     ):
@@ -504,6 +553,18 @@ async def get_beleg_url(
     if eingangsrechnung.beleg_object_key is None:
         return {"url": None}
     return {"url": storage_service.presigned_get_url(eingangsrechnung.beleg_object_key)}
+
+
+@router.get("/{eingangsrechnung_id}/xml-url")
+async def get_xml_url(
+    eingangsrechnung_id: UUID, session: AsyncSession = Depends(get_db)
+) -> dict[str, str | None]:
+    eingangsrechnung = await session.get(Eingangsrechnung, eingangsrechnung_id)
+    if eingangsrechnung is None or eingangsrechnung.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Eingangsrechnung nicht gefunden")
+    if eingangsrechnung.xml_object_key is None:
+        return {"url": None}
+    return {"url": storage_service.presigned_get_url(eingangsrechnung.xml_object_key)}
 
 
 @router.delete(
