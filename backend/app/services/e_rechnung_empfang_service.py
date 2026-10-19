@@ -18,8 +18,15 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Literal
+from uuid import UUID
 
 from lxml import etree
+from sqlalchemy import func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.eingangsrechnung import Eingangsrechnung, EingangsrechnungPosition
+from app.models.lieferant import Lieferant
+from app.services import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -908,3 +915,183 @@ def _notiz(r: EmpfangeneRechnung) -> str | None:
     if r.zahlungsbedingungen:
         zeilen.append(f"Zahlungsbedingungen: {_kurz_text(r.zahlungsbedingungen)}")
     return "\n".join(zeilen)
+
+
+# --- Import in den Rechnungseingang (DB/S3) -------------------------------------
+
+
+def _norm_name(name: str) -> str:
+    return " ".join(name.split()).casefold()
+
+
+async def _lieferant_zuordnen(
+    session: AsyncSession, mandant_id: UUID, name: str
+) -> tuple[Lieferant | None, bool]:
+    """Zuordnung nur ueber den Namen: Lieferanten tragen (noch) keine USt-IdNr.
+    Mehrere Treffer gelten als mehrdeutig und werden nicht geraten."""
+    # system_session umgeht RLS (E-Mail-Import) -- Mandant daher immer explizit filtern.
+    alle = (
+        (
+            await session.execute(
+                select(Lieferant).where(Lieferant.mandant_id == mandant_id, Lieferant.geloescht_am.is_(None))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    treffer = [lieferant for lieferant in alle if _norm_name(lieferant.name) == _norm_name(name)]
+    if len(treffer) == 1:
+        return treffer[0], False
+    return None, len(treffer) > 1
+
+
+async def _finde_duplikat(
+    session: AsyncSession,
+    *,
+    mandant_id: UUID,
+    rechnungsnummer: str,
+    namen: set[str],
+    lieferant_id: UUID | None,
+    sha256: str,
+) -> Eingangsrechnung | None:
+    nummer = rechnungsnummer.strip().lower()
+    kandidaten = (
+        (
+            await session.execute(
+                select(Eingangsrechnung).where(
+                    Eingangsrechnung.mandant_id == mandant_id,
+                    Eingangsrechnung.geloescht_am.is_(None),
+                    or_(
+                        func.lower(func.trim(Eingangsrechnung.rechnungsnummer_lieferant)) == nummer,
+                        Eingangsrechnung.xml_sha256 == sha256,
+                    ),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for kandidat in kandidaten:
+        if kandidat.xml_sha256 == sha256:
+            return kandidat
+        if kandidat.rechnungsnummer_lieferant.strip().lower() != nummer:
+            continue
+        if (lieferant_id is not None and kandidat.lieferant_id == lieferant_id) or _norm_name(
+            kandidat.lieferant_name
+        ) in namen:
+            return kandidat
+    return None
+
+
+def lese_e_rechnung_datei(daten: bytes) -> tuple[bytes, bytes | None]:
+    """Liefert (xml, pdf): bei Hybrid-PDF die eingebettete XML samt Original-PDF,
+    bei reiner XML (xml, None)."""
+    if ist_pdf(daten):
+        xml = extrahiere_xml_aus_pdf(daten)
+        if xml is None:
+            raise ERechnungFehler(
+                "Das PDF enthält keine eingebettete E-Rechnung (erwartet: factur-x.xml, zugferd-invoice.xml "
+                "oder xrechnung.xml). Gewöhnliche PDF-Belege bitte über „Rechnung erfassen“ hochladen.",
+                grund="kein_xml",
+            )
+        return xml, daten
+    if len(daten) > XML_MAX_BYTES:
+        raise ERechnungFehler("Die XML-Datei ist zu groß (max. 5 MB).", grund="zu_gross")
+    return daten, None
+
+
+async def importiere_e_rechnung(
+    session: AsyncSession,
+    *,
+    mandant_id: UUID,
+    erstellt_von: UUID | None,
+    daten: bytes,
+    dateiname: str | None = None,
+    email_absender: str | None = None,
+    email_betreff: str | None = None,
+) -> Eingangsrechnung:
+    """Legt aus einer XML- oder Hybrid-PDF-Datei eine Eingangsrechnung im Status
+    'offen' an. Wirft ERechnungFehler (unlesbar/unvollstaendig/Fremdwaehrung)
+    bzw. ERechnungDuplikat; in beiden Faellen bleibt die Datenbank unberuehrt.
+    Die Original-XML wird unveraendert archiviert (Pruefsumme ueber genau diese
+    Bytes)."""
+    xml_bytes, pdf_bytes = lese_e_rechnung_datei(daten)
+    rechnung = parse_e_rechnung(xml_bytes)
+    uebernahme = baue_uebernahme(rechnung)
+    sha256 = sha256_hex(xml_bytes)
+
+    lieferant, mehrdeutig = await _lieferant_zuordnen(session, mandant_id, uebernahme.lieferant_name)
+    namen = {_norm_name(uebernahme.lieferant_name)}
+    if lieferant is not None:
+        namen.add(_norm_name(lieferant.name))
+    duplikat = await _finde_duplikat(
+        session,
+        mandant_id=mandant_id,
+        rechnungsnummer=uebernahme.rechnungsnummer,
+        namen=namen,
+        lieferant_id=lieferant.id if lieferant else None,
+        sha256=sha256,
+    )
+    if duplikat is not None:
+        raise ERechnungDuplikat(duplikat.id, duplikat.rechnungsnummer_lieferant, duplikat.lieferant_name)
+    if mehrdeutig:
+        uebernahme.hinweise.append(
+            f"Mehrere Lieferanten mit dem Namen „{uebernahme.lieferant_name}“ – keine automatische Zuordnung"
+        )
+
+    eingangsrechnung = Eingangsrechnung(
+        mandant_id=mandant_id,
+        lieferant_id=lieferant.id if lieferant else None,
+        lieferant_name=lieferant.name if lieferant else uebernahme.lieferant_name,
+        rechnungsnummer_lieferant=uebernahme.rechnungsnummer,
+        rechnungsdatum=uebernahme.rechnungsdatum,
+        eingegangen_am=date.today(),
+        faellig_am=uebernahme.faellig_am,
+        betrag_netto=uebernahme.betrag_netto,
+        mwst_satz=uebernahme.mwst_satz,
+        status="offen",
+        erstellt_von=erstellt_von,
+        email_absender=email_absender,
+        email_betreff=email_betreff,
+        e_rechnung_syntax=rechnung.syntax,
+        xml_sha256=sha256,
+        import_hinweis=uebernahme.import_hinweis,
+        notiz=uebernahme.notiz,
+    )
+    session.add(eingangsrechnung)
+    await session.flush()
+    for index, p in enumerate(uebernahme.positionen, start=1):
+        session.add(
+            EingangsrechnungPosition(
+                mandant_id=mandant_id,
+                eingangsrechnung_id=eingangsrechnung.id,
+                position=index,
+                beschreibung=p.beschreibung,
+                menge=p.menge,
+                einheit=p.einheit,
+                einzelpreis=p.einzelpreis,
+            )
+        )
+
+    hochgeladen: list[str] = []
+    try:
+        xml_key = storage_service.new_eingangsrechnung_xml_key(eingangsrechnung.id)
+        await storage_service.upload_bytes(xml_key, xml_bytes, "application/xml")
+        hochgeladen.append(xml_key)
+        eingangsrechnung.xml_object_key = xml_key
+        if pdf_bytes is not None:
+            beleg_key = storage_service.new_eingangsrechnung_beleg_key(
+                eingangsrechnung.id, dateiname or "rechnung.pdf"
+            )
+            await storage_service.upload_bytes(beleg_key, pdf_bytes, "application/pdf")
+            hochgeladen.append(beleg_key)
+            eingangsrechnung.beleg_object_key = beleg_key
+        await session.flush()
+    except Exception:
+        for key in hochgeladen:
+            try:
+                await storage_service.delete_object(key)
+            except Exception:
+                logger.warning("Aufräumen des S3-Objekts %s nach Importfehler fehlgeschlagen", key)
+        raise
+    return eingangsrechnung

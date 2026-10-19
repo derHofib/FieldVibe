@@ -1,18 +1,23 @@
 """Empfang von E-Rechnungen: Parser (rein), Hybrid-PDF, Sicherheit, Import,
 Archivierung, Rechte/RLS, Mail-Import und Papierkorb."""
 import hashlib
+import io
 import logging
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
+from app.db.session import system_session
+from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
-from app.services import e_invoice_service, e_rechnung_empfang_service as empfang
+from app.services import e_invoice_service, storage_service
+from app.services import e_rechnung_empfang_service as empfang
 from app.services.e_rechnung_empfang_service import ERechnungFehler, parse_e_rechnung
+from tests.conftest import auth_headers, login
 
 
 # --- Testdaten ----------------------------------------------------------------
@@ -88,7 +93,7 @@ def mischsteuer_cii() -> bytes:
                   steuer_kategorie="S", steuer_satz=Decimal("7.00")),
     ]
     return cii_bytes(
-        _rechnung(betrag_netto=Decimal("150.00")), positionen, Decimal("150.00"), Decimal("172.50")
+        _rechnung(betrag_netto=Decimal("150.00"), rechnungsnummer="R-MISCH"), positionen, Decimal("150.00"), Decimal("172.50")
     )
 
 
@@ -98,7 +103,7 @@ def ae_cii() -> bytes:
                   steuer_grund="reverse_charge_13b")
     ]
     return cii_bytes(
-        _rechnung(betrag_netto=Decimal("1000.00"), mwst_satz=Decimal("0.00")), positionen,
+        _rechnung(betrag_netto=Decimal("1000.00"), mwst_satz=Decimal("0.00"), rechnungsnummer="R-AE"), positionen,
         Decimal("1000.00"), Decimal("1000.00"),
     )
 
@@ -594,3 +599,551 @@ def test_pdf_anhangszahl_ist_begrenzt(monkeypatch):
     monkeypatch.setattr(empfang, "_ANHANG_MAX_ANZAHL", 3)
     anhaenge = [(f"datei{i}.txt", b"x") for i in range(5)] + [("factur-x.xml", b"<a/>")]
     assert empfang.extrahiere_xml_aus_pdf(_pdf_mit_anhaengen(anhaenge)) is None
+
+
+# --- API: Import, Archivierung, Duplikate, Rechte ----------------------------------
+
+
+async def _admin(client, make_mandant, make_user, mandant=None):
+    mandant = mandant or await make_mandant()
+    admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
+    token = await login(client, admin.email, "pw-123456")
+    return mandant, auth_headers(token)
+
+
+async def _hochladen(client, headers, daten: bytes, name="rechnung.xml", typ="application/xml"):
+    return await client.post(
+        "/api/eingangsrechnungen/e-rechnung", headers=headers, files={"file": (name, io.BytesIO(daten), typ)}
+    )
+
+
+async def _zeile(eingangsrechnung_id) -> Eingangsrechnung:
+    async with system_session() as session:
+        return await session.get(Eingangsrechnung, UUID(eingangsrechnung_id))
+
+
+async def test_xml_upload_legt_eingangsrechnung_an_und_archiviert_original(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+    xml = ubl_bytes()
+
+    resp = await _hochladen(client, headers, xml)
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["status"] == "offen"
+    assert body["lieferant_name"] == "Kabelwerk Nord GmbH" and body["lieferant_id"] is None
+    assert body["rechnungsnummer_lieferant"] == "UBL-2026-1"
+    assert body["rechnungsdatum"] == "2026-08-01" and body["faellig_am"] == "2026-08-31"
+    assert body["eingegangen_am"] == date.today().isoformat()
+    assert (body["betrag_netto"], body["mwst_satz"], body["betrag_brutto"]) == ("200.00", "19.00", "238.00")
+    assert body["e_rechnung_syntax"] == "ubl" and body["hat_xml"] is True
+    assert body["import_hinweis"] is None
+    assert body["beleg_object_key"] is None
+    assert len(body["positionen"]) == 1 and body["positionen"][0]["gesamt"] == "200.00"
+    assert body["xml_sha256"] == hashlib.sha256(xml).hexdigest()
+
+    zeile = await _zeile(body["id"])
+    assert zeile.erstellt_von is not None
+    assert await storage_service.download_bytes(zeile.xml_object_key) == xml
+
+    url = (await client.get(f"/api/eingangsrechnungen/{body['id']}/xml-url", headers=headers)).json()["url"]
+    assert zeile.xml_object_key in url
+
+
+async def test_hybrid_pdf_upload_archiviert_pdf_und_xml_byte_identisch(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+    xml = cii_bytes(_rechnung(rechnungsnummer="R-HYB-7"))
+    pdf = hybrid_pdf(xml, nummer="R-HYB-7")
+
+    resp = await _hochladen(client, headers, pdf, "rechnung.pdf", "application/pdf")
+
+    assert resp.status_code == 201, resp.text
+    body = resp.json()
+    assert body["e_rechnung_syntax"] == "cii" and body["hat_xml"] and body["beleg_object_key"]
+    zeile = await _zeile(body["id"])
+    assert await storage_service.download_bytes(zeile.beleg_object_key) == pdf
+    assert await storage_service.download_bytes(zeile.xml_object_key) == xml
+    assert zeile.xml_sha256 == hashlib.sha256(xml).hexdigest() == body["xml_sha256"]
+
+
+async def test_lieferant_wird_ueber_den_namen_zugeordnet(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+    lieferant = (await client.post("/api/lieferanten", headers=headers, json={"name": "Kabelwerk  NORD GmbH"})).json()
+
+    body = (await _hochladen(client, headers, ubl_bytes())).json()
+
+    assert body["lieferant_id"] == lieferant["id"]
+    assert body["lieferant_name"] == "Kabelwerk  NORD GmbH"
+
+
+async def test_gutschrift_und_mischsteuer_ueber_die_api(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+
+    gutschrift = (await _hochladen(client, headers, ubl_bytes(wurzel="CreditNote", typ="381", nummer="G-1"))).json()
+    assert gutschrift["betrag_netto"] == "-200.00" and gutschrift["betrag_brutto"] == "-238.00"
+    assert gutschrift["import_hinweis"] == "Gutschrift (Typcode 381) – Beträge als negative Werte übernommen"
+
+    misch = (await _hochladen(client, headers, mischsteuer_cii(), "m.xml")).json()
+    assert misch["mwst_satz"] == "19.00" and misch["betrag_netto"] == "150.00"
+    assert misch["import_hinweis"].splitlines()[0] == "Mehrere Steuersätze (19 %, 7 %) – Vorsteuer bitte prüfen"
+    assert [p["beschreibung"] for p in misch["positionen"]] == ["Kabel", "Fachbuch"]
+
+    ae = (await _hochladen(client, headers, ae_cii(), "ae.xml")).json()
+    assert ae["mwst_satz"] == "0.00" and "§ 13b UStG" in ae["import_hinweis"]
+
+
+async def test_duplikat_wird_mit_409_abgelehnt(client, make_mandant, make_user):
+    mandant, headers = await _admin(client, make_mandant, make_user)
+    assert (await _hochladen(client, headers, ubl_bytes())).status_code == 201
+
+    # identische Datei
+    zweite = await _hochladen(client, headers, ubl_bytes())
+    assert zweite.status_code == 409
+    assert "UBL-2026-1" in zweite.json()["detail"] and "bereits" in zweite.json()["detail"]
+
+    # gleiche Nummer und Lieferant, andere Datei (anderer Betrag)
+    anders = ubl_bytes(netto="300.00", steuer="57.00", brutto="357.00",
+                       zeilen=[("1", "Kabel", "1", "H87", "300.00", "300.00", "S", "19")])
+    assert (await _hochladen(client, headers, anders)).status_code == 409
+
+    # anderer Lieferant, gleiche Nummer -> kein Duplikat
+    assert (await _hochladen(client, headers, ubl_bytes(name="Elektro Gross AG"))).status_code == 201
+
+    # Papierkorb zaehlt nicht: nach dem Loeschen ist ein erneuter Import moeglich
+    liste = (await client.get("/api/eingangsrechnungen", headers=headers)).json()
+    erste = next(e for e in liste if e["lieferant_name"] == "Kabelwerk Nord GmbH")
+    assert (await client.delete(f"/api/eingangsrechnungen/{erste['id']}", headers=headers)).status_code == 204
+    assert (await _hochladen(client, headers, ubl_bytes())).status_code == 201
+
+
+async def test_duplikat_gilt_nur_im_eigenen_mandanten(client, make_mandant, make_user):
+    _, headers_a = await _admin(client, make_mandant, make_user)
+    _, headers_b = await _admin(client, make_mandant, make_user)
+    assert (await _hochladen(client, headers_a, ubl_bytes())).status_code == 201
+    assert (await _hochladen(client, headers_b, ubl_bytes())).status_code == 201
+
+
+async def test_fehlerfaelle_liefern_422_mit_lesbarer_meldung(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+
+    falsche_wurzel = await _hochladen(client, headers, b"<Bestellung/>")
+    assert falsche_wurzel.status_code == 422
+    assert "Unbekanntes Wurzelelement" in falsche_wurzel.json()["detail"][0]["msg"]
+
+    defekt = await _hochladen(client, headers, b"<a><b></a>")
+    assert defekt.status_code == 422 and "wohlgeformt" in defekt.json()["detail"][0]["msg"]
+
+    fremd = await _hochladen(client, headers, ubl_bytes(waehrung="USD"))
+    assert fremd.status_code == 422 and "USD" in fremd.json()["detail"][0]["msg"]
+
+    fehlt = await _hochladen(client, headers, ubl_bytes(nummer="", datum=""))
+    assert fehlt.status_code == 422
+    assert [d["msg"] for d in fehlt.json()["detail"]] == [
+        "Pflichtfeld fehlt: Rechnungsnummer (BT-1)",
+        "Pflichtfeld fehlt: Rechnungsdatum (BT-2)",
+    ]
+
+    ohne_xml = await _hochladen(client, headers, b"%PDF-1.4 fake", "x.pdf", "application/pdf")
+    assert ohne_xml.status_code == 422 and "keine eingebettete E-Rechnung" in ohne_xml.json()["detail"][0]["msg"]
+
+    liste = (await client.get("/api/eingangsrechnungen", headers=headers)).json()
+    assert liste == []
+
+
+async def test_xxe_ueber_die_api_leakt_nichts(client, make_mandant, make_user, caplog):
+    caplog.set_level(logging.DEBUG)
+    _, headers = await _admin(client, make_mandant, make_user)
+
+    resp = await _hochladen(client, headers, _XXE)
+
+    assert resp.status_code == 422
+    assert "root:" not in resp.text and "root:" not in caplog.text
+    assert (await client.get("/api/eingangsrechnungen", headers=headers)).json() == []
+
+
+async def test_zu_grosse_dateien_werden_abgelehnt(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+
+    xml_zu_gross = await _hochladen(client, headers, b"<a>" + b" " * (empfang.XML_MAX_BYTES + 1) + b"</a>")
+    assert xml_zu_gross.status_code == 413
+
+    pdf_zu_gross = await _hochladen(
+        client, headers, b"%PDF-1.4" + b"0" * empfang.PDF_MAX_BYTES, "x.pdf", "application/pdf"
+    )
+    assert pdf_zu_gross.status_code == 413
+
+
+async def test_xml_im_beleg_upload_verweist_auf_den_neuen_endpunkt(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+    angelegt = (await _hochladen(client, headers, ubl_bytes())).json()
+
+    resp = await client.post(
+        f"/api/eingangsrechnungen/{angelegt['id']}/beleg",
+        headers=headers,
+        files={"file": ("rechnung.xml", io.BytesIO(ubl_bytes()), "text/xml")},
+    )
+    assert resp.status_code == 400
+    assert "E-Rechnung importieren" in resp.json()["detail"]
+
+
+async def test_rechte_ohne_abrechnung_erstellen_sind_403(client, make_mandant, make_user):
+    mandant = await make_mandant()
+    for rolle in ("techniker", "mitarbeiter"):
+        user = await make_user(mandant=mandant, role=rolle, password="pw-123456")
+        headers = auth_headers(await login(client, user.email, "pw-123456"))
+        assert (await _hochladen(client, headers, ubl_bytes())).status_code == 403, rolle
+    assert (await client.post("/api/eingangsrechnungen/e-rechnung", files={"file": ("a.xml", b"<a/>")})).status_code in (401, 403)
+
+
+async def test_techniker_darf_xml_url_sehen_aber_nicht_importieren(client, make_mandant, make_user):
+    mandant, admin_headers = await _admin(client, make_mandant, make_user)
+    angelegt = (await _hochladen(client, admin_headers, ubl_bytes())).json()
+
+    # techniker hat abrechnung.sehen, ist aber laut Router-Rollen (mandant_admin/custom) zugelassen
+    techniker = await make_user(mandant=mandant, role="techniker", password="pw-123456")
+    headers = auth_headers(await login(client, techniker.email, "pw-123456"))
+    assert (await client.get(f"/api/eingangsrechnungen/{angelegt['id']}/xml-url", headers=headers)).status_code == 200
+
+    mitarbeiter = await make_user(mandant=mandant, role="mitarbeiter", password="pw-123456")
+    headers = auth_headers(await login(client, mitarbeiter.email, "pw-123456"))
+    assert (await client.get(f"/api/eingangsrechnungen/{angelegt['id']}/xml-url", headers=headers)).status_code == 403
+
+
+async def test_anderer_mandant_sieht_die_xml_nicht(client, make_mandant, make_user):
+    _, headers_a = await _admin(client, make_mandant, make_user)
+    _, headers_b = await _admin(client, make_mandant, make_user)
+    angelegt = (await _hochladen(client, headers_a, ubl_bytes())).json()
+
+    assert (await client.get(f"/api/eingangsrechnungen/{angelegt['id']}/xml-url", headers=headers_b)).status_code == 404
+    assert (await client.get(f"/api/eingangsrechnungen/{angelegt['id']}", headers=headers_b)).status_code == 404
+    assert (await client.get("/api/eingangsrechnungen", headers=headers_b)).json() == []
+
+
+async def test_xml_url_ohne_xml_ist_null(client, make_mandant, make_user):
+    _, headers = await _admin(client, make_mandant, make_user)
+    manuell = (
+        await client.post(
+            "/api/eingangsrechnungen",
+            headers=headers,
+            json={"lieferant_name": "X", "rechnungsnummer_lieferant": "1", "rechnungsdatum": "2026-01-01"},
+        )
+    ).json()
+    assert manuell["hat_xml"] is False and manuell["e_rechnung_syntax"] is None
+    assert (await client.get(f"/api/eingangsrechnungen/{manuell['id']}/xml-url", headers=headers)).json() == {"url": None}
+
+
+async def test_papierkorb_behaelt_die_xml_und_purge_bleibt_gesperrt(client, make_mandant, make_user):
+    # Der Papierkorb loescht nirgends S3-Objekte (auch nicht beleg_object_key); eine
+    # importierte E-Rechnung ist 'offen', damit GoBD-gesperrt und nie endgueltig loeschbar.
+    mandant, headers = await _admin(client, make_mandant, make_user)
+    xml = ubl_bytes()
+    angelegt = (await _hochladen(client, headers, xml)).json()
+    zeile = await _zeile(angelegt["id"])
+
+    assert (await client.delete(f"/api/eingangsrechnungen/{angelegt['id']}", headers=headers)).status_code == 204
+    operativ = await make_user(mandant=mandant, role="loesch_operativ", password="pw-123456")
+    op_headers = auth_headers(await login(client, operativ.email, "pw-123456"))
+    purge = await client.delete(f"/api/papierkorb/eingangsrechnung/{angelegt['id']}", headers=op_headers)
+
+    assert purge.status_code == 409 and "Aufbewahrungspflicht" in purge.json()["detail"]
+    assert await storage_service.download_bytes(zeile.xml_object_key) == xml
+    # soft-geloescht: kein Download mehr ueber die Route
+    assert (await client.get(f"/api/eingangsrechnungen/{angelegt['id']}/xml-url", headers=headers)).status_code == 404
+
+    restore = await client.post(f"/api/papierkorb/eingangsrechnung/{angelegt['id']}/wiederherstellen", headers=op_headers)
+    assert restore.status_code == 204
+    assert (await client.get(f"/api/eingangsrechnungen/{angelegt['id']}/xml-url", headers=headers)).json()["url"]
+
+
+# --- Mail-Import ----------------------------------------------------------------------
+
+
+def _mail(*, betreff="Ihre Rechnung", absender="Kabelwerk <buchhaltung@kabelwerk.example>", anhaenge=(), message_id=None):
+    from email.message import EmailMessage
+
+    nachricht = EmailMessage()
+    nachricht["From"] = absender
+    nachricht["To"] = "rechnung@mandant.de"
+    nachricht["Subject"] = betreff
+    if message_id:
+        nachricht["Message-ID"] = message_id
+    nachricht.set_content("Siehe Anhang.")
+    for name, daten, haupt, unter in anhaenge:
+        nachricht.add_attachment(daten, maintype=haupt, subtype=unter, filename=name)
+    return bytes(nachricht)
+
+
+async def _integration(mandant, monkeypatch, nachrichten, uid=7):
+    from app.core.security import encrypt_secret
+    from app.models.integration import MandantIntegration
+    from app.services import email_ingest_service
+
+    async with system_session() as session:
+        session.add(
+            MandantIntegration(
+                mandant_id=mandant.id,
+                typ="imap",
+                config={"host": "imap.example.de", "port": 993, "user": "r@example.de", "mailbox": "INBOX"},
+                secret_ref=encrypt_secret("pw"),
+                aktiv=True,
+            )
+        )
+    monkeypatch.setattr(email_ingest_service, "_fetch_neue_nachrichten", lambda _i: (nachrichten, uid))
+    return email_ingest_service
+
+
+async def _eingangsrechnungen(mandant) -> list[Eingangsrechnung]:
+    from sqlalchemy import select
+
+    async with system_session() as session:
+        return list(
+            (await session.execute(select(Eingangsrechnung).where(Eingangsrechnung.mandant_id == mandant.id)))
+            .scalars()
+            .all()
+        )
+
+
+async def _notifications(mandant) -> list[str]:
+    from sqlalchemy import select
+
+    from app.models.notification import Notification
+
+    async with system_session() as session:
+        rows = (await session.execute(select(Notification).where(Notification.mandant_id == mandant.id))).scalars().all()
+        return [n.titel for n in rows]
+
+
+async def test_mail_import_xml_anhang_wird_zur_offenen_eingangsrechnung(make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    xml = ubl_bytes()
+    service = await _integration(
+        mandant, monkeypatch, [_mail(anhaenge=[("re.xml", xml, "application", "xml")])]
+    )
+
+    ergebnis = await service.run_email_ingest([mandant.id])
+
+    assert ergebnis["neue_e_rechnungen"] == 1 and ergebnis["neue_entwuerfe"] == 0
+    assert ergebnis["uebersprungen"] == {}
+    (zeile,) = await _eingangsrechnungen(mandant)
+    assert zeile.status == "offen" and zeile.erstellt_von is None
+    assert zeile.rechnungsnummer_lieferant == "UBL-2026-1" and zeile.e_rechnung_syntax == "ubl"
+    assert zeile.email_absender == "buchhaltung@kabelwerk.example" and zeile.email_betreff == "Ihre Rechnung"
+    assert await storage_service.download_bytes(zeile.xml_object_key) == xml
+    assert await _notifications(mandant) == ["Neue E-Rechnung per E-Mail: Kabelwerk Nord GmbH"]
+
+
+async def test_mail_import_hybrid_pdf_wird_e_rechnung_und_gewoehnliches_pdf_bleibt_entwurf(
+    make_mandant, make_user, monkeypatch
+):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    hybrid = hybrid_pdf(nummer="R-MAIL-1")
+    service = await _integration(
+        mandant,
+        monkeypatch,
+        [
+            _mail(anhaenge=[("hybrid.pdf", hybrid, "application", "pdf")]),
+            _mail(betreff="Ohne XML", anhaenge=[("normal.pdf", b"%PDF-1.4 fake", "application", "pdf")]),
+        ],
+    )
+
+    ergebnis = await service.run_email_ingest([mandant.id])
+
+    assert (ergebnis["neue_e_rechnungen"], ergebnis["neue_entwuerfe"]) == (1, 1)
+    zeilen = {z.status: z for z in await _eingangsrechnungen(mandant)}
+    assert zeilen["offen"].rechnungsnummer_lieferant == "R-MAIL-1" and zeilen["offen"].beleg_object_key
+    assert await storage_service.download_bytes(zeilen["offen"].beleg_object_key) == hybrid
+    assert zeilen["entwurf"].xml_object_key is None
+
+
+async def test_mail_ohne_anhang_ist_nicht_still_sondern_benachrichtigung(make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    service = await _integration(
+        mandant,
+        monkeypatch,
+        [
+            _mail(betreff="Newsletter", message_id="<n1@x>"),
+            _mail(betreff="Bild", message_id="<n2@x>", anhaenge=[("logo.png", b"\x89PNG", "image", "png")]),
+        ],
+    )
+
+    ergebnis = await service.run_email_ingest([mandant.id])
+
+    assert ergebnis["neue_e_rechnungen"] == 0 and ergebnis["neue_entwuerfe"] == 0
+    assert ergebnis["uebersprungen"] == {"kein_anhang": 1, "kein_verwertbarer_anhang": 1}
+    assert {d["grund"]: d["betreff"] for d in ergebnis["uebersprungen_details"]} == {
+        "kein_anhang": "Newsletter",
+        "kein_verwertbarer_anhang": "Bild",
+    }
+    titel = await _notifications(mandant)
+    assert len(titel) == 2 and all(t.startswith("E-Mail ohne Rechnungsanhang") for t in titel)
+
+
+async def test_mail_import_fehlerhafte_xml_wird_gemeldet_nicht_stillschweigend(make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    service = await _integration(
+        mandant,
+        monkeypatch,
+        [
+            _mail(anhaenge=[("kaputt.xml", b"<a><b></a>", "application", "xml")], message_id="<k@x>"),
+            _mail(anhaenge=[("usd.xml", ubl_bytes(waehrung="USD"), "application", "xml")], message_id="<u@x>"),
+            _mail(anhaenge=[("xxe.xml", _XXE, "application", "xml")], message_id="<x@x>"),
+        ],
+    )
+
+    ergebnis = await service.run_email_ingest([mandant.id])
+
+    assert ergebnis["neue_e_rechnungen"] == 0
+    assert ergebnis["uebersprungen"] == {"ungueltig": 2, "fremdwaehrung": 1}
+    assert await _eingangsrechnungen(mandant) == []
+    titel = await _notifications(mandant)
+    assert len(titel) == 3
+    assert any("kaputt.xml" in t and "wohlgeformt" in t for t in titel)
+    assert any("usd.xml" in t and "USD" in t for t in titel)
+    assert not any("root:" in t for t in titel)
+
+
+async def test_mail_import_defekte_xml_im_hybrid_pdf_behaelt_das_pdf_als_entwurf(make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    kaputt = hybrid_pdf(cii_bytes().replace(b"CrossIndustryInvoice", b"Unsinn"), nummer="R-X")
+    service = await _integration(mandant, monkeypatch, [_mail(anhaenge=[("h.pdf", kaputt, "application", "pdf")])])
+
+    ergebnis = await service.run_email_ingest([mandant.id])
+
+    assert ergebnis["neue_entwuerfe"] == 1 and ergebnis["neue_e_rechnungen"] == 0
+    assert ergebnis["uebersprungen"] == {"ungueltig": 1}
+    (zeile,) = await _eingangsrechnungen(mandant)
+    assert zeile.status == "entwurf" and zeile.beleg_object_key
+    assert "Eingebettete E-Rechnung nicht verwertbar" in zeile.import_hinweis
+
+
+async def test_mail_import_duplikat_wird_uebersprungen_und_im_ergebnis_vermerkt(make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    xml = ubl_bytes()
+    anhang = ("re.xml", xml, "application", "xml")
+    service = await _integration(
+        mandant,
+        monkeypatch,
+        [_mail(anhaenge=[anhang], message_id="<d1@x>"), _mail(anhaenge=[anhang], message_id="<d2@x>")],
+    )
+
+    ergebnis = await service.run_email_ingest([mandant.id])
+
+    assert ergebnis["neue_e_rechnungen"] == 1
+    assert ergebnis["uebersprungen"] == {"duplikat": 1}
+    (detail,) = ergebnis["uebersprungen_details"]
+    assert detail["anhang"] == "re.xml" and "bereits" in detail["meldung"]
+    assert len(await _eingangsrechnungen(mandant)) == 1
+    # Duplikate erzeugen keine zusaetzliche Benachrichtigung
+    assert len(await _notifications(mandant)) == 1
+
+
+async def test_mail_import_meldet_denselben_fehler_nicht_bei_jedem_lauf_erneut(make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    mail = _mail(message_id="<wieder@x>")
+    service = await _integration(mandant, monkeypatch, [mail])
+
+    await service.run_email_ingest([mandant.id])
+    await service.run_email_ingest([mandant.id])
+
+    assert len(await _notifications(mandant)) == 1
+
+
+async def test_mail_import_begrenzt_einzelmeldungen_je_lauf(make_mandant, make_user, monkeypatch):
+    mandant = await make_mandant()
+    await make_user(mandant=mandant, role="mandant_admin")
+    mails = [_mail(betreff=f"Spam {i}", message_id=f"<s{i}@x>") for i in range(14)]
+    service = await _integration(mandant, monkeypatch, mails)
+
+    ergebnis = await service.run_email_ingest([mandant.id])
+
+    assert ergebnis["uebersprungen"] == {"kein_anhang": 14}
+    titel = await _notifications(mandant)
+    assert len(titel) == 11
+    assert any("4 weitere Mail(s)" in t for t in titel)
+
+
+async def test_mail_import_isoliert_mandanten(make_mandant, make_user, monkeypatch):
+    mandant_a = await make_mandant()
+    mandant_b = await make_mandant()
+    await make_user(mandant=mandant_a, role="mandant_admin")
+    await make_user(mandant=mandant_b, role="mandant_admin")
+    xml = ubl_bytes()
+    service = await _integration(mandant_a, monkeypatch, [_mail(anhaenge=[("a.xml", xml, "application", "xml")])])
+    await service.run_email_ingest([mandant_a.id])
+    service = await _integration(mandant_b, monkeypatch, [_mail(anhaenge=[("a.xml", xml, "application", "xml")])])
+    # Zweite Integration von A bleibt aktiv; der Fetch liefert fuer beide dieselbe Mail -- B darf nicht als Duplikat gelten
+    ergebnis = await service.run_email_ingest([mandant_b.id])
+
+    assert ergebnis["neue_e_rechnungen"] == 1
+    assert len(await _eingangsrechnungen(mandant_b)) == 1
+
+
+# --- Migration -------------------------------------------------------------------------
+
+
+def _alembic_cfg():
+    import os
+
+    from alembic.config import Config
+
+    backend = os.path.dirname(os.path.dirname(__file__))
+    cfg = Config(os.path.join(backend, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(backend, "alembic"))
+    return cfg
+
+
+async def _migrieren(richtung: str, ziel: str) -> None:
+    import asyncio
+
+    from alembic import command
+
+    await asyncio.to_thread(getattr(command, richtung), _alembic_cfg(), ziel)
+
+
+async def test_migration_0106_up_down_up():
+    import os
+
+    from sqlalchemy import create_engine, inspect
+
+    from app.core.config import get_settings
+
+    engine = create_engine(os.environ.get("DATABASE_URL_SYNC") or get_settings().database_url_sync)
+    neu = {"xml_object_key", "xml_sha256", "e_rechnung_syntax", "import_hinweis"}
+    checks = {"ck_eingangsrechnungen_e_rechnung_syntax_valid", "ck_eingangsrechnungen_xml_sha256_format"}
+    try:
+        await _migrieren("downgrade", "0105")
+        assert neu.isdisjoint({c["name"] for c in inspect(engine).get_columns("eingangsrechnungen")})
+        assert not checks & {c["name"] for c in inspect(engine).get_check_constraints("eingangsrechnungen")}
+
+        await _migrieren("upgrade", "head")
+        spalten = {c["name"]: c for c in inspect(engine).get_columns("eingangsrechnungen")}
+        assert neu <= set(spalten) and all(spalten[n]["nullable"] for n in neu)
+        assert checks <= {c["name"] for c in inspect(engine).get_check_constraints("eingangsrechnungen")}
+    finally:
+        await _migrieren("upgrade", "head")
+        engine.dispose()
+
+
+async def test_check_constraints_verhindern_ungueltige_werte(make_mandant):
+    from sqlalchemy.exc import IntegrityError
+
+    mandant = await make_mandant()
+    for feld, wert in (("e_rechnung_syntax", "edifact"), ("xml_sha256", "ABC")):
+        with pytest.raises(IntegrityError):
+            async with system_session() as session:
+                session.add(
+                    Eingangsrechnung(
+                        mandant_id=mandant.id,
+                        lieferant_name="X",
+                        rechnungsnummer_lieferant="1",
+                        rechnungsdatum=date.today(),
+                        **{feld: wert},
+                    )
+                )

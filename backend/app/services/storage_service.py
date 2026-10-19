@@ -84,6 +84,10 @@ def new_eingangsrechnung_beleg_key(eingangsrechnung_id: uuid.UUID, filename: str
     return f"eingangsrechnungen/{eingangsrechnung_id}/beleg/{uuid.uuid4()}.{suffix}"
 
 
+def new_eingangsrechnung_xml_key(eingangsrechnung_id: uuid.UUID) -> str:
+    return f"eingangsrechnungen/{eingangsrechnung_id}/xml/{uuid.uuid4()}.xml"
+
+
 def new_mail_attachment_key(message_id: uuid.UUID, filename: str) -> str:
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
     return f"mail-nachrichten/{message_id}/{uuid.uuid4()}.{suffix}"
