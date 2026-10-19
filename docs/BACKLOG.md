@@ -90,7 +90,7 @@ Kein Bug, nur verwirrend — historisch gewachsener Name.
 
 Bündelt Kunden/Material/Abrechnung, aber der Name verrät das nicht.
 
-## 8. Mandanten-eigene Rechtstexte im Kundenportal
+## 8. Mandanten-eigene Rechtstexte im Kundenportal — Teilweise erledigt
 
 Die Links zu Impressum und Datenschutz im Kundenportal zeigen bisher auf die
 plattformweiten Texte (`VITE_IMPRESSUM_URL`/`VITE_DATENSCHUTZ_URL`, Build-Zeit).
@@ -98,7 +98,17 @@ Gegenüber seinen Kunden ist aber der Handwerksbetrieb selbst
 Diensteanbieter und Verantwortlicher, braucht also ein eigenes Impressum und
 eine eigene Datenschutzerklärung. Offen: pro Mandant hinterlegbare URLs (z. B.
 im `Mandant.branding`-JSON, siehe Punkt 5) und Vorrang vor dem Plattform-Link
-im Portal. Noch nicht begonnen.
+im Portal.
+
+Stand: Pro Mandant hinterlegbar sind `impressum_url`/`datenschutz_url` in
+`Mandant.firmendaten` (Formular „Firmenprofil“, nur http/https). Reihenfolge je
+Link: Firmendaten-URL, dann Build-Env, dann interne Platzhalter-Seite
+`/impressum` bzw. `/datenschutz`, die nur die Firmenangaben anzeigt
+(`GET /api/public/rechtliches`, Mandant über `portal_slug` bzw. bei genau einem
+aktiven Mandanten). Die Links sind dadurch nie tot. Offen: die rechtsgeprüften
+Texte selbst (Platzhalter-Hinweis bleibt, bis URLs hinterlegt sind), Mandanten-
+Kontext im Partnerportal und auf den Kundenportal-Seiten ohne Slug (Registrieren,
+Passwort zurücksetzen) bei mehreren aktiven Mandanten.
 
 ## Erledigt, zur Einordnung
 

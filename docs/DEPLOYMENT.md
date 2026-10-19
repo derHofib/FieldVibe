@@ -235,6 +235,18 @@ In `.env` mindestens setzen:
 
 `chmod 600 .env` nicht vergessen – die Datei enthält alle Secrets.
 
+**Impressum/Datenschutz:** Die Links auf Login-, Registrierungs- und
+Portalseiten zeigen immer auf etwas. Reihenfolge: (1) `impressum_url`/
+`datenschutz_url` in den Firmendaten des Betriebs (Integrationen →
+Firmenprofil), (2) `VITE_IMPRESSUM_URL`/`VITE_DATENSCHUTZ_URL` in der `.env`
+(Build-Zeit, danach Frontend neu bauen), (3) sonst die Platzhalter-Seiten
+`/impressum` und `/datenschutz` der App, die nur die Firmenangaben anzeigen
+und ausdrücklich als Platzhalter gekennzeichnet sind. Für den
+Produktivbetrieb ersetzen rechtsgeprüfte Texte (1) oder (2) die Platzhalter
+(§ 5 DDG, Art. 13 DSGVO). Die Platzhalter-Seiten erkennen den Betrieb bei
+genau einem aktiven Mandanten automatisch, bei mehreren nur über den
+Kundenportal-Link `/portal/l/<slug>`.
+
 ## 3. Starten
 
 **Nicht** einfach `docker compose up` – das lädt automatisch

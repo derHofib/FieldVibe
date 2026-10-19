@@ -215,11 +215,11 @@ else
 fi
 
 # --- 6b. Rechtstexte (Impressum/Datenschutz) ---------------------------------
-# Nur Warnung, kein Abbruch: die Links werden zur Build-Zeit ins Frontend
-# gebacken; ohne Wert zeigt das Frontend sie schlicht nicht an.
+# Nur Hinweis, kein Abbruch: die Links werden zur Build-Zeit ins Frontend
+# gebacken; ohne Wert zeigt das Frontend die Platzhalter-Seiten der App.
 for legal_var in VITE_IMPRESSUM_URL VITE_DATENSCHUTZ_URL; do
   if [[ -z "$(get_env "$legal_var")" ]]; then
-    warn "${legal_var} ist in der .env nicht gesetzt -- Impressum/Datenschutz werden im Frontend nicht verlinkt (Pflicht für den Produktivbetrieb, §5 DDG / Art. 13 DSGVO). Wert eintragen und dieses Skript erneut ausführen, damit das Frontend neu gebaut wird."
+    log "Hinweis: ${legal_var} ist in der .env nicht gesetzt -- die App nutzt Platzhalter-Seiten (/impressum, /datenschutz); echte URLs in den Firmendaten oder in der .env hinterlegen (Pflicht für den Produktivbetrieb, §5 DDG / Art. 13 DSGVO). Nach einer .env-Änderung dieses Skript erneut ausführen, damit das Frontend neu gebaut wird."
   fi
 done
 
