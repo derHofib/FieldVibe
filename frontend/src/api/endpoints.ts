@@ -146,7 +146,9 @@ import type {
   Pruefzyklus,
   PruefzyklusEinheit,
   Rechnung,
+  RechnungAusAngebotCreate,
   RechnungenFilter,
+  RechnungGutschriftCreate,
   RechnungListe,
   RechnungPosition,
   RechnungPositionQuelle,
@@ -1465,7 +1467,17 @@ export const rechnungenApi = {
     faellig_am?: string;
     leistungsdatum?: string;
     positionen?: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis">[];
+    rechnungsart?: "rechnung" | "abschlag";
   }) => apiFetch<Rechnung>("/api/rechnungen", { method: "POST", body: JSON.stringify(body) }),
+  ausAngebot: (body: RechnungAusAngebotCreate) =>
+    apiFetch<Rechnung>("/api/rechnungen/aus-angebot", { method: "POST", body: JSON.stringify(body) }),
+  abschlaegeAnrechnen: (id: string, abschlagRechnungIds?: string[]) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/abschlaege-anrechnen`, {
+      method: "POST",
+      body: JSON.stringify(abschlagRechnungIds ? { abschlag_rechnung_ids: abschlagRechnungIds } : {}),
+    }),
+  gutschrift: (id: string, body: RechnungGutschriftCreate) =>
+    apiFetch<Rechnung>(`/api/rechnungen/${id}/gutschrift`, { method: "POST", body: JSON.stringify(body) }),
   addPosition: (
     id: string,
     body: Pick<RechnungPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
