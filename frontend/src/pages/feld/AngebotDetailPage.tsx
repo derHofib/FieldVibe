@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { angeboteApi, kundenApi, leistungsverzeichnisApi, mandantEinstellungenApi } from "../../api/endpoints";
+import { AngebotAbrechnung } from "../../components/angebot/AngebotAbrechnung";
 import { AngebotPositionSheet } from "../../components/angebot/AngebotPositionSheet";
 import { GueltigkeitSheet } from "../../components/angebot/GueltigkeitSheet";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
@@ -68,7 +69,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   const id = idProp ?? idParam;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
+  const kannAbrechnen = hatRecht("abrechnung", "erstellen");
   const kannLoeschen = currentUser?.role === "loesch_operativ";
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<NeuePosition>({
@@ -544,6 +546,14 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
         </div>
       </div>
+
+      {angebot.status === "angenommen" && (
+        <AngebotAbrechnung
+          angebot={angebot}
+          kannErstellen={kannAbrechnen}
+          onRechnung={(rechnung) => navigate(`/rechnungen/${rechnung.id}`)}
+        />
+      )}
 
       {mutationFehler && <FehlerMeldung meldung={mutationFehler} alsKasten />}
 
