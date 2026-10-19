@@ -119,6 +119,21 @@ Passwort zurücksetzen) bei mehreren aktiven Mandanten.
 
 Angebote sind bisher eine flache Positionsliste mit festem Einleitungs- und Schlusstext im PDF. Offen sind Gliederung (Titel/Zwischensummen), Alternativ- und Bedarfspositionen, Varianten sowie frei wählbare Textbausteine für Einleitung und Schluss.
 
+## 10. DATEV-Export: Abnahme und Lücken (Roadmap 1.7)
+
+Stand und Annahmen: `docs/konzepte/DATEV.md`.
+
+- **Abnahme per Testimport beim Steuerberater offen.** Header (Formatversion 13),
+  Spaltenköpfe und Feldregeln sind aus dem Gedächtnis rekonstruiert, nicht gegen die
+  DATEV-Spezifikation geprüft; ebenso die SKR04-Standardkonten.
+- **Zahlungsbuchungen (OP-Ausgleich)** fehlen: der Stapel enthält nur Rechnungen, keine
+  Zahlungseingänge/-ausgänge, Skonto oder Mahngebühren.
+- **Eingangsrechnung mit gemischten MwSt-Sätzen**: eine Eingangsrechnung hat genau einen
+  Satz und ergibt eine Buchungszeile; Aufwandskonto je Kategorie ist nicht konfigurierbar.
+- Wirtschaftsjahr-übergreifende Zeiträume werden nicht geprüft; keine Umnummerierung der
+  Personenkonten bei geänderter Sachkontenlänge; kein Bearbeiten des Kreditorenkontos in der
+  Oberfläche (nur API).
+
 ## Erledigt, zur Einordnung
 
 `v1.0.0` (17.08.2026) markiert den Ausgangsstand nach Zusammenführung
