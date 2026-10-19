@@ -20,7 +20,7 @@ from app.schemas.auswertung import (
     UstVaBericht,
     UstVaSatzZeile,
 )
-from app.services import eingangsrechnung_service, rechnung_service
+from app.services import eingangsrechnung_service, rechnung_service, steuer_service
 
 _CENT = Decimal("0.01")
 
@@ -58,6 +58,21 @@ def _kreditorenkonto(lieferant_id: UUID | None, lieferant_name: str) -> str:
     return str(70000 + (zlib.crc32(schluessel) % 9000))
 
 
+def _gruppen_fuer_buchung(rechnung: Rechnung, positionen) -> list[steuer_service.SteuerGruppe]:
+    """Steuergruppen einer Ausgangsrechnung fuer UStVA/DATEV. Satz 0 mit
+    Kategorie E (Kleinunternehmer) bucht wie bisher ueber den Satz 0. Z und AE
+    haben noch kein Konten-/Kennzahlen-Mapping -- lieber abbrechen als still
+    falsch buchen."""
+    gruppen = steuer_service.steuer_gruppen(rechnung, positionen)
+    for gruppe in gruppen:
+        if gruppe.kategorie in ("Z", "AE"):
+            raise NotImplementedError(
+                f"Steuerkategorie {gruppe.kategorie} (Rechnung {rechnung.rechnungsnummer}) "
+                "hat noch kein Mapping in UStVA/DATEV -- Mapping folgt in Schritt 3"
+            )
+    return gruppen
+
+
 async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis: date) -> UstVaBericht:
     """Aggregiert Umsatzsteuer (aus versendeten Ausgangsrechnungen, inkl.
     Storno-Belegen mit negativen Betraegen -- siehe Rechnung.ist_storno)
@@ -77,8 +92,8 @@ async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis
     umsatz_nach_satz: dict[Decimal, Decimal] = {}
     for rechnung in ausgangsrechnungen:
         positionen = await rechnung_service.positionen_fuer(session, rechnung.id)
-        netto = rechnung_service.netto_betrag(rechnung, positionen)
-        umsatz_nach_satz[rechnung.mwst_satz] = umsatz_nach_satz.get(rechnung.mwst_satz, Decimal("0")) + netto
+        for gruppe in _gruppen_fuer_buchung(rechnung, positionen):
+            umsatz_nach_satz[gruppe.satz] = umsatz_nach_satz.get(gruppe.satz, Decimal("0")) + gruppe.netto
 
     eingang_stmt = select(Eingangsrechnung).where(
         Eingangsrechnung.mandant_id == mandant_id,
@@ -97,7 +112,7 @@ async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis
         )
 
     umsatzsteuer_saetze = [
-        UstVaSatzZeile(satz=satz, netto=netto.quantize(_CENT), steuer=(netto * satz / Decimal("100")).quantize(_CENT))
+        UstVaSatzZeile(satz=satz, netto=netto.quantize(_CENT), steuer=steuer_service.runde_cent(netto * satz / Decimal("100")))
         for satz, netto in sorted(umsatz_nach_satz.items())
     ]
     vorsteuer_saetze = [
@@ -243,22 +258,23 @@ async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, b
     for rechnung in ausgangsrechnungen:
         kunde = await session.get(Kunde, rechnung.kunde_id)
         positionen = await rechnung_service.positionen_fuer(session, rechnung.id)
-        netto = rechnung_service.netto_betrag(rechnung, positionen)
-        brutto = (netto + netto * rechnung.mwst_satz / Decimal("100")).quantize(_CENT)
-        zeilen.append(
-            [
-                _betrag_datev(brutto),
-                "S",
-                "EUR",
-                _debitorenkonto(rechnung.kunde_id),
-                _ERLOESKONTO_NACH_SATZ.get(rechnung.mwst_satz, "8400"),
-                _ERLOES_BU_SCHLUESSEL.get(rechnung.mwst_satz, ""),
-                rechnung.versendet_am.strftime("%d%m"),
-                rechnung.rechnungsnummer,
-                "",
-                f"Rechnung {rechnung.rechnungsnummer} {kunde.name if kunde else ''}".strip(),
-            ]
-        )
+        # Eine Buchungszeile je Steuergruppe: der Erloeskonto-/BU-Schluessel
+        # haengt am Satz. Einzelsatz-Belege ergeben wie bisher genau eine Zeile.
+        for gruppe in _gruppen_fuer_buchung(rechnung, positionen):
+            zeilen.append(
+                [
+                    _betrag_datev(gruppe.brutto),
+                    "S",
+                    "EUR",
+                    _debitorenkonto(rechnung.kunde_id),
+                    _ERLOESKONTO_NACH_SATZ.get(gruppe.satz, "8400"),
+                    _ERLOES_BU_SCHLUESSEL.get(gruppe.satz, ""),
+                    rechnung.versendet_am.strftime("%d%m"),
+                    rechnung.rechnungsnummer,
+                    "",
+                    f"Rechnung {rechnung.rechnungsnummer} {kunde.name if kunde else ''}".strip(),
+                ]
+            )
     for eingangsrechnung in eingangsrechnungen:
         positionen = await eingangsrechnung_service.positionen_fuer(session, eingangsrechnung.id)
         netto = eingangsrechnung_service.netto_betrag(eingangsrechnung, positionen)
