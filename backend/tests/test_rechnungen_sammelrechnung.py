@@ -321,6 +321,16 @@ async def test_position_bearbeiten(client, make_mandant, make_user, make_kunde, 
     )
     assert r404.status_code == 404
 
+    # Beleg mit Satz 0 (kein Kleinunternehmer): die geerbte Befreiung E/0 braucht seit
+    # Schritt 3 vor dem Versand einen Steuergrund.
+    ohne_grund = await client.patch(f"/api/rechnungen/{rechnung_id}", headers=headers, json={"status": "versendet"})
+    assert ohne_grund.status_code == 422
+    mit_grund = await client.patch(
+        f"/api/rechnungen/{rechnung_id}/positionen/{position_id}",
+        headers=headers,
+        json={"steuer_grund": "sonstige_befreiung", "steuer_grund_text": "Steuerfreie Ausfuhrlieferung"},
+    )
+    assert mit_grund.status_code == 200
     versendet = await client.patch(f"/api/rechnungen/{rechnung_id}", headers=headers, json={"status": "versendet"})
     assert versendet.status_code == 200
     r400 = await client.patch(
