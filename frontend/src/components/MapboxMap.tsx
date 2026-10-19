@@ -3,6 +3,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useRef } from "react";
 
 import { useTheme } from "../context/ThemeContext";
+import { richteMapboxEin } from "./mapboxSetup";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -32,7 +33,7 @@ export function MapboxMap({
 
   useEffect(() => {
     if (!MAPBOX_TOKEN || !containerRef.current) return;
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    richteMapboxEin(MAPBOX_TOKEN);
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE_URL[theme],
