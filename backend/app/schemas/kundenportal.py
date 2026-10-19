@@ -43,6 +43,20 @@ class KundenportalZugangUpdate(BaseModel):
 
 class KundenAngebotAntwort(BaseModel):
     status: str
+    # Nur im B2C-Ablauf Pflicht (Button-Loesung § 312j Abs. 3 BGB): der Kunde
+    # bestaetigt die Zahlungspflicht und die Kenntnisnahme der Belehrung, die
+    # er in genau dieser Version gesehen hat.
+    bestaetigung: bool | None = None
+    belehrung_version: str | None = None
+    # Hash der Fassung, die der Kunde auf dem Bildschirm hatte; weicht sie ab,
+    # wurde das Angebot zwischenzeitlich geaendert (409).
+    fassung_sha256: str | None = None
+
+
+class KundenAngebotWiderruf(BaseModel):
+    # Zweite Stufe des Widerrufsbuttons: ohne ausdrueckliche Bestaetigung
+    # (Seite "Widerruf bestaetigen") kein Widerruf.
+    bestaetigung: bool = False
 
 
 class KundenPasswortVergessenRequest(BaseModel):
@@ -180,6 +194,33 @@ class AngebotPortalRead(BaseModel):
     gesamt_netto: Decimal
     gesamt_brutto: Decimal
     ist_abgelaufen: bool
+    widerrufen_am: datetime | None = None
+    fassung_sha256: str = ""
+    # B2C-Ablauf gilt fuer diesen Kunden (Mandanteneinstellung + Kundentyp).
+    verbraucherschutz: bool = False
+    # Widerrufsbutton: moeglich = Button zeigen; Frist/Hinweis erklaeren, warum
+    # er fehlt (abgelaufen, Rechnung schon versendet).
+    widerruf_moeglich: bool = False
+    widerruf_frist_bis: datetime | None = None
+    widerruf_hinweis: str | None = None
+    nachweis_referenz: str | None = None
+
+
+class BelehrungPortalRead(BaseModel):
+    version: str
+    text: str
+    # True = Mustertext des Systems, noch nicht vom Betrieb hinterlegt.
+    ist_platzhalter: bool
+
+
+class VerbraucherschutzPortalRead(BaseModel):
+    """Angaben fuer den B2C-Annahmedialog. Auch fuer Nicht-Verbraucher
+    abrufbar (verbraucherschutz=false), dann ohne Texte."""
+
+    verbraucherschutz: bool
+    widerrufsfrist_tage: int
+    belehrung: BelehrungPortalRead | None = None
+    widerrufsformular_text: str | None = None
 
 
 class RechnungPositionPortalRead(BaseModel):

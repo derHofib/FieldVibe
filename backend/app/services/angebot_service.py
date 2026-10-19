@@ -1,3 +1,6 @@
+import hashlib
+import json
+import unicodedata
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
@@ -13,7 +16,8 @@ from app.models.mangel import Mangel
 from app.models.rechnung import Rechnung
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
-from app.schemas.angebot import AngebotAbschlagRead, AngebotPositionRead, AngebotRead
+from app.models.angebot_annahme import AngebotAnnahme
+from app.schemas.angebot import AngebotAbschlagRead, AngebotNachweisRead, AngebotPositionRead, AngebotRead
 from app.services import rechnung_service
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
@@ -35,6 +39,49 @@ def summen(positionen: list[AngebotPosition], mwst_satz: Decimal) -> tuple[Decim
     # Netto -- sonst weicht das Angebot vom spaeteren Beleg um einen Cent ab.
     netto = runde_cent(sum((p.menge * p.einzelpreis for p in positionen), Decimal("0")))
     return netto, netto + runde_cent(netto * mwst_satz / Decimal("100"))
+
+
+def _dez(wert: Decimal) -> str:
+    # Feste zwei Nachkommastellen: Decimal("10") und Decimal("10.00") muessen
+    # denselben Hash ergeben, egal ob frisch berechnet oder aus der DB geladen.
+    return format(Decimal(wert).quantize(Decimal("0.01")), "f")
+
+
+def kanonische_fassung(angebot: Angebot, positionen: list[AngebotPosition]) -> str:
+    """Kanonische JSON-Serialisierung dessen, was der Kunde annimmt: Positionen,
+    Summen, Steuersatz und Gueltigkeit. Bewusst nicht das PDF: fpdf2 schreibt
+    CreationDate und Dokument-ID in jede Ausgabe, derselbe Inhalt ergaebe bei
+    jedem Abruf einen anderen Hash. Auch keine Datenbank-IDs, Zeitstempel,
+    Artikelnummern oder interne Positionstypen -- sie aendern den Inhalt des
+    Angebots nicht. Das Format ist versioniert ("v"), damit eine spaetere
+    Erweiterung alte Nachweise nicht unpruefbar macht."""
+    netto, brutto = summen(positionen, angebot.mwst_satz)
+    daten = {
+        "v": 1,
+        "angebotsnummer": angebot.angebotsnummer,
+        "mandant_id": str(angebot.mandant_id),
+        "kunde_id": str(angebot.kunde_id),
+        "mwst_satz": _dez(angebot.mwst_satz),
+        "gueltig_bis": angebot.gueltig_bis.isoformat() if angebot.gueltig_bis else None,
+        "positionen": [
+            {
+                "position": p.position,
+                "beschreibung": unicodedata.normalize("NFC", p.beschreibung),
+                "menge": _dez(p.menge),
+                "einheit": unicodedata.normalize("NFC", p.einheit),
+                "einzelpreis": _dez(p.einzelpreis),
+                "gesamt": _dez(runde_cent(p.menge * p.einzelpreis)),
+            }
+            for p in sorted(positionen, key=lambda p: p.position)
+        ],
+        "gesamt_netto": _dez(netto),
+        "gesamt_brutto": _dez(brutto),
+    }
+    return json.dumps(daten, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def berechne_fassung_sha256(angebot: Angebot, positionen: list[AngebotPosition]) -> str:
+    return hashlib.sha256(kanonische_fassung(angebot, positionen).encode("utf-8")).hexdigest()
 
 
 def effektiver_mwst_satz(mandant: Mandant, gewuenscht: Decimal | None) -> Decimal:
@@ -68,6 +115,7 @@ async def to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
     netto, brutto = summen(positionen, angebot.mwst_satz)
     abschlaege, schlussrechnung_id, rechnung_id = await _abrechnung_fuer(session, angebot)
     abgerechnet = sum((a.netto for a in abschlaege), Decimal("0")).quantize(Decimal("0.01"))
+    nachweis = await letzter_nachweis(session, angebot.id)
     return AngebotRead(
         **{
             k: getattr(angebot, k)
@@ -83,6 +131,8 @@ async def to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
                 "rest_netto",
                 "schlussrechnung_id",
                 "rechnung_id",
+                "fassung_sha256",
+                "letzter_nachweis",
             )
         },
         positionen=[AngebotPositionRead.model_validate(p) for p in positionen],
@@ -94,7 +144,20 @@ async def to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
         rest_netto=netto - abgerechnet,
         schlussrechnung_id=schlussrechnung_id,
         rechnung_id=rechnung_id,
+        fassung_sha256=berechne_fassung_sha256(angebot, positionen),
+        letzter_nachweis=AngebotNachweisRead.model_validate(nachweis) if nachweis else None,
     )
+
+
+async def letzter_nachweis(session: AsyncSession, angebot_id: UUID) -> AngebotAnnahme | None:
+    return (
+        await session.execute(
+            select(AngebotAnnahme)
+            .where(AngebotAnnahme.angebot_id == angebot_id)
+            .order_by(AngebotAnnahme.created_at.desc(), AngebotAnnahme.id.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
 
 async def _abrechnung_fuer(

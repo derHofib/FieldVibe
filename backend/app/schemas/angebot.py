@@ -107,6 +107,25 @@ class AngebotAbschlagRead(BaseModel):
     netto: Decimal
 
 
+class AngebotNachweisRead(BaseModel):
+    """Letzter Portal-Nachweis (Annahme/Ablehnung/Widerruf) fuer die Office-
+    Ansicht. IP und User-Agent bleiben hier sichtbar: es ist der Beleg des
+    Betriebs, nicht des Kunden (Portal-Schemas enthalten sie nie)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    aktion: str
+    zugang_email: str
+    zugang_name: str
+    ip: str
+    user_agent: str
+    fassung_sha256: str
+    b2c_flag: bool
+    belehrung_version: str | None
+    created_at: datetime
+
+
 class AngebotRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -123,12 +142,17 @@ class AngebotRead(BaseModel):
     abgelehnt_am: datetime | None
     auftrag_vorgang_id: UUID | None
     nachgefasst_am: datetime | None
+    widerrufen_am: datetime | None = None
     created_at: datetime
     updated_at: datetime
     positionen: list[AngebotPositionRead]
     gesamt_netto: Decimal
     gesamt_brutto: Decimal
     ist_abgelaufen: bool
+    # Hash der aktuellen Fassung -- derselbe Wert, den der Nachweis bei Annahme
+    # festhaelt; Abweichung zum Nachweis = Angebot wurde danach geaendert.
+    fassung_sha256: str = ""
+    letzter_nachweis: AngebotNachweisRead | None = None
     # Abrechnung (nicht stornierte Abschlagsrechnungen, Entwuerfe eingeschlossen,
     # weil sie ihr Kontingent bereits belegen).
     abschlaege: list[AngebotAbschlagRead] = Field(default_factory=list)

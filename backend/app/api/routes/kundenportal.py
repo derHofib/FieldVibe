@@ -1,13 +1,17 @@
+import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import KundenAuthContext, get_current_kunde, get_kunden_db, require_module_kunde
+from app.core.rate_limit import client_ip
 from app.models.angebot import Angebot
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung
 from app.models.standort import Standort
@@ -19,17 +23,29 @@ from app.schemas.kundenportal import (
     PORTAL_EVENT_TYPEN,
     AngebotPortalRead,
     AnlagePortalRead,
+    BelehrungPortalRead,
     KundenAngebotAntwort,
+    KundenAngebotWiderruf,
     KundenAnlageCreate,
     KundenStandortCreate,
     RechnungPortalRead,
     StandortPortalRead,
+    VerbraucherschutzPortalRead,
     VorgangAnfragePortalRead,
     VorgangEventPortalRead,
     VorgangPortalRead,
 )
 from app.schemas.vorgang_anfrage import VorgangAnfrageCreate
-from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.services import angebot_annahme_service as annahme_service
+from app.services import verbraucherschutz_service as vs
+from app.services.angebot_service import (
+    apply_status_transition,
+    berechne_fassung_sha256,
+    letzter_nachweis,
+    positionen_fuer,
+    summen,
+    to_read_model,
+)
 from app.services.geocoding_service import geocode_falls_modul_aktiv
 from app.services.pdf_service import generate_angebot_pdf, generate_rechnung_pdf
 from app.services.rechnung_service import (
@@ -40,6 +56,8 @@ from app.services.rechnung_service import (
 from app.services.storage_service import download_bytes
 from app.services.vorgang_anfrage_service import notify_neue_anfrage
 from app.services.vorgang_event_service import to_read_model as event_to_read_model
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/kundenportal",
@@ -60,8 +78,28 @@ async def _require_own_vorgang(session: AsyncSession, auth: KundenAuthContext, v
     return vorgang
 
 
-async def _angebot_portal(session: AsyncSession, angebot: Angebot) -> AngebotPortalRead:
-    return AngebotPortalRead.model_validate(await to_read_model(session, angebot), from_attributes=True)
+async def _angebot_portal(
+    session: AsyncSession,
+    angebot: Angebot,
+    *,
+    mandant: Mandant | None = None,
+    kunde: Kunde | None = None,
+) -> AngebotPortalRead:
+    read = AngebotPortalRead.model_validate(await to_read_model(session, angebot), from_attributes=True)
+    mandant = mandant or await session.get(Mandant, angebot.mandant_id)
+    kunde = kunde or await session.get(Kunde, angebot.kunde_id)
+    zusatz: dict = {"verbraucherschutz": vs.b2c_ablauf_aktiv(mandant, kunde)}
+    nachweis = await letzter_nachweis(session, angebot.id)
+    if nachweis is not None:
+        zusatz["nachweis_referenz"] = str(nachweis.id)
+    # Der Widerruf haengt am Nachweis der Annahme (b2c_flag), nicht an der
+    # heutigen Einstellung: schaltet der Betrieb den Schutz spaeter ab, behaelt
+    # der Verbraucher sein Widerrufsrecht fuer den bereits geschlossenen Vertrag.
+    if angebot.status == "angenommen":
+        grund, ende = await annahme_service.widerruf_pruefung(session, angebot, datetime.now(timezone.utc))
+        if ende is not None:
+            zusatz.update(widerruf_moeglich=grund is None, widerruf_frist_bis=ende, widerruf_hinweis=grund)
+    return read.model_copy(update=zusatz)
 
 
 async def _rechnung_portal(session: AsyncSession, rechnung: Rechnung) -> RechnungPortalRead:
@@ -133,7 +171,11 @@ async def list_eigene_angebote(
         )
         .order_by(Angebot.created_at.desc())
     )
-    return [await _angebot_portal(session, a) for a in result.scalars().all()]
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    return [
+        await _angebot_portal(session, a, mandant=mandant, kunde=kunde) for a in result.scalars().all()
+    ]
 
 
 async def _require_own_angebot(session: AsyncSession, auth: KundenAuthContext, angebot_id: UUID) -> Angebot:
@@ -162,6 +204,7 @@ async def get_eigenes_angebot(
 async def antwort_auf_angebot(
     angebot_id: UUID,
     body: KundenAngebotAntwort,
+    request: Request,
     auth: KundenAuthContext = Depends(get_current_kunde),
     session: AsyncSession = Depends(get_kunden_db),
 ) -> AngebotPortalRead:
@@ -171,12 +214,151 @@ async def antwort_auf_angebot(
             detail="Als Kunde können Sie ein Angebot nur annehmen oder ablehnen",
         )
     angebot = await _require_own_angebot(session, auth, angebot_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    zugang = await session.get(KundenportalZugang, auth.zugang_id)
+    aktion = "annahme" if body.status == "angenommen" else "ablehnung"
+
+    # Button-Loesung (§ 312j Abs. 3 BGB) nur bei der Annahme durch einen
+    # Verbraucher; das Ablehnen bleibt formlos, wird aber protokolliert.
+    b2c = vs.b2c_ablauf_aktiv(mandant, kunde)
+    belehrung = vs.belehrung_fuer(mandant) if b2c and aktion == "annahme" else None
+    if belehrung is not None:
+        if body.bestaetigung is not True:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Die Beauftragung muss ausdrücklich als zahlungspflichtig bestätigt werden",
+            )
+        if body.belehrung_version != belehrung.version:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Die Widerrufsbelehrung fehlt oder wurde aktualisiert – bitte die Seite neu laden",
+            )
+    fassung_konflikt = HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Das Angebot wurde seit dem Laden der Seite geändert – bitte die Seite neu laden und erneut prüfen",
+    )
+    if body.fassung_sha256 is not None and body.fassung_sha256 != berechne_fassung_sha256(
+        angebot, await positionen_fuer(session, angebot.id)
+    ):
+        raise fassung_konflikt
+
     await apply_status_transition(
         session, angebot, body.status, mandant_id=auth.mandant_id, actor_user_id=None
     )
+    # Hash aus dem gesperrten, frischen Stand: faengt eine Aenderung zwischen
+    # Vorpruefung und Sperre ab (die Transaktion rollt beim 409 zurueck).
+    positionen = await positionen_fuer(session, angebot.id)
+    fassung = berechne_fassung_sha256(angebot, positionen)
+    if body.fassung_sha256 is not None and body.fassung_sha256 != fassung:
+        raise fassung_konflikt
+
+    zeitpunkt = angebot.angenommen_am if aktion == "annahme" else angebot.abgelehnt_am
+    nachweis = await annahme_service.protokolliere(
+        session,
+        angebot=angebot,
+        aktion=aktion,
+        zugang=zugang,
+        ip=client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+        fassung_sha256=fassung,
+        zeitpunkt=zeitpunkt,
+        b2c=b2c,
+        belehrung=belehrung,
+    )
     await session.flush()
     await session.refresh(angebot)
-    return await _angebot_portal(session, angebot)
+
+    if belehrung is not None:
+        betreff, text = annahme_service.baue_annahme_mail(
+            mandant=mandant,
+            angebot=angebot,
+            zugang=zugang,
+            brutto=summen(positionen, angebot.mwst_satz)[1],
+            nachweis=nachweis,
+            belehrung=belehrung,
+        )
+        try:
+            pdf_bytes = await _angebot_pdf_bytes(session, mandant, angebot, kunde)
+            anhang = (f"{angebot.angebotsnummer}.pdf", pdf_bytes, "application/pdf")
+        except Exception:
+            logger.exception("Angebots-PDF für Bestätigungsmail %s nicht erzeugt", angebot.angebotsnummer)
+            anhang = None
+        await annahme_service.sende_kundenmail(
+            session, angebot=angebot, zugang=zugang, betreff=betreff, text=text, anhang=anhang
+        )
+    return await _angebot_portal(session, angebot, mandant=mandant, kunde=kunde)
+
+
+@router.get("/verbraucherschutz", response_model=VerbraucherschutzPortalRead)
+async def get_verbraucherschutz(
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> VerbraucherschutzPortalRead:
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    if not vs.b2c_ablauf_aktiv(mandant, kunde):
+        return VerbraucherschutzPortalRead(verbraucherschutz=False, widerrufsfrist_tage=vs.WIDERRUFSFRIST_TAGE)
+    belehrung = vs.belehrung_fuer(mandant)
+    return VerbraucherschutzPortalRead(
+        verbraucherschutz=True,
+        widerrufsfrist_tage=vs.WIDERRUFSFRIST_TAGE,
+        belehrung=BelehrungPortalRead(
+            version=belehrung.version, text=belehrung.text, ist_platzhalter=belehrung.ist_platzhalter
+        ),
+        widerrufsformular_text=vs.muster_widerrufsformular(mandant),
+    )
+
+
+@router.post("/angebote/{angebot_id}/widerruf", response_model=AngebotPortalRead)
+async def widerruf_angebot(
+    angebot_id: UUID,
+    body: KundenAngebotWiderruf,
+    request: Request,
+    auth: KundenAuthContext = Depends(get_current_kunde),
+    session: AsyncSession = Depends(get_kunden_db),
+) -> AngebotPortalRead:
+    """Widerrufsbutton (§ 356a BGB), zweite Stufe: erst die Bestaetigungsseite
+    im Portal schickt `bestaetigung: true`."""
+    if body.bestaetigung is not True:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Der Widerruf muss ausdrücklich bestätigt werden",
+        )
+    angebot = await _require_own_angebot(session, auth, angebot_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    kunde = await session.get(Kunde, auth.kunde_id)
+    zugang = await session.get(KundenportalZugang, auth.zugang_id)
+
+    jetzt = await annahme_service.widerrufe(session, angebot, mandant_id=auth.mandant_id)
+    nachweis = await annahme_service.protokolliere(
+        session,
+        angebot=angebot,
+        aktion="widerruf",
+        zugang=zugang,
+        ip=client_ip(request),
+        user_agent=request.headers.get("user-agent"),
+        fassung_sha256=berechne_fassung_sha256(angebot, await positionen_fuer(session, angebot.id)),
+        zeitpunkt=jetzt,
+        b2c=True,
+    )
+    await session.refresh(angebot)
+
+    betreff, text = annahme_service.baue_widerruf_mail(
+        mandant=mandant, angebot=angebot, zugang=zugang, nachweis=nachweis
+    )
+    await annahme_service.sende_kundenmail(session, angebot=angebot, zugang=zugang, betreff=betreff, text=text)
+    await annahme_service.benachrichtige_mandant_widerruf(
+        session, mandant=mandant, angebot=angebot, kunde=kunde, nachweis=nachweis
+    )
+    return await _angebot_portal(session, angebot, mandant=mandant, kunde=kunde)
+
+
+async def _angebot_pdf_bytes(session: AsyncSession, mandant: Mandant, angebot: Angebot, kunde: Kunde) -> bytes:
+    positionen = await positionen_fuer(session, angebot.id)
+    bearbeiter = await session.get(User, angebot.erstellt_von)
+    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
+    return generate_angebot_pdf(mandant, angebot, positionen, kunde, bearbeiter, logo_bytes)
 
 
 @router.get("/angebote/{angebot_id}/pdf")
@@ -187,12 +369,9 @@ async def eigenes_angebot_pdf(
 ) -> Response:
     angebot = await _require_own_angebot(session, auth, angebot_id)
     kunde = await session.get(Kunde, angebot.kunde_id)
-    positionen = await positionen_fuer(session, angebot.id)
     mandant = await session.get(Mandant, auth.mandant_id)
-    bearbeiter = await session.get(User, angebot.erstellt_von)
-    logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
 
-    pdf_bytes = generate_angebot_pdf(mandant, angebot, positionen, kunde, bearbeiter, logo_bytes)
+    pdf_bytes = await _angebot_pdf_bytes(session, mandant, angebot, kunde)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
