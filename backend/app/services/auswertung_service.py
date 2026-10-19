@@ -280,6 +280,14 @@ def _betrag_datev(betrag: Decimal) -> str:
     return f"{abs(betrag):.2f}".replace(".", ",")
 
 
+def _soll_haben_ausgang(brutto: Decimal) -> str:
+    """Eine Ausgangsrechnung bucht Soll auf das Debitorenkonto. Storno-Belege
+    und Gutschriften tragen negative Betraege und sind Gegenbuchungen: gleiche
+    Konten, aber Haben. Ohne das erschiene ein Storno wie eine zweite
+    Normalbuchung und der Umsatz waere doppelt gebucht."""
+    return "H" if brutto < 0 else "S"
+
+
 async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, bis: date) -> Response:
     """Buchungsstapel-CSV im DATEV-EXTF-Format (siehe Modul-Docstring-
     Kommentare zu den Kontenrahmen-Annahmen). Nur als Ausgangspunkt fuer
@@ -314,7 +322,7 @@ async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, b
             zeilen.append(
                 [
                     _betrag_datev(gruppe.brutto),
-                    "S",
+                    _soll_haben_ausgang(gruppe.brutto),
                     "EUR",
                     _debitorenkonto(rechnung.kunde_id),
                     konto,
@@ -322,7 +330,8 @@ async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, b
                     rechnung.versendet_am.strftime("%d%m"),
                     rechnung.rechnungsnummer,
                     "",
-                    f"Rechnung {rechnung.rechnungsnummer} {kunde.name if kunde else ''}".strip(),
+                    f"{'Gutschrift' if rechnung.rechnungsart == 'gutschrift' else 'Rechnung'} "
+                    f"{rechnung.rechnungsnummer} {kunde.name if kunde else ''}".strip(),
                 ]
             )
     for eingangsrechnung in eingangsrechnungen:
