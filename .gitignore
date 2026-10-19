@@ -35,3 +35,6 @@ backups/
 .vscode/
 .idea/
 .DS_Store
+
+# E-Rechnungs-Pruefwerkzeug (scripts/e-rechnung/installieren.sh)
+.cache/
