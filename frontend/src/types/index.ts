@@ -1608,6 +1608,9 @@ export interface MandantFirmendaten {
   // Vorrang vor den Platzhalter-Seiten /impressum und /datenschutz.
   impressum_url?: string;
   datenschutz_url?: string;
+  // Erlöskonten je Steuerkategorie für den DATEV-Export; Schlüssel
+  // "S:19.00" | "S:7.00" | "Z:0.00" | "E:0.00" | "AE:0.00".
+  buchhaltung?: { erloeskonten?: Record<string, { konto: string; bu: string }> };
 }
 
 export interface MandantEinstellungen {
