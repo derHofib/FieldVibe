@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
@@ -74,6 +74,10 @@ export function LoginPage() {
           >
             {submitting ? "Anmelden…" : "Anmelden"}
           </button>
+
+          <Link to="/passwort-vergessen" className="mt-4 block text-center text-sm text-label2 hover:text-label">
+            Passwort vergessen?
+          </Link>
         </Blueprint>
         <RechtlicheLinks className="mt-6" />
       </form>

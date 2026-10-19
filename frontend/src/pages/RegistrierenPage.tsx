@@ -70,11 +70,12 @@ export function RegistrierenPage() {
             <input
               type="password"
               required
-              minLength={8}
+              minLength={10}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="field-ap btn-touch mb-6"
+              className="field-ap btn-touch mb-1"
             />
+            <p className="mb-6 text-xs text-label2">Mindestens 10 Zeichen.</p>
 
             <button
               type="submit"

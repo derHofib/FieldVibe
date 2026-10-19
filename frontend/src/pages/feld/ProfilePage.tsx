@@ -7,9 +7,10 @@ import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
+import { PasswortAendernKarte } from "./PasswortAendernKarte";
 
 export function ProfilePage() {
-  const { currentUser, hatRecht, logout } = useAuth();
+  const { currentUser, hatRecht, isImpersonating, logout } = useAuth();
   const navigate = useNavigate();
   const [abmeldenLaeuft, setAbmeldenLaeuft] = useState(false);
   const [abmeldenFehler, setAbmeldenFehler] = useState<string | null>(null);
@@ -95,6 +96,9 @@ export function ProfilePage() {
           </span>
         </button>
       )}
+
+      {/* Bei Impersonation gehoert das Profil dem Super-Admin, nicht dem Mandanten-Nutzer. */}
+      {!isImpersonating && <PasswortAendernKarte />}
 
       <button
         onClick={ueberallAbmelden}

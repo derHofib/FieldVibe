@@ -10,10 +10,12 @@ import { AuditLogPage } from "./pages/AuditLogPage";
 import { BugfixDetailPage, BugfixesPage } from "./pages/BugfixesPage";
 import { DsgvoPage } from "./pages/DsgvoPage";
 import { EinstellungenPage } from "./pages/EinstellungenPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
 import { RegistrierenPage } from "./pages/RegistrierenPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { UebersichtPage } from "./pages/UebersichtPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
@@ -121,6 +123,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
       <Route path="/registrieren" element={<RegistrierenPage />} />
+      <Route path="/passwort-vergessen" element={<ForgotPasswordPage />} />
+      <Route path="/passwort-zuruecksetzen" element={<ResetPasswordPage />} />
 
       {!isAuthenticated && <Route path="*" element={<Navigate to="/login" replace />} />}
 

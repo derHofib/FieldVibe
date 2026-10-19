@@ -229,6 +229,23 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ token, name, password }),
     }),
+  passwortVergessen: (email: string) =>
+    apiFetch<void>("/api/auth/passwort-vergessen", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  passwortZuruecksetzen: (token: string, newPassword: string) =>
+    apiFetch<void>("/api/auth/passwort-zuruecksetzen", {
+      method: "POST",
+      body: JSON.stringify({ token, new_password: newPassword }),
+    }),
+  // Liefert ein frisches Token-Paar: alle bisherigen Tokens werden serverseitig
+  // widerrufen, die aufrufende Sitzung laeuft damit weiter.
+  passwortAendern: (oldPassword: string, newPassword: string) =>
+    apiFetch<TokenPair>("/api/auth/passwort-aendern", {
+      method: "POST",
+      body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    }),
 };
 
 export const streamApi = {
