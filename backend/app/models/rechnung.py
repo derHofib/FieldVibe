@@ -20,6 +20,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 RECHNUNG_STATUS = ("entwurf", "versendet", "teilweise_bezahlt", "bezahlt", "storniert")
+# Muss mit der CHECK-Constraint aus Migration 0108 uebereinstimmen. Storno-
+# Belege behalten 'rechnung' und sind ueber ist_storno gekennzeichnet.
+RECHNUNGSARTEN = ("rechnung", "abschlag", "schluss", "gutschrift")
 RECHNUNG_ZAHLUNGSARTEN = ("ueberweisung", "bar", "karte", "lastschrift", "sonstiges")
 
 # Muss mit der CHECK-Constraint ck_rechnung_positionen_quelle_valid
@@ -40,6 +43,11 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("mandant_id", "rechnungsnummer", name="uq_rechnungen_mandant_rechnungsnummer"),
         CheckConstraint(f"status IN {RECHNUNG_STATUS}", name="ck_rechnungen_status_valid"),
+        CheckConstraint(f"rechnungsart IN {RECHNUNGSARTEN}", name="ck_rechnungen_rechnungsart_valid"),
+        CheckConstraint(
+            "gutschrift_grund IS NULL OR char_length(gutschrift_grund) <= 200",
+            name="ck_rechnungen_gutschrift_grund_laenge",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -93,6 +101,18 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     # EN16931-Vollstaendigkeitspruefung zum Versand-Zeitpunkt fehlschlug --
     # in beiden Faellen wurde stillschweigend nur ein normales PDF erzeugt.
     xml_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rechnungsart: Mapped[str] = mapped_column(Text, nullable=False, default="rechnung", server_default="rechnung")
+    # Angebot, aus dem Rechnung/Abschlag/Schlussrechnung entstanden ist; die
+    # Summe der Abschlaege je Angebot und die Anrechnung laufen darueber.
+    angebot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("angebote.id"), nullable=True, index=True
+    )
+    # Nur bei Gutschriften: die Ursprungsrechnung.
+    bezug_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id"), nullable=True, index=True
+    )
+    # Nur bei Gutschriften: Grund, steht auf dem Beleg (PDF und E-Rechnung).
+    gutschrift_grund: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class RechnungPosition(Base):
@@ -168,6 +188,16 @@ class RechnungPosition(Base):
     # MaterialVerwendungen dieses Materials am Vorgang beim Entfernen.
     material_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("material.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Nur bei der Abzugsposition einer Schlussrechnung: die angerechnete
+    # Abschlagsrechnung. Steuerfelder der Position sind identisch zu denen des
+    # Abschlags, damit die Gruppenrechnung die Reststeuer von selbst ergibt.
+    abschlag_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id"), nullable=True, index=True
+    )
+    # Nur bei Gutschriftspositionen: die Originalposition, die sie zuruecknehmen.
+    bezug_position_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnung_positionen.id"), nullable=True, index=True
     )
 
 
