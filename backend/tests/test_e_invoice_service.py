@@ -252,6 +252,22 @@ def test_rundungsdifferenz_zuschlag_wenn_zeilen_niedriger_als_gruppensumme():
     assert ergebnis["korrekturen"] == [("true", "0.01", "Rundungsdifferenz", "S")]
 
 
+def test_storno_zeile_mit_negativem_preis_wandert_vorzeichen_in_die_menge():
+    # BR-27: BT-146 (Nettopreis) nie negativ; Zeilenbetrag und Belegsummen bleiben negativ.
+    from lxml import etree
+
+    rechnung = _rechnung(ist_storno=True)
+    positionen = [_position(menge=Decimal("2"), einzelpreis=Decimal("-50.00"))]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), rechnung, _kunde(), positionen, Decimal("-100.00"), Decimal("-119.00")
+    )
+    wurzel = etree.fromstring(e_invoice_service.cii_xml_bytes(dokument))
+    zeile = wurzel.xpath("//ram:IncludedSupplyChainTradeLineItem", namespaces=_RAM_NS)[0]
+    assert zeile.xpath("string(.//ram:NetPriceProductTradePrice/ram:ChargeAmount)", namespaces=_RAM_NS) == "50.00"
+    assert zeile.xpath("string(.//*[local-name()='BilledQuantity'])") == "-2"
+    assert zeile.xpath("string(.//ram:LineTotalAmount)", namespaces=_RAM_NS) == "-100.00"
+
+
 def test_keine_rundungsdifferenz_wenn_zeilen_aufgehen():
     dokument = e_invoice_service.baue_cii_dokument(
         _mandant(), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")

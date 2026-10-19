@@ -43,6 +43,7 @@ def _pruefe_en16931(xml: bytes, tmp_path: Path, name: str) -> None:
     ergebnis = subprocess.run(
         ["bash", str(_SKRIPT), str(datei)], capture_output=True, text=True, timeout=180, env={**os.environ}
     )
+    print(ergebnis.stdout)  # Warnungen der Regeln sichtbar machen (pytest -s)
     assert ergebnis.returncode == 0, f"EN-16931-Regelverstoesse in '{name}':\n{ergebnis.stdout}{ergebnis.stderr}"
 
 

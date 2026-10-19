@@ -208,8 +208,14 @@ def baue_cii_dokument(
         zeilen_summen[(zeilen_kategorie, zeilen_satz)] = (
             zeilen_summen.get((zeilen_kategorie, zeilen_satz), Decimal("0")) + zeilen_netto
         )
-        line.agreement.net.amount = position.einzelpreis.quantize(_CENT)
-        line.delivery.billed_quantity = (position.menge, "H87")
+        einzelpreis, menge = position.einzelpreis.quantize(_CENT), position.menge
+        if einzelpreis < 0:
+            # BR-27: der Nettopreis (BT-146) darf nicht negativ sein. Stornozeilen
+            # tragen den negativen Preis intern; hier wandert das Vorzeichen in die
+            # Menge, der Zeilenbetrag bleibt gleich.
+            einzelpreis, menge = -einzelpreis, -menge
+        line.agreement.net.amount = einzelpreis
+        line.delivery.billed_quantity = (menge, "H87")
         line.settlement.trade_tax.category_code = zeilen_kategorie
         line.settlement.trade_tax.type_code = "VAT"
         line.settlement.trade_tax.rate_applicable_percent = zeilen_satz
