@@ -1,5 +1,6 @@
 from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.angebot import Angebot, AngebotPosition
+from app.models.angebot_annahme import AngebotAnnahme
 from app.models.anlage import Anlage
 from app.models.anlagen_feld_definition import AnlagenFeldDefinition
 from app.models.audit_log import AuditLog

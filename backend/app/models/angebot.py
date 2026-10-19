@@ -17,7 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
-ANGEBOT_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt")
+ANGEBOT_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt", "widerrufen")
 ANGEBOT_POSITIONSTYPEN = ("material", "arbeitszeit")
 
 
@@ -56,6 +56,9 @@ class Angebot(SoftDeleteMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=True
     )
     nachgefasst_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Nur ueber den Widerrufsbutton im Portal gesetzt -- nie per PATCH,
+    # "widerrufen" steht in keiner Uebergangstabelle.
+    widerrufen_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AngebotPosition(Base):
