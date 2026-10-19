@@ -1,3 +1,4 @@
+import re
 from decimal import Decimal
 from typing import Literal
 
@@ -18,6 +19,13 @@ Bundesland = Literal[
 # Optionale Rechtstext-URLs in Mandant.firmendaten; haben auf den Login-/
 # Portalseiten Vorrang vor den Platzhalter-Seiten (siehe public_rechtliches).
 FIRMENDATEN_URL_KEYS = ("impressum_url", "datenschutz_url")
+
+# Schluessel "<Steuerkategorie>:<Satz>" der Erloeskonto-Zuordnung in
+# firmendaten["buchhaltung"]["erloeskonten"] (DATEV-Export, siehe
+# auswertung_service._erloeskonto).
+ERLOESKONTO_SCHLUESSEL = ("S:19.00", "S:7.00", "Z:0.00", "E:0.00", "AE:0.00")
+_KONTO_MUSTER = re.compile(r"\d{4,8}")
+_BU_MUSTER = re.compile(r"\d{1,3}")
 
 
 class MandantEinstellungenRead(BaseModel):
@@ -80,6 +88,36 @@ class MandantEinstellungenUpdate(BaseModel):
                 raise ValueError(f"{key} muss eine http(s)-URL sein oder leer bleiben")
             ergebnis[key] = wert.strip()
         return ergebnis
+
+    @field_validator("firmendaten")
+    @classmethod
+    def _buchhaltung_pruefen(cls, v: dict | None) -> dict | None:
+        if v is None or v.get("buchhaltung") is None:
+            return v
+        buchhaltung = v["buchhaltung"]
+        if not isinstance(buchhaltung, dict):
+            raise ValueError("buchhaltung muss ein Objekt sein")
+        erloeskonten = buchhaltung.get("erloeskonten")
+        if erloeskonten is None:
+            return v
+        if not isinstance(erloeskonten, dict):
+            raise ValueError("buchhaltung.erloeskonten muss ein Objekt sein")
+        geprueft = {}
+        for schluessel, eintrag in erloeskonten.items():
+            if schluessel not in ERLOESKONTO_SCHLUESSEL:
+                raise ValueError(
+                    f"Unbekannter Erlöskonto-Schlüssel {schluessel} (erlaubt: {', '.join(ERLOESKONTO_SCHLUESSEL)})"
+                )
+            if not isinstance(eintrag, dict) or set(eintrag) - {"konto", "bu"}:
+                raise ValueError(f"Erlöskonto {schluessel}: erlaubt sind nur konto und bu")
+            konto = str(eintrag.get("konto") or "").strip()
+            if not _KONTO_MUSTER.fullmatch(konto):
+                raise ValueError(f"Erlöskonto {schluessel}: konto muss 4 bis 8 Ziffern haben")
+            bu = str(eintrag.get("bu") or "").strip()
+            if bu and not _BU_MUSTER.fullmatch(bu):
+                raise ValueError(f"Erlöskonto {schluessel}: bu muss leer sein oder 1 bis 3 Ziffern haben")
+            geprueft[schluessel] = {"konto": konto, "bu": bu}
+        return {**v, "buchhaltung": {**buchhaltung, "erloeskonten": geprueft}}
 
 
 class MandantLogoUrl(BaseModel):

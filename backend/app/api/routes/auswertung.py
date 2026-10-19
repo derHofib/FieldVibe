@@ -5,7 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_recht, require_roles
 from app.schemas.auswertung import OffenePostenBericht, UstVaBericht
-from app.services.auswertung_service import datev_export_csv, offene_posten_bericht, ust_va_bericht
+from app.services.auswertung_service import (
+    KontoNichtKonfiguriert,
+    datev_export_csv,
+    offene_posten_bericht,
+    ust_va_bericht,
+)
 from app.services.zuweisung_service import erlaubte_kunde_ids
 
 
@@ -62,4 +67,7 @@ async def get_datev_export(
 ) -> Response:
     if bis < von:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
-    return await datev_export_csv(session, auth.mandant_id, von, bis)
+    try:
+        return await datev_export_csv(session, auth.mandant_id, von, bis)
+    except KontoNichtKonfiguriert as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc

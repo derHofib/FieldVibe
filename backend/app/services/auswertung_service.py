@@ -12,12 +12,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.eingangsrechnung import Eingangsrechnung
 from app.models.kunde import Kunde
 from app.models.lieferant import Lieferant
+from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung
 from app.schemas.auswertung import (
     OffenePostenBericht,
     OffenePostenBucket,
     OffenerPostenEintrag,
     UstVaBericht,
+    UstVaKategorieZeile,
     UstVaSatzZeile,
 )
 from app.services import eingangsrechnung_service, rechnung_service, steuer_service
@@ -27,9 +29,17 @@ _CENT = Decimal("0.01")
 # SKR03-orientierte Standard-Kontenrahmen fuer den DATEV-Export -- ein
 # Startpunkt, kein zertifizierter Buchungsvorschlag. Ein Steuerberater muss
 # vor dem ersten echten Import pruefen, ob die Konten/BU-Schluessel zum
-# tatsaechlich verwendeten Kontenrahmen des Mandanten passen.
+# tatsaechlich verwendeten Kontenrahmen des Mandanten passen. Die Erloeskonten
+# je Steuergruppe sind je Mandant ueberschreibbar (firmendaten.buchhaltung);
+# Defaults gibt es nur fuer das bisherige Verhalten (S/19, S/7, Kleinunternehmer-E).
 _ERLOESKONTO_NACH_SATZ = {Decimal("19.00"): "8400", Decimal("7.00"): "8300"}
 _ERLOES_BU_SCHLUESSEL = {Decimal("19.00"): "3", Decimal("7.00"): "2"}
+_KLEINUNTERNEHMER_ERLOESKONTO = "8400"
+_UST_VA_BEZEICHNUNG = {
+    "AE": "Steuerpflichtige Umsätze, Steuerschuldner ist der Leistungsempfänger (§ 13b)",
+    "Z": "Umsätze zum Steuersatz 0 % (§ 12 Abs. 3)",
+    "E": "Sonstige steuerfreie Umsätze",
+}
 _AUFWANDSKONTO_NACH_KATEGORIE = {
     "wareneinkauf": "3200",
     "betriebskosten": "4900",
@@ -58,19 +68,40 @@ def _kreditorenkonto(lieferant_id: UUID | None, lieferant_name: str) -> str:
     return str(70000 + (zlib.crc32(schluessel) % 9000))
 
 
-def _gruppen_fuer_buchung(rechnung: Rechnung, positionen) -> list[steuer_service.SteuerGruppe]:
-    """Steuergruppen einer Ausgangsrechnung fuer UStVA/DATEV. Satz 0 mit
-    Kategorie E (Kleinunternehmer) bucht wie bisher ueber den Satz 0. Z und AE
-    haben noch kein Konten-/Kennzahlen-Mapping -- lieber abbrechen als still
-    falsch buchen."""
-    gruppen = steuer_service.steuer_gruppen(rechnung, positionen)
-    for gruppe in gruppen:
-        if gruppe.kategorie in ("Z", "AE"):
-            raise NotImplementedError(
-                f"Steuerkategorie {gruppe.kategorie} (Rechnung {rechnung.rechnungsnummer}) "
-                "hat noch kein Mapping in UStVA/DATEV -- Mapping folgt in Schritt 3"
-            )
-    return gruppen
+class KontoNichtKonfiguriert(Exception):
+    """Fuer eine Steuergruppe ist kein Erloeskonto hinterlegt -- die Route macht
+    daraus ein 422. Z, AE und E (ausser Kleinunternehmer) haben bewusst keinen
+    Default: ein geratenes Konto wuerde still falsch buchen."""
+
+    def __init__(self, kategorie: str, schluessel: str):
+        self.kategorie = kategorie
+        self.schluessel = schluessel
+        super().__init__(
+            f"Für Steuerkategorie {kategorie} ist kein Erlöskonto hinterlegt – "
+            f"bitte unter Firmendaten ➝ Buchhaltung eintragen (Schlüssel {schluessel})"
+        )
+
+
+def _ist_kleinunternehmer_gruppe(mandant: Mandant, gruppe: steuer_service.SteuerGruppe) -> bool:
+    # Der Grund am Beleg zaehlt mit: ein Mandant, der den Status spaeter verliert,
+    # hat Altbelege, die weiterhin Kleinunternehmer-Belege sind.
+    return gruppe.kategorie == "E" and (
+        steuer_service.ist_kleinunternehmer(mandant) or gruppe.gruende == ("kleinunternehmer_19",)
+    )
+
+
+def _erloeskonto(mandant: Mandant, gruppe: steuer_service.SteuerGruppe) -> tuple[str, str]:
+    """(Konto, BU-Schluessel) einer Steuergruppe aus firmendaten.buchhaltung,
+    sonst der Default des bisherigen Verhaltens."""
+    schluessel = f"{gruppe.kategorie}:{gruppe.satz:f}"
+    eintrag = ((mandant.firmendaten or {}).get("buchhaltung") or {}).get("erloeskonten", {}).get(schluessel)
+    if eintrag and eintrag.get("konto"):
+        return str(eintrag["konto"]), str(eintrag.get("bu") or "")
+    if gruppe.kategorie == "S":
+        return _ERLOESKONTO_NACH_SATZ.get(gruppe.satz, "8400"), _ERLOES_BU_SCHLUESSEL.get(gruppe.satz, "")
+    if _ist_kleinunternehmer_gruppe(mandant, gruppe):
+        return _KLEINUNTERNEHMER_ERLOESKONTO, ""
+    raise KontoNichtKonfiguriert(gruppe.kategorie, schluessel)
 
 
 async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis: date) -> UstVaBericht:
@@ -89,11 +120,22 @@ async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis
     )
     ausgangsrechnungen = (await session.execute(ausgang_stmt)).scalars().all()
 
+    mandant = await session.get(Mandant, mandant_id)
     umsatz_nach_satz: dict[Decimal, Decimal] = {}
+    # Z/AE und E ausser Kleinunternehmer haben keine Steuer und stehen in
+    # eigenen Zeilen; die Zuordnung zu Kennzahlen macht der Steuerberater.
+    umsatz_nach_kategorie: dict[str, Decimal] = {}
     for rechnung in ausgangsrechnungen:
         positionen = await rechnung_service.positionen_fuer(session, rechnung.id)
-        for gruppe in _gruppen_fuer_buchung(rechnung, positionen):
-            umsatz_nach_satz[gruppe.satz] = umsatz_nach_satz.get(gruppe.satz, Decimal("0")) + gruppe.netto
+        for gruppe in steuer_service.steuer_gruppen(rechnung, positionen):
+            if gruppe.kategorie in ("Z", "AE") or (
+                gruppe.kategorie == "E" and not _ist_kleinunternehmer_gruppe(mandant, gruppe)
+            ):
+                umsatz_nach_kategorie[gruppe.kategorie] = (
+                    umsatz_nach_kategorie.get(gruppe.kategorie, Decimal("0")) + gruppe.netto
+                )
+            else:
+                umsatz_nach_satz[gruppe.satz] = umsatz_nach_satz.get(gruppe.satz, Decimal("0")) + gruppe.netto
 
     eingang_stmt = select(Eingangsrechnung).where(
         Eingangsrechnung.mandant_id == mandant_id,
@@ -119,6 +161,10 @@ async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis
         UstVaSatzZeile(satz=satz, netto=netto.quantize(_CENT), steuer=(netto * satz / Decimal("100")).quantize(_CENT))
         for satz, netto in sorted(vorsteuer_netto_nach_satz.items())
     ]
+    sonstige_umsaetze = [
+        UstVaKategorieZeile(kategorie=kategorie, bezeichnung=_UST_VA_BEZEICHNUNG[kategorie], netto=netto.quantize(_CENT))
+        for kategorie, netto in sorted(umsatz_nach_kategorie.items(), key=lambda e: list(_UST_VA_BEZEICHNUNG).index(e[0]))
+    ]
     summe_umsatzsteuer = sum((z.steuer for z in umsatzsteuer_saetze), Decimal("0")).quantize(_CENT)
     summe_vorsteuer = sum((z.steuer for z in vorsteuer_saetze), Decimal("0")).quantize(_CENT)
 
@@ -126,6 +172,7 @@ async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis
         von=von,
         bis=bis,
         umsatzsteuer_saetze=umsatzsteuer_saetze,
+        sonstige_umsaetze=sonstige_umsaetze,
         vorsteuer_saetze=vorsteuer_saetze,
         summe_umsatzsteuer=summe_umsatzsteuer,
         summe_vorsteuer=summe_vorsteuer,
@@ -254,21 +301,24 @@ async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, b
     ).order_by(Eingangsrechnung.rechnungsdatum)
     eingangsrechnungen = (await session.execute(eingang_stmt)).scalars().all()
 
+    mandant = await session.get(Mandant, mandant_id)
     zeilen: list[list[str]] = []
     for rechnung in ausgangsrechnungen:
         kunde = await session.get(Kunde, rechnung.kunde_id)
         positionen = await rechnung_service.positionen_fuer(session, rechnung.id)
-        # Eine Buchungszeile je Steuergruppe: der Erloeskonto-/BU-Schluessel
-        # haengt am Satz. Einzelsatz-Belege ergeben wie bisher genau eine Zeile.
-        for gruppe in _gruppen_fuer_buchung(rechnung, positionen):
+        # Eine Buchungszeile je Steuergruppe: Erloeskonto und BU-Schluessel
+        # kommen aus der Mandantenkonfiguration bzw. den Defaults (_erloeskonto).
+        # Einzelsatz-Belege ergeben wie bisher genau eine Zeile.
+        for gruppe in steuer_service.steuer_gruppen(rechnung, positionen):
+            konto, bu_schluessel = _erloeskonto(mandant, gruppe)
             zeilen.append(
                 [
                     _betrag_datev(gruppe.brutto),
                     "S",
                     "EUR",
                     _debitorenkonto(rechnung.kunde_id),
-                    _ERLOESKONTO_NACH_SATZ.get(gruppe.satz, "8400"),
-                    _ERLOES_BU_SCHLUESSEL.get(gruppe.satz, ""),
+                    konto,
+                    bu_schluessel,
                     rechnung.versendet_am.strftime("%d%m"),
                     rechnung.rechnungsnummer,
                     "",

@@ -21,9 +21,10 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.config import get_settings
 from app.db.session import system_session
+from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.services import steuer_service
-from app.services.auswertung_service import _gruppen_fuer_buchung
+from app.services.auswertung_service import KontoNichtKonfiguriert, _erloeskonto
 from tests.conftest import auth_headers, login
 
 _CENT = Decimal("0.01")
@@ -758,8 +759,12 @@ async def test_kleinunternehmer_ust_va_und_datev_wie_bisher(client, make_mandant
     assert [(z[0], z[4], z[5]) for z in zeilen] == [("13,60", "8400", "")]
 
 
-def test_buchung_mit_z_oder_ae_bricht_ab_statt_falsch_zu_buchen():
-    for kategorie in ("Z", "AE"):
+def test_buchung_ohne_konfiguriertes_konto_bricht_ab_statt_falsch_zu_buchen():
+    # Ersetzt den NotImplementedError-Test aus Schritt 2: Z/AE und E ausser
+    # Kleinunternehmer haben kein Default-Konto, sondern verlangen die Konfiguration.
+    mandant = Mandant(firmendaten={})
+    for kategorie in ("Z", "AE", "E"):
         beleg = Rechnung(rechnungsnummer="R-1", betrag_netto=Decimal("0"), mwst_satz=Decimal("19"))
-        with pytest.raises(NotImplementedError, match="Schritt 3"):
-            _gruppen_fuer_buchung(beleg, [_position(1, "10", "0", kategorie)])
+        gruppe = steuer_service.steuer_gruppen(beleg, [_position(1, "10", "0", kategorie)])[0]
+        with pytest.raises(KontoNichtKonfiguriert, match=f"Steuerkategorie {kategorie} ist kein Erlöskonto hinterlegt"):
+            _erloeskonto(mandant, gruppe)
