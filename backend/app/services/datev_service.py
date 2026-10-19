@@ -237,10 +237,19 @@ async def _konten_vergeben(
         if art == "kreditor":
             belegt.add(kreditoren_sammelkonto(sachkontenlaenge))
         zeiger = start
-        zuteilung = []
-        for objekt in sorted(offen, key=lambda o: (o.created_at, str(o.id))):
+
+        def wunsch_von(objekt) -> str | None:
             wunsch = wunschkonto(objekt)
-            if wunsch and len(wunsch) == sachkontenlaenge + 1 and start <= int(wunsch) <= ende and wunsch not in belegt:
+            passt = wunsch and len(wunsch) == sachkontenlaenge + 1 and start <= int(wunsch) <= ende
+            return wunsch if passt else None
+
+        zuteilung = []
+        # Wuensche zuerst: sonst nimmt ein davor bearbeiteter Datensatz per
+        # Hochzaehlen die Nummer weg, die ein anderer sich ueber seine
+        # Kundennummer ausdruecklich "bestellt" hat.
+        for objekt in sorted(offen, key=lambda o: (wunsch_von(o) is None, o.created_at, str(o.id))):
+            wunsch = wunsch_von(objekt)
+            if wunsch and wunsch not in belegt:
                 konto = wunsch
             else:
                 while str(zeiger) in belegt:
