@@ -497,9 +497,43 @@ def _beleg_positionen(
     return gesamt_netto
 
 
-def _beleg_summenblock_hoehe(kleinunternehmer: bool, anzahl_steuerzeilen: int = 1) -> float:
+_SUMMEN_X = 115
+_HINWEIS_BREITE = 75
+_HINWEIS_ZEILENHOEHE = 4
+_STEUERZEILE_LABEL = {
+    "Z": "zzgl. 0 % USt.",
+    "E": "USt. 0 % (steuerfrei)",
+    "AE": "USt. 0 % (Reverse Charge)",
+}
+
+
+def _gruppen_hinweiszeilen(pdf: FPDF, steuer_gruppen: list[SteuerGruppe] | None) -> list[list[str]]:
+    """Umbrochene Hinweiszeilen je Steuergruppe (Z/E/AE) fuer den Summenblock.
+    Gemessen wird in der Schrift, in der sie gesetzt werden -- die Hoehe fuer den
+    Seitenumbruch muss vor dem Zeichnen feststehen."""
+    ergebnis: list[list[str]] = []
+    familie, stil, groesse = pdf.font_family, pdf.font_style, pdf.font_size_pt
+    pdf.set_font("Helvetica", "", 8)
+    for gruppe in steuer_gruppen or []:
+        texte = list(gruppe.hinweise)
+        if gruppe.kategorie == "AE":
+            texte.append("Steuerschuldner ist der Leistungsempfänger.")
+        zeilen: list[str] = []
+        for text in texte:
+            zeilen += pdf.multi_cell(_HINWEIS_BREITE, _HINWEIS_ZEILENHOEHE, _pdf_safe_text(text), dry_run=True, output="LINES")
+        ergebnis.append(zeilen)
+    pdf.set_font(familie, stil, groesse)
+    return ergebnis
+
+
+def _beleg_summenblock_hoehe(
+    kleinunternehmer: bool, anzahl_steuerzeilen: int = 1, hinweiszeilen: list[list[str]] | None = None
+) -> float:
     # 6 Abstand + (Netto/USt-Zeilen + Linie) + Endbetrag (+ §19-Hinweis)
-    return 6 + (8 + 5 if kleinunternehmer else 6 * (1 + anzahl_steuerzeilen) + 3 + 8)
+    if kleinunternehmer:
+        return 6 + 8 + 5
+    hinweis_hoehe = sum(len(z) * _HINWEIS_ZEILENHOEHE + 1 for z in hinweiszeilen or [] if z)
+    return 6 + 6 * (1 + anzahl_steuerzeilen) + hinweis_hoehe + 3 + 8
 
 
 def _beleg_summenblock(
@@ -520,41 +554,54 @@ def _beleg_summenblock(
     Netto/USt./Brutto kommen aus dem Steuerkern statt aus mwst_satz, damit die
     PDF exakt die Summen der Rechnung zeigt."""
     netto = steuer_service.netto_summe(steuer_gruppen) if steuer_gruppen else gesamt_netto.quantize(_CENT)
+    hinweiszeilen = _gruppen_hinweiszeilen(pdf, steuer_gruppen)
     hoehe = (
-        _beleg_summenblock_hoehe(kleinunternehmer or nur_netto, len(steuer_gruppen) if steuer_gruppen else 1)
+        _beleg_summenblock_hoehe(
+            kleinunternehmer or nur_netto, len(steuer_gruppen) if steuer_gruppen else 1, hinweiszeilen
+        )
         + hoehe_danach
     )
     if not _b_platz(pdf, hoehe):
         _b_neue_seite(pdf, mit_kopfzeile=False)
     pdf.set_y(pdf.get_y() + 6)
-    x = 115
+    x = _SUMMEN_X
     if kleinunternehmer or nur_netto:
         brutto = netto
     else:
-        # Schritt 3: je Gruppe Kategorie und Befreiungshinweis ausweisen
-        # (Z/E/AE); heute reicht eine USt.-Zeile je Satz.
+        # Je Gruppe eine Steuerzeile; Z/E/AE tragen darunter ihren Hinweistext.
         if steuer_gruppen:
-            steuerzeilen = [(g.satz, g.steuer) for g in steuer_gruppen]
+            steuerzeilen = [(g.kategorie, g.satz, g.steuer) for g in steuer_gruppen]
             brutto = steuer_service.brutto_summe(steuer_gruppen)
         else:
             mwst = (netto * mwst_satz / Decimal("100")).quantize(_CENT)
-            steuerzeilen = [(mwst_satz, mwst)]
+            steuerzeilen = [("S", mwst_satz, mwst)]
             brutto = netto + mwst
         pdf.set_font("Helvetica", "", 9)
         _set_text(pdf)
-        zeilen = [("Summe netto", _fmt_euro(netto))]
-        for satz_wert, mwst in steuerzeilen:
+        zeilen = [("Summe netto", _fmt_euro(netto), [])]
+        for index, (kategorie, satz_wert, mwst) in enumerate(steuerzeilen):
             satz = f"{satz_wert:f}"
             if "." in satz:
                 satz = satz.rstrip("0").rstrip(".")
-            zeilen.append((f"zzgl. {satz.replace('.', ',')} % USt.", _fmt_euro(mwst)))
-        for label, wert in zeilen:
+            label = _STEUERZEILE_LABEL.get(kategorie) or f"zzgl. {satz.replace('.', ',')} % USt."
+            zeilen.append((label, _fmt_euro(mwst), hinweiszeilen[index] if steuer_gruppen else []))
+        for label, wert, hinweis in zeilen:
             y = pdf.get_y()
             pdf.set_xy(x, y)
             pdf.cell(40, 6, _pdf_safe_text(label))
             pdf.set_xy(155, y)
             pdf.cell(35, 6, wert, align="R")
             pdf.set_y(y + 6)
+            if hinweis:
+                pdf.set_font("Helvetica", "", 8)
+                _set_grau(pdf)
+                for zeile in hinweis:
+                    pdf.set_xy(x, pdf.get_y())
+                    pdf.cell(_HINWEIS_BREITE, _HINWEIS_ZEILENHOEHE, zeile)
+                    pdf.set_y(pdf.get_y() + _HINWEIS_ZEILENHOEHE)
+                pdf.set_y(pdf.get_y() + 1)
+                pdf.set_font("Helvetica", "", 9)
+                _set_text(pdf)
         _linie(pdf, pdf.get_y() + 1, _LINIE_KOPF, x1=x, x2=190)
         pdf.set_y(pdf.get_y() + 3)
     y = pdf.get_y()
@@ -693,7 +740,9 @@ def _beleg_rumpf(
         summen_hoehe = 0.0
     else:
         summen_hoehe = _beleg_summenblock_hoehe(
-            kleinunternehmer or nur_netto, len(steuer_gruppen) if steuer_gruppen else 1
+            kleinunternehmer or nur_netto,
+            len(steuer_gruppen) if steuer_gruppen else 1,
+            _gruppen_hinweiszeilen(pdf, steuer_gruppen),
         )
     if positionen:
         gesamt_netto = _beleg_positionen(pdf, positionen, vorgang_koepfe, summen_hoehe + abschluss_hoehe)
