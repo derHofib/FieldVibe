@@ -214,6 +214,15 @@ else
   fi
 fi
 
+# --- 6b. Rechtstexte (Impressum/Datenschutz) ---------------------------------
+# Nur Warnung, kein Abbruch: die Links werden zur Build-Zeit ins Frontend
+# gebacken; ohne Wert zeigt das Frontend sie schlicht nicht an.
+for legal_var in VITE_IMPRESSUM_URL VITE_DATENSCHUTZ_URL; do
+  if [[ -z "$(get_env "$legal_var")" ]]; then
+    warn "${legal_var} ist in der .env nicht gesetzt -- Impressum/Datenschutz werden im Frontend nicht verlinkt (Pflicht für den Produktivbetrieb, §5 DDG / Art. 13 DSGVO). Wert eintragen und dieses Skript erneut ausführen, damit das Frontend neu gebaut wird."
+  fi
+done
+
 # --- 7. Vorhandenes Repo aktualisieren (falls kein Erststart) --------------
 if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
   if [[ -z "$(git status --porcelain)" ]]; then
