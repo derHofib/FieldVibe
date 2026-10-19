@@ -266,7 +266,8 @@ fi
 # informative Update-Anzeige im Super-Admin-Bereich (aktueller vs. neuester
 # Commit auf GitHub), siehe app/services/version_service.py. Kein git-
 # Repo (z.B. per curl heruntergeladenes Tarball) -> bleibt "unknown".
-export GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+export GIT_COMMIT
 log "Baue und starte den Stack (Postgres, MinIO, Backend, Frontend, Worker$([[ "$DEPLOY_MODE" == "domain" ]] && echo ", Caddy"))..."
 "${COMPOSE[@]}" up -d --build
 
@@ -301,6 +302,7 @@ if ! command -v crontab &>/dev/null; then
 fi
 
 CRON_LINE="30 2 * * * ${REPO_DIR}/scripts/backup.sh >> /var/log/fieldvibe-backup.log 2>&1"
+PRUEF_CRON_LINE="30 4 * * 0 ${REPO_DIR}/scripts/backup-pruefen.sh >> /var/log/fieldvibe-backup-pruefen.log 2>&1"
 if command -v crontab &>/dev/null; then
   if ! crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup.sh"; then
     log "Richte tägliches Backup per Cron ein (02:30 Uhr)..."
@@ -309,6 +311,22 @@ if command -v crontab &>/dev/null; then
   else
     log "Backup-Cron bereits eingerichtet, überspringe."
   fi
+  if ! crontab -l 2>/dev/null | grep -qF "${REPO_DIR}/scripts/backup-pruefen.sh"; then
+    log "Richte wöchentliche Backup-Prüfung (Test-Restore) per Cron ein (sonntags 04:30 Uhr)..."
+    (crontab -l 2>/dev/null; echo "$PRUEF_CRON_LINE") | crontab - \
+      || warn "Cron-Eintrag konnte nicht angelegt werden, bitte manuell eintragen: $PRUEF_CRON_LINE"
+  else
+    log "Cron für die Backup-Prüfung bereits eingerichtet, überspringe."
+  fi
+fi
+
+# Nur Hinweise, nichts Interaktives: die Werte gehören in die .env (siehe
+# .env.example, Block "Backups").
+if [[ -z "$(get_env BACKUP_TARGETS)" && -z "$(get_env BACKUP_OFFSITE_REMOTE)" ]]; then
+  warn "Weder BACKUP_TARGETS noch BACKUP_OFFSITE_REMOTE in der .env gesetzt -- die Backups liegen nur auf diesem Server und überleben einen Plattendefekt oder Totalverlust nicht. Ziele einrichten: docs/DEPLOYMENT.md, Abschnitt 5."
+fi
+if [[ -z "$(get_env BACKUP_GPG_RECIPIENT)" ]]; then
+  warn "BACKUP_GPG_RECIPIENT in der .env nicht gesetzt -- Backups sind unverschlüsselt, das Secrets-Bündel (.env) wird dann nur lokal abgelegt, und Uploads zu Remote-Zielen werden verweigert. Einrichtung: docs/DEPLOYMENT.md, Abschnitt 5."
 fi
 
 # --- 12. Zusammenfassung ------------------------------------------------------
@@ -319,7 +337,7 @@ if [[ "$DEPLOY_MODE" == "domain" ]]; then
   App (Handy):     https://$(get_env DOMAIN_APP)
   Office (Desktop): https://$(get_env DOMAIN_OFFICE)
   API-Docs:        https://$(get_env DOMAIN_API)/docs
-  Backups:         ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
+  Backups:         ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr, Prüfung sonntags 04:30 Uhr)
 
   Falls das Zertifikat noch nicht bereit ist:
     ${COMPOSE[*]} logs -f caddy
@@ -331,7 +349,7 @@ else
 
   App:       http://$(get_env DEPLOY_IP):4173
   API-Docs:  http://$(get_env DEPLOY_IP):8000/docs
-  Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr)
+  Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr, Prüfung sonntags 04:30 Uhr)
 
   ⚠ Unverschlüsselt (kein HTTPS) -- nur für Tests/internes Netz gedacht.
     Für echten Betrieb später auf eine Domain umsteigen: die Zeile
