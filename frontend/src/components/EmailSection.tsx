@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { ApiError } from "../api/client";
 import type { EmailLog } from "../types";
+import { FehlerMeldung } from "./Hinweiskasten";
 
 interface EmailSectionProps {
   queryKey: unknown[];
@@ -115,7 +116,7 @@ export function EmailSection({
               className="w-full resize-none border border-sep bg-transparent p-2 text-sm text-label"
             />
           </div>
-          {error && <p className="text-xs text-st-fehlt ">{error}</p>}
+          {error && <FehlerMeldung meldung={error} />}
           <div className="flex gap-2">
             <button
               onClick={() => sendMutation.mutate()}
@@ -165,7 +166,9 @@ export function EmailSection({
                 {e.anhang_dateiname && ` · ${e.anhang_dateiname}`}
               </div>
               {e.status === "fehler" && e.fehlermeldung && (
-                <p className="mt-0.5 text-xs text-st-fehlt ">{e.fehlermeldung}</p>
+                <div className="mt-0.5">
+                  <FehlerMeldung meldung={e.fehlermeldung} />
+                </div>
               )}
             </div>
           ))}

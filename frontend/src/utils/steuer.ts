@@ -1,4 +1,4 @@
-import type { RechnungPosition, RechnungSteuerGrund, RechnungSteuerKategorie } from "../types";
+import type { RechnungPosition, RechnungSteuerFelder, RechnungSteuerGruppe } from "../types";
 import { formatIsoTag, tageZwischen } from "./format";
 
 /** Auswahl der Steuer je Position in der UI. Eine Option bündelt, was die API
@@ -16,12 +16,7 @@ export const STEUER_OPTIONEN: { wert: SteuerOption; label: string; kurz: string 
 export const STEUER_TEXT_MIN = 3;
 export const STEUER_TEXT_MAX = 200;
 
-export interface SteuerFelder {
-  steuer_kategorie: RechnungSteuerKategorie;
-  steuer_satz: string;
-  steuer_grund: RechnungSteuerGrund | null;
-  steuer_grund_text: string | null;
-}
+export type SteuerFelder = RechnungSteuerFelder;
 
 export interface SteuerEingabe {
   option: SteuerOption;
@@ -107,6 +102,28 @@ export function steuerKurzlabel(p: PositionSteuerFelder): string {
   const eingabe = positionZuEingabe(p);
   if (!eingabe) return "Steuerfrei";
   return STEUER_OPTIONEN.find((o) => o.wert === eingabe.option)?.kurz ?? "";
+}
+
+/** Zeilenbeschriftung einer Steuergruppe im Summenblock. */
+export function steuergruppeLabel(g: Pick<RechnungSteuerGruppe, "kategorie" | "satz">): string {
+  switch (g.kategorie) {
+    case "S":
+      return `${Number(g.satz).toLocaleString("de-DE", { maximumFractionDigits: 2 })} % USt`;
+    case "Z":
+      return "0 % – Photovoltaik (§ 12 Abs. 3 UStG)";
+    case "AE":
+      return "Reverse Charge (§ 13b UStG)";
+    case "E":
+      return "Steuerfrei";
+  }
+}
+
+/** Ob der Summenblock je Gruppe aufgeschlüsselt werden muss: bei mehreren
+ * Gruppen oder wenn eine Gruppe einen Hinweis trägt; sonst bleibt es bei
+ * Netto/Brutto. */
+export function zeigeSteuergruppen(gruppen: RechnungSteuerGruppe[] | undefined): boolean {
+  if (!gruppen) return false;
+  return gruppen.length > 1 || gruppen.some((g) => !!g.hinweis || (g.hinweise?.length ?? 0) > 0);
 }
 
 // --- § 13b -------------------------------------------------------------------

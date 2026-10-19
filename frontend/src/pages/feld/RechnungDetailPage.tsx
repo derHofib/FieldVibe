@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { kundenApi, leistungsverzeichnisApi, rechnungenApi } from "../../api/endpoints";
+import { kundenApi, leistungsverzeichnisApi, mandantEinstellungenApi, rechnungenApi } from "../../api/endpoints";
 import type { RechnungPosition, RechnungPositionQuelle, RechnungPositionVorschlag } from "../../types";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerMeldung, Hinweiskasten } from "../../components/Hinweiskasten";
+import { RechnungSummen } from "../../components/rechnung/RechnungSummen";
+import { SteuerAuswahl } from "../../components/rechnung/SteuerAuswahl";
 import { VorgangHinzufuegen } from "../../components/rechnung/VorgangHinzufuegen";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
@@ -16,6 +19,14 @@ import { downloadBlob } from "../../utils/download";
 import { heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import { gruppierePositionen } from "../../utils/rechnungAbrechnung";
+import {
+  optionZuFelder,
+  positionZuEingabe,
+  steuerKurzlabel,
+  validiereSteuer,
+  vorbelegung,
+  type SteuerEingabe,
+} from "../../utils/steuer";
 import type { RechnungZahlungsart } from "../../types";
 
 const VORSCHLAG_QUELLE_LABEL: Record<RechnungPositionQuelle, string> = {
@@ -167,6 +178,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   const [showVorgang, setShowVorgang] = useState(false);
   const [form, setForm] = useState({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
   const [lvAuswahl, setLvAuswahl] = useState("");
+  const [steuerNeu, setSteuerNeu] = useState<SteuerEingabe | null>(null);
+  const [steuerBearbeitung, setSteuerBearbeitung] = useState<{ positionId: string; eingabe: SteuerEingabe } | null>(null);
   const [showZahlungForm, setShowZahlungForm] = useState(false);
   const [zahlungBetrag, setZahlungBetrag] = useState("");
   const [zahlungDatum, setZahlungDatum] = useState(heuteIso());
@@ -195,6 +208,15 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     queryFn: () => kundenApi.get(rechnung!.kunde_id),
     enabled: !!rechnung,
   });
+  // Die Einstellungen sind nur für mandant_admin lesbar; für alle anderen
+  // erkennt die Seite den Kleinunternehmer an den bereits erzwungenen
+  // Positionen (kleinunternehmer_aus_positionen weiter unten).
+  const { data: einstellungen } = useQuery({
+    queryKey: ["mandant-einstellungen"],
+    queryFn: mandantEinstellungenApi.get,
+    enabled: currentUser?.role === "mandant_admin",
+    retry: false,
+  });
   const { data: leistungsverzeichnis } = useQuery({
     queryKey: ["leistungsverzeichnis", rechnung?.kunde_id],
     queryFn: () => leistungsverzeichnisApi.list(rechnung!.kunde_id),
@@ -205,6 +227,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     queryFn: () => rechnungenApi.get(rechnung!.storniert_rechnung_id!),
     enabled: !!rechnung?.storniert_rechnung_id,
   });
+
+  const kleinunternehmer =
+    einstellungen?.firmendaten.ist_kleinunternehmer === true ||
+    (rechnung?.positionen ?? []).some((p) => p.steuer_grund === "kleinunternehmer_19");
 
   const statusMutation = useMutation({
     mutationFn: (status: string) => rechnungenApi.updateStatus(id!, status),
@@ -226,9 +252,11 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         menge: form.menge,
         einheit: form.einheit,
         einzelpreis: form.einzelpreis,
+        ...(kleinunternehmer || !steuerNeu ? {} : optionZuFelder(steuerNeu.option, steuerNeu.text)),
       }),
     onSuccess: () => {
       setShowForm(false);
+      setSteuerNeu(null);
       setForm({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
       setLvAuswahl("");
       queryClient.invalidateQueries({ queryKey: ["rechnung", id] });
@@ -244,6 +272,15 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     mutationFn: ({ positionId, einzelpreis }: { positionId: string; einzelpreis: string }) =>
       rechnungenApi.updatePosition(id!, positionId, { einzelpreis }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
+  });
+
+  const steuerSpeichernMutation = useMutation({
+    mutationFn: ({ positionId, eingabe }: { positionId: string; eingabe: SteuerEingabe }) =>
+      rechnungenApi.updatePosition(id!, positionId, optionZuFelder(eingabe.option, eingabe.text)),
+    onSuccess: () => {
+      setSteuerBearbeitung(null);
+      queryClient.invalidateQueries({ queryKey: ["rechnung", id] });
+    },
   });
 
   const pdfMutation = useMutation({
@@ -300,11 +337,11 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   if (!rechnung) return <p className="text-center text-label2">Lädt…</p>;
 
   const { ohneVorgang, gruppen } = gruppierePositionen(rechnung.positionen, rechnung.vorgaenge ?? []);
-  const renderPosition = (p: RechnungPosition) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
-              >
+  const renderPosition = (p: RechnungPosition) => {
+    const bearbeitet = steuerBearbeitung?.positionId === p.id ? steuerBearbeitung : null;
+    return (
+            <div key={p.id} className="space-y-1.5">
+              <div className="flex items-center justify-between rounded-md bg-fill p-2 text-sm">
                 <div>
                   <div className="text-label">{p.beschreibung}</div>
                   <div className="flex items-center gap-1 text-xs text-label2">
@@ -321,6 +358,35 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       p.einzelpreis
                     )}{" "}
                     EUR
+                  </div>
+                  <div className="mt-1">
+                    {rechnung.status === "entwurf" && !kleinunternehmer ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSteuerBearbeitung(
+                            bearbeitet
+                              ? null
+                              : {
+                                  positionId: p.id,
+                                  eingabe: positionZuEingabe(p) ?? vorbelegung(rechnung.mwst_satz),
+                                },
+                          )
+                        }
+                        aria-expanded={!!bearbeitet}
+                        aria-label={`Steuer ändern: ${steuerKurzlabel(p)}`}
+                        className="btn-touch inline-flex items-center rounded-[var(--radius-ap-pill)] bg-tintbg px-2 py-0.5 text-xs font-medium text-tint-text"
+                      >
+                        Steuer: {steuerKurzlabel(p)}
+                      </button>
+                    ) : (
+                      <span
+                        title={p.steuer_grund_text ?? undefined}
+                        className="inline-flex items-center rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-xs font-medium text-label"
+                      >
+                        Steuer: {steuerKurzlabel(p)}
+                      </span>
+                    )}
                   </div>
                   {(p.quelle === "zeit" || p.quelle === "fahrzeit") && Number(p.einzelpreis) === 0 && (
                     <div className="mt-0.5 text-xs font-medium text-st-arbeit">
@@ -344,7 +410,51 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   )}
                 </div>
               </div>
-            );
+              {bearbeitet && (
+                <div className="card-ap space-y-2 p-3">
+                  <SteuerAuswahl
+                    wert={bearbeitet.eingabe}
+                    onChange={(eingabe) => setSteuerBearbeitung({ positionId: p.id, eingabe })}
+                    kunde={kunde}
+                    leistungsdatum={rechnung.leistungsdatum}
+                  />
+                  {steuerSpeichernMutation.isError && (
+                    <FehlerMeldung
+                      alsKasten
+                      meldung={
+                        steuerSpeichernMutation.error instanceof ApiError
+                          ? steuerSpeichernMutation.error.message
+                          : "Steuer konnte nicht gespeichert werden"
+                      }
+                    />
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={!!validiereSteuer(bearbeitet.eingabe) || steuerSpeichernMutation.isPending}
+                      onClick={() =>
+                        steuerSpeichernMutation.mutate({ positionId: p.id, eingabe: bearbeitet.eingabe })
+                      }
+                      className="btn-touch flex-1 rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+                    >
+                      Steuer speichern
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        steuerSpeichernMutation.reset();
+                        setSteuerBearbeitung(null);
+                      }}
+                      className="btn-touch px-2 text-sm font-medium text-label2"
+                    >
+                      Abbrechen
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -418,17 +528,12 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </p>
         )}
 
-        <div className="mt-3 text-right text-sm">
-          <div className="text-label2">Netto: {rechnung.betrag_netto} EUR</div>
-          <div className="font-semibold text-label">
-            Brutto: {rechnung.betrag_brutto} EUR
+        <RechnungSummen rechnung={rechnung} />
+        {rechnung.status !== "entwurf" && rechnung.status !== "storniert" && (
+          <div className="mt-1 text-right text-xs text-label2">
+            Bezahlt: {rechnung.bezahlter_betrag} EUR · Offen: {rechnung.offener_betrag} EUR
           </div>
-          {rechnung.status !== "entwurf" && rechnung.status !== "storniert" && (
-            <div className="mt-1 text-xs text-label2">
-              Bezahlt: {rechnung.bezahlter_betrag} EUR · Offen: {rechnung.offener_betrag} EUR
-            </div>
-          )}
-        </div>
+        )}
 
         <div className="mt-3 flex items-center gap-2">
           <button
@@ -462,7 +567,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 + Vorgang
               </button>
               <button
-                onClick={() => setShowForm((v) => !v)}
+                onClick={() => {
+                  setSteuerNeu(vorbelegung(rechnung.mwst_satz));
+                  setShowForm((v) => !v);
+                }}
                 className="btn-touch text-xs font-medium text-tint "
               >
                 {showForm ? "Abbrechen" : "+ Position"}
@@ -535,8 +643,37 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                 className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
+            {kleinunternehmer ? (
+              <Hinweiskasten ton="info">Kleinunternehmer – steuerbefreit nach § 19 UStG</Hinweiskasten>
+            ) : (
+              steuerNeu && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-label2">Steuer</label>
+                  <SteuerAuswahl
+                    wert={steuerNeu}
+                    onChange={setSteuerNeu}
+                    kunde={kunde}
+                    leistungsdatum={rechnung.leistungsdatum}
+                  />
+                </div>
+              )
+            )}
+            {addPositionMutation.isError && (
+              <FehlerMeldung
+                alsKasten
+                meldung={
+                  addPositionMutation.error instanceof ApiError
+                    ? addPositionMutation.error.message
+                    : "Position konnte nicht angelegt werden"
+                }
+              />
+            )}
             <button
-              disabled={!form.beschreibung || addPositionMutation.isPending}
+              disabled={
+                !form.beschreibung ||
+                addPositionMutation.isPending ||
+                (!kleinunternehmer && !!steuerNeu && !!validiereSteuer(steuerNeu))
+              }
               onClick={() => addPositionMutation.mutate()}
               className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
             >
@@ -551,6 +688,12 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
               ? updatePositionMutation.error.message
               : "Preis konnte nicht gespeichert werden"}
           </p>
+        )}
+
+        {kleinunternehmer && !showForm && (
+          <div className="mb-2">
+            <Hinweiskasten ton="info">Kleinunternehmer – steuerbefreit nach § 19 UStG</Hinweiskasten>
+          </div>
         )}
 
         {rechnung.positionen.length === 0 ? (
@@ -702,6 +845,17 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         betreffPflicht={false}
         hinweis="Die Rechnung wird als PDF-Anhang mitgesendet."
       />
+
+      {statusMutation.isError && (
+        <FehlerMeldung
+          alsKasten
+          meldung={
+            statusMutation.error instanceof ApiError
+              ? statusMutation.error.message
+              : "Status konnte nicht geändert werden"
+          }
+        />
+      )}
 
       {rechnung.status === "entwurf" && (
         <div className="flex gap-2">

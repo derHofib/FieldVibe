@@ -1027,6 +1027,14 @@ export type RechnungSteuerGrund =
   | "kleinunternehmer_19"
   | "sonstige_befreiung";
 
+// Steuerfelder einer Position wie sie Create/PATCH annehmen.
+export interface RechnungSteuerFelder {
+  steuer_kategorie: RechnungSteuerKategorie;
+  steuer_satz: string;
+  steuer_grund: RechnungSteuerGrund | null;
+  steuer_grund_text: string | null;
+}
+
 export interface RechnungSteuerGruppe {
   kategorie: RechnungSteuerKategorie;
   satz: string;

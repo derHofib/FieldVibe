@@ -149,6 +149,7 @@ import type {
   RechnungPosition,
   RechnungPositionQuelle,
   RechnungPositionVorschlag,
+  RechnungSteuerFelder,
   AbrechenbarerVorgang,
   RechnungZahlungCreate,
   RechteMatrixEintrag,
@@ -509,6 +510,7 @@ export const kundenApi = {
       adresse: Adresse | null;
       notiz: string | null;
       ust_idnr: string | null;
+      ust_13b_nachweis_bis: string | null;
       ansprechpartner: Ansprechpartner[];
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -1456,11 +1458,15 @@ export const rechnungenApi = {
       quelle?: RechnungPositionQuelle;
       lv_position_id?: string | null;
       material_id?: string | null;
-    },
+    } & Partial<RechnungSteuerFelder>,
   ) => apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
   removePosition: (id: string, positionId: string) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen/${positionId}`, { method: "DELETE" }),
-  updatePosition: (id: string, positionId: string, body: { beschreibung?: string; einzelpreis?: string }) =>
+  updatePosition: (
+    id: string,
+    positionId: string,
+    body: { beschreibung?: string; einzelpreis?: string } & Partial<RechnungSteuerFelder>,
+  ) =>
     apiFetch<Rechnung>(`/api/rechnungen/${id}/positionen/${positionId}`, {
       method: "PATCH",
       body: JSON.stringify(body),
