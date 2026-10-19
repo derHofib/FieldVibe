@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
+import { Nachweis13bFeld } from "../../components/kunde/Nachweis13b";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
@@ -33,6 +34,7 @@ export function KundenPage() {
     ort: "",
     notiz: "",
     ustIdnr: "",
+    ust13bBis: "",
   });
 
   const { data: kunden, isLoading: kundenLoading } = useQuery({
@@ -59,13 +61,14 @@ export function KundenPage() {
         adresse,
         notiz: neuerKunde.notiz || undefined,
         ust_idnr: neuerKunde.ustIdnr || undefined,
+        ust_13b_nachweis_bis: neuerKunde.ust13bBis || undefined,
       });
     },
     onSuccess: (kunde) => {
       queryClient.invalidateQueries({ queryKey: ["kunden"] });
       setShowForm(false);
       setKundeFehler(null);
-      setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "", ustIdnr: "" });
+      setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "", ustIdnr: "", ust13bBis: "" });
       navigate(`/kunden/${kunde.id}`);
     },
     onError: (err) =>
@@ -143,6 +146,12 @@ export function KundenPage() {
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
+          )}
+          {(neuerKunde.typ === "gewerbe" || neuerKunde.typ === "oeffentlich") && (
+            <Nachweis13bFeld
+              wert={neuerKunde.ust13bBis}
+              onChange={(ust13bBis) => setNeuerKunde({ ...neuerKunde, ust13bBis })}
+            />
           )}
           <div>
             <label className="mb-1 block text-xs text-label2">Straße + Hausnr.</label>

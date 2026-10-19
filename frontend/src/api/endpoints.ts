@@ -501,7 +501,8 @@ export const kundenApi = {
     adresse?: Adresse;
     notiz?: string;
     ust_idnr?: string;
-  }) => apiFetch<Kunde>("/api/kunden", { method: "POST", body: JSON.stringify(body) }),
+    ust_13b_nachweis_bis?: string;
+  }) => apiFetch<Kunde>("/api/kunden",{ method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
     body: Partial<{

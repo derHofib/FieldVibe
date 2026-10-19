@@ -17,6 +17,7 @@ import { ApiError } from "../../api/client";
 import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
+import { Nachweis13bFeld, Nachweis13bStatus } from "../../components/kunde/Nachweis13b";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { downloadBlob } from "../../utils/download";
@@ -41,6 +42,7 @@ function Stammdaten({
   notiz,
   typ,
   ustIdnr,
+  ust13bBis,
   kannVerwalten,
 }: {
   kundeId: string;
@@ -48,6 +50,7 @@ function Stammdaten({
   notiz: string | null;
   typ: string | null;
   ustIdnr: string | null;
+  ust13bBis: string | null;
   kannVerwalten: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -56,6 +59,7 @@ function Stammdaten({
     ...leereAdresse(adresse),
     notiz: notiz ?? "",
     ustIdnr: ustIdnr ?? "",
+    ust13bBis: ust13bBis ?? "",
   }));
   const brauchtUstIdnr = typ === "gewerbe" || typ === "oeffentlich";
 
@@ -68,6 +72,7 @@ function Stammdaten({
             : null,
         notiz: form.notiz || null,
         ust_idnr: form.ustIdnr || null,
+        ust_13b_nachweis_bis: form.ust13bBis || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
@@ -86,7 +91,12 @@ function Stammdaten({
           {kannVerwalten && (
             <button
               onClick={() => {
-                setForm({ ...leereAdresse(adresse), notiz: notiz ?? "", ustIdnr: ustIdnr ?? "" });
+                setForm({
+                  ...leereAdresse(adresse),
+                  notiz: notiz ?? "",
+                  ustIdnr: ustIdnr ?? "",
+                  ust13bBis: ust13bBis ?? "",
+                });
                 setBearbeiten(true);
               }}
               className="btn-touch text-xs font-medium text-tint "
@@ -106,6 +116,12 @@ function Stammdaten({
             USt-IdNr.:{" "}
             {ustIdnr || <span className="text-label2">nicht hinterlegt</span>}
           </p>
+        )}
+        {brauchtUstIdnr && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-label2">
+            <span>§ 13b-Nachweis USt 1 TG:</span>
+            <Nachweis13bStatus bis={ust13bBis} />
+          </div>
         )}
       </div>
     );
@@ -141,6 +157,9 @@ function Stammdaten({
           placeholder="USt-IdNr."
           className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
+      )}
+      {brauchtUstIdnr && (
+        <Nachweis13bFeld wert={form.ust13bBis} onChange={(ust13bBis) => setForm({ ...form, ust13bBis })} />
       )}
       <textarea
         value={form.notiz}
@@ -1231,6 +1250,7 @@ export function KundeProfilePage() {
         notiz={profil.notiz}
         typ={profil.typ}
         ustIdnr={profil.ust_idnr}
+        ust13bBis={profil.ust_13b_nachweis_bis ?? null}
         kannVerwalten={kannVerwalten}
       />
 
