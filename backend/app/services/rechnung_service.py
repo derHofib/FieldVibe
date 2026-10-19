@@ -1,8 +1,10 @@
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
+from lxml import etree
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +28,8 @@ from app.schemas.rechnung import (
 )
 from app.services import e_invoice_service, pdf_service, steuer_service, storage_service
 from app.services.numbering_service import next_rechnungsnummer
+
+logger = logging.getLogger(__name__)
 
 _CENT = Decimal("0.01")
 _STUNDE = Decimal("3600")
@@ -559,9 +563,11 @@ async def vorgang_uebernehmen(
     gewaehlt = {_auswahl_schluessel(a.quelle, a.lv_position_id, a.material_id) for a in auswahl}
     vorschlaege = await positionen_vorschlaege_fuer_vorgang(session, vorgang.id, mandant)
     naechste_position = max((p.position for p in await positionen_fuer(session, rechnung.id)), default=0) + 1
+    kleinunternehmer = steuer_service.ist_kleinunternehmer(mandant)
     steuer_kategorie, steuer_satz = steuer_service.beleg_vorbelegung(
-        rechnung.mwst_satz, kleinunternehmer=steuer_service.ist_kleinunternehmer(mandant)
+        rechnung.mwst_satz, kleinunternehmer=kleinunternehmer
     )
+    steuer_grund = "kleinunternehmer_19" if kleinunternehmer else None
 
     angelegt = 0
     for vorschlag in vorschlaege:
@@ -579,6 +585,7 @@ async def vorgang_uebernehmen(
                 einzelpreis=stundensatz if vorschlag.quelle == "zeit" else vorschlag.einzelpreis,
                 steuer_kategorie=steuer_kategorie,
                 steuer_satz=steuer_satz,
+                steuer_grund=steuer_grund,
                 quelle=vorschlag.quelle,
                 vorgang_id=vorgang.id,
                 lv_position_id=vorschlag.lv_position_id,
@@ -878,6 +885,8 @@ async def erstelle_stornorechnung(
                 einzelpreis=-p.einzelpreis,
                 steuer_kategorie=p.steuer_kategorie,
                 steuer_satz=p.steuer_satz,
+                steuer_grund=p.steuer_grund,
+                steuer_grund_text=p.steuer_grund_text,
                 # Nur fuer die Gruppendarstellung der Storno-PDF -- quelle/
                 # lv_position_id/material_id bleiben leer, damit der Beleg nie
                 # als Sperrgrundlage gilt.
@@ -891,6 +900,33 @@ async def erstelle_stornorechnung(
     return storno
 
 
+class VersandFehler(Exception):
+    """Versand/Archivierung ist nicht moeglich; die Meldung geht als 422 an den
+    Aufrufer (routes/rechnungen.py)."""
+
+
+def versand_meldung(probleme: list[str]) -> str:
+    return "Rechnung kann nicht versendet werden:\n" + "\n".join(f"- {p}" for p in probleme)
+
+
+def pruefe_versand(mandant: Mandant, rechnung: Rechnung, kunde: Kunde, positionen: list[RechnungPosition]) -> list[str]:
+    """Alle Pflichtangaben vor dem Versand: Steuergruende/13b-Voraussetzungen
+    (nur Nicht-Kleinunternehmer) und, bei aktiver E-Rechnung, die EN16931-
+    Pflichtfelder. Leere Liste = versendbar."""
+    probleme = steuer_service.pruefe_steuer_fuer_versand(mandant, rechnung, kunde, positionen)
+    if (mandant.firmendaten or {}).get("e_rechnung_aktiv"):
+        probleme += e_invoice_service.pruefe_en16931_vollstaendigkeit(mandant, rechnung, kunde, positionen)
+    return list(dict.fromkeys(probleme))
+
+
+def _kurzgrund_e_rechnung(exc: Exception) -> str:
+    # Die Details (lxml-Fehlerliste mit Elementpfaden) gehoeren ins Log, nicht
+    # in die Antwort.
+    if isinstance(exc, etree.LxmlError):
+        return "Schema-Validierung fehlgeschlagen"
+    return "unerwarteter Fehler beim Aufbau der XML"
+
+
 def _rechnung_dokument_bytes(
     rechnung: Rechnung,
     mandant: Mandant,
@@ -899,11 +935,15 @@ def _rechnung_dokument_bytes(
     storniert_rechnung: Rechnung | None,
     vorgang_koepfe: dict[UUID, tuple[str, str]],
     logo_bytes: bytes | None = None,
+    *,
+    strikt: bool = True,
 ) -> tuple[bytes, bytes | None]:
-    """Normales PDF ist immer der Ausgangspunkt. Nur wenn der Mandant
-    e_rechnung_aktiv gesetzt hat UND alle EN16931-Pflichtangaben vorhanden
-    sind, wird stattdessen ein ZUGFeRD-Hybrid-PDF (mit eingebetteter CII-XML)
-    erzeugt -- sonst stiller Fallback aufs normale PDF, kein Versand-Block."""
+    """Normales PDF ist immer der Ausgangspunkt. Hat der Mandant e_rechnung_aktiv
+    gesetzt, entsteht stattdessen ein ZUGFeRD-Hybrid-PDF (mit eingebetteter
+    CII-XML). strikt (Versand): fehlende Pflichtangaben oder ein Fehler beim
+    Erzeugen brechen mit VersandFehler ab statt still aufs normale PDF
+    zurueckzufallen. Nicht strikt (Storno): ein bereits versendetes Original
+    darf seine Korrektur nicht blockieren -- dort bleibt der Fallback."""
     pdf_bytes = pdf_service.generate_rechnung_pdf(
         mandant,
         rechnung,
@@ -917,23 +957,31 @@ def _rechnung_dokument_bytes(
         return pdf_bytes, None
     probleme = e_invoice_service.pruefe_en16931_vollstaendigkeit(mandant, rechnung, kunde, positionen)
     if probleme:
+        if strikt:
+            raise VersandFehler(versand_meldung(probleme))
         return pdf_bytes, None
 
-    netto = netto_betrag(rechnung, positionen)
-    brutto = brutto_betrag(rechnung, positionen)
-    dokument = e_invoice_service.baue_cii_dokument(mandant, rechnung, kunde, positionen, netto, brutto)
-    xml_bytes = e_invoice_service.cii_xml_bytes(dokument)
-    pdf_bytes_mit_output_intent = pdf_service.generate_rechnung_pdf(
-        mandant,
-        rechnung,
-        kunde,
-        positionen,
-        storniert_rechnung=storniert_rechnung,
-        vorgang_koepfe=vorgang_koepfe,
-        pdfa_output_intent=True,
-        logo_bytes=logo_bytes,
-    )
-    hybrid_pdf_bytes = e_invoice_service.baue_hybrid_pdf(pdf_bytes_mit_output_intent, xml_bytes)
+    try:
+        netto = netto_betrag(rechnung, positionen)
+        brutto = brutto_betrag(rechnung, positionen)
+        dokument = e_invoice_service.baue_cii_dokument(mandant, rechnung, kunde, positionen, netto, brutto)
+        xml_bytes = e_invoice_service.cii_xml_bytes(dokument)
+        pdf_bytes_mit_output_intent = pdf_service.generate_rechnung_pdf(
+            mandant,
+            rechnung,
+            kunde,
+            positionen,
+            storniert_rechnung=storniert_rechnung,
+            vorgang_koepfe=vorgang_koepfe,
+            pdfa_output_intent=True,
+            logo_bytes=logo_bytes,
+        )
+        hybrid_pdf_bytes = e_invoice_service.baue_hybrid_pdf(pdf_bytes_mit_output_intent, xml_bytes)
+    except Exception as exc:
+        logger.exception("E-Rechnung für %s konnte nicht erzeugt werden", rechnung.rechnungsnummer)
+        if strikt:
+            raise VersandFehler(f"E-Rechnung konnte nicht erzeugt werden: {_kurzgrund_e_rechnung(exc)}") from exc
+        return pdf_bytes, None
     return hybrid_pdf_bytes, xml_bytes
 
 
@@ -953,6 +1001,8 @@ async def archiviere_pdf(
     mandant: Mandant,
     kunde: Kunde,
     storniert_rechnung: Rechnung | None = None,
+    *,
+    strikt: bool = True,
 ) -> bytes:
     """Erzeugt das PDF einmalig zum Versand-Zeitpunkt und speichert es
     unveraenderlich in MinIO/S3 -- spaetere Aenderungen an Firmendaten/Logo
@@ -963,7 +1013,14 @@ async def archiviere_pdf(
     positionen = await positionen_fuer(session, rechnung.id)
     koepfe = await vorgang_koepfe_map(session, positionen)
     pdf_bytes, xml_bytes = _rechnung_dokument_bytes(
-        rechnung, mandant, kunde, positionen, storniert_rechnung, koepfe, await logo_bytes_laden(mandant)
+        rechnung,
+        mandant,
+        kunde,
+        positionen,
+        storniert_rechnung,
+        koepfe,
+        await logo_bytes_laden(mandant),
+        strikt=strikt,
     )
     key = storage_service.new_rechnung_pdf_key(rechnung.id)
     await storage_service.upload_bytes(key, pdf_bytes, "application/pdf")

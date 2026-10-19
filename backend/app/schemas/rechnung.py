@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 # Muss mit RECHNUNG_POSITION_QUELLEN in app/models/rechnung.py
 # uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 8).
@@ -12,6 +12,10 @@ RechnungPositionQuelle = Literal["material", "zeit", "fahrzeit", "fahrtkosten", 
 # Muss mit RECHNUNG_STEUER_KATEGORIEN in app/models/rechnung.py uebereinstimmen.
 # Welche davon per API anlegbar sind, regelt steuer_service (Gating).
 RechnungSteuerKategorie = Literal["S", "Z", "E", "AE"]
+# Muss mit den Schluesseln von steuer_service.STEUER_GRUENDE uebereinstimmen.
+RechnungSteuerGrund = Literal["pv_12_3", "reverse_charge_13b", "kleinunternehmer_19", "sonstige_befreiung"]
+# Belegkopf: nur die Regelsaetze und 0 (Vorbelegung E/0 fuer Altverhalten).
+ERLAUBTE_BELEG_MWST_SAETZE = (Decimal("19.00"), Decimal("7.00"), Decimal("0.00"))
 
 
 def _satz_zu_kategorie_pruefen(kategorie: str | None, satz: Decimal | None) -> None:
@@ -39,6 +43,10 @@ class RechnungPositionCreate(BaseModel):
     # Kleinunternehmern wird ohnehin E/0 erzwungen.
     steuer_kategorie: RechnungSteuerKategorie | None = None
     steuer_satz: Decimal | None = Field(default=None, ge=0, le=100)
+    # Pflicht bei Z/E/AE (siehe steuer_service.STEUER_GRUENDE); steuer_grund_text
+    # nur bei sonstige_befreiung.
+    steuer_grund: RechnungSteuerGrund | None = None
+    steuer_grund_text: str | None = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
     def _steuer_konsistent(self) -> "RechnungPositionCreate":
@@ -53,6 +61,10 @@ class RechnungSteuerGruppeRead(BaseModel):
     satz: Decimal
     netto: Decimal
     steuer: Decimal
+    # Hinweistext(e) aus dem Steuergrund der Positionen dieser Gruppe -- nur zur
+    # Anzeige, die Berechnung gruppiert weiter nach (Kategorie, Satz).
+    hinweis: str | None = None
+    hinweise: list[str] = Field(default_factory=list)
 
 
 class RechnungPositionRead(BaseModel):
@@ -70,6 +82,8 @@ class RechnungPositionRead(BaseModel):
     material_id: UUID | None
     steuer_kategorie: RechnungSteuerKategorie
     steuer_satz: Decimal
+    steuer_grund: RechnungSteuerGrund | None
+    steuer_grund_text: str | None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -139,6 +153,8 @@ class RechnungPositionUpdate(BaseModel):
     einzelpreis: Decimal | None = Field(default=None, ge=0)
     steuer_kategorie: RechnungSteuerKategorie | None = None
     steuer_satz: Decimal | None = Field(default=None, ge=0, le=100)
+    steuer_grund: RechnungSteuerGrund | None = None
+    steuer_grund_text: str | None = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
     def _steuer_konsistent(self) -> "RechnungPositionUpdate":
@@ -171,6 +187,13 @@ class RechnungCreate(BaseModel):
     # da oft identisch mit dem Rechnungsdatum.
     leistungsdatum: date | None = None
     positionen: list[RechnungPositionCreate] = Field(default_factory=list)
+
+    @field_validator("mwst_satz")
+    @classmethod
+    def _mwst_satz_erlaubt(cls, v: Decimal) -> Decimal:
+        if v not in ERLAUBTE_BELEG_MWST_SAETZE:
+            raise ValueError("mwst_satz muss 19, 7 oder 0 sein")
+        return v
 
 
 class RechnungUpdate(BaseModel):

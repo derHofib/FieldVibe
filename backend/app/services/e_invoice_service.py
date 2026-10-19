@@ -10,11 +10,13 @@ wird -- echte Konformitaet wird spaeter manuell extern gegengeprueft).
 
 Wird nur aktiv, wenn Mandant.firmendaten.e_rechnung_aktiv gesetzt ist
 (siehe rechnung_service._rechnung_dokument_bytes) -- optional pro
-Mandant, kein Zwang fuer alle Rechnungen."""
+Mandant, kein Zwang fuer alle Rechnungen. Fehlen dann Pflichtangaben,
+scheitert der Versand (kein stiller Fallback aufs normale PDF)."""
 from decimal import Decimal
 
 from drafthorse.models.accounting import ApplicableTradeTax
 from drafthorse.models.document import Document
+from drafthorse.models.note import IncludedNote
 from drafthorse.models.party import TaxRegistration
 from drafthorse.models.payment import PaymentTerms
 from drafthorse.models.tradelines import LineItem
@@ -47,7 +49,9 @@ def pruefe_en16931_vollstaendigkeit(
     """Reine Praesenzpruefung der EN16931-Pflichtfelder -- keine Schema-
     Validierung. Leere Liste = alle Pflichtangaben vorhanden, e_invoice_
     service.baue_cii_dokument() kann aufgerufen werden. Nicht-leere Liste =
-    stiller Fallback auf ein normales PDF (siehe rechnung_service."""
+    der Versand wird mit dieser Liste abgelehnt (rechnung_service.pruefe_versand).
+    Steuergruende und die 13b-Voraussetzungen am Kunden prueft
+    steuer_service.pruefe_steuer_fuer_versand."""
     probleme: list[str] = []
     firmendaten = mandant.firmendaten or {}
     adresse = firmendaten.get("adresse") or {}
@@ -73,6 +77,14 @@ def pruefe_en16931_vollstaendigkeit(
         probleme.append("Leistungsdatum fehlt")
     if not positionen and rechnung.betrag_netto <= 0:
         probleme.append("Rechnung hat weder Positionen noch einen Betrag")
+
+    # Reverse Charge: BT-31 (Verkaeufer) und BT-48 (Kaeufer) muessen USt-IdNrn.
+    # sein -- eine Steuernummer reicht beim Verkaeufer hier nicht.
+    if any(p.steuer_kategorie == "AE" for p in positionen):
+        if not (firmendaten.get("ust_idnr") or "").strip():
+            probleme.append(steuer_service.MELDUNG_MANDANT_UST_IDNR_13B)
+        if not (kunde.ust_idnr or "").strip():
+            probleme.append(steuer_service.MELDUNG_KUNDE_UST_IDNR_13B)
 
     return probleme
 
@@ -147,8 +159,8 @@ def baue_cii_dokument(
     # interne Element-Objekt, nicht den rohen Wert -- eine Wiederverwendung
     # ueber Rueck-Lesen wuerde das Element selbst als neuen Wert einsetzen
     # (serialisiert dann fehlerhaft).
-    # Schritt 3: Kategorien Z/AE mit Befreiungsgrund (heute nur S und die
-    # Kleinunternehmer-Befreiung E); je Gruppe ein Steuerblock.
+    # Je Gruppe ein Steuerblock mit Kategorie, Satz und -- bei E/AE -- dem
+    # Befreiungsgrund aus dem Katalog.
     if ist_kleinunternehmer:
         # Eine Befreiung fuer den ganzen Beleg, unabhaengig von gespeicherten Saetzen.
         gruppen = [SteuerGruppe(KLEINUNTERNEHMER_VAT_EXEMPTION_CODE, Decimal("0.00"), netto, steuer)]
@@ -159,10 +171,16 @@ def baue_cii_dokument(
         tax.calculated_amount = gruppe.steuer
         tax.type_code = "VAT"
         tax.basis_amount = gruppe.netto
-        tax.category_code = _cii_kategorie(gruppe.kategorie, ist_kleinunternehmer)
+        tax.category_code = gruppe.kategorie
         tax.rate_applicable_percent = gruppe.satz
         if ist_kleinunternehmer:
             tax.exemption_reason = KLEINUNTERNEHMER_VAT_EXEMPTION_REASON
+        elif gruppe.kategorie in ("E", "AE") and gruppe.hinweis:
+            tax.exemption_reason = gruppe.hinweis
+        elif gruppe.kategorie == "Z" and gruppe.hinweis:
+            # BR-Z-10: "Zero rated" darf keinen Befreiungsgrund tragen -- der
+            # gesetzliche Hinweis steht stattdessen als Rechnungsvermerk (BT-22).
+            doc.header.notes.add(IncludedNote(content=gruppe.hinweis))
         doc.trade.settlement.trade_tax.add(tax)
 
     if rechnung.faellig_am:
@@ -207,16 +225,7 @@ def _steuer_der_zeile(
         return KLEINUNTERNEHMER_VAT_EXEMPTION_CODE, Decimal("0.00")
     satz = rechnung.mwst_satz if position.steuer_satz is None else position.steuer_satz
     kategorie = position.steuer_kategorie or steuer_service.kategorie_fuer_beleg_satz(satz)
-    return _cii_kategorie(kategorie, ist_kleinunternehmer), satz
-
-
-def _cii_kategorie(kategorie: str, ist_kleinunternehmer: bool) -> str:
-    # E traegt als Befreiungsgrund nur die Kleinunternehmerregelung. Ein
-    # Beleg mit Satz 0 ohne Kleinunternehmer-Status wurde bisher als S/0
-    # exportiert und bleibt bis Schritt 3 (Z/E/AE mit Grund) dabei.
-    if kategorie == "E" and not ist_kleinunternehmer:
-        return "S"
-    return kategorie
+    return kategorie, satz
 
 
 def _synthetische_position(rechnung: Rechnung) -> RechnungPosition:

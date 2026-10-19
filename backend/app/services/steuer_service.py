@@ -15,10 +15,15 @@ auseinanderlaufen:
   an exakten Halb-Cent-Faellen von der SQL-Seite abgewichen.
 - Ohne Positionen (einfache Abschlussrechnung aus Phase 6) bildet
   betrag_netto mit mwst_satz des Belegs die einzige Gruppe.
+- Der Steuergrund (Katalog STEUER_GRUENDE) fliesst bewusst NICHT in die
+  Gruppierung der Berechnung ein: sonst wuerde die Rundung je Gruppe die
+  Summen veraendern. Jede Gruppe sammelt nur die Hinweistexte ihrer
+  Positionen (SteuerGruppe.hinweise) fuer PDF, E-Rechnung und API.
 """
 from dataclasses import dataclass
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Iterable
+from typing import Iterable, NamedTuple
 
 from sqlalchemy import func, select
 from sqlalchemy.sql.elements import ColumnElement
@@ -32,11 +37,25 @@ _HUNDERT = Decimal("100")
 _KATEGORIE_REIHENFOLGE = {kategorie: i for i, kategorie in enumerate(RECHNUNG_STEUER_KATEGORIEN)}
 
 # Gating: welche Kategorien/Saetze per API angelegt werden duerfen. Z, E und
-# AE brauchen vorher Mapping in UStVA/DATEV und Darstellung in PDF/E-Rechnung
-# (Schritt 3); Kleinunternehmer (E/0) sind davon ausgenommen und werden
-# serverseitig erzwungen.
-FREIGEGEBENE_STEUER_KATEGORIEN = ("S",)
+# AE sind nur mit passendem Steuergrund zulaessig (STEUER_GRUENDE); beim
+# Kleinunternehmer (E/0) wird alles serverseitig erzwungen.
+FREIGEGEBENE_STEUER_KATEGORIEN = ("S", "Z", "E", "AE")
 ERLAUBTE_REGELSAETZE = (Decimal("19.00"), Decimal("7.00"))
+
+# Steuergrund -> (Kategorie, Standardtext). Der Text erscheint auf der PDF und
+# als Befreiungsgrund (BT-120) in der E-Rechnung. Bei sonstige_befreiung gibt
+# es keinen Standardtext, er kommt aus rechnung_positionen.steuer_grund_text.
+STEUER_GRUENDE: dict[str, tuple[str, str | None]] = {
+    "pv_12_3": (
+        "Z",
+        "Nullsteuersatz nach § 12 Abs. 3 UStG (Lieferung und Installation von Photovoltaikanlagen)",
+    ),
+    "reverse_charge_13b": ("AE", "Steuerschuldnerschaft des Leistungsempfängers (§ 13b UStG)"),
+    "kleinunternehmer_19": ("E", "Steuerbefreit nach § 19 UStG (Kleinunternehmerregelung)"),
+    "sonstige_befreiung": ("E", None),
+}
+SONSTIGE_BEFREIUNG_TEXT_MIN = 3
+SONSTIGE_BEFREIUNG_TEXT_MAX = 200
 
 
 class SteuerFehler(ValueError):
@@ -48,16 +67,36 @@ def runde_cent(wert: Decimal) -> Decimal:
     return Decimal(wert).quantize(_CENT, rounding=ROUND_HALF_UP)
 
 
+def steuer_hinweis_text(position) -> str | None:
+    """Hinweistext einer Position aus dem Katalog; None ohne (bekannten) Grund
+    oder bei sonstige_befreiung ohne Text."""
+    eintrag = STEUER_GRUENDE.get(position.steuer_grund or "")
+    if eintrag is None:
+        return None
+    if eintrag[1] is not None:
+        return eintrag[1]
+    return (position.steuer_grund_text or "").strip() or None
+
+
 @dataclass(frozen=True)
 class SteuerGruppe:
     kategorie: str
     satz: Decimal
     netto: Decimal
     steuer: Decimal
+    # Distinkte Hinweistexte der Positionen in Positionsreihenfolge; leer, wenn
+    # keine Position einen Grund traegt.
+    hinweise: tuple[str, ...] = ()
+    # Distinkte Grund-Schluessel der Positionen (None = Position ohne Grund).
+    gruende: tuple[str | None, ...] = ()
 
     @property
     def brutto(self) -> Decimal:
         return self.netto + self.steuer
+
+    @property
+    def hinweis(self) -> str | None:
+        return "; ".join(self.hinweise) or None
 
 
 def _satz(wert: Decimal) -> Decimal:
@@ -78,14 +117,28 @@ def steuer_gruppen(rechnung: Rechnung, positionen: Iterable[RechnungPosition]) -
         return [SteuerGruppe(kategorie_fuer_beleg_satz(satz), satz, netto, runde_cent(netto * satz / _HUNDERT))]
 
     summen: dict[tuple[str, Decimal], Decimal] = {}
+    hinweise: dict[tuple[str, Decimal], list[str]] = {}
+    gruende: dict[tuple[str, Decimal], list[str | None]] = {}
     for p in positionen:
         # Nicht gespeicherte Positionen (z. B. im Speicher gebaute Vorschau-
         # Positionen) haben noch keine Steuerfelder und erben vom Beleg.
         satz = _satz(rechnung.mwst_satz if p.steuer_satz is None else p.steuer_satz)
         schluessel = (p.steuer_kategorie or kategorie_fuer_beleg_satz(satz), satz)
         summen[schluessel] = summen.get(schluessel, Decimal("0")) + p.menge * p.einzelpreis
+        hinweis = steuer_hinweis_text(p)
+        if hinweis is not None and hinweis not in hinweise.setdefault(schluessel, []):
+            hinweise[schluessel].append(hinweis)
+        if p.steuer_grund not in gruende.setdefault(schluessel, []):
+            gruende[schluessel].append(p.steuer_grund)
     gruppen = [
-        SteuerGruppe(kategorie, satz, runde_cent(roh), runde_cent(runde_cent(roh) * satz / _HUNDERT))
+        SteuerGruppe(
+            kategorie,
+            satz,
+            runde_cent(roh),
+            runde_cent(runde_cent(roh) * satz / _HUNDERT),
+            tuple(hinweise.get((kategorie, satz), ())),
+            tuple(gruende[(kategorie, satz)]),
+        )
         for (kategorie, satz), roh in summen.items()
     ]
     gruppen.sort(key=lambda g: (_KATEGORIE_REIHENFOLGE[g.kategorie], -g.satz))
@@ -115,6 +168,13 @@ def beleg_vorbelegung(beleg_mwst_satz: Decimal, *, kleinunternehmer: bool) -> tu
     return kategorie_fuer_beleg_satz(satz), satz
 
 
+class PositionSteuer(NamedTuple):
+    kategorie: str
+    satz: Decimal
+    grund: str | None
+    grund_text: str | None
+
+
 def _pruefe_freigabe(kategorie: str, satz: Decimal) -> None:
     if kategorie not in RECHNUNG_STEUER_KATEGORIEN:
         raise SteuerFehler(f"Steuerkategorie {kategorie} ist unbekannt")
@@ -131,45 +191,95 @@ def _pruefe_freigabe(kategorie: str, satz: Decimal) -> None:
         )
 
 
+def _normiere_grund(kategorie: str, grund: str | None, grund_text: str | None) -> tuple[str | None, str | None]:
+    """Prueft den Steuergrund zur Kategorie (fuer Nicht-Kleinunternehmer; dort
+    wird der Grund erzwungen) und liefert (Grund, Text) normalisiert."""
+    text = (grund_text or "").strip() or None
+    if grund != "sonstige_befreiung" and text is not None:
+        raise SteuerFehler("steuer_grund_text ist nur bei sonstige_befreiung zulässig")
+    if kategorie == "S":
+        if grund is not None:
+            raise SteuerFehler("Bei Steuerkategorie S ist kein Steuergrund vorgesehen")
+        return None, None
+    if kategorie == "Z":
+        if grund != "pv_12_3":
+            raise SteuerFehler("Für 0 % ist derzeit nur § 12 Abs. 3 UStG (Photovoltaik) vorgesehen")
+        return grund, None
+    if kategorie == "AE":
+        if grund != "reverse_charge_13b":
+            raise SteuerFehler("Bei Steuerkategorie AE (§ 13b UStG) muss der Steuergrund reverse_charge_13b sein")
+        return grund, None
+    if grund is None:
+        raise SteuerFehler(
+            "Steuerkategorie E (steuerfrei) braucht einen Steuergrund: sonstige_befreiung mit steuer_grund_text"
+        )
+    if grund == "kleinunternehmer_19":
+        raise SteuerFehler("Der Steuergrund kleinunternehmer_19 gilt nur für Kleinunternehmer")
+    if grund != "sonstige_befreiung":
+        raise SteuerFehler(f"Der Steuergrund {grund} passt nicht zur Steuerkategorie E")
+    if text is None or not (SONSTIGE_BEFREIUNG_TEXT_MIN <= len(text) <= SONSTIGE_BEFREIUNG_TEXT_MAX):
+        raise SteuerFehler(
+            f"Für sonstige Steuerbefreiungen ist ein Text von {SONSTIGE_BEFREIUNG_TEXT_MIN} bis "
+            f"{SONSTIGE_BEFREIUNG_TEXT_MAX} Zeichen nötig (steuer_grund_text)"
+        )
+    return grund, text
+
+
+_KLEINUNTERNEHMER_STEUER = PositionSteuer("E", Decimal("0.00"), "kleinunternehmer_19", None)
+
+
 def loese_steuer_auf(
     *,
     kategorie: str | None,
     satz: Decimal | None,
+    grund: str | None = None,
+    grund_text: str | None = None,
     beleg_mwst_satz: Decimal,
     kleinunternehmer: bool,
-) -> tuple[str, Decimal]:
-    """Steuerfelder einer neu angelegten Position aus API-Angaben. Fehlt beides,
+) -> PositionSteuer:
+    """Steuerfelder einer neu angelegten Position aus API-Angaben. Fehlt alles,
     gilt die Vorbelegung aus dem Beleg; ein daraus entstehender Satz
     ausserhalb der Regelsaetze wird wie eine explizite Angabe abgelehnt. Die
-    geerbte Befreiung E/0 (Beleg mit Satz 0) ist Altverhalten und bleibt
-    zulaessig."""
+    geerbte Befreiung E/0 (Beleg mit Satz 0) ist Altverhalten, bleibt ohne
+    Grund zulaessig und wird erst beim Versand geprueft. Nur mit Grund (ohne
+    Kategorie) bestimmt der Katalog die Kategorie."""
     if kleinunternehmer:
-        return "E", Decimal("0.00")
-    if kategorie is None and satz is None:
+        return _KLEINUNTERNEHMER_STEUER
+    if kategorie is None and satz is None and grund is None and grund_text is None:
         kategorie_v, satz_v = beleg_vorbelegung(beleg_mwst_satz, kleinunternehmer=False)
         if kategorie_v != "E":
             _pruefe_freigabe(kategorie_v, satz_v)
-        return kategorie_v, satz_v
+        return PositionSteuer(kategorie_v, satz_v, None, None)
+    if kategorie is None and grund in STEUER_GRUENDE:
+        kategorie = STEUER_GRUENDE[grund][0]
     kategorie = kategorie or "S"
     if satz is None:
         satz = _satz(beleg_mwst_satz) if kategorie == "S" else Decimal("0.00")
     _pruefe_freigabe(kategorie, satz)
-    return kategorie, _satz(satz)
+    grund, grund_text = _normiere_grund(kategorie, grund, grund_text)
+    return PositionSteuer(kategorie, _satz(satz), grund, grund_text)
 
 
 def aendere_steuer(
     *,
     aktuell_kategorie: str,
     aktuell_satz: Decimal,
+    aktuell_grund: str | None = None,
+    aktuell_grund_text: str | None = None,
     kategorie: str | None,
     satz: Decimal | None,
+    grund: str | None = None,
+    grund_text: str | None = None,
     kleinunternehmer: bool,
-) -> tuple[str, Decimal]:
+) -> PositionSteuer:
     """Steuerfelder einer bestehenden Position nach PATCH. Nicht angegebene
     Felder bleiben; wechselt nur die Kategorie auf eine ohne Satz, wird der
-    Satz 0."""
+    Satz 0. Der Grund gehoert zur Kategorie und bleibt nur erhalten, solange
+    sie sich nicht aendert -- ein Wechsel verlangt den neuen Grund."""
     if kleinunternehmer:
-        return "E", Decimal("0.00")
+        return _KLEINUNTERNEHMER_STEUER
+    if kategorie is None and grund in STEUER_GRUENDE:
+        kategorie = STEUER_GRUENDE[grund][0]
     neue_kategorie = kategorie or aktuell_kategorie
     if satz is not None:
         neuer_satz = satz
@@ -178,7 +288,79 @@ def aendere_steuer(
     else:
         neuer_satz = aktuell_satz
     _pruefe_freigabe(neue_kategorie, neuer_satz)
-    return neue_kategorie, _satz(neuer_satz)
+    if neue_kategorie != aktuell_kategorie:
+        aktuell_grund = aktuell_grund_text = None
+    neuer_grund = grund if grund is not None else aktuell_grund
+    # Der Text gehoert zum Grund: bei neuem Grund gilt der alte Text nicht weiter.
+    if grund_text is not None:
+        neuer_text = grund_text
+    else:
+        neuer_text = aktuell_grund_text if neuer_grund == aktuell_grund else None
+    neuer_grund, neuer_text = _normiere_grund(neue_kategorie, neuer_grund, neuer_text)
+    return PositionSteuer(neue_kategorie, _satz(neuer_satz), neuer_grund, neuer_text)
+
+
+# --- Voraussetzungen und Versandpruefung -------------------------------------
+
+
+def _datum(tag: date) -> str:
+    return tag.strftime("%d.%m.%Y")
+
+
+MELDUNG_KUNDE_UST_IDNR_13B = "Beim Kunden fehlt die USt-IdNr. (Pflicht für Reverse Charge nach § 13b UStG)"
+MELDUNG_MANDANT_UST_IDNR_13B = "Für Reverse Charge nach § 13b UStG fehlt die eigene USt-IdNr. in den Firmendaten"
+
+
+def pruefe_13b_voraussetzungen(kunde, leistungsdatum: date | None, *, heute: date | None = None) -> list[str]:
+    """Voraussetzungen fuer Reverse Charge (§ 13b UStG) beim Leistungsempfaenger:
+    USt-IdNr. und eine zum Leistungszeitpunkt gueltige Bescheinigung USt 1 TG
+    (§ 13b Abs. 2 Nr. 4 UStG). Ohne Leistungsdatum gilt der heutige Tag."""
+    probleme: list[str] = []
+    if not (kunde.ust_idnr or "").strip():
+        probleme.append(MELDUNG_KUNDE_UST_IDNR_13B)
+    bezugstag = leistungsdatum or heute or date.today()
+    bezug = f"Leistungsdatum {_datum(leistungsdatum)}" if leistungsdatum else f"heute, {_datum(bezugstag)}"
+    if kunde.ust_13b_nachweis_bis is None:
+        probleme.append(
+            "Beim Kunden fehlt das Ablaufdatum der Bescheinigung USt 1 TG (§ 13b Abs. 2 Nr. 4 UStG)"
+        )
+    elif kunde.ust_13b_nachweis_bis < bezugstag:
+        probleme.append(
+            f"Die Bescheinigung USt 1 TG des Kunden ist am {_datum(kunde.ust_13b_nachweis_bis)} abgelaufen ({bezug})"
+        )
+    return probleme
+
+
+def pruefe_steuer_fuer_versand(mandant, rechnung, kunde, positionen: Iterable[RechnungPosition]) -> list[str]:
+    """Steuerliche Pflichtangaben vor dem Versand einer Ausgangsrechnung. Der
+    Kleinunternehmer ist ausgenommen: seine Steuerfelder werden beim Anlegen
+    erzwungen. Geprueft wird hier (statt nur beim Anlegen), weil Entwuerfe aus
+    Altbestand ohne Grund stammen und sich Kundendaten nachtraeglich aendern."""
+    if ist_kleinunternehmer(mandant):
+        return []
+    positionen = list(positionen)
+    probleme: list[str] = []
+    if not positionen:
+        if _satz(rechnung.mwst_satz) == 0:
+            probleme.append(
+                "Rechnung mit Steuersatz 0 % braucht Positionen mit Steuergrund "
+                "(Steuerkategorie Z, E oder AE)"
+            )
+        return probleme
+
+    for p in positionen:
+        try:
+            if p.steuer_kategorie == "S":
+                continue
+            _normiere_grund(p.steuer_kategorie, p.steuer_grund, p.steuer_grund_text)
+        except SteuerFehler as exc:
+            probleme.append(f"Position {p.position}: {exc}")
+
+    if any(p.steuer_kategorie == "AE" for p in positionen):
+        probleme.extend(pruefe_13b_voraussetzungen(kunde, rechnung.leistungsdatum))
+        if not ((mandant.firmendaten or {}).get("ust_idnr") or "").strip():
+            probleme.append(MELDUNG_MANDANT_UST_IDNR_13B)
+    return probleme
 
 
 # --- SQL-Gegenstuecke -------------------------------------------------------

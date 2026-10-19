@@ -54,9 +54,12 @@ from app.services.rechnung_service import (
     pdf_bytes_fuer,
     positionen_fuer,
     positionen_vorschlaege_fuer_vorgang,
+    pruefe_versand,
     status_nach_zahlung,
     to_read_model,
     to_read_model_bulk,
+    VersandFehler,
+    versand_meldung,
     vorgang_uebernehmen,
     zahlungen_fuer,
     zeiterfassung_abrechnen,
@@ -462,16 +465,29 @@ async def delete_rechnung(
 
 def _steuer_fuer_position(
     body: RechnungPositionCreate, beleg_mwst_satz: Decimal, *, kleinunternehmer: bool
-) -> tuple[str, Decimal]:
+) -> steuer_service.PositionSteuer:
     try:
         return steuer_service.loese_steuer_auf(
             kategorie=body.steuer_kategorie,
             satz=body.steuer_satz,
+            grund=body.steuer_grund,
+            grund_text=body.steuer_grund_text,
             beleg_mwst_satz=beleg_mwst_satz,
             kleinunternehmer=kleinunternehmer,
         )
     except steuer_service.SteuerFehler as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+def _pruefe_13b_beim_anlegen(kunde: Kunde, rechnung_leistungsdatum: date | None) -> None:
+    """Reverse Charge (AE) haengt am Kunden der Rechnung, nicht an der Position.
+    Beim Versand wird erneut geprueft (rechnung_service.pruefe_versand)."""
+    probleme = steuer_service.pruefe_13b_voraussetzungen(kunde, rechnung_leistungsdatum)
+    if probleme:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Reverse Charge (§ 13b UStG) nicht möglich: " + "; ".join(probleme),
+        )
 
 
 def _neue_positionen(
@@ -484,7 +500,7 @@ def _neue_positionen(
 ) -> list[RechnungPosition]:
     positionen = []
     for i, e in enumerate(eintraege):
-        steuer_kategorie, steuer_satz = _steuer_fuer_position(e, beleg_mwst_satz, kleinunternehmer=kleinunternehmer)
+        steuer = _steuer_fuer_position(e, beleg_mwst_satz, kleinunternehmer=kleinunternehmer)
         positionen.append(
             RechnungPosition(
                 mandant_id=mandant_id,
@@ -494,8 +510,10 @@ def _neue_positionen(
                 menge=e.menge,
                 einheit=e.einheit,
                 einzelpreis=e.einzelpreis,
-                steuer_kategorie=steuer_kategorie,
-                steuer_satz=steuer_satz,
+                steuer_kategorie=steuer.kategorie,
+                steuer_satz=steuer.satz,
+                steuer_grund=steuer.grund,
+                steuer_grund_text=steuer.grund_text,
                 quelle=e.quelle,
             )
         )
@@ -516,7 +534,8 @@ async def create_rechnung(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RechnungRead:
-    if await session.get(Kunde, body.kunde_id) is None:
+    kunde = await session.get(Kunde, body.kunde_id)
+    if kunde is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
@@ -557,9 +576,12 @@ async def create_rechnung(
     session.add(rechnung)
     await session.flush()
 
-    for p in _neue_positionen(
+    neue_positionen = _neue_positionen(
         rechnung.id, auth.mandant_id, body.positionen, mwst_satz, kleinunternehmer=ist_kleinunternehmer
-    ):
+    )
+    if any(p.steuer_kategorie == "AE" for p in neue_positionen):
+        _pruefe_13b_beim_anlegen(kunde, body.leistungsdatum)
+    for p in neue_positionen:
         session.add(p)
     await session.flush()
     await session.refresh(rechnung)
@@ -686,9 +708,11 @@ async def add_position(
         )
 
     mandant = await session.get(Mandant, auth.mandant_id)
-    steuer_kategorie, steuer_satz = _steuer_fuer_position(
+    steuer = _steuer_fuer_position(
         body, rechnung.mwst_satz, kleinunternehmer=steuer_service.ist_kleinunternehmer(mandant)
     )
+    if steuer.kategorie == "AE":
+        _pruefe_13b_beim_anlegen(await session.get(Kunde, rechnung.kunde_id), rechnung.leistungsdatum)
     bestehende = await positionen_fuer(session, rechnung_id)
     naechste_position = max((p.position for p in bestehende), default=0) + 1
     session.add(
@@ -700,8 +724,10 @@ async def add_position(
             menge=body.menge,
             einheit=body.einheit,
             einzelpreis=body.einzelpreis,
-            steuer_kategorie=steuer_kategorie,
-            steuer_satz=steuer_satz,
+            steuer_kategorie=steuer.kategorie,
+            steuer_satz=steuer.satz,
+            steuer_grund=steuer.grund,
+            steuer_grund_text=steuer.grund_text,
             quelle=body.quelle,
             vorgang_id=(
                 rechnung.vorgang_id
@@ -839,18 +865,29 @@ async def update_position(
         position.beschreibung = body.beschreibung
     if body.einzelpreis is not None:
         position.einzelpreis = body.einzelpreis
-    if body.steuer_kategorie is not None or body.steuer_satz is not None:
+    if any(
+        wert is not None
+        for wert in (body.steuer_kategorie, body.steuer_satz, body.steuer_grund, body.steuer_grund_text)
+    ):
         mandant = await session.get(Mandant, auth.mandant_id)
         try:
-            position.steuer_kategorie, position.steuer_satz = steuer_service.aendere_steuer(
+            steuer = steuer_service.aendere_steuer(
                 aktuell_kategorie=position.steuer_kategorie,
                 aktuell_satz=position.steuer_satz,
+                aktuell_grund=position.steuer_grund,
+                aktuell_grund_text=position.steuer_grund_text,
                 kategorie=body.steuer_kategorie,
                 satz=body.steuer_satz,
+                grund=body.steuer_grund,
+                grund_text=body.steuer_grund_text,
                 kleinunternehmer=steuer_service.ist_kleinunternehmer(mandant),
             )
         except steuer_service.SteuerFehler as exc:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        if steuer.kategorie == "AE":
+            _pruefe_13b_beim_anlegen(await session.get(Kunde, rechnung.kunde_id), rechnung.leistungsdatum)
+        position.steuer_kategorie, position.steuer_satz = steuer.kategorie, steuer.satz
+        position.steuer_grund, position.steuer_grund_text = steuer.grund, steuer.grund_text
     await session.flush()
     await session.refresh(position)
     await session.refresh(rechnung)
@@ -936,11 +973,20 @@ async def update_rechnung(
             )
         jetzt = datetime.now(timezone.utc)
         if neuer_status == "versendet":
-            rechnung.versendet_am = jetzt
-            rechnung.status = neuer_status
             kunde = await session.get(Kunde, rechnung.kunde_id)
             mandant = await session.get(Mandant, auth.mandant_id)
-            await archiviere_pdf(session, rechnung, mandant, kunde)
+            # Vor jeder Aenderung: bei fehlenden Pflichtangaben bleibt der Entwurf unberuehrt.
+            probleme = pruefe_versand(mandant, rechnung, kunde, await positionen_fuer(session, rechnung_id))
+            if probleme:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=versand_meldung(probleme)
+                )
+            rechnung.versendet_am = jetzt
+            rechnung.status = neuer_status
+            try:
+                await archiviere_pdf(session, rechnung, mandant, kunde)
+            except VersandFehler as exc:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
         elif neuer_status == "bezahlt":
             # Invariante offener_betrag == brutto - Summe(Zahlungen) muss
             # immer gelten -- ein manueller "als bezahlt markieren"-Abschluss
@@ -1012,7 +1058,7 @@ async def storno_rechnung(
 
     kunde = await session.get(Kunde, storno.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
-    await archiviere_pdf(session, storno, mandant, kunde, storniert_rechnung=rechnung)
+    await archiviere_pdf(session, storno, mandant, kunde, storniert_rechnung=rechnung, strikt=False)
 
     # Sammelrechnungen haben kein rechnung.vorgang_id -- die Vorgaenge stecken
     # in den Positionen.

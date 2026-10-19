@@ -36,6 +36,9 @@ _FIRMENDATEN_E_RECHNUNG = {
 }
 
 
+_KU_HINWEIS = "Steuerbefreit nach § 19 UStG (Kleinunternehmerregelung)"
+
+
 def _d(wert) -> Decimal:
     return Decimal(str(wert))
 
@@ -438,8 +441,8 @@ async def test_mischbeleg_gruppen_und_summen(client, make_mandant, make_user, ma
     rechnung = await _mischbeleg(client, token, kunde)
 
     assert rechnung["steuergruppen"] == [
-        {"kategorie": "S", "satz": "19.00", "netto": "10.10", "steuer": "1.92"},
-        {"kategorie": "S", "satz": "7.00", "netto": "3.50", "steuer": "0.25"},
+        {"kategorie": "S", "satz": "19.00", "netto": "10.10", "steuer": "1.92", "hinweis": None, "hinweise": []},
+        {"kategorie": "S", "satz": "7.00", "netto": "3.50", "steuer": "0.25", "hinweis": None, "hinweise": []},
     ]
     assert rechnung["betrag_netto"] == "13.60"
     assert rechnung["betrag_steuer"] == "2.17"
@@ -517,9 +520,17 @@ async def test_position_erbt_satz_des_belegs(client, make_mandant, make_user, ma
     assert pos.json()["betrag_brutto"] == "21.40"
 
 
+# Seit Schritt 3 sind Z/E/AE freigeschaltet, aber nur mit passendem Steuergrund.
+_MELDUNG_OHNE_GRUND = {
+    "Z": "nur § 12 Abs. 3 UStG",
+    "E": "braucht einen Steuergrund",
+    "AE": "muss der Steuergrund reverse_charge_13b sein",
+}
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("kategorie", ["Z", "E", "AE"])
-async def test_gating_nicht_freigegebene_kategorie_422(client, make_mandant, make_user, make_kunde, kategorie):
+async def test_gating_kategorie_ohne_grund_422(client, make_mandant, make_user, make_kunde, kategorie):
     token, kunde = await _admin(client, make_mandant, make_user, make_kunde)
     rechnung = await _mischbeleg(client, token, kunde)
 
@@ -529,7 +540,7 @@ async def test_gating_nicht_freigegebene_kategorie_422(client, make_mandant, mak
         json={"beschreibung": "x", "einzelpreis": "1", "steuer_kategorie": kategorie},
     )
     assert pos.status_code == 422
-    assert f"Steuerkategorie {kategorie} ist noch nicht freigeschaltet" in pos.json()["detail"]
+    assert _MELDUNG_OHNE_GRUND[kategorie] in pos.json()["detail"]
 
     anlegen = await client.post(
         "/api/rechnungen",
@@ -621,7 +632,16 @@ async def test_kleinunternehmer_positionen_automatisch_e_null(client, make_manda
         ("E", "0.00"),
         ("E", "0.00"),
     ]
-    assert rechnung["steuergruppen"] == [{"kategorie": "E", "satz": "0.00", "netto": "13.60", "steuer": "0.00"}]
+    assert rechnung["steuergruppen"] == [
+        {
+            "kategorie": "E",
+            "satz": "0.00",
+            "netto": "13.60",
+            "steuer": "0.00",
+            "hinweis": _KU_HINWEIS,
+            "hinweise": [_KU_HINWEIS],
+        }
+    ]
     assert rechnung["betrag_brutto"] == "13.60"
 
     # Auch explizite Angaben und spaetere Positionen werden erzwungen; das Gating greift hier nicht.
@@ -654,8 +674,8 @@ async def test_storno_kopiert_steuerfelder_und_summiert_auf_null(client, make_ma
         ("S", "7.00", "-3.50"),
     ]
     assert storno["steuergruppen"] == [
-        {"kategorie": "S", "satz": "19.00", "netto": "-10.10", "steuer": "-1.92"},
-        {"kategorie": "S", "satz": "7.00", "netto": "-3.50", "steuer": "-0.25"},
+        {"kategorie": "S", "satz": "19.00", "netto": "-10.10", "steuer": "-1.92", "hinweis": None, "hinweise": []},
+        {"kategorie": "S", "satz": "7.00", "netto": "-3.50", "steuer": "-0.25", "hinweis": None, "hinweise": []},
     ]
     original = (await client.get(f"/api/rechnungen/{rechnung['id']}", headers=auth_headers(token))).json()
     for feld in ("betrag_netto", "betrag_steuer", "betrag_brutto"):
