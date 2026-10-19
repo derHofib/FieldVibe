@@ -268,6 +268,19 @@ def test_storno_zeile_mit_negativem_preis_wandert_vorzeichen_in_die_menge():
     assert zeile.xpath("string(.//ram:LineTotalAmount)", namespaces=_RAM_NS) == "-100.00"
 
 
+def test_storno_nullsteuer_gruppe_ohne_negative_null():
+    # BR-Z-09/BR-E-09/BR-AE-09: der Steuerbetrag muss 0 sein, "-0.00" gilt nicht.
+    positionen = [
+        _position(einzelpreis=Decimal("-200.00"), steuer_kategorie="Z", steuer_satz=Decimal("0"), steuer_grund="pv_12_3"),
+    ]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(ist_storno=True), _kunde(), positionen, Decimal("-200.00"), Decimal("-200.00")
+    )
+    xml = e_invoice_service.cii_xml_bytes(dokument).decode("utf-8")
+    assert "<ram:CalculatedAmount>0.00</ram:CalculatedAmount>" in xml
+    assert "-0.00" not in xml
+
+
 def test_keine_rundungsdifferenz_wenn_zeilen_aufgehen():
     dokument = e_invoice_service.baue_cii_dokument(
         _mandant(), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")

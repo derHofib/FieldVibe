@@ -89,6 +89,12 @@ def pruefe_en16931_vollstaendigkeit(
     return probleme
 
 
+def _betrag(wert: Decimal) -> Decimal:
+    # Stornobelege rechnen mit negativen Betraegen; 0 * -1 ergibt "-0.00", das die
+    # Regeln BR-Z-09/BR-E-09/BR-AE-09 ("Steuerbetrag = 0") als Verstoss werten.
+    return Decimal("0.00") if wert == 0 else wert
+
+
 def _land(adresse: dict | None, fallback: str) -> str:
     return (adresse or {}).get("land") or fallback
 
@@ -113,7 +119,8 @@ def baue_cii_dokument(
     kunde_adresse = kunde.adresse or {}
     kunde_land = _land(kunde_adresse, seller_land)
 
-    steuer = (brutto - netto).quantize(_CENT)
+    netto, brutto = _betrag(netto), _betrag(brutto)
+    steuer = _betrag((brutto - netto).quantize(_CENT))
     ist_kleinunternehmer = bool(firmendaten.get("ist_kleinunternehmer"))
 
     doc = Document()
@@ -173,9 +180,9 @@ def baue_cii_dokument(
         gruppen = steuer_service.steuer_gruppen(rechnung, positionen)
     for gruppe in gruppen:
         tax = ApplicableTradeTax()
-        tax.calculated_amount = gruppe.steuer
+        tax.calculated_amount = _betrag(gruppe.steuer)
         tax.type_code = "VAT"
-        tax.basis_amount = gruppe.netto
+        tax.basis_amount = _betrag(gruppe.netto)
         tax.category_code = gruppe.kategorie
         tax.rate_applicable_percent = gruppe.satz
         if ist_kleinunternehmer:
@@ -204,11 +211,11 @@ def baue_cii_dokument(
         line.document.line_id = str(index)
         line.product.name = position.beschreibung
         zeilen_kategorie, zeilen_satz = _steuer_der_zeile(position, rechnung, ist_kleinunternehmer)
-        zeilen_netto = steuer_service.runde_cent(position.menge * position.einzelpreis)
+        zeilen_netto = _betrag(steuer_service.runde_cent(position.menge * position.einzelpreis))
         zeilen_summen[(zeilen_kategorie, zeilen_satz)] = (
             zeilen_summen.get((zeilen_kategorie, zeilen_satz), Decimal("0")) + zeilen_netto
         )
-        einzelpreis, menge = position.einzelpreis.quantize(_CENT), position.menge
+        einzelpreis, menge = _betrag(position.einzelpreis.quantize(_CENT)), position.menge
         if einzelpreis < 0:
             # BR-27: der Nettopreis (BT-146) darf nicht negativ sein. Stornozeilen
             # tragen den negativen Preis intern; hier wandert das Vorzeichen in die

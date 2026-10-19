@@ -40,6 +40,8 @@ def _werkzeug_vorhanden():
 def _pruefe_en16931(xml: bytes, tmp_path: Path, name: str) -> None:
     datei = tmp_path / f"{name}.xml"
     datei.write_bytes(xml)
+    if os.environ.get("E_RECHNUNG_XML_DIR"):  # erzeugte XML zur Fehlersuche ablegen
+        Path(os.environ["E_RECHNUNG_XML_DIR"], datei.name).write_bytes(xml)
     ergebnis = subprocess.run(
         ["bash", str(_SKRIPT), str(datei)], capture_output=True, text=True, timeout=180, env={**os.environ}
     )
@@ -151,6 +153,34 @@ async def test_storno(client, make_mandant, make_user, make_kunde, tmp_path):
     xml = await client.get(f"/api/rechnungen/{storno.json()['id']}/xml", headers=auth_headers(token))
     assert xml.status_code == 200
     _pruefe_en16931(xml.content, tmp_path, "storno")
+
+
+@pytest.mark.asyncio
+async def test_storno_mit_allen_kategorien_und_rundung(client, make_mandant, make_user, make_kunde, tmp_path):
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    positionen = [
+        {"beschreibung": "Halb-Cent", "menge": "0.5", "einzelpreis": "10.01"},
+        {"beschreibung": "Halb-Cent 2", "menge": "0.5", "einzelpreis": "10.01"},
+        {"beschreibung": "Material 7", "menge": "3", "einzelpreis": "0.33", "steuer_satz": "7"},
+        _POS_Z,
+        _POS_AE,
+        _POS_E,
+    ]
+    original = await _rechnung(client, token, kunde, positionen)
+    assert (await _versenden(client, token, original["id"])).status_code == 200
+    storno = await client.post(f"/api/rechnungen/{original['id']}/storno", headers=auth_headers(token))
+    assert storno.status_code == 201
+    xml = await client.get(f"/api/rechnungen/{storno.json()['id']}/xml", headers=auth_headers(token))
+    _pruefe_en16931(xml.content, tmp_path, "storno_alle_kategorien")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("typ", ["privat", "oeffentlich"])
+async def test_kundentypen(client, make_mandant, make_user, make_kunde, tmp_path, typ):
+    kunde_kw = {"typ": typ, "ust_idnr": None} if typ == "privat" else {"typ": typ}
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde, **kunde_kw)
+    xml = await _versendet_xml(client, token, kunde, [_POS_S])
+    _pruefe_en16931(xml, tmp_path, f"kunde_{typ}")
 
 
 @pytest.mark.asyncio
