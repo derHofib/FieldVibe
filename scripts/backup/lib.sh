@@ -12,6 +12,11 @@ BACKUP_LIB_DIR="$(dirname "$BACKUP_LIB_DATEI")"
 # rotation_plan) per "source" mitbenutzen kann.
 export BACKUP_LIB_DATEI
 
+# Cron startet mit einem minimalen PATH; rclone aus dem Installationsskript
+# liegt in /usr/local/bin. Hinten anhaengen, damit vorhandene Eintraege Vorrang
+# behalten.
+export PATH="$PATH:/usr/local/bin:/usr/local/sbin:/snap/bin"
+
 # --- Logging ------------------------------------------------------------------
 log()    { printf '[%s] %s\n' "$(date -Iseconds)" "$*" >&2; }
 warn()   { printf '[%s] WARNUNG: %s\n' "$(date -Iseconds)" "$*" >&2; }

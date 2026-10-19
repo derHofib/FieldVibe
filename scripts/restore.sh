@@ -27,7 +27,7 @@ cd "$REPO_DIR"
 # shellcheck source=scripts/backup/lib.sh
 source "$REPO_DIR/scripts/backup/lib.sh"
 
-usage() { sed -n '4,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 MODUS="${1:-}"
 [[ -n "$MODUS" ]] || { usage >&2; exit 1; }
