@@ -132,3 +132,35 @@ jobs:
       - name: Tests
         working-directory: tools/bugreport-mcp
         run: npm test
+
+  scripts-tests:
+    runs-on: ubuntu-latest
+    # Fuer den Test gegen einen echten Postgres (scripts/tests/test_postgres_echt.sh);
+    # ohne erreichbaren Server ueberspringt er sich selbst.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fieldvibe
+          POSTGRES_PASSWORD: fieldvibe
+          POSTGRES_DB: fieldvibe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fieldvibe"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Werkzeuge installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck postgresql-client gnupg
+
+      - name: shellcheck
+        run: |
+          find scripts -name '*.sh' -print0 | xargs -0 shellcheck -S warning
+          shellcheck -S warning scripts/backup/ziele/befehl-beispiel.sh.example
+
+      - name: Shell-Tests (Backup/Restore)
+        run: bash scripts/tests/run.sh
