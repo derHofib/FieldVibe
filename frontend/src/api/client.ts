@@ -172,7 +172,15 @@ export async function apiFetchBlob(path: string, _isRetry = false): Promise<Blob
   }
 
   if (!resp.ok) {
-    throw new ApiError(resp.status, resp.statusText);
+    // Fehler kommen auch bei Downloads als JSON-`detail` (z. B. 422 des
+    // DATEV-Exports mit dem fehlenden Erlöskonto); ohne Body bleibt statusText.
+    let detail = resp.statusText;
+    try {
+      detail = extractErrorDetail(await resp.json()) ?? detail;
+    } catch {
+      /* response had no JSON body */
+    }
+    throw new ApiError(resp.status, detail);
   }
   return await resp.blob();
 }

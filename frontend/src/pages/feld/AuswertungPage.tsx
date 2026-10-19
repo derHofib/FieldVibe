@@ -1,17 +1,21 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Receipt } from "lucide-react";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import { auswertungApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerMeldung, Hinweiskasten } from "../../components/Hinweiskasten";
 import { useAuth } from "../../context/AuthContext";
+import { ApiError } from "../../api/client";
 import { downloadBlob } from "../../utils/download";
+import { datumZuIso, heuteIso } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
+import { istErloeskontoFehler } from "../../utils/steuer";
 
 function ersterTagDesMonats(): string {
   const heute = new Date();
-  return new Date(heute.getFullYear(), heute.getMonth(), 1).toISOString().slice(0, 10);
+  return datumZuIso(new Date(heute.getFullYear(), heute.getMonth(), 1));
 }
 
 export function AuswertungPage() {
@@ -22,7 +26,7 @@ export function AuswertungPage() {
   const eingeschraenkt = currentUser?.nur_zugewiesene_kunden === true;
 
   const [von, setVon] = useState(ersterTagDesMonats());
-  const [bis, setBis] = useState(new Date().toISOString().slice(0, 10));
+  const [bis, setBis] = useState(heuteIso());
 
   const { data: bericht, isFetching, refetch } = useQuery({
     queryKey: ["ust-va", von, bis],
@@ -40,6 +44,8 @@ export function AuswertungPage() {
     mutationFn: () => auswertungApi.datevExportCsv(von, bis),
     onSuccess: (blob) => downloadBlob(blob, `DATEV-Export_${von}_${bis}.csv`),
   });
+
+  const datevMeldung = datevMutation.error instanceof ApiError ? datevMutation.error.message : null;
 
   if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
@@ -197,6 +203,21 @@ export function AuswertungPage() {
             </div>
           )}
 
+          {(bericht.sonstige_umsaetze ?? []).length > 0 && (
+            <>
+              <h2 className="mb-2 mt-4 text-sm font-semibold text-label2">Weitere Umsätze (ohne Umsatzsteuer)</h2>
+              <div className="space-y-1">
+                {bericht.sonstige_umsaetze!.map((u) => (
+                  <div key={u.kategorie} className="flex justify-between gap-3 text-sm">
+                    <span className="text-label">{u.bezeichnung}</span>
+                    <span className="shrink-0 font-medium tabular-nums text-label">{u.netto} EUR</span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-label2">Die Kennzahl ordnet der Steuerberater zu.</p>
+            </>
+          )}
+
           <h2 className="mb-2 mt-4 text-sm font-semibold text-label2">
             Vorsteuer (Eingangsrechnungen)
           </h2>
@@ -245,6 +266,22 @@ export function AuswertungPage() {
         >
           <Download size={15} strokeWidth={2} /> DATEV-Export (CSV)
         </button>
+        {datevMutation.isError && (
+          <div className="mt-3">
+            {datevMeldung && istErloeskontoFehler(datevMeldung) ? (
+              <Hinweiskasten ton="warnung" titel="Erlöskonto fehlt">
+                <p>{datevMeldung}</p>
+                <p>
+                  <Link to="/integrationen" className="font-semibold underline underline-offset-2">
+                    Zu den Firmendaten
+                  </Link>
+                </p>
+              </Hinweiskasten>
+            ) : (
+              <FehlerMeldung alsKasten meldung={datevMeldung ?? "DATEV-Export fehlgeschlagen"} />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
