@@ -14,7 +14,7 @@ Mandant, kein Zwang fuer alle Rechnungen. Fehlen dann Pflichtangaben,
 scheitert der Versand (kein stiller Fallback aufs normale PDF)."""
 from decimal import Decimal
 
-from drafthorse.models.accounting import ApplicableTradeTax
+from drafthorse.models.accounting import ApplicableTradeTax, CategoryTradeTax, TradeAllowanceCharge
 from drafthorse.models.document import Document
 from drafthorse.models.note import IncludedNote
 from drafthorse.models.party import TaxRegistration
@@ -194,28 +194,60 @@ def baue_cii_dokument(
         terms.due = rechnung.faellig_am
         doc.trade.settlement.terms.add(terms)
 
-    doc.trade.settlement.monetary_summation.line_total = netto
-    doc.trade.settlement.monetary_summation.charge_total = Decimal("0.00")
-    doc.trade.settlement.monetary_summation.allowance_total = Decimal("0.00")
+    zeilen = positionen or [_synthetische_position(rechnung)]
+    # Zeilensummen je Steuergruppe: BR-CO-10/BR-S-08 u. a. verlangen, dass sich die
+    # Belegsummen aus den (auf Cent gerundeten) Zeilenbetraegen ergeben, waehrend
+    # steuer_service je Gruppe erst die ungerundete Summe rundet (siehe dort).
+    zeilen_summen: dict[tuple[str, Decimal], Decimal] = {}
+    for index, position in enumerate(zeilen, start=1):
+        line = LineItem()
+        line.document.line_id = str(index)
+        line.product.name = position.beschreibung
+        zeilen_kategorie, zeilen_satz = _steuer_der_zeile(position, rechnung, ist_kleinunternehmer)
+        zeilen_netto = steuer_service.runde_cent(position.menge * position.einzelpreis)
+        zeilen_summen[(zeilen_kategorie, zeilen_satz)] = (
+            zeilen_summen.get((zeilen_kategorie, zeilen_satz), Decimal("0")) + zeilen_netto
+        )
+        line.agreement.net.amount = position.einzelpreis.quantize(_CENT)
+        line.delivery.billed_quantity = (position.menge, "H87")
+        line.settlement.trade_tax.category_code = zeilen_kategorie
+        line.settlement.trade_tax.type_code = "VAT"
+        line.settlement.trade_tax.rate_applicable_percent = zeilen_satz
+        line.settlement.monetary_summation.total_amount = zeilen_netto
+        doc.trade.items.add(line)
+
+    # Rundungsdifferenz zwischen Gruppennetto und Summe der Zeilenbetraege als
+    # Zu-/Abschlag in der Steuergruppe, damit die Belegsummen mit PDF und
+    # Buchhaltung uebereinstimmen und die Zeilen unverfaelscht bleiben.
+    zuschlaege = Decimal("0.00")
+    abschlaege = Decimal("0.00")
+    for gruppe in gruppen:
+        differenz = gruppe.netto - zeilen_summen.get((gruppe.kategorie, gruppe.satz), Decimal("0"))
+        if not differenz:
+            continue
+        korrektur = TradeAllowanceCharge()
+        korrektur.indicator = differenz > 0
+        korrektur.actual_amount = abs(differenz)
+        korrektur.reason = "Rundungsdifferenz"
+        korrektur_steuer = CategoryTradeTax()
+        korrektur_steuer.type_code = "VAT"
+        korrektur_steuer.category_code = gruppe.kategorie
+        korrektur_steuer.rate_applicable_percent = gruppe.satz
+        korrektur.trade_tax.add(korrektur_steuer)
+        doc.trade.settlement.allowance_charge.add(korrektur)
+        if differenz > 0:
+            zuschlaege += differenz
+        else:
+            abschlaege -= differenz
+
+    doc.trade.settlement.monetary_summation.line_total = sum(zeilen_summen.values(), Decimal("0.00"))
+    doc.trade.settlement.monetary_summation.charge_total = zuschlaege
+    doc.trade.settlement.monetary_summation.allowance_total = abschlaege
     doc.trade.settlement.monetary_summation.tax_basis_total = netto
     doc.trade.settlement.monetary_summation.tax_total = (steuer, "EUR")
     # CII-DT-031: currencyID darf nur am Steuerbetrag (BT-110) stehen, nicht am Gesamtbetrag.
     doc.trade.settlement.monetary_summation.grand_total = brutto
     doc.trade.settlement.monetary_summation.due_amount = brutto
-
-    zeilen = positionen or [_synthetische_position(rechnung)]
-    for index, position in enumerate(zeilen, start=1):
-        line = LineItem()
-        line.document.line_id = str(index)
-        line.product.name = position.beschreibung
-        line.agreement.net.amount = position.einzelpreis.quantize(_CENT)
-        line.delivery.billed_quantity = (position.menge, "H87")
-        zeilen_kategorie, zeilen_satz = _steuer_der_zeile(position, rechnung, ist_kleinunternehmer)
-        line.settlement.trade_tax.category_code = zeilen_kategorie
-        line.settlement.trade_tax.type_code = "VAT"
-        line.settlement.trade_tax.rate_applicable_percent = zeilen_satz
-        line.settlement.monetary_summation.total_amount = (position.menge * position.einzelpreis).quantize(_CENT)
-        doc.trade.items.add(line)
 
     return doc
 
@@ -229,7 +261,7 @@ def _steuer_der_zeile(
     # Beleg.
     if ist_kleinunternehmer:
         return KLEINUNTERNEHMER_VAT_EXEMPTION_CODE, Decimal("0.00")
-    satz = rechnung.mwst_satz if position.steuer_satz is None else position.steuer_satz
+    satz = (rechnung.mwst_satz if position.steuer_satz is None else position.steuer_satz).quantize(_CENT)
     kategorie = position.steuer_kategorie or steuer_service.kategorie_fuer_beleg_satz(satz)
     return kategorie, satz
 

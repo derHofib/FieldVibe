@@ -191,3 +191,71 @@ def test_verkaeufer_mit_ust_idnr_bekommt_keine_zusaetzliche_kennung():
         _mandant(steuernummer="12/345/67890"), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")
     )
     assert _verkaeufer_ids(e_invoice_service.cii_xml_bytes(dokument)) == [("VA", "DE123456789")]
+
+
+_RAM_NS = {"ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"}
+
+
+def _summen_und_korrekturen(xml: bytes) -> dict:
+    from lxml import etree
+
+    wurzel = etree.fromstring(xml)
+
+    def text(pfad: str) -> list[str]:
+        return [e.text for e in wurzel.xpath(pfad, namespaces=_RAM_NS)]
+
+    kopf = "//ram:ApplicableHeaderTradeSettlement"
+    return {
+        "zeilen": text("//ram:IncludedSupplyChainTradeLineItem//ram:LineTotalAmount"),
+        "zeilensumme": text(f"{kopf}//ram:LineTotalAmount"),
+        "zuschlaege": text(f"{kopf}//ram:ChargeTotalAmount"),
+        "abschlaege": text(f"{kopf}//ram:AllowanceTotalAmount"),
+        "basis": text(f"{kopf}//ram:TaxBasisTotalAmount"),
+        "korrekturen": [
+            (
+                e.xpath("string(ram:ChargeIndicator/*)", namespaces=_RAM_NS),
+                e.xpath("string(ram:ActualAmount)", namespaces=_RAM_NS),
+                e.xpath("string(ram:Reason)", namespaces=_RAM_NS),
+                e.xpath("string(ram:CategoryTradeTax/ram:CategoryCode)", namespaces=_RAM_NS),
+            )
+            for e in wurzel.xpath(f"{kopf}/ram:SpecifiedTradeAllowanceCharge", namespaces=_RAM_NS)
+        ],
+    }
+
+
+def test_rundungsdifferenz_abschlag_wenn_zeilen_hoeher_als_gruppensumme():
+    # 2 x (0,5 x 10,01 = 5,005 -> 5,01) = 10,02, die Gruppe rundet erst die Rohsumme 10,01.
+    positionen = [
+        _position(position=1, menge=Decimal("0.5"), einzelpreis=Decimal("10.01")),
+        _position(position=2, menge=Decimal("0.5"), einzelpreis=Decimal("10.01")),
+    ]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), positionen, Decimal("10.01"), Decimal("11.91")
+    )
+    ergebnis = _summen_und_korrekturen(e_invoice_service.cii_xml_bytes(dokument))
+    assert ergebnis["zeilen"] == ["5.01", "5.01"]
+    assert ergebnis["zeilensumme"] == ["10.02"]
+    assert ergebnis["abschlaege"] == ["0.01"] and ergebnis["zuschlaege"] == ["0.00"]
+    assert ergebnis["basis"] == ["10.01"]
+    assert ergebnis["korrekturen"] == [("false", "0.01", "Rundungsdifferenz", "S")]
+
+
+def test_rundungsdifferenz_zuschlag_wenn_zeilen_niedriger_als_gruppensumme():
+    # 3 x (0,33 x 1,01 = 0,3333 -> 0,33) = 0,99, die Rohsumme 0,9999 rundet auf 1,00.
+    positionen = [_position(position=i, menge=Decimal("0.33"), einzelpreis=Decimal("1.01")) for i in (1, 2, 3)]
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), positionen, Decimal("1.00"), Decimal("1.19")
+    )
+    ergebnis = _summen_und_korrekturen(e_invoice_service.cii_xml_bytes(dokument))
+    assert ergebnis["zeilensumme"] == ["0.99"]
+    assert ergebnis["zuschlaege"] == ["0.01"] and ergebnis["abschlaege"] == ["0.00"]
+    assert ergebnis["korrekturen"] == [("true", "0.01", "Rundungsdifferenz", "S")]
+
+
+def test_keine_rundungsdifferenz_wenn_zeilen_aufgehen():
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")
+    )
+    ergebnis = _summen_und_korrekturen(e_invoice_service.cii_xml_bytes(dokument))
+    assert ergebnis["korrekturen"] == []
+    assert ergebnis["zeilensumme"] == ergebnis["basis"] == ["300.00"]
