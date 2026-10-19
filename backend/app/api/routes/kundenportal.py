@@ -257,6 +257,12 @@ async def eigene_rechnung_pdf(
         if storniert_rechnung is not None and storniert_rechnung.kunde_id != auth.kunde_id:
             storniert_rechnung = None
 
+    bezug_rechnung = None
+    if rechnung.bezug_rechnung_id is not None:
+        bezug_rechnung = await session.get(Rechnung, rechnung.bezug_rechnung_id)
+        if bezug_rechnung is not None and bezug_rechnung.kunde_id != auth.kunde_id:
+            bezug_rechnung = None
+
     logo_bytes = await download_bytes(mandant.logo_object_key) if mandant.logo_object_key else None
 
     pdf_bytes = generate_rechnung_pdf(
@@ -267,6 +273,7 @@ async def eigene_rechnung_pdf(
         storniert_rechnung=storniert_rechnung,
         vorgang_koepfe=await vorgang_koepfe_map(session, positionen),
         logo_bytes=logo_bytes,
+        bezug_rechnung=bezug_rechnung,
     )
     return Response(
         content=pdf_bytes,

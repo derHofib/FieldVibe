@@ -16,6 +16,8 @@ RechnungSteuerKategorie = Literal["S", "Z", "E", "AE"]
 RechnungSteuerGrund = Literal["pv_12_3", "reverse_charge_13b", "kleinunternehmer_19", "sonstige_befreiung"]
 # Belegkopf: nur die Regelsaetze und 0 (Vorbelegung E/0 fuer Altverhalten).
 ERLAUBTE_BELEG_MWST_SAETZE = (Decimal("19.00"), Decimal("7.00"), Decimal("0.00"))
+# Muss mit RECHNUNGSARTEN in app/models/rechnung.py uebereinstimmen.
+Rechnungsart = Literal["rechnung", "abschlag", "schluss", "gutschrift"]
 
 
 def _satz_zu_kategorie_pruefen(kategorie: str | None, satz: Decimal | None) -> None:
@@ -84,6 +86,14 @@ class RechnungPositionRead(BaseModel):
     steuer_satz: Decimal
     steuer_grund: RechnungSteuerGrund | None
     steuer_grund_text: str | None
+    # Abzugsposition einer Schlussrechnung: die angerechnete Abschlagsrechnung.
+    abschlag_rechnung_id: UUID | None = None
+    # Gutschriftsposition: die Originalposition, die sie zuruecknimmt.
+    bezug_position_id: UUID | None = None
+    # Menge dieser Position, die bereits durch (nicht stornierte) Gutschriften
+    # zurueckgenommen ist; wird vom Service gesetzt (Obergrenze fuer die
+    # naechste Gutschrift = menge - bereits_gutgeschrieben).
+    bereits_gutgeschrieben: Decimal = Decimal("0")
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -103,6 +113,22 @@ class RechnungPositionVorschlag(BaseModel):
     einzelpreis: Decimal
     lv_position_id: UUID | None = None
     material_id: UUID | None = None
+
+
+class AngerechneterAbschlagRead(BaseModel):
+    rechnung_id: UUID
+    rechnungsnummer: str
+    datum: date
+    # Positiver Nettobetrag der Abschlagsrechnung (die Abzugsposition der
+    # Schlussrechnung traegt ihn negativ).
+    netto: Decimal
+
+
+class GutschriftKurzRead(BaseModel):
+    rechnung_id: UUID
+    rechnungsnummer: str
+    # Mit Vorzeichen wie auf dem Gutschriftsbeleg (negativ).
+    brutto: Decimal
 
 
 class RechnungZahlungCreate(BaseModel):
@@ -187,6 +213,9 @@ class RechnungCreate(BaseModel):
     # da oft identisch mit dem Rechnungsdatum.
     leistungsdatum: date | None = None
     positionen: list[RechnungPositionCreate] = Field(default_factory=list)
+    # Schlussrechnung entsteht nur ueber /aus-angebot bzw. /abschlaege-anrechnen,
+    # Gutschrift nur ueber /gutschrift -- hier bewusst nicht waehlbar.
+    rechnungsart: Literal["rechnung", "abschlag"] = "rechnung"
 
     @field_validator("mwst_satz")
     @classmethod
@@ -194,6 +223,67 @@ class RechnungCreate(BaseModel):
         if v not in ERLAUBTE_BELEG_MWST_SAETZE:
             raise ValueError("mwst_satz muss 19, 7 oder 0 sein")
         return v
+
+    @field_validator("rechnungsart", mode="before")
+    @classmethod
+    def _rechnungsart_anlegbar(cls, v):
+        if v == "schluss":
+            raise ValueError("Eine Schlussrechnung entsteht über POST /api/rechnungen/aus-angebot oder .../abschlaege-anrechnen")
+        if v == "gutschrift":
+            raise ValueError("Eine Gutschrift entsteht über POST /api/rechnungen/{id}/gutschrift")
+        return v
+
+
+class RechnungAusAngebotCreate(BaseModel):
+    angebot_id: UUID
+    rechnungsart: Literal["rechnung", "abschlag", "schluss"]
+    # Nur bei rechnungsart="abschlag", genau eines von beiden: Anteil bzw.
+    # Betrag bezogen auf das Angebot-Netto.
+    abschlag_prozent: Decimal | None = Field(default=None, gt=0, le=100)
+    abschlag_netto: Decimal | None = Field(default=None, gt=0)
+    faellig_am: date | None = None
+    leistungsdatum: date | None = None
+
+    @model_validator(mode="after")
+    def _abschlag_angaben(self) -> "RechnungAusAngebotCreate":
+        angaben = (self.abschlag_prozent is not None) + (self.abschlag_netto is not None)
+        if self.rechnungsart == "abschlag":
+            if angaben != 1:
+                raise ValueError("Für einen Abschlag genau eines von abschlag_prozent und abschlag_netto angeben")
+        elif angaben:
+            raise ValueError("abschlag_prozent und abschlag_netto gelten nur bei rechnungsart abschlag")
+        return self
+
+
+class AbschlaegeAnrechnen(BaseModel):
+    # Ohne Angabe werden alle anrechenbaren Abschlaege angerechnet.
+    abschlag_rechnung_ids: list[UUID] | None = None
+
+
+class GutschriftPositionAuswahl(BaseModel):
+    position_id: UUID
+    menge: Decimal = Field(gt=0)
+
+
+class GutschriftCreate(BaseModel):
+    # Genau eines von positionen/alle.
+    positionen: list[GutschriftPositionAuswahl] | None = None
+    alle: bool = False
+    grund: str = Field(min_length=3, max_length=200)
+
+    @field_validator("grund")
+    @classmethod
+    def _grund_getrimmt(cls, v: str) -> str:
+        v = v.strip()
+        if not 3 <= len(v) <= 200:
+            raise ValueError("grund muss 3 bis 200 Zeichen lang sein")
+        return v
+
+    @model_validator(mode="after")
+    def _eine_auswahl(self) -> "GutschriftCreate":
+        if bool(self.positionen) == self.alle:
+            raise ValueError("Genau eines von positionen und alle angeben")
+        return self
 
 
 class RechnungUpdate(BaseModel):
@@ -220,6 +310,11 @@ class RechnungRead(BaseModel):
     letzte_mahnung_am: datetime | None
     ist_storno: bool
     storniert_rechnung_id: UUID | None
+    rechnungsart: Rechnungsart = "rechnung"
+    angebot_id: UUID | None = None
+    # Nur bei Gutschriften: Ursprungsrechnung und Grund (steht auch auf dem Beleg).
+    bezug_rechnung_id: UUID | None = None
+    gutschrift_grund: str | None = None
     # Gesetzt, wenn beim Versand eine ZUGFeRD-konforme Hybrid-PDF mit
     # eingebetteter XML erzeugt und archiviert wurde -- siehe
     # rechnung_service._rechnung_dokument_bytes(). NULL bei Entwuerfen,
@@ -234,6 +329,15 @@ class RechnungRead(BaseModel):
     steuergruppen: list[RechnungSteuerGruppeRead]
     betrag_steuer: Decimal
     zahlungen: list[RechnungZahlungRead] = Field(default_factory=list)
+    # Nur bei Schlussrechnungen: die angerechneten Abschlaege.
+    angerechnete_abschlaege: list[AngerechneterAbschlagRead] = Field(default_factory=list)
+    # Am Original: die nicht stornierten Gutschriften zu dieser Rechnung.
+    gutschriften: list[GutschriftKurzRead] = Field(default_factory=list)
+    # Offener Betrag nach der zentralen Regel (rechnung_service.offener_betrag_regel):
+    # Brutto - Zahlungen - |Gutschriften|, mindestens 0; an einer Gutschrift
+    # bzw. einem Storno-Beleg der Ueberhang als Guthaben (negativ). Wird vom
+    # Service gesetzt -- aus den Feldern dieses Modells allein nicht berechenbar.
+    offener_betrag: Decimal = Decimal("0.00")
     # Alle distinct vorgang_id der Positionen, nach erster Positionsnummer --
     # Grundlage der Gruppendarstellung (Ueberschrift je Vorgang).
     vorgaenge: list[RechnungVorgangKopf] = Field(default_factory=list)
@@ -247,11 +351,6 @@ class RechnungRead(BaseModel):
     @property
     def bezahlter_betrag(self) -> Decimal:
         return sum((z.betrag for z in self.zahlungen), Decimal("0")).quantize(Decimal("0.01"))
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def offener_betrag(self) -> Decimal:
-        return (self.betrag_brutto - self.bezahlter_betrag).quantize(Decimal("0.01"))
 
     @computed_field  # type: ignore[prop-decorator]
     @property

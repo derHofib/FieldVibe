@@ -813,6 +813,14 @@ def generate_angebot_pdf(
     return bytes(pdf.output())
 
 
+_RECHNUNGSART_TITEL = {
+    "rechnung": "Rechnung",
+    "abschlag": "Abschlagsrechnung",
+    "schluss": "Schlussrechnung",
+    "gutschrift": "Gutschrift",
+}
+
+
 def generate_rechnung_pdf(
     mandant: Mandant,
     rechnung: Rechnung,
@@ -823,8 +831,12 @@ def generate_rechnung_pdf(
     vorgang_koepfe: dict[UUID, tuple[str, str]] | None = None,
     pdfa_output_intent: bool = False,
     logo_bytes: bytes | None = None,
+    bezug_rechnung: Rechnung | None = None,
 ) -> bytes:
-    """pdfa_output_intent=True fuegt einen sRGB-OutputIntent hinzu (Betriebs-
+    """bezug_rechnung: bei einer Gutschrift die Ursprungsrechnung ("Bezug:
+    Rechnung ... vom ...").
+
+    pdfa_output_intent=True fuegt einen sRGB-OutputIntent hinzu (Betriebs-
     system fpdf2, kein "enforce_compliance"-Modus -- der wuerde ungebettete
     Core-Fonts wie Helvetica verbieten, die dieses Layout bewusst weiter
     nutzt). Wird ausschliesslich von e_invoice_service.baue_hybrid_pdf()
@@ -834,7 +846,8 @@ def generate_rechnung_pdf(
     PDF ohne ICC-Profil und damit nicht wirklich PDF/A-3-konform."""
     fd = mandant.firmendaten or {}
     storno = rechnung.ist_storno
-    titel = "Stornorechnung" if storno else "Rechnung"
+    gutschrift = rechnung.rechnungsart == "gutschrift"
+    titel = "Stornorechnung" if storno else _RECHNUNGSART_TITEL.get(rechnung.rechnungsart, "Rechnung")
 
     paare = [
         ("Rechnungsnummer", rechnung.rechnungsnummer),
@@ -856,8 +869,18 @@ def generate_rechnung_pdf(
             f"vom {_fmt_datum(storniert_rechnung.created_at)}."
         )
 
+    if gutschrift and bezug_rechnung is not None:
+        zusatzzeile = f"Bezug: Rechnung {bezug_rechnung.rechnungsnummer} vom {_fmt_datum(bezug_rechnung.created_at)}"
+
     absaetze = []
-    if not storno and fd.get("iban"):
+    # Direkt unter dem Summenblock: die Abzugszeilen sind netto, die USt. der
+    # Abschlaege steht schon auf den Abschlagsrechnungen.
+    if any(p.abschlag_rechnung_id is not None for p in positionen or []):
+        absaetze.append(
+            "Bereits gestellte Abschlagsrechnungen wurden netto angerechnet; die Umsatzsteuer der Abschläge "
+            "wurde bereits mit diesen Rechnungen ausgewiesen."
+        )
+    if not storno and not gutschrift and fd.get("iban"):
         if rechnung.faellig_am:
             absaetze.append(
                 f"Bitte überweisen Sie den Rechnungsbetrag bis zum {_fmt_datum(rechnung.faellig_am)} "
@@ -880,13 +903,17 @@ def generate_rechnung_pdf(
         einleitung=(
             "Hiermit stornieren wir die oben genannte Rechnung vollständig."
             if storno
-            else "Vielen Dank für Ihren Auftrag. Wir berechnen Ihnen folgende Leistungen:"
+            else (
+                f"Wir schreiben Ihnen folgende Positionen gut.\nGrund: {rechnung.gutschrift_grund}"
+                if gutschrift
+                else "Vielen Dank für Ihren Auftrag. Wir berechnen Ihnen folgende Leistungen:"
+            )
         ),
         positionen=positionen,
         vorgang_koepfe=vorgang_koepfe or {},
         netto_ohne_positionen=rechnung.betrag_netto,
         mwst_satz=rechnung.mwst_satz,
-        endbetrag_label="Rechnungsbetrag",
+        endbetrag_label="Gutschriftsbetrag" if gutschrift else "Rechnungsbetrag",
         label_akzent=False,
         absaetze=absaetze,
         steuer_gruppen=steuer_service.steuer_gruppen(rechnung, positionen or []),

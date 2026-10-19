@@ -100,6 +100,13 @@ class AngebotUpdate(BaseModel):
     _mwst_satz_erlaubt = field_validator("mwst_satz")(_pruefe_mwst_satz)
 
 
+class AngebotAbschlagRead(BaseModel):
+    rechnung_id: UUID
+    rechnungsnummer: str
+    status: str
+    netto: Decimal
+
+
 class AngebotRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -122,3 +129,11 @@ class AngebotRead(BaseModel):
     gesamt_netto: Decimal
     gesamt_brutto: Decimal
     ist_abgelaufen: bool
+    # Abrechnung (nicht stornierte Abschlagsrechnungen, Entwuerfe eingeschlossen,
+    # weil sie ihr Kontingent bereits belegen).
+    abschlaege: list[AngebotAbschlagRead] = Field(default_factory=list)
+    abgerechnet_netto: Decimal = Decimal("0.00")
+    rest_netto: Decimal = Decimal("0.00")
+    schlussrechnung_id: UUID | None = None
+    # Rechnung ohne Abschlaege (aus dem Angebot erstellt).
+    rechnung_id: UUID | None = None

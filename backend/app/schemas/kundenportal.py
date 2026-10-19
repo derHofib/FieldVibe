@@ -219,6 +219,8 @@ class RechnungPortalRead(BaseModel):
     versendet_am: datetime | None
     bezahlt_am: datetime | None
     ist_storno: bool
+    rechnungsart: str = "rechnung"
+    gutschrift_grund: str | None = None
     created_at: datetime
     positionen: list[RechnungPositionPortalRead]
 

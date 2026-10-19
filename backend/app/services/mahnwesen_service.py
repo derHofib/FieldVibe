@@ -16,13 +16,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.db.session import system_session
 from app.services.email_service import send_email_and_log
 from app.services.pdf_service import generate_mahnung_pdf
-from app.services.rechnung_service import (
-    bezahlter_betrag,
-    brutto_betrag,
-    logo_bytes_laden,
-    positionen_fuer,
-    zahlungen_fuer,
-)
+from app.services.rechnung_service import logo_bytes_laden, offene_betraege
 from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
 
 MAHNWESEN_AKTION = "mahnwesen_eskalation_run"
@@ -97,15 +91,19 @@ async def run_mahnwesen_eskalation(mandant_ids: list[UUID] | None = None) -> dic
             Rechnung.status.in_(("versendet", "teilweise_bezahlt")),
             Rechnung.faellig_am.isnot(None),
             Rechnung.faellig_am < heute,
+            # Gutschriften und Storno-Belege sind keine Forderung.
+            Rechnung.rechnungsart != "gutschrift",
+            Rechnung.ist_storno.is_(False),
         )
         if mandant_ids is not None:
             ueberfaellig_stmt = ueberfaellig_stmt.where(Rechnung.mandant_id.in_(mandant_ids))
-        ueberfaellig = (await session.execute(ueberfaellig_stmt)).scalars().all()
+        ueberfaellig = list((await session.execute(ueberfaellig_stmt)).scalars().all())
+        # Offener Betrag nach der zentralen Regel: ein durch Gutschrift
+        # verrechneter Betrag wird nie gemahnt.
+        offen_je_rechnung = await offene_betraege(session, ueberfaellig)
 
         for rechnung in ueberfaellig:
-            positionen = await positionen_fuer(session, rechnung.id)
-            zahlungen = await zahlungen_fuer(session, rechnung.id)
-            offener_betrag = brutto_betrag(rechnung, positionen) - bezahlter_betrag(zahlungen)
+            offener_betrag = offen_je_rechnung[rechnung.id]
             if offener_betrag <= 0:
                 continue
 

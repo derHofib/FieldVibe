@@ -10,9 +10,11 @@ from app.core.zeit import in_lokal
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.mandant import Mandant
 from app.models.mangel import Mangel
+from app.models.rechnung import Rechnung
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
-from app.schemas.angebot import AngebotPositionRead, AngebotRead
+from app.schemas.angebot import AngebotAbschlagRead, AngebotPositionRead, AngebotRead
+from app.services import rechnung_service
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.steuer_service import ist_kleinunternehmer, runde_cent
@@ -64,17 +66,72 @@ async def positionen_neu_nummerieren(session: AsyncSession, angebot_id: UUID) ->
 async def to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
     positionen = await positionen_fuer(session, angebot.id)
     netto, brutto = summen(positionen, angebot.mwst_satz)
+    abschlaege, schlussrechnung_id, rechnung_id = await _abrechnung_fuer(session, angebot)
+    abgerechnet = sum((a.netto for a in abschlaege), Decimal("0")).quantize(Decimal("0.01"))
     return AngebotRead(
         **{
             k: getattr(angebot, k)
             for k in AngebotRead.model_fields
-            if k not in ("positionen", "gesamt_netto", "gesamt_brutto", "ist_abgelaufen")
+            if k
+            not in (
+                "positionen",
+                "gesamt_netto",
+                "gesamt_brutto",
+                "ist_abgelaufen",
+                "abschlaege",
+                "abgerechnet_netto",
+                "rest_netto",
+                "schlussrechnung_id",
+                "rechnung_id",
+            )
         },
         positionen=[AngebotPositionRead.model_validate(p) for p in positionen],
         gesamt_netto=netto,
         gesamt_brutto=brutto,
         ist_abgelaufen=ist_abgelaufen(angebot),
+        abschlaege=abschlaege,
+        abgerechnet_netto=abgerechnet,
+        rest_netto=netto - abgerechnet,
+        schlussrechnung_id=schlussrechnung_id,
+        rechnung_id=rechnung_id,
     )
+
+
+async def _abrechnung_fuer(
+    session: AsyncSession, angebot: Angebot
+) -> tuple[list[AngebotAbschlagRead], UUID | None, UUID | None]:
+    """Abschlaege sowie Schluss- und Vollrechnung des Angebots."""
+    belege = (
+        (
+            await session.execute(
+                select(Rechnung)
+                .where(
+                    Rechnung.angebot_id == angebot.id,
+                    Rechnung.rechnungsart.in_(("rechnung", "abschlag", "schluss")),
+                    Rechnung.status != "storniert",
+                    Rechnung.geloescht_am.is_(None),
+                    Rechnung.ist_storno.is_(False),
+                )
+                .order_by(Rechnung.created_at, Rechnung.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    positionen_je = await rechnung_service.positionen_fuer_mehrere(session, [b.id for b in belege])
+    abschlaege = [
+        AngebotAbschlagRead(
+            rechnung_id=b.id,
+            rechnungsnummer=b.rechnungsnummer,
+            status=b.status,
+            netto=rechnung_service.netto_betrag(b, positionen_je[b.id]),
+        )
+        for b in belege
+        if b.rechnungsart == "abschlag"
+    ]
+    schluss = next((b.id for b in belege if b.rechnungsart == "schluss"), None)
+    voll = next((b.id for b in belege if b.rechnungsart == "rechnung"), None)
+    return abschlaege, schluss, voll
 
 
 async def _auftrag_zur_annahme(session: AsyncSession, angebot: Angebot, mandant_id: UUID) -> UUID:

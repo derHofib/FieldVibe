@@ -26,6 +26,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, NamedTuple
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.models.rechnung import RECHNUNG_STEUER_KATEGORIEN, Rechnung, RechnungPosition
@@ -366,19 +367,24 @@ def pruefe_steuer_fuer_versand(mandant, rechnung, kunde, positionen: Iterable[Re
 # --- SQL-Gegenstuecke -------------------------------------------------------
 
 
-def _gruppen_summe(je_gruppe) -> ColumnElement:
+def _gruppen_summe(je_gruppe, beleg=Rechnung) -> ColumnElement:
     """Summe von je_gruppe(netto, satz) ueber die Steuergruppen eines Belegs.
     Die innere Aggregation je (Kategorie, Satz) rundet das Gruppen-Netto
     (menge*einzelpreis vergroessert in Postgres die Skala auf 4); die aeussere
-    Summe addiert die gerundeten Gruppenwerte -- exakt wie steuer_gruppen()."""
+    Summe addiert die gerundeten Gruppenwerte -- exakt wie steuer_gruppen().
+    beleg ist die Rechnung (Entity oder aliased()), auf die korreliert wird --
+    Subqueries ueber ein anderes Rechnungs-Alias (Gutschriften, Bezugsrechnung)
+    brauchen auch ein eigenes Positions-Alias, sonst verwechselt SQLAlchemy die
+    Korrelation."""
+    position = RechnungPosition if beleg is Rechnung else aliased(RechnungPosition)
     gruppen = (
         select(
-            func.round(func.sum(RechnungPosition.menge * RechnungPosition.einzelpreis), 2).label("netto"),
-            RechnungPosition.steuer_satz.label("satz"),
+            func.round(func.sum(position.menge * position.einzelpreis), 2).label("netto"),
+            position.steuer_satz.label("satz"),
         )
-        .where(RechnungPosition.rechnung_id == Rechnung.id)
-        .group_by(RechnungPosition.steuer_kategorie, RechnungPosition.steuer_satz)
-        .correlate(Rechnung)
+        .where(position.rechnung_id == beleg.id)
+        .group_by(position.steuer_kategorie, position.steuer_satz)
+        .correlate(beleg)
         .subquery()
     )
     return select(func.sum(je_gruppe(gruppen.c.netto, gruppen.c.satz))).scalar_subquery()
@@ -388,21 +394,21 @@ def _steuer_von(netto, satz) -> ColumnElement:
     return func.round(netto * satz / _HUNDERT, 2)
 
 
-def netto_sql() -> ColumnElement:
+def netto_sql(beleg=Rechnung) -> ColumnElement:
     """Fallback ohne Positionen: betrag_netto des Belegs (coalesce, weil die
     Gruppensumme nur ohne Positionen NULL ist)."""
-    return func.coalesce(_gruppen_summe(lambda netto, satz: netto), func.round(Rechnung.betrag_netto, 2))
+    return func.coalesce(_gruppen_summe(lambda netto, satz: netto, beleg), func.round(beleg.betrag_netto, 2))
 
 
-def steuer_sql() -> ColumnElement:
+def steuer_sql(beleg=Rechnung) -> ColumnElement:
     return func.coalesce(
-        _gruppen_summe(_steuer_von),
-        _steuer_von(func.round(Rechnung.betrag_netto, 2), Rechnung.mwst_satz),
+        _gruppen_summe(_steuer_von, beleg),
+        _steuer_von(func.round(beleg.betrag_netto, 2), beleg.mwst_satz),
     )
 
 
-def brutto_sql() -> ColumnElement:
+def brutto_sql(beleg=Rechnung) -> ColumnElement:
     return func.coalesce(
-        _gruppen_summe(lambda netto, satz: netto + _steuer_von(netto, satz)),
-        func.round(Rechnung.betrag_netto, 2) + _steuer_von(func.round(Rechnung.betrag_netto, 2), Rechnung.mwst_satz),
+        _gruppen_summe(lambda netto, satz: netto + _steuer_von(netto, satz), beleg),
+        func.round(beleg.betrag_netto, 2) + _steuer_von(func.round(beleg.betrag_netto, 2), beleg.mwst_satz),
     )

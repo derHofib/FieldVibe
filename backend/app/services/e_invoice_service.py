@@ -43,6 +43,17 @@ KLEINUNTERNEHMER_VAT_EXEMPTION_REASON = "Steuerbefreite Kleinunternehmerregelung
 
 _KUNDE_TYPEN_MIT_UST_IDNR_PFLICHT = ("gewerbe", "oeffentlich")
 
+# UNTDID 1001: 380 Handelsrechnung, 381 Gutschrift, 384 Rechnungskorrektur
+# (Storno), 386 Vorauszahlungsrechnung. Die Schlussrechnung ist eine normale
+# Handelsrechnung: die Abschlaege stehen als Abzugszeilen darauf.
+_TYPE_CODE_NACH_ART = {"rechnung": "380", "schluss": "380", "abschlag": "386", "gutschrift": "381"}
+
+
+def type_code_fuer(rechnung: Rechnung) -> str:
+    if rechnung.ist_storno:
+        return "384"
+    return _TYPE_CODE_NACH_ART.get(rechnung.rechnungsart, "380")
+
 
 def pruefe_en16931_vollstaendigkeit(
     mandant: Mandant, rechnung: Rechnung, kunde: Kunde, positionen: list[RechnungPosition]
@@ -107,13 +118,21 @@ def baue_cii_dokument(
     positionen: list[RechnungPosition],
     netto: Decimal,
     brutto: Decimal,
+    *,
+    bezug_rechnung: Rechnung | None = None,
+    angerechnete_abschlaege: list[Rechnung] | None = None,
 ) -> Document:
     """Baut ein drafthorse-Document im EN16931-Profil. Wird nur aufgerufen,
     nachdem pruefe_en16931_vollstaendigkeit() eine leere Problemliste
     zurueckgegeben hat -- setzt also vollstaendige Pflichtangaben voraus.
     netto/brutto werden vom Aufrufer uebergeben (rechnung_service.netto_
     betrag/brutto_betrag) statt hier importiert, um einen Zirkelimport mit
-    rechnung_service (das seinerseits dieses Modul aufruft) zu vermeiden."""
+    rechnung_service (das seinerseits dieses Modul aufruft) zu vermeiden.
+
+    bezug_rechnung (Gutschrift): die Ursprungsrechnung als BT-25. Das Factur-X-
+    Profil EN 16931 erlaubt nur EINE InvoiceReferencedDocument; deshalb stehen
+    die angerechneten Abschlaege einer Schlussrechnung (mehrere moeglich) als
+    Rechnungsvermerk (BT-22) statt als Referenz."""
     firmendaten = mandant.firmendaten or {}
     seller_adresse = firmendaten.get("adresse") or {}
     seller_land = _land(seller_adresse, _LAND_FALLBACK)
@@ -127,8 +146,7 @@ def baue_cii_dokument(
     doc = Document()
     doc.context.guideline_parameter.id = "urn:cen.eu:en16931:2017"
     doc.header.id = rechnung.rechnungsnummer
-    # Rechnung (380) bzw. Rechnungskorrektur/Gutschrift (384) nach UNTDID 1001
-    doc.header.type_code = "384" if rechnung.ist_storno else "380"
+    doc.header.type_code = type_code_fuer(rechnung)
     doc.header.issue_date_time = rechnung.created_at.date()
     # drafthorse-Eigenheit: das Feld "Name" existiert in KEINER der
     # tatsaechlichen Factur-X/EN16931-XSD-Varianten, wird aber von der
@@ -166,6 +184,21 @@ def baue_cii_dokument(
 
     doc.trade.settlement.currency_code = "EUR"
     doc.trade.settlement.payment_reference = rechnung.rechnungsnummer
+
+    if rechnung.rechnungsart == "gutschrift":
+        if bezug_rechnung is not None:
+            bezug = doc.trade.settlement.invoice_referenced_document
+            bezug.issuer_assigned_id = bezug_rechnung.rechnungsnummer
+            bezug.issue_date_time = bezug_rechnung.created_at.date()
+        if rechnung.gutschrift_grund:
+            doc.header.notes.add(IncludedNote(content=f"Grund der Gutschrift: {rechnung.gutschrift_grund}"))
+    if angerechnete_abschlaege:
+        angerechnet = "; ".join(
+            f"{a.rechnungsnummer} vom {a.created_at.strftime('%d.%m.%Y')}" for a in angerechnete_abschlaege
+        )
+        doc.header.notes.add(
+            IncludedNote(content=f"Netto angerechnete Abschlagsrechnungen: {angerechnet}")
+        )
 
     # Als eigene Python-Werte halten, nicht ueber tax.category_code etc.
     # zuruecklesen: drafthorse-Feld-Deskriptoren liefern beim Lesen das

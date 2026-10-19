@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -14,6 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.models.angebot import Angebot
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
@@ -25,6 +27,9 @@ from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.rechnung import (
     AbrechenbarerVorgang,
+    AbschlaegeAnrechnen,
+    GutschriftCreate,
+    RechnungAusAngebotCreate,
     RechnungCreate,
     RechnungListe,
     RechnungPositionCreate,
@@ -35,7 +40,7 @@ from app.schemas.rechnung import (
     RechnungVorgangUebernahme,
     RechnungZahlungCreate,
 )
-from app.services import papierkorb_service, steuer_service, storage_service
+from app.services import papierkorb_service, rechnungsart_service, steuer_service, storage_service
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
@@ -45,6 +50,7 @@ from app.services.rechnung_service import (
     brutto_betrag,
     brutto_sql,
     erstelle_stornorechnung,
+    offener_betrag_regel,
     kunden_namen_fuer,
     material_abrechnen,
     material_abrechnung_zuruecksetzen,
@@ -146,6 +152,7 @@ def _filter_bedingungen(
     betrag_bis: Decimal | None,
     nur_offen: bool,
     nur_ueberfaellig: bool,
+    rechnungsart: str | None = None,
 ) -> list:
     """Die Filter einmal bauen und sowohl auf die Seiten- als auch auf die
     Summen-Query anwenden, damit Summenzeile und Liste nie auseinanderlaufen."""
@@ -176,8 +183,14 @@ def _filter_bedingungen(
         bedingungen.append(brutto_sql() >= betrag_von)
     if betrag_bis is not None:
         bedingungen.append(brutto_sql() <= betrag_bis)
+    if rechnungsart:
+        bedingungen.append(Rechnung.rechnungsart == rechnungsart)
     if nur_offen and not nur_ueberfaellig:
+        # Ein versendeter Beleg ist nur offen, solange etwas aussteht -- eine
+        # durch Gutschrift verrechnete Rechnung nicht, die Gutschrift mit
+        # Guthaben (negativer offener Betrag) schon.
         bedingungen.append(Rechnung.status.in_(_OFFENE_STATUS))
+        bedingungen.append(or_(Rechnung.status == "entwurf", offen_sql() != 0))
     if nur_ueberfaellig:
         # Bewusst enger als _OFFENE_STATUS: ein Entwurf ist nie ueberfaellig,
         # weil er den Kunden nie erreicht hat. Muss deckungsgleich mit
@@ -203,6 +216,7 @@ async def list_rechnungen(
     betrag_bis: Decimal | None = Query(default=None, description="Bruttobetrag bis"),
     nur_offen: bool = Query(default=False),
     nur_ueberfaellig: bool = Query(default=False),
+    rechnungsart: Literal["rechnung", "abschlag", "schluss", "gutschrift"] | None = Query(default=None),
     sort: str = Query(default="-datum"),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -222,6 +236,7 @@ async def list_rechnungen(
         betrag_bis,
         nur_offen,
         nur_ueberfaellig,
+        rechnungsart,
     )
     erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
     if erlaubte_kunden is not None:
@@ -572,6 +587,7 @@ async def create_rechnung(
         faellig_am=body.faellig_am,
         leistungsdatum=body.leistungsdatum,
         erstellt_von=auth.user_id,
+        rechnungsart=body.rechnungsart,
     )
     session.add(rechnung)
     await session.flush()
@@ -593,12 +609,95 @@ async def create_rechnung(
                 vorgang_id=vorgang.id,
                 event_type="rechnung_status",
                 author_user_id=auth.user_id,
-                body=f"Rechnung {rechnungsnummer} erstellt (Entwurf)",
+                body=f"{rechnungsart_service.rechnungsart_label(rechnung)} {rechnungsnummer} erstellt (Entwurf)",
                 payload={"rechnung_id": str(rechnung.id), "status": "entwurf"},
             )
         )
     await session.flush()
     return await to_read_model(session, rechnung)
+
+
+_ERSTELLEN = [
+    Depends(require_roles("mandant_admin", "custom")),
+    Depends(require_recht("abrechnung", "erstellen")),
+]
+
+
+@router.post("/aus-angebot", response_model=RechnungRead, status_code=status.HTTP_201_CREATED, dependencies=_ERSTELLEN)
+async def create_rechnung_aus_angebot(
+    body: RechnungAusAngebotCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    """Rechnung, Abschlag oder Schlussrechnung (mit Anrechnung der Abschlaege)
+    zu einem angenommenen Angebot -- immer als Entwurf."""
+    angebot = await session.get(Angebot, body.angebot_id)
+    if angebot is None or angebot.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    await require_kunde_zugriff(session, auth, angebot.kunde_id, "Angebot nicht gefunden")
+    await require_kunde_zugewiesen(session, auth, angebot.kunde_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    rechnung = await rechnungsart_service.rechnung_aus_angebot(
+        session, body, mandant=mandant, actor_user_id=auth.user_id
+    )
+    return await to_read_model(session, rechnung)
+
+
+@router.post("/{rechnung_id}/abschlaege-anrechnen", response_model=RechnungRead, dependencies=_ERSTELLEN)
+async def abschlaege_anrechnen(
+    rechnung_id: UUID,
+    body: AbschlaegeAnrechnen | None = None,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    """Macht einen Entwurf zur Schlussrechnung: rechnet die Abschlagsrechnungen
+    desselben Kunden an, die zum selben Angebot oder Vorgang gehoeren."""
+    rechnung = await _rechnung_laden(session, auth, rechnung_id)
+    if rechnung.status != "entwurf":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Abschläge können nur im Entwurf angerechnet werden"
+        )
+    if rechnung.rechnungsart not in ("rechnung", "schluss"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Abschläge können nur in einer Rechnung oder Schlussrechnung angerechnet werden",
+        )
+    await rechnungsart_service.abschlaege_anrechnen(session, rechnung, body or AbschlaegeAnrechnen())
+    await session.refresh(rechnung)
+    return await to_read_model(session, rechnung)
+
+
+@router.post(
+    "/{rechnung_id}/gutschrift", response_model=RechnungRead, status_code=status.HTTP_201_CREATED, dependencies=_ERSTELLEN
+)
+async def create_gutschrift(
+    rechnung_id: UUID,
+    body: GutschriftCreate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> RechnungRead:
+    """Voll- oder Teil-Gutschrift zu einer versendeten Rechnung. Das Original
+    bleibt gueltig; die Gutschrift ist sofort versendet (wie ein Storno-Beleg)
+    und senkt dessen offenen Betrag."""
+    original = await _rechnung_laden(session, auth, rechnung_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
+    gutschrift = await rechnungsart_service.erstelle_gutschrift(
+        session, original, body, mandant=mandant, actor_user_id=auth.user_id
+    )
+    kunde = await session.get(Kunde, gutschrift.kunde_id)
+    await archiviere_pdf(session, gutschrift, mandant, kunde, strikt=False)
+
+    vorher = original.status
+    voll_gutgeschrieben = await rechnungsart_service.status_nach_gutschriften(session, original)
+    if vorher != "bezahlt" and original.status == "bezahlt" and not voll_gutgeschrieben:
+        # Der Rest ist bezahlt -- wie beim Zahlungs-Abschluss gilt der Vorgang
+        # als abgerechnet. Eine vollstaendig gutgeschriebene Rechnung hat
+        # nichts abgerechnet.
+        await _auf_bezahlt_setzen(session, original, auth, bezahlt_am=original.bezahlt_am)
+    await rechnungsart_service.vorgang_event_gutschrift(session, original, gutschrift, auth.user_id)
+    await session.flush()
+    await session.refresh(gutschrift)
+    return await to_read_model(session, gutschrift)
 
 
 async def _entwurf_laden(session: AsyncSession, auth: AuthContext, rechnung_id: UUID) -> Rechnung:
@@ -860,6 +959,12 @@ async def update_position(
     position = await session.get(RechnungPosition, position_id)
     if position is None or position.rechnung_id != rechnung_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
+    if position.abschlag_rechnung_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Abzugspositionen einer Schlussrechnung sind nicht änderbar – bitte entfernen "
+            "(hebt die Anrechnung auf) und den Abschlag erneut anrechnen",
+        )
 
     if body.beschreibung is not None:
         position.beschreibung = body.beschreibung
@@ -977,6 +1082,7 @@ async def update_rechnung(
             mandant = await session.get(Mandant, auth.mandant_id)
             # Vor jeder Aenderung: bei fehlenden Pflichtangaben bleibt der Entwurf unberuehrt.
             probleme = pruefe_versand(mandant, rechnung, kunde, await positionen_fuer(session, rechnung_id))
+            probleme += await rechnungsart_service.pruefe_abzuege_fuer_versand(session, rechnung)
             if probleme:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=versand_meldung(probleme)
@@ -988,13 +1094,21 @@ async def update_rechnung(
             except VersandFehler as exc:
                 raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
         elif neuer_status == "bezahlt":
-            # Invariante offener_betrag == brutto - Summe(Zahlungen) muss
-            # immer gelten -- ein manueller "als bezahlt markieren"-Abschluss
+            if rechnung.rechnungsart == "gutschrift":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail="Gutschriften können nicht als bezahlt markiert werden"
+                )
+            # Invariante offener_betrag == brutto - Summe(Zahlungen) - Gutschriften
+            # muss immer gelten -- ein manueller "als bezahlt markieren"-Abschluss
             # ohne Gegenbuchung wuerde sie brechen (das genaue Altdaten-
             # problem, das der Backfill in Migration 0056 behoben hat).
             positionen = await positionen_fuer(session, rechnung_id)
             zahlungen = await zahlungen_fuer(session, rechnung_id)
-            offen = brutto_betrag(rechnung, positionen) - bezahlter_betrag(zahlungen)
+            offen = offener_betrag_regel(
+                brutto_betrag(rechnung, positionen),
+                bezahlter_betrag(zahlungen),
+                await rechnungsart_service.gutschrift_summe(session, rechnung_id),
+            )
             if offen > 0:
                 session.add(
                     RechnungZahlung(
@@ -1048,6 +1162,23 @@ async def storno_rechnung(
             detail="Nur versendete, teilweise bezahlte oder bezahlte Rechnungen können storniert werden",
         )
 
+    if rechnung.rechnungsart == "abschlag":
+        schluss = (await rechnungsart_service.abschlag_angerechnet_in(session, [rechnung.id])).get(rechnung.id)
+        if schluss is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Der Abschlag ist in Schlussrechnung {schluss.rechnungsnummer} angerechnet und kann "
+                "nicht storniert werden – bitte zuerst die Schlussrechnung stornieren",
+            )
+    gutschriften = await rechnungsart_service.gutschriften_zu(session, rechnung.id)
+    if gutschriften:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Zu dieser Rechnung existieren Gutschriften ("
+            + ", ".join(g.rechnungsnummer for g in gutschriften)
+            + ") – ein Komplett-Storno ist nicht mehr möglich",
+        )
+
     original_positionen = await positionen_fuer(session, rechnung.id)
     storno = await erstelle_stornorechnung(session, rechnung, auth.user_id)
     # Storno ist endgueltig: die Stunden gehen ohne Verweis zurueck in den Pool.
@@ -1059,6 +1190,11 @@ async def storno_rechnung(
     kunde = await session.get(Kunde, storno.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     await archiviere_pdf(session, storno, mandant, kunde, storniert_rechnung=rechnung, strikt=False)
+    if rechnung.rechnungsart == "gutschrift" and rechnung.bezug_rechnung_id is not None:
+        # Die stornierte Gutschrift deckt das Original nicht mehr.
+        bezug = await session.get(Rechnung, rechnung.bezug_rechnung_id)
+        if bezug is not None:
+            await rechnungsart_service.status_nach_gutschriften(session, bezug)
 
     # Sammelrechnungen haben kein rechnung.vorgang_id -- die Vorgaenge stecken
     # in den Positionen.
@@ -1116,10 +1252,15 @@ async def add_zahlung(
     if body.zahlungsart is not None and body.zahlungsart not in RECHNUNG_ZAHLUNGSARTEN:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unbekannte Zahlungsart")
 
+    if rechnung.rechnungsart == "gutschrift":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Zu Gutschriften können keine Zahlungen gebucht werden"
+        )
     positionen = await positionen_fuer(session, rechnung_id)
     zahlungen = await zahlungen_fuer(session, rechnung_id)
     brutto = brutto_betrag(rechnung, positionen)
-    offener_betrag = brutto - bezahlter_betrag(zahlungen)
+    gutschriften = await rechnungsart_service.gutschrift_summe(session, rechnung_id)
+    offener_betrag = offener_betrag_regel(brutto, bezahlter_betrag(zahlungen), gutschriften)
     if body.betrag > offener_betrag:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1140,7 +1281,9 @@ async def add_zahlung(
     await session.flush()
 
     neuer_offener_betrag = offener_betrag - body.betrag
-    neuer_status = status_nach_zahlung(brutto, bezahlter_betrag(zahlungen) + body.betrag, rechnung.status)
+    neuer_status = status_nach_zahlung(
+        brutto, bezahlter_betrag(zahlungen) + body.betrag, rechnung.status, gutschriften
+    )
     if neuer_status == "bezahlt":
         # bezahlt_am wird das Datum der Zahlung, die die Rechnung schliesst
         # -- nicht mehr immer "jetzt" wie vor Phase 2, das war der Kern des
@@ -1231,14 +1374,16 @@ async def storno_zahlung(
     zahlungen = await zahlungen_fuer(session, rechnung_id)
     brutto = brutto_betrag(rechnung, positionen)
     bezahlt = bezahlter_betrag(zahlungen)
-    if bezahlt <= 0:
+    gutschriften = await rechnungsart_service.gutschrift_summe(session, rechnung_id)
+    if bezahlt <= 0 and gutschriften <= 0:
         rechnung.status = "versendet"
         rechnung.bezahlt_am = None
-    elif bezahlt < brutto:
-        rechnung.status = "teilweise_bezahlt"
+    elif brutto - bezahlt - gutschriften > 0:
+        rechnung.status = "teilweise_bezahlt" if bezahlt > 0 else "versendet"
         rechnung.bezahlt_am = None
-    # bezahlt >= brutto bliebe "bezahlt" -- praktisch nur bei einem Storno,
-    # das den offenen Betrag nicht wirklich veraendert.
+    # Sonst bleibt "bezahlt" -- praktisch nur bei einem Storno, das den
+    # offenen Betrag nicht wirklich veraendert, oder wenn Gutschriften den
+    # Rest decken.
 
     if rechnung.vorgang_id is not None:
         vorgang = await session.get(Vorgang, rechnung.vorgang_id)
@@ -1338,8 +1483,9 @@ async def send_rechnung_email(
         entity_type="rechnung",
         entity_id=rechnung_id,
         to=body.empfaenger,
-        subject=body.betreff or f"Rechnung {rechnung.rechnungsnummer}",
-        body=body.inhalt or f"Anbei erhalten Sie unsere Rechnung {rechnung.rechnungsnummer}.",
+        subject=body.betreff or f"{rechnungsart_service.rechnungsart_label(rechnung)} {rechnung.rechnungsnummer}",
+        body=body.inhalt
+        or f"Anbei erhalten Sie unsere {rechnungsart_service.rechnungsart_label(rechnung)} {rechnung.rechnungsnummer}.",
         gesendet_von=auth.user_id,
         attachment=(dateiname, pdf_bytes, "application/pdf"),
     )
