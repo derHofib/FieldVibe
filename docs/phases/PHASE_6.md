@@ -126,5 +126,8 @@ senden → als bezahlt markieren.
   o. ä.) – `mandant_integrationen` (Phase 1) ist als generischer Slot
   dafür vorgesehen, eine konkrete externe Integration ohne echte
   Zugangsdaten/API-Dokumentation zu bauen wäre geraten statt fundiert.
-- Keine Teil-/Sammelrechnungen mit eigenen Positionen (siehe oben) und
-  keine automatische Mahnwesen-Eskalation bei überfälligen Rechnungen.
+- ~~Keine Teil-/Sammelrechnungen mit eigenen Positionen und keine
+  automatische Mahnwesen-Eskalation~~ -- überholt: Positionen, Sammelrechnung
+  über mehrere Vorgänge (`rechnung_service.vorgang_uebernehmen`) und
+  Mahnwesen-Eskalation (Worker) gibt es inzwischen. Weiterhin offen:
+  Abschlags-/Schlussrechnung mit Anrechnung und Teilstorno.

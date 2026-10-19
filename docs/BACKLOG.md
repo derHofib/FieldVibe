@@ -9,6 +9,11 @@ Nummern werden nicht neu vergeben, damit alte Verweise gültig bleiben.
 
 ## 1. Partnerportal fertigstellen
 
+> **Stand 19.10.2026:** Teilweise überholt -- ein Partnerportal-Frontend
+> existiert unter `frontend/src/partner/` (Login, Registrierung, Passwort,
+> Aufträge, Zeitplan, Profil). Offen bleibt zu prüfen, ob 1.1 (Verwaltung der
+> Partner im Office) vollständig ist.
+
 Backend ist vollständig da (`app/api/routes/partner.py`, `partner_auth.py`,
 `partner_portal.py`, Models `partner`/`partner_nachweis`/`partner_zugang`,
 Migration 0062) — Nachunternehmer-Verwaltung inkl. Freistellungsbescheinigung,
