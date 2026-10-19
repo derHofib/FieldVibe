@@ -154,3 +154,13 @@ def test_baue_hybrid_pdf_bettet_xml_ein():
     assert hybrid_bytes.startswith(b"%PDF")
     assert b"factur-x.xml" in hybrid_bytes
     assert len(hybrid_bytes) > len(pdf_bytes)
+
+
+def test_waehrung_nur_am_steuerbetrag():
+    # CII-DT-031 der EN-16931-Geschaeftsregeln: currencyID nur am Steuerbetrag (BT-110).
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")
+    )
+    xml = e_invoice_service.cii_xml_bytes(dokument).decode("utf-8")
+    assert '<ram:TaxTotalAmount currencyID="EUR">57.00</ram:TaxTotalAmount>' in xml
+    assert "currencyID" not in xml.replace('<ram:TaxTotalAmount currencyID="EUR">', "")

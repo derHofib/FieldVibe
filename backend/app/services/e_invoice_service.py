@@ -194,7 +194,8 @@ def baue_cii_dokument(
     doc.trade.settlement.monetary_summation.allowance_total = Decimal("0.00")
     doc.trade.settlement.monetary_summation.tax_basis_total = netto
     doc.trade.settlement.monetary_summation.tax_total = (steuer, "EUR")
-    doc.trade.settlement.monetary_summation.grand_total = (brutto, "EUR")
+    # CII-DT-031: currencyID darf nur am Steuerbetrag (BT-110) stehen, nicht am Gesamtbetrag.
+    doc.trade.settlement.monetary_summation.grand_total = brutto
     doc.trade.settlement.monetary_summation.due_amount = brutto
 
     zeilen = positionen or [_synthetische_position(rechnung)]
