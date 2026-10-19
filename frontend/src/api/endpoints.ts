@@ -27,8 +27,10 @@ import type {
   AccountTypUpdate,
   Adresse,
   Angebot,
+  AngebotMwstSatz,
   AngebotPosition,
   AngebotPositionstyp,
+  AngebotPositionUpdate,
   Anlage,
   AnlagenFeldDefinition,
   AnlagenFeldTyp,
@@ -1385,7 +1387,7 @@ export const angeboteApi = {
     return apiFetch<Angebot[]>(`/api/angebote${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Angebot>(`/api/angebote/${id}`),
-  create: (body: { kunde_id: string; vorgang_id?: string | null; gueltig_bis?: string }) =>
+  create: (body: { kunde_id: string; vorgang_id?: string | null; gueltig_bis?: string; mwst_satz?: AngebotMwstSatz }) =>
     apiFetch<Angebot>("/api/angebote", { method: "POST", body: JSON.stringify(body) }),
   createFromMaengel: (mangelIds: string[], gueltigBis?: string) =>
     apiFetch<Angebot>("/api/angebote/from-maengel", {
@@ -1409,8 +1411,19 @@ export const angeboteApi = {
       positionstyp?: AngebotPositionstyp;
     },
   ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
+  updatePosition: (id: string, positionId: string, body: AngebotPositionUpdate) =>
+    apiFetch<Angebot>(`/api/angebote/${id}/positionen/${positionId}`, { method: "PATCH", body: JSON.stringify(body) }),
+  removePosition: (id: string, positionId: string) =>
+    apiFetch<Angebot>(`/api/angebote/${id}/positionen/${positionId}`, { method: "DELETE" }),
+  positionenNeuOrdnen: (id: string, positionIds: string[]) =>
+    apiFetch<Angebot>(`/api/angebote/${id}/positionen/neu-ordnen`, {
+      method: "POST",
+      body: JSON.stringify({ position_ids: positionIds }),
+    }),
   updateStatus: (id: string, status: string) =>
     apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  update: (id: string, body: { gueltig_bis?: string; mwst_satz?: AngebotMwstSatz }) =>
+    apiFetch<Angebot>(`/api/angebote/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/angebote/${id}`, { method: "DELETE" }),
   pdf: (id: string) => apiFetchBlob(`/api/angebote/${id}/pdf`),
   emails: (id: string) => apiFetch<EmailLog[]>(`/api/angebote/${id}/emails`),

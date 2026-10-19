@@ -12,6 +12,7 @@ function targetPath(n: NotificationEntry): string | null {
   if (n.ref_entity_type === "vorgang" && n.ref_entity_id) return `/vorgaenge/${n.ref_entity_id}`;
   if (n.ref_entity_type === "anlage" && n.ref_entity_id) return `/anlagen/${n.ref_entity_id}`;
   if (n.ref_entity_type === "eingangsrechnung" && n.ref_entity_id) return `/rechnungseingang/${n.ref_entity_id}`;
+  if (n.ref_entity_type === "angebot" && n.ref_entity_id) return `/angebote/${n.ref_entity_id}`;
   // Zeitplan-Antraege: Office oeffnet das Projekt im Zeitplan-Tab, die Feld-App die Zeitplan-Liste.
   if (n.ref_entity_type === "projekt" && n.ref_entity_id) {
     return istOfficeHost() ? `/projekte?projekt=${n.ref_entity_id}&tab=zeitplan` : `/projekte/${n.ref_entity_id}/zeitplan`;

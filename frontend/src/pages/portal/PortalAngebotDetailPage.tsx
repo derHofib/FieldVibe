@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenportalApi } from "../../api/endpoints";
+import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { SkeletonCard } from "../../components/Skeleton";
 import { openPdfBlob } from "../../utils/pdf";
 import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_ERKLAERUNG, ANGEBOT_STATUS_LABEL } from "./status";
@@ -101,11 +102,17 @@ export function PortalAngebotDetailPage() {
         </div>
       </div>
 
+      {angebot.status === "versendet" && angebot.ist_abgelaufen && (
+        <Hinweiskasten ton="warnung" titel="Dieses Angebot ist abgelaufen">
+          Eine Annahme ist nicht mehr möglich. Bitte wenden Sie sich an den Betrieb, wenn Sie das Angebot dennoch
+          beauftragen möchten.
+        </Hinweiskasten>
+      )}
       {angebot.status === "versendet" && (
         <div className="flex gap-2">
           <button
             onClick={() => antwortMutation.mutate("angenommen")}
-            disabled={antwortMutation.isPending}
+            disabled={antwortMutation.isPending || angebot.ist_abgelaufen}
             className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Annehmen

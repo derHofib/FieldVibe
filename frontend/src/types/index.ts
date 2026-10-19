@@ -548,6 +548,7 @@ export interface PortalAngebot {
   positionen: PortalAngebotPosition[];
   gesamt_netto: string;
   gesamt_brutto: string;
+  ist_abgelaufen: boolean;
 }
 
 export interface PortalRechnungPosition {
@@ -999,11 +1000,28 @@ export interface Angebot {
   versendet_am: string | null;
   angenommen_am: string | null;
   abgelehnt_am: string | null;
+  // Vorgang aus der Annahme (neu angelegt oder der bereits verknuepfte); beim
+  // Maengel-Pfad leer, dort haengt der Reparatur-Vorgang an den Maengeln.
+  auftrag_vorgang_id: string | null;
+  nachgefasst_am: string | null;
   created_at: string;
   updated_at: string;
   positionen: AngebotPosition[];
   gesamt_netto: string;
   gesamt_brutto: string;
+  // Berechnet im Backend (versendet und gueltig_bis vor dem heutigen Betriebstag).
+  ist_abgelaufen: boolean;
+}
+
+export type AngebotMwstSatz = "19" | "7" | "0";
+
+export interface AngebotPositionUpdate {
+  artikelnummer?: string | null;
+  beschreibung?: string;
+  menge?: string;
+  einheit?: string;
+  einzelpreis?: string;
+  positionstyp?: AngebotPositionstyp;
 }
 
 export type RechnungStatus = "entwurf" | "versendet" | "teilweise_bezahlt" | "bezahlt" | "storniert";

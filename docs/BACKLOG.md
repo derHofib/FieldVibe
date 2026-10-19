@@ -115,6 +115,10 @@ Texte selbst (Platzhalter-Hinweis bleibt, bis URLs hinterlegt sind), Mandanten-
 Kontext im Partnerportal und auf den Kundenportal-Seiten ohne Slug (Registrieren,
 Passwort zurücksetzen) bei mehreren aktiven Mandanten.
 
+## 9. Angebot: Gliederung, Alternativ-/Bedarfspositionen, Varianten, Textbausteine (Roadmap 3.1)
+
+Angebote sind bisher eine flache Positionsliste mit festem Einleitungs- und Schlusstext im PDF. Offen sind Gliederung (Titel/Zwischensummen), Alternativ- und Bedarfspositionen, Varianten sowie frei wählbare Textbausteine für Einleitung und Schluss.
+
 ## Erledigt, zur Einordnung
 
 `v1.0.0` (17.08.2026) markiert den Ausgangsstand nach Zusammenführung

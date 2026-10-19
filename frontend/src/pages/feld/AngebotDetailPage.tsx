@@ -1,23 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, FileText } from "lucide-react";
+import { Ban, ChevronDown, ChevronUp, FileText } from "lucide-react";
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { angeboteApi, kundenApi, leistungsverzeichnisApi } from "../../api/endpoints";
+import { angeboteApi, kundenApi, leistungsverzeichnisApi, mandantEinstellungenApi } from "../../api/endpoints";
+import { AngebotPositionSheet } from "../../components/angebot/AngebotPositionSheet";
+import { GueltigkeitSheet } from "../../components/angebot/GueltigkeitSheet";
+import { SegmentedControl } from "../../components/apple/SegmentedControl";
+import { StatusPille } from "../../components/apple/StatusPille";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerMeldung, Hinweiskasten } from "../../components/Hinweiskasten";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
+import {
+  ANGEBOT_STATUS_LABEL,
+  ANGEBOT_STATUS_TOKEN,
+  MWST_SAETZE,
+  ablaufAnzeige,
+  ablaufText,
+  mwstSatzWert,
+  verschiebePosition,
+} from "../../utils/angebot";
+import { formatIsoTag, heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
-import type { AngebotPositionstyp, AngebotStatus } from "../../types";
-
-const STATUS_LABEL: Record<AngebotStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  angenommen: "Angenommen",
-  abgelehnt: "Abgelehnt",
-};
+import type { AngebotMwstSatz, AngebotPosition, AngebotPositionstyp } from "../../types";
 
 const POSITIONSTYP_LABEL: Record<AngebotPositionstyp, string> = {
   material: "Material",
@@ -31,6 +39,25 @@ interface NeuePosition {
   einheit: string;
   einzelpreis: string;
   positionstyp: AngebotPositionstyp;
+}
+
+function PositionInhalt({ p }: { p: AngebotPosition }) {
+  return (
+    <>
+      <div className="text-label">
+        {p.positionstyp === "arbeitszeit" && (
+          <span className="mr-1.5 border border-st-arbeit px-1.5 py-0.5 text-xs text-st-arbeit ">
+            {POSITIONSTYP_LABEL.arbeitszeit}
+          </span>
+        )}
+        {p.artikelnummer && <span className="mr-1.5 text-xs text-label2">{p.artikelnummer}</span>}
+        {p.beschreibung}
+      </div>
+      <div className="text-xs text-label2">
+        {p.menge} {p.einheit} × {p.einzelpreis} EUR
+      </div>
+    </>
+  );
 }
 
 // id optional als Prop, damit die Office-Oberflaeche diese Seite in ihrem
@@ -54,6 +81,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   });
   const [lvAuswahl, setLvAuswahl] = useState("");
   const [lvSplitMenge, setLvSplitMenge] = useState("1");
+  const [bearbeitetePosition, setBearbeitetePosition] = useState<AngebotPosition | null>(null);
+  const [gueltigkeitOffen, setGueltigkeitOffen] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: () => angeboteApi.remove(id!),
@@ -78,6 +107,15 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     queryFn: () => kundenApi.get(angebot!.kunde_id),
     enabled: !!angebot,
   });
+  // Die Einstellungen sind nur fuer mandant_admin lesbar; fuer alle anderen
+  // erzwingt das Backend den Satz 0 % beim Kleinunternehmer ohnehin.
+  const { data: einstellungen } = useQuery({
+    queryKey: ["mandant-einstellungen"],
+    queryFn: mandantEinstellungenApi.get,
+    enabled: currentUser?.role === "mandant_admin",
+    retry: false,
+  });
+  const kleinunternehmer = einstellungen?.firmendaten.ist_kleinunternehmer === true;
   const { data: leistungsverzeichnis } = useQuery({
     queryKey: ["leistungsverzeichnis", angebot?.kunde_id],
     queryFn: () => leistungsverzeichnisApi.list(angebot!.kunde_id),
@@ -152,6 +190,21 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["angebot", id] }),
   });
 
+  const aktualisiert = () => {
+    queryClient.invalidateQueries({ queryKey: ["angebot", id] });
+    queryClient.invalidateQueries({ queryKey: ["angebote"] });
+  };
+
+  const neuOrdnenMutation = useMutation({
+    mutationFn: (positionIds: string[]) => angeboteApi.positionenNeuOrdnen(id!, positionIds),
+    onSuccess: aktualisiert,
+  });
+
+  const mwstMutation = useMutation({
+    mutationFn: (satz: AngebotMwstSatz) => angeboteApi.update(id!, { mwst_satz: satz }),
+    onSuccess: aktualisiert,
+  });
+
   const pdfMutation = useMutation({
     mutationFn: () => angeboteApi.pdf(id!),
     onSuccess: openPdfBlob,
@@ -175,6 +228,13 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     );
   }
   if (!angebot) return <p className="text-center text-label2">Lädt…</p>;
+
+  const istEntwurf = angebot.status === "entwurf";
+  const ablauf = ablaufAnzeige(angebot, heuteIso());
+  const positionIds = angebot.positionen.map((p) => p.id);
+  const mutationFehler = [statusMutation, neuOrdnenMutation, mwstMutation]
+    .map((m) => (m.error instanceof ApiError ? m.error.message : m.isError ? "Aktion fehlgeschlagen" : null))
+    .find(Boolean);
 
   return (
     <div className="space-y-4">
@@ -203,14 +263,31 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
             <div className="text-xs text-label2">{angebot.angebotsnummer}</div>
             <h1 className="text-lg font-bold text-label">{kunde?.name ?? "…"}</h1>
           </div>
-          <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
-            {STATUS_LABEL[angebot.status]}
-          </span>
+          <div className="flex flex-wrap justify-end gap-1.5">
+            <StatusPille status={ANGEBOT_STATUS_TOKEN[angebot.status]} label={ANGEBOT_STATUS_LABEL[angebot.status]} />
+            {ablauf.art === "abgelaufen" && <StatusPille status="arbeit" label="Abgelaufen" />}
+          </div>
         </div>
         {angebot.gueltig_bis && (
           <p className="mt-1 text-xs text-label2">
-            Gültig bis {new Date(angebot.gueltig_bis).toLocaleDateString("de-DE")}
+            Gültig bis {formatIsoTag(angebot.gueltig_bis)}
+            {ablauf.art === "laeuft_bald_ab" && (
+              <span className="font-medium text-st-arbeit"> · {ablaufText(ablauf)}</span>
+            )}
+            {(istEntwurf || angebot.status === "versendet") && (
+              <>
+                {" · "}
+                <button type="button" onClick={() => setGueltigkeitOffen(true)} className="font-medium text-tint">
+                  Ändern
+                </button>
+              </>
+            )}
           </p>
+        )}
+        {!angebot.gueltig_bis && (istEntwurf || angebot.status === "versendet") && (
+          <button type="button" onClick={() => setGueltigkeitOffen(true)} className="mt-1 text-xs font-medium text-tint">
+            Gültigkeit festlegen
+          </button>
         )}
         <button
           onClick={() => pdfMutation.mutate()}
@@ -221,10 +298,26 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
       </div>
 
+      {ablauf.art === "abgelaufen" && (
+        <Hinweiskasten ton="warnung" titel="Angebot abgelaufen">
+          <p>
+            Die Gültigkeit endete am {angebot.gueltig_bis ? formatIsoTag(angebot.gueltig_bis) : "—"}. Das Angebot kann
+            nicht mehr angenommen werden – auch nicht vom Kunden im Portal.
+          </p>
+          <button
+            type="button"
+            onClick={() => setGueltigkeitOffen(true)}
+            className="btn-touch mt-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label"
+          >
+            Gültigkeit verlängern
+          </button>
+        </Hinweiskasten>
+      )}
+
       <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Positionen</h2>
-          {angebot.status === "entwurf" && (
+          {istEntwurf && (
             <button
               onClick={() => setShowForm((v) => !v)}
               className="btn-touch text-xs font-medium text-tint "
@@ -378,40 +471,81 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           <p className="text-sm text-label2">Noch keine Positionen.</p>
         ) : (
           <div className="space-y-1.5">
-            {angebot.positionen.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between rounded-md bg-fill p-2 text-sm"
-              >
-                <div>
-                  <div className="text-label">
-                    {p.positionstyp === "arbeitszeit" && (
-                      <span className="mr-1.5 border border-st-arbeit px-1.5 py-0.5 text-xs text-st-arbeit ">
-                        {POSITIONSTYP_LABEL.arbeitszeit}
-                      </span>
-                    )}
-                    {p.artikelnummer && (
-                      <span className="mr-1.5 text-xs text-label2">{p.artikelnummer}</span>
-                    )}
-                    {p.beschreibung}
+            {angebot.positionen.map((p, index) => (
+              <div key={p.id} className="flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm">
+                {istEntwurf ? (
+                  <button
+                    type="button"
+                    onClick={() => setBearbeitetePosition(p)}
+                    aria-label={`Position ${p.position} bearbeiten: ${p.beschreibung}`}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <PositionInhalt p={p} />
+                  </button>
+                ) : (
+                  <div className="min-w-0 flex-1">
+                    <PositionInhalt p={p} />
                   </div>
-                  <div className="text-xs text-label2">
-                    {p.menge} {p.einheit} × {p.einzelpreis} EUR
+                )}
+                <div className="shrink-0 font-medium text-label">{p.gesamt} EUR</div>
+                {istEntwurf && angebot.positionen.length > 1 && (
+                  <div className="flex shrink-0 flex-col">
+                    <button
+                      type="button"
+                      onClick={() => neuOrdnenMutation.mutate(verschiebePosition(positionIds, index, -1))}
+                      disabled={index === 0 || neuOrdnenMutation.isPending}
+                      aria-label={`Position ${p.position} nach oben`}
+                      className="btn-touch p-0.5 text-label2 disabled:opacity-30"
+                    >
+                      <ChevronUp size={16} strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => neuOrdnenMutation.mutate(verschiebePosition(positionIds, index, 1))}
+                      disabled={index === angebot.positionen.length - 1 || neuOrdnenMutation.isPending}
+                      aria-label={`Position ${p.position} nach unten`}
+                      className="btn-touch p-0.5 text-label2 disabled:opacity-30"
+                    >
+                      <ChevronDown size={16} strokeWidth={2} />
+                    </button>
                   </div>
-                </div>
-                <div className="font-medium text-label">{p.gesamt} EUR</div>
+                )}
               </div>
             ))}
           </div>
         )}
+        {istEntwurf && angebot.positionen.length > 0 && (
+          <p className="mt-1.5 text-xs text-label3">Position antippen zum Bearbeiten oder Löschen.</p>
+        )}
 
-        <div className="mt-3 border-t border-sep pt-2 text-right text-sm ">
-          <div className="text-label2">Netto: {angebot.gesamt_netto} EUR</div>
-          <div className="font-semibold text-label">
-            Brutto: {angebot.gesamt_brutto} EUR
+        <div className="mt-3 space-y-2 border-t border-sep pt-2 text-sm ">
+          {kleinunternehmer ? (
+            <Hinweiskasten ton="info">Kleinunternehmer – steuerbefreit nach § 19 UStG</Hinweiskasten>
+          ) : istEntwurf ? (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-label2">Steuersatz</span>
+              <SegmentedControl
+                ariaLabel="Steuersatz"
+                optionen={MWST_SAETZE}
+                wert={mwstSatzWert(angebot.mwst_satz) ?? "19"}
+                onChange={(satz) => mwstMutation.mutate(satz)}
+                groesse="mobil"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between text-label2">
+              <span>Steuersatz</span>
+              <span>{Number(angebot.mwst_satz)} %</span>
+            </div>
+          )}
+          <div className="text-right">
+            <div className="text-label2">Netto: {angebot.gesamt_netto} EUR</div>
+            <div className="font-semibold text-label">Brutto: {angebot.gesamt_brutto} EUR</div>
           </div>
         </div>
       </div>
+
+      {mutationFehler && <FehlerMeldung meldung={mutationFehler} alsKasten />}
 
       <EmailSection
         queryKey={["angebot-emails", id]}
@@ -422,7 +556,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         hinweis="Das Angebot wird als PDF-Anhang mitgesendet."
       />
 
-      {angebot.status === "entwurf" && (
+      {istEntwurf && (
         <button
           onClick={() => statusMutation.mutate("versendet")}
           disabled={statusMutation.isPending}
@@ -435,7 +569,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         <div className="flex gap-2">
           <button
             onClick={() => statusMutation.mutate("angenommen")}
-            disabled={statusMutation.isPending}
+            disabled={statusMutation.isPending || angebot.ist_abgelaufen}
             className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             Angenommen
@@ -450,9 +584,39 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       )}
       {angebot.status === "angenommen" && (
-        <p className="text-center text-sm text-st-erledigt ">
-          Angebot angenommen – ein Reparatur-Vorgang wurde automatisch angelegt (siehe verknüpfte Mängel).
-        </p>
+        <div className="space-y-1 text-center text-sm">
+          {angebot.auftrag_vorgang_id ? (
+            <>
+              <p className="text-st-erledigt ">Angebot angenommen.</p>
+              <Link
+                to={`/vorgaenge/${angebot.auftrag_vorgang_id}`}
+                className="btn-touch inline-block font-medium text-tint"
+              >
+                Zum Auftrag →
+              </Link>
+            </>
+          ) : (
+            <p className="text-st-erledigt ">
+              Angebot angenommen – ein Reparatur-Vorgang wurde automatisch angelegt (siehe verknüpfte Mängel).
+            </p>
+          )}
+        </div>
+      )}
+
+      {bearbeitetePosition && (
+        <AngebotPositionSheet
+          key={bearbeitetePosition.id}
+          angebotId={angebot.id}
+          position={bearbeitetePosition}
+          onClose={() => setBearbeitetePosition(null)}
+        />
+      )}
+      {gueltigkeitOffen && (
+        <GueltigkeitSheet
+          angebotId={angebot.id}
+          aktuell={angebot.gueltig_bis}
+          onClose={() => setGueltigkeitOffen(false)}
+        />
       )}
     </div>
   );
