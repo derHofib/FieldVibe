@@ -25,6 +25,8 @@ from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.services import steuer_service
 from app.services.auswertung_service import KontoNichtKonfiguriert, _erloeskonto
+from app.services.datev_service import DatevStammdaten
+from tests.datev_helfer import stammdaten_setzen
 from tests.conftest import auth_headers, login
 
 _CENT = Decimal("0.01")
@@ -718,6 +720,7 @@ async def test_pdf_und_e_rechnung_fuer_mischbeleg(client, make_mandant, make_use
 async def test_ust_va_und_datev_je_steuergruppe(client, make_mandant, make_user, make_kunde):
     token, kunde = await _admin(client, make_mandant, make_user, make_kunde)
     rechnung = await _mischbeleg(client, token, kunde)
+    await stammdaten_setzen(client, auth_headers(token))
     await client.patch(
         f"/api/rechnungen/{rechnung['id']}", headers=auth_headers(token), json={"status": "versendet"}
     )
@@ -734,7 +737,7 @@ async def test_ust_va_und_datev_je_steuergruppe(client, make_mandant, make_user,
     )
     assert datev.status_code == 200
     zeilen = list(csv.reader(io.StringIO(datev.text), delimiter=";"))[2:]
-    assert [(z[0], z[4], z[5]) for z in zeilen] == [("12,02", "8400", "3"), ("3,75", "8300", "2")]
+    assert [(z[0], z[7], z[8]) for z in zeilen] == [("12,02", "8400", "3"), ("3,75", "8300", "2")]
 
 
 @pytest.mark.asyncio
@@ -744,6 +747,7 @@ async def test_kleinunternehmer_ust_va_und_datev_wie_bisher(client, make_mandant
         firmendaten={"ist_kleinunternehmer": True, "steuernummer": "12/345/67890"},
     )
     rechnung = await _mischbeleg(client, token, kunde)
+    await stammdaten_setzen(client, auth_headers(token))
     await client.patch(
         f"/api/rechnungen/{rechnung['id']}", headers=auth_headers(token), json={"status": "versendet"}
     )
@@ -756,7 +760,7 @@ async def test_kleinunternehmer_ust_va_und_datev_wie_bisher(client, make_mandant
         "/api/auswertung/datev-export?von=2020-01-01&bis=2030-12-31", headers=auth_headers(token)
     )
     zeilen = list(csv.reader(io.StringIO(datev.text), delimiter=";"))[2:]
-    assert [(z[0], z[4], z[5]) for z in zeilen] == [("13,60", "8400", "")]
+    assert [(z[0], z[7], z[8]) for z in zeilen] == [("13,60", "8400", "")]
 
 
 def test_buchung_ohne_konfiguriertes_konto_bricht_ab_statt_falsch_zu_buchen():
@@ -767,4 +771,4 @@ def test_buchung_ohne_konfiguriertes_konto_bricht_ab_statt_falsch_zu_buchen():
         beleg = Rechnung(rechnungsnummer="R-1", betrag_netto=Decimal("0"), mwst_satz=Decimal("19"))
         gruppe = steuer_service.steuer_gruppen(beleg, [_position(1, "10", "0", kategorie)])[0]
         with pytest.raises(KontoNichtKonfiguriert, match=f"Steuerkategorie {kategorie} ist kein Erlöskonto hinterlegt"):
-            _erloeskonto(mandant, gruppe)
+            _erloeskonto(mandant, gruppe, DatevStammdaten(1001, 1, 1, "SKR03", 4))

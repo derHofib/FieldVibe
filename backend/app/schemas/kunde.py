@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.kontakt import AnsprechpartnerEintrag
 from app.services import leitweg_id
+from app.schemas.personenkonto import personenkonto_normalisieren
 
 KundeTyp = Literal["privat", "gewerbe", "oeffentlich", "hausverwaltung"]
 # Automatik (NULL) ist kein Wert dieses Literals, sondern None am Feld.
@@ -29,6 +30,12 @@ class KundeCreate(BaseModel):
     e_rechnung_format: KundeEmpfangsformat | None = None
 
     _leitweg_pruefen = field_validator("leitweg_id")(_leitweg_id_pruefen)
+    debitorenkonto: str | None = None
+
+    @field_validator("debitorenkonto")
+    @classmethod
+    def _debitorenkonto_pruefen(cls, v: str | None) -> str | None:
+        return personenkonto_normalisieren(v, "Debitorenkonto")
 
 
 class KundeLogoUrl(BaseModel):
@@ -47,6 +54,12 @@ class KundeUpdate(BaseModel):
     e_rechnung_format: KundeEmpfangsformat | None = None
 
     _leitweg_pruefen = field_validator("leitweg_id")(_leitweg_id_pruefen)
+    debitorenkonto: str | None = None
+
+    @field_validator("debitorenkonto")
+    @classmethod
+    def _debitorenkonto_pruefen(cls, v: str | None) -> str | None:
+        return personenkonto_normalisieren(v, "Debitorenkonto")
 
 
 class KundeRead(BaseModel):
@@ -63,6 +76,7 @@ class KundeRead(BaseModel):
     ust_13b_nachweis_bis: date | None
     leitweg_id: str | None = None
     e_rechnung_format: KundeEmpfangsformat | None = None
+    debitorenkonto: str | None
     portal_slug: str
     logo_object_key: str | None
     created_at: datetime

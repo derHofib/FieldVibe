@@ -45,7 +45,7 @@ from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
 from app.services.token_widerruf_service import widerrufe_tokens
-from app.services import angebot_service, papierkorb_service, rechnung_service, storage_service
+from app.services import angebot_service, datev_service, papierkorb_service, rechnung_service, storage_service
 from app.services.einladung_service import (
     create_einladung,
     registrierungslink_erzeugen,
@@ -108,6 +108,8 @@ async def create_kunde(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Kunde:
+    if body.debitorenkonto:
+        await _debitorenkonto_pruefen(session, auth.mandant_id, body.debitorenkonto)
     kundennummer = body.kundennummer or await next_kundennummer(session, auth.mandant_id)
     kunde = Kunde(
         mandant_id=auth.mandant_id,
@@ -121,6 +123,7 @@ async def create_kunde(
         ust_13b_nachweis_bis=body.ust_13b_nachweis_bis,
         leitweg_id=body.leitweg_id,
         e_rechnung_format=body.e_rechnung_format,
+        debitorenkonto=body.debitorenkonto,
         # Ein Link fuer den gesamten Kunden (nicht pro Ansprechpartner) --
         # jeder Mitarbeiter des Kunden mit eigenem KundenportalZugang meldet
         # sich darueber mit seiner eigenen E-Mail/seinem eigenen Passwort an.
@@ -131,9 +134,22 @@ async def create_kunde(
         await session.flush()
     except IntegrityError as exc:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Kundennummer bereits vergeben"
+            status_code=status.HTTP_409_CONFLICT, detail=_integritaetsfehler_text(exc)
         ) from exc
     return kunde
+
+
+def _integritaetsfehler_text(exc: IntegrityError) -> str:
+    if "uq_kunden_mandant_debitorenkonto" in str(exc.orig):
+        return "Debitorenkonto bereits vergeben"
+    return "Kundennummer bereits vergeben"
+
+
+async def _debitorenkonto_pruefen(session: AsyncSession, mandant_id: UUID, konto: str) -> None:
+    try:
+        await datev_service.personenkonto_fuer_mandant_pruefen(session, mandant_id, konto, "debitor")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
 
 async def _require_kunde_zugriff(
@@ -472,9 +488,16 @@ async def update_kunde(
     # Date-Spalte: mode="json" liefert einen String, den asyncpg nicht annimmt.
     if "ust_13b_nachweis_bis" in changes:
         changes["ust_13b_nachweis_bis"] = body.ust_13b_nachweis_bis
+    if changes.get("debitorenkonto"):
+        await _debitorenkonto_pruefen(session, auth.mandant_id, changes["debitorenkonto"])
     for field, value in changes.items():
         setattr(kunde, field, value)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=_integritaetsfehler_text(exc)
+        ) from exc
     if changes:
         await session.refresh(kunde)
     return kunde

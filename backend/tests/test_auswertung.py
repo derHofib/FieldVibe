@@ -1,6 +1,7 @@
 import pytest
 
 from tests.conftest import auth_headers, login
+from tests.datev_helfer import stammdaten_setzen
 
 
 @pytest.mark.asyncio
@@ -148,6 +149,7 @@ async def test_datev_export_liefert_csv(client, make_mandant, make_user, make_ku
     admin = await make_user(mandant=mandant, role="mandant_admin", password="pw-123456")
     kunde = await make_kunde(mandant=mandant)
     token = await login(client, admin.email, "pw-123456")
+    await stammdaten_setzen(client, auth_headers(token))
 
     rechnung_resp = await client.post(
         "/api/rechnungen",
@@ -166,8 +168,9 @@ async def test_datev_export_liefert_csv(client, make_mandant, make_user, make_ku
     )
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/csv")
-    text = resp.content.decode("utf-8")
-    assert text.startswith("EXTF")
+    assert "charset=windows-1252" in resp.headers["content-type"]
+    text = resp.content.decode("cp1252")
+    assert text.startswith('"EXTF";700;21;"Buchungsstapel";13;')
     assert rechnungsnummer in text
     assert "1190,00" in text  # Brutto (1000 + 19% USt), Komma statt Punkt
 

@@ -31,6 +31,50 @@ ERLOESKONTO_SCHLUESSEL = ("S:19.00", "S:7.00", "Z:0.00", "E:0.00", "AE:0.00")
 _KONTO_MUSTER = re.compile(r"\d{4,8}")
 _BU_MUSTER = re.compile(r"\d{1,3}")
 
+# DATEV-Stammdaten in firmendaten["buchhaltung"] (Header des Buchungsstapels,
+# siehe datev_service); Wertebereiche laut DATEV-Vorgabe (Berater 1001-9999999,
+# Mandant 1-99999).
+DATEV_ZAHLENFELDER = {
+    "berater_nr": (1001, 9999999),
+    "mandant_nr": (1, 99999),
+    "wirtschaftsjahr_beginn_monat": (1, 12),
+    "sachkontenlaenge": (4, 8),
+}
+DATEV_KONTENRAHMEN = ("SKR03", "SKR04")
+
+
+def _ganzzahl(wert: object, name: str, minimum: int, maximum: int) -> int | None:
+    """Leer/None = nicht gesetzt. Strings aus Formularen sind erlaubt, Bool und
+    Dezimalzahlen nicht (True waere sonst still die Beraternummer 1)."""
+    if wert is None or (isinstance(wert, str) and not wert.strip()):
+        return None
+    if isinstance(wert, bool) or not isinstance(wert, (int, str)):
+        raise ValueError(f"{name} muss eine ganze Zahl sein")
+    text = str(wert).strip()
+    if not text.isascii() or not text.isdigit():
+        raise ValueError(f"{name} muss eine ganze Zahl sein")
+    zahl = int(text)
+    if not minimum <= zahl <= maximum:
+        raise ValueError(f"{name} muss zwischen {minimum} und {maximum} liegen")
+    return zahl
+
+
+def _datev_stammdaten_pruefen(buchhaltung: dict) -> dict:
+    """Normalisiert die DATEV-Stammdaten (Zahlen als int). Nicht gesetzte Felder
+    entfallen, damit der Export fehlende Berater-/Mandantennummer erkennt, statt
+    eine leere Zeichenkette zu verarbeiten."""
+    ergebnis = {k: v for k, v in buchhaltung.items() if k not in DATEV_ZAHLENFELDER and k != "kontenrahmen"}
+    for name, (minimum, maximum) in DATEV_ZAHLENFELDER.items():
+        zahl = _ganzzahl(buchhaltung.get(name), name, minimum, maximum)
+        if zahl is not None:
+            ergebnis[name] = zahl
+    kontenrahmen = buchhaltung.get("kontenrahmen")
+    if kontenrahmen not in (None, ""):
+        if kontenrahmen not in DATEV_KONTENRAHMEN:
+            raise ValueError(f"kontenrahmen muss {' oder '.join(DATEV_KONTENRAHMEN)} sein")
+        ergebnis["kontenrahmen"] = kontenrahmen
+    return ergebnis
+
 
 class MandantEinstellungenRead(BaseModel):
     scheduler_stunde_utc: int | None
@@ -119,9 +163,10 @@ class MandantEinstellungenUpdate(BaseModel):
         buchhaltung = v["buchhaltung"]
         if not isinstance(buchhaltung, dict):
             raise ValueError("buchhaltung muss ein Objekt sein")
+        ergebnis = _datev_stammdaten_pruefen(buchhaltung)
         erloeskonten = buchhaltung.get("erloeskonten")
         if erloeskonten is None:
-            return v
+            return {**v, "buchhaltung": ergebnis}
         if not isinstance(erloeskonten, dict):
             raise ValueError("buchhaltung.erloeskonten muss ein Objekt sein")
         geprueft = {}
@@ -139,7 +184,7 @@ class MandantEinstellungenUpdate(BaseModel):
             if bu and not _BU_MUSTER.fullmatch(bu):
                 raise ValueError(f"Erlöskonto {schluessel}: bu muss leer sein oder 1 bis 3 Ziffern haben")
             geprueft[schluessel] = {"konto": konto, "bu": bu}
-        return {**v, "buchhaltung": {**buchhaltung, "erloeskonten": geprueft}}
+        return {**v, "buchhaltung": {**ergebnis, "erloeskonten": geprueft}}
 
 
 class MandantLogoUrl(BaseModel):

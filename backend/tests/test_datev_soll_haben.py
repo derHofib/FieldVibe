@@ -7,10 +7,11 @@ Normalbuchung und der Umsatz war doppelt gebucht."""
 import csv
 import io
 
+from tests.datev_helfer import BELEG1, BU, GEGENKONTO, KONTO, SH, TEXT, UMSATZ, buchhaltung
 from tests.test_rechnungsarten import (
     GRUPPEN_POSITIONEN,
     _abschlag_versendet,
-    _admin,
+    _admin as _admin_basis,
     _angebot,
     _aus_angebot,
     _d,
@@ -22,11 +23,14 @@ from tests.test_rechnungsarten import (
 )
 
 _ZEITRAUM = "von=2020-01-01&bis=2030-12-31"
-_KONTEN = {
-    "buchhaltung": {
-        "erloeskonten": {"Z:0.00": {"konto": "8101", "bu": "11"}},
-    }
-}
+_KONTEN = buchhaltung(erloeskonten={"Z:0.00": {"konto": "8101", "bu": "11"}})
+
+
+async def _admin(client, make_mandant, make_user, make_kunde, *, firmendaten=None, **kw):
+    # Ohne Berater-/Mandantennummer laeuft der Export nicht.
+    return await _admin_basis(
+        client, make_mandant, make_user, make_kunde, firmendaten=firmendaten or buchhaltung(), **kw
+    )
 
 
 async def _datev(client, h) -> list[list[str]]:
@@ -44,7 +48,7 @@ async def test_normale_rechnung_bleibt_soll_wie_bisher(client, make_mandant, mak
     _, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
     rechnung = await _versendete_rechnung(client, h, kunde, [{"beschreibung": "Material", "einzelpreis": "100"}])
     [zeile] = await _datev(client, h)
-    assert (zeile[0], zeile[1], zeile[2], zeile[4], zeile[5], zeile[7]) == (
+    assert (zeile[UMSATZ], zeile[SH], zeile[2], zeile[GEGENKONTO], zeile[BU], zeile[BELEG1]) == (
         "119,00",
         "S",
         "EUR",
@@ -52,7 +56,7 @@ async def test_normale_rechnung_bleibt_soll_wie_bisher(client, make_mandant, mak
         "3",
         rechnung["rechnungsnummer"],
     )
-    assert zeile[9] == f"Rechnung {rechnung['rechnungsnummer']} {kunde.name}"
+    assert zeile[TEXT] == f"Rechnung {rechnung['rechnungsnummer']} {kunde.name}"
 
 
 async def test_storno_ist_gegenbuchung_mit_haben(client, make_mandant, make_user, make_kunde):
@@ -61,12 +65,12 @@ async def test_storno_ist_gegenbuchung_mit_haben(client, make_mandant, make_user
     storno = await _ok(await client.post(f"/api/rechnungen/{original['id']}/storno", headers=h))
     zeilen = await _datev(client, h)
     # Je Rechnung eine Zeile je Steuergruppe (19 %, 7 %, 0 % PV) -- Original Soll, Storno Haben.
-    original_zeilen = [z for z in zeilen if z[7] == original["rechnungsnummer"]]
-    storno_zeilen = [z for z in zeilen if z[7] == storno["rechnungsnummer"]]
+    original_zeilen = [z for z in zeilen if z[BELEG1] == original["rechnungsnummer"]]
+    storno_zeilen = [z for z in zeilen if z[BELEG1] == storno["rechnungsnummer"]]
     assert len(original_zeilen) == len(storno_zeilen) == 3
-    assert {z[1] for z in original_zeilen} == {"S"} and {z[1] for z in storno_zeilen} == {"H"}
+    assert {z[SH] for z in original_zeilen} == {"S"} and {z[SH] for z in storno_zeilen} == {"H"}
     # Gleiche Betraege (positiv), Konten und BU-Schluessel in gleicher Reihenfolge.
-    assert _spalten(original_zeilen, 0, 3, 4, 5) == _spalten(storno_zeilen, 0, 3, 4, 5)
+    assert _spalten(original_zeilen, UMSATZ, KONTO, GEGENKONTO, BU) == _spalten(storno_zeilen, UMSATZ, KONTO, GEGENKONTO, BU)
 
 
 async def test_gutschrift_ist_gegenbuchung_mit_haben(client, make_mandant, make_user, make_kunde):
@@ -82,13 +86,13 @@ async def test_gutschrift_ist_gegenbuchung_mit_haben(client, make_mandant, make_
         )
     )
     zeilen = await _datev(client, h)
-    gs_zeilen = [z for z in zeilen if z[7] == gutschrift["rechnungsnummer"]]
+    gs_zeilen = [z for z in zeilen if z[BELEG1] == gutschrift["rechnungsnummer"]]
     # 100 netto 19 % -> 119,00; 100 netto 7 % -> 107,00 (positiv, Haben), Konten wie die Ursprungsrechnung.
-    assert _spalten(gs_zeilen, 0, 1, 4, 5) == [("119,00", "H", "8400", "3"), ("107,00", "H", "8300", "2")]
-    assert all(z[9].startswith("Gutschrift ") for z in gs_zeilen)
-    ursprung = [z for z in zeilen if z[7] == original["rechnungsnummer"]]
-    assert {z[3] for z in ursprung} == {z[3] for z in gs_zeilen}  # gleiches Debitorenkonto
-    assert {z[1] for z in ursprung} == {"S"}
+    assert _spalten(gs_zeilen, UMSATZ, SH, GEGENKONTO, BU) == [("119,00", "H", "8400", "3"), ("107,00", "H", "8300", "2")]
+    assert all(z[TEXT].startswith("Gutschrift ") for z in gs_zeilen)
+    ursprung = [z for z in zeilen if z[BELEG1] == original["rechnungsnummer"]]
+    assert {z[KONTO] for z in ursprung} == {z[KONTO] for z in gs_zeilen}  # gleiches Debitorenkonto
+    assert {z[SH] for z in ursprung} == {"S"}
 
 
 async def test_abschlag_und_schluss_sind_normale_buchungen(client, make_mandant, make_user, make_kunde):
@@ -97,7 +101,7 @@ async def test_abschlag_und_schluss_sind_normale_buchungen(client, make_mandant,
     abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="30")
     schluss = await _versenden(client, h, (await _ok(await _aus_angebot(client, h, angebot["id"], "schluss")))["id"])
     zeilen = await _datev(client, h)
-    assert _spalten(zeilen, 0, 1, 4, 7) == [
+    assert _spalten(zeilen, UMSATZ, SH, GEGENKONTO, BELEG1) == [
         ("535,50", "S", "8400", abschlag["rechnungsnummer"]),
         ("1249,50", "S", "8400", schluss["rechnungsnummer"]),
     ]
@@ -130,9 +134,9 @@ async def test_schluss_mit_negativer_steuergruppe_wird_haben(client, make_mandan
     )
     await _ok(await client.post(f"/api/rechnungen/{schluss['id']}/abschlaege-anrechnen", headers=h), 200)
     await _versenden(client, h, schluss["id"])
-    zeilen = [z for z in await _datev(client, h) if z[7] == schluss["rechnungsnummer"]]
+    zeilen = [z for z in await _datev(client, h) if z[BELEG1] == schluss["rechnungsnummer"]]
     # 19 %: 1190 Soll; 7 %: (200 - 300) netto -> -107 brutto -> 107 Haben.
-    assert _spalten(zeilen, 0, 1, 4) == [("1190,00", "S", "8400"), ("107,00", "H", "8300")]
+    assert _spalten(zeilen, UMSATZ, SH, GEGENKONTO) == [("1190,00", "S", "8400"), ("107,00", "H", "8300")]
 
 
 async def test_ust_va_summen_mit_storno_und_gutschrift(client, make_mandant, make_user, make_kunde):

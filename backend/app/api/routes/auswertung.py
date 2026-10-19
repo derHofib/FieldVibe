@@ -11,6 +11,7 @@ from app.services.auswertung_service import (
     offene_posten_bericht,
     ust_va_bericht,
 )
+from app.services.datev_service import DatevKonfigurationFehler
 from app.services.zuweisung_service import erlaubte_kunde_ids
 
 
@@ -69,5 +70,5 @@ async def get_datev_export(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
     try:
         return await datev_export_csv(session, auth.mandant_id, von, bis)
-    except KontoNichtKonfiguriert as exc:
+    except (KontoNichtKonfiguriert, DatevKonfigurationFehler) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc

@@ -1,6 +1,3 @@
-import csv
-import io
-import zlib
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
@@ -22,50 +19,25 @@ from app.schemas.auswertung import (
     UstVaKategorieZeile,
     UstVaSatzZeile,
 )
-from app.services import eingangsrechnung_service, rechnung_service, steuer_service
+from app.services import datev_service, eingangsrechnung_service, rechnung_service, steuer_service
 
 _CENT = Decimal("0.01")
 
-# SKR03-orientierte Standard-Kontenrahmen fuer den DATEV-Export -- ein
-# Startpunkt, kein zertifizierter Buchungsvorschlag. Ein Steuerberater muss
-# vor dem ersten echten Import pruefen, ob die Konten/BU-Schluessel zum
-# tatsaechlich verwendeten Kontenrahmen des Mandanten passen. Die Erloeskonten
-# je Steuergruppe sind je Mandant ueberschreibbar (firmendaten.buchhaltung);
-# Defaults gibt es nur fuer das bisherige Verhalten (S/19, S/7, Kleinunternehmer-E).
-_ERLOESKONTO_NACH_SATZ = {Decimal("19.00"): "8400", Decimal("7.00"): "8300"}
+# Standardkonten je Kontenrahmen stehen in datev_service -- ein Startpunkt,
+# kein zertifizierter Buchungsvorschlag. Die Erloeskonten je Steuergruppe sind
+# je Mandant ueberschreibbar (firmendaten.buchhaltung); Defaults gibt es nur
+# fuer S/19, S/7 und Kleinunternehmer-E.
 _ERLOES_BU_SCHLUESSEL = {Decimal("19.00"): "3", Decimal("7.00"): "2"}
-_KLEINUNTERNEHMER_ERLOESKONTO = "8400"
 _UST_VA_BEZEICHNUNG = {
     "AE": "Steuerpflichtige Umsätze, Steuerschuldner ist der Leistungsempfänger (§ 13b)",
     "Z": "Umsätze zum Steuersatz 0 % (§ 12 Abs. 3)",
     "E": "Sonstige steuerfreie Umsätze",
-}
-_AUFWANDSKONTO_NACH_KATEGORIE = {
-    "wareneinkauf": "3200",
-    "betriebskosten": "4900",
-    "miete": "4210",
-    "personal": "4120",
-    "fahrzeug": "4530",
-    "versicherung": "4360",
-    "sonstiges": "4900",
 }
 _VORSTEUER_BU_SCHLUESSEL = {Decimal("19.00"): "9", Decimal("7.00"): "8"}
 
 
 def _tagesbeginn_utc(tag: date) -> datetime:
     return datetime.combine(tag, time.min, tzinfo=timezone.utc)
-
-
-def _debitorenkonto(kunde_id: UUID) -> str:
-    """Kein Kontenrahmen im System hinterlegt -- die Kontonummer wird
-    stabil aus der Kunden-ID abgeleitet (gleicher Kunde = gleiches Konto
-    ueber mehrere Exporte hinweg), im ueblichen Debitoren-Nummernkreis."""
-    return str(10000 + (zlib.crc32(kunde_id.bytes) % 9000))
-
-
-def _kreditorenkonto(lieferant_id: UUID | None, lieferant_name: str) -> str:
-    schluessel = lieferant_id.bytes if lieferant_id else lieferant_name.encode("utf-8")
-    return str(70000 + (zlib.crc32(schluessel) % 9000))
 
 
 class KontoNichtKonfiguriert(Exception):
@@ -90,17 +62,23 @@ def _ist_kleinunternehmer_gruppe(mandant: Mandant, gruppe: steuer_service.Steuer
     )
 
 
-def _erloeskonto(mandant: Mandant, gruppe: steuer_service.SteuerGruppe) -> tuple[str, str]:
+def _erloeskonto(
+    mandant: Mandant, gruppe: steuer_service.SteuerGruppe, stammdaten: datev_service.DatevStammdaten
+) -> tuple[str, str]:
     """(Konto, BU-Schluessel) einer Steuergruppe aus firmendaten.buchhaltung,
-    sonst der Default des bisherigen Verhaltens."""
+    sonst der Default des Kontenrahmens."""
     schluessel = f"{gruppe.kategorie}:{gruppe.satz:f}"
     eintrag = ((mandant.firmendaten or {}).get("buchhaltung") or {}).get("erloeskonten", {}).get(schluessel)
+    standard = datev_service.ERLOESKONTO_NACH_SATZ[stammdaten.kontenrahmen]
     if eintrag and eintrag.get("konto"):
-        return str(eintrag["konto"]), str(eintrag.get("bu") or "")
+        konto = datev_service.sachkonto(str(eintrag["konto"]), stammdaten, bezeichnung=f"Erlöskonto {schluessel}")
+        return konto, str(eintrag.get("bu") or "")
     if gruppe.kategorie == "S":
-        return _ERLOESKONTO_NACH_SATZ.get(gruppe.satz, "8400"), _ERLOES_BU_SCHLUESSEL.get(gruppe.satz, "")
+        konto4 = standard.get(f"{gruppe.satz:f}", standard["19.00"])
+        return datev_service.standardkonto(konto4, stammdaten), _ERLOES_BU_SCHLUESSEL.get(gruppe.satz, "")
     if _ist_kleinunternehmer_gruppe(mandant, gruppe):
-        return _KLEINUNTERNEHMER_ERLOESKONTO, ""
+        konto4 = datev_service.KLEINUNTERNEHMER_ERLOESKONTO[stammdaten.kontenrahmen]
+        return datev_service.standardkonto(konto4, stammdaten), ""
     raise KontoNichtKonfiguriert(gruppe.kategorie, schluessel)
 
 
@@ -273,11 +251,7 @@ async def offene_posten_bericht(session: AsyncSession, mandant_id: UUID, heute: 
     )
 
 
-def _betrag_datev(betrag: Decimal) -> str:
-    """DATEV verlangt Komma statt Punkt als Dezimaltrennzeichen und immer
-    ein positives Vorzeichen -- die Richtung ergibt sich ausschliesslich
-    aus dem Soll/Haben-Kennzeichen, nicht aus dem Vorzeichen des Betrags."""
-    return f"{abs(betrag):.2f}".replace(".", ",")
+
 
 
 def _soll_haben_ausgang(brutto: Decimal) -> str:
@@ -289,10 +263,15 @@ def _soll_haben_ausgang(brutto: Decimal) -> str:
 
 
 async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, bis: date) -> Response:
-    """Buchungsstapel-CSV im DATEV-EXTF-Format (siehe Modul-Docstring-
-    Kommentare zu den Kontenrahmen-Annahmen). Nur als Ausgangspunkt fuer
-    den Steuerberater gedacht -- vor dem ersten echten Import unbedingt
-    gegen den tatsaechlichen Kontenrahmen des Mandanten pruefen."""
+    """Buchungsstapel im DATEV-EXTF-Format (Details und offene Annahmen:
+    docs/konzepte/DATEV.md). Nur als Ausgangspunkt fuer den Steuerberater
+    gedacht -- vor dem ersten echten Import unbedingt gegen den tatsaechlichen
+    Kontenrahmen des Mandanten pruefen."""
+    mandant = await session.get(Mandant, mandant_id)
+    # Zuerst, damit ein unvollstaendig eingerichteter Mandant nicht erst nach
+    # dem Laden aller Belege (und der Kontenvergabe) scheitert.
+    stammdaten = datev_service.stammdaten_lesen(mandant)
+
     ausgang_stmt = select(Rechnung).where(
         Rechnung.mandant_id == mandant_id,
         Rechnung.versendet_am.isnot(None),
@@ -309,76 +288,78 @@ async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, b
     ).order_by(Eingangsrechnung.rechnungsdatum)
     eingangsrechnungen = (await session.execute(eingang_stmt)).scalars().all()
 
-    mandant = await session.get(Mandant, mandant_id)
-    zeilen: list[list[str]] = []
+    # Papierkorb-Kunden/-Lieferanten bewusst eingeschlossen: ihre Belege stehen
+    # weiter im Export und brauchen ihr Konto.
+    kunden_ids = {r.kunde_id for r in ausgangsrechnungen}
+    kunden = {
+        k.id: k
+        for k in (
+            await session.execute(select(Kunde).where(Kunde.mandant_id == mandant_id, Kunde.id.in_(kunden_ids)))
+        ).scalars()
+    }
+    await datev_service.debitorenkonten_vergeben(session, mandant_id, list(kunden.values()), stammdaten.sachkontenlaenge)
+
+    lieferant_ids = {e.lieferant_id for e in eingangsrechnungen if e.lieferant_id}
+    lieferanten = {
+        li.id: li
+        for li in (
+            await session.execute(
+                select(Lieferant).where(Lieferant.mandant_id == mandant_id, Lieferant.id.in_(lieferant_ids))
+            )
+        ).scalars()
+    }
+    await datev_service.kreditorenkonten_vergeben(
+        session, mandant_id, list(lieferanten.values()), stammdaten.sachkontenlaenge
+    )
+
+    aufwandskonten = datev_service.AUFWANDSKONTO_NACH_KATEGORIE[stammdaten.kontenrahmen]
+    buchungen: list[datev_service.Buchung] = []
     for rechnung in ausgangsrechnungen:
-        kunde = await session.get(Kunde, rechnung.kunde_id)
+        kunde = kunden.get(rechnung.kunde_id)
         positionen = await rechnung_service.positionen_fuer(session, rechnung.id)
         # Eine Buchungszeile je Steuergruppe: Erloeskonto und BU-Schluessel
         # kommen aus der Mandantenkonfiguration bzw. den Defaults (_erloeskonto).
         # Einzelsatz-Belege ergeben wie bisher genau eine Zeile.
         for gruppe in steuer_service.steuer_gruppen(rechnung, positionen):
-            konto, bu_schluessel = _erloeskonto(mandant, gruppe)
-            zeilen.append(
-                [
-                    _betrag_datev(gruppe.brutto),
-                    _soll_haben_ausgang(gruppe.brutto),
-                    "EUR",
-                    _debitorenkonto(rechnung.kunde_id),
-                    konto,
-                    bu_schluessel,
-                    rechnung.versendet_am.strftime("%d%m"),
-                    rechnung.rechnungsnummer,
-                    "",
-                    f"{'Gutschrift' if rechnung.rechnungsart == 'gutschrift' else 'Rechnung'} "
-                    f"{rechnung.rechnungsnummer} {kunde.name if kunde else ''}".strip(),
-                ]
+            konto, bu_schluessel = _erloeskonto(mandant, gruppe, stammdaten)
+            buchungen.append(
+                datev_service.Buchung(
+                    betrag=datev_service.betrag(gruppe.brutto),
+                    soll_haben=_soll_haben_ausgang(gruppe.brutto),
+                    konto=kunde.debitorenkonto,
+                    gegenkonto=konto,
+                    bu_schluessel=bu_schluessel,
+                    belegdatum=rechnung.versendet_am.date(),
+                    belegfeld1=rechnung.rechnungsnummer,
+                    buchungstext=f"{'Gutschrift' if rechnung.rechnungsart == 'gutschrift' else 'Rechnung'} "
+                    f"{rechnung.rechnungsnummer} {kunde.name}",
+                )
             )
+    sammelkonto = datev_service.kreditoren_sammelkonto(stammdaten.sachkontenlaenge)
     for eingangsrechnung in eingangsrechnungen:
         positionen = await eingangsrechnung_service.positionen_fuer(session, eingangsrechnung.id)
         netto = eingangsrechnung_service.netto_betrag(eingangsrechnung, positionen)
         brutto = (netto + netto * eingangsrechnung.mwst_satz / Decimal("100")).quantize(_CENT)
-        zeilen.append(
-            [
-                _betrag_datev(brutto),
-                "S",
-                "EUR",
-                _AUFWANDSKONTO_NACH_KATEGORIE.get(eingangsrechnung.kategorie or "sonstiges", "4900"),
-                _kreditorenkonto(eingangsrechnung.lieferant_id, eingangsrechnung.lieferant_name),
-                _VORSTEUER_BU_SCHLUESSEL.get(eingangsrechnung.mwst_satz, ""),
-                eingangsrechnung.rechnungsdatum.strftime("%d%m"),
-                eingangsrechnung.rechnungsnummer_lieferant,
-                "",
-                f"Eingangsrechnung {eingangsrechnung.rechnungsnummer_lieferant} {eingangsrechnung.lieferant_name}".strip(),
-            ]
+        lieferant = lieferanten.get(eingangsrechnung.lieferant_id)
+        aufwandskonto = aufwandskonten.get(eingangsrechnung.kategorie or "sonstiges", aufwandskonten["sonstiges"])
+        buchungen.append(
+            datev_service.Buchung(
+                betrag=datev_service.betrag(brutto),
+                soll_haben="S",
+                konto=datev_service.standardkonto(aufwandskonto, stammdaten),
+                gegenkonto=lieferant.kreditorenkonto if lieferant else sammelkonto,
+                bu_schluessel=_VORSTEUER_BU_SCHLUESSEL.get(eingangsrechnung.mwst_satz, ""),
+                belegdatum=eingangsrechnung.rechnungsdatum,
+                belegfeld1=eingangsrechnung.rechnungsnummer_lieferant,
+                buchungstext=f"Eingangsrechnung {eingangsrechnung.rechnungsnummer_lieferant} "
+                f"{eingangsrechnung.lieferant_name}",
+            )
         )
 
-    jetzt = datetime.now(timezone.utc)
-    header_zeile = [
-        "EXTF", "510", "21", "Buchungsstapel", "7",
-        jetzt.strftime("%Y%m%d%H%M%S%f")[:-3],
-        "", "", "", "",
-        "1001", "1",
-        f"{von.year}0101",
-        "4",
-        von.strftime("%Y%m%d"), bis.strftime("%Y%m%d"),
-        "", "", "1", "0", "0", "EUR",
-    ]
-    spalten_header = [
-        "Umsatz (ohne Soll/Haben-Kz)", "Soll/Haben-Kennzeichen", "WKZ Umsatz",
-        "Konto", "Gegenkonto (ohne BU-Schlüssel)", "BU-Schlüssel",
-        "Belegdatum", "Belegfeld 1", "Belegfeld 2", "Buchungstext",
-    ]
-
-    buffer = io.StringIO()
-    writer = csv.writer(buffer, delimiter=";", quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(header_zeile)
-    writer.writerow(spalten_header)
-    writer.writerows(zeilen)
-
+    inhalt = datev_service.csv_bytes(stammdaten, von, bis, datetime.now(timezone.utc), buchungen)
     return Response(
-        content=buffer.getvalue().encode("utf-8"),
-        media_type="text/csv",
+        content=inhalt,
+        media_type="text/csv; charset=windows-1252",
         headers={
             "Content-Disposition": f'attachment; filename="EXTF_Buchungsstapel_{von.isoformat()}_{bis.isoformat()}.csv"'
         },

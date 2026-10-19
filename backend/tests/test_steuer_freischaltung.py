@@ -17,6 +17,7 @@ from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
 from app.services import e_invoice_service, steuer_service
 from tests.conftest import auth_headers, login
+from tests.datev_helfer import STAMMDATEN, buchhaltung, stammdaten_setzen
 from tests.test_steuer_je_position import (
     _KU_HINWEIS,
     _admin,
@@ -782,6 +783,7 @@ async def test_pdf_enthaelt_hinweise_und_reverse_charge_vermerk(client, make_man
 
 _KONTEN = {
     "buchhaltung": {
+        **STAMMDATEN,
         "erloeskonten": {
             "Z:0.00": {"konto": "8101", "bu": "11"},
             "E:0.00": {"konto": "8102", "bu": ""},
@@ -807,6 +809,7 @@ def _datev_zeilen(antwort):
 async def test_datev_konten_je_gruppe_aus_konfiguration(client, make_mandant, make_user, make_kunde):
     token, kunde = await _admin13b(client, make_mandant, make_user, make_kunde)
     await _gemischt_versendet(client, token, kunde)
+    await stammdaten_setzen(client, auth_headers(token))
     ohne = await client.get("/api/auswertung/datev-export?von=2020-01-01&bis=2030-12-31", headers=auth_headers(token))
     assert ohne.status_code == 422
     assert "Für Steuerkategorie Z ist kein Erlöskonto hinterlegt – bitte unter Firmendaten ➝ Buchhaltung eintragen" in ohne.json()["detail"]
@@ -815,7 +818,7 @@ async def test_datev_konten_je_gruppe_aus_konfiguration(client, make_mandant, ma
     teil = await client.patch(
         "/api/mandant/einstellungen",
         headers=auth_headers(token),
-        json={"firmendaten": {"buchhaltung": {"erloeskonten": {"Z:0.00": {"konto": "8101", "bu": "11"}}}}},
+        json={"firmendaten": buchhaltung(erloeskonten={"Z:0.00": {"konto": "8101", "bu": "11"}})},
     )
     assert teil.status_code == 200
     noch_ohne = await client.get("/api/auswertung/datev-export?von=2020-01-01&bis=2030-12-31", headers=auth_headers(token))
@@ -829,7 +832,7 @@ async def test_datev_konten_je_gruppe_aus_konfiguration(client, make_mandant, ma
     export = await client.get("/api/auswertung/datev-export?von=2020-01-01&bis=2030-12-31", headers=auth_headers(token))
     assert export.status_code == 200
     # Defaults S/19 und S/7 unveraendert, Z/E/AE aus der Konfiguration (Reihenfolge S, Z, E, AE)
-    assert [(z[0], z[4], z[5]) for z in _datev_zeilen(export)] == [
+    assert [(z[0], z[7], z[8]) for z in _datev_zeilen(export)] == [
         ("119,00", "8400", "3"),
         ("53,50", "8300", "2"),
         ("200,00", "8101", "11"),
@@ -841,11 +844,12 @@ async def test_datev_konten_je_gruppe_aus_konfiguration(client, make_mandant, ma
 @pytest.mark.asyncio
 async def test_datev_ohne_nullsteuer_belege_braucht_keine_konfiguration(client, make_mandant, make_user, make_kunde):
     token, kunde = await _admin(client, make_mandant, make_user, make_kunde)
+    await stammdaten_setzen(client, auth_headers(token))
     rechnung = await _rechnung(client, token, kunde, [_POS_S])
     await _versenden(client, token, rechnung["id"])
     export = await client.get("/api/auswertung/datev-export?von=2020-01-01&bis=2030-12-31", headers=auth_headers(token))
     assert export.status_code == 200
-    assert [(z[0], z[4], z[5]) for z in _datev_zeilen(export)] == [("119,00", "8400", "3")]
+    assert [(z[0], z[7], z[8]) for z in _datev_zeilen(export)] == [("119,00", "8400", "3")]
 
 
 @pytest.mark.asyncio
@@ -854,20 +858,21 @@ async def test_datev_kleinunternehmer_default_und_konfiguration(client, make_man
         client, make_mandant, make_user, make_kunde,
         firmendaten={"ist_kleinunternehmer": True, "steuernummer": "12/345/67890"},
     )
+    await stammdaten_setzen(client, auth_headers(token))
     rechnung = await _rechnung(client, token, kunde, [_POS_S, _POS_Z])
     await _versenden(client, token, rechnung["id"])
     export = await client.get("/api/auswertung/datev-export?von=2020-01-01&bis=2030-12-31", headers=auth_headers(token))
     assert export.status_code == 200
-    assert [(z[0], z[4], z[5]) for z in _datev_zeilen(export)] == [("300,00", "8400", "")]
+    assert [(z[0], z[7], z[8]) for z in _datev_zeilen(export)] == [("300,00", "8400", "")]
 
     # Ein hinterlegter Eintrag gewinnt auch beim Kleinunternehmer
     await client.patch(
         "/api/mandant/einstellungen",
         headers=auth_headers(token),
-        json={"firmendaten": {"buchhaltung": {"erloeskonten": {"E:0.00": {"konto": "8195", "bu": ""}}}}},
+        json={"firmendaten": buchhaltung(erloeskonten={"E:0.00": {"konto": "8195", "bu": ""}})},
     )
     export = await client.get("/api/auswertung/datev-export?von=2020-01-01&bis=2030-12-31", headers=auth_headers(token))
-    assert [(z[4]) for z in _datev_zeilen(export)] == ["8195"]
+    assert [(z[7]) for z in _datev_zeilen(export)] == ["8195"]
 
 
 @pytest.mark.asyncio
