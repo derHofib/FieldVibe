@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, FileText, Inbox, Paperclip } from "lucide-react";
+import { Check, FileCode, FileText, Inbox, Paperclip } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
+import { StatusPille } from "../../components/apple/StatusPille";
+import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { useAuth } from "../../context/AuthContext";
 import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
+import { eRechnungSyntaxLabel, hinweisZeilen } from "../../utils/eRechnung";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -24,6 +27,22 @@ const KATEGORIE_LABEL: Record<EingangsrechnungKategorie, string> = {
   versicherung: "Versicherung",
   sonstiges: "Sonstiges",
 };
+
+/** Hinweise aus dem Import (mehrere Steuersätze, Reverse Charge, Summenabweichung, ...):
+ * Vorsteuer-relevant, daher auffällig und nicht wegklickbar. */
+function ImportHinweise({ hinweis }: { hinweis: string | null }) {
+  const zeilen = hinweisZeilen(hinweis);
+  if (zeilen.length === 0) return null;
+  return (
+    <Hinweiskasten ton="warnung" titel="Hinweise zum Import – bitte prüfen">
+      <ul className="list-disc space-y-0.5 pl-4">
+        {zeilen.map((z) => (
+          <li key={z}>{z}</li>
+        ))}
+      </ul>
+    </Hinweiskasten>
+  );
+}
 
 function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingangsrechnung }) {
   const navigate = useNavigate();
@@ -84,6 +103,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
         {eingangsrechnung.email_betreff && ` · "${eingangsrechnung.email_betreff}"`} -- bitte Angaben gegen den
         Beleg prüfen und bestätigen.
       </div>
+      <ImportHinweise hinweis={eingangsrechnung.import_hinweis} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card-ap p-2">
@@ -247,6 +267,13 @@ export function EingangsrechnungDetailPage() {
     },
   });
 
+  const xmlAnzeigenMutation = useMutation({
+    mutationFn: () => eingangsrechnungenApi.xmlUrl(id!),
+    onSuccess: (res) => {
+      if (res.url) window.open(res.url, "_blank");
+    },
+  });
+
   const addZahlungMutation = useMutation({
     mutationFn: () => eingangsrechnungenApi.addZahlung(id!, { betrag: zahlungBetrag }),
     onSuccess: () => {
@@ -261,6 +288,8 @@ export function EingangsrechnungDetailPage() {
   if (eingangsrechnung.status === "entwurf") {
     return <EntwurfBestaetigenView eingangsrechnung={eingangsrechnung} />;
   }
+
+  const syntaxLabel = eRechnungSyntaxLabel(eingangsrechnung.e_rechnung_syntax);
 
   return (
     <div className="space-y-4">
@@ -283,6 +312,8 @@ export function EingangsrechnungDetailPage() {
         )}
       </div>
 
+      <ImportHinweise hinweis={eingangsrechnung.import_hinweis} />
+
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
@@ -297,6 +328,11 @@ export function EingangsrechnungDetailPage() {
             {STATUS_LABEL[eingangsrechnung.status]}
           </span>
         </div>
+        {syntaxLabel && (
+          <div className="mt-2">
+            <StatusPille status="neu" label={`E-Rechnung · ${syntaxLabel}`} />
+          </div>
+        )}
         <p className="mt-1 text-xs text-label2">
           Rechnungsdatum {new Date(eingangsrechnung.rechnungsdatum).toLocaleDateString("de-DE")}
         </p>
@@ -311,7 +347,7 @@ export function EingangsrechnungDetailPage() {
           </p>
         )}
         {eingangsrechnung.notiz && (
-          <p className="mt-2 text-sm text-label">{eingangsrechnung.notiz}</p>
+          <p className="mt-2 whitespace-pre-line text-sm text-label">{eingangsrechnung.notiz}</p>
         )}
         {eingangsrechnung.skonto_prozent && eingangsrechnung.skonto_frist && (
           <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-400">
@@ -335,6 +371,26 @@ export function EingangsrechnungDetailPage() {
 
       <div className="card-ap p-4">
         <h2 className="mb-2 text-sm font-semibold text-label2">Beleg</h2>
+        {eingangsrechnung.hat_xml && (
+          <div className="mb-3 space-y-1.5">
+            <button
+              onClick={() => xmlAnzeigenMutation.mutate()}
+              disabled={xmlAnzeigenMutation.isPending}
+              className="btn-touch flex w-full items-center justify-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50"
+            >
+              <FileCode size={14} strokeWidth={2} aria-hidden="true" /> Original-XML herunterladen
+            </button>
+            <p className="text-xs text-label2">
+              Die XML ist der Beleg und wird unverändert aufbewahrt.
+              {eingangsrechnung.xml_sha256 && (
+                <>
+                  {" "}
+                  Prüfsumme (SHA-256): <span className="break-all font-mono">{eingangsrechnung.xml_sha256}</span>
+                </>
+              )}
+            </p>
+          </div>
+        )}
         {eingangsrechnung.beleg_object_key ? (
           <div className="flex gap-2">
             <button
@@ -344,7 +400,7 @@ export function EingangsrechnungDetailPage() {
             >
               <FileText size={14} strokeWidth={2} /> Beleg anzeigen
             </button>
-            {eingangsrechnung.status === "offen" && (
+            {eingangsrechnung.status === "offen" && !eingangsrechnung.hat_xml && (
               <button
                 onClick={() => belegRemoveMutation.mutate()}
                 disabled={belegRemoveMutation.isPending}
@@ -354,7 +410,7 @@ export function EingangsrechnungDetailPage() {
               </button>
             )}
           </div>
-        ) : (
+        ) : eingangsrechnung.hat_xml ? null : (
           <div>
             <input
               ref={fileInputRef}
@@ -459,7 +515,8 @@ export function EingangsrechnungDetailPage() {
       <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Zahlungen</h2>
-          {eingangsrechnung.status === "offen" && (
+          {/* Gutschriften (negativer Betrag) lassen keine Zahlung zu -- das Backend lehnt sie ab. */}
+          {eingangsrechnung.status === "offen" && Number(eingangsrechnung.offener_betrag) > 0 && (
             <button
               onClick={() => {
                 setZahlungBetrag(eingangsrechnung.offener_betrag);

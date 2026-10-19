@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { FileUp } from "lucide-react";
+import { useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
+import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { useAuth } from "../../context/AuthContext";
+import { pruefeERechnungDatei } from "../../utils/eRechnung";
 import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 
@@ -48,6 +51,8 @@ export function RechnungseingangPage() {
     skontoTage: "",
   });
   const [fehler, setFehler] = useState<string | null>(null);
+  const [importFehler, setImportFehler] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const { data: eingangsrechnungen } = useQuery({
     queryKey: ["eingangsrechnungen", statusFilter],
@@ -93,21 +98,67 @@ export function RechnungseingangPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Anlegen fehlgeschlagen"),
   });
 
+  const eRechnungMutation = useMutation({
+    mutationFn: (file: File) => eingangsrechnungenApi.eRechnungImport(file),
+    onSuccess: (eingangsrechnung) => {
+      setImportFehler(null);
+      queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
+      navigate(`/rechnungseingang/${eingangsrechnung.id}`);
+    },
+    onError: (err) =>
+      setImportFehler(err instanceof ApiError ? err.message : "Import der E-Rechnung fehlgeschlagen"),
+  });
+
+  function eRechnungGewaehlt(datei: File | undefined) {
+    if (importInputRef.current) importInputRef.current.value = "";
+    if (!datei) return;
+    const vorabFehler = pruefeERechnungDatei(datei);
+    if (vorabFehler) {
+      setImportFehler(vorabFehler);
+      return;
+    }
+    setImportFehler(null);
+    eRechnungMutation.mutate(datei);
+  }
+
   if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-bold text-label">Rechnungseingang</h1>
         {kannErstellen && (
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
-          >
-            {showForm ? "Abbrechen" : "+ Neu"}
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xml,.pdf,application/xml,text/xml,application/pdf"
+              className="hidden"
+              onChange={(e) => eRechnungGewaehlt(e.target.files?.[0])}
+            />
+            <button
+              onClick={() => importInputRef.current?.click()}
+              disabled={eRechnungMutation.isPending}
+              className="btn-touch flex items-center gap-1 rounded-md bg-fill px-3 py-1.5 text-sm font-medium text-label disabled:opacity-50"
+            >
+              <FileUp size={14} strokeWidth={2} aria-hidden="true" />
+              {eRechnungMutation.isPending ? "Importiert…" : "E-Rechnung importieren"}
+            </button>
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
+            >
+              {showForm ? "Abbrechen" : "+ Neu"}
+            </button>
+          </div>
         )}
       </div>
+
+      {importFehler && (
+        <Hinweiskasten ton="fehler" titel="E-Rechnung konnte nicht importiert werden">
+          <p className="whitespace-pre-line">{importFehler}</p>
+        </Hinweiskasten>
+      )}
 
       {showForm && (
         <div className="space-y-2 card-ap p-4">
@@ -246,6 +297,8 @@ export function RechnungseingangPage() {
               <div className="text-xs text-label2">
                 {e.rechnungsnummer_lieferant} · {new Date(e.rechnungsdatum).toLocaleDateString("de-DE")}
                 {e.kategorie && ` · ${KATEGORIE_LABEL[e.kategorie]}`}
+                {e.hat_xml && " · E-Rechnung"}
+                {e.import_hinweis && " · Hinweis prüfen"}
               </div>
             </div>
             <div className="text-right">

@@ -1217,6 +1217,10 @@ export interface Eingangsrechnung {
   status: EingangsrechnungStatus;
   bezahlt_am: string | null;
   beleg_object_key: string | null;
+  e_rechnung_syntax: "cii" | "ubl" | null;
+  hat_xml: boolean;
+  xml_sha256: string | null;
+  import_hinweis: string | null;
   notiz: string | null;
   erstellt_von: string | null;
   email_absender: string | null;

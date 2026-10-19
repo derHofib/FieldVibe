@@ -1557,6 +1557,12 @@ export const eingangsrechnungenApi = {
     return apiFetchForm<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/beleg`, formData);
   },
   belegUrl: (id: string) => apiFetch<EingangsrechnungBelegUrl>(`/api/eingangsrechnungen/${id}/beleg-url`),
+  eRechnungImport: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiFetchForm<Eingangsrechnung>("/api/eingangsrechnungen/e-rechnung", formData);
+  },
+  xmlUrl: (id: string) => apiFetch<EingangsrechnungBelegUrl>(`/api/eingangsrechnungen/${id}/xml-url`),
   belegRemove: (id: string) =>
     apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}/beleg`, { method: "DELETE" }),
 };
