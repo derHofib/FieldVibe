@@ -138,6 +138,11 @@ def baue_cii_dokument(
     seller_ust_idnr = firmendaten.get("ust_idnr") or firmendaten.get("steuernummer")
     if seller_ust_idnr:
         seller.tax_registrations.add(TaxRegistration(id=("VA" if firmendaten.get("ust_idnr") else "FC", seller_ust_idnr)))
+        if not firmendaten.get("ust_idnr"):
+            # BR-CO-26 verlangt BT-29, BT-30 oder BT-31; eine Steuernummer (BT-32) allein
+            # genuegt nicht. Ohne USt-IdNr. und Handelsregisternummer bleibt als
+            # Verkaeuferkennung (BT-29) nur die Steuernummer.
+            seller.id = seller_ust_idnr
 
     buyer = doc.trade.agreement.buyer
     buyer.name = kunde.name

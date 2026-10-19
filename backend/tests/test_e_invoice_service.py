@@ -164,3 +164,30 @@ def test_waehrung_nur_am_steuerbetrag():
     xml = e_invoice_service.cii_xml_bytes(dokument).decode("utf-8")
     assert '<ram:TaxTotalAmount currencyID="EUR">57.00</ram:TaxTotalAmount>' in xml
     assert "currencyID" not in xml.replace('<ram:TaxTotalAmount currencyID="EUR">', "")
+
+
+def _verkaeufer_ids(xml: bytes) -> list[tuple[str | None, str]]:
+    from lxml import etree
+
+    ns = {"ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"}
+    wurzel = etree.fromstring(xml)
+    verkaeufer = wurzel.xpath("//ram:SellerTradeParty", namespaces=ns)[0]
+    kennung = [(None, e.text) for e in verkaeufer.xpath("ram:ID", namespaces=ns)]
+    steuer = [(e.get("schemeID"), e.text) for e in verkaeufer.xpath("ram:SpecifiedTaxRegistration/ram:ID", namespaces=ns)]
+    return kennung + steuer
+
+
+def test_verkaeufer_nur_mit_steuernummer_bekommt_verkaeuferkennung():
+    # BR-CO-26: BT-29/BT-30/BT-31 muessen vorhanden sein, die Steuernummer (BT-32) zaehlt nicht.
+    mandant = _mandant(ust_idnr=None, steuernummer="12/345/67890", ist_kleinunternehmer=True)
+    dokument = e_invoice_service.baue_cii_dokument(
+        mandant, _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("300.00")
+    )
+    assert _verkaeufer_ids(e_invoice_service.cii_xml_bytes(dokument)) == [(None, "12/345/67890"), ("FC", "12/345/67890")]
+
+
+def test_verkaeufer_mit_ust_idnr_bekommt_keine_zusaetzliche_kennung():
+    dokument = e_invoice_service.baue_cii_dokument(
+        _mandant(steuernummer="12/345/67890"), _rechnung(), _kunde(), [_position()], Decimal("300.00"), Decimal("357.00")
+    )
+    assert _verkaeufer_ids(e_invoice_service.cii_xml_bytes(dokument)) == [("VA", "DE123456789")]
