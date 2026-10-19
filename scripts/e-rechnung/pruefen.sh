@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Prueft CII-E-Rechnungen (Profil EN 16931) gegen die CEN-Geschaeftsregeln
-# (Schematron, kompiliert als XSLT). Je Datei eine Zeile OK bzw. FEHLER, darunter
+# Prueft CII-E-Rechnungen gegen die CEN-Geschaeftsregeln der EN 16931 (Schematron,
+# kompiliert als XSLT); Dokumente mit der XRechnung-CustomizationID zusaetzlich gegen die
+# XRechnung-Regeln (BR-DE-*, siehe pins.sh). Je Datei eine Zeile OK bzw. FEHLER, darunter
 # die verletzten Regeln mit Regel-ID, Meldung und Fundstelle (XPath im Dokument).
 # Warnungen (Flag "warning") werden angezeigt, zaehlen aber nicht als Fehler.
 #
@@ -10,8 +11,8 @@ set -euo pipefail
 #   --svrl <dir>  legt den rohen SVRL-Bericht je Datei dort ab
 # Exit-Code: 0 alle Dateien ohne Fehler, 1 mindestens eine Datei mit Regelverstoss,
 #            2 Aufruf-/Installationsproblem (Werkzeug fehlt: installieren.sh ausfuehren)
-# Geprueft wird NUR EN 16931 -- weder das XRechnung-Profil noch Peppol (siehe
-# docs/konzepte/E_RECHNUNG_PRUEFUNG.md).
+# Nicht geprueft wird Peppol (siehe docs/konzepte/E_RECHNUNG_PRUEFUNG.md); die XRechnung-Regeln
+# sind das Schematron der KoSIT, aber ohne den KoSIT-Validator drumherum (kein XSD-/Berichtslauf).
 
 SKRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SKRIPT_DIR/../.." && pwd)"
@@ -42,6 +43,7 @@ SAXON="$CACHE_DIR/Saxon-HE-$SAXON_VERSION.jar"
 RESOLVER="$CACHE_DIR/xmlresolver-$XMLRESOLVER_VERSION.jar"
 RESOLVER_DATA="$CACHE_DIR/xmlresolver-$XMLRESOLVER_VERSION-data.jar"
 REGELN="$CACHE_DIR/EN16931-CII-validation.xslt"
+XR_REGELN="$CACHE_DIR/XRechnung-CII-validation.xslt"
 for f in "$SAXON" "$RESOLVER" "$RESOLVER_DATA" "$REGELN"; do
   if [[ ! -f "$f" ]]; then
     fehler "Pruefwerkzeug nicht installiert ($f fehlt) -- zuerst scripts/e-rechnung/installieren.sh ausfuehren"
@@ -68,17 +70,33 @@ for datei in "${DATEIEN[@]}"; do
     GESAMT_FEHLER=1
     continue
   fi
-  svrl="$ARBEIT/bericht.svrl"
-  if ! saxon -s:"$datei" -xsl:"$REGELN" -o:"$svrl" 2>"$ARBEIT/saxon.err"; then
-    echo "FEHLER  $name  (XML nicht verarbeitbar)"
-    grep -v '^Picked up JAVA_TOOL_OPTIONS' "$ARBEIT/saxon.err" | sed 's/^/  /' || true
-    GESAMT_FEHLER=1
-    continue
+  regelsaetze=("$REGELN")
+  # Die XRechnung-Regeln gelten nur fuer Dokumente, die sich als XRechnung ausgeben.
+  if grep -q 'urn:xoev-de:kosit:standard:xrechnung' "$datei"; then
+    if [[ ! -f "$XR_REGELN" ]]; then
+      fehler "XRechnung-Regeln nicht installiert ($XR_REGELN fehlt) -- zuerst scripts/e-rechnung/installieren.sh ausfuehren"
+      exit 2
+    fi
+    regelsaetze+=("$XR_REGELN")
   fi
-  if [[ -n "$SVRL_DIR" ]]; then
-    cp "$svrl" "$SVRL_DIR/${name%.xml}.svrl"
-  fi
-  saxon -s:"$svrl" -xsl:"$SKRIPT_DIR/svrl-auswertung.xsl" -o:"$ARBEIT/auswertung.txt" 2>/dev/null
+  : >"$ARBEIT/auswertung.txt"
+  verarbeitbar=1
+  for regeln in "${regelsaetze[@]}"; do
+    svrl="$ARBEIT/bericht.svrl"
+    if ! saxon -s:"$datei" -xsl:"$regeln" -o:"$svrl" 2>"$ARBEIT/saxon.err"; then
+      echo "FEHLER  $name  (XML nicht verarbeitbar)"
+      grep -v '^Picked up JAVA_TOOL_OPTIONS' "$ARBEIT/saxon.err" | sed 's/^/  /' || true
+      GESAMT_FEHLER=1
+      verarbeitbar=0
+      break
+    fi
+    if [[ -n "$SVRL_DIR" ]]; then
+      cp "$svrl" "$SVRL_DIR/${name%.xml}$([[ "$regeln" == "$XR_REGELN" ]] && echo -xrechnung || true).svrl"
+    fi
+    saxon -s:"$svrl" -xsl:"$SKRIPT_DIR/svrl-auswertung.xsl" -o:"$ARBEIT/teil.txt" 2>/dev/null
+    cat "$ARBEIT/teil.txt" >>"$ARBEIT/auswertung.txt"
+  done
+  [[ "$verarbeitbar" -eq 1 ]] || continue
 
   fehler_zeilen="$(grep -c '^FEHLER'$'\t' "$ARBEIT/auswertung.txt" || true)"
   if [[ "$fehler_zeilen" -eq 0 ]]; then

@@ -9,7 +9,7 @@ set -euo pipefail
 #
 # Usage: scripts/e-rechnung/installieren.sh
 # Cache: EN16931_CACHE_DIR (Standard: .cache/e-rechnung im Repo)
-# Benoetigt: java (>= 11), curl, git, sha256sum bzw. shasum
+# Benoetigt: java (>= 11), curl, git, unzip, sha256sum bzw. shasum
 
 SKRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SKRIPT_DIR/../.." && pwd)"
@@ -33,7 +33,7 @@ pruefsumme_ok() { # <datei> <erwartet>
   [[ -f "$1" && "$(sha256_von "$1")" == "$2" ]]
 }
 
-for werkzeug in java curl git; do
+for werkzeug in java curl git unzip; do
   command -v "$werkzeug" >/dev/null 2>&1 || { fehler "$werkzeug nicht gefunden"; exit 1; }
 done
 
@@ -85,7 +85,43 @@ else
   mv "$ARBEIT/regeln.xslt" "$XSLT_ZIEL"
 fi
 
+# XRechnung-Regeln: Schematron-Quellen vom gepinnten Commit, mit SchXslt zu XSLT kompiliert.
+XR_XSLT_ZIEL="$CACHE_DIR/XRechnung-CII-validation.xslt"
+XR_MARKER="$CACHE_DIR/.xrechnung-stand"
+XR_STAND="$XRECHNUNG_COMMIT:$SCHXSLT_VERSION"
+herunterladen "$MAVEN/name/dmaus/schxslt/schxslt/$SCHXSLT_VERSION/schxslt-$SCHXSLT_VERSION.jar" \
+  "$CACHE_DIR/schxslt-$SCHXSLT_VERSION.jar" "$SCHXSLT_SHA256"
+if [[ -f "$XR_XSLT_ZIEL" && -f "$XR_MARKER" && "$(cat "$XR_MARKER")" == "$XR_STAND" ]]; then
+  echo "vorhanden: $(basename "$XR_XSLT_ZIEL")"
+else
+  echo "lade: $XRECHNUNG_REPO @ $XRECHNUNG_COMMIT"
+  git init -q "$ARBEIT/xrechnung"
+  git -C "$ARBEIT/xrechnung" fetch -q --depth 1 "$XRECHNUNG_REPO" "$XRECHNUNG_COMMIT"
+  if [[ "$(git -C "$ARBEIT/xrechnung" rev-parse FETCH_HEAD)" != "$XRECHNUNG_COMMIT" ]]; then
+    fehler "geholter Commit entspricht nicht dem gepinnten $XRECHNUNG_COMMIT -- abgebrochen"
+    exit 1
+  fi
+  # Die CII-Regeln binden common.sch relativ ein (../common.sch).
+  mkdir -p "$ARBEIT/xr-src/cii" "$ARBEIT/schxslt"
+  git -C "$ARBEIT/xrechnung" show "FETCH_HEAD:$XRECHNUNG_SCH_PFAD" >"$ARBEIT/xr-src/cii/XRechnung-CII-validation.sch"
+  git -C "$ARBEIT/xrechnung" show "FETCH_HEAD:$XRECHNUNG_COMMON_PFAD" >"$ARBEIT/xr-src/common.sch"
+  if ! pruefsumme_ok "$ARBEIT/xr-src/cii/XRechnung-CII-validation.sch" "$XRECHNUNG_SCH_SHA256"; then
+    fehler "Pruefsumme der XRechnung-Regeln weicht ab -- abgebrochen"
+    exit 1
+  fi
+  if ! pruefsumme_ok "$ARBEIT/xr-src/common.sch" "$XRECHNUNG_COMMON_SHA256"; then
+    fehler "Pruefsumme von common.sch weicht ab -- abgebrochen"
+    exit 1
+  fi
+  (cd "$ARBEIT/schxslt" && unzip -q "$CACHE_DIR/schxslt-$SCHXSLT_VERSION.jar" 'xslt/*')
+  java -cp "$CACHE_DIR/Saxon-HE-$SAXON_VERSION.jar:$CACHE_DIR/xmlresolver-$XMLRESOLVER_VERSION.jar:$CACHE_DIR/xmlresolver-$XMLRESOLVER_VERSION-data.jar" \
+    net.sf.saxon.Transform -s:"$ARBEIT/xr-src/cii/XRechnung-CII-validation.sch" \
+    -xsl:"$ARBEIT/schxslt/xslt/2.0/pipeline-for-svrl.xsl" -o:"$ARBEIT/xr.xslt"
+  mv "$ARBEIT/xr.xslt" "$XR_XSLT_ZIEL"
+  printf '%s' "$XR_STAND" >"$XR_MARKER"
+fi
+
 # Marker, an dem pruefen.sh und die pytest-Konformitaetstests die Installation erkennen.
-printf 'saxon-he %s\nxmlresolver %s\nen16931-cii-validation @ %s\n' \
-  "$SAXON_VERSION" "$XMLRESOLVER_VERSION" "$EN16931_COMMIT" >"$CACHE_DIR/installiert.txt"
+printf 'saxon-he %s\nxmlresolver %s\nen16931-cii-validation @ %s\nxrechnung-cii-validation @ %s (schxslt %s)\n' \
+  "$SAXON_VERSION" "$XMLRESOLVER_VERSION" "$EN16931_COMMIT" "$XRECHNUNG_COMMIT" "$SCHXSLT_VERSION" >"$CACHE_DIR/installiert.txt"
 echo "Pruefwerkzeug bereit in $CACHE_DIR"

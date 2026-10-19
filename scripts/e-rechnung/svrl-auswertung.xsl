@@ -13,7 +13,7 @@
       <xsl:text>FEHLER&#9;KEINE-REGEL&#9;Keine Regel angewendet -- kein CII-Dokument (CrossIndustryInvoice)?&#9;/&#10;</xsl:text>
     </xsl:if>
     <xsl:for-each select="svrl:failed-assert | svrl:successful-report">
-      <xsl:value-of select="if (@flag = 'warning') then 'WARNUNG' else 'FEHLER'"/>
+      <xsl:value-of select="if (@flag = ('warning', 'information')) then 'WARNUNG' else 'FEHLER'"/>
       <xsl:text>&#9;</xsl:text>
       <xsl:value-of select="@id"/>
       <xsl:text>&#9;</xsl:text>
