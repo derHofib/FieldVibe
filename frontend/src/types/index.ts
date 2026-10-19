@@ -1457,6 +1457,8 @@ export interface CurrentKunde {
   kunde_name: string;
   name: string;
   email: string;
+  // Mandanten-Kontext fuer die Rechtstext-Links im angemeldeten Portal.
+  portal_slug: string | null;
 }
 
 export interface KundenportalZugang {
@@ -1573,6 +1575,10 @@ export interface MandantFirmendaten {
   // EN16931-Pflichtangaben vorhanden sind -- sonst stiller Fallback auf ein
   // normales PDF (siehe e_invoice_service.pruefe_en16931_vollstaendigkeit).
   e_rechnung_aktiv?: boolean;
+  // Optionale Rechtstext-URLs (http/https): haben auf Login-/Portalseiten
+  // Vorrang vor den Platzhalter-Seiten /impressum und /datenschutz.
+  impressum_url?: string;
+  datenschutz_url?: string;
 }
 
 export interface MandantEinstellungen {
@@ -1596,6 +1602,29 @@ export interface MandantEinstellungen {
 }
 
 export type FahrzeitAbrechnung = "keine" | "zeit" | "km" | "zeit_und_km";
+
+// Oeffentliche Angaben fuer die Platzhalter-Seiten /impressum und
+// /datenschutz (GET /api/public/rechtliches). anbieter=null: kein eindeutiger
+// Mandant (mehrere Mandanten ohne portal_slug).
+export interface RechtlichesAnbieter {
+  name: string;
+  strasse: string | null;
+  plz: string | null;
+  ort: string | null;
+  land: string | null;
+  telefon: string | null;
+  email: string | null;
+  website: string | null;
+  geschaeftsfuehrung: string | null;
+  handelsregister: string | null;
+  ust_idnr: string | null;
+}
+
+export interface Rechtliches {
+  impressum_url: string | null;
+  datenschutz_url: string | null;
+  anbieter: RechtlichesAnbieter | null;
+}
 
 export interface MandantLogoUrl {
   url: string | null;

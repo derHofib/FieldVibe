@@ -6,6 +6,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
+import { istHttpUrl } from "../../utils/rechtliches";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
@@ -26,6 +27,10 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   const [steuernummer, setSteuernummer] = useState(fd.steuernummer ?? "");
   const [istKleinunternehmer, setIstKleinunternehmer] = useState(fd.ist_kleinunternehmer ?? false);
   const [eRechnungAktiv, setERechnungAktiv] = useState(fd.e_rechnung_aktiv ?? false);
+  const [impressumUrl, setImpressumUrl] = useState(fd.impressum_url ?? "");
+  const [datenschutzUrl, setDatenschutzUrl] = useState(fd.datenschutz_url ?? "");
+  const impressumUrlFehlt = impressumUrl.trim() !== "" && !istHttpUrl(impressumUrl);
+  const datenschutzUrlFehlt = datenschutzUrl.trim() !== "" && !istHttpUrl(datenschutzUrl);
 
   const { data: logoUrl } = useQuery({
     queryKey: ["mandant-logo-url"],
@@ -48,6 +53,8 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         steuernummer,
         ist_kleinunternehmer: istKleinunternehmer,
         e_rechnung_aktiv: eRechnungAktiv,
+        impressum_url: impressumUrl.trim(),
+        datenschutz_url: datenschutzUrl.trim(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });
@@ -169,6 +176,54 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         />
       </div>
 
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div>
+          <label htmlFor="firma-impressum-url" className="mb-1 block text-xs font-medium text-label2">
+            Impressum-URL
+          </label>
+          <input
+            id="firma-impressum-url"
+            type="url"
+            inputMode="url"
+            value={impressumUrl}
+            onChange={(e) => setImpressumUrl(e.target.value)}
+            placeholder="https://"
+            aria-invalid={impressumUrlFehlt}
+            aria-describedby="firma-rechtstext-hilfe"
+            className={`w-full ${inputClass}`}
+          />
+          {impressumUrlFehlt && (
+            <p role="alert" className="mt-1 text-xs text-st-fehlt">
+              Bitte eine URL mit http:// oder https:// angeben.
+            </p>
+          )}
+        </div>
+        <div>
+          <label htmlFor="firma-datenschutz-url" className="mb-1 block text-xs font-medium text-label2">
+            Datenschutz-URL
+          </label>
+          <input
+            id="firma-datenschutz-url"
+            type="url"
+            inputMode="url"
+            value={datenschutzUrl}
+            onChange={(e) => setDatenschutzUrl(e.target.value)}
+            placeholder="https://"
+            aria-invalid={datenschutzUrlFehlt}
+            aria-describedby="firma-rechtstext-hilfe"
+            className={`w-full ${inputClass}`}
+          />
+          {datenschutzUrlFehlt && (
+            <p role="alert" className="mt-1 text-xs text-st-fehlt">
+              Bitte eine URL mit http:// oder https:// angeben.
+            </p>
+          )}
+        </div>
+        <p id="firma-rechtstext-hilfe" className="text-xs text-label2 sm:col-span-2">
+          Leer lassen = automatische Platzhalter-Seite mit deinen Firmendaten
+        </p>
+      </div>
+
       <label className="flex items-center gap-2 text-sm text-label">
         <input
           type="checkbox"
@@ -198,7 +253,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
       <div className="flex items-center gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
-          disabled={speichernMutation.isPending}
+          disabled={speichernMutation.isPending || impressumUrlFehlt || datenschutzUrlFehlt}
           className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern

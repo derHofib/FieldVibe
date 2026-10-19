@@ -117,11 +117,14 @@ export function PortalLoginPage() {
             {submitting ? "Anmelden…" : "Anmelden"}
           </button>
 
-          <Link to="/portal/passwort-vergessen" className="mt-4 block text-center text-sm text-label2 hover:text-label">
+          <Link
+            to={slug ? `/portal/passwort-vergessen?portal_slug=${encodeURIComponent(slug)}` : "/portal/passwort-vergessen"}
+            className="mt-4 block text-center text-sm text-label2 hover:text-label"
+          >
             Passwort vergessen?
           </Link>
         </Blueprint>
-        <RechtlicheLinks className="mt-6" />
+        <RechtlicheLinks className="mt-6" portalSlug={slug} />
       </form>
     </div>
   );

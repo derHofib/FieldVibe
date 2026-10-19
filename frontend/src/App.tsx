@@ -14,6 +14,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
+import { DatenschutzPage, ImpressumPage } from "./pages/RechtlichesPage";
 import { RegistrierenPage } from "./pages/RegistrierenPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { UebersichtPage } from "./pages/UebersichtPage";
@@ -117,6 +118,12 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
     <Routes>
       <Route path="/portal/*" element={<KundenPortalApp />} />
       <Route path="/partnerportal/*" element={<PartnerPortalApp />} />
+
+      {/* Oeffentlich fuer alle (angemeldet oder nicht, auch auf dem Office-
+          Host): die Pflichtlinks muessen ueberall erreichbar sein. Spezifischer
+          als der Office-Catch-all /* und der Login-Redirect *. */}
+      <Route path="/impressum" element={<ImpressumPage />} />
+      <Route path="/datenschutz" element={<DatenschutzPage />} />
 
       <Route
         path="/login"

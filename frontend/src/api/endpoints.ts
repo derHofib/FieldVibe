@@ -95,6 +95,7 @@ import type {
   KundeLogoUrl,
   KundeProfil,
   KundenportalLinkInfo,
+  Rechtliches,
   KundenportalZugang,
   Leistungsverzeichnis,
   LeistungsverzeichnisPosition,
@@ -1826,6 +1827,15 @@ export const kundenportalAuthApi = {
       method: "POST",
       body: JSON.stringify({ token, name, password }),
     }),
+};
+
+export const rechtlichesApi = {
+  get: (portalSlug?: string | null) =>
+    apiFetch<Rechtliches>(
+      portalSlug
+        ? `/api/public/rechtliches?portal_slug=${encodeURIComponent(portalSlug)}`
+        : "/api/public/rechtliches",
+    ),
 };
 
 export const mandantEinstellungenApi = {
