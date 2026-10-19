@@ -73,7 +73,7 @@ class Privatkundenhinweise:
 
 
 def _eur(betrag: Decimal) -> str:
-    return f"{betrag:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " EUR"
+    return f"{betrag:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " €"
 
 
 def _arbeitskosten(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Arbeitskosten | None:
