@@ -50,6 +50,12 @@ class Angebot(SoftDeleteMixin, TimestampMixin, Base):
     versendet_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     angenommen_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     abgelehnt_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Vorgang aus der Annahme (neu angelegt oder der bereits verknuepfte);
+    # beim Mangel-Pfad bleibt er leer, siehe Mangel.reparatur_vorgang_id.
+    auftrag_vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vorgaenge.id"), nullable=True
+    )
+    nachgefasst_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AngebotPosition(Base):
