@@ -26,6 +26,12 @@ RECHNUNG_ZAHLUNGSARTEN = ("ueberweisung", "bar", "karte", "lastschrift", "sonsti
 # (Migration 0086) uebereinstimmen. NULL = manuell eingetragene Position.
 RECHNUNG_POSITION_QUELLEN = ("material", "zeit", "fahrzeit", "fahrtkosten", "leistung")
 
+# Steuerkategorien nach EN 16931 / UNTDID 5305: S = Regel-/ermaessigter Satz,
+# Z = 0 % (z. B. PV nach § 12 Abs. 3 UStG), E = steuerbefreit (z. B.
+# Kleinunternehmer § 19), AE = Reverse Charge (§ 13b UStG). Muss mit den
+# CHECK-Constraints aus Migration 0104 uebereinstimmen.
+RECHNUNG_STEUER_KATEGORIEN = ("S", "Z", "E", "AE")
+
 
 class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     __tablename__ = "rechnungen"
@@ -93,6 +99,16 @@ class RechnungPosition(Base):
         CheckConstraint(
             f"quelle IS NULL OR quelle IN {RECHNUNG_POSITION_QUELLEN}", name="ck_rechnung_positionen_quelle_valid"
         ),
+        CheckConstraint(
+            f"steuer_kategorie IN {RECHNUNG_STEUER_KATEGORIEN}",
+            name="ck_rechnung_positionen_steuer_kategorie_valid",
+        ),
+        CheckConstraint(
+            "steuer_kategorie = 'S' OR steuer_satz = 0", name="ck_rechnung_positionen_steuer_satz_zu_kategorie"
+        ),
+        CheckConstraint(
+            "steuer_satz >= 0 AND steuer_satz <= 100", name="ck_rechnung_positionen_steuer_satz_bereich"
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -109,6 +125,11 @@ class RechnungPosition(Base):
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # Steuer je Position (Migration 0104). Kein ORM-Default fuer den Satz:
+    # jede Anlage-Stelle muss ihn bewusst setzen (Vorbelegung aus dem Beleg
+    # siehe steuer_service), sonst entstuende still eine unversteuerte Position.
+    steuer_kategorie: Mapped[str] = mapped_column(Text, nullable=False, default="S", server_default="S")
+    steuer_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
     # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher diese
     # Position stammt -- steuert beim Entfernen, welche Zeiterfassung-
     # Eintraege wieder auf 'gebucht' zurueckgesetzt werden (siehe
