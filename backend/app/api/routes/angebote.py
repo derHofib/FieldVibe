@@ -30,12 +30,20 @@ from app.schemas.angebot import (
     AngebotAusVorgangCreate,
     AngebotCreate,
     AngebotPositionCreate,
+    AngebotPositionenNeuOrdnen,
+    AngebotPositionUpdate,
     AngebotRead,
     AngebotUpdate,
 )
 from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
 from app.services import papierkorb_service
-from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.services.angebot_service import (
+    apply_status_transition,
+    effektiver_mwst_satz,
+    positionen_fuer,
+    positionen_neu_nummerieren,
+    to_read_model,
+)
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_angebotsnummer
 from app.services.pdf_service import generate_angebot_pdf
@@ -151,6 +159,10 @@ async def _validate_kunde_vorgang(
             )
 
 
+async def _standard_mwst_satz(session: AsyncSession, auth: AuthContext) -> Decimal:
+    return effektiver_mwst_satz(await session.get(Mandant, auth.mandant_id), None)
+
+
 def _neue_positionen(angebot_id: UUID, mandant_id: UUID, eintraege: list[AngebotPositionCreate]) -> list[AngebotPosition]:
     return [
         AngebotPosition(
@@ -183,6 +195,7 @@ async def create_angebot(
     session: AsyncSession = Depends(get_db),
 ) -> AngebotRead:
     await _validate_kunde_vorgang(session, auth, body.kunde_id, body.vorgang_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
 
     angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
     angebot = Angebot(
@@ -192,6 +205,7 @@ async def create_angebot(
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=body.gueltig_bis,
+        mwst_satz=effektiver_mwst_satz(mandant, body.mwst_satz),
     )
     session.add(angebot)
     await session.flush()
@@ -258,6 +272,7 @@ async def create_angebot_from_maengel(
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=body.gueltig_bis,
+        mwst_satz=await _standard_mwst_satz(session, auth),
     )
     session.add(angebot)
     await session.flush()
@@ -341,6 +356,7 @@ async def _angebot_aus_bedarfen(
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=gueltig_bis,
+        mwst_satz=await _standard_mwst_satz(session, auth),
     )
     session.add(angebot)
     await session.flush()
@@ -466,6 +482,7 @@ async def create_angebot_from_vorgang(
             angebotsnummer=angebotsnummer,
             erstellt_von=auth.user_id,
             gueltig_bis=body.gueltig_bis,
+            mwst_satz=await _standard_mwst_satz(session, auth),
         )
         session.add(angebot)
         await session.flush()
@@ -515,6 +532,96 @@ async def add_position(
     return await to_read_model(session, angebot)
 
 
+def _nur_im_entwurf(angebot: Angebot) -> None:
+    if angebot.status != "entwurf":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Angebot ist nicht mehr bearbeitbar")
+
+
+async def _position_laden(session: AsyncSession, angebot_id: UUID, position_id: UUID) -> AngebotPosition:
+    position = await session.get(AngebotPosition, position_id)
+    if position is None or position.angebot_id != angebot_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
+    return position
+
+
+@router.post(
+    "/{angebot_id}/positionen/neu-ordnen",
+    response_model=AngebotRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def positionen_neu_ordnen(
+    angebot_id: UUID,
+    body: AngebotPositionenNeuOrdnen,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
+    _nur_im_entwurf(angebot)
+
+    bestehende = {p.id: p for p in await positionen_fuer(session, angebot_id)}
+    if len(body.position_ids) != len(set(body.position_ids)) or set(body.position_ids) != set(bestehende):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Die Liste muss genau die vorhandenen Positionen je einmal enthalten",
+        )
+    for nummer, position_id in enumerate(body.position_ids, start=1):
+        bestehende[position_id].position = nummer
+    await session.flush()
+    return await to_read_model(session, angebot)
+
+
+@router.patch(
+    "/{angebot_id}/positionen/{position_id}",
+    response_model=AngebotRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def update_position(
+    angebot_id: UUID,
+    position_id: UUID,
+    body: AngebotPositionUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
+    _nur_im_entwurf(angebot)
+    position = await _position_laden(session, angebot_id, position_id)
+
+    for feld in body.model_fields_set:
+        setattr(position, feld, getattr(body, feld))
+    await session.flush()
+    return await to_read_model(session, angebot)
+
+
+@router.delete(
+    "/{angebot_id}/positionen/{position_id}",
+    response_model=AngebotRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def delete_position(
+    angebot_id: UUID,
+    position_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
+    _nur_im_entwurf(angebot)
+    position = await _position_laden(session, angebot_id, position_id)
+
+    await session.delete(position)
+    await session.flush()
+    await positionen_neu_nummerieren(session, angebot_id)
+    return await to_read_model(session, angebot)
+
+
 @router.patch(
     "/{angebot_id}",
     response_model=AngebotRead,
@@ -532,7 +639,21 @@ async def update_angebot(
     angebot = await _angebot_laden(session, auth, angebot_id)
 
     if body.gueltig_bis is not None:
+        # Verlaengern ist der Weg, ein abgelaufenes (noch versendetes) Angebot
+        # wieder annehmbar zu machen; nach Annahme/Ablehnung ist es bedeutungslos.
+        if angebot.status not in ("entwurf", "versendet"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Die Gültigkeit kann nur im Entwurf oder bei versendeten Angeboten geändert werden",
+            )
         angebot.gueltig_bis = body.gueltig_bis
+
+    if body.mwst_satz is not None:
+        mandant = await session.get(Mandant, auth.mandant_id)
+        neuer_satz = effektiver_mwst_satz(mandant, body.mwst_satz)
+        if neuer_satz != angebot.mwst_satz:
+            _nur_im_entwurf(angebot)
+            angebot.mwst_satz = neuer_satz
 
     if body.status is not None:
         await apply_status_transition(

@@ -179,6 +179,7 @@ class AngebotPortalRead(BaseModel):
     positionen: list[AngebotPositionPortalRead]
     gesamt_netto: Decimal
     gesamt_brutto: Decimal
+    ist_abgelaufen: bool
 
 
 class RechnungPositionPortalRead(BaseModel):
