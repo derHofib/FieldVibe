@@ -15,6 +15,7 @@ import {
   offenAnzeige,
   offenLabel,
   parseMenge,
+  restMenge,
   rechnungsartVon,
 } from "./rechnungsart";
 
@@ -150,6 +151,13 @@ describe("maxGutschriftMenge", () => {
 
   it("Abzugspositionen sind nie gutschreibbar", () => {
     expect(maxGutschriftMenge(position({ menge: "1.00", abschlag_rechnung_id: "ab1" }))).toBe(0);
+  });
+});
+
+describe("restMenge", () => {
+  it("zählt auch bei Abzugspositionen (für Komplett-Gutschrift)", () => {
+    expect(restMenge(position({ menge: "1.00", abschlag_rechnung_id: "ab1" }))).toBe(1);
+    expect(restMenge(position({ menge: "1.00", bereits_gutgeschrieben: "1.00" }))).toBe(0);
   });
 });
 

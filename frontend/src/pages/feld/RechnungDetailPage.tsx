@@ -1,24 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, ChevronDown, FileText, ListChecks, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { kundenApi, leistungsverzeichnisApi, mandantEinstellungenApi, rechnungenApi } from "../../api/endpoints";
+import {
+  angeboteApi,
+  kundenApi,
+  leistungsverzeichnisApi,
+  mandantEinstellungenApi,
+  rechnungenApi,
+} from "../../api/endpoints";
 import type { RechnungPosition, RechnungPositionQuelle, RechnungPositionVorschlag } from "../../types";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerMeldung, Hinweiskasten } from "../../components/Hinweiskasten";
+import { GutschriftSheet } from "../../components/rechnung/GutschriftSheet";
 import { RechnungSummen } from "../../components/rechnung/RechnungSummen";
 import { SteuerAuswahl } from "../../components/rechnung/SteuerAuswahl";
 import { VorgangHinzufuegen } from "../../components/rechnung/VorgangHinzufuegen";
 import { SearchableSelect } from "../../components/SearchableSelect";
+import { StatusBadge } from "../../components/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { downloadBlob } from "../../utils/download";
-import { heuteIso } from "../../utils/format";
+import { formatEuro, heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import { gruppierePositionen } from "../../utils/rechnungAbrechnung";
+import {
+  RECHNUNGSART_LABEL,
+  RECHNUNGSART_TONE,
+  istAbzugsposition,
+  kannGutschriftErstellen,
+  offenAnzeige,
+  offenLabel,
+  rechnungsartVon,
+} from "../../utils/rechnungsart";
 import {
   optionZuFelder,
   positionZuEingabe,
@@ -172,8 +189,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   const id = idProp ?? idParam;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser } = useAuth();
+  const { currentUser, hatRecht } = useAuth();
   const kannLoeschen = currentUser?.role === "loesch_operativ";
+  const kannAbrechnen = hatRecht("abrechnung", "erstellen");
+  const [gutschriftOffen, setGutschriftOffen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showVorgang, setShowVorgang] = useState(false);
   const [form, setForm] = useState({ beschreibung: "", menge: "1", einheit: "Stk", einzelpreis: "0" });
@@ -228,6 +247,25 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     enabled: !!rechnung?.storniert_rechnung_id,
   });
 
+  const { data: bezugRechnung } = useQuery({
+    queryKey: ["rechnung", rechnung?.bezug_rechnung_id],
+    queryFn: () => rechnungenApi.get(rechnung!.bezug_rechnung_id!),
+    enabled: !!rechnung?.bezug_rechnung_id,
+  });
+  // Abschläge stehen am Angebot; ohne Leserecht dort bleibt der Button
+  // sichtbar und der Server entscheidet (409 mit Klartext).
+  const anrechenbarPruefen =
+    !!rechnung &&
+    rechnung.status === "entwurf" &&
+    !!rechnung.angebot_id &&
+    (rechnungsartVon(rechnung) === "rechnung" || rechnungsartVon(rechnung) === "schluss");
+  const { data: bezugAngebot, isError: bezugAngebotFehler } = useQuery({
+    queryKey: ["angebot", rechnung?.angebot_id],
+    queryFn: () => angeboteApi.get(rechnung!.angebot_id!),
+    enabled: anrechenbarPruefen,
+    retry: false,
+  });
+
   const kleinunternehmer =
     einstellungen?.firmendaten.ist_kleinunternehmer === true ||
     (rechnung?.positionen ?? []).some((p) => p.steuer_grund === "kleinunternehmer_19");
@@ -242,6 +280,15 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     onSuccess: (storno) => {
       queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
       navigate(`/rechnungen/${storno.id}`);
+    },
+  });
+
+  const anrechnenMutation = useMutation({
+    mutationFn: () => rechnungenApi.abschlaegeAnrechnen(id!),
+    onSuccess: (aktualisiert) => {
+      queryClient.setQueryData(["rechnung", id], aktualisiert);
+      queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
+      queryClient.invalidateQueries({ queryKey: ["angebot", aktualisiert.angebot_id] });
     },
   });
 
@@ -336,17 +383,37 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   }
   if (!rechnung) return <p className="text-center text-label2">Lädt…</p>;
 
+  const art = rechnungsartVon(rechnung);
+  const istGutschrift = art === "gutschrift";
+  const angerechneteIds = new Set((rechnung.angerechnete_abschlaege ?? []).map((a) => a.rechnung_id));
+  const hatAnrechenbare =
+    anrechenbarPruefen &&
+    (bezugAngebotFehler ||
+      (!!bezugAngebot &&
+        (!bezugAngebot.schlussrechnung_id || bezugAngebot.schlussrechnung_id === rechnung.id) &&
+        (bezugAngebot.abschlaege ?? []).some((a) => a.status !== "entwurf" && !angerechneteIds.has(a.rechnung_id))));
+  const kannGutschrift = kannAbrechnen && kannGutschriftErstellen(rechnung);
   const { ohneVorgang, gruppen } = gruppierePositionen(rechnung.positionen, rechnung.vorgaenge ?? []);
   const renderPosition = (p: RechnungPosition) => {
     const bearbeitet = steuerBearbeitung?.positionId === p.id ? steuerBearbeitung : null;
+    // Abzugspositionen kommen aus der Anrechnung; der Server lehnt Änderungen ab (409),
+    // nur Entfernen (hebt die Anrechnung auf) ist im Entwurf erlaubt.
+    const abzug = istAbzugsposition(p);
     return (
             <div key={p.id} className="space-y-1.5">
               <div className="flex items-center justify-between rounded-md bg-fill p-2 text-sm">
                 <div>
-                  <div className="text-label">{p.beschreibung}</div>
+                  <div className="text-label">
+                    {abzug && (
+                      <span className="mr-1.5 inline-block rounded-[var(--radius-ap-pill)] bg-fill2 px-2 py-0.5 text-xs font-medium text-label">
+                        Abzug
+                      </span>
+                    )}
+                    {p.beschreibung}
+                  </div>
                   <div className="flex items-center gap-1 text-xs text-label2">
                     {p.menge} {p.einheit} ×{" "}
-                    {rechnung.status === "entwurf" ? (
+                    {rechnung.status === "entwurf" && !abzug ? (
                       <EinzelpreisFeld
                         wert={p.einzelpreis}
                         disabled={updatePositionMutation.isPending}
@@ -360,7 +427,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                     EUR
                   </div>
                   <div className="mt-1">
-                    {rechnung.status === "entwurf" && !kleinunternehmer ? (
+                    {rechnung.status === "entwurf" && !kleinunternehmer && !abzug ? (
                       <button
                         type="button"
                         onClick={() =>
@@ -394,6 +461,9 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       Steuergrund fehlt – vor dem Versand angeben
                     </div>
                   )}
+                  {abzug && rechnung.status === "entwurf" && (
+                    <div className="mt-0.5 text-xs text-label2">Entfernen hebt die Anrechnung auf.</div>
+                  )}
                   {(p.quelle === "zeit" || p.quelle === "fahrzeit") && Number(p.einzelpreis) === 0 && (
                     <div className="mt-0.5 text-xs font-medium text-st-arbeit">
                       {p.quelle === "fahrzeit"
@@ -408,7 +478,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                     <button
                       onClick={() => removePositionMutation.mutate(p.id)}
                       disabled={removePositionMutation.isPending}
-                      title="Position entfernen"
+                      title={abzug ? "Abzug entfernen – Anrechnung wird aufgehoben" : "Position entfernen"}
+                      aria-label={
+                        abzug ? `Abzug entfernen: ${p.beschreibung} – Anrechnung wird aufgehoben` : "Position entfernen"
+                      }
                       className="btn-touch p-1 text-label2 hover:text-st-fehlt disabled:opacity-50"
                     >
                       <X size={14} strokeWidth={2} />
@@ -509,13 +582,37 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">{rechnung.rechnungsnummer}</div>
+            <div className="text-xs text-label2">
+              {art !== "rechnung" && `${RECHNUNGSART_LABEL[art]} `}
+              {rechnung.rechnungsnummer}
+            </div>
             <h1 className="text-lg font-bold text-label">{kunde?.name ?? "…"}</h1>
           </div>
-          <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
-            {RECHNUNG_STATUS_LABEL[rechnung.status]}
-          </span>
+          <div className="flex flex-wrap items-start justify-end gap-1.5">
+            {art !== "rechnung" && <StatusBadge label={RECHNUNGSART_LABEL[art]} tone={RECHNUNGSART_TONE[art]} />}
+            <span className="border border-sep px-2 py-1 text-xs font-semibold text-label">
+              {RECHNUNG_STATUS_LABEL[rechnung.status]}
+            </span>
+          </div>
         </div>
+        {istGutschrift && (
+          <div className="mt-2 space-y-0.5 text-sm">
+            {rechnung.gutschrift_grund && (
+              <p className="text-label">
+                <span className="text-label2">Grund: </span>
+                {rechnung.gutschrift_grund}
+              </p>
+            )}
+            {rechnung.bezug_rechnung_id && (
+              <p className="text-label2">
+                Zu Rechnung{" "}
+                <Link to={`/rechnungen/${rechnung.bezug_rechnung_id}`} className="font-medium text-tint-text">
+                  {bezugRechnung?.rechnungsnummer ?? "anzeigen"}
+                </Link>
+              </p>
+            )}
+          </div>
+        )}
         {rechnung.leistungsdatum && (
           <p className="mt-1 text-xs text-label2">
             Leistungsdatum {new Date(rechnung.leistungsdatum).toLocaleDateString("de-DE")}
@@ -537,7 +634,16 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         <RechnungSummen rechnung={rechnung} />
         {rechnung.status !== "entwurf" && rechnung.status !== "storniert" && (
           <div className="mt-1 text-right text-xs text-label2">
-            Bezahlt: {rechnung.bezahlter_betrag} EUR · Offen: {rechnung.offener_betrag} EUR
+            {istGutschrift ? (
+              <>
+                Guthaben: {offenAnzeige(rechnung.offener_betrag)} EUR
+              </>
+            ) : (
+              <>
+                Bezahlt: {rechnung.bezahlter_betrag} EUR · {offenLabel(rechnung.offener_betrag)}:{" "}
+                {offenAnzeige(rechnung.offener_betrag)} EUR
+              </>
+            )}
           </div>
         )}
 
@@ -561,11 +667,62 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </div>
       </div>
 
+      {art === "schluss" && (rechnung.angerechnete_abschlaege ?? []).length > 0 && (
+        <div className="card-ap p-4">
+          <h2 className="mb-2 text-sm font-semibold text-label2">Angerechnete Abschlagsrechnungen</h2>
+          <ul className="space-y-1.5">
+            {(rechnung.angerechnete_abschlaege ?? []).map((a) => (
+              <li key={a.rechnung_id}>
+                <Link
+                  to={`/rechnungen/${a.rechnung_id}`}
+                  className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-label">{a.rechnungsnummer}</span>
+                    <span className="block text-xs text-label2">vom {new Date(a.datum).toLocaleDateString("de-DE")}</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums font-medium text-label">{formatEuro(a.netto)} netto</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(rechnung.gutschriften ?? []).length > 0 && (
+        <div className="card-ap p-4">
+          <h2 className="mb-2 text-sm font-semibold text-label2">Gutschriften</h2>
+          <ul className="space-y-1.5">
+            {(rechnung.gutschriften ?? []).map((g) => (
+              <li key={g.rechnung_id}>
+                <Link
+                  to={`/rechnungen/${g.rechnung_id}`}
+                  className="btn-touch flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm"
+                >
+                  <span className="truncate font-medium text-label">{g.rechnungsnummer}</span>
+                  <span className="shrink-0 tabular-nums font-medium text-st-fehlt">{formatEuro(g.brutto)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="card-ap p-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Positionen</h2>
           {rechnung.status === "entwurf" && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              {hatAnrechenbare && kannAbrechnen && (
+                <button
+                  type="button"
+                  onClick={() => anrechnenMutation.mutate()}
+                  disabled={anrechnenMutation.isPending}
+                  className="btn-touch text-xs font-medium text-tint-text disabled:opacity-50"
+                >
+                  Abschläge anrechnen
+                </button>
+              )}
               <button
                 onClick={() => setShowVorgang(true)}
                 className="btn-touch text-xs font-medium text-tint-text"
@@ -584,6 +741,19 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             </div>
           )}
         </div>
+
+        {anrechnenMutation.isError && (
+          <div className="mb-2">
+            <FehlerMeldung
+              alsKasten
+              meldung={
+                anrechnenMutation.error instanceof ApiError
+                  ? anrechnenMutation.error.message
+                  : "Abschläge konnten nicht angerechnet werden"
+              }
+            />
+          </div>
+        )}
 
         {rechnung.status === "entwurf" && rechnung.vorgang_id && (
           <PositionsVorschlaege rechnungId={id!} vorgangId={rechnung.vorgang_id} />
@@ -722,9 +892,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         )}
       </div>
 
-      {(rechnung.status === "versendet" ||
-        rechnung.status === "teilweise_bezahlt" ||
-        rechnung.status === "bezahlt") && (
+      {!istGutschrift &&
+        (rechnung.status === "versendet" ||
+          rechnung.status === "teilweise_bezahlt" ||
+          rechnung.status === "bezahlt") && (
         <div className="card-ap p-4">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-label2">Zahlungen</h2>
@@ -863,6 +1034,15 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         />
       )}
 
+      {stornoMutation.isError && (
+        <FehlerMeldung
+          alsKasten
+          meldung={
+            stornoMutation.error instanceof ApiError ? stornoMutation.error.message : "Stornierung fehlgeschlagen"
+          }
+        />
+      )}
+
       {rechnung.status === "entwurf" && (
         <div className="flex gap-2">
           <button
@@ -881,22 +1061,35 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           </button>
         </div>
       )}
+      {kannGutschrift && (
+        <button
+          type="button"
+          onClick={() => setGutschriftOffen(true)}
+          className="btn-touch w-full btn-ap px-4 py-2 text-sm font-medium"
+        >
+          Gutschrift erstellen
+        </button>
+      )}
       {(rechnung.status === "versendet" || rechnung.status === "teilweise_bezahlt") && (
         <div className="flex gap-2">
-          <button
-            onClick={() => statusMutation.mutate("bezahlt")}
-            disabled={statusMutation.isPending}
-            className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            Als bezahlt markieren
-          </button>
+          {!istGutschrift && (
+            <button
+              onClick={() => statusMutation.mutate("bezahlt")}
+              disabled={statusMutation.isPending}
+              className="btn-touch flex-1 rounded-md bg-st-erledigt-dot px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            >
+              Als bezahlt markieren
+            </button>
+          )}
           <button
             onClick={() => {
               if (window.confirm("Diese Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
-            className="btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "
+            className={`btn-touch rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 ${
+              istGutschrift ? "flex-1" : ""
+            }`}
           >
             Stornieren
           </button>
@@ -913,6 +1106,17 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         >
           Stornieren
         </button>
+      )}
+
+      {gutschriftOffen && (
+        <GutschriftSheet
+          rechnung={rechnung}
+          onClose={() => setGutschriftOffen(false)}
+          onErstellt={(gutschrift) => {
+            setGutschriftOffen(false);
+            navigate(`/rechnungen/${gutschrift.id}`);
+          }}
+        />
       )}
     </div>
   );

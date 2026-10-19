@@ -172,17 +172,21 @@ export function kannGutschriftErstellen(
   return (art === "rechnung" || art === "schluss") && !rechnung.ist_storno && GUTSCHRIFT_STATUS.has(rechnung.status);
 }
 
-/** Noch gutschreibbare Menge einer Position (Menge minus bereits gutgeschrieben, nie
- * negativ); Abzugspositionen einer Schlussrechnung sind nicht gutschreibbar. */
-export function maxGutschriftMenge(
-  position: Pick<RechnungPosition, "menge" | "bereits_gutgeschrieben" | "abschlag_rechnung_id">,
-): number {
-  if (istAbzugsposition(position)) return 0;
+/** Menge minus bereits gutgeschrieben, nie negativ -- unabhängig von der Positionsart. */
+export function restMenge(position: Pick<RechnungPosition, "menge" | "bereits_gutgeschrieben">): number {
   const menge = textZuCent(position.menge);
   const bereits = textZuCent(position.bereits_gutgeschrieben ?? "0");
   if (menge === null || bereits === null) return 0;
   const rest = menge - bereits;
   return rest > 0n ? Number(rest) / 100 : 0;
+}
+
+/** Bei Teil-Gutschriften wählbare Höchstmenge. Abzugspositionen einer Schlussrechnung
+ * sind nicht einzeln gutschreibbar (nur über "Komplett"). */
+export function maxGutschriftMenge(
+  position: Pick<RechnungPosition, "menge" | "bereits_gutgeschrieben" | "abschlag_rechnung_id">,
+): number {
+  return istAbzugsposition(position) ? 0 : restMenge(position);
 }
 
 /** Menge deutsch/englisch tippbar -> Zahl; null bei Unsinn oder <= 0. */
