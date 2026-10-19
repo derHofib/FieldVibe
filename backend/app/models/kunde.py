@@ -1,6 +1,7 @@
 import uuid
+from datetime import date
 
-from sqlalchemy import CheckConstraint, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +34,9 @@ class Kunde(SoftDeleteMixin, TimestampMixin, Base):
     # e_invoice_service.pruefe_en16931_vollstaendigkeit(). Bei privaten
     # Kunden schlicht nicht vorhanden, daher nullable statt Pflichtfeld.
     ust_idnr: Mapped[str | None] = mapped_column(Text)
+    # Ablauf der Bescheinigung USt 1 TG (§ 13b Abs. 2 Nr. 4 UStG): Voraussetzung
+    # fuer Reverse-Charge-Positionen (Steuerkategorie AE) an diesen Kunden.
+    ust_13b_nachweis_bis: Mapped[date | None] = mapped_column(Date)
     # Personalisierter Kundenportal-Login-Link (/portal/l/{portal_slug}): ein
     # Link pro Kunde, nicht pro Ansprechpartner -- jeder Mitarbeiter des
     # Kunden mit einem eigenen KundenportalZugang meldet sich darueber mit

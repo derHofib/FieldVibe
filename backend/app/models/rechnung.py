@@ -31,6 +31,8 @@ RECHNUNG_POSITION_QUELLEN = ("material", "zeit", "fahrzeit", "fahrtkosten", "lei
 # Kleinunternehmer § 19), AE = Reverse Charge (§ 13b UStG). Muss mit den
 # CHECK-Constraints aus Migration 0104 uebereinstimmen.
 RECHNUNG_STEUER_KATEGORIEN = ("S", "Z", "E", "AE")
+# Muss mit den Schluesseln von steuer_service.STEUER_GRUENDE uebereinstimmen.
+RECHNUNG_STEUER_GRUENDE = ("pv_12_3", "reverse_charge_13b", "kleinunternehmer_19", "sonstige_befreiung")
 
 
 class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
@@ -109,6 +111,14 @@ class RechnungPosition(Base):
         CheckConstraint(
             "steuer_satz >= 0 AND steuer_satz <= 100", name="ck_rechnung_positionen_steuer_satz_bereich"
         ),
+        CheckConstraint(
+            f"steuer_grund IS NULL OR steuer_grund IN {RECHNUNG_STEUER_GRUENDE}",
+            name="ck_rechnung_positionen_steuer_grund_valid",
+        ),
+        CheckConstraint(
+            "steuer_grund_text IS NULL OR char_length(steuer_grund_text) <= 200",
+            name="ck_rechnung_positionen_steuer_grund_text_laenge",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -131,6 +141,9 @@ class RechnungPosition(Base):
     # (Tests, Skripte) ab. Kein DB-Default fuer den Satz.
     steuer_kategorie: Mapped[str] = mapped_column(Text, nullable=False, default="S", server_default="S")
     steuer_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("19.00"))
+    # Grund fuer Z/E/AE (Migration 0105); NULL bei S und bei Altbestand E/0.
+    steuer_grund: Mapped[str | None] = mapped_column(Text)
+    steuer_grund_text: Mapped[str | None] = mapped_column(Text)
     # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher diese
     # Position stammt -- steuert beim Entfernen, welche Zeiterfassung-
     # Eintraege wieder auf 'gebucht' zurueckgesetzt werden (siehe

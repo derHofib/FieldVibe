@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -17,6 +17,7 @@ class KundeCreate(BaseModel):
     adresse: dict | None = None
     notiz: str | None = None
     ust_idnr: str | None = None
+    ust_13b_nachweis_bis: date | None = None
 
 
 class KundeLogoUrl(BaseModel):
@@ -30,6 +31,7 @@ class KundeUpdate(BaseModel):
     adresse: dict | None = None
     notiz: str | None = None
     ust_idnr: str | None = None
+    ust_13b_nachweis_bis: date | None = None
 
 
 class KundeRead(BaseModel):
@@ -43,6 +45,7 @@ class KundeRead(BaseModel):
     adresse: dict | None
     notiz: str | None
     ust_idnr: str | None
+    ust_13b_nachweis_bis: date | None
     portal_slug: str
     logo_object_key: str | None
     created_at: datetime
