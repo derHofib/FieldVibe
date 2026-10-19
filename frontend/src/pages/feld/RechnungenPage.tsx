@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
+import { FilterChip } from "../../components/apple/FilterChip";
 import { NeueRechnungForm } from "../../components/NeueRechnungForm";
 import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -14,7 +15,13 @@ import { RECHNUNG_STATUS_LABEL, RECHNUNG_STATUS_TONE } from "../../utils/buchhal
 import { downloadBlob } from "../../utils/download";
 import { formatDatum, formatEuro, heuteIso } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
-import type { AngebotStatus, RechnungStatus, RechnungenFilter } from "../../types";
+import {
+  RECHNUNGSART_FILTER,
+  RECHNUNGSART_LABEL,
+  RECHNUNGSART_TONE,
+  rechnungsartVon,
+} from "../../utils/rechnungsart";
+import type { AngebotStatus, RechnungStatus, Rechnungsart, RechnungenFilter } from "../../types";
 
 type Bereich = "rechnungen" | "angebote";
 
@@ -112,6 +119,7 @@ export function RechnungenPage() {
   const [zeigeNeu, setZeigeNeu] = useState(false);
   const [q, setQ] = useState("");
   const [statusAktiv, setStatusAktiv] = useState<Set<RechnungStatus>>(new Set());
+  const [artAktiv, setArtAktiv] = useState<Rechnungsart | null>(null);
   const [nurUeberfaellig, setNurUeberfaellig] = useState(false);
   const [faelligBis7Tage, setFaelligBis7Tage] = useState(false);
   const [seiten, setSeiten] = useState(1);
@@ -119,6 +127,7 @@ export function RechnungenPage() {
   const filter: RechnungenFilter = {
     q: q.trim() || undefined,
     status: statusAktiv.size > 0 ? Array.from(statusAktiv) : undefined,
+    rechnungsart: artAktiv ?? undefined,
     nur_ueberfaellig: nurUeberfaellig || undefined,
     faellig_bis: faelligBis7Tage ? heuteIso(7) : undefined,
     sort: "-faellig",
@@ -259,6 +268,21 @@ export function RechnungenPage() {
             </button>
           </div>
 
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">
+            <span className="text-xs text-label2">Art</span>
+            {RECHNUNGSART_FILTER.map((a) => (
+              <FilterChip
+                key={a}
+                label={RECHNUNGSART_LABEL[a]}
+                aktiv={artAktiv === a}
+                onClick={() => {
+                  setSeiten(1);
+                  setArtAktiv((aktuell) => (aktuell === a ? null : a));
+                }}
+              />
+            ))}
+          </div>
+
           {data && (
             <div className="grid grid-cols-3 gap-2 card-ap p-3 text-center">
               <div>
@@ -315,10 +339,19 @@ export function RechnungenPage() {
                     )}
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="tabular-nums text-sm font-medium text-label">
+                    <span
+                      className={`tabular-nums text-sm font-medium ${
+                        Number(r.betrag_brutto) < 0 ? "text-st-fehlt" : "text-label"
+                      }`}
+                    >
                       {formatEuro(r.betrag_brutto)}
                     </span>
-                    <StatusBadge label={RECHNUNG_STATUS_LABEL[r.status]} tone={RECHNUNG_STATUS_TONE[r.status]} />
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {rechnungsartVon(r) !== "rechnung" && (
+                        <StatusBadge label={RECHNUNGSART_LABEL[rechnungsartVon(r)]} tone={RECHNUNGSART_TONE[rechnungsartVon(r)]} />
+                      )}
+                      <StatusBadge label={RECHNUNG_STATUS_LABEL[r.status]} tone={RECHNUNG_STATUS_TONE[r.status]} />
+                    </div>
                   </div>
                 </button>
               ))

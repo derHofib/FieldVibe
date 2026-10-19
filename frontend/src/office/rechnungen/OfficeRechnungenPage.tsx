@@ -4,12 +4,20 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
+import { FilterChip } from "../../components/apple/FilterChip";
 import { NeueRechnungForm } from "../../components/NeueRechnungForm";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { EmptyState } from "../../components/EmptyState";
 import { AngebotDetailPage } from "../../pages/feld/AngebotDetailPage";
 import { RechnungDetailPage } from "../../pages/feld/RechnungDetailPage";
-import type { AngebotStatus, RechnungStatus } from "../../types";
+import { StatusBadge } from "../../components/StatusBadge";
+import type { AngebotStatus, Rechnungsart, RechnungStatus } from "../../types";
+import {
+  RECHNUNGSART_FILTER,
+  RECHNUNGSART_LABEL,
+  RECHNUNGSART_TONE,
+  rechnungsartVon,
+} from "../../utils/rechnungsart";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 
 type Bereich = "rechnungen" | "angebote";
@@ -100,10 +108,11 @@ export function OfficeRechnungenPage() {
   const [bereich, setBereich] = useState<Bereich>("rechnungen");
   const [gewaehlt, setGewaehlt] = useState<string | null>(null);
   const [zeigeNeu, setZeigeNeu] = useState(false);
+  const [artFilter, setArtFilter] = useState<Rechnungsart | null>(null);
 
   const rechnungen = useQuery({
-    queryKey: ["rechnungen", {}],
-    queryFn: () => rechnungenApi.list(),
+    queryKey: ["rechnungen", { rechnungsart: artFilter }],
+    queryFn: () => rechnungenApi.list({ rechnungsart: artFilter ?? undefined }),
     enabled: bereich === "rechnungen",
   });
   const angebote = useQuery({
@@ -136,6 +145,8 @@ export function OfficeRechnungenPage() {
               ? `fällig ${r.faellig_am}`
               : "",
           warnung: r.ist_ueberfaellig,
+          negativ: Number(r.betrag_brutto) < 0,
+          art: rechnungsartVon(r) !== "rechnung" ? rechnungsartVon(r) : null,
           badge: RECHNUNG_STATUS_BADGE[r.status],
           label: RECHNUNG_STATUS_LABEL[r.status],
         }))
@@ -145,6 +156,8 @@ export function OfficeRechnungenPage() {
           betrag: euro(a.gesamt_brutto),
           zusatz: a.gueltig_bis ? `gültig bis ${a.gueltig_bis}` : "",
           warnung: false,
+          negativ: false,
+          art: null,
           badge: ANGEBOT_STATUS_BADGE[a.status],
           label: ANGEBOT_STATUS_LABEL[a.status],
         }));
@@ -173,6 +186,20 @@ export function OfficeRechnungenPage() {
         ) : (
           <NeuesAngebotForm onAbbrechen={() => setZeigeNeu(false)} onErfolg={neuAngelegt} />
         ))}
+
+      {bereich === "rechnungen" && (
+        <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Art der Rechnung">
+          <span className="text-xs text-label2">Art</span>
+          {RECHNUNGSART_FILTER.map((a) => (
+            <FilterChip
+              key={a}
+              label={RECHNUNGSART_LABEL[a]}
+              aktiv={artFilter === a}
+              onClick={() => setArtFilter((aktuell) => (aktuell === a ? null : a))}
+            />
+          ))}
+        </div>
+      )}
 
       {rechnungen.data && bereich === "rechnungen" && (
         <div className="mb-4 flex flex-wrap gap-4 text-xs text-label2">
@@ -212,7 +239,8 @@ export function OfficeRechnungenPage() {
                 }`}
               >
                 <p className="truncate text-[13px] font-semibold text-label">
-                  {e.nummer} · <span className="tabular-nums">{e.betrag}</span>
+                  {e.nummer} ·{" "}
+                  <span className={`tabular-nums ${e.negativ ? "text-st-fehlt" : ""}`}>{e.betrag}</span>
                 </p>
                 {e.zusatz && (
                   <p
@@ -225,11 +253,10 @@ export function OfficeRechnungenPage() {
                     {e.zusatz}
                   </p>
                 )}
-                <span
-                  className={`mt-1.5 inline-block px-2 py-0.5 text-[10px] font-semibold ${e.badge}`}
-                >
-                  {e.label}
-                </span>
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {e.art && <StatusBadge label={RECHNUNGSART_LABEL[e.art]} tone={RECHNUNGSART_TONE[e.art]} />}
+                  <span className={`inline-block px-2 py-0.5 text-[10px] font-semibold ${e.badge}`}>{e.label}</span>
+                </div>
               </button>
             ))}
           </Karte>
