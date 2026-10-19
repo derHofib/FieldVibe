@@ -3,6 +3,7 @@ from decimal import Decimal
 from io import BytesIO
 from uuid import uuid4
 
+import pymupdf
 from pypdf import PdfReader
 
 from app.models.kunde import Kunde
@@ -199,3 +200,60 @@ def test_rechnung_titel_beginnt_frueh_bei_kurzem_adressblock():
     # Block + 10 mm) statt der frueheren fixen 100 mm (Grundlinie ~106,5).
     y_mm = (841.89 - ys[0]) * 25.4 / 72
     assert 96 <= y_mm <= 102
+
+
+def _gemischte_positionen(anzahl_s: int) -> list[RechnungPosition]:
+    def position(nr, kategorie, satz, grund=None, text=None):
+        return RechnungPosition(
+            position=nr,
+            beschreibung=f"Leistung {nr}",
+            menge=Decimal("1"),
+            einheit="Std",
+            einzelpreis=Decimal("100.00"),
+            steuer_kategorie=kategorie,
+            steuer_satz=Decimal(satz),
+            steuer_grund=grund,
+            steuer_grund_text=text,
+        )
+
+    positionen = [position(i, "S", "19.00") for i in range(1, anzahl_s + 1)]
+    n = anzahl_s
+    positionen += [
+        position(n + 1, "Z", "0.00", "pv_12_3"),
+        position(n + 2, "AE", "0.00", "reverse_charge_13b"),
+        position(n + 3, "E", "0.00", "sonstige_befreiung", "Steuerfreie Lieferung nach § 4 Nr. 1 UStG"),
+    ]
+    return positionen
+
+
+def test_rechnung_ae_z_s_gleichzeitig_hinweise_vollstaendig_und_im_rand():
+    mm = 25.4 / 72
+    hinweise = [
+        "Nullsteuersatz nach § 12 Abs. 3 UStG",
+        "Steuerschuldnerschaft des Leistungsempfängers",
+        "Steuerschuldner ist der Leistungsempfänger.",
+        "Steuerfreie Lieferung nach § 4 Nr. 1 UStG",
+    ]
+    # Anzahl der Positionen durchlaufen, damit der Summenblock mit den Hinweiszeilen
+    # auch an der Seitengrenze umbricht statt ueber den Rand zu laufen.
+    for anzahl_s in range(1, 36):
+        pdf = pdf_service.generate_rechnung_pdf(_mandant(), _rechnung(), _kunde(), _gemischte_positionen(anzahl_s))
+        dokument = pymupdf.open(stream=pdf)
+        seiten_text = [" ".join(s.get_text().split()) for s in dokument]
+        letzte = dokument[-1]
+        # Summenblock samt allen Hinweisen steht zusammen auf der letzten Seite.
+        for hinweis in hinweise:
+            assert hinweis in seiten_text[-1], (anzahl_s, hinweis)
+        assert "USt. 0 % (Reverse Charge)" in seiten_text[-1]
+        assert "USt. 0 % (steuerfrei)" in seiten_text[-1]
+        assert "zzgl. 19 % USt." in seiten_text[-1]
+        assert "Rechnungsbetrag" in seiten_text[-1]
+        for index, seite in enumerate(dokument):
+            for x0, y0, x1, y1, wort, *_ in seite.get_text("words"):
+                assert 15 <= x0 * mm and x1 * mm <= 195, (anzahl_s, index, wort)
+                assert y1 * mm <= 297 - 3, (anzahl_s, index, wort)
+        # Der Endbetrag liegt oberhalb des Seitenumbruchs (A4 minus 30 mm unterer Rand).
+        betrag_y = [w[3] * mm for w in letzte.get_text("words") if w[4] == "Rechnungsbetrag"]
+        assert betrag_y and betrag_y[0] <= 297 - 30
+        # Kaeufer-USt-IdNr. im Kopf der ersten Seite
+        assert "DE987654321" in seiten_text[0]

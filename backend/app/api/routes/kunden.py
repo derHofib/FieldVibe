@@ -467,6 +467,9 @@ async def update_kunde(
     # ist -- die JSONB-Spalte braucht dafuer JSON-taugliche Werte (str statt
     # UUID), sonst schlaegt das Schreiben in die Datenbank fehl.
     changes = body.model_dump(exclude_unset=True, mode="json")
+    # Date-Spalte: mode="json" liefert einen String, den asyncpg nicht annimmt.
+    if "ust_13b_nachweis_bis" in changes:
+        changes["ust_13b_nachweis_bis"] = body.ust_13b_nachweis_bis
     for field, value in changes.items():
         setattr(kunde, field, value)
     await session.flush()
