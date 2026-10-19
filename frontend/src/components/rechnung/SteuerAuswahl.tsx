@@ -51,7 +51,7 @@ export function SteuerAuswahl({
         aria-haspopup="dialog"
         className="field-ap btn-touch flex items-center justify-between gap-2 text-left disabled:opacity-50"
       >
-        <span className="min-w-0 truncate">{steuerOptionLabel(wert.option)}</span>
+        <span className="min-w-0">{steuerOptionLabel(wert.option)}</span>
         <ChevronDown size={16} className="shrink-0 text-label3" aria-hidden="true" />
       </button>
 

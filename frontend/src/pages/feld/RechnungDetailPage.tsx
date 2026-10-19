@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Ban, FileText, ListChecks, X } from "lucide-react";
+import { Ban, ChevronDown, FileText, ListChecks, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -375,9 +375,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                         }
                         aria-expanded={!!bearbeitet}
                         aria-label={`Steuer ändern: ${steuerKurzlabel(p)}`}
-                        className="btn-touch inline-flex items-center rounded-[var(--radius-ap-pill)] bg-tintbg px-2 py-0.5 text-xs font-medium text-tint-text"
+                        className="btn-touch inline-flex items-center gap-1 rounded-[var(--radius-ap-pill)] bg-fill px-2 py-0.5 text-xs font-medium text-label"
                       >
                         Steuer: {steuerKurzlabel(p)}
+                        <ChevronDown size={12} strokeWidth={2} aria-hidden="true" />
                       </button>
                     ) : (
                       <span
@@ -388,6 +389,11 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       </span>
                     )}
                   </div>
+                  {rechnung.status === "entwurf" && p.steuer_kategorie === "E" && !p.steuer_grund && (
+                    <div className="mt-0.5 text-xs font-medium text-st-arbeit">
+                      Steuergrund fehlt – vor dem Versand angeben
+                    </div>
+                  )}
                   {(p.quelle === "zeit" || p.quelle === "fahrzeit") && Number(p.einzelpreis) === 0 && (
                     <div className="mt-0.5 text-xs font-medium text-st-arbeit">
                       {p.quelle === "fahrzeit"
@@ -562,7 +568,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowVorgang(true)}
-                className="btn-touch text-xs font-medium text-tint "
+                className="btn-touch text-xs font-medium text-tint-text"
               >
                 + Vorgang
               </button>
@@ -571,7 +577,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                   setSteuerNeu(vorbelegung(rechnung.mwst_satz));
                   setShowForm((v) => !v);
                 }}
-                className="btn-touch text-xs font-medium text-tint "
+                className="btn-touch text-xs font-medium text-tint-text"
               >
                 {showForm ? "Abbrechen" : "+ Position"}
               </button>
