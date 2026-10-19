@@ -69,6 +69,67 @@ jobs:
           DATABASE_URL_SYNC: postgresql+psycopg2://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
         run: pytest
 
+  # Prueft die ausgehende E-Rechnung (CII, Profil EN 16931) gegen die CEN-Geschaeftsregeln
+  # (Schematron). Das Werkzeug kommt komplett aus Maven Central und einem gepinnten Commit
+  # von ConnectingEurope/eInvoicing-EN16931 (siehe scripts/e-rechnung/pins.sh, jede Datei
+  # mit SHA-256 geprueft) -- keine Release-Downloads noetig. Im Job backend-tests werden
+  # diese Tests mangels Werkzeug uebersprungen.
+  e-rechnung-konformitaet:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fieldvibe
+          POSTGRES_PASSWORD: fieldvibe
+          POSTGRES_DB: fieldvibe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fieldvibe"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements-dev.lock
+
+      - name: Backend-Abhaengigkeiten installieren
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements-dev.lock
+
+      - name: Test-Rolle ohne Superuser/BYPASSRLS anlegen
+        env:
+          PGPASSWORD: fieldvibe
+        run: >-
+          psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
+          -c "CREATE ROLE fieldvibe_test LOGIN PASSWORD 'fieldvibe_test' NOSUPERUSER NOBYPASSRLS CREATEDB;"
+
+      - name: Java pruefen
+        run: java -version
+
+      - name: Pruefwerkzeug installieren
+        run: scripts/e-rechnung/installieren.sh
+
+      - name: Konformitaetstests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
+          DATABASE_URL_SYNC: postgresql+psycopg2://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
+        # -rs zeigt, falls Tests wegen fehlendem Werkzeug uebersprungen wuerden; dann
+        # soll der Job rot werden statt faelschlich gruen.
+        run: |
+          set -euo pipefail
+          pytest tests/test_e_rechnung_konformitaet.py -rs | tee /tmp/konformitaet.log
+          if grep -q SKIPPED /tmp/konformitaet.log; then echo "Tests wurden uebersprungen" >&2; exit 1; fi
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
