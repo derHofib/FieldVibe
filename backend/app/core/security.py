@@ -25,6 +25,7 @@ class TokenType(StrEnum):
     PARTNER_ACCESS = "partner_access"
     PARTNER_REFRESH = "partner_refresh"
     PARTNER_PASSWORD_RESET = "partner_password_reset"
+    USER_PASSWORD_RESET = "user_password_reset"
     EINLADUNG = "einladung"
     STREAM = "stream"
 
@@ -164,6 +165,24 @@ def create_kundenportal_password_reset_token(*, zugang_id: UUID) -> str:
         "type": TokenType.KUNDENPORTAL_PASSWORD_RESET.value,
         "iat": now,
         "exp": now + timedelta(minutes=_settings.kundenportal_reset_token_expire_minutes),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
+def create_user_password_reset_token(*, user_id: UUID, token_version: int) -> str:
+    """Single-Purpose-Token fuer den 'Passwort vergessen'-Link der
+    Mitarbeiter. Traegt wie ein Zugriffstoken den "tv"-Claim: der Reset
+    erhoeht token_version (widerrufe_tokens) und entwertet damit denselben
+    Link -- einmalig verwendbar, ohne eigene Tabelle fuer verbrauchte Tokens.
+    Kein role/mandant_id, und der abweichende `type` verhindert, dass es als
+    Bearer-Token fuer die API durchgeht (siehe get_current_user)."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "type": TokenType.USER_PASSWORD_RESET.value,
+        "tv": token_version,
+        "iat": now,
+        "exp": now + timedelta(minutes=_settings.user_reset_token_expire_minutes),
     }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
 

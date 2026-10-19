@@ -1,24 +1,46 @@
+import logging
+
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.api.deps import AuthContext, get_current_user
-from app.core.rate_limit import client_ip, login_account_limiter, login_ip_limiter
+from app.core.config import get_settings
+from app.core.rate_limit import (
+    client_ip,
+    login_account_limiter,
+    login_ip_limiter,
+    password_reset_ip_limiter,
+)
 from app.core.security import (
     TokenType,
     create_access_token,
     create_refresh_token,
+    create_user_password_reset_token,
     decode_token,
     hash_password,
+    verify_password,
 )
 from app.db.session import system_session
 from app.models.account_typ import AccountTyp
 from app.models.mandant import Mandant
 from app.models.user import User
-from app.schemas.auth import CurrentUser, LoginRequest, RefreshRequest, RegistrierenRequest, TokenPair
+from app.schemas.auth import (
+    MIN_PASSWORT_LAENGE,
+    CurrentUser,
+    LoginRequest,
+    PasswortAendernRequest,
+    PasswortVergessenRequest,
+    PasswortZuruecksetzenRequest,
+    RefreshRequest,
+    RegistrierenRequest,
+    TokenPair,
+)
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
+from app.services.audit_service import log_action
 from app.services.auth_service import authenticate
+from app.services.email_service import EmailNichtKonfiguriert, send_email
 from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services import berechtigung_service
@@ -26,6 +48,8 @@ from app.services.berechtigung_service import effektive_rechte_gecacht
 from app.services.organigramm_sync_service import besetzung_pflegen
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+_settings = get_settings()
+_logger = logging.getLogger("app.auth")
 
 
 @router.post("/login", response_model=TokenPair)
@@ -109,13 +133,174 @@ async def ueberall_abmelden(auth: AuthContext = Depends(get_current_user)) -> No
         await widerrufe_tokens(session, user)
 
 
+@router.post("/passwort-vergessen", status_code=status.HTTP_202_ACCEPTED)
+async def passwort_vergessen(body: PasswortVergessenRequest, request: Request) -> None:
+    """Antwortet immer mit 202 (Enumeration-Schutz, Begruendung wie beim
+    Kundenportal -- siehe kundenportal_auth.passwort_vergessen). Das Rate-
+    Limit zaehlt deshalb jeden Aufruf pro IP, nicht nur Fehlschlaege."""
+    ip_key = client_ip(request)
+    password_reset_ip_limiter.check(ip_key)
+    password_reset_ip_limiter.record_failure(ip_key)
+
+    async with system_session() as session:
+        result = await session.execute(select(User).where(func.lower(User.email) == body.email))
+        user = result.scalar_one_or_none()
+        if user is None or not user.aktiv:
+            return None
+        if user.mandant_id is not None:
+            # Wie beim Login: fuer einen deaktivierten Mandanten gibt es kein
+            # nutzbares Konto, also auch keinen Link.
+            mandant = await session.get(Mandant, user.mandant_id)
+            if mandant is None or mandant.status != "aktiv":
+                return None
+
+        token = create_user_password_reset_token(user_id=user.id, token_version=user.token_version)
+        reset_link = f"{_settings.frontend_base_url}/passwort-zuruecksetzen?token={token}"
+        try:
+            await send_email(
+                session,
+                user.mandant_id,
+                to=user.email,
+                subject="Passwort zurücksetzen",
+                body=(
+                    f"Hallo {user.name},\n\n"
+                    "für Ihr FieldVibe-Konto wurde ein Passwort-Reset angefordert. "
+                    f"Falls Sie das waren, setzen Sie hier ein neues Passwort:\n{reset_link}\n\n"
+                    f"Der Link ist {_settings.user_reset_token_expire_minutes} Minuten gültig und "
+                    "kann nur einmal verwendet werden. "
+                    "Falls Sie das nicht angefordert haben, ignorieren Sie diese E-Mail."
+                ),
+            )
+        except EmailNichtKonfiguriert:
+            # Weder Mandanten- noch Plattform-SMTP: ein Administrator muss das
+            # Passwort direkt setzen. Kein Fehler nach aussen (Enumeration-Schutz).
+            _logger.warning("Passwort-Reset angefordert, aber kein SMTP konfiguriert")
+        except Exception:
+            # Zustellungsfehler darf nie zu einem 500 werden, sonst waere die
+            # Existenz des Kontos wieder ablesbar.
+            _logger.exception("Passwort-Reset-Mail konnte nicht verschickt werden")
+
+    return None
+
+
+@router.post("/passwort-zuruecksetzen", status_code=status.HTTP_204_NO_CONTENT)
+async def passwort_zuruecksetzen(body: PasswortZuruecksetzenRequest, request: Request) -> None:
+    ip_key = client_ip(request)
+    password_reset_ip_limiter.check(ip_key)
+
+    try:
+        payload = decode_token(body.token)
+    except jwt.PyJWTError as exc:
+        password_reset_ip_limiter.record_failure(ip_key)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Reset-Link ist ungültig oder abgelaufen"
+        ) from exc
+
+    if payload.get("type") != TokenType.USER_PASSWORD_RESET.value:
+        password_reset_ip_limiter.record_failure(ip_key)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Reset-Token")
+
+    async with system_session() as session:
+        user = await session.get(User, payload["sub"])
+        # Einmalverwendung: der Link traegt die token_version von seiner
+        # Ausstellung; jeder Widerruf (auch dieser Reset selbst) macht ihn ungueltig.
+        if user is None or not user.aktiv or payload.get("tv") != user.token_version:
+            password_reset_ip_limiter.record_failure(ip_key)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Reset-Link ist ungültig oder abgelaufen"
+            )
+        user.password_hash = hash_password(body.new_password)
+        await widerrufe_tokens(session, user)
+        await log_action(
+            session,
+            aktion="passwort_zurueckgesetzt",
+            mandant_id=user.mandant_id,
+            actor_user_id=user.id,
+            entity_type="user",
+            entity_id=user.id,
+        )
+    password_reset_ip_limiter.record_success(ip_key)
+    return None
+
+
+@router.post("/passwort-aendern", response_model=TokenPair)
+async def passwort_aendern(
+    body: PasswortAendernRequest, request: Request, auth: AuthContext = Depends(get_current_user)
+) -> TokenPair:
+    """Alle bisherigen Tokens werden widerrufen (andere Geraete sind damit
+    abgemeldet); die aufrufende Sitzung bekommt direkt ein frisches Paar, so
+    dass sie ohne erneute Anmeldung weiterlaeuft -- deshalb 200 + TokenPair
+    statt 204."""
+    if auth.impersonated_by is not None:
+        # sub ist hier der echte Super-Admin; sein Passwort darf ueber ein
+        # Impersonation-Token nicht geaendert werden.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Während der Impersonation nicht möglich"
+        )
+    ip_key = client_ip(request)
+    async with system_session() as session:
+        user = await session.get(User, auth.user_id)
+        if user is None or not user.aktiv:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
+
+        # Dieselben Limiter und derselbe Account-Schluessel wie /login: ein
+        # gestohlenes Zugriffstoken taugt so nicht zum Durchprobieren des
+        # alten Passworts, und Login-/Aendern-Fehlversuche zaehlen zusammen.
+        account_key = user.email.strip().lower()
+        login_ip_limiter.check(ip_key)
+        login_account_limiter.check(account_key)
+        if not verify_password(body.old_password, user.password_hash):
+            login_ip_limiter.record_failure(ip_key)
+            login_account_limiter.record_failure(account_key)
+            # 400 statt 401/403: das Frontend behandelt 401 als abgelaufene
+            # Sitzung, und das Token selbst ist ja gueltig.
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Aktuelles Passwort ist falsch"
+            )
+        login_ip_limiter.record_success(ip_key)
+        login_account_limiter.record_success(account_key)
+        if body.new_password == body.old_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Das neue Passwort muss sich vom aktuellen unterscheiden",
+            )
+
+        user.password_hash = hash_password(body.new_password)
+        await widerrufe_tokens(session, user)
+        await log_action(
+            session,
+            aktion="passwort_geaendert",
+            mandant_id=user.mandant_id,
+            actor_user_id=user.id,
+            entity_type="user",
+            entity_id=user.id,
+        )
+        return TokenPair(
+            access_token=create_access_token(
+                token_version=user.token_version,
+                subject=user.id,
+                role=user.role,
+                mandant_id=user.mandant_id,
+                account_typ_id=user.account_typ_id,
+            ),
+            refresh_token=create_refresh_token(
+                token_version=user.token_version,
+                subject=user.id,
+                role=user.role,
+                mandant_id=user.mandant_id,
+                account_typ_id=user.account_typ_id,
+            ),
+        )
+
+
 @router.post("/registrieren", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
 async def registrieren(body: RegistrierenRequest) -> TokenPair:
     """Schliesst eine Mitarbeiter-Einladung ab: legt den User-Account mit
     dem selbst gewaehlten Passwort an und loggt direkt ein."""
-    if len(body.password) < 8:
+    if len(body.password) < MIN_PASSWORT_LAENGE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 8 Zeichen haben"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
         )
     async with system_session() as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="mitarbeiter")

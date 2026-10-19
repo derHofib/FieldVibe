@@ -34,7 +34,7 @@ class _SmtpVerbindung:
     ist_global: bool
 
 
-async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbindung:
+async def _resolve_smtp(session: AsyncSession, mandant_id: UUID | None) -> _SmtpVerbindung:
     """Dreistufiger Fallback, jede Stufe optional:
 
     1. Eigene smtp-Integration des Mandanten (mandant_integrationen) -- hat
@@ -50,14 +50,18 @@ async def _resolve_smtp(session: AsyncSession, mandant_id: UUID) -> _SmtpVerbind
     Ohne jede der drei Stufen kaeme keine Mail raus, bevor irgendjemand
     SMTP eingerichtet hat -- deshalb der mehrstufige statt ein rein
     Mandanten-gebundener Fallback."""
-    result = await session.execute(
-        select(MandantIntegration).where(
-            MandantIntegration.mandant_id == mandant_id,
-            MandantIntegration.typ == "smtp",
-            MandantIntegration.aktiv.is_(True),
+    # mandant_id None = Account ohne Mandant (super_admin): es gibt keine
+    # Mandanten-Integration, die Stufe 1 entfaellt.
+    integration = None
+    if mandant_id is not None:
+        result = await session.execute(
+            select(MandantIntegration).where(
+                MandantIntegration.mandant_id == mandant_id,
+                MandantIntegration.typ == "smtp",
+                MandantIntegration.aktiv.is_(True),
+            )
         )
-    )
-    integration = result.scalar_one_or_none()
+        integration = result.scalar_one_or_none()
     if integration is not None:
         config = integration.config
         host = config.get("host")
@@ -140,7 +144,7 @@ def _send_blocking(
 
 async def send_email(
     session: AsyncSession,
-    mandant_id: UUID,
+    mandant_id: UUID | None,
     *,
     to: str,
     subject: str,
@@ -172,7 +176,7 @@ async def send_email(
         # bleiben, fuer die FieldVibe tatsaechlich SPF/DKIM eingerichtet
         # hat, sonst wirkt die Mail wie Spoofing statt wie eine echte
         # Nachricht vom Betrieb.
-        mandant = await session.get(Mandant, mandant_id)
+        mandant = await session.get(Mandant, mandant_id) if mandant_id is not None else None
         if mandant is not None:
             from_address = formataddr((f"{mandant.name} via FieldVibe", verbindung.from_address))
 

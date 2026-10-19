@@ -1,6 +1,7 @@
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import AfterValidator, BaseModel, EmailStr, field_validator
 
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 
@@ -38,6 +39,39 @@ class RegistrierenRequest(BaseModel):
     token: str
     name: str
     password: str
+
+
+MIN_PASSWORT_LAENGE = 10
+
+
+def _mindestlaenge(v: str) -> str:
+    if len(v) < MIN_PASSWORT_LAENGE:
+        raise ValueError(f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben")
+    return v
+
+
+# Nur fuer die Passwort-vergessen/-aendern-Endpunkte: registrieren (8 Zeichen)
+# und die Admin-Funktion "Passwort direkt setzen" behalten ihre bisherige Regel.
+NeuesPasswort = Annotated[str, AfterValidator(_mindestlaenge)]
+
+
+class PasswortVergessenRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+class PasswortZuruecksetzenRequest(BaseModel):
+    token: str
+    new_password: NeuesPasswort
+
+
+class PasswortAendernRequest(BaseModel):
+    old_password: str
+    new_password: NeuesPasswort
 
 
 class CurrentUser(BaseModel):
