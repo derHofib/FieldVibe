@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Beispiel fuer ein Programm zum Adapter "befehl": Sicherungen auf einen WebDAV-
+# Server (Nextcloud, ownCloud, Hetzner Storage Box per WebDAV, ...) ablegen --
+# nur mit curl. Als Vorlage fuer einen eigenen Anbieter gedacht: die fuenf
+# Unterbefehle unten durch eigene Aufrufe ersetzen (scp, sftp, aws, az, ein
+# Python-Skript ...); die Sprache ist egal, nur der Vertrag zaehlt.
+#
+# Einrichtung:
+#   1. Kopie ausserhalb des Repos anlegen und ausfuehrbar machen:
+#        cp scripts/backup/ziele/befehl-beispiel.sh.example /opt/fieldvibe-webdav.sh
+#        chmod 700 /opt/fieldvibe-webdav.sh
+#   2. In der .env eintragen (Werte in einfachen Anfuehrungszeichen, wenn sie
+#      Sonderzeichen enthalten):
+#        BACKUP_TARGETS=befehl:/opt/fieldvibe-webdav.sh
+#        WEBDAV_URL=https://cloud.example.de/remote.php/dav/files/backup/fieldvibe
+#        WEBDAV_USER=backup
+#        WEBDAV_PASSWORD=...        # bei Nextcloud ein App-Passwort
+#   3. Pruefen: /opt/fieldvibe-webdav.sh pruefen     (mit exportierten Variablen)
+#
+# Vertrag (siehe docs/DEPLOYMENT.md, "Eigenen Anbieter einbinden"):
+#   pruefen                                   Exit 0 = erreichbar/konfiguriert
+#   hochladen <verzeichnis> <stamp>           alle *-<stamp>.* hochladen, Manifest ZULETZT
+#   auflisten                                 vollstaendige Stamps (mit Manifest), einer je Zeile, neueste zuletzt
+#   herunterladen <stamp> <zielverz> [art]    Satz holen; art = db|minio|secrets|alle (optional, darf ignoriert werden)
+#   aufraeumen <behalte_tage> <mindestens>    Rotation
+# Meldungen auf stderr; auf stdout darf nur "auflisten" seine Stamps schreiben.
+
+: "${WEBDAV_URL:?WEBDAV_URL fehlt (siehe Kopfkommentar)}"
+: "${WEBDAV_USER:?WEBDAV_USER fehlt}"
+: "${WEBDAV_PASSWORD:?WEBDAV_PASSWORD fehlt}"
+BASIS="${WEBDAV_URL%/}"
+
+# Zugangsdaten per Konfig auf einem Dateideskriptor statt als -u-Argument,
+# damit sie nicht in der Prozessliste (ps) auftauchen.
+dav() {
+  curl -fsS -m 3600 --retry 3 -K <(printf 'user = "%s:%s"\n' "$WEBDAV_USER" "$WEBDAV_PASSWORD") "$@"
+}
+
+# Dateinamen im Zielverzeichnis, einer je Zeile (PROPFIND, Tiefe 1).
+dateinamen() {
+  dav -X PROPFIND -H 'Depth: 1' "$BASIS/" \
+    | grep -o '<[A-Za-z0-9]*:\{0,1\}href>[^<]*' | sed 's/^[^>]*>//' \
+    | while IFS= read -r href; do basename "$href"; done \
+    | grep -E '^(db|minio|secrets|manifest)-[0-9]{8}-[0-9]{6}\.' || true
+}
+
+# Die Bibliothek bringt rotation_plan/satz_stamps_vollstaendig mit (Pfad kommt
+# vom Backup-Skript); ein eigenes Programm kann die Regeln auch selbst umsetzen.
+# shellcheck disable=SC1090
+bibliothek() { source "${BACKUP_LIB_DATEI:?BACKUP_LIB_DATEI nicht gesetzt (wird von backup.sh exportiert)}"; }
+
+case "${1:-}" in
+  pruefen)
+    # Zielverzeichnis anlegen (405 = gibt es schon) und Erreichbarkeit/Login pruefen.
+    dav -X MKCOL "$BASIS/" -o /dev/null 2>/dev/null || true
+    dav -X PROPFIND -H 'Depth: 0' "$BASIS/" -o /dev/null
+    ;;
+  hochladen)
+    verz="${2:?Verzeichnis fehlt}"; stamp="${3:?Stamp fehlt}"
+    shopt -s nullglob
+    manifest=""
+    for f in "$verz"/*-"$stamp".*; do
+      if [[ "$(basename "$f")" == manifest-* ]]; then manifest="$f"; continue; fi
+      dav -T "$f" "$BASIS/$(basename "$f")"
+    done
+    [[ -n "$manifest" ]] || { echo "Manifest fehlt im Satz $stamp" >&2; exit 1; }
+    dav -T "$manifest" "$BASIS/$(basename "$manifest")"
+    ;;
+  auflisten)
+    bibliothek
+    dateinamen | satz_stamps_vollstaendig
+    ;;
+  herunterladen)
+    stamp="${2:?Stamp fehlt}"; ziel="${3:?Zielverzeichnis fehlt}"; art="${4:-alle}"
+    bibliothek
+    mkdir -p "$ziel"
+    liste="$(dateinamen)"
+    grep -qx "manifest-$stamp.json" <<<"$liste" || { echo "Satz $stamp nicht vorhanden oder unvollstaendig" >&2; exit 1; }
+    while IFS= read -r name; do
+      [[ "$name" == *-"$stamp".* ]] || continue
+      art_passt "$art" "$name" || continue
+      dav -o "$ziel/$name" "$BASIS/$name"
+    done <<<"$liste"
+    ;;
+  aufraeumen)
+    bibliothek
+    dateinamen | rotation_plan "${2:?behalte_tage fehlt}" "${3:?mindestens fehlt}" | while IFS= read -r name; do
+      dav -X DELETE "$BASIS/$name" -o /dev/null
+      echo "Rotation: $name geloescht" >&2
+    done
+    ;;
+  *)
+    echo "Unbekannter Unterbefehl '${1:-}' (erwartet: pruefen|hochladen|auflisten|herunterladen|aufraeumen)" >&2
+    exit 2
+    ;;
+esac
