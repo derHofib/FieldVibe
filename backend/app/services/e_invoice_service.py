@@ -4,9 +4,10 @@ attach_xml -- battle-tested, aus dem urspruenglichen factur-x-Paket
 uebernommen, statt fpdf2s embed_file/set_xmp_metadata von Hand
 nachzubauen).
 
-Reine interne Pflichtfeld-Praesenzpruefung, keine Schema-/Schematron-
-Validierung (siehe KoSIT-Referenzvalidator, der bewusst nicht integriert
-wird -- echte Konformitaet wird spaeter manuell extern gegengeprueft).
+Die interne Pruefung ist eine reine Pflichtfeld-Praesenzpruefung. Die
+Konformitaet der erzeugten XML gegen die EN-16931-Geschaeftsregeln
+(Schematron) belegen scripts/e-rechnung/ und tests/test_e_rechnung_
+konformitaet.py, siehe docs/konzepte/E_RECHNUNG_PRUEFUNG.md.
 
 Wird nur aktiv, wenn Mandant.firmendaten.e_rechnung_aktiv gesetzt ist
 (siehe rechnung_service._rechnung_dokument_bytes) -- optional pro
