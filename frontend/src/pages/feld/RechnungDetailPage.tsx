@@ -582,10 +582,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       <div className="card-ap p-4">
         <div className="flex items-start justify-between">
           <div>
-            <div className="text-xs text-label2">
-              {art !== "rechnung" && `${RECHNUNGSART_LABEL[art]} `}
-              {rechnung.rechnungsnummer}
-            </div>
+            <div className="text-xs text-label2">{rechnung.rechnungsnummer}</div>
             <h1 className="text-lg font-bold text-label">{kunde?.name ?? "…"}</h1>
           </div>
           <div className="flex flex-wrap items-start justify-end gap-1.5">
