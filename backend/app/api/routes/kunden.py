@@ -119,6 +119,8 @@ async def create_kunde(
         notiz=body.notiz,
         ust_idnr=body.ust_idnr,
         ust_13b_nachweis_bis=body.ust_13b_nachweis_bis,
+        leitweg_id=body.leitweg_id,
+        e_rechnung_format=body.e_rechnung_format,
         # Ein Link fuer den gesamten Kunden (nicht pro Ansprechpartner) --
         # jeder Mitarbeiter des Kunden mit eigenem KundenportalZugang meldet
         # sich darueber mit seiner eigenen E-Mail/seinem eigenen Passwort an.

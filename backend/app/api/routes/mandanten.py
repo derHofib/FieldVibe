@@ -38,6 +38,10 @@ async def create_mandant(
         slug=body.slug,
         branche=body.branche,
         branding=body.branding,
+        # E-Rechnung ab Werk nur fuer gewerbliche Kunden: nur im B2B-Verkehr gilt die
+        # E-Rechnung-Pflicht; "alle" wuerde Privatkunden-Rechnungen bei fehlenden
+        # Pflichtangaben mit 422 blockieren.
+        firmendaten={"e_rechnung_modus": "b2b", "e_rechnung_aktiv": True},
     )
     session.add(mandant)
     try:

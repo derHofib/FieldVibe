@@ -321,6 +321,11 @@ class RechnungRead(BaseModel):
     # bei deaktivierter E-Rechnung oder wenn Pflichtangaben zum
     # Versand-Zeitpunkt fehlten (stiller Fallback auf normales PDF).
     xml_object_key: str | None
+    # Beim Versand festgehalten: 'xrechnung' oder 'en16931' (ZUGFeRD) und die
+    # Leitweg-ID, die in der E-Rechnung stand. Belegt nur, dass die interne
+    # Pflichtfeldpruefung bestanden wurde, nicht den Schematron-Lauf (der braucht Java).
+    e_rechnung_profil: Literal["en16931", "xrechnung"] | None = None
+    leitweg_id: str | None = None
     created_at: datetime
     updated_at: datetime
     positionen: list[RechnungPositionRead]

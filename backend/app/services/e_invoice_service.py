@@ -9,17 +9,19 @@ Konformitaet der erzeugten XML gegen die EN-16931-Geschaeftsregeln
 (Schematron) belegen scripts/e-rechnung/ und tests/test_e_rechnung_
 konformitaet.py, siehe docs/konzepte/E_RECHNUNG_PRUEFUNG.md.
 
-Wird nur aktiv, wenn Mandant.firmendaten.e_rechnung_aktiv gesetzt ist
-(siehe rechnung_service._rechnung_dokument_bytes) -- optional pro
-Mandant, kein Zwang fuer alle Rechnungen. Fehlen dann Pflichtangaben,
+Wird nur aktiv, wenn der Modus des Mandanten (firmendaten.e_rechnung_modus
+aus/b2b/alle, siehe e_rechnung_gilt) es fuer den Kunden verlangt -- optional
+pro Mandant, kein Zwang fuer alle Rechnungen. Das Profil (EN 16931 bzw.
+ZUGFeRD oder XRechnung) waehlt profil_fuer je Kunde. Fehlen dann Pflichtangaben,
 scheitert der Versand (kein stiller Fallback aufs normale PDF)."""
+import re
 from decimal import Decimal
 
 from drafthorse.models.accounting import ApplicableTradeTax, CategoryTradeTax, TradeAllowanceCharge
 from drafthorse.models.document import Document
 from drafthorse.models.note import IncludedNote
 from drafthorse.models.party import TaxRegistration
-from drafthorse.models.payment import PaymentTerms
+from drafthorse.models.payment import PaymentMeans, PaymentTerms
 from drafthorse.models.tradelines import LineItem
 from drafthorse.pdf import attach_xml
 
@@ -55,6 +57,96 @@ def type_code_fuer(rechnung: Rechnung) -> str:
     return _TYPE_CODE_NACH_ART.get(rechnung.rechnungsart, "380")
 
 
+E_RECHNUNG_MODI = ("aus", "b2b", "alle")
+
+EN16931_PROFIL = "en16931"
+XRECHNUNG_PROFIL = "xrechnung"
+EN16931_KENNUNG = "urn:cen.eu:en16931:2017"
+# Kennung laut XRechnung-Schematron 2.6.0 (common.sch): seit XRechnung 3.0 "xeinkauf.de",
+# nicht mehr "xoev-de:kosit:standard" wie in 2.x.
+XRECHNUNG_KENNUNG = "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0"
+# Elektronische Adresse (BT-49) des Kaeufers: EAS-Code 0204 = Leitweg-ID; BT-34 des
+# Verkaeufers: EM = E-Mail.
+_EAS_LEITWEG_ID = "0204"
+_EAS_EMAIL = "EM"
+
+_EMAIL_MUSTER = re.compile(r"[^@\s]+@([^@.\s]+\.)+[^@.\s]+")
+_IBAN_MUSTER = re.compile(r"[A-Z]{2}\d{2}[A-Z0-9]{11,30}")
+
+
+def e_rechnung_modus(firmendaten: dict | None) -> str:
+    """Wirksamer Modus: der gespeicherte, sonst abgeleitet aus dem aelteren
+    e_rechnung_aktiv (true -> alle, sonst aus) -- Mandanten und Tests ohne den neuen
+    Schluessel verhalten sich damit wie vorher."""
+    fd = firmendaten or {}
+    if fd.get("e_rechnung_modus") in E_RECHNUNG_MODI:
+        return fd["e_rechnung_modus"]
+    return "alle" if fd.get("e_rechnung_aktiv") else "aus"
+
+
+def e_rechnung_gilt(mandant: Mandant, kunde: Kunde) -> bool:
+    modus = e_rechnung_modus(mandant.firmendaten)
+    if modus == "alle":
+        return True
+    return modus == "b2b" and kunde.ist_gewerblich
+
+
+def profil_fuer(kunde: Kunde) -> str:
+    """Explizites Kundenformat gewinnt; ohne Angabe entscheidet die Leitweg-ID."""
+    if kunde.e_rechnung_format == "xrechnung":
+        return XRECHNUNG_PROFIL
+    if kunde.e_rechnung_format == "zugferd":
+        return EN16931_PROFIL
+    return XRECHNUNG_PROFIL if (kunde.leitweg_id or "").strip() else EN16931_PROFIL
+
+
+def iban_gueltig(iban: str) -> bool:
+    iban = "".join(iban.split()).upper()
+    if not _IBAN_MUSTER.fullmatch(iban):
+        return False
+    umgestellt = iban[4:] + iban[:4]
+    return int("".join(str(int(zeichen, 36)) for zeichen in umgestellt)) % 97 == 1
+
+
+def pruefe_e_rechnung(
+    mandant: Mandant, rechnung: Rechnung, kunde: Kunde, positionen: list[RechnungPosition]
+) -> list[str]:
+    """EN16931-Pflichtfelder plus, beim Profil XRechnung, die Pflichtangaben der
+    Zusatzregeln BR-DE-*. Der Versandweg ruft ausschliesslich diese Funktion."""
+    probleme = pruefe_en16931_vollstaendigkeit(mandant, rechnung, kunde, positionen)
+    if profil_fuer(kunde) == XRECHNUNG_PROFIL:
+        probleme += pruefe_xrechnung_zusatz(mandant, kunde)
+    return probleme
+
+
+def pruefe_xrechnung_zusatz(mandant: Mandant, kunde: Kunde) -> list[str]:
+    """Angaben, die nur die XRechnung (CIUS) zusaetzlich zur EN 16931 verlangt. Anschrift
+    von Verkaeufer und Kaeufer (BR-DE-3/4/8/9) und Steuerkennung (BR-DE-16) deckt die
+    EN16931-Pruefung schon ab."""
+    fd = mandant.firmendaten or {}
+    probleme: list[str] = []
+    if not (kunde.leitweg_id or "").strip():
+        probleme.append("Leitweg-ID des Kunden fehlt (Pflicht für die XRechnung, BT-10 / BR-DE-15)")
+
+    telefon = (fd.get("telefon") or "").strip()
+    if not telefon:
+        probleme.append("Telefonnummer des Mandanten fehlt (XRechnung: Verkäufer-Kontakt, BR-DE-6)")
+    elif sum(zeichen.isdigit() for zeichen in telefon) < 3:
+        probleme.append("Telefonnummer des Mandanten braucht mindestens drei Ziffern (BR-DE-27)")
+    email = (fd.get("email") or "").strip()
+    if not email:
+        probleme.append("E-Mail-Adresse des Mandanten fehlt (XRechnung: Verkäufer-Kontakt, BR-DE-7)")
+    elif not _EMAIL_MUSTER.fullmatch(email):
+        probleme.append("E-Mail-Adresse des Mandanten ist ungültig (BR-DE-28)")
+
+    iban = (fd.get("iban") or "").strip()
+    if not iban:
+        probleme.append("IBAN des Mandanten fehlt (XRechnung: Zahlungsangaben, BR-DE-1 / BR-DE-23)")
+    elif not iban_gueltig(iban):
+        probleme.append("IBAN des Mandanten ist ungültig (Prüfsumme, BR-DE-19)")
+    return probleme
+
+
 def pruefe_en16931_vollstaendigkeit(
     mandant: Mandant, rechnung: Rechnung, kunde: Kunde, positionen: list[RechnungPosition]
 ) -> list[str]:
@@ -80,7 +172,9 @@ def pruefe_en16931_vollstaendigkeit(
     kunde_adresse = kunde.adresse or {}
     if not (kunde_adresse.get("strasse") and kunde_adresse.get("plz") and kunde_adresse.get("ort")):
         probleme.append("Anschrift des Kunden unvollstaendig (Strasse/PLZ/Ort)")
-    if kunde.typ in _KUNDE_TYPEN_MIT_UST_IDNR_PFLICHT and not kunde.ust_idnr:
+    # Behoerden haben haeufig keine USt-IdNr.; die XRechnung adressiert sie ueber die Leitweg-ID.
+    ust_idnr_entbehrlich = kunde.typ == "oeffentlich" and profil_fuer(kunde) == XRECHNUNG_PROFIL
+    if kunde.typ in _KUNDE_TYPEN_MIT_UST_IDNR_PFLICHT and not kunde.ust_idnr and not ust_idnr_entbehrlich:
         probleme.append("USt-IdNr. des Kunden fehlt (Pflicht bei gewerblichen/oeffentlichen Kunden)")
 
     if not rechnung.rechnungsnummer:
@@ -121,9 +215,11 @@ def baue_cii_dokument(
     *,
     bezug_rechnung: Rechnung | None = None,
     angerechnete_abschlaege: list[Rechnung] | None = None,
+    profil: str = EN16931_PROFIL,
+    hinweise: list[str] | None = None,
 ) -> Document:
-    """Baut ein drafthorse-Document im EN16931-Profil. Wird nur aufgerufen,
-    nachdem pruefe_en16931_vollstaendigkeit() eine leere Problemliste
+    """Baut ein drafthorse-Document im EN16931- oder XRechnung-Profil (profil). Wird
+    nur aufgerufen, nachdem pruefe_e_rechnung() eine leere Problemliste
     zurueckgegeben hat -- setzt also vollstaendige Pflichtangaben voraus.
     netto/brutto werden vom Aufrufer uebergeben (rechnung_service.netto_
     betrag/brutto_betrag) statt hier importiert, um einen Zirkelimport mit
@@ -132,7 +228,10 @@ def baue_cii_dokument(
     bezug_rechnung (Gutschrift): die Ursprungsrechnung als BT-25. Das Factur-X-
     Profil EN 16931 erlaubt nur EINE InvoiceReferencedDocument; deshalb stehen
     die angerechneten Abschlaege einer Schlussrechnung (mehrere moeglich) als
-    Rechnungsvermerk (BT-22) statt als Referenz."""
+    Rechnungsvermerk (BT-22) statt als Referenz.
+
+    hinweise: zusaetzliche Rechnungsvermerke (BT-22), z. B. die Hinweise fuer
+    Privatkunden aus privatkunden_service -- derselbe Text wie im PDF."""
     firmendaten = mandant.firmendaten or {}
     seller_adresse = firmendaten.get("adresse") or {}
     seller_land = _land(seller_adresse, _LAND_FALLBACK)
@@ -144,7 +243,8 @@ def baue_cii_dokument(
     ist_kleinunternehmer = bool(firmendaten.get("ist_kleinunternehmer"))
 
     doc = Document()
-    doc.context.guideline_parameter.id = "urn:cen.eu:en16931:2017"
+    ist_xrechnung = profil == XRECHNUNG_PROFIL
+    doc.context.guideline_parameter.id = XRECHNUNG_KENNUNG if ist_xrechnung else EN16931_KENNUNG
     doc.header.id = rechnung.rechnungsnummer
     doc.header.type_code = type_code_fuer(rechnung)
     doc.header.issue_date_time = rechnung.created_at.date()
@@ -179,11 +279,19 @@ def baue_cii_dokument(
     if kunde.ust_idnr:
         buyer.tax_registrations.add(TaxRegistration(id=("VA", kunde.ust_idnr)))
 
+    leitweg = (kunde.leitweg_id or "").strip()
+    if leitweg:
+        doc.trade.agreement.buyer_reference = leitweg  # BT-10
+    if ist_xrechnung:
+        _xrechnung_angaben(doc, mandant, leitweg)
+
     if rechnung.leistungsdatum:
         doc.trade.delivery.event.occurrence = rechnung.leistungsdatum
 
     doc.trade.settlement.currency_code = "EUR"
     doc.trade.settlement.payment_reference = rechnung.rechnungsnummer
+    for text in hinweise or []:
+        doc.header.notes.add(IncludedNote(content=text))
 
     if rechnung.rechnungsart == "gutschrift":
         if bezug_rechnung is not None:
@@ -299,6 +407,32 @@ def baue_cii_dokument(
     return doc
 
 
+def _xrechnung_angaben(doc: Document, mandant: Mandant, leitweg: str) -> None:
+    """Angaben, die die XRechnung zusaetzlich zur EN 16931 verlangt (Vollstaendigkeit
+    stellt pruefe_xrechnung_zusatz sicher): Verkaeufer-Kontakt BG-6, Zahlungsangaben
+    BG-16/17 und die elektronischen Adressen BT-34/BT-49."""
+    fd = mandant.firmendaten or {}
+    seller = doc.trade.agreement.seller
+    email = fd["email"].strip()
+    # BT-41 verlangt eine Person oder Abteilung; ohne eigenes Feld dafuer: die
+    # Geschaeftsfuehrung, sonst der Firmenname als Abteilung.
+    if (fd.get("geschaeftsfuehrung") or "").strip():
+        seller.contact.person_name = fd["geschaeftsfuehrung"].strip()
+    else:
+        seller.contact.department_name = mandant.name
+    seller.contact.telephone.number = fd["telefon"].strip()
+    seller.contact.email.address = email
+    seller.electronic_address.uri_ID = (_EAS_EMAIL, email)
+    doc.trade.agreement.buyer.electronic_address.uri_ID = (_EAS_LEITWEG_ID, leitweg)
+
+    zahlung = PaymentMeans()
+    zahlung.type_code = "58"  # SEPA-Ueberweisung; BR-DE-23 verlangt dann BG-17 (IBAN)
+    zahlung.payee_account.iban = "".join(fd["iban"].split()).upper()
+    if (fd.get("bic") or "").strip():
+        zahlung.payee_institution.bic = fd["bic"].strip()
+    doc.trade.settlement.payment_means.add(zahlung)
+
+
 def _steuer_der_zeile(
     position: RechnungPosition, rechnung: Rechnung, ist_kleinunternehmer: bool
 ) -> tuple[str, Decimal]:
@@ -330,11 +464,11 @@ def cii_xml_bytes(document: Document) -> bytes:
     return document.serialize(schema="FACTUR-X_EN16931")
 
 
-def baue_hybrid_pdf(pdf_bytes: bytes, xml_bytes: bytes) -> bytes:
+def baue_hybrid_pdf(pdf_bytes: bytes, xml_bytes: bytes, profil: str = EN16931_PROFIL) -> bytes:
     """Bettet die CII-XML in das bereits erzeugte PDF ein (embed_file,
     OutputIntent-Uebernahme, Factur-X-XMP-Metadaten) -- drafthorse.pdf.
     attach_xml() macht das vollstaendig, keine eigene fpdf2-Nachbildung
     noetig. Das Quell-PDF muss bereits mit pdf_service.generate_rechnung_pdf(
     ..., pdfa_output_intent=True) erzeugt worden sein, sonst bleibt das
     Hybrid-PDF ohne ICC-OutputIntent."""
-    return attach_xml(pdf_bytes, xml_bytes, level="EN 16931")
+    return attach_xml(pdf_bytes, xml_bytes, level="XRECHNUNG" if profil == XRECHNUNG_PROFIL else "EN 16931")

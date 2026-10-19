@@ -151,6 +151,7 @@ async def send_email(
     body: str,
     html_body: str | None = None,
     attachment: tuple[str, bytes, str] | None = None,
+    weitere_anhaenge: list[tuple[str, bytes, str]] | None = None,
 ) -> None:
     """Verschickt eine E-Mail ueber die smtp-Integration des Mandanten,
     oder -- falls keine hinterlegt ist -- ueber den globalen
@@ -166,7 +167,8 @@ async def send_email(
     (Fallback), der HTML-Teil danach (von Clients bevorzugt, die beides
     koennen; siehe app/services/einladung_service.py). `attachment` ist
     optional (Dateiname, Inhalt, Mimetype z.B. "application/pdf") -- fuer
-    den Versand von Angebot/Rechnung/Bestellung als PDF-Anhang."""
+    den Versand von Angebot/Rechnung/Bestellung als PDF-Anhang. Weitere Anhaenge
+    (z. B. die XRechnung-XML neben dem PDF) gehen in weitere_anhaenge."""
     verbindung = await _resolve_smtp(session, mandant_id)
 
     from_address = verbindung.from_address
@@ -187,8 +189,7 @@ async def send_email(
     message.set_content(body)
     if html_body is not None:
         message.add_alternative(html_body, subtype="html")
-    if attachment is not None:
-        dateiname, inhalt, mimetype = attachment
+    for dateiname, inhalt, mimetype in [*([attachment] if attachment is not None else []), *(weitere_anhaenge or [])]:
         maintype, _, subtype = mimetype.partition("/")
         message.add_attachment(inhalt, maintype=maintype, subtype=subtype or "octet-stream", filename=dateiname)
 
@@ -213,6 +214,7 @@ async def send_email_and_log(
     body: str,
     gesendet_von: UUID | None = None,
     attachment: tuple[str, bytes, str] | None = None,
+    weitere_anhaenge: list[tuple[str, bytes, str]] | None = None,
 ) -> EmailLog:
     """Wie send_email, schreibt aber -- egal ob Versand gelingt oder
     fehlschlaegt -- einen EmailLog-Eintrag, damit der Nutzer im Verlauf
@@ -226,7 +228,15 @@ async def send_email_and_log(
     status_wert = "gesendet"
     fehlermeldung: str | None = None
     try:
-        await send_email(session, mandant_id, to=to, subject=subject, body=body, attachment=attachment)
+        await send_email(
+            session,
+            mandant_id,
+            to=to,
+            subject=subject,
+            body=body,
+            attachment=attachment,
+            weitere_anhaenge=weitere_anhaenge,
+        )
     except EmailNichtKonfiguriert:
         status_wert = "fehler"
         fehlermeldung = "Kein SMTP-Postfach für diesen Mandanten hinterlegt (siehe Integrationen)."

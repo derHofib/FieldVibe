@@ -22,7 +22,7 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
-from app.services import steuer_service
+from app.services import privatkunden_service, steuer_service
 from app.services.steuer_service import SteuerGruppe
 
 # Freitext im Formular-Baukasten (Feldlabels, Antworten) kommt direkt vom
@@ -891,6 +891,9 @@ def generate_rechnung_pdf(
                 f"Bitte überweisen Sie den Rechnungsbetrag unter Angabe der Rechnungsnummer "
                 f"{rechnung.rechnungsnummer} auf das unten genannte Konto."
             )
+    hinweise = privatkunden_service.hinweise_fuer(mandant, rechnung, kunde, positionen or [])
+    if hinweise is not None:
+        absaetze.extend(hinweise.texte())
 
     pdf = _BelegPDF(mandant, titel, rechnung.rechnungsnummer, logo_bytes)
     _beleg_rumpf(

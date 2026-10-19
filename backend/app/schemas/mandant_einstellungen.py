@@ -20,6 +20,10 @@ Bundesland = Literal[
 # Portalseiten Vorrang vor den Platzhalter-Seiten (siehe public_rechtliches).
 FIRMENDATEN_URL_KEYS = ("impressum_url", "datenschutz_url")
 
+# Muss mit e_invoice_service.E_RECHNUNG_MODI uebereinstimmen (hier nicht importiert,
+# damit das Schema nicht die XML-Bibliothek nachzieht).
+E_RECHNUNG_MODI = ("aus", "b2b", "alle")
+
 # Schluessel "<Steuerkategorie>:<Satz>" der Erloeskonto-Zuordnung in
 # firmendaten["buchhaltung"]["erloeskonten"] (DATEV-Export, siehe
 # auswertung_service._erloeskonto).
@@ -87,6 +91,24 @@ class MandantEinstellungenUpdate(BaseModel):
             if not isinstance(wert, str) or (wert.strip() and not ist_http_url(wert.strip())):
                 raise ValueError(f"{key} muss eine http(s)-URL sein oder leer bleiben")
             ergebnis[key] = wert.strip()
+        return ergebnis
+
+    @field_validator("firmendaten")
+    @classmethod
+    def _e_rechnung_pruefen(cls, v: dict | None) -> dict | None:
+        if v is None:
+            return v
+        ergebnis = dict(v)
+        modus = ergebnis.get("e_rechnung_modus")
+        if modus is not None:
+            if modus not in E_RECHNUNG_MODI:
+                raise ValueError(f"e_rechnung_modus muss einer von {', '.join(E_RECHNUNG_MODI)} sein")
+            # e_rechnung_aktiv bleibt als abgeleiteter Wert fuer aeltere Leser erhalten.
+            ergebnis["e_rechnung_aktiv"] = modus != "aus"
+        elif "e_rechnung_aktiv" in ergebnis:
+            ergebnis["e_rechnung_modus"] = "alle" if ergebnis["e_rechnung_aktiv"] else "aus"
+        if "privatkunden_hinweise" in ergebnis and not isinstance(ergebnis["privatkunden_hinweise"], bool):
+            raise ValueError("privatkunden_hinweise muss true oder false sein")
         return ergebnis
 
     @field_validator("firmendaten")

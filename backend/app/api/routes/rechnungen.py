@@ -1435,10 +1435,15 @@ async def rechnung_xml(
     if not rechnung.xml_object_key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Keine ZUGFeRD-XML fuer diese Rechnung vorhanden")
     xml_bytes = await storage_service.download_bytes(rechnung.xml_object_key)
+    # Die XRechnung ist die Rechnung selbst und wird einzeln weitergegeben; der feste
+    # Name "factur-x.xml" steht fuer die im ZUGFeRD-PDF eingebettete Datei.
+    dateiname = (
+        f"{rechnung.rechnungsnummer}-xrechnung.xml" if rechnung.e_rechnung_profil == "xrechnung" else "factur-x.xml"
+    )
     return Response(
         content=xml_bytes,
         media_type="application/xml",
-        headers={"Content-Disposition": 'inline; filename="factur-x.xml"'},
+        headers={"Content-Disposition": f'inline; filename="{dateiname}"'},
     )
 
 
@@ -1478,6 +1483,11 @@ async def send_rechnung_email(
     storniert_rechnung = await _storniert_rechnung_fuer(session, rechnung)
     pdf_bytes = await pdf_bytes_fuer(session, rechnung, mandant, kunde, storniert_rechnung=storniert_rechnung)
     dateiname = f"{rechnung.rechnungsnummer}.pdf"
+    # XRechnung: Empfaenger (Behoerden, Eingangsportale) verarbeiten die XML, nicht das PDF.
+    weitere_anhaenge = []
+    if rechnung.e_rechnung_profil == "xrechnung" and rechnung.xml_object_key:
+        xml_bytes = await storage_service.download_bytes(rechnung.xml_object_key)
+        weitere_anhaenge.append((f"{rechnung.rechnungsnummer}-xrechnung.xml", xml_bytes, "application/xml"))
 
     log = await send_email_and_log(
         session,
@@ -1490,5 +1500,6 @@ async def send_rechnung_email(
         or f"Anbei erhalten Sie unsere {rechnungsart_service.rechnungsart_label(rechnung)} {rechnung.rechnungsnummer}.",
         gesendet_von=auth.user_id,
         attachment=(dateiname, pdf_bytes, "application/pdf"),
+        weitere_anhaenge=weitere_anhaenge,
     )
     return log

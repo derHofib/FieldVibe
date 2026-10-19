@@ -23,6 +23,8 @@ RECHNUNG_STATUS = ("entwurf", "versendet", "teilweise_bezahlt", "bezahlt", "stor
 # Muss mit der CHECK-Constraint aus Migration 0108 uebereinstimmen. Storno-
 # Belege behalten 'rechnung' und sind ueber ist_storno gekennzeichnet.
 RECHNUNGSARTEN = ("rechnung", "abschlag", "schluss", "gutschrift")
+# Muss mit der CHECK-Constraint aus Migration 0109 uebereinstimmen.
+E_RECHNUNG_PROFILE = ("en16931", "xrechnung")
 RECHNUNG_ZAHLUNGSARTEN = ("ueberweisung", "bar", "karte", "lastschrift", "sonstiges")
 
 # Muss mit der CHECK-Constraint ck_rechnung_positionen_quelle_valid
@@ -47,6 +49,10 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
         CheckConstraint(
             "gutschrift_grund IS NULL OR char_length(gutschrift_grund) <= 200",
             name="ck_rechnungen_gutschrift_grund_laenge",
+        ),
+        CheckConstraint(
+            f"e_rechnung_profil IS NULL OR e_rechnung_profil IN {E_RECHNUNG_PROFILE}",
+            name="ck_rechnungen_e_rechnung_profil_valid",
         ),
     )
 
@@ -113,6 +119,10 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     )
     # Nur bei Gutschriften: Grund, steht auf dem Beleg (PDF und E-Rechnung).
     gutschrift_grund: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Beim Versand festgehalten (GoBD): Profil der erzeugten E-Rechnung und die
+    # Leitweg-ID, die darin stand. NULL bei Entwuerfen und Belegen ohne E-Rechnung.
+    e_rechnung_profil: Mapped[str | None] = mapped_column(Text, nullable=True)
+    leitweg_id: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class RechnungPosition(Base):

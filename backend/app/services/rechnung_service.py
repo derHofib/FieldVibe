@@ -30,7 +30,7 @@ from app.schemas.rechnung import (
     RechnungVorgangKopf,
     RechnungZahlungRead,
 )
-from app.services import e_invoice_service, pdf_service, steuer_service, storage_service
+from app.services import e_invoice_service, pdf_service, privatkunden_service, steuer_service, storage_service
 from app.services.numbering_service import next_rechnungsnummer
 
 logger = logging.getLogger(__name__)
@@ -1160,11 +1160,12 @@ def versand_meldung(probleme: list[str]) -> str:
 
 def pruefe_versand(mandant: Mandant, rechnung: Rechnung, kunde: Kunde, positionen: list[RechnungPosition]) -> list[str]:
     """Alle Pflichtangaben vor dem Versand: Steuergruende/13b-Voraussetzungen
-    (nur Nicht-Kleinunternehmer) und, bei aktiver E-Rechnung, die EN16931-
-    Pflichtfelder. Leere Liste = versendbar."""
+    (nur Nicht-Kleinunternehmer) und, wenn der E-Rechnung-Modus des Mandanten fuer
+    diesen Kunden greift, die EN16931-Pflichtfelder (beim Profil XRechnung samt
+    BR-DE-Zusatzangaben). Leere Liste = versendbar."""
     probleme = steuer_service.pruefe_steuer_fuer_versand(mandant, rechnung, kunde, positionen)
-    if (mandant.firmendaten or {}).get("e_rechnung_aktiv"):
-        probleme += e_invoice_service.pruefe_en16931_vollstaendigkeit(mandant, rechnung, kunde, positionen)
+    if e_invoice_service.e_rechnung_gilt(mandant, kunde):
+        probleme += e_invoice_service.pruefe_e_rechnung(mandant, rechnung, kunde, positionen)
     return list(dict.fromkeys(probleme))
 
 
@@ -1188,10 +1189,12 @@ def _rechnung_dokument_bytes(
     strikt: bool = True,
     bezug_rechnung: Rechnung | None = None,
     angerechnete_abschlaege: list[Rechnung] | None = None,
-) -> tuple[bytes, bytes | None]:
-    """Normales PDF ist immer der Ausgangspunkt. Hat der Mandant e_rechnung_aktiv
-    gesetzt, entsteht stattdessen ein ZUGFeRD-Hybrid-PDF (mit eingebetteter
-    CII-XML). strikt (Versand): fehlende Pflichtangaben oder ein Fehler beim
+) -> tuple[bytes, bytes | None, str | None]:
+    """(PDF, XML, Profil). Normales PDF ist immer der Ausgangspunkt. Greift der
+    E-Rechnung-Modus des Mandanten fuer den Kunden, entsteht stattdessen ein Hybrid-PDF
+    (mit eingebetteter CII-XML); beim Profil XRechnung gilt die XML als die Rechnung,
+    das PDF ist deren eingebettete Lesefassung. Die XML wird in beiden Faellen
+    zusaetzlich einzeln archiviert. strikt (Versand): fehlende Pflichtangaben oder ein Fehler beim
     Erzeugen brechen mit VersandFehler ab statt still aufs normale PDF
     zurueckzufallen. Nicht strikt (Storno): ein bereits versendetes Original
     darf seine Korrektur nicht blockieren -- dort bleibt der Fallback."""
@@ -1205,13 +1208,15 @@ def _rechnung_dokument_bytes(
         logo_bytes=logo_bytes,
         bezug_rechnung=bezug_rechnung,
     )
-    if not (mandant.firmendaten or {}).get("e_rechnung_aktiv"):
-        return pdf_bytes, None
-    probleme = e_invoice_service.pruefe_en16931_vollstaendigkeit(mandant, rechnung, kunde, positionen)
+    if not e_invoice_service.e_rechnung_gilt(mandant, kunde):
+        return pdf_bytes, None, None
+    probleme = e_invoice_service.pruefe_e_rechnung(mandant, rechnung, kunde, positionen)
     if probleme:
         if strikt:
             raise VersandFehler(versand_meldung(probleme))
-        return pdf_bytes, None
+        return pdf_bytes, None, None
+    profil = e_invoice_service.profil_fuer(kunde)
+    hinweise = privatkunden_service.hinweise_fuer(mandant, rechnung, kunde, positionen)
 
     try:
         netto = netto_betrag(rechnung, positionen)
@@ -1225,6 +1230,8 @@ def _rechnung_dokument_bytes(
             brutto,
             bezug_rechnung=bezug_rechnung,
             angerechnete_abschlaege=angerechnete_abschlaege,
+            profil=profil,
+            hinweise=hinweise.texte() if hinweise is not None else None,
         )
         xml_bytes = e_invoice_service.cii_xml_bytes(dokument)
         pdf_bytes_mit_output_intent = pdf_service.generate_rechnung_pdf(
@@ -1238,13 +1245,13 @@ def _rechnung_dokument_bytes(
             logo_bytes=logo_bytes,
             bezug_rechnung=bezug_rechnung,
         )
-        hybrid_pdf_bytes = e_invoice_service.baue_hybrid_pdf(pdf_bytes_mit_output_intent, xml_bytes)
+        hybrid_pdf_bytes = e_invoice_service.baue_hybrid_pdf(pdf_bytes_mit_output_intent, xml_bytes, profil)
     except Exception as exc:
         logger.exception("E-Rechnung für %s konnte nicht erzeugt werden", rechnung.rechnungsnummer)
         if strikt:
             raise VersandFehler(f"E-Rechnung konnte nicht erzeugt werden: {_kurzgrund_e_rechnung(exc)}") from exc
-        return pdf_bytes, None
-    return hybrid_pdf_bytes, xml_bytes
+        return pdf_bytes, None, None
+    return hybrid_pdf_bytes, xml_bytes, profil
 
 
 async def beleg_bezuege_laden(
@@ -1297,7 +1304,7 @@ async def archiviere_pdf(
     positionen = await positionen_fuer(session, rechnung.id)
     koepfe = await vorgang_koepfe_map(session, positionen)
     bezug, abschlaege = await beleg_bezuege_laden(session, rechnung, positionen)
-    pdf_bytes, xml_bytes = _rechnung_dokument_bytes(
+    pdf_bytes, xml_bytes, profil = _rechnung_dokument_bytes(
         rechnung,
         mandant,
         kunde,
@@ -1316,6 +1323,9 @@ async def archiviere_pdf(
         xml_key = storage_service.new_rechnung_xml_key(rechnung.id)
         await storage_service.upload_bytes(xml_key, xml_bytes, "application/xml")
         rechnung.xml_object_key = xml_key
+        # GoBD: festhalten, was versendet wurde; spaetere Kundenaenderungen aendern das nicht.
+        rechnung.e_rechnung_profil = profil
+        rechnung.leitweg_id = (kunde.leitweg_id or "").strip() or None
     return pdf_bytes
 
 
