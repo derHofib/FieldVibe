@@ -506,6 +506,8 @@ export const kundenApi = {
     notiz?: string;
     ust_idnr?: string;
     ust_13b_nachweis_bis?: string;
+    leitweg_id?: string;
+    e_rechnung_format?: "zugferd" | "xrechnung";
   }) => apiFetch<Kunde>("/api/kunden",{ method: "POST", body: JSON.stringify(body) }),
   update: (
     id: string,
@@ -516,6 +518,8 @@ export const kundenApi = {
       notiz: string | null;
       ust_idnr: string | null;
       ust_13b_nachweis_bis: string | null;
+      leitweg_id: string | null;
+      e_rechnung_format: "zugferd" | "xrechnung" | null;
       ansprechpartner: Ansprechpartner[];
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),

@@ -7,6 +7,7 @@ import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { ErloeskontenSection } from "../../components/ErloeskontenSection";
 import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
+import { E_RECHNUNG_MODI, type ERechnungModus, eRechnungModus } from "../../utils/eRechnungVersand";
 import { istHttpUrl } from "../../utils/rechtliches";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
@@ -27,7 +28,8 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   const [ustIdnr, setUstIdnr] = useState(fd.ust_idnr ?? "");
   const [steuernummer, setSteuernummer] = useState(fd.steuernummer ?? "");
   const [istKleinunternehmer, setIstKleinunternehmer] = useState(fd.ist_kleinunternehmer ?? false);
-  const [eRechnungAktiv, setERechnungAktiv] = useState(fd.e_rechnung_aktiv ?? false);
+  const [eRechnungModusWahl, setERechnungModusWahl] = useState<ERechnungModus>(eRechnungModus(fd));
+  const [privatkundenHinweise, setPrivatkundenHinweise] = useState(fd.privatkunden_hinweise ?? true);
   const [impressumUrl, setImpressumUrl] = useState(fd.impressum_url ?? "");
   const [datenschutzUrl, setDatenschutzUrl] = useState(fd.datenschutz_url ?? "");
   const impressumUrlFehlt = impressumUrl.trim() !== "" && !istHttpUrl(impressumUrl);
@@ -55,7 +57,9 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         ust_idnr: ustIdnr,
         steuernummer,
         ist_kleinunternehmer: istKleinunternehmer,
-        e_rechnung_aktiv: eRechnungAktiv,
+        e_rechnung_modus: eRechnungModusWahl,
+        e_rechnung_aktiv: eRechnungModusWahl !== "aus",
+        privatkunden_hinweise: privatkundenHinweise,
         impressum_url: impressumUrl.trim(),
         datenschutz_url: datenschutzUrl.trim(),
       }),
@@ -236,19 +240,48 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
         Kleinunternehmer nach § 19 UStG (keine Umsatzsteuer auf Rechnungen)
       </label>
 
+      <fieldset className="space-y-1.5">
+        <legend className="text-sm font-medium text-label">E-Rechnung (XRechnung / ZUGFeRD)</legend>
+        <p className="text-xs text-label2">
+          Rechnungen werden beim Versand mit eingebetteter bzw. beiliegender E-Rechnungs-XML erzeugt, sobald alle
+          Pflichtangaben vorhanden sind. Fehlen Angaben, ist der Versand gesperrt und die Meldung nennt, was fehlt.
+          Kunden mit Leitweg-ID (Behörden) bekommen eine XRechnung, alle anderen ZUGFeRD.
+        </p>
+        {E_RECHNUNG_MODI.map((o) => (
+          <label key={o.wert} className="flex items-start gap-2 text-sm text-label">
+            <input
+              type="radio"
+              name="e-rechnung-modus"
+              className="mt-0.5"
+              value={o.wert}
+              checked={eRechnungModusWahl === o.wert}
+              onChange={() => setERechnungModusWahl(o.wert)}
+            />
+            <span>
+              {o.label}
+              <span className="mt-0.5 block text-xs text-label2">{o.hinweis}</span>
+            </span>
+          </label>
+        ))}
+        {eRechnungModusWahl !== "aus" && (
+          <p className="text-xs text-label2">
+            Für die XRechnung zusätzlich nötig: Telefon, E-Mail und IBAN oben sowie die Leitweg-ID am Kunden.
+          </p>
+        )}
+      </fieldset>
+
       <label className="flex items-start gap-2 text-sm text-label">
         <input
           type="checkbox"
           className="mt-0.5"
-          checked={eRechnungAktiv}
-          onChange={(e) => setERechnungAktiv(e.target.checked)}
+          checked={privatkundenHinweise}
+          onChange={(e) => setPrivatkundenHinweise(e.target.checked)}
         />
         <span>
-          E-Rechnung (ZUGFeRD) aktivieren
+          Hinweise für Privatkunden auf Rechnungen
           <span className="mt-0.5 block text-xs text-label2">
-            Rechnungen werden beim Versand als ZUGFeRD-Hybrid-PDF mit eingebetteter E-Rechnungs-XML
-            erzeugt, sobald alle Pflichtangaben (u.a. USt-IdNr. des Kunden bei gewerblichen/öffentlichen
-            Kunden) vorhanden sind -- sonst automatisch normales PDF.
+            Aufbewahrungspflicht von zwei Jahren (§ 14 Abs. 4 Nr. 9 UStG) und – wenn die Positionen aus Zeiterfassung
+            und Material stammen – der Ausweis der Arbeitskosten für die Steuerermäßigung nach § 35a EStG.
           </span>
         </span>
       </label>

@@ -5,10 +5,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
+import { ERechnungFelder, zeigeERechnungFelder } from "../../components/kunde/ERechnungFelder";
 import { Nachweis13bFeld } from "../../components/kunde/Nachweis13b";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
+import { type ERechnungFormat, leitwegIdFehler } from "../../utils/eRechnungVersand";
 import { istModulAktiv } from "../../utils/module";
 
 /** Eigenstaendige Kundenverwaltung -- vormals der "kunden"-Tab in der
@@ -35,6 +37,8 @@ export function KundenPage() {
     notiz: "",
     ustIdnr: "",
     ust13bBis: "",
+    leitwegId: "",
+    eRechnungFormat: "" as ERechnungFormat | "",
   });
 
   const { data: kunden, isLoading: kundenLoading } = useQuery({
@@ -62,13 +66,27 @@ export function KundenPage() {
         notiz: neuerKunde.notiz || undefined,
         ust_idnr: neuerKunde.ustIdnr || undefined,
         ust_13b_nachweis_bis: neuerKunde.ust13bBis || undefined,
+        leitweg_id: neuerKunde.leitwegId.trim() || undefined,
+        e_rechnung_format: neuerKunde.eRechnungFormat || undefined,
       });
     },
     onSuccess: (kunde) => {
       queryClient.invalidateQueries({ queryKey: ["kunden"] });
       setShowForm(false);
       setKundeFehler(null);
-      setNeuerKunde({ name: "", kundennummer: "", typ: "", strasse: "", plz: "", ort: "", notiz: "", ustIdnr: "", ust13bBis: "" });
+      setNeuerKunde({
+        name: "",
+        kundennummer: "",
+        typ: "",
+        strasse: "",
+        plz: "",
+        ort: "",
+        notiz: "",
+        ustIdnr: "",
+        ust13bBis: "",
+        leitwegId: "",
+        eRechnungFormat: "",
+      });
       navigate(`/kunden/${kunde.id}`);
     },
     onError: (err) =>
@@ -153,6 +171,15 @@ export function KundenPage() {
               onChange={(ust13bBis) => setNeuerKunde({ ...neuerKunde, ust13bBis })}
             />
           )}
+          {zeigeERechnungFelder(neuerKunde.typ, neuerKunde.leitwegId, neuerKunde.eRechnungFormat) && (
+            <ERechnungFelder
+              leitwegId={neuerKunde.leitwegId}
+              format={neuerKunde.eRechnungFormat}
+              onChange={({ leitwegId, format }) =>
+                setNeuerKunde({ ...neuerKunde, leitwegId, eRechnungFormat: format })
+              }
+            />
+          )}
           <div>
             <label className="mb-1 block text-xs text-label2">Straße + Hausnr.</label>
             <input
@@ -193,7 +220,7 @@ export function KundenPage() {
           </p>
           {kundeFehler && <p className="text-sm text-st-fehlt ">{kundeFehler}</p>}
           <button
-            disabled={!neuerKunde.name.trim() || createKundeMutation.isPending}
+            disabled={!neuerKunde.name.trim() || leitwegIdFehler(neuerKunde.leitwegId) !== null || createKundeMutation.isPending}
             onClick={() => createKundeMutation.mutate()}
             className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >

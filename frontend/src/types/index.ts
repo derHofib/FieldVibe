@@ -312,6 +312,10 @@ export interface Kunde {
   ust_idnr: string | null;
   // Ablauf der Bescheinigung USt 1 TG (§ 13b Abs. 2 Nr. 4 UStG), ISO-Datum.
   ust_13b_nachweis_bis?: string | null;
+  // Routing-Kennung öffentlicher Auftraggeber (BT-10 der XRechnung).
+  leitweg_id?: string | null;
+  // Profil der E-Rechnung; null = Automatik (mit Leitweg-ID XRechnung, sonst ZUGFeRD).
+  e_rechnung_format?: "zugferd" | "xrechnung" | null;
   portal_slug: string;
   logo_object_key: string | null;
   created_at: string;
@@ -1195,6 +1199,9 @@ export interface Rechnung {
   offener_betrag: string;
   // Nur gesetzt, wenn beim Versand ein ZUGFeRD-Hybrid-PDF archiviert wurde.
   xml_object_key: string | null;
+  // Beim Versand festgehalten: Profil der E-Rechnung und die darin enthaltene Leitweg-ID.
+  e_rechnung_profil?: "en16931" | "xrechnung" | null;
+  leitweg_id?: string | null;
   rechnungsart?: Rechnungsart;
   angebot_id?: string | null;
   // Nur Gutschriften: Ursprungsrechnung und Grund.
@@ -1696,6 +1703,13 @@ export interface MandantFirmendaten {
   // EN16931-Pflichtangaben vorhanden sind -- sonst stiller Fallback auf ein
   // normales PDF (siehe e_invoice_service.pruefe_en16931_vollstaendigkeit).
   e_rechnung_aktiv?: boolean;
+  // Wann Rechnungen als E-Rechnung versendet werden: nie / nur an gewerbliche Kunden / an alle.
+  // Fehlt der Schlüssel, gilt e_rechnung_aktiv (true = alle). e_rechnung_aktiv wird vom Backend
+  // aus dem Modus abgeleitet.
+  e_rechnung_modus?: "aus" | "b2b" | "alle";
+  // Hinweise für Privatkunden auf Rechnungen (Aufbewahrungspflicht, § 35a-Arbeitskosten);
+  // fehlt der Schlüssel, sind sie an.
+  privatkunden_hinweise?: boolean;
   // Optionale Rechtstext-URLs (http/https): haben auf Login-/Portalseiten
   // Vorrang vor den Platzhalter-Seiten /impressum und /datenschutz.
   impressum_url?: string;

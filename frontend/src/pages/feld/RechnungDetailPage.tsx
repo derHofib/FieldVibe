@@ -24,6 +24,7 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
 import { downloadBlob } from "../../utils/download";
+import { eRechnungPruefHinweis } from "../../utils/eRechnungVersand";
 import { formatEuro, heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import { gruppierePositionen } from "../../utils/rechnungAbrechnung";
@@ -337,7 +338,11 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
   const xmlMutation = useMutation({
     mutationFn: () => rechnungenApi.xml(id!),
-    onSuccess: (blob) => downloadBlob(blob, "factur-x.xml"),
+    onSuccess: (blob) =>
+      downloadBlob(
+        blob,
+        rechnung?.e_rechnung_profil === "xrechnung" ? `${rechnung.rechnungsnummer}-xrechnung.xml` : "factur-x.xml",
+      ),
   });
 
   const addZahlungMutation = useMutation({
@@ -575,7 +580,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
 
       {rechnung.xml_object_key && (
         <div className="rounded-lg bg-st-erledigt-bg p-3 text-sm text-st-erledigt ">
-          ZUGFeRD-Rechnung — diese PDF enthält eine eingebettete E-Rechnungs-XML.
+          {eRechnungPruefHinweis(rechnung.e_rechnung_profil ?? "en16931", rechnung.leitweg_id)} Das PDF enthält die
+          eingebettete E-Rechnungs-XML.
         </div>
       )}
 

@@ -17,10 +17,12 @@ import { ApiError } from "../../api/client";
 import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
+import { ERechnungFelder, zeigeERechnungFelder } from "../../components/kunde/ERechnungFelder";
 import { Nachweis13bFeld, Nachweis13bStatus } from "../../components/kunde/Nachweis13b";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { downloadBlob } from "../../utils/download";
+import { E_RECHNUNG_FORMAT_KURZ, type ERechnungFormat, leitwegIdFehler } from "../../utils/eRechnungVersand";
 import type {
   Adresse,
   Anlage,
@@ -43,6 +45,8 @@ function Stammdaten({
   typ,
   ustIdnr,
   ust13bBis,
+  leitwegId,
+  eRechnungFormat,
   kannVerwalten,
 }: {
   kundeId: string;
@@ -51,6 +55,8 @@ function Stammdaten({
   typ: string | null;
   ustIdnr: string | null;
   ust13bBis: string | null;
+  leitwegId: string | null;
+  eRechnungFormat: ERechnungFormat | null;
   kannVerwalten: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -60,6 +66,8 @@ function Stammdaten({
     notiz: notiz ?? "",
     ustIdnr: ustIdnr ?? "",
     ust13bBis: ust13bBis ?? "",
+    leitwegId: leitwegId ?? "",
+    eRechnungFormat: (eRechnungFormat ?? "") as ERechnungFormat | "",
   }));
   const brauchtUstIdnr = typ === "gewerbe" || typ === "oeffentlich";
 
@@ -73,6 +81,8 @@ function Stammdaten({
         notiz: form.notiz || null,
         ust_idnr: form.ustIdnr || null,
         ust_13b_nachweis_bis: form.ust13bBis || null,
+        leitweg_id: form.leitwegId.trim() || null,
+        e_rechnung_format: form.eRechnungFormat || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
@@ -96,6 +106,8 @@ function Stammdaten({
                   notiz: notiz ?? "",
                   ustIdnr: ustIdnr ?? "",
                   ust13bBis: ust13bBis ?? "",
+                  leitwegId: leitwegId ?? "",
+                  eRechnungFormat: (eRechnungFormat ?? "") as ERechnungFormat | "",
                 });
                 setBearbeiten(true);
               }}
@@ -122,6 +134,12 @@ function Stammdaten({
             <span>§ 13b-Nachweis USt 1 TG:</span>
             <Nachweis13bStatus bis={ust13bBis} />
           </div>
+        )}
+        {(leitwegId || eRechnungFormat) && (
+          <p className="mt-1.5 text-sm text-label2">
+            E-Rechnung: {eRechnungFormat ? E_RECHNUNG_FORMAT_KURZ[eRechnungFormat] : "Format automatisch"}
+            {leitwegId && ` · Leitweg-ID ${leitwegId}`}
+          </p>
         )}
       </div>
     );
@@ -161,6 +179,13 @@ function Stammdaten({
       {brauchtUstIdnr && (
         <Nachweis13bFeld wert={form.ust13bBis} onChange={(ust13bBis) => setForm({ ...form, ust13bBis })} />
       )}
+      {zeigeERechnungFelder(typ, form.leitwegId, form.eRechnungFormat) && (
+        <ERechnungFelder
+          leitwegId={form.leitwegId}
+          format={form.eRechnungFormat}
+          onChange={({ leitwegId: neueId, format }) => setForm({ ...form, leitwegId: neueId, eRechnungFormat: format })}
+        />
+      )}
       <textarea
         value={form.notiz}
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
@@ -171,7 +196,7 @@ function Stammdaten({
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
-          disabled={speichernMutation.isPending}
+          disabled={speichernMutation.isPending || leitwegIdFehler(form.leitwegId) !== null}
           className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
@@ -183,6 +208,13 @@ function Stammdaten({
           Abbrechen
         </button>
       </div>
+      {speichernMutation.isError && (
+        <p role="alert" className="text-xs text-st-fehlt">
+          {speichernMutation.error instanceof ApiError
+            ? speichernMutation.error.message
+            : "Stammdaten konnten nicht gespeichert werden."}
+        </p>
+      )}
     </div>
   );
 }
@@ -1251,6 +1283,8 @@ export function KundeProfilePage() {
         typ={profil.typ}
         ustIdnr={profil.ust_idnr}
         ust13bBis={profil.ust_13b_nachweis_bis ?? null}
+        leitwegId={profil.leitweg_id ?? null}
+        eRechnungFormat={profil.e_rechnung_format ?? null}
         kannVerwalten={kannVerwalten}
       />
 
