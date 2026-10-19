@@ -35,7 +35,7 @@ from app.schemas.rechnung import (
     RechnungVorgangUebernahme,
     RechnungZahlungCreate,
 )
-from app.services import papierkorb_service, storage_service
+from app.services import papierkorb_service, steuer_service, storage_service
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
@@ -322,7 +322,8 @@ async def export_rechnungen_csv(
             r.faellig_am.strftime("%d.%m.%Y") if r.faellig_am else "",
             r.status,
             str(r.betrag_netto),
-            str(r.mwst_satz),
+            # Gemischte Belege haben keinen einen Satz -- alle Saetze ausweisen.
+            "/".join(str(g.satz) for g in r.steuergruppen) if len(r.steuergruppen) > 1 else str(r.mwst_satz),
             str(r.betrag_brutto),
             str(r.tage_ueberfaellig),
             str(r.mahnstufe),
@@ -459,22 +460,46 @@ async def delete_rechnung(
     )
 
 
-def _neue_positionen(
-    rechnung_id: UUID, mandant_id: UUID, eintraege: list[RechnungPositionCreate]
-) -> list[RechnungPosition]:
-    return [
-        RechnungPosition(
-            mandant_id=mandant_id,
-            rechnung_id=rechnung_id,
-            position=i + 1,
-            beschreibung=e.beschreibung,
-            menge=e.menge,
-            einheit=e.einheit,
-            einzelpreis=e.einzelpreis,
-            quelle=e.quelle,
+def _steuer_fuer_position(
+    body: RechnungPositionCreate, beleg_mwst_satz: Decimal, *, kleinunternehmer: bool
+) -> tuple[str, Decimal]:
+    try:
+        return steuer_service.loese_steuer_auf(
+            kategorie=body.steuer_kategorie,
+            satz=body.steuer_satz,
+            beleg_mwst_satz=beleg_mwst_satz,
+            kleinunternehmer=kleinunternehmer,
         )
-        for i, e in enumerate(eintraege)
-    ]
+    except steuer_service.SteuerFehler as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+def _neue_positionen(
+    rechnung_id: UUID,
+    mandant_id: UUID,
+    eintraege: list[RechnungPositionCreate],
+    beleg_mwst_satz: Decimal,
+    *,
+    kleinunternehmer: bool,
+) -> list[RechnungPosition]:
+    positionen = []
+    for i, e in enumerate(eintraege):
+        steuer_kategorie, steuer_satz = _steuer_fuer_position(e, beleg_mwst_satz, kleinunternehmer=kleinunternehmer)
+        positionen.append(
+            RechnungPosition(
+                mandant_id=mandant_id,
+                rechnung_id=rechnung_id,
+                position=i + 1,
+                beschreibung=e.beschreibung,
+                menge=e.menge,
+                einheit=e.einheit,
+                einzelpreis=e.einzelpreis,
+                steuer_kategorie=steuer_kategorie,
+                steuer_satz=steuer_satz,
+                quelle=e.quelle,
+            )
+        )
+    return positionen
 
 
 @router.post(
@@ -514,7 +539,7 @@ async def create_rechnung(
     # Kleinunternehmer (§19 UStG) duerfen keine Umsatzsteuer ausweisen -- der
     # Satz wird hier serverseitig erzwungen, damit kein Aufruf (versehentlich
     # oder nicht) trotzdem eine besteuerte Rechnung erzeugen kann.
-    ist_kleinunternehmer = bool((mandant.firmendaten or {}).get("ist_kleinunternehmer"))
+    ist_kleinunternehmer = steuer_service.ist_kleinunternehmer(mandant)
     mwst_satz = Decimal("0") if ist_kleinunternehmer else body.mwst_satz
 
     rechnungsnummer = await next_rechnungsnummer(session, auth.mandant_id)
@@ -532,7 +557,9 @@ async def create_rechnung(
     session.add(rechnung)
     await session.flush()
 
-    for p in _neue_positionen(rechnung.id, auth.mandant_id, body.positionen):
+    for p in _neue_positionen(
+        rechnung.id, auth.mandant_id, body.positionen, mwst_satz, kleinunternehmer=ist_kleinunternehmer
+    ):
         session.add(p)
     await session.flush()
     await session.refresh(rechnung)
@@ -658,6 +685,10 @@ async def add_position(
             detail="Material nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
 
+    mandant = await session.get(Mandant, auth.mandant_id)
+    steuer_kategorie, steuer_satz = _steuer_fuer_position(
+        body, rechnung.mwst_satz, kleinunternehmer=steuer_service.ist_kleinunternehmer(mandant)
+    )
     bestehende = await positionen_fuer(session, rechnung_id)
     naechste_position = max((p.position for p in bestehende), default=0) + 1
     session.add(
@@ -669,6 +700,8 @@ async def add_position(
             menge=body.menge,
             einheit=body.einheit,
             einzelpreis=body.einzelpreis,
+            steuer_kategorie=steuer_kategorie,
+            steuer_satz=steuer_satz,
             quelle=body.quelle,
             vorgang_id=(
                 rechnung.vorgang_id
@@ -806,6 +839,18 @@ async def update_position(
         position.beschreibung = body.beschreibung
     if body.einzelpreis is not None:
         position.einzelpreis = body.einzelpreis
+    if body.steuer_kategorie is not None or body.steuer_satz is not None:
+        mandant = await session.get(Mandant, auth.mandant_id)
+        try:
+            position.steuer_kategorie, position.steuer_satz = steuer_service.aendere_steuer(
+                aktuell_kategorie=position.steuer_kategorie,
+                aktuell_satz=position.steuer_satz,
+                kategorie=body.steuer_kategorie,
+                satz=body.steuer_satz,
+                kleinunternehmer=steuer_service.ist_kleinunternehmer(mandant),
+            )
+        except steuer_service.SteuerFehler as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     await session.flush()
     await session.refresh(position)
     await session.refresh(rechnung)

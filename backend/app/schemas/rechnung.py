@@ -3,11 +3,20 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 # Muss mit RECHNUNG_POSITION_QUELLEN in app/models/rechnung.py
 # uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 8).
 RechnungPositionQuelle = Literal["material", "zeit", "fahrzeit", "fahrtkosten", "leistung"]
+
+# Muss mit RECHNUNG_STEUER_KATEGORIEN in app/models/rechnung.py uebereinstimmen.
+# Welche davon per API anlegbar sind, regelt steuer_service (Gating).
+RechnungSteuerKategorie = Literal["S", "Z", "E", "AE"]
+
+
+def _satz_zu_kategorie_pruefen(kategorie: str | None, satz: Decimal | None) -> None:
+    if kategorie is not None and kategorie != "S" and satz is not None and satz != 0:
+        raise ValueError(f"Bei Steuerkategorie {kategorie} muss der Steuersatz 0 sein")
 
 
 class RechnungPositionCreate(BaseModel):
@@ -26,6 +35,24 @@ class RechnungPositionCreate(BaseModel):
     # Nur bei quelle="material": das Material, dessen offene Verwendungen am
     # Vorgang mit uebernommen (und gesperrt) werden.
     material_id: UUID | None = None
+    # Ohne Angabe gilt die Vorbelegung aus dem Beleg (steuer_service); bei
+    # Kleinunternehmern wird ohnehin E/0 erzwungen.
+    steuer_kategorie: RechnungSteuerKategorie | None = None
+    steuer_satz: Decimal | None = Field(default=None, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _steuer_konsistent(self) -> "RechnungPositionCreate":
+        _satz_zu_kategorie_pruefen(self.steuer_kategorie, self.steuer_satz)
+        return self
+
+
+class RechnungSteuerGruppeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    kategorie: RechnungSteuerKategorie
+    satz: Decimal
+    netto: Decimal
+    steuer: Decimal
 
 
 class RechnungPositionRead(BaseModel):
@@ -41,6 +68,8 @@ class RechnungPositionRead(BaseModel):
     vorgang_id: UUID | None
     lv_position_id: UUID | None
     material_id: UUID | None
+    steuer_kategorie: RechnungSteuerKategorie
+    steuer_satz: Decimal
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -104,9 +133,17 @@ class RechnungVorgangKopf(BaseModel):
 
 class RechnungPositionUpdate(BaseModel):
     # menge/einheit/quelle/vorgang_id bewusst nicht aenderbar: sie haengen an
-    # den gesperrten Zeiterfassung-Eintraegen.
+    # den gesperrten Zeiterfassung-Eintraegen. Die Steuerfelder haengen nicht
+    # daran und sind -- wie die ganze Position -- nur im Entwurf aenderbar.
     beschreibung: str | None = None
     einzelpreis: Decimal | None = Field(default=None, ge=0)
+    steuer_kategorie: RechnungSteuerKategorie | None = None
+    steuer_satz: Decimal | None = Field(default=None, ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _steuer_konsistent(self) -> "RechnungPositionUpdate":
+        _satz_zu_kategorie_pruefen(self.steuer_kategorie, self.steuer_satz)
+        return self
 
 
 class AbrechenbarerVorgang(BaseModel):
@@ -169,6 +206,10 @@ class RechnungRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     positionen: list[RechnungPositionRead]
+    # Steuer je (Kategorie, Satz) -- die Quelle fuer Steuer- und Bruttobetrag
+    # (steuer_service); betrag_netto ist die Summe der gerundeten Gruppen.
+    steuergruppen: list[RechnungSteuerGruppeRead]
+    betrag_steuer: Decimal
     zahlungen: list[RechnungZahlungRead] = Field(default_factory=list)
     # Alle distinct vorgang_id der Positionen, nach erster Positionsnummer --
     # Grundlage der Gruppendarstellung (Ueberschrift je Vorgang).
@@ -177,7 +218,7 @@ class RechnungRead(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def betrag_brutto(self) -> Decimal:
-        return (self.betrag_netto + self.betrag_netto * self.mwst_satz / Decimal("100")).quantize(Decimal("0.01"))
+        return (self.betrag_netto + self.betrag_steuer).quantize(Decimal("0.01"))
 
     @computed_field  # type: ignore[prop-decorator]
     @property

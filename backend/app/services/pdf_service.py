@@ -22,6 +22,8 @@ from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
+from app.services import steuer_service
+from app.services.steuer_service import SteuerGruppe
 
 # Freitext im Formular-Baukasten (Feldlabels, Antworten) kommt direkt vom
 # Nutzer -- Zeichen ausserhalb von Windows-1252 (z.B. "Ω", "∆") liess fpdf2
@@ -495,9 +497,9 @@ def _beleg_positionen(
     return gesamt_netto
 
 
-def _beleg_summenblock_hoehe(kleinunternehmer: bool) -> float:
+def _beleg_summenblock_hoehe(kleinunternehmer: bool, anzahl_steuerzeilen: int = 1) -> float:
     # 6 Abstand + (Netto/USt-Zeilen + Linie) + Endbetrag (+ §19-Hinweis)
-    return 6 + (8 + 5 if kleinunternehmer else 6 * 2 + 3 + 8)
+    return 6 + (8 + 5 if kleinunternehmer else 6 * (1 + anzahl_steuerzeilen) + 3 + 8)
 
 
 def _beleg_summenblock(
@@ -511,11 +513,17 @@ def _beleg_summenblock(
     hoehe_danach: float = 0.0,
     nur_netto: bool = False,
     hinweis: str | None = None,
+    steuer_gruppen: list[SteuerGruppe] | None = None,
 ) -> None:
     """nur_netto: Endbetrag ohne USt.-Zeilen (Bestellung -- Richtwert netto),
-    mit optionalem grauem hinweis darunter."""
-    netto = gesamt_netto.quantize(_CENT)
-    hoehe = _beleg_summenblock_hoehe(kleinunternehmer or nur_netto) + hoehe_danach
+    mit optionalem grauem hinweis darunter. steuer_gruppen (nur Rechnung):
+    Netto/USt./Brutto kommen aus dem Steuerkern statt aus mwst_satz, damit die
+    PDF exakt die Summen der Rechnung zeigt."""
+    netto = steuer_service.netto_summe(steuer_gruppen) if steuer_gruppen else gesamt_netto.quantize(_CENT)
+    hoehe = (
+        _beleg_summenblock_hoehe(kleinunternehmer or nur_netto, len(steuer_gruppen) if steuer_gruppen else 1)
+        + hoehe_danach
+    )
     if not _b_platz(pdf, hoehe):
         _b_neue_seite(pdf, mit_kopfzeile=False)
     pdf.set_y(pdf.get_y() + 6)
@@ -523,17 +531,24 @@ def _beleg_summenblock(
     if kleinunternehmer or nur_netto:
         brutto = netto
     else:
-        mwst = (netto * mwst_satz / Decimal("100")).quantize(_CENT)
-        brutto = netto + mwst
-        satz = f"{mwst_satz:f}"
-        if "." in satz:
-            satz = satz.rstrip("0").rstrip(".")
+        # Schritt 3: je Gruppe Kategorie und Befreiungshinweis ausweisen
+        # (Z/E/AE); heute reicht eine USt.-Zeile je Satz.
+        if steuer_gruppen:
+            steuerzeilen = [(g.satz, g.steuer) for g in steuer_gruppen]
+            brutto = steuer_service.brutto_summe(steuer_gruppen)
+        else:
+            mwst = (netto * mwst_satz / Decimal("100")).quantize(_CENT)
+            steuerzeilen = [(mwst_satz, mwst)]
+            brutto = netto + mwst
         pdf.set_font("Helvetica", "", 9)
         _set_text(pdf)
-        for label, wert in (
-            ("Summe netto", _fmt_euro(netto)),
-            (f"zzgl. {satz.replace('.', ',')} % USt.", _fmt_euro(mwst)),
-        ):
+        zeilen = [("Summe netto", _fmt_euro(netto))]
+        for satz_wert, mwst in steuerzeilen:
+            satz = f"{satz_wert:f}"
+            if "." in satz:
+                satz = satz.rstrip("0").rstrip(".")
+            zeilen.append((f"zzgl. {satz.replace('.', ',')} % USt.", _fmt_euro(mwst)))
+        for label, wert in zeilen:
             y = pdf.get_y()
             pdf.set_xy(x, y)
             pdf.cell(40, 6, _pdf_safe_text(label))
@@ -657,6 +672,7 @@ def _beleg_rumpf(
     netto_hinweis: str | None = None,
     aufstellung: tuple[list[tuple[str, Decimal]], Decimal] | None = None,
     ohne_summenblock: bool = False,
+    steuer_gruppen: list[SteuerGruppe] | None = None,
 ) -> None:
     """aufstellung=(Zeilen, Endbetrag) ersetzt den USt.-Summenblock durch die
     Mahn-Aufstellung; ohne_summenblock laesst den Block ganz weg."""
@@ -676,7 +692,9 @@ def _beleg_rumpf(
     elif ohne_summenblock:
         summen_hoehe = 0.0
     else:
-        summen_hoehe = _beleg_summenblock_hoehe(kleinunternehmer or nur_netto)
+        summen_hoehe = _beleg_summenblock_hoehe(
+            kleinunternehmer or nur_netto, len(steuer_gruppen) if steuer_gruppen else 1
+        )
     if positionen:
         gesamt_netto = _beleg_positionen(pdf, positionen, vorgang_koepfe, summen_hoehe + abschluss_hoehe)
     else:
@@ -694,6 +712,7 @@ def _beleg_rumpf(
             hoehe_danach=abschluss_hoehe,
             nur_netto=nur_netto,
             hinweis=netto_hinweis,
+            steuer_gruppen=steuer_gruppen,
         )
     _beleg_abschluss(pdf, mandant, absaetze)
 
@@ -821,6 +840,7 @@ def generate_rechnung_pdf(
         endbetrag_label="Rechnungsbetrag",
         label_akzent=False,
         absaetze=absaetze,
+        steuer_gruppen=steuer_service.steuer_gruppen(rechnung, positionen or []),
     )
 
     if pdfa_output_intent:

@@ -23,6 +23,8 @@ from drafthorse.pdf import attach_xml
 from app.models.kunde import Kunde
 from app.models.mandant import Mandant
 from app.models.rechnung import Rechnung, RechnungPosition
+from app.services import steuer_service
+from app.services.steuer_service import SteuerGruppe
 
 _CENT = Decimal("0.01")
 # Land-Fallback fuer Kunden ohne eigenes Laenderfeld (Kunde.adresse hat
@@ -145,18 +147,23 @@ def baue_cii_dokument(
     # interne Element-Objekt, nicht den rohen Wert -- eine Wiederverwendung
     # ueber Rueck-Lesen wuerde das Element selbst als neuen Wert einsetzen
     # (serialisiert dann fehlerhaft).
-    steuerkategorie = KLEINUNTERNEHMER_VAT_EXEMPTION_CODE if ist_kleinunternehmer else "S"
-    steuersatz = Decimal("0.00") if ist_kleinunternehmer else rechnung.mwst_satz
-
-    tax = ApplicableTradeTax()
-    tax.calculated_amount = steuer
-    tax.type_code = "VAT"
-    tax.basis_amount = netto
-    tax.category_code = steuerkategorie
-    tax.rate_applicable_percent = steuersatz
+    # Schritt 3: Kategorien Z/AE mit Befreiungsgrund (heute nur S und die
+    # Kleinunternehmer-Befreiung E); je Gruppe ein Steuerblock.
     if ist_kleinunternehmer:
-        tax.exemption_reason = KLEINUNTERNEHMER_VAT_EXEMPTION_REASON
-    doc.trade.settlement.trade_tax.add(tax)
+        # Eine Befreiung fuer den ganzen Beleg, unabhaengig von gespeicherten Saetzen.
+        gruppen = [SteuerGruppe(KLEINUNTERNEHMER_VAT_EXEMPTION_CODE, Decimal("0.00"), netto, steuer)]
+    else:
+        gruppen = steuer_service.steuer_gruppen(rechnung, positionen)
+    for gruppe in gruppen:
+        tax = ApplicableTradeTax()
+        tax.calculated_amount = gruppe.steuer
+        tax.type_code = "VAT"
+        tax.basis_amount = gruppe.netto
+        tax.category_code = _cii_kategorie(gruppe.kategorie, ist_kleinunternehmer)
+        tax.rate_applicable_percent = gruppe.satz
+        if ist_kleinunternehmer:
+            tax.exemption_reason = KLEINUNTERNEHMER_VAT_EXEMPTION_REASON
+        doc.trade.settlement.trade_tax.add(tax)
 
     if rechnung.faellig_am:
         terms = PaymentTerms()
@@ -179,13 +186,37 @@ def baue_cii_dokument(
         line.product.name = position.beschreibung
         line.agreement.net.amount = position.einzelpreis.quantize(_CENT)
         line.delivery.billed_quantity = (position.menge, "H87")
-        line.settlement.trade_tax.category_code = steuerkategorie
+        zeilen_kategorie, zeilen_satz = _steuer_der_zeile(position, rechnung, ist_kleinunternehmer)
+        line.settlement.trade_tax.category_code = zeilen_kategorie
         line.settlement.trade_tax.type_code = "VAT"
-        line.settlement.trade_tax.rate_applicable_percent = steuersatz
+        line.settlement.trade_tax.rate_applicable_percent = zeilen_satz
         line.settlement.monetary_summation.total_amount = (position.menge * position.einzelpreis).quantize(_CENT)
         doc.trade.items.add(line)
 
     return doc
+
+
+def _steuer_der_zeile(
+    position: RechnungPosition, rechnung: Rechnung, ist_kleinunternehmer: bool
+) -> tuple[str, Decimal]:
+    # Als eigene Python-Werte zurueckgeben, nicht ueber tax.category_code etc.
+    # zuruecklesen (siehe drafthorse-Hinweis in baue_cii_dokument). Synthetische
+    # und nicht gespeicherte Positionen haben keine Steuerfelder und erben vom
+    # Beleg.
+    if ist_kleinunternehmer:
+        return KLEINUNTERNEHMER_VAT_EXEMPTION_CODE, Decimal("0.00")
+    satz = rechnung.mwst_satz if position.steuer_satz is None else position.steuer_satz
+    kategorie = position.steuer_kategorie or steuer_service.kategorie_fuer_beleg_satz(satz)
+    return _cii_kategorie(kategorie, ist_kleinunternehmer), satz
+
+
+def _cii_kategorie(kategorie: str, ist_kleinunternehmer: bool) -> str:
+    # E traegt als Befreiungsgrund nur die Kleinunternehmerregelung. Ein
+    # Beleg mit Satz 0 ohne Kleinunternehmer-Status wurde bisher als S/0
+    # exportiert und bleibt bis Schritt 3 (Z/E/AE mit Grund) dabei.
+    if kategorie == "E" and not ist_kleinunternehmer:
+        return "S"
+    return kategorie
 
 
 def _synthetische_position(rechnung: Rechnung) -> RechnungPosition:

@@ -19,11 +19,12 @@ from app.schemas.rechnung import (
     RechnungPositionRead,
     RechnungPositionVorschlag,
     RechnungRead,
+    RechnungSteuerGruppeRead,
     RechnungVorgangAuswahlPosten,
     RechnungVorgangKopf,
     RechnungZahlungRead,
 )
-from app.services import e_invoice_service, pdf_service, storage_service
+from app.services import e_invoice_service, pdf_service, steuer_service, storage_service
 from app.services.numbering_service import next_rechnungsnummer
 
 _CENT = Decimal("0.01")
@@ -558,6 +559,9 @@ async def vorgang_uebernehmen(
     gewaehlt = {_auswahl_schluessel(a.quelle, a.lv_position_id, a.material_id) for a in auswahl}
     vorschlaege = await positionen_vorschlaege_fuer_vorgang(session, vorgang.id, mandant)
     naechste_position = max((p.position for p in await positionen_fuer(session, rechnung.id)), default=0) + 1
+    steuer_kategorie, steuer_satz = steuer_service.beleg_vorbelegung(
+        rechnung.mwst_satz, kleinunternehmer=steuer_service.ist_kleinunternehmer(mandant)
+    )
 
     angelegt = 0
     for vorschlag in vorschlaege:
@@ -573,6 +577,8 @@ async def vorgang_uebernehmen(
                 menge=vorschlag.menge,
                 einheit=vorschlag.einheit,
                 einzelpreis=stundensatz if vorschlag.quelle == "zeit" else vorschlag.einzelpreis,
+                steuer_kategorie=steuer_kategorie,
+                steuer_satz=steuer_satz,
                 quelle=vorschlag.quelle,
                 vorgang_id=vorgang.id,
                 lv_position_id=vorschlag.lv_position_id,
@@ -616,10 +622,9 @@ def netto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Deci
     Ueberlegung wie bei Angebot.gesamt_netto: verhindert eine veraltete Summe
     nach nachtraeglicher Preisaenderung einer Position. Ohne Positionen (der
     einfache Fall aus Phase 6, eine Abschlussrechnung ohne eigene Zeilen)
-    bleibt der manuell gesetzte betrag_netto massgeblich."""
-    if positionen:
-        return sum((p.menge * p.einzelpreis for p in positionen), Decimal("0")).quantize(_CENT)
-    return rechnung.betrag_netto.quantize(_CENT)
+    bleibt der manuell gesetzte betrag_netto massgeblich. Die Regel lebt in
+    steuer_service."""
+    return steuer_service.netto_summe(steuer_service.steuer_gruppen(rechnung, positionen))
 
 
 async def zahlungen_fuer(session: AsyncSession, rechnung_id: UUID) -> list[RechnungZahlung]:
@@ -653,8 +658,7 @@ def bezahlter_betrag(zahlungen: list[RechnungZahlung]) -> Decimal:
 
 
 def brutto_betrag(rechnung: Rechnung, positionen: list[RechnungPosition]) -> Decimal:
-    netto = netto_betrag(rechnung, positionen)
-    return (netto + netto * rechnung.mwst_satz / Decimal("100")).quantize(_CENT)
+    return steuer_service.brutto_summe(steuer_service.steuer_gruppen(rechnung, positionen))
 
 
 def status_nach_zahlung(brutto: Decimal, bezahlt: Decimal, aktueller_status: str) -> str:
@@ -673,29 +677,16 @@ def status_nach_zahlung(brutto: Decimal, bezahlt: Decimal, aktueller_status: str
 def netto_sql():
     """Netto als SQL-Ausdruck -- Gegenstueck zu netto_betrag() fuer alles, was
     in der Datenbank gefiltert, sortiert oder summiert werden muss (Betrags-
-    filter und Summenzeile der Rechnungsuebersicht). Muss dieselbe Regel
-    abbilden: Positionen gewinnen, sonst der manuell gesetzte betrag_netto.
-    sum() ueber 0 Zeilen ist NULL, daher coalesce. round(...,2): die
-    Positionssumme menge*einzelpreis vergroessert in Postgres die Skala
-    (Numeric(10,2) * Numeric(10,2) -> Skala 4), sonst zeigt die Summenzeile
-    z.B. "3450.0000" statt "3450.00"."""
-    positionen_summe = (
-        select(func.sum(RechnungPosition.menge * RechnungPosition.einzelpreis))
-        .where(RechnungPosition.rechnung_id == Rechnung.id)
-        .correlate(Rechnung)
-        .scalar_subquery()
-    )
-    return func.round(func.coalesce(positionen_summe, Rechnung.betrag_netto), 2)
+    filter und Summenzeile der Rechnungsuebersicht)."""
+    return steuer_service.netto_sql()
 
 
 def brutto_sql():
     """Brutto als SQL-Ausdruck. Brutto ist absichtlich nirgends persistiert
     (siehe RechnungRead.betrag_brutto) -- fuers Filtern/Sortieren nach Betrag
     braucht es die Formel trotzdem in SQL, statt eine redundante Spalte
-    einzufuehren, die gegen netto_betrag() auseinanderlaufen koennte."""
-    return func.round(
-        netto_sql() * (Decimal("1") + Rechnung.mwst_satz / Decimal("100")), 2
-    )
+    einzufuehren, die gegen brutto_betrag() auseinanderlaufen koennte."""
+    return steuer_service.brutto_sql()
 
 
 def bezahlt_sql():
@@ -757,6 +748,8 @@ _AUSGESCHLOSSENE_FELDER = (
     "zahlungen",
     "vorgaenge",
     "betrag_netto",
+    "betrag_steuer",
+    "steuergruppen",
     "betrag_brutto",
     "bezahlter_betrag",
     "offener_betrag",
@@ -805,9 +798,12 @@ def _read_model_aus(
     zahlungen: list[RechnungZahlung],
     vorgaenge: list[RechnungVorgangKopf],
 ) -> RechnungRead:
+    gruppen = steuer_service.steuer_gruppen(rechnung, positionen)
     return RechnungRead(
         **{k: getattr(rechnung, k) for k in RechnungRead.model_fields if k not in _AUSGESCHLOSSENE_FELDER},
-        betrag_netto=netto_betrag(rechnung, positionen),
+        betrag_netto=steuer_service.netto_summe(gruppen),
+        betrag_steuer=steuer_service.steuer_summe(gruppen),
+        steuergruppen=[RechnungSteuerGruppeRead.model_validate(g) for g in gruppen],
         positionen=[RechnungPositionRead.model_validate(p) for p in positionen],
         zahlungen=[RechnungZahlungRead.model_validate(z) for z in zahlungen],
         vorgaenge=vorgaenge,
@@ -880,6 +876,8 @@ async def erstelle_stornorechnung(
                 menge=p.menge,
                 einheit=p.einheit,
                 einzelpreis=-p.einzelpreis,
+                steuer_kategorie=p.steuer_kategorie,
+                steuer_satz=p.steuer_satz,
                 # Nur fuer die Gruppendarstellung der Storno-PDF -- quelle/
                 # lv_position_id/material_id bleiben leer, damit der Beleg nie
                 # als Sperrgrundlage gilt.
