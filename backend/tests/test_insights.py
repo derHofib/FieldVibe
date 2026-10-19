@@ -106,7 +106,9 @@ async def test_insights_aggregation_correctness(
 
     # 2 explizit "neu" + der Vorgang, der unten fuer die Zeiterfassung angelegt
     # wird (make_vorgang() faellt sonst auf den Modell-Default "neu" zurueck)
-    assert body["vorgaenge_nach_status"]["neu"] == 3
+    # + der Auftrag, den die Annahme von angebot1 (ohne Maengel, ohne Vorgang)
+    # automatisch anlegt
+    assert body["vorgaenge_nach_status"]["neu"] == 4
     assert body["vorgaenge_nach_status"]["abgeschlossen"] == 1
 
     # Nur die "versendet" Rechnung zaehlt zur offenen Summe (100 * 1.19 = 119.00),
