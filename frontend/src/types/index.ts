@@ -310,6 +310,8 @@ export interface Kunde {
   adresse: Adresse | null;
   notiz: string | null;
   ust_idnr: string | null;
+  // Ablauf der Bescheinigung USt 1 TG (§ 13b Abs. 2 Nr. 4 UStG), ISO-Datum.
+  ust_13b_nachweis_bis?: string | null;
   portal_slug: string;
   logo_object_key: string | null;
   created_at: string;
@@ -1016,11 +1018,22 @@ export type RechnungPositionQuelle = "material" | "zeit" | "fahrzeit" | "fahrtko
 // Steuerkategorien nach EN 16931 (Steuer je Position, Migration 0104).
 export type RechnungSteuerKategorie = "S" | "Z" | "E" | "AE";
 
+// Steuergrund je Position (Migration 0105): Pflicht bei Z (pv_12_3), AE
+// (reverse_charge_13b) und E (sonstige_befreiung + Text); Kleinunternehmer
+// bekommen kleinunternehmer_19 serverseitig.
+export type RechnungSteuerGrund =
+  | "pv_12_3"
+  | "reverse_charge_13b"
+  | "kleinunternehmer_19"
+  | "sonstige_befreiung";
+
 export interface RechnungSteuerGruppe {
   kategorie: RechnungSteuerKategorie;
   satz: string;
   netto: string;
   steuer: string;
+  hinweis?: string | null;
+  hinweise?: string[];
 }
 
 export interface RechnungPosition {
@@ -1037,6 +1050,8 @@ export interface RechnungPosition {
   material_id?: string | null;
   steuer_kategorie?: RechnungSteuerKategorie;
   steuer_satz?: string;
+  steuer_grund?: RechnungSteuerGrund | null;
+  steuer_grund_text?: string | null;
 }
 
 // Offene, noch nicht abgerechnete Stunden eines Vorgangs (Einzelposten-
@@ -1781,10 +1796,20 @@ export interface UstVaSatzZeile {
   steuer: string;
 }
 
+// Umsaetze ohne Steuer (Z, AE, E ausser Kleinunternehmer); die Kennzahl ordnet
+// der Steuerberater zu und ist daher leer.
+export interface UstVaKategorieZeile {
+  kategorie: RechnungSteuerKategorie;
+  bezeichnung: string;
+  netto: string;
+  kennzahl: string | null;
+}
+
 export interface UstVaBericht {
   von: string;
   bis: string;
   umsatzsteuer_saetze: UstVaSatzZeile[];
+  sonstige_umsaetze?: UstVaKategorieZeile[];
   vorsteuer_saetze: UstVaSatzZeile[];
   summe_umsatzsteuer: string;
   summe_vorsteuer: string;
