@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
+import { ErloeskontenSection } from "../../components/ErloeskontenSection";
 import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
 import { istHttpUrl } from "../../utils/rechtliches";
@@ -40,6 +41,8 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   const speichernMutation = useMutation({
     mutationFn: () =>
       mandantEinstellungenApi.firmendatenSpeichern({
+        // Unbekannte/anderswo gepflegte Keys (z. B. buchhaltung) bleiben erhalten.
+        ...fd,
         adresse: { strasse, plz, ort, land },
         telefon,
         email,
@@ -749,6 +752,7 @@ export function IntegrationenPage() {
       </h1>
 
       {einstellungen && <FirmenprofilSection einstellungen={einstellungen} />}
+      {einstellungen && <ErloeskontenSection einstellungen={einstellungen} />}
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 
       {einstellungen && (
