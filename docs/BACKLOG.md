@@ -90,6 +90,16 @@ Kein Bug, nur verwirrend — historisch gewachsener Name.
 
 Bündelt Kunden/Material/Abrechnung, aber der Name verrät das nicht.
 
+## 8. Mandanten-eigene Rechtstexte im Kundenportal
+
+Die Links zu Impressum und Datenschutz im Kundenportal zeigen bisher auf die
+plattformweiten Texte (`VITE_IMPRESSUM_URL`/`VITE_DATENSCHUTZ_URL`, Build-Zeit).
+Gegenüber seinen Kunden ist aber der Handwerksbetrieb selbst
+Diensteanbieter und Verantwortlicher, braucht also ein eigenes Impressum und
+eine eigene Datenschutzerklärung. Offen: pro Mandant hinterlegbare URLs (z. B.
+im `Mandant.branding`-JSON, siehe Punkt 5) und Vorrang vor dem Plattform-Link
+im Portal. Noch nicht begonnen.
+
 ## Erledigt, zur Einordnung
 
 `v1.0.0` (17.08.2026) markiert den Ausgangsstand nach Zusammenführung
