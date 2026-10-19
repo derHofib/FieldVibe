@@ -8,6 +8,7 @@ import { ApiError } from "../api/client";
 import { Sheet } from "../components/apple/Sheet";
 import type { Einladung, EinladungRolle, Role, User } from "../types";
 import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
+import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -251,11 +252,12 @@ export function UsersPage() {
               <input
                 type="password"
                 required
-                minLength={8}
+                minLength={MIN_PASSWORT_LAENGE}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               />
+              <p className="mt-1 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
             </div>
           )}
           <div>

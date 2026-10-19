@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { kundenportalAuthApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { RechtlicheLinks } from "../../components/RechtlicheLinks";
+import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
 
 export function PortalResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -68,12 +69,12 @@ export function PortalResetPasswordPage() {
               id="portal-reset-password"
               type="password"
               required
-              minLength={10}
+              minLength={MIN_PASSWORT_LAENGE}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="field-ap btn-touch mb-1"
             />
-            <p className="mb-4 text-xs text-label2">Mindestens 10 Zeichen.</p>
+            <p className="mb-4 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
             <button
               type="submit"
               disabled={submitting || !token}

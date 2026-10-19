@@ -41,6 +41,7 @@ from app.services.einladung_service import (
     to_read_model,
     versende_einladung,
 )
+from app.schemas.user import MIN_PASSWORT_LAENGE
 
 _NACHWEIS_MAX_BYTES = 15 * 1024 * 1024
 
@@ -473,10 +474,10 @@ async def update_zugang(
     for field, value in changes.items():
         setattr(zugang, field, value)
     if body.password is not None:
-        if len(body.password) < 10:
+        if len(body.password) < MIN_PASSWORT_LAENGE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Passwort muss mindestens 10 Zeichen haben",
+                detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
             )
         zugang.password_hash = hash_password(body.password)
         changes["password_hash"] = zugang.password_hash

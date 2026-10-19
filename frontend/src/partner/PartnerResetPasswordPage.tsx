@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { partnerPortalAuthApi } from "../api/endpoints";
 import { ErfolgsHinweis, FehlerHinweis, PartnerAuthShell } from "./PartnerAuthShell";
+import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 
 export function PartnerResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -53,12 +54,12 @@ export function PartnerResetPasswordPage() {
             type="password"
             autoComplete="new-password"
             required
-            minLength={10}
+            minLength={MIN_PASSWORT_LAENGE}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="field-ap btn-touch mb-1"
           />
-          <p className="mb-4 text-xs text-label2">Mindestens 10 Zeichen.</p>
+          <p className="mb-4 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
           <button
             type="submit"
             disabled={submitting || !token}

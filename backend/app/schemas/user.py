@@ -12,11 +12,15 @@ Role = Literal[
     "loesch_operativ",
 ]
 
+# Einzige Quelle der Mindestlaenge fuer jedes Passwort (Mitarbeiter, Kundenportal,
+# Partnerportal, Admin-Vergabe) -- vorher standen 8 und 10 nebeneinander.
+MIN_PASSWORT_LAENGE = 10
+
 
 class UserCreate(BaseModel):
     mandant_id: UUID | None = None
     email: EmailStr
-    password: str = Field(min_length=8)
+    password: str = Field(min_length=MIN_PASSWORT_LAENGE)
     role: Role
     # Nur bei role == "custom" gesetzt -- zeigt auf den vom mandant_admin
     # definierten Account-Typ (siehe app/models/account_typ.py).
@@ -49,7 +53,7 @@ class UserUpdate(BaseModel):
     role: Role | None = None
     account_typ_id: UUID | None = None
     aktiv: bool | None = None
-    password: str | None = Field(default=None, min_length=8)
+    password: str | None = Field(default=None, min_length=MIN_PASSWORT_LAENGE)
 
 
 class BottomNavUpdate(BaseModel):

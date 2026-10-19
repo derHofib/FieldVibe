@@ -40,7 +40,7 @@ from app.schemas.kunde_zuweisung import KundeZuweisungUpdate
 from app.schemas.kundenportal import KundenportalZugangRead, KundenportalZugangUpdate
 from app.schemas.profile import KundeProfil
 from app.schemas.standort import StandortRead
-from app.schemas.user import UserRead
+from app.schemas.user import MIN_PASSWORT_LAENGE, UserRead
 from app.schemas.vertrag import VertragRead
 from app.schemas.vorgang import VorgangRead
 from app.schemas.vorgang_event import VorgangEventRead
@@ -667,10 +667,10 @@ async def update_portal_zugang(
     for field, value in changes.items():
         setattr(zugang, field, value)
     if body.password is not None:
-        if len(body.password) < 10:
+        if len(body.password) < MIN_PASSWORT_LAENGE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Passwort muss mindestens 10 Zeichen haben",
+                detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
             )
         zugang.password_hash = hash_password(body.password)
         changes["password_hash"] = zugang.password_hash

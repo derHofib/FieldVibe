@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { authApi } from "../../api/endpoints";
 import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
+import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
 
 /** Passwort ändern im Profil (Feld-App und Office teilen sich die Seite). */
 export function PasswortAendernKarte() {
@@ -98,13 +99,13 @@ export function PasswortAendernKarte() {
             id="pw-neu"
             type="password"
             required
-            minLength={10}
+            minLength={MIN_PASSWORT_LAENGE}
             autoComplete="new-password"
             value={neuesPasswort}
             onChange={(e) => setNeuesPasswort(e.target.value)}
             className="field-ap btn-touch mb-1"
           />
-          <p className="mb-4 text-xs text-label2">Mindestens 10 Zeichen.</p>
+          <p className="mb-4 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
 
           <label htmlFor="pw-wiederholung" className="mb-1 block text-sm font-medium text-label">
             Neues Passwort wiederholen
@@ -113,7 +114,7 @@ export function PasswortAendernKarte() {
             id="pw-wiederholung"
             type="password"
             required
-            minLength={10}
+            minLength={MIN_PASSWORT_LAENGE}
             autoComplete="new-password"
             value={wiederholung}
             onChange={(e) => setWiederholung(e.target.value)}

@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import { partnerPortalAuthApi } from "../api/endpoints";
 import { usePartnerAuth } from "../context/PartnerAuthContext";
 import { FehlerHinweis, PartnerAuthShell } from "./PartnerAuthShell";
+import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 
 /** Abschluss einer Partner-Einladung (Link aus der Einladungsmail,
  * `/partnerportal/registrieren?token=...`, siehe einladung_service.py). */
@@ -64,12 +65,12 @@ export function PartnerRegistrierenPage() {
           type="password"
           autoComplete="new-password"
           required
-          minLength={10}
+          minLength={MIN_PASSWORT_LAENGE}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="field-ap btn-touch mb-1"
         />
-        <p className="mb-5 text-xs text-label2">Mindestens 10 Zeichen.</p>
+        <p className="mb-5 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
 
         <button type="submit" disabled={submitting || !token} className="btn-ap-capsule btn-ap-capsule-primary w-full">
           {submitting ? "Registrieren…" : "Zugang einrichten"}

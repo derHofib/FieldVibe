@@ -29,6 +29,7 @@ import type {
   Standort,
   User,
 } from "../../types";
+import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
   return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
@@ -965,7 +966,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
     e.preventDefault();
     setError(null);
     if (password.length < 10) {
-      setError("Passwort muss mindestens 10 Zeichen haben");
+      setError(`Passwort muss mindestens ${MIN_PASSWORT_LAENGE} Zeichen haben`);
       return;
     }
     createMutation.mutate();

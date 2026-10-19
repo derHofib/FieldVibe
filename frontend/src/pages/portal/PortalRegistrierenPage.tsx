@@ -6,6 +6,7 @@ import { kundenportalAuthApi } from "../../api/endpoints";
 import Blueprint from "../../components/Blueprint";
 import { useKundenAuth } from "../../context/KundenAuthContext";
 import { RechtlicheLinks } from "../../components/RechtlicheLinks";
+import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
 
 export function PortalRegistrierenPage() {
   const [searchParams] = useSearchParams();
@@ -73,12 +74,12 @@ export function PortalRegistrierenPage() {
             id="portal-register-password"
             type="password"
             required
-            minLength={10}
+            minLength={MIN_PASSWORT_LAENGE}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="field-ap btn-touch mb-1"
           />
-          <p className="mb-6 text-xs text-label2">Mindestens 10 Zeichen.</p>
+          <p className="mb-6 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
 
           <button
             type="submit"

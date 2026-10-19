@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, EmailStr, field_validator
 
-from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
+from app.schemas.user import MIN_PASSWORT_LAENGE, BottomNavUpdate, OfficeNavUpdate
 
 
 class LoginRequest(BaseModel):
@@ -39,9 +39,6 @@ class RegistrierenRequest(BaseModel):
     token: str
     name: str
     password: str
-
-
-MIN_PASSWORT_LAENGE = 10
 
 
 def _mindestlaenge(v: str) -> str:

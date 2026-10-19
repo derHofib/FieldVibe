@@ -37,6 +37,7 @@ from app.services.email_service import EmailNichtKonfiguriert, send_email
 from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services.kundenportal_auth_service import authenticate_kunde
+from app.schemas.user import MIN_PASSWORT_LAENGE
 
 router = APIRouter(prefix="/api/kundenportal/auth", tags=["kundenportal"])
 _settings = get_settings()
@@ -146,9 +147,9 @@ async def refresh(body: RefreshRequest) -> TokenPair:
 async def registrieren(body: RegistrierenRequest) -> TokenPair:
     """Schliesst eine Kunden-Einladung ab: legt den Kundenportal-Zugang mit
     dem selbst gewaehlten Passwort an und loggt direkt ein."""
-    if len(body.password) < 10:
+    if len(body.password) < MIN_PASSWORT_LAENGE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
     async with system_session() as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="kunde")
@@ -271,9 +272,9 @@ async def passwort_zuruecksetzen(body: KundenPasswortResetRequest, request: Requ
         password_reset_ip_limiter.record_failure(ip_key)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Reset-Token")
 
-    if len(body.new_password) < 10:
+    if len(body.new_password) < MIN_PASSWORT_LAENGE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
 
     async with system_session() as session:

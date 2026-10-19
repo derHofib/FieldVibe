@@ -35,6 +35,7 @@ from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
 from app.services import storage_service
 from app.services.partner_auth_service import authenticate_partner
+from app.schemas.user import MIN_PASSWORT_LAENGE
 
 router = APIRouter(prefix="/api/partnerportal/auth", tags=["partnerportal"])
 _settings = get_settings()
@@ -104,9 +105,9 @@ async def refresh(body: RefreshRequest) -> TokenPair:
 async def registrieren(body: RegistrierenRequest) -> TokenPair:
     """Schliesst eine Partner-Einladung ab: legt den Partnerportal-Zugang
     mit dem selbst gewaehlten Passwort an und loggt direkt ein."""
-    if len(body.password) < 10:
+    if len(body.password) < MIN_PASSWORT_LAENGE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
     async with system_session() as session:
         einladung = await resolve_offene_einladung(session, body.token, erwartete_art="partner")
@@ -222,9 +223,9 @@ async def passwort_zuruecksetzen(body: PartnerPasswortResetRequest, request: Req
         password_reset_ip_limiter.record_failure(ip_key)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger Reset-Token")
 
-    if len(body.new_password) < 10:
+    if len(body.new_password) < MIN_PASSWORT_LAENGE:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwort muss mindestens 10 Zeichen haben"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben"
         )
 
     async with system_session() as session:
