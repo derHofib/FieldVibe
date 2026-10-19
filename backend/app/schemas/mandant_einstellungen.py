@@ -1,7 +1,9 @@
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.schemas.public_rechtliches import ist_http_url
 
 # Muss mit MANDANT_FAHRZEIT_ABRECHNUNG in app/models/mandant.py
 # uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 5.3/8).
@@ -11,6 +13,11 @@ FahrzeitAbrechnung = Literal["keine", "zeit", "km", "zeit_und_km"]
 Bundesland = Literal[
     "BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"
 ]
+
+
+# Optionale Rechtstext-URLs in Mandant.firmendaten; haben auf den Login-/
+# Portalseiten Vorrang vor den Platzhalter-Seiten (siehe public_rechtliches).
+FIRMENDATEN_URL_KEYS = ("impressum_url", "datenschutz_url")
 
 
 class MandantEinstellungenRead(BaseModel):
@@ -55,6 +62,24 @@ class MandantEinstellungenUpdate(BaseModel):
     fahrzeit_abrechnung: FahrzeitAbrechnung | None = None
     # None setzt zurueck (nur bundesweite Feiertage).
     bundesland: Bundesland | None = None
+
+
+    @field_validator("firmendaten")
+    @classmethod
+    def _rechtstext_urls_pruefen(cls, v: dict | None) -> dict | None:
+        if v is None:
+            return v
+        ergebnis = dict(v)
+        for key in FIRMENDATEN_URL_KEYS:
+            if key not in ergebnis or ergebnis[key] is None:
+                continue
+            wert = ergebnis[key]
+            # Leer = "Platzhalter-Seite nutzen"; sonst nur http(s), weil der
+            # Wert ungeprueft als href auf oeffentlichen Seiten landet.
+            if not isinstance(wert, str) or (wert.strip() and not ist_http_url(wert.strip())):
+                raise ValueError(f"{key} muss eine http(s)-URL sein oder leer bleiben")
+            ergebnis[key] = wert.strip()
+        return ergebnis
 
 
 class MandantLogoUrl(BaseModel):

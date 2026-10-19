@@ -43,6 +43,7 @@ from app.api.routes import (
     mail_accounts,
     mail_messages,
     mandant_einstellungen,
+    public_rechtliches,
     mandanten,
     material,
     material_bedarfe,
@@ -168,6 +169,7 @@ app.include_router(bestellungen.router)
 app.include_router(insights.router)
 app.include_router(integrationen.router)
 app.include_router(mandant_einstellungen.router)
+app.include_router(public_rechtliches.router)
 app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)

@@ -55,6 +55,7 @@ async def test_kunde_login_and_me(client, make_mandant, make_kunde):
     assert body["kunde_id"] == str(kunde.id)
     assert body["kunde_name"] == "Café Sonnenschein"
     assert body["zugang_id"] == str(zugang.id)
+    assert body["portal_slug"] == kunde.portal_slug
 
 
 @pytest.mark.asyncio

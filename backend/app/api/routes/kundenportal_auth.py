@@ -195,6 +195,7 @@ async def me(
         kunde_name=kunde.name,
         name=zugang.name,
         email=zugang.email,
+        portal_slug=kunde.portal_slug,
     )
 
 

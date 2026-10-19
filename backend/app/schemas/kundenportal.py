@@ -27,6 +27,9 @@ class CurrentKunde(BaseModel):
     kunde_name: str
     name: str
     email: str
+    # Mandanten-Kontext fuer die Impressum-/Datenschutz-Links im angemeldeten
+    # Portal (GET /api/public/rechtliches?portal_slug=...).
+    portal_slug: str | None = None
 
 
 class KundenportalZugangUpdate(BaseModel):
