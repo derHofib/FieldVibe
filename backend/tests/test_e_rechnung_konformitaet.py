@@ -71,6 +71,21 @@ async def _admin_e_rechnung(client, make_mandant, make_user, make_kunde, firmend
 
 
 @pytest.mark.asyncio
+async def test_pruefwerkzeug_schlaegt_bei_regelverstoss_an(client, make_mandant, make_user, make_kunde, tmp_path):
+    # Negativkontrolle: ein Z-Block mit Befreiungsgrund verletzt BR-Z-10 -- sonst
+    # wuerde ein kaputtes Werkzeug alle Tests still gruen faerben.
+    token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
+    xml = await _versendet_xml(client, token, kunde, [_POS_Z])
+    kaputt = xml.replace(b"<ram:BasisAmount>", b"<ram:ExemptionReason>x</ram:ExemptionReason><ram:BasisAmount>", 1)
+    assert kaputt != xml
+    datei = tmp_path / "kaputt.xml"
+    datei.write_bytes(kaputt)
+    ergebnis = subprocess.run(["bash", str(_SKRIPT), str(datei)], capture_output=True, text=True, timeout=180)
+    assert ergebnis.returncode == 1
+    assert "[BR-Z-10]" in ergebnis.stdout
+
+
+@pytest.mark.asyncio
 async def test_einzelsatz_19(client, make_mandant, make_user, make_kunde, tmp_path):
     token, kunde = await _admin_e_rechnung(client, make_mandant, make_user, make_kunde)
     xml = await _versendet_xml(client, token, kunde, [_POS_S])
