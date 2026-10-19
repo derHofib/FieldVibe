@@ -1011,6 +1011,20 @@ export interface Angebot {
   gesamt_brutto: string;
   // Berechnet im Backend (versendet und gueltig_bis vor dem heutigen Betriebstag).
   ist_abgelaufen: boolean;
+  // Abrechnung (nicht stornierte Abschlagsrechnungen, Entwuerfe eingeschlossen).
+  abschlaege?: AngebotAbschlag[];
+  abgerechnet_netto?: string;
+  rest_netto?: string;
+  schlussrechnung_id?: string | null;
+  // Rechnung ohne Abschlaege (aus dem Angebot erstellt).
+  rechnung_id?: string | null;
+}
+
+export interface AngebotAbschlag {
+  rechnung_id: string;
+  rechnungsnummer: string;
+  status: string;
+  netto: string;
 }
 
 export type AngebotMwstSatz = "19" | "7" | "0";
@@ -1025,6 +1039,7 @@ export interface AngebotPositionUpdate {
 }
 
 export type RechnungStatus = "entwurf" | "versendet" | "teilweise_bezahlt" | "bezahlt" | "storniert";
+export type Rechnungsart = "rechnung" | "abschlag" | "schluss" | "gutschrift";
 export type RechnungZahlungsart = "ueberweisung" | "bar" | "karte" | "lastschrift" | "sonstiges";
 
 // Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher eine Position
@@ -1078,6 +1093,12 @@ export interface RechnungPosition {
   steuer_satz?: string;
   steuer_grund?: RechnungSteuerGrund | null;
   steuer_grund_text?: string | null;
+  // Abzugsposition einer Schlussrechnung: die angerechnete Abschlagsrechnung.
+  abschlag_rechnung_id?: string | null;
+  // Gutschriftsposition: die Originalposition, die sie zuruecknimmt.
+  bezug_position_id?: string | null;
+  // Menge, die bereits durch Gutschriften zurueckgenommen ist.
+  bereits_gutgeschrieben?: string;
 }
 
 // Offene, noch nicht abgerechnete Stunden eines Vorgangs (Einzelposten-
@@ -1129,6 +1150,20 @@ export interface RechnungZahlungCreate {
   notiz?: string;
 }
 
+export interface AngerechneterAbschlag {
+  rechnung_id: string;
+  rechnungsnummer: string;
+  datum: string;
+  netto: string;
+}
+
+export interface GutschriftKurz {
+  rechnung_id: string;
+  rechnungsnummer: string;
+  // Mit Vorzeichen wie auf dem Gutschriftsbeleg (negativ).
+  brutto: string;
+}
+
 export interface Rechnung {
   id: string;
   kunde_id: string;
@@ -1160,6 +1195,32 @@ export interface Rechnung {
   offener_betrag: string;
   // Nur gesetzt, wenn beim Versand ein ZUGFeRD-Hybrid-PDF archiviert wurde.
   xml_object_key: string | null;
+  rechnungsart?: Rechnungsart;
+  angebot_id?: string | null;
+  // Nur Gutschriften: Ursprungsrechnung und Grund.
+  bezug_rechnung_id?: string | null;
+  gutschrift_grund?: string | null;
+  // Nur Schlussrechnungen.
+  angerechnete_abschlaege?: AngerechneterAbschlag[];
+  // Am Original: nicht stornierte Gutschriften.
+  gutschriften?: GutschriftKurz[];
+}
+
+export interface RechnungAusAngebotCreate {
+  angebot_id: string;
+  rechnungsart: "rechnung" | "abschlag" | "schluss";
+  // Nur bei abschlag, genau eines von beiden.
+  abschlag_prozent?: string;
+  abschlag_netto?: string;
+  faellig_am?: string;
+  leistungsdatum?: string;
+}
+
+export interface RechnungGutschriftCreate {
+  // Genau eines von positionen/alle.
+  positionen?: { position_id: string; menge: string }[];
+  alle?: boolean;
+  grund: string;
 }
 
 export interface RechnungListe {
@@ -1183,6 +1244,7 @@ export interface RechnungenFilter {
   betrag_bis?: string;
   nur_offen?: boolean;
   nur_ueberfaellig?: boolean;
+  rechnungsart?: Rechnungsart;
   sort?: string;
   limit?: number;
   offset?: number;
