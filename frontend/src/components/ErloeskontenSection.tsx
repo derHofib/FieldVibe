@@ -12,6 +12,7 @@ import {
   kontenFehler,
   type ErloeskontoSchluessel,
 } from "../utils/erloeskonten";
+import { standardErloeskonto } from "../utils/datev";
 import { FehlerMeldung } from "./Hinweiskasten";
 
 /** Erlöskonten je Steuerkategorie für den DATEV-Export (firmendaten.
@@ -24,6 +25,9 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
   const [besucht, setBesucht] = useState(false);
   const fehler = kontenFehler(konten);
   const hatFehler = Object.keys(fehler).length > 0;
+  const kontenrahmen = einstellungen.firmendaten.buchhaltung?.kontenrahmen ?? "SKR03";
+  const standard19 = standardErloeskonto("S:19.00", kontenrahmen);
+  const standard7 = standardErloeskonto("S:7.00", kontenrahmen);
 
   const speichernMutation = useMutation({
     mutationFn: () => mandantEinstellungenApi.firmendatenSpeichern(firmendatenMitKonten(einstellungen.firmendaten, konten)),
@@ -42,8 +46,8 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
           <BookOpen size={15} strokeWidth={2} className="text-tone-indigo" /> Buchhaltung – Erlöskonten
         </h2>
         <p className="mt-1 text-xs text-label2">
-          Wird vom Steuerberater festgelegt. Für 19 % und 7 % gelten ohne Eintrag die Standardkonten 8400/8300. Für die
-          übrigen Kategorien blockiert der DATEV-Export, bis ein Konto hinterlegt ist.
+          Wird vom Steuerberater festgelegt. Für 19 % und 7 % gelten ohne Eintrag die Standardkonten {standard19}/{standard7} ({kontenrahmen}). Für die
+          übrigen Kategorien blockiert der DATEV-Export, bis ein Konto hinterlegt ist. Eingetragene Konten müssen genau so viele Stellen haben wie die Sachkontenlänge.
         </p>
       </div>
 
@@ -66,7 +70,7 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
                   onBlur={() => setBesucht(true)}
                   inputMode="numeric"
                   maxLength={8}
-                  placeholder={z.standardKonto ?? "z. B. 8337"}
+                  placeholder={standardErloeskonto(z.schluessel, kontenrahmen) ?? "z. B. 8337"}
                   aria-invalid={!!f?.konto}
                   className="field-ap tabular-nums"
                 />

@@ -520,6 +520,7 @@ export const kundenApi = {
       ust_13b_nachweis_bis: string | null;
       leitweg_id: string | null;
       e_rechnung_format: "zugferd" | "xrechnung" | null;
+      debitorenkonto: string | null;
       ansprechpartner: Ansprechpartner[];
     }>,
   ) => apiFetch<Kunde>(`/api/kunden/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -1759,9 +1760,9 @@ export const leistungsverzeichnisApi = {
 
 export const lieferantenApi = {
   list: () => apiFetch<Lieferant[]>("/api/lieferanten"),
-  create: (body: { name: string; email?: string; telefon?: string; notiz?: string }) =>
+  create: (body: { name: string; email?: string; telefon?: string; notiz?: string; kreditorenkonto?: string }) =>
     apiFetch<Lieferant>("/api/lieferanten", { method: "POST", body: JSON.stringify(body) }),
-  update: (id: string, body: Partial<Pick<Lieferant, "name" | "email" | "telefon" | "notiz">>) =>
+  update: (id: string, body: Partial<Pick<Lieferant, "name" | "email" | "telefon" | "notiz">> & { kreditorenkonto?: string | null }) =>
     apiFetch<Lieferant>(`/api/lieferanten/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   remove: (id: string) => apiFetch<void>(`/api/lieferanten/${id}`, { method: "DELETE" }),
 };

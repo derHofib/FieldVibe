@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
+import { DatevSection } from "../../components/DatevSection";
 import { ErloeskontenSection } from "../../components/ErloeskontenSection";
 import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
@@ -785,6 +786,7 @@ export function IntegrationenPage() {
       </h1>
 
       {einstellungen && <FirmenprofilSection einstellungen={einstellungen} />}
+      {einstellungen && <DatevSection einstellungen={einstellungen} />}
       {einstellungen && <ErloeskontenSection einstellungen={einstellungen} />}
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 

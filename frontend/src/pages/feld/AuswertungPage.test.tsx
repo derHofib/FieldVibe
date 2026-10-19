@@ -77,6 +77,17 @@ describe("AuswertungPage", () => {
     expect(screen.getByRole("link", { name: "Zu den Firmendaten" })).toHaveAttribute("href", "/integrationen");
   });
 
+  it("verweist bei fehlenden DATEV-Stammdaten auf die Einstellungen", async () => {
+    const text =
+      "DATEV-Stammdaten unvollständig: Beraternummer und Mandantennummer nicht hinterlegt – bitte unter Einstellungen ➝ Buchhaltung (DATEV) eintragen";
+    vi.mocked(auswertungApi.datevExportCsv).mockRejectedValue(new ApiError(422, text));
+    renderSeite();
+    fireEvent.click(screen.getByRole("button", { name: /DATEV-Export \(CSV\)/ }));
+    expect(await screen.findByText(text)).toBeInTheDocument();
+    expect(screen.getByText("DATEV-Stammdaten fehlen")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Zu den DATEV-Einstellungen" })).toHaveAttribute("href", "/integrationen");
+  });
+
   it("zeigt andere DATEV-Fehler als normale Fehlermeldung ohne Firmendaten-Link", async () => {
     vi.mocked(auswertungApi.datevExportCsv).mockRejectedValue(new ApiError(500, "Interner Fehler"));
     renderSeite();

@@ -18,9 +18,11 @@ import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwa
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
 import { ERechnungFelder, zeigeERechnungFelder } from "../../components/kunde/ERechnungFelder";
+import { FehlerMeldung } from "../../components/Hinweiskasten";
 import { Nachweis13bFeld, Nachweis13bStatus } from "../../components/kunde/Nachweis13b";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
+import { validiereDebitorenkonto } from "../../utils/datev";
 import { downloadBlob } from "../../utils/download";
 import { E_RECHNUNG_FORMAT_KURZ, type ERechnungFormat, leitwegIdFehler } from "../../utils/eRechnungVersand";
 import type {
@@ -47,6 +49,7 @@ function Stammdaten({
   ust13bBis,
   leitwegId,
   eRechnungFormat,
+  debitorenkonto,
   kannVerwalten,
 }: {
   kundeId: string;
@@ -57,6 +60,7 @@ function Stammdaten({
   ust13bBis: string | null;
   leitwegId: string | null;
   eRechnungFormat: ERechnungFormat | null;
+  debitorenkonto: string | null;
   kannVerwalten: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -68,7 +72,9 @@ function Stammdaten({
     ust13bBis: ust13bBis ?? "",
     leitwegId: leitwegId ?? "",
     eRechnungFormat: (eRechnungFormat ?? "") as ERechnungFormat | "",
+    debitorenkonto: debitorenkonto ?? "",
   }));
+  const kontoFehler = validiereDebitorenkonto(form.debitorenkonto);
   const brauchtUstIdnr = typ === "gewerbe" || typ === "oeffentlich";
 
   const speichernMutation = useMutation({
@@ -83,6 +89,7 @@ function Stammdaten({
         ust_13b_nachweis_bis: form.ust13bBis || null,
         leitweg_id: form.leitwegId.trim() || null,
         e_rechnung_format: form.eRechnungFormat || null,
+        debitorenkonto: form.debitorenkonto.trim() || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
@@ -108,7 +115,9 @@ function Stammdaten({
                   ust13bBis: ust13bBis ?? "",
                   leitwegId: leitwegId ?? "",
                   eRechnungFormat: (eRechnungFormat ?? "") as ERechnungFormat | "",
+                  debitorenkonto: debitorenkonto ?? "",
                 });
+                speichernMutation.reset();
                 setBearbeiten(true);
               }}
               className="btn-touch text-xs font-medium text-tint "
@@ -123,6 +132,10 @@ function Stammdaten({
           <p className="text-sm text-label2">Keine Adresse hinterlegt.</p>
         )}
         {notiz && <p className="mt-1 text-sm text-label2">{notiz}</p>}
+        <p className="mt-1 text-sm text-label2">
+          Debitorenkonto (DATEV):{" "}
+          {debitorenkonto || <span className="text-label2">wird beim ersten Export vergeben</span>}
+        </p>
         {brauchtUstIdnr && (
           <p className="mt-1 text-sm text-label2">
             USt-IdNr.:{" "}
@@ -186,6 +199,32 @@ function Stammdaten({
           onChange={({ leitwegId: neueId, format }) => setForm({ ...form, leitwegId: neueId, eRechnungFormat: format })}
         />
       )}
+      <div>
+        <label htmlFor="kunde-debitorenkonto" className="mb-0.5 block text-xs text-label2">
+          Debitorenkonto (DATEV, optional)
+        </label>
+        <input
+          id="kunde-debitorenkonto"
+          value={form.debitorenkonto}
+          onChange={(e) => {
+            setForm({ ...form, debitorenkonto: e.target.value });
+            speichernMutation.reset();
+          }}
+          inputMode="numeric"
+          maxLength={9}
+          placeholder="leer = automatisch beim ersten Export"
+          aria-invalid={!!kontoFehler}
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm tabular-nums text-label"
+        />
+        {kontoFehler && (
+          <p role="alert" className="mt-0.5 text-xs text-st-fehlt">
+            {kontoFehler}
+          </p>
+        )}
+        <p className="mt-0.5 text-xs text-label2">
+          Nach dem ersten DATEV-Import nicht mehr ändern, sonst passen die Buchungen nicht mehr zum Personenkonto.
+        </p>
+      </div>
       <textarea
         value={form.notiz}
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
@@ -193,10 +232,17 @@ function Stammdaten({
         rows={2}
         className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
+      {speichernMutation.isError && (
+        <FehlerMeldung
+          alsKasten
+          meldung={speichernMutation.error instanceof ApiError ? speichernMutation.error.message : "Speichern fehlgeschlagen"}
+        />
+      )}
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
-          disabled={speichernMutation.isPending || leitwegIdFehler(form.leitwegId) !== null}
+          disabled={speichernMutation.isPending || leitwegIdFehler(form.leitwegId) !== null || !!kontoFehler}
+ (Frontend: DATEV-Stammdaten-Abschnitt, Debitorenkonto im Kundenprofil, Export-Hinweis mit Link zu den Einstellungen)
           className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
@@ -1285,6 +1331,7 @@ export function KundeProfilePage() {
         ust13bBis={profil.ust_13b_nachweis_bis ?? null}
         leitwegId={profil.leitweg_id ?? null}
         eRechnungFormat={profil.e_rechnung_format ?? null}
+        debitorenkonto={profil.debitorenkonto ?? null}
         kannVerwalten={kannVerwalten}
       />
 

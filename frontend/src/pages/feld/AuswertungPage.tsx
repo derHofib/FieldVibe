@@ -11,6 +11,7 @@ import { ApiError } from "../../api/client";
 import { downloadBlob } from "../../utils/download";
 import { datumZuIso, heuteIso } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
+import { istDatevEinstellungenFehler, istDatevStammdatenFehler } from "../../utils/datev";
 import { istErloeskontoFehler } from "../../utils/steuer";
 
 function ersterTagDesMonats(): string {
@@ -256,8 +257,8 @@ export function AuswertungPage() {
       <div className="card-ap p-4">
         <h2 className="mb-1 text-sm font-semibold text-label2">DATEV-Export</h2>
         <p className="mb-3 text-xs text-label2">
-          Buchungsstapel-CSV auf Basis gängiger SKR03-Konten -- vor dem ersten echten Import bitte mit
-          dem Steuerberater abstimmen.
+          Buchungsstapel (CSV, Windows-1252) mit den DATEV-Stammdaten und Konten aus den Einstellungen -- vor dem
+          ersten echten Import bitte mit dem Steuerberater abstimmen.
         </p>
         <button
           onClick={() => datevMutation.mutate()}
@@ -268,12 +269,21 @@ export function AuswertungPage() {
         </button>
         {datevMutation.isError && (
           <div className="mt-3">
-            {datevMeldung && istErloeskontoFehler(datevMeldung) ? (
-              <Hinweiskasten ton="warnung" titel="Erlöskonto fehlt">
+            {datevMeldung && (istErloeskontoFehler(datevMeldung) || istDatevEinstellungenFehler(datevMeldung)) ? (
+              <Hinweiskasten
+                ton="warnung"
+                titel={
+                  istDatevStammdatenFehler(datevMeldung)
+                    ? "DATEV-Stammdaten fehlen"
+                    : istErloeskontoFehler(datevMeldung)
+                      ? "Erlöskonto fehlt"
+                      : "DATEV-Einstellungen prüfen"
+                }
+              >
                 <p>{datevMeldung}</p>
                 <p>
                   <Link to="/integrationen" className="font-semibold underline underline-offset-2">
-                    Zu den Firmendaten
+                    {istErloeskontoFehler(datevMeldung) ? "Zu den Firmendaten" : "Zu den DATEV-Einstellungen"}
                   </Link>
                 </p>
               </Hinweiskasten>

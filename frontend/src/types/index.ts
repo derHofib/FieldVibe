@@ -316,6 +316,8 @@ export interface Kunde {
   leitweg_id?: string | null;
   // Profil der E-Rechnung; null = Automatik (mit Leitweg-ID XRechnung, sonst ZUGFeRD).
   e_rechnung_format?: "zugferd" | "xrechnung" | null;
+  // DATEV-Personenkonto; wird beim ersten Export automatisch vergeben.
+  debitorenkonto?: string | null;
   portal_slug: string;
   logo_object_key: string | null;
   created_at: string;
@@ -1505,6 +1507,7 @@ export interface Lieferant {
   email: string | null;
   telefon: string | null;
   notiz: string | null;
+  kreditorenkonto?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1716,7 +1719,16 @@ export interface MandantFirmendaten {
   datenschutz_url?: string;
   // Erlöskonten je Steuerkategorie für den DATEV-Export; Schlüssel
   // "S:19.00" | "S:7.00" | "Z:0.00" | "E:0.00" | "AE:0.00".
-  buchhaltung?: { erloeskonten?: Record<string, { konto: string; bu: string }> };
+  // DATEV-Stammdaten (Header des Buchungsstapels) liegen daneben; ohne
+  // berater_nr/mandant_nr blockiert der Export.
+  buchhaltung?: {
+    erloeskonten?: Record<string, { konto: string; bu: string }>;
+    berater_nr?: number;
+    mandant_nr?: number;
+    wirtschaftsjahr_beginn_monat?: number;
+    kontenrahmen?: "SKR03" | "SKR04";
+    sachkontenlaenge?: number;
+  };
 }
 
 export interface MandantEinstellungen {
