@@ -1009,7 +1009,8 @@ async def beleg_kontexte(
                         ),
                         _NULL,
                     )
-            kontext.offener_betrag = -guthaben_regel(abs(brutto), vorher, rest)
+            guthaben = guthaben_regel(abs(brutto), vorher, rest)
+            kontext.offener_betrag = -guthaben if guthaben else guthaben.copy_abs()
         else:
             kontext.offener_betrag = offener_betrag_regel(
                 brutto, bezahlt, sum((abs(gutschrift_brutto[g.id]) for g in eigene_gutschriften), _NULL)
@@ -1050,7 +1051,7 @@ def _read_model_aus(
     positionen_read = []
     for p in positionen:
         gelesen = RechnungPositionRead.model_validate(p)
-        gelesen.bereits_gutgeschrieben = kontext.gutgeschrieben.get(p.id, _NULL)
+        gelesen.bereits_gutgeschrieben = kontext.gutgeschrieben.get(p.id, _NULL).quantize(_CENT)
         positionen_read.append(gelesen)
     return RechnungRead(
         **{k: getattr(rechnung, k) for k in RechnungRead.model_fields if k not in _AUSGESCHLOSSENE_FELDER},

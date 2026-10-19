@@ -586,3 +586,420 @@ async def test_abschlag_mit_angerechneter_schlussrechnung_ist_nicht_stornierbar(
     await _versenden(client, h, schluss["id"])
     assert (await client.post(f"/api/rechnungen/{schluss['id']}/storno", headers=h)).status_code == 201
     assert (await client.post(f"/api/rechnungen/{abschlag['id']}/storno", headers=h)).status_code == 201
+
+
+# --- Gutschrift --------------------------------------------------------------------
+
+# 19 %: 10 x 100 = 1000 netto, Brutto 1190; eine Menge von 1 entspricht 119,00 Brutto.
+EINZEL_POSITION = [{"beschreibung": "Anlage", "menge": "10", "einheit": "Stk", "einzelpreis": "100.00"}]
+GRUPPEN_POSITIONEN = [
+    {"beschreibung": "Leistung", "menge": "4", "einheit": "Std", "einzelpreis": "100.00"},
+    {"beschreibung": "Material 7", "menge": "2", "einheit": "Stk", "einzelpreis": "50.00", "steuer_satz": "7"},
+    {
+        "beschreibung": "PV-Modul",
+        "menge": "3",
+        "einheit": "Stk",
+        "einzelpreis": "200.00",
+        "steuer_kategorie": "Z",
+        "steuer_grund": "pv_12_3",
+    },
+]
+
+
+async def _versendete_rechnung(client, h, kunde, positionen=None, **extra) -> dict:
+    rechnung = await _rechnung_direkt(client, h, kunde, positionen or EINZEL_POSITION, **extra)
+    return await _versenden(client, h, rechnung["id"])
+
+
+async def _zahlung(client, h, rechnung_id, betrag) -> dict:
+    return await _ok(
+        await client.post(f"/api/rechnungen/{rechnung_id}/zahlungen", headers=h, json={"betrag": str(betrag)}), 201
+    )
+
+
+async def _op_regel_sql_gleich_python(mandant) -> dict[uuid.UUID, Decimal]:
+    """Die eine Regel in zwei Gestalten: offen_sql() und offene_betraege() muessen
+    fuer jede Rechnung des Mandanten dasselbe liefern."""
+    async with system_session() as session:
+        sql = {
+            rid: offen.quantize(Decimal("0.01"))
+            for rid, offen in (
+                await session.execute(
+                    select(Rechnung.id, rechnung_service.offen_sql()).where(Rechnung.mandant_id == mandant.id)
+                )
+            ).all()
+        }
+        rechnungen = list(
+            (await session.execute(select(Rechnung).where(Rechnung.mandant_id == mandant.id))).scalars().all()
+        )
+        python = await rechnung_service.offene_betraege(session, rechnungen)
+    assert sql == python
+    return python
+
+
+async def test_gutschrift_teilweise_mit_mehreren_steuergruppen(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde, GRUPPEN_POSITIONEN, leistungsdatum="2026-07-15")
+    leistung, material, pv = original["positionen"]
+
+    gutschrift = await _ok(
+        await _gutschrift(
+            client,
+            h,
+            original["id"],
+            positionen=[{"position_id": leistung["id"], "menge": "1"}, {"position_id": material["id"], "menge": "2"}],
+        )
+    )
+    assert gutschrift["rechnungsart"] == "gutschrift"
+    assert gutschrift["bezug_rechnung_id"] == original["id"]
+    assert gutschrift["status"] == "versendet" and gutschrift["ist_storno"] is False
+    assert gutschrift["gutschrift_grund"] == "Preisnachlass vereinbart"
+    assert gutschrift["leistungsdatum"] == "2026-07-15"
+    assert gutschrift["rechnungsnummer"].startswith("R-") and gutschrift["rechnungsnummer"] != original["rechnungsnummer"]
+    assert gutschrift["faellig_am"] is None
+    assert [
+        (p["beschreibung"], p["menge"], p["einzelpreis"], p["steuer_kategorie"], p["steuer_satz"], p["bezug_position_id"])
+        for p in gutschrift["positionen"]
+    ] == [
+        ("Leistung", "1.00", "-100.00", "S", "19.00", leistung["id"]),
+        ("Material 7", "2.00", "-50.00", "S", "7.00", material["id"]),
+    ]
+    gruppen = {g["satz"]: (g["netto"], g["steuer"]) for g in gutschrift["steuergruppen"]}
+    assert gruppen == {"19.00": ("-100.00", "-19.00"), "7.00": ("-100.00", "-7.00")}
+    assert gutschrift["betrag_netto"] == "-200.00" and gutschrift["betrag_brutto"] == "-226.00"
+
+    # Original: bleibt gueltig, kennt die Gutschrift und die gutgeschriebenen Mengen.
+    neu = await _holen(client, h, original["id"])
+    assert neu["status"] == "versendet"
+    assert [(g["rechnung_id"], g["brutto"]) for g in neu["gutschriften"]] == [(gutschrift["id"], "-226.00")]
+    assert [p["bereits_gutgeschrieben"] for p in neu["positionen"]] == ["1.00", "2.00", "0.00"]
+    assert _d(neu["offener_betrag"]) == _d(original["betrag_brutto"]) - Decimal("226.00")
+    # Das PDF der Gutschrift entsteht und die Gutschrift ist archiviert.
+    assert (await client.get(f"/api/rechnungen/{gutschrift['id']}/pdf", headers=h)).content.startswith(b"%PDF")
+
+
+async def test_gutschrift_alle_positionen_und_status_bezahlt(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde, GRUPPEN_POSITIONEN)
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True))
+    assert len(gutschrift["positionen"]) == 3
+    assert gutschrift["betrag_netto"] == "-" + original["betrag_netto"]
+    assert gutschrift["betrag_brutto"] == "-" + original["betrag_brutto"]
+    neu = await _holen(client, h, original["id"])
+    assert neu["status"] == "bezahlt" and neu["bezahlt_am"] is not None
+    assert neu["offener_betrag"] == "0.00"
+    # Nichts mehr gutzuschreiben.
+    assert (await _gutschrift(client, h, original["id"], alle=True)).status_code == 422
+
+
+async def test_gutschrift_mengengrenze_ist_kumulativ(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    position = original["positionen"][0]  # Menge 10
+    await _ok(await _gutschrift(client, h, original["id"], positionen=[{"position_id": position["id"], "menge": "6"}]))
+    zu_viel = await _gutschrift(client, h, original["id"], positionen=[{"position_id": position["id"], "menge": "4.01"}])
+    assert zu_viel.status_code == 422
+    assert "noch gutschreibbare Menge 4.00" in zu_viel.json()["detail"]
+    await _ok(await _gutschrift(client, h, original["id"], positionen=[{"position_id": position["id"], "menge": "4"}]))
+    assert (
+        await _gutschrift(client, h, original["id"], positionen=[{"position_id": position["id"], "menge": "0.01"}])
+    ).status_code == 422
+    assert len((await _holen(client, h, original["id"]))["gutschriften"]) == 2
+
+
+async def test_gutschrift_parallel_ueberschreitet_menge_nicht(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    position = original["positionen"][0]
+    antworten = await asyncio.gather(
+        *[
+            _gutschrift(client, h, original["id"], positionen=[{"position_id": position["id"], "menge": "6"}])
+            for _ in range(3)
+        ]
+    )
+    assert sorted(r.status_code for r in antworten) == [201, 422, 422]
+
+
+async def test_gutschrift_voraussetzungen(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    entwurf = await _rechnung_direkt(client, h, kunde, EINZEL_POSITION)
+    assert (await _gutschrift(client, h, entwurf["id"], alle=True)).status_code == 409
+
+    original = await _versenden(client, h, entwurf["id"])
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True))
+    # Gutschrift auf Gutschrift.
+    assert (await _gutschrift(client, h, gutschrift["id"], alle=True)).status_code == 409
+
+    # Gutschrift auf einen Storno-Beleg.
+    zweite = await _versendete_rechnung(client, h, kunde)
+    storno = await _ok(await client.post(f"/api/rechnungen/{zweite['id']}/storno", headers=h))
+    assert (await _gutschrift(client, h, storno["id"], alle=True)).status_code == 409
+    # Das stornierte Original selbst ist ebenfalls kein Gutschrift-Kandidat.
+    assert (await _gutschrift(client, h, zweite["id"], alle=True)).status_code == 409
+
+
+async def test_gutschrift_auf_abschlag_ist_nicht_moeglich(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    angebot = await _angebot(client, h, kunde)
+    abschlag = await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="30")
+    resp = await _gutschrift(client, h, abschlag["id"], alle=True)
+    assert resp.status_code == 409 and "Abschlagsrechnung" in resp.json()["detail"]
+
+
+async def test_gutschrift_eingaben_werden_geprueft(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    position_id = original["positionen"][0]["id"]
+    auswahl = [{"position_id": position_id, "menge": "1"}]
+    url = f"/api/rechnungen/{original['id']}/gutschrift"
+    assert (await client.post(url, headers=h, json={"grund": "Grund ok"})).status_code == 422  # weder noch
+    assert (
+        await client.post(url, headers=h, json={"grund": "Grund ok", "alle": True, "positionen": auswahl})
+    ).status_code == 422
+    assert (await client.post(url, headers=h, json={"grund": "ab", "alle": True})).status_code == 422
+    assert (await client.post(url, headers=h, json={"grund": "x" * 201, "alle": True})).status_code == 422
+    nullmenge = {"grund": "Grund ok", "positionen": [{"position_id": position_id, "menge": "0"}]}
+    assert (await client.post(url, headers=h, json=nullmenge)).status_code == 422
+    fremd = {"grund": "Grund ok", "positionen": [{"position_id": str(uuid.uuid4()), "menge": "1"}]}
+    assert (await client.post(url, headers=h, json=fremd)).status_code == 422
+    doppelt = {"grund": "Grund ok", "positionen": auswahl + auswahl}
+    assert (await client.post(url, headers=h, json=doppelt)).status_code == 422
+    assert (await client.post(url, headers=h, json={"grund": "Grund ok", "alle": False})).status_code == 422
+
+
+async def test_gutschrift_muss_betrag_verringern(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    angebot = await _angebot(client, h, kunde)
+    await _abschlag_versendet(client, h, angebot["id"], abschlag_prozent="30")
+    schluss = await _versenden(client, h, (await _ok(await _aus_angebot(client, h, angebot["id"], "schluss")))["id"])
+    [abzug] = _abzuege(schluss)
+    # Die Gutschrift allein auf die Abzugsposition waere eine Belastung.
+    resp = await _gutschrift(client, h, schluss["id"], positionen=[{"position_id": abzug["id"], "menge": "1"}])
+    assert resp.status_code == 422 and "negativen Gesamtbetrag" in resp.json()["detail"]
+    # Alle Positionen der Schlussrechnung ergeben eine Gutschrift ueber den Restbetrag.
+    gutschrift = await _ok(await _gutschrift(client, h, schluss["id"], alle=True))
+    assert gutschrift["betrag_netto"] == "-1050.00"
+
+
+async def test_gutschrift_zu_rechnung_ohne_positionen(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    einfach = await _ok(
+        await client.post(
+            "/api/rechnungen",
+            headers=h,
+            json={"kunde_id": str(kunde.id), "betrag_netto": "300.00", "mwst_satz": "19.00", "leistungsdatum": "2026-08-10"},
+        )
+    )
+    einfach = await _versenden(client, h, einfach["id"])
+    positionsweise = await _gutschrift(
+        client, h, einfach["id"], positionen=[{"position_id": str(uuid.uuid4()), "menge": "1"}]
+    )
+    assert positionsweise.status_code == 422
+    gutschrift = await _ok(await _gutschrift(client, h, einfach["id"], alle=True))
+    assert gutschrift["betrag_netto"] == "-300.00" and gutschrift["betrag_brutto"] == "-357.00"
+    assert (await _gutschrift(client, h, einfach["id"], alle=True)).status_code == 409
+
+
+async def test_komplett_storno_nach_gutschrift_ist_gesperrt(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    gutschrift = await _ok(
+        await _gutschrift(
+            client, h, original["id"], positionen=[{"position_id": original["positionen"][0]["id"], "menge": "1"}]
+        )
+    )
+    resp = await client.post(f"/api/rechnungen/{original['id']}/storno", headers=h)
+    assert resp.status_code == 409
+    assert gutschrift["rechnungsnummer"] in resp.json()["detail"]
+    # Wird die Gutschrift storniert, ist der Komplett-Storno wieder frei und das Original wieder offen.
+    assert (await client.post(f"/api/rechnungen/{gutschrift['id']}/storno", headers=h)).status_code == 201
+    assert (await _holen(client, h, original["id"]))["offener_betrag"] == original["betrag_brutto"]
+    assert (await client.post(f"/api/rechnungen/{original['id']}/storno", headers=h)).status_code == 201
+
+
+async def test_gutschrift_nicht_bezahlt_markierbar_und_ohne_zahlung(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True))
+    bezahlt = await client.patch(f"/api/rechnungen/{gutschrift['id']}", headers=h, json={"status": "bezahlt"})
+    assert bezahlt.status_code == 400
+    zahlung = await client.post(f"/api/rechnungen/{gutschrift['id']}/zahlungen", headers=h, json={"betrag": "10"})
+    assert zahlung.status_code == 400
+
+
+# --- Offene Posten mit Gutschriften -----------------------------------------------------
+
+
+async def test_op_regel_gutschrift_senkt_offenen_rest(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)  # Brutto 1190
+    position_id = original["positionen"][0]["id"]
+    gutschrift = await _ok(
+        await _gutschrift(client, h, original["id"], positionen=[{"position_id": position_id, "menge": "3"}])
+    )
+    assert gutschrift["betrag_brutto"] == "-357.00"
+    assert gutschrift["offener_betrag"] == "0.00"
+    neu = await _holen(client, h, original["id"])
+    assert neu["offener_betrag"] == "833.00" and neu["status"] == "versendet"
+    werte = await _op_regel_sql_gleich_python(mandant)
+    assert werte[uuid.UUID(original["id"])] == Decimal("833.00") and werte[uuid.UUID(gutschrift["id"])] == Decimal("0")
+
+    # Zahlung ueber den Rest bis zur Grenze: 833 offen, mehr geht nicht.
+    zu_viel = await client.post(f"/api/rechnungen/{original['id']}/zahlungen", headers=h, json={"betrag": "833.01"})
+    assert zu_viel.status_code == 400
+    bezahlt = await _zahlung(client, h, original["id"], "833.00")
+    assert bezahlt["status"] == "bezahlt" and bezahlt["offener_betrag"] == "0.00"
+    # bezahlter_betrag bleibt echtes Geld (ohne Gutschrift).
+    assert bezahlt["bezahlter_betrag"] == "833.00"
+    await _op_regel_sql_gleich_python(mandant)
+
+
+async def test_op_regel_teilzahlung_und_gutschrift(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    await _zahlung(client, h, original["id"], "500")
+    position_id = original["positionen"][0]["id"]
+    await _ok(await _gutschrift(client, h, original["id"], positionen=[{"position_id": position_id, "menge": "3"}]))
+    neu = await _holen(client, h, original["id"])
+    assert neu["offener_betrag"] == "333.00"  # 1190 - 500 - 357
+    assert neu["status"] == "teilweise_bezahlt"
+    await _op_regel_sql_gleich_python(mandant)
+
+
+async def test_op_regel_ueberhang_bleibt_als_guthaben_an_der_gutschrift(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    await _zahlung(client, h, original["id"], "1000")  # Rest 190
+    position_id = original["positionen"][0]["id"]
+    gutschrift = await _ok(
+        await _gutschrift(client, h, original["id"], positionen=[{"position_id": position_id, "menge": "3"}])
+    )
+    # 357 Gutschrift, nur 190 offen -> 167 Guthaben an der Gutschrift, Original bezahlt.
+    assert gutschrift["offener_betrag"] == "-167.00"
+    neu = await _holen(client, h, original["id"])
+    assert neu["offener_betrag"] == "0.00" and neu["status"] == "bezahlt"
+    werte = await _op_regel_sql_gleich_python(mandant)
+    assert werte[uuid.UUID(gutschrift["id"])] == Decimal("-167.00")
+
+    # Komplett bezahltes Original: die ganze Gutschrift ist Guthaben.
+    zweites = await _versendete_rechnung(client, h, kunde)
+    await _zahlung(client, h, zweites["id"], "1190")
+    zweite_gs = await _ok(
+        await _gutschrift(
+            client, h, zweites["id"], positionen=[{"position_id": zweites["positionen"][0]["id"], "menge": "1"}]
+        )
+    )
+    assert zweite_gs["offener_betrag"] == "-119.00"
+    assert (await _holen(client, h, zweites["id"]))["status"] == "bezahlt"
+    await _op_regel_sql_gleich_python(mandant)
+
+
+async def test_op_regel_mehrere_gutschriften_fruehere_nehmen_den_rest_zuerst(
+    client, make_mandant, make_user, make_kunde
+):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    await _zahlung(client, h, original["id"], "1000")  # Rest 190
+    position_id = original["positionen"][0]["id"]
+    eins = [{"position_id": position_id, "menge": "1"}]
+    erste = await _ok(await _gutschrift(client, h, original["id"], positionen=eins))
+    zweite = await _ok(await _gutschrift(client, h, original["id"], positionen=eins))
+    dritte = await _ok(await _gutschrift(client, h, original["id"], positionen=eins))
+    # 119 -> voll vom Rest (71 bleiben), 119 -> 71 absorbiert, 48 Guthaben; 119 -> komplett Guthaben.
+    assert (erste["offener_betrag"], zweite["offener_betrag"], dritte["offener_betrag"]) == ("0.00", "-48.00", "-119.00")
+    assert (await _holen(client, h, original["id"]))["offener_betrag"] == "0.00"
+    await _op_regel_sql_gleich_python(mandant)
+
+
+async def test_op_regel_storno_beleg(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    unbezahlt = await _versendete_rechnung(client, h, kunde)
+    storno = await _ok(await client.post(f"/api/rechnungen/{unbezahlt['id']}/storno", headers=h))
+    # Ein Storno einer unbezahlten Rechnung hinterlaesst keinen offenen Posten (weder Forderung noch Guthaben).
+    assert storno["offener_betrag"] == "0.00"
+
+    bezahlt = await _versendete_rechnung(client, h, kunde)
+    await _zahlung(client, h, bezahlt["id"], "400")
+    storno2 = await _ok(await client.post(f"/api/rechnungen/{bezahlt['id']}/storno", headers=h))
+    assert storno2["offener_betrag"] == "-400.00"  # 400 gezahlt -> 400 Guthaben
+    await _op_regel_sql_gleich_python(mandant)
+
+
+async def test_op_regel_gutschrift_storno_macht_original_wieder_offen(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    original = await _versendete_rechnung(client, h, kunde)
+    gutschrift = await _ok(await _gutschrift(client, h, original["id"], alle=True))
+    assert (await _holen(client, h, original["id"]))["status"] == "bezahlt"
+    storno = await _ok(await client.post(f"/api/rechnungen/{gutschrift['id']}/storno", headers=h))
+    assert storno["rechnungsart"] == "rechnung" and storno["ist_storno"] is True
+    # Der Storno einer Gutschrift ist (positiv) wieder eine normale Forderung.
+    assert storno["offener_betrag"] == "1190.00"
+    wieder = await _holen(client, h, original["id"])
+    assert wieder["status"] == "versendet" and wieder["bezahlt_am"] is None and wieder["offener_betrag"] == "1190.00"
+    # Die Gutschrift selbst ist storniert und hinterlaesst nichts.
+    assert (await _holen(client, h, gutschrift["id"]))["status"] == "storniert"
+    await _op_regel_sql_gleich_python(mandant)
+
+
+async def test_op_regel_uebersicht_summe_und_nur_offen(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    teil = await _versendete_rechnung(client, h, kunde)  # 1190, Gutschrift 357 -> 833 offen
+    position_id = teil["positionen"][0]["id"]
+    await _ok(await _gutschrift(client, h, teil["id"], positionen=[{"position_id": position_id, "menge": "3"}]))
+    voll = await _versendete_rechnung(client, h, kunde)  # vollstaendig gutgeschrieben -> verrechnet
+    voll_gs = await _ok(await _gutschrift(client, h, voll["id"], alle=True))
+    paid = await _versendete_rechnung(client, h, kunde)  # voll bezahlt + Gutschrift -> Guthaben
+    await _zahlung(client, h, paid["id"], "1190")
+    guthaben = await _ok(
+        await _gutschrift(client, h, paid["id"], positionen=[{"position_id": paid["positionen"][0]["id"], "menge": "1"}])
+    )
+
+    offen = (await client.get("/api/rechnungen?nur_offen=true&limit=200", headers=h)).json()
+    ids = {e["id"] for e in offen["eintraege"]}
+    # Offen: die teilgutgeschriebene Rechnung und die Gutschrift mit Guthaben; nicht die verrechneten.
+    assert ids == {teil["id"], guthaben["id"]}
+    assert voll["id"] not in ids and voll_gs["id"] not in ids and paid["id"] not in ids
+    assert offen["summe_offen"] == "714.00"  # 833 - 119 Guthaben
+    alle = (await client.get("/api/rechnungen?limit=200", headers=h)).json()
+    assert alle["summe_offen"] == "714.00"
+    nach_art = (await client.get("/api/rechnungen?rechnungsart=gutschrift&limit=200", headers=h)).json()
+    assert nach_art["gesamt_anzahl"] == 3 and {e["rechnungsart"] for e in nach_art["eintraege"]} == {"gutschrift"}
+    await _op_regel_sql_gleich_python(mandant)
+
+
+async def test_op_regel_op_liste_und_insights(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    teil = await _versendete_rechnung(client, h, kunde, faellig_am=str(date.today() + timedelta(days=5)))
+    position_id = teil["positionen"][0]["id"]
+    await _ok(await _gutschrift(client, h, teil["id"], positionen=[{"position_id": position_id, "menge": "3"}]))
+    voll = await _versendete_rechnung(client, h, kunde)
+    await _ok(await _gutschrift(client, h, voll["id"], alle=True))
+
+    bericht = (await client.get("/api/auswertung/offene-posten", headers=h)).json()
+    assert [(e["nummer"], e["offener_betrag"]) for e in bericht["debitoren"]] == [(teil["rechnungsnummer"], "833.00")]
+    assert bericht["summe_debitoren"] == "833.00"
+    insights = (await client.get("/api/insights", headers=h)).json()
+    assert insights["offene_rechnungssumme"] == "833.00"
+
+
+async def test_op_regel_mahnwesen_mahnt_nur_den_unverrechneten_rest(client, make_mandant, make_user, make_kunde):
+    mandant, kunde, h = await _admin(client, make_mandant, make_user, make_kunde)
+    faellig = str(date.today() - timedelta(days=15))
+    teil = await _versendete_rechnung(client, h, kunde, faellig_am=faellig)
+    voll = await _versendete_rechnung(client, h, kunde, faellig_am=faellig)
+    await _ok(
+        await _gutschrift(client, h, teil["id"], positionen=[{"position_id": teil["positionen"][0]["id"], "menge": "3"}])
+    )
+    voll_gs = await _ok(await _gutschrift(client, h, voll["id"], alle=True))
+    # Selbst eine ueberfaellig datierte Gutschrift wird nie gemahnt.
+    async with system_session() as session:
+        gs = await session.get(Rechnung, uuid.UUID(voll_gs["id"]))
+        gs.faellig_am = date.today() - timedelta(days=40)
+        await session.commit()
+
+    ergebnis = await mahnwesen_service.run_mahnwesen_eskalation([mandant.id])
+    assert ergebnis["rechnungen_eskaliert"] == 1
+    async with system_session() as session:
+        assert (await session.get(Rechnung, uuid.UUID(teil["id"]))).mahnstufe == 1
+        assert (await session.get(Rechnung, uuid.UUID(voll["id"]))).mahnstufe == 0
+        assert (await session.get(Rechnung, uuid.UUID(voll_gs["id"]))).mahnstufe == 0
