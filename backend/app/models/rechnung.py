@@ -125,11 +125,12 @@ class RechnungPosition(Base):
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    # Steuer je Position (Migration 0104). Kein ORM-Default fuer den Satz:
-    # jede Anlage-Stelle muss ihn bewusst setzen (Vorbelegung aus dem Beleg
-    # siehe steuer_service), sonst entstuende still eine unversteuerte Position.
+    # Steuer je Position (Migration 0104). Die Anlage-Stellen setzen beides
+    # bewusst (Vorbelegung aus dem Beleg siehe steuer_service); der ORM-Default
+    # spiegelt nur Rechnung.mwst_satz und faengt direkt gebaute Positionen
+    # (Tests, Skripte) ab. Kein DB-Default fuer den Satz.
     steuer_kategorie: Mapped[str] = mapped_column(Text, nullable=False, default="S", server_default="S")
-    steuer_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False)
+    steuer_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("19.00"))
     # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher diese
     # Position stammt -- steuert beim Entfernen, welche Zeiterfassung-
     # Eintraege wieder auf 'gebucht' zurueckgesetzt werden (siehe
