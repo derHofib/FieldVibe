@@ -69,10 +69,11 @@ jobs:
           DATABASE_URL_SYNC: postgresql+psycopg2://fieldvibe_test:fieldvibe_test@localhost:5432/fieldvibe_test
         run: pytest
 
-  # Prueft die ausgehende E-Rechnung (CII, Profil EN 16931) gegen die CEN-Geschaeftsregeln
-  # (Schematron). Das Werkzeug kommt komplett aus Maven Central und einem gepinnten Commit
-  # von ConnectingEurope/eInvoicing-EN16931 (siehe scripts/e-rechnung/pins.sh, jede Datei
-  # mit SHA-256 geprueft) -- keine Release-Downloads noetig. Im Job backend-tests werden
+  # Prueft die ausgehende E-Rechnung (CII, Profil EN 16931 und XRechnung) gegen die CEN-
+  # Geschaeftsregeln und die BR-DE-Regeln (Schematron). Das Werkzeug kommt komplett aus Maven
+  # Central und gepinnten Commits von ConnectingEurope/eInvoicing-EN16931 und
+  # itplr-kosit/xrechnung-schematron (siehe scripts/e-rechnung/pins.sh, jede Datei mit
+  # SHA-256 geprueft) -- keine Release-Downloads noetig. Im Job backend-tests werden
   # diese Tests mangels Werkzeug uebersprungen.
   e-rechnung-konformitaet:
     runs-on: ubuntu-latest
