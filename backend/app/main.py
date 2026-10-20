@@ -96,6 +96,13 @@ async def lifespan(_: FastAPI):
     sampler_task.cancel()
 
 
+def docs_optionen(einstellungen) -> dict:
+    """Ohne API-Doku liefern /docs, /redoc und /openapi.json schlicht 404."""
+    if einstellungen.api_docs_aktiv:
+        return {}
+    return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+
 app = FastAPI(
     title="FieldVibe API",
     description=(
@@ -104,6 +111,7 @@ app = FastAPI(
     ),
     version="0.7.0",
     lifespan=lifespan,
+    **docs_optionen(settings),
 )
 
 app.add_middleware(

@@ -65,7 +65,9 @@
 # Backend einfach bleibt (ein Origin pro Domain) und Anfragen 1:1 an
 # uvicorn durchgereicht werden koennen.
 # Die API liefert nur JSON; "frame-ancestors" statt einer strikten
-# default-src-CSP, weil FastAPI unter /docs Swagger-UI von einem CDN laedt.
+# default-src-CSP, weil FastAPI unter /docs Swagger-UI von einem CDN laedt
+# (in Produktion ist /docs aus, siehe FIELDVIBE_API_DOCS in .env.example --
+# die CSP bleibt locker, falls es bewusst eingeschaltet wird).
 {$DOMAIN_API} {
 	import header_basis
 	header {

@@ -340,7 +340,6 @@ if [[ "$DEPLOY_MODE" == "domain" ]]; then
 
   App (Handy):     https://$(get_env DOMAIN_APP)
   Office (Desktop): https://$(get_env DOMAIN_OFFICE)
-  API-Docs:        https://$(get_env DOMAIN_API)/docs
   Backups:         ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr, Prüfung sonntags 04:30 Uhr)
 
   Falls das Zertifikat noch nicht bereit ist:
@@ -352,7 +351,6 @@ else
   cat <<SUMMARY
 
   App:       http://$(get_env DEPLOY_IP):4173
-  API-Docs:  http://$(get_env DEPLOY_IP):8000/docs
   Backups:   ${BACKUP_DIR_VAL:-/opt/fieldvibe-backups} (täglich 02:30 Uhr, Prüfung sonntags 04:30 Uhr)
 
   ⚠ Unverschlüsselt (kein HTTPS) -- nur für Tests/internes Netz gedacht.

@@ -205,9 +205,17 @@ class Settings(BaseSettings):
     # (oder GITHUB_BRANCH in der .env setzen) -- siehe README.
     github_branch: str = "claude/multi-tenant-crm-social-feed-vea1l3"
 
+    # /docs, /redoc und /openapi.json: legt die komplette API-Oberflaeche offen
+    # (und Swagger-UI laedt Skripte von einem CDN). Default: nur in Dev/Test.
+    api_docs: bool | None = Field(default=None, validation_alias="FIELDVIBE_API_DOCS")
+
     @property
     def ist_dev_umgebung(self) -> bool:
         return self.environment.strip().lower() in DEV_UMGEBUNGEN
+
+    @property
+    def api_docs_aktiv(self) -> bool:
+        return self.ist_dev_umgebung if self.api_docs is None else self.api_docs
 
     @model_validator(mode="after")
     def _pruefe_sichere_konfiguration(self) -> "Settings":
