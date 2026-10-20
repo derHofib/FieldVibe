@@ -15,6 +15,9 @@ os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
 # Ohne explizite Dev/Test-Umgebung bricht die Settings-Pruefung bei den
 # Test-Secrets ab (app/core/config.py).
 os.environ.setdefault("ENVIRONMENT", "test")
+# Bestehende Tests nutzen das Refresh-Token aus dem Body -- die Uebergangsfrist
+# (config.refresh_body_bis) darf sie nicht mit dem Kalender kippen lassen.
+os.environ.setdefault("FIELDVIBE_REFRESH_BODY_BIS", "2999-12-31")
 
 
 def _moto_port_ermitteln() -> int:

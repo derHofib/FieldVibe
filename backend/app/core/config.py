@@ -1,3 +1,4 @@
+from datetime import date
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -210,6 +211,23 @@ class Settings(BaseSettings):
     # /docs, /redoc und /openapi.json: legt die komplette API-Oberflaeche offen
     # (und Swagger-UI laedt Skripte von einem CDN). Default: nur in Dev/Test.
     api_docs: bool | None = Field(default=None, validation_alias="FIELDVIBE_API_DOCS")
+
+    # Refresh-Token als HttpOnly-Cookie (siehe app/core/refresh_cookie.py).
+    # Secure-Flag: Default an ausser in Dev/Test; im IP-Betrieb ohne TLS muss
+    # es aus sein, sonst verwirft der Browser das Cookie (docker-compose.ip.yml).
+    refresh_cookie_secure: bool | None = Field(
+        default=None, validation_alias="FIELDVIBE_REFRESH_COOKIE_SECURE"
+    )
+    # Uebergangsfrist fuer alte Clients (PWA-Bundle im Cache): bis einschliesslich
+    # diesem Datum wird das Refresh-Token noch im Body ausgeliefert und
+    # angenommen. Danach nur noch Cookie. Leer/"none" = sofort beendet.
+    refresh_body_bis: date | None = Field(
+        default=date(2026, 12, 31), validation_alias="FIELDVIBE_REFRESH_BODY_BIS"
+    )
+
+    @property
+    def refresh_cookie_secure_aktiv(self) -> bool:
+        return (not self.ist_dev_umgebung) if self.refresh_cookie_secure is None else self.refresh_cookie_secure
 
     @property
     def ist_dev_umgebung(self) -> bool:

@@ -10,6 +10,11 @@
 #
 services:
   backend:
+    environment:
+      # Ohne TLS wuerde der Browser ein Secure-Cookie verwerfen (Refresh-Cookie,
+      # siehe backend/app/core/refresh_cookie.py) -- das ist der Preis des
+      # unverschluesselten Testbetriebs.
+      FIELDVIBE_REFRESH_COOKIE_SECURE: "0"
     ports:
       - "8000:8000"
 

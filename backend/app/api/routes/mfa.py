@@ -1,8 +1,9 @@
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 
 from app.api.deps import AuthContext, get_current_user, get_current_user_mfa_einrichtung
+from app.core import refresh_cookie
 from app.core.rate_limit import client_ip, login_account_limiter, login_ip_limiter
 from app.core.security import TokenType, decode_token, verify_password
 from app.db.session import system_session
@@ -112,6 +113,7 @@ async def mfa_einrichten(auth: AuthContext = Depends(get_current_user_mfa_einric
 async def mfa_bestaetigen(
     body: MfaCodeRequest,
     request: Request,
+    response: Response,
     auth: AuthContext = Depends(get_current_user_mfa_einrichtung),
 ) -> MfaAktiviert:
     """Schliesst die Einrichtung mit einem gueltigen Code ab. Alle bisherigen
@@ -135,7 +137,7 @@ async def mfa_bestaetigen(
             entity_type="user",
             entity_id=user.id,
         )
-        paar = await token_paar_fuer(session, user)
+        paar = refresh_cookie.paar_mit_cookie(request, response, await token_paar_fuer(session, user))
         return MfaAktiviert(
             access_token=paar.access_token, refresh_token=paar.refresh_token, wiederherstellungscodes=codes
         )
@@ -160,7 +162,10 @@ async def _passwort_und_code_pruefen(
 
 @router.post("/deaktivieren", response_model=TokenPair)
 async def mfa_deaktivieren(
-    body: MfaPasswortCodeRequest, request: Request, auth: AuthContext = Depends(get_current_user)
+    body: MfaPasswortCodeRequest,
+    request: Request,
+    response: Response,
+    auth: AuthContext = Depends(get_current_user),
 ) -> TokenPair:
     """Nur mit Passwort UND Code (bzw. Wiederherstellungscode). Ist MFA fuer den
     Mandanten Pflicht, bleibt sie an -- sonst stuende der Account sofort wieder
@@ -182,7 +187,7 @@ async def mfa_deaktivieren(
             entity_type="user",
             entity_id=user.id,
         )
-        return await token_paar_fuer(session, user)
+        return refresh_cookie.paar_mit_cookie(request, response, await token_paar_fuer(session, user))
 
 
 @router.post("/wiederherstellungscodes", response_model=MfaWiederherstellungscodes)
@@ -206,7 +211,7 @@ async def mfa_wiederherstellungscodes_erneuern(
 
 
 @router.post("/verifizieren", response_model=TokenPair)
-async def mfa_verifizieren(body: MfaVerifizierenRequest, request: Request) -> TokenPair:
+async def mfa_verifizieren(body: MfaVerifizierenRequest, request: Request, response: Response) -> TokenPair:
     """Zweiter Login-Schritt: tauscht den MFA-Token aus /login plus Code (TOTP
     oder Wiederherstellungscode) gegen das Token-Paar."""
     ungueltig = HTTPException(
@@ -252,4 +257,4 @@ async def mfa_verifizieren(body: MfaVerifizierenRequest, request: Request) -> To
                 entity_id=user.id,
                 payload={"codes_uebrig": mfa_service.wiederherstellungscodes_uebrig(user)},
             )
-        return await token_paar_fuer(session, user, mandant)
+        return refresh_cookie.paar_mit_cookie(request, response, await token_paar_fuer(session, user, mandant))

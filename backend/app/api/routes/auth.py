@@ -1,12 +1,13 @@
 import logging
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import ValidationError
 from sqlalchemy import func, select
 
 from app.api.deps import AuthContext, get_current_user, get_current_user_mfa_einrichtung
 from app.core.config import get_settings
+from app.core import refresh_cookie
 from app.core.rate_limit import (
     client_ip,
     login_account_limiter,
@@ -32,7 +33,7 @@ from app.schemas.auth import (
     PasswortAendernRequest,
     PasswortVergessenRequest,
     PasswortZuruecksetzenRequest,
-    RefreshRequest,
+    UserRefreshRequest,
     RegistrierenRequest,
     TokenPair,
 )
@@ -53,7 +54,7 @@ _logger = logging.getLogger("app.auth")
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(body: LoginRequest, request: Request) -> LoginResponse:
+async def login(body: LoginRequest, request: Request, response: Response) -> LoginResponse:
     ip_key = client_ip(request)
     account_key = body.email.strip().lower()
     login_ip_limiter.check(ip_key)
@@ -71,13 +72,29 @@ async def login(body: LoginRequest, request: Request) -> LoginResponse:
     if not result.mfa_erforderlich:
         login_ip_limiter.record_success(ip_key)
         login_account_limiter.record_success(account_key)
+        paar = refresh_cookie.paar_mit_cookie(
+            request,
+            response,
+            TokenPair(access_token=result.access_token, refresh_token=result.refresh_token),
+        )
+        return LoginResponse(access_token=paar.access_token, refresh_token=paar.refresh_token)
     return result
 
 
 @router.post("/refresh", response_model=TokenPair)
-async def refresh(body: RefreshRequest) -> TokenPair:
+async def refresh(
+    request: Request, response: Response, body: UserRefreshRequest | None = None
+) -> TokenPair:
+    # Body-Token nur in der Uebergangsfrist (alte PWA-Bundles); sonst Cookie,
+    # und dann zusaetzlich Origin-Pruefung gegen CSRF.
+    token = body.refresh_token if body and refresh_cookie.body_token_erlaubt() else None
+    if token is None:
+        token = request.cookies.get(refresh_cookie.COOKIE_NAME)
+        if token is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Kein Refresh-Token")
+        refresh_cookie.origin_pruefen(request)
     try:
-        payload = decode_token(body.refresh_token)
+        payload = decode_token(token)
     except jwt.PyJWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Ungültiges Refresh-Token"
@@ -108,11 +125,11 @@ async def refresh(body: RefreshRequest) -> TokenPair:
                     status_code=status.HTTP_401_UNAUTHORIZED, detail="Mandant ist nicht aktiv"
                 )
 
-        return await token_paar_fuer(session, user, mandant)
+        return refresh_cookie.paar_mit_cookie(request, response, await token_paar_fuer(session, user, mandant))
 
 
 @router.post("/ueberall-abmelden", status_code=status.HTTP_204_NO_CONTENT)
-async def ueberall_abmelden(auth: AuthContext = Depends(get_current_user)) -> None:
+async def ueberall_abmelden(response: Response, auth: AuthContext = Depends(get_current_user)) -> None:
     """Entwertet alle Tokens des eigenen Accounts (alle Geraete, inkl. des
     aufrufenden). system_session wie bei /me: bei Impersonation ist die
     Zeile des Super-Admins unter der Mandanten-RLS nicht sichtbar -- dann
@@ -122,6 +139,15 @@ async def ueberall_abmelden(auth: AuthContext = Depends(get_current_user)) -> No
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
         await widerrufe_tokens(session, user)
+    refresh_cookie.loesche_refresh_cookie(response)
+
+
+@router.post("/abmelden", status_code=status.HTTP_204_NO_CONTENT)
+async def abmelden(response: Response) -> None:
+    """Loescht nur das Refresh-Cookie dieses Browsers (keine Authentifizierung
+    noetig: ohne Cookie ist nichts zu tun). Andere Geraete bleiben angemeldet,
+    dafuer gibt es /ueberall-abmelden."""
+    refresh_cookie.loesche_refresh_cookie(response)
 
 
 @router.post("/passwort-vergessen", status_code=status.HTTP_202_ACCEPTED)
@@ -216,7 +242,7 @@ async def passwort_zuruecksetzen(body: PasswortZuruecksetzenRequest, request: Re
 
 @router.post("/passwort-aendern", response_model=TokenPair)
 async def passwort_aendern(
-    body: PasswortAendernRequest, request: Request, auth: AuthContext = Depends(get_current_user)
+    body: PasswortAendernRequest, request: Request, response: Response, auth: AuthContext = Depends(get_current_user)
 ) -> TokenPair:
     """Alle bisherigen Tokens werden widerrufen (andere Geraete sind damit
     abgemeldet); die aufrufende Sitzung bekommt direkt ein frisches Paar, so
@@ -266,11 +292,11 @@ async def passwort_aendern(
             entity_type="user",
             entity_id=user.id,
         )
-        return await token_paar_fuer(session, user)
+        return refresh_cookie.paar_mit_cookie(request, response, await token_paar_fuer(session, user))
 
 
 @router.post("/registrieren", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
-async def registrieren(body: RegistrierenRequest) -> TokenPair:
+async def registrieren(body: RegistrierenRequest, request: Request, response: Response) -> TokenPair:
     """Schliesst eine Mitarbeiter-Einladung ab: legt den User-Account mit
     dem selbst gewaehlten Passwort an und loggt direkt ein."""
     if len(body.password) < MIN_PASSWORT_LAENGE:
@@ -294,7 +320,7 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
         await besetzung_pflegen(session, user, neu=True)
         await als_angenommen_markieren(session, einladung)
 
-        return await token_paar_fuer(session, user)
+        return refresh_cookie.paar_mit_cookie(request, response, await token_paar_fuer(session, user))
 
 
 @router.get("/me", response_model=CurrentUser)

@@ -21,7 +21,9 @@ class LoginRequest(BaseModel):
 
 class TokenPair(BaseModel):
     access_token: str
-    refresh_token: str
+    # None bei Mitarbeiter-Antworten fuer Cookie-Clients (HttpOnly-Cookie statt
+    # Body, siehe app/core/refresh_cookie.py); Portal/Partner liefern es weiter.
+    refresh_token: str | None = None
     token_type: str = "bearer"
 
 
@@ -38,6 +40,12 @@ class LoginResponse(BaseModel):
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class UserRefreshRequest(BaseModel):
+    """Mitarbeiter-Refresh: ohne Token im Body kommt es aus dem Cookie."""
+
+    refresh_token: str | None = None
 
 
 class RegistrierenRequest(BaseModel):
