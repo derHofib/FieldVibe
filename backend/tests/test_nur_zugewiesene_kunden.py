@@ -13,6 +13,7 @@ from app.models.account_typ import AccountTyp, AccountTypRecht
 from app.models.user import User
 from app.models.vorgang_event import VorgangEvent
 from tests.conftest import auth_headers, login
+from tests.datev_helfer import stammdaten_setzen
 
 
 @pytest.fixture
@@ -234,6 +235,7 @@ async def test_angebote(client, szenario):
 async def test_auswertung_fuer_eingeschraenkte_gesperrt(client, szenario):
     s = szenario
     zeitraum = {"von": "2020-01-01", "bis": "2030-12-31"}
+    await stammdaten_setzen(client, s["admin"])  # ohne Berater-/Mandantennummer antwortet der DATEV-Export mit 422
     for pfad, params in (
         ("/api/auswertung/ust-va", zeitraum),
         ("/api/auswertung/offene-posten", None),
