@@ -134,7 +134,7 @@ async def analysiere_import(
     daten = await datei.read(grenze + 1)
     if len(daten) > grenze:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=413,
             detail=f"Die Datei ist größer als {grenze // (1024 * 1024)} MB.",
         )
     try:

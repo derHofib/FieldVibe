@@ -487,8 +487,9 @@ async def raeume_auf(jetzt: datetime | None = None) -> dict:
     Aufbewahrungsfrist. Die Laeufe selbst bleiben als Nachweis."""
     einstellungen = get_settings()
     jetzt = jetzt or datetime.now(UTC)
-    quelle_grenze = jetzt - timedelta(hours=einstellungen.import_zwischenspeicher_stunden)
-    bericht_grenze = jetzt - timedelta(days=einstellungen.import_fehlerbericht_tage)
+    # created_at/updated_at sind im ORM zeitzonenlos (TimestampMixin), daher naive UTC-Grenzen.
+    quelle_grenze = (jetzt - timedelta(hours=einstellungen.import_zwischenspeicher_stunden)).replace(tzinfo=None)
+    bericht_grenze = (jetzt - timedelta(days=einstellungen.import_fehlerbericht_tage)).replace(tzinfo=None)
     quellen = berichte = 0
     async with system_session() as session:
         alt = (

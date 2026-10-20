@@ -133,7 +133,7 @@ async def rueckgaengig(session: AsyncSession, lauf: ImportLauf, user_id: UUID) -
         for abh_typ, abh_modell, attr in _abhaengige(typ):
             spalte = getattr(abh_modell, attr)
             for stueck in _stuecke(ids):
-                stmt = select(abh_modell.id, spalte).where(spalte.in_(stueck))
+                stmt = select(getattr(abh_modell, "id", spalte), spalte).where(spalte.in_(stueck))
                 if hasattr(abh_modell, "geloescht_am"):
                     stmt = stmt.where(abh_modell.geloescht_am.is_(None))
                 for abh_id, eltern_id in (await session.execute(stmt)).all():

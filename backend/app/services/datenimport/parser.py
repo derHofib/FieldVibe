@@ -85,7 +85,9 @@ def _dekodieren(daten: bytes) -> tuple[str, str]:
             return daten.decode("utf-16"), "UTF-16"
         except UnicodeDecodeError:
             raise ImportDateiFehler("Die Datei konnte nicht gelesen werden (Kodierung).") from None
-    if b"\x00" in daten[:4096]:
+    probe = daten[:4096]
+    # Einzelne NUL-Zeichen in Zellen werden spaeter bereinigt; viele NULs heissen Binaerdatei.
+    if probe.count(b"\x00") * 10 > len(probe):
         raise ImportDateiFehler("Die Datei ist keine Textdatei (CSV).")
     if daten.startswith(b"\xef\xbb\xbf"):
         try:
