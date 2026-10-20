@@ -233,7 +233,9 @@ In `.env` mindestens setzen:
 - `DATABASE_URL`/`DATABASE_URL_SYNC` – Passwort aus `POSTGRES_PASSWORD`
   übernehmen (siehe Kommentare in der Datei).
 
-`chmod 600 .env` nicht vergessen – die Datei enthält alle Secrets.
+`chmod 600 .env` nicht vergessen – die Datei enthält alle Secrets. Ohne
+`ENVIRONMENT=development` bricht der Start bei Platzhalter-Secrets ab, siehe
+Abschnitt 6c.
 
 **Impressum/Datenschutz:** Die Links auf Login-, Registrierungs- und
 Portalseiten zeigen immer auf etwas. Reihenfolge: (1) `impressum_url`/
@@ -789,6 +791,137 @@ wenn ein Paket nicht gepinnt ist oder der Hash nicht passt.
 
 Zugriff für Claude auf In-App-Fehlerberichte (Token, `.env`, Netzwerk):
 siehe `docs/FEHLERBERICHTE.md`.
+
+## 6c. Sicherheit (TOM, Art. 32 DSGVO)
+
+Technische Maßnahmen dieser Installation und was dafür zu tun ist.
+
+### Startabbruch bei unsicherer Konfiguration
+
+`ENVIRONMENT` ist **fail-closed**: ohne Eintrag gilt `production`. Backend,
+Worker, Alembic und CLI verweigern dann den Start mit einer Liste der
+Probleme, wenn `JWT_SECRET` ein Platzhalter/Default oder kürzer als 32 Zeichen
+ist, `S3_SECRET_KEY` oder ein gesetzter `INTEGRATION_SECRET_KEY` ein
+Platzhalter ist (enthält `changeme`/`change-me`) oder die Datenbank-URLs ein
+Default-Passwort (`fieldvibe`, `fieldvibe_app`, Platzhalter) tragen. Ein
+fehlender `INTEGRATION_SECRET_KEY` bleibt erlaubt (Fallback auf `JWT_SECRET`;
+ein neuer Schlüssel würde bereits verschlüsselte Integrations-Secrets
+unlesbar machen). Dev/Test setzen `ENVIRONMENT=development` bzw. `test`
+(`.env.example`, `docker-compose.override.yml`, `tests/conftest.py`).
+`scripts/deploy.sh` setzt `production` auch bei Bestandsinstallationen.
+
+### API-Dokumentation
+
+`/docs`, `/redoc` und `/openapi.json` sind nur in Dev/Test erreichbar.
+Gezielt umschalten: `FIELDVIBE_API_DOCS=1|0`.
+
+### Zwei-Faktor-Anmeldung (TOTP) für Mitarbeiter
+
+- Einrichtung im Profil („Zwei-Faktor-Anmeldung"): QR-Code (serverseitig als
+  SVG erzeugt, keine externen Requests), Bestätigung mit einem Code, zehn
+  Einmal-Wiederherstellungscodes (nur als HMAC gespeichert, einmalig sichtbar).
+  Das Secret liegt Fernet-verschlüsselt in `users.mfa_secret_enc` (Schlüssel
+  wie bei den Integrations-Secrets: `INTEGRATION_SECRET_KEY`, sonst
+  `JWT_SECRET` – bei Rotation dieses Schlüssels müssen alle Nutzer MFA neu
+  einrichten).
+- Login zweistufig: `POST /api/auth/login` liefert bei aktiver MFA nur einen
+  5 Minuten gültigen `mfa_token`; `POST /api/auth/mfa/verifizieren` tauscht ihn
+  mit Code oder Wiederherstellungscode gegen die Tokens. Zeitfenster ±1 Schritt,
+  ein Zeitschritt gilt nur einmal (Replay-Schutz). Fehlversuche zählen in
+  denselben Login-Limitern wie das Passwort (5 je Konto / 20 je IP in 15 Min.).
+- **Pflicht je Betrieb**: Integrationen → Sicherheit („Zwei-Faktor-Anmeldung
+  vorschreiben", `firmendaten.mfa_pflicht`, Default aus). Betroffen sind alle
+  Mandanten-Nutzer, nicht `super_admin`. Wer noch keine MFA hat, bekommt nur
+  ein Einrichtungs-Token (alles außer `/me` und den MFA-Einrichtungsendpunkten
+  antwortet 403); die App zeigt die Einrichtung vollbildig. Bereits
+  ausgestellte Access-Tokens (30 Min.) laufen bis zum nächsten Refresh weiter.
+  Bei Pflicht ist Deaktivieren gesperrt.
+- **Verlorenes Gerät ohne Codes**: ein Admin setzt die MFA des Nutzers zurück
+  (Accounts → „MFA zurücksetzen", `POST /api/users/{id}/mfa-zuruecksetzen`,
+  Audit-Eintrag `mfa_zurueckgesetzt`, Nutzer wird überall abgemeldet). Hat der
+  einzige Admin eines Betriebs beides verloren, kann ein `super_admin` ihn
+  zurücksetzen. Weitere Audit-Einträge: `mfa_aktiviert`, `mfa_deaktiviert`,
+  `mfa_wiederherstellungscode_verwendet`, `mfa_wiederherstellungscodes_erneuert`,
+  `mfa_pflicht_geaendert`.
+- Nicht enthalten: MFA für Kundenportal/Partnerportal, WebAuthn,
+  Pflicht für `super_admin` (siehe `docs/BACKLOG.md`).
+
+### Refresh-Token als HttpOnly-Cookie
+
+Das Refresh-Token der Mitarbeiter liegt nicht mehr im Browser-Speicher,
+sondern im Cookie `fv_refresh` (`HttpOnly; SameSite=Strict; Path=/api/auth`,
+`Secure` außer Dev/Test und im IP-Betrieb). Der Access-Token (30 Min.) bleibt
+wie bisher im `localStorage`, damit die Feld-App offline starten kann.
+
+**Cookie-Variante (Entscheidung):** *host-only* am API-Host, kein
+`Domain=`-Attribut. App (`app.<domain>`) und Office (`office.<domain>`) sprechen
+beide mit **einem** API-Host (`api.<domain>`); das Cookie gehört diesem Host und
+wird deshalb von beiden Oberflächen genutzt – sie teilen sich eine Sitzung (nach
+dem Anmelden in einer Shell stellt die andere sie beim Start still wieder her),
+Abmelden in einer meldet auch die andere ab. Fremde Subdomains erreichen das
+Cookie nie. SameSite=Strict genügt, weil Frontend und API dieselbe registrierbare
+Domain haben („same-site"). *Alternative:* `Domain=.<domain>` – nur nötig, wenn
+die API je Oberfläche auf einem anderen Host liefe; sie öffnet das Cookie für
+alle Subdomains (größere Angriffsfläche, z. B. Subdomain-Takeover) und wird
+deshalb nicht verwendet.
+
+**CSRF:** SameSite=Strict, dazu prüft `/api/auth/refresh` bei Cookie-Nutzung den
+`Origin`-Header gegen `CORS_ORIGINS` (fehlt er oder ist er fremd: 403), und das
+Frontend sendet den Header `X-Refresh-Cookie` (löst im Browser einen Preflight
+aus). Das Cookie gilt nur für `/api/auth/*`.
+
+**Übergangsfrist für alte Clients** (PWA-Bundle im Cache, Refresh-Token noch im
+`localStorage`): bis einschließlich `FIELDVIBE_REFRESH_BODY_BIS` (Default
+`2026-12-31`) wird das Refresh-Token noch im Antwort-Body geliefert und im
+Request-Body akzeptiert (ohne Origin-Prüfung, es ist ein Bearer-Token). Neue
+Clients bekommen es nie im Body. Nach dem Datum, oder bei leerem Wert, nur
+noch Cookie; alte Clients landen dann einmalig auf der Login-Seite. Datum bei
+Bedarf verlängern und nach Ablauf aus der Konfiguration entfernen.
+
+Offen: Kundenportal und Partnerportal nutzen weiter Tokens im Browser-Speicher
+(`docs/BACKLOG.md`).
+
+### MinIO-Service-Account
+
+Backend und Worker verbinden sich nicht mit dem MinIO-Root-Zugang, sondern mit
+einem Service-Account, dessen Policy nur Objekte (Lesen/Schreiben/Löschen) und
+das Auflisten des Buckets `S3_BUCKET_FOTOS` erlaubt. `scripts/deploy.sh` ruft
+`scripts/minio-service-account.sh` auf (idempotent; legt Bucket, Policy
+`fieldvibe-app` und den Account an, prüft mit dessen Zugang, dass ein fremder
+Bucket nicht anlegbar ist, trägt `S3_ACCESS_KEY`/`S3_SECRET_KEY` in `.env` ein und
+erzeugt Backend/Worker bei Änderung neu). Der Root-Zugang
+(`MINIO_ROOT_USER`/`-PASSWORD`) bleibt für MinIO selbst und die Administration.
+Manuell: `./scripts/minio-service-account.sh [--dry-run]`. Ist
+`S3_ACCESS_KEY` leer, fällt die Compose-Datei auf den Root-Zugang zurück
+(lokale Entwicklung). **Wurde bisher nicht gegen ein echtes MinIO getestet** (kein
+Docker in der Entwicklungsumgebung): bei Problemen mit der `mc`-Syntax der
+gepinnten MinIO-Version läuft der Stack mit dem Root-Zugang weiter, `deploy.sh`
+warnt.
+
+### Datenbank-Rolle: Besitz der Tabellen
+
+Backend und Worker laufen als `NOSUPERUSER NOBYPASSRLS`-Rolle (Abschnitt 3).
+Gehören dieser Rolle aber die Tabellen – der bisherige Standard, weil die
+Migrationen über dieselbe Rolle laufen –, könnte sie RLS per `ALTER TABLE …
+DISABLE ROW LEVEL SECURITY` selbst abschalten. Beim Start prüft
+`app/db/rollen_pruefung.py` das und **warnt**. Härtung (opt-in):
+
+```bash
+./scripts/app_rolle_einrichten.sh --getrennter-owner --compose "docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+# oder bei deploy.sh: DB_GETRENNTER_OWNER=1 in die .env, Skript erneut ausführen
+```
+
+Danach gehören Tabellen/Funktionen/Typen einer eigenen Owner-Rolle
+(`fieldvibe_owner`), die App-Rolle hat nur DML-Rechte (inkl. Default-Privilegien
+für künftige Migrationen), die Owner-Zugangsdaten stehen in `.env.migration`
+(nicht in `.env`, die als `env_file` in Backend/Worker geladen wird), Migrationen
+laufen über `scripts/migrieren.sh`, und `FIELDVIBE_DB_BESITZ_VERBOTEN=1` lässt
+den Start scheitern, falls die App-Rolle doch wieder Besitzerin wird. **Das SQL
+und die Skriptverdrahtung wurden nicht gegen eine echte Datenbank mit
+Rollenrechten getestet** – vor dem Einsatz auf einer Kopie der Produktionsdaten
+probieren (`scripts/backup.sh` zuvor). `restore.sh`/Runbook-Schritte mit
+`alembic` gehen weiter davon aus, dass die App-Rolle migriert; bei getrenntem
+Owner stattdessen `scripts/migrieren.sh` verwenden.
 
 ## 7. Deinstallieren
 

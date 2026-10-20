@@ -134,6 +134,30 @@ Stand und Annahmen: `docs/konzepte/DATEV.md`.
   Personenkonten bei geänderter Sachkontenlänge; kein Bearbeiten des Kreditorenkontos in der
   Oberfläche (nur API).
 
+## 11. Sicherheit: Rest nach Roadmap 1.2
+
+- **MFA für Kundenportal und Partnerportal** — TOTP gibt es nur für
+  Mitarbeiter (`app/services/mfa_service.py`, `users.mfa_*`). Portal-Zugänge
+  hätten dieselbe Mechanik (Spalten an `kundenportal_zugaenge`/`partner_zugaenge`).
+- **Refresh-Cookie für Kundenportal und Partnerportal** — dort liegt das
+  Refresh-Token weiter im `localStorage` (`kundenAuthStore`, `partnerAuthStore`);
+  `app/core/refresh_cookie.py` ist wiederverwendbar, die Portale brauchen
+  eigene Cookie-Namen und Pfade.
+- **WebAuthn/Passkeys** als zweiter Faktor oder Ersatz für TOTP.
+- **MFA-Pflicht für `super_admin`** — bewusst Teil der späteren „Console"
+  (Super-Admin-Frontend); technisch ist MFA für `super_admin` schon möglich,
+  nur die Pflicht (`mfa_service.einrichtung_erforderlich`) nimmt die Rolle aus.
+- **Getrennte DB-Owner-Rolle als Standard** — heute opt-in
+  (`--getrennter-owner`), nicht gegen echtes Postgres mit Rollenrechten
+  getestet; `restore.sh`/Backup-Prüfung kennen die Owner-Rolle noch nicht.
+- **MinIO-Service-Account gegen echtes MinIO verifizieren** und
+  Schlüsselrotation (heute: Zeilen in `.env` löschen, Skript erneut ausführen).
+- **Access-Token nicht im `localStorage`** — bleibt dort, damit die Feld-App
+  offline startet; Alternative: In-Memory plus Offline-Sitzungsmodus.
+- **Refresh-Token-Rotation mit Wiederverwendungserkennung** — Refresh-Tokens
+  sind weiterhin zustandslose JWTs; ein gestohlenes Cookie gilt bis zum Ablauf
+  (14 Tage) oder Widerruf.
+
 ## Erledigt, zur Einordnung
 
 `v1.0.0` (17.08.2026) markiert den Ausgangsstand nach Zusammenführung
