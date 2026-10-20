@@ -1,13 +1,38 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Nur diese Werte von ENVIRONMENT gelten als bewusst unsichere Umgebung
+# (lokale Entwicklung, pytest) -- alles andere, auch ein vergessener Eintrag,
+# wird wie Produktion behandelt.
+DEV_UMGEBUNGEN = frozenset({"development", "dev", "test", "testing", "local"})
+
+# Mindestlaenge fuer JWT_SECRET (HS256): `openssl rand -base64 48` liefert 64.
+MIN_JWT_SECRET_LAENGE = 32
+
+
+class UnsichereKonfigurationError(RuntimeError):
+    """Bewusst keine ValueError-Ableitung: pydantic wuerde sie sonst in einen
+    ValidationError mit Feld-Rauschen einpacken, der die Handlungsanweisung
+    verschluckt."""
+
+
+def _ist_platzhalter(wert: str | None) -> bool:
+    if not wert:
+        return True
+    klein = wert.strip().lower()
+    return "changeme" in klein or "change-me" in klein
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    environment: str = "development"
+    # Fail-closed: ohne ENVIRONMENT gilt Produktion. Dev/Test muessen es
+    # ausdruecklich setzen (.env.example, tests/conftest.py), siehe
+    # DEV_UMGEBUNGEN und die Startpruefung unten.
+    environment: str = "production"
 
     # Betriebs-Zeitzone fuer Tagesgrenzen (Zeiterfassung: Tages-/Wochenfilter,
     # Wochenzettel); siehe app/core/zeit.py. Mandanten haben kein eigenes Feld.
@@ -179,6 +204,48 @@ class Settings(BaseSettings):
     # TODO: nach dem Mergen dieses Branches in main hier "main" eintragen
     # (oder GITHUB_BRANCH in der .env setzen) -- siehe README.
     github_branch: str = "claude/multi-tenant-crm-social-feed-vea1l3"
+
+    @property
+    def ist_dev_umgebung(self) -> bool:
+        return self.environment.strip().lower() in DEV_UMGEBUNGEN
+
+    @model_validator(mode="after")
+    def _pruefe_sichere_konfiguration(self) -> "Settings":
+        """Startabbruch bei Default-/Platzhalter-Secrets ausserhalb einer
+        Dev-Umgebung. Laeuft bei jedem Settings() und damit auch fuer Worker,
+        Alembic und CLI, nicht nur fuer den Webprozess."""
+        if self.ist_dev_umgebung:
+            return self
+
+        probleme: list[str] = []
+        if _ist_platzhalter(self.jwt_secret) or len(self.jwt_secret) < MIN_JWT_SECRET_LAENGE:
+            probleme.append(
+                f"JWT_SECRET ist ein Platzhalter/Default oder kuerzer als {MIN_JWT_SECRET_LAENGE} "
+                "Zeichen (Erzeugen: openssl rand -base64 48)"
+            )
+        # None bleibt erlaubt (Fallback auf JWT_SECRET): ein Bestand mit schon
+        # verschluesselten Integrations-Secrets liesse sich sonst nach einem
+        # Update nicht mehr entschluesseln. Ein gesetzter Platzhalter ist dagegen
+        # eindeutig ein vergessener Eintrag.
+        if self.integration_secret_key is not None and _ist_platzhalter(self.integration_secret_key):
+            probleme.append("INTEGRATION_SECRET_KEY ist ein Platzhalter (Erzeugen: openssl rand -base64 48)")
+        if _ist_platzhalter(self.s3_secret_key):
+            probleme.append("S3_SECRET_KEY (= MINIO_ROOT_PASSWORD bzw. Service-Account-Secret) ist ein Platzhalter/Default")
+        for name, url in (("DATABASE_URL", self.database_url), ("DATABASE_URL_SYNC", self.database_url_sync)):
+            passwort = urlsplit(url).password
+            if _ist_platzhalter(passwort) or passwort in {"fieldvibe", "fieldvibe_app"}:
+                probleme.append(f"{name} enthaelt ein Platzhalter-/Default-Passwort")
+
+        if probleme:
+            zeilen = "\n".join(f"  - {p}" for p in probleme)
+            raise UnsichereKonfigurationError(
+                f"Unsichere Konfiguration (ENVIRONMENT={self.environment!r}), Start abgebrochen:\n"
+                f"{zeilen}\n"
+                "Werte in der .env setzen (scripts/deploy.sh erzeugt sie). Fuer lokale "
+                "Entwicklung/Tests stattdessen ENVIRONMENT=development setzen "
+                "(siehe .env.example, docs/DEPLOYMENT.md, Abschnitt Sicherheit)."
+            )
+        return self
 
 
 @lru_cache

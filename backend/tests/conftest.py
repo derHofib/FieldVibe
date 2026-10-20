@@ -12,6 +12,9 @@ os.environ.setdefault(
     "postgresql+psycopg2://fieldvibe:fieldvibe@localhost:5432/fieldvibe_test",
 )
 os.environ.setdefault("JWT_SECRET", "test-only-secret-do-not-use-in-prod")
+# Ohne explizite Dev/Test-Umgebung bricht die Settings-Pruefung bei den
+# Test-Secrets ab (app/core/config.py).
+os.environ.setdefault("ENVIRONMENT", "test")
 
 
 def _moto_port_ermitteln() -> int:

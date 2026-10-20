@@ -23,6 +23,9 @@ services:
 
   backend:
     environment:
+      # Lokal ohne .env soll das Backend trotz Platzhalter-Secrets starten
+      # (app/core/config.py: ohne ENVIRONMENT gilt Produktion).
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
       DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
@@ -35,6 +38,7 @@ services:
 
   worker:
     environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
       DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:-postgresql+psycopg2://fieldvibe_app:fieldvibe_app@postgres:5432/fieldvibe}
 

@@ -138,6 +138,10 @@ is_placeholder POSTGRES_PASSWORD && set_env POSTGRES_PASSWORD "$(gen_secret)"
 is_placeholder JWT_SECRET && set_env JWT_SECRET "$(gen_secret)"
 is_placeholder INTEGRATION_SECRET_KEY && set_env INTEGRATION_SECRET_KEY "$(gen_secret)"
 is_placeholder MINIO_ROOT_PASSWORD && set_env MINIO_ROOT_PASSWORD "$(gen_secret)"
+# Auch Bestandsinstallationen: eine aus .env.example kopierte .env traegt
+# ENVIRONMENT=development -- das haette die Startpruefung auf Platzhalter-
+# Secrets (app/core/config.py) und die API-Doku-Sperre ausgehebelt.
+set_env ENVIRONMENT "production"
 # Eigener Key statt gen_secret(): MinIO braucht echtes, unverstuemmeltes
 # Base64 eines 32-Byte-Schluessels (gen_secret() entfernt bewusst
 # =/+ fuer Passwoerter, die z.B. in einer DATABASE_URL landen).
