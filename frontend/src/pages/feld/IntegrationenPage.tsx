@@ -6,6 +6,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { DatevSection } from "../../components/DatevSection";
 import { ErloeskontenSection } from "../../components/ErloeskontenSection";
+import { PortalVerbraucherschutzSection } from "../../components/PortalVerbraucherschutzSection";
 import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
 import { E_RECHNUNG_MODI, type ERechnungModus, eRechnungModus } from "../../utils/eRechnungVersand";
@@ -787,6 +788,7 @@ export function IntegrationenPage() {
 
       {einstellungen && <FirmenprofilSection einstellungen={einstellungen} />}
       {einstellungen && <DatevSection einstellungen={einstellungen} />}
+      {einstellungen && <PortalVerbraucherschutzSection einstellungen={einstellungen} />}
       {einstellungen && <ErloeskontenSection einstellungen={einstellungen} />}
       {einstellungen && <MahnwesenSection einstellungen={einstellungen} />}
 

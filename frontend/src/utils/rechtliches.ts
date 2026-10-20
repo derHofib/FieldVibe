@@ -1,4 +1,4 @@
-export type RechtlicheSeite = "impressum" | "datenschutz";
+export type RechtlicheSeite = "impressum" | "datenschutz" | "barrierefreiheit";
 
 export const PORTAL_SLUG_QUERY = "portal_slug";
 

@@ -6,6 +6,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { angeboteApi, kundenApi, leistungsverzeichnisApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { AngebotAbrechnung } from "../../components/angebot/AngebotAbrechnung";
+import { AngebotNachweis } from "../../components/angebot/AngebotNachweis";
 import { AngebotPositionSheet } from "../../components/angebot/AngebotPositionSheet";
 import { GueltigkeitSheet } from "../../components/angebot/GueltigkeitSheet";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
@@ -546,6 +547,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           </div>
         </div>
       </div>
+
+      <AngebotNachweis angebot={angebot} />
 
       {angebot.status === "angenommen" && (
         <AngebotAbrechnung

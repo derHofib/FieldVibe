@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { usePortalSlugAusUrl, useRechtliches } from "../hooks/useRechtliches";
 import { aufloesenRechtlicheUrl, type RechtlicheSeite } from "../utils/rechtliches";
 
-// Pflichtlinks nach §5 DDG / Art. 13 DSGVO. Reihenfolge je Link: URL aus den
+// Pflichtlinks nach §5 DDG / Art. 13 DSGVO (im Kundenportal zusaetzlich die
+// Barrierefreiheitserklaerung nach BFSG). Reihenfolge je Link: URL aus den
 // Firmendaten des Mandanten > Build-Env (VITE_IMPRESSUM_URL /
 // VITE_DATENSCHUTZ_URL, siehe .env.example) > interne Platzhalter-Seite.
 // Die Links stehen sofort mit dem Fallback da; die Firmendaten-URLs ziehen
@@ -18,6 +19,9 @@ type Props = {
   // Kunden-Login-Link (/portal/l/:slug) bzw. angemeldetes Kundenportal: legt
   // den zuständigen Mandanten fest. Ohne Angabe gilt ?portal_slug= der Seite.
   portalSlug?: string;
+  // Link zur Barrierefreiheitserklaerung (BFSG): nur im Kundenportal, dem
+  // Verbraucher-Frontend -- die Mitarbeiter-Oberflaechen zeigen ihn nicht.
+  barrierefreiheit?: boolean;
 };
 
 function Eintrag({
@@ -53,7 +57,7 @@ function Eintrag({
   );
 }
 
-export function RechtlicheLinks({ dunkel = false, className = "", portalSlug }: Props) {
+export function RechtlicheLinks({ dunkel = false, className = "", portalSlug, barrierefreiheit = false }: Props) {
   const slugAusUrl = usePortalSlugAusUrl();
   const slug = portalSlug ?? slugAusUrl;
   const { data } = useRechtliches(slug);
@@ -81,6 +85,16 @@ export function RechtlicheLinks({ dunkel = false, className = "", portalSlug }: 
         portalSlug={slug}
         dunkel={dunkel}
       />
+      {barrierefreiheit && (
+        <Eintrag
+          label="Barrierefreiheit"
+          seite="barrierefreiheit"
+          firmendatenUrl={data?.barrierefreiheit_url}
+          envUrl={undefined}
+          portalSlug={slug}
+          dunkel={dunkel}
+        />
+      )}
     </nav>
   );
 }

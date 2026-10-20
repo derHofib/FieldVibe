@@ -48,6 +48,7 @@ const ANGEBOT_STATUS_BADGE: Record<AngebotStatus, string> = {
   versendet: "border border-tint text-tint ",
   angenommen: "border border-st-erledigt text-st-erledigt ",
   abgelehnt: "border border-st-fehlt text-st-fehlt ",
+  widerrufen: "border border-st-arbeit text-st-arbeit ",
 };
 
 const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
@@ -55,6 +56,7 @@ const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
   versendet: "Versendet",
   angenommen: "Angenommen",
   abgelehnt: "Abgelehnt",
+  widerrufen: "Widerrufen",
 };
 
 function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; onErfolg: (id: string) => void }) {

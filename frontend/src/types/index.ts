@@ -555,6 +555,21 @@ export interface PortalAngebot {
   gesamt_netto: string;
   gesamt_brutto: string;
   ist_abgelaufen: boolean;
+  widerrufen_am: string | null;
+  fassung_sha256: string;
+  /** B2C-Ablauf (Button-Loesung, Widerruf) gilt fuer diesen Kunden. */
+  verbraucherschutz: boolean;
+  widerruf_moeglich: boolean;
+  widerruf_frist_bis: string | null;
+  widerruf_hinweis: string | null;
+  nachweis_referenz: string | null;
+}
+
+export interface PortalVerbraucherschutz {
+  verbraucherschutz: boolean;
+  widerrufsfrist_tage: number;
+  belehrung: { version: string; text: string; ist_platzhalter: boolean } | null;
+  widerrufsformular_text: string | null;
 }
 
 export interface PortalRechnungPosition {
@@ -979,7 +994,7 @@ export interface Mangel {
   updated_at: string;
 }
 
-export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt";
+export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt" | "widerrufen";
 export type AngebotPositionstyp = "material" | "arbeitszeit";
 
 export interface AngebotPosition {
@@ -992,6 +1007,20 @@ export interface AngebotPosition {
   einzelpreis: string;
   positionstyp: AngebotPositionstyp;
   gesamt: string;
+}
+
+/** Letzter Portal-Nachweis (Annahme/Ablehnung/Widerruf) eines Angebots. */
+export interface AngebotNachweis {
+  id: string;
+  aktion: "annahme" | "ablehnung" | "widerruf";
+  zugang_email: string;
+  zugang_name: string;
+  ip: string;
+  user_agent: string;
+  fassung_sha256: string;
+  b2c_flag: boolean;
+  belehrung_version: string | null;
+  created_at: string;
 }
 
 export interface Angebot {
@@ -1010,6 +1039,8 @@ export interface Angebot {
   // Maengel-Pfad leer, dort haengt der Reparatur-Vorgang an den Maengeln.
   auftrag_vorgang_id: string | null;
   nachgefasst_am: string | null;
+  // Nur ueber den Widerrufsbutton im Kundenportal (Verbraucher) gesetzt.
+  widerrufen_am?: string | null;
   created_at: string;
   updated_at: string;
   positionen: AngebotPosition[];
@@ -1024,6 +1055,8 @@ export interface Angebot {
   schlussrechnung_id?: string | null;
   // Rechnung ohne Abschlaege (aus dem Angebot erstellt).
   rechnung_id?: string | null;
+  fassung_sha256?: string;
+  letzter_nachweis?: AngebotNachweis | null;
 }
 
 export interface AngebotAbschlag {
@@ -1729,6 +1762,15 @@ export interface MandantFirmendaten {
     kontenrahmen?: "SKR03" | "SKR04";
     sachkontenlaenge?: number;
   };
+  // Kundenportal-Verbraucherschutz (B2C-Ablauf fuer Privatkunden). Fehlender
+  // Key (Bestandsmandant) gilt als "aus".
+  portal_verbraucherschutz?: "aus" | "nur_privatkunden";
+  widerrufsbelehrung_text?: string;
+  widerrufsbelehrung_version?: string;
+  // Barrierefreiheitserklaerung (BFSG): Kontakt, Stand (JJJJ-MM-TT), optionale externe URL.
+  barrierefreiheit_kontakt_email?: string;
+  barrierefreiheit_stand?: string;
+  barrierefreiheit_url?: string;
 }
 
 export interface MandantEinstellungen {
@@ -1773,6 +1815,9 @@ export interface RechtlichesAnbieter {
 export interface Rechtliches {
   impressum_url: string | null;
   datenschutz_url: string | null;
+  barrierefreiheit_url?: string | null;
+  barrierefreiheit_kontakt_email?: string | null;
+  barrierefreiheit_stand?: string | null;
   anbieter: RechtlichesAnbieter | null;
 }
 

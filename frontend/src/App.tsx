@@ -14,7 +14,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
-import { DatenschutzPage, ImpressumPage } from "./pages/RechtlichesPage";
+import { BarrierefreiheitPage, DatenschutzPage, ImpressumPage } from "./pages/RechtlichesPage";
 import { RegistrierenPage } from "./pages/RegistrierenPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { UebersichtPage } from "./pages/UebersichtPage";
@@ -124,6 +124,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           als der Office-Catch-all /* und der Login-Redirect *. */}
       <Route path="/impressum" element={<ImpressumPage />} />
       <Route path="/datenschutz" element={<DatenschutzPage />} />
+      <Route path="/barrierefreiheit" element={<BarrierefreiheitPage />} />
 
       <Route
         path="/login"

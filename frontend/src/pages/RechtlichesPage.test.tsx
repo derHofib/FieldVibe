@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { rechtlichesApi } from "../api/endpoints";
 import type { Rechtliches } from "../types";
-import { DatenschutzPage, ImpressumPage } from "./RechtlichesPage";
+import { BarrierefreiheitPage, DatenschutzPage, ImpressumPage } from "./RechtlichesPage";
 
 vi.mock("../api/endpoints", () => ({ rechtlichesApi: { get: vi.fn() } }));
 
@@ -86,5 +86,44 @@ describe("Platzhalter-Seiten", () => {
       expect(screen.getByRole("button", { name: "Zurück" })).toBeInTheDocument();
       unmount();
     }
+  });
+
+  it("Barrierefreiheitserklaerung zeigt Kontakt, Stand und den Platzhalter-Status", async () => {
+    vi.mocked(rechtlichesApi.get).mockResolvedValue({
+      ...firma,
+      barrierefreiheit_kontakt_email: "barrierefrei@mueller.de",
+      barrierefreiheit_stand: "2026-10-19",
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <BarrierefreiheitPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("heading", { level: 1, name: "Erklärung zur Barrierefreiheit" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "barrierefrei@mueller.de" })).toHaveAttribute(
+      "href",
+      "mailto:barrierefrei@mueller.de",
+    );
+    expect(screen.getByText("teilweise konform")).toBeInTheDocument();
+    expect(screen.getByText(/Platzhalter – der Konformitätsstatus/)).toBeInTheDocument();
+    expect(screen.getByText("19.10.2026")).toBeInTheDocument();
+  });
+
+  it("Barrierefreiheitserklaerung faellt ohne eigenen Kontakt auf die Firmen-E-Mail zurueck", async () => {
+    vi.mocked(rechtlichesApi.get).mockResolvedValue(firma);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <BarrierefreiheitPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole("link", { name: "info@mueller.de" })).toBeInTheDocument();
   });
 });

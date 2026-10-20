@@ -33,6 +33,7 @@ const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
   versendet: "Versendet",
   angenommen: "Angenommen",
   abgelehnt: "Abgelehnt",
+  widerrufen: "Widerrufen",
 };
 
 function AngeboteListe() {

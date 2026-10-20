@@ -169,3 +169,59 @@ export function DatenschutzPage() {
     </Rahmen>
   );
 }
+
+function stand(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(`${iso}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("de-DE");
+}
+
+// Platzhalter-Erklaerung nach BFSG: nur Kontakt und Stand aus den Firmendaten,
+// der Konformitaetsstatus ist ein Vorschlag, den der Betrieb pruefen muss.
+export function BarrierefreiheitPage() {
+  const slug = usePortalSlugAusUrl();
+  const { data } = useRechtliches(slug);
+  const a = data?.anbieter;
+  const kontakt = data?.barrierefreiheit_kontakt_email || a?.email;
+
+  return (
+    <Rahmen titel="Erklärung zur Barrierefreiheit">
+      <Block titel="Anbieter">
+        {a ? (
+          <>
+            <p className="text-[17px] font-semibold text-label">{a.name}</p>
+            <Anschrift anbieter={a} />
+          </>
+        ) : (
+          <Fehlt />
+        )}
+      </Block>
+      <Block titel="Stand der Vereinbarkeit mit den Anforderungen">
+        <p className="text-[15px] text-label">
+          Dieses Kundenportal ist mit den Anforderungen an die Barrierefreiheit (WCAG 2.1, Stufe AA)
+          <strong> teilweise konform</strong>.
+        </p>
+        <p className="text-sm text-label2">
+          Platzhalter – der Konformitätsstatus und die Liste der nicht barrierefreien Inhalte müssen vom Betreiber
+          geprüft und ergänzt werden.
+        </p>
+        <Zeilen zeilen={[["Stand", stand(data?.barrierefreiheit_stand)]]} />
+      </Block>
+      <Block titel="Barrieren melden und Feedback">
+        <p className="text-[15px] text-label">
+          Sind Ihnen Barrieren aufgefallen oder benötigen Sie Inhalte in einer anderen Form? Schreiben Sie uns.
+        </p>
+        {kontakt ? (
+          <p className="text-[15px]">
+            <a href={`mailto:${kontakt}`} className="text-tint-text underline underline-offset-2">
+              {kontakt}
+            </a>
+          </p>
+        ) : (
+          <Fehlt />
+        )}
+        <Zeilen zeilen={[["Telefon", a?.telefon]]} />
+      </Block>
+    </Rahmen>
+  );
+}

@@ -7,6 +7,7 @@ export const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
   versendet: "Versendet",
   angenommen: "Angenommen",
   abgelehnt: "Abgelehnt",
+  widerrufen: "Widerrufen",
 };
 
 export const ANGEBOT_STATUS_TOKEN: Record<AngebotStatus, StatusKey> = {
@@ -14,6 +15,7 @@ export const ANGEBOT_STATUS_TOKEN: Record<AngebotStatus, StatusKey> = {
   versendet: "wartet",
   angenommen: "erledigt",
   abgelehnt: "fehlt",
+  widerrufen: "arbeit",
 };
 
 export const MWST_SAETZE: { wert: AngebotMwstSatz; label: string }[] = [

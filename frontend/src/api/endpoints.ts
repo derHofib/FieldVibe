@@ -175,6 +175,7 @@ import type {
   UserAuswahl,
   VersionInfo,
   PortalAngebot,
+  PortalVerbraucherschutz,
   PortalAnlage,
   PortalRechnung,
   PortalStandort,
@@ -2242,10 +2243,24 @@ export const kundenportalApi = {
   vorgangEvents: (id: string) => kundenApiFetch<PortalVorgangEvent[]>(`/api/kundenportal/vorgaenge/${id}/events`),
   angebote: () => kundenApiFetch<PortalAngebot[]>("/api/kundenportal/angebote"),
   angebot: (id: string) => kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}`),
-  antwortAufAngebot: (id: string, status: "angenommen" | "abgelehnt") =>
+  antwortAufAngebot: (
+    id: string,
+    status: "angenommen" | "abgelehnt",
+    b2c?: { belehrung_version: string; fassung_sha256: string },
+  ) =>
     kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(
+        b2c && status === "angenommen"
+          ? { status, bestaetigung: true, belehrung_version: b2c.belehrung_version, fassung_sha256: b2c.fassung_sha256 }
+          : { status },
+      ),
+    }),
+  verbraucherschutz: () => kundenApiFetch<PortalVerbraucherschutz>("/api/kundenportal/verbraucherschutz"),
+  widerrufAngebot: (id: string) =>
+    kundenApiFetch<PortalAngebot>(`/api/kundenportal/angebote/${id}/widerruf`, {
+      method: "POST",
+      body: JSON.stringify({ bestaetigung: true }),
     }),
   angebotPdf: (id: string) => kundenApiFetchBlob(`/api/kundenportal/angebote/${id}/pdf`),
   rechnungen: () => kundenApiFetch<PortalRechnung[]>("/api/kundenportal/rechnungen"),

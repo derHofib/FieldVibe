@@ -129,4 +129,35 @@ describe("RechtlicheLinks", () => {
     await waitFor(() => expect(rechtlichesApi.get).toHaveBeenCalled());
     expect(screen.getByRole("link", { name: "Impressum" })).toHaveAttribute("href", "/impressum");
   });
+
+  it("zeigt den Barrierefreiheits-Link nur auf Wunsch (Kundenportal)", async () => {
+    vi.stubEnv("VITE_IMPRESSUM_URL", "");
+    vi.stubEnv("VITE_DATENSCHUTZ_URL", "");
+
+    const { unmount } = renderLinks();
+    expect(screen.queryByRole("link", { name: "Barrierefreiheit" })).not.toBeInTheDocument();
+    unmount();
+
+    renderLinks({ barrierefreiheit: true, portalSlug: "abc" });
+    expect(screen.getByRole("link", { name: "Barrierefreiheit" })).toHaveAttribute(
+      "href",
+      "/barrierefreiheit?portal_slug=abc",
+    );
+  });
+
+  it("gibt der Barrierefreiheits-URL aus den Firmendaten Vorrang", async () => {
+    vi.mocked(rechtlichesApi.get).mockResolvedValue({
+      ...leer,
+      barrierefreiheit_url: "https://firma.de/barrierefreiheit",
+    });
+
+    renderLinks({ barrierefreiheit: true });
+
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "Barrierefreiheit" })).toHaveAttribute(
+        "href",
+        "https://firma.de/barrierefreiheit",
+      ),
+    );
+  });
 });
