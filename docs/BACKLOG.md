@@ -158,6 +158,22 @@ Stand und Annahmen: `docs/konzepte/DATEV.md`.
   sind weiterhin zustandslose JWTs; ein gestohlenes Cookie gilt bis zum Ablauf
   (14 Tage) oder Widerruf.
 
+## 12. Datenimport: Lücken (Roadmap 1.10)
+
+Stand und Regeln: `docs/konzepte/DATENIMPORT.md`. Umgesetzt: Kunden, Standorte & Anlagen
+(mit Prüfzyklus), Material; Probelauf, Dubletten, Fehlerbericht, Rückgängig.
+
+- **Offene Posten nicht umgesetzt** (Entscheidungsvorlage: `docs/konzepte/DATENIMPORT_OFFENE_POSTEN.md`).
+- Baujahr der Anlage landet in der Notiz (kein Feld im Modell); Anlagen-Zusatzfelder
+  (`stammdaten`) lassen sich nicht importieren.
+- Keine Importe für Verträge, Vorgänge, Lieferanten, Partner; keine mehrfachen Ansprechpartner
+  je Kunde; kein Einkaufspreis (Materialmodell kennt nur den Einzelpreis).
+- Rückgängig setzt aktualisierte Datensätze nicht zurück (nur angelegte, unveränderte).
+- Body-Limit vor dem Upload-Endpunkt (Reverse-Proxy) nicht konfiguriert; die App prüft erst
+  nach dem Empfang. Bestehende CSV-Exporte (`csv_response`) haben keinen Formelschutz, nur der
+  Import-Fehlerbericht (`csv_service.formel_sicher`).
+- Kein eigener Rechte-Bereich „Import“ (nur mandant_admin/loesch_operativ).
+
 ## Erledigt, zur Einordnung
 
 `v1.0.0` (17.08.2026) markiert den Ausgangsstand nach Zusammenführung

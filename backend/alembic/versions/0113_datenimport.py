@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 
 revision: str = "0113"
 # Bei Zusammenfuehrung mit der Sicherheits-Migration 0112 auf "0112" umhaengen.
-down_revision: Union[str, None] = "0111"
+down_revision: Union[str, None] = "0112"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
