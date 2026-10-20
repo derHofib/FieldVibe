@@ -21,6 +21,7 @@ from app.api.routes import (
     auth,
     bestellungen,
     boards,
+    datenimport,
     dauerauftraege,
     dsgvo,
     eingangsrechnungen,
@@ -184,6 +185,7 @@ app.include_router(zuweisungen.router)
 app.include_router(fahrzeug_zuweisungen.router)
 app.include_router(inventurzyklen.router)
 app.include_router(papierkorb.router)
+app.include_router(datenimport.router)
 app.include_router(system_resources.router)
 app.include_router(mail_accounts.router)
 app.include_router(mail_messages.router)

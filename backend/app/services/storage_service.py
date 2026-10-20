@@ -112,6 +112,15 @@ def new_fehlerbericht_screenshot_key(mandant_id: uuid.UUID, bericht_id: uuid.UUI
     return f"mandanten/{mandant_id}/fehlerberichte/{bericht_id}/{art}-{uuid.uuid4()}"
 
 
+def new_import_quelle_key(mandant_id: uuid.UUID, lauf_id: uuid.UUID) -> str:
+    # Bewusst ohne Dateiname/Endung: der Name stammt vom Nutzer und darf nie Teil des Keys werden.
+    return f"mandanten/{mandant_id}/datenimport/{lauf_id}/quelle-{uuid.uuid4()}.bin"
+
+
+def new_import_fehlerbericht_key(mandant_id: uuid.UUID, lauf_id: uuid.UUID) -> str:
+    return f"mandanten/{mandant_id}/datenimport/{lauf_id}/fehlerbericht-{uuid.uuid4()}.csv"
+
+
 async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) verschluesselt
     # Kundenfotos/Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der

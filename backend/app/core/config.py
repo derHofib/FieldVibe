@@ -204,6 +204,25 @@ class Settings(BaseSettings):
         default=None, validation_alias="FIELDVIBE_FEHLERBERICHT_TOKEN_HASH"
     )
 
+    # --- Datenimport (app/services/datenimport/, docs/konzepte/DATENIMPORT.md) --
+    # Obergrenzen gegen zu grosse oder praeparierte Dateien; der Import laeuft
+    # synchron im Request, die Zeilengrenze haelt ihn im Sekundenbereich.
+    import_max_bytes: int = Field(default=10 * 1024 * 1024, validation_alias="FIELDVIBE_IMPORT_MAX_BYTES")
+    import_max_zeilen: int = Field(default=20_000, validation_alias="FIELDVIBE_IMPORT_MAX_ZEILEN")
+    import_max_spalten: int = Field(default=100, validation_alias="FIELDVIBE_IMPORT_MAX_SPALTEN")
+    import_max_zellenlaenge: int = Field(default=5000, validation_alias="FIELDVIBE_IMPORT_MAX_ZELLENLAENGE")
+    # Entpackte Groesse einer XLSX-Datei (Schutz vor Zip-Bomben).
+    import_max_entpackt_bytes: int = Field(
+        default=100 * 1024 * 1024, validation_alias="FIELDVIBE_IMPORT_MAX_ENTPACKT_BYTES"
+    )
+    import_zeitlimit_sekunden: float = Field(default=60.0, validation_alias="FIELDVIBE_IMPORT_ZEITLIMIT_SEKUNDEN")
+    # Hochgeladene Quelldatei: spaetestens nach so vielen Stunden aus dem Objektspeicher entfernen.
+    import_zwischenspeicher_stunden: int = Field(
+        default=24, validation_alias="FIELDVIBE_IMPORT_ZWISCHENSPEICHER_STUNDEN"
+    )
+    # Fehlerbericht-CSV (enthaelt Zeilen der Quelldatei) wird so viele Tage nach Abschluss geloescht.
+    import_fehlerbericht_tage: int = Field(default=7, validation_alias="FIELDVIBE_IMPORT_FEHLERBERICHT_TAGE")
+
     # --- Update-Anzeige im Super-Admin-Bereich (rein informativ, kein
     # automatisches Ausfuehren von Updates aus der Web-App heraus -- siehe
     # app/services/version_service.py). git_commit wird beim Docker-Build

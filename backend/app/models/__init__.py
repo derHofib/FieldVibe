@@ -28,6 +28,7 @@ from app.models.form_modul import (
 )
 from app.models.gespeicherter_filter import GespeicherterFilter
 from app.models.highlight import Highlight
+from app.models.import_lauf import ImportLauf, ImportLaufEintrag
 from app.models.integration import MandantIntegration
 from app.models.inventurzyklus import InventurZyklus
 from app.models.kunde import Kunde
@@ -123,6 +124,8 @@ __all__ = [
     "FormViewFieldLayout",
     "GespeicherterFilter",
     "Highlight",
+    "ImportLauf",
+    "ImportLaufEintrag",
     "MandantIntegration",
     "InventurZyklus",
     "Kunde",

@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from app.core.config import get_settings
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine, system_session
+from app.services.datenimport.lauf import raeume_auf as raeume_datenimport_auf
 from app.services.email_ingest_service import run_email_ingest
 from app.services.fehlerbericht_service import loesche_abgelaufene_fehlerberichte
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
@@ -73,6 +74,15 @@ async def _run_hourly_tick() -> None:
             logger.info("E-Mail-Rechnungseingang-Import abgeschlossen: %s", email_ergebnis)
         except Exception:
             logger.exception("E-Mail-Rechnungseingang-Import fehlgeschlagen")
+
+        # Stuendlich, nicht nur zur Standard-Stunde: die Quelldatei eines Imports soll
+        # nach 24 Stunden weg sein, nicht erst nach dem naechsten Tageslauf.
+        try:
+            aufgeraeumt = await raeume_datenimport_auf()
+            if aufgeraeumt["quellen"] or aufgeraeumt["fehlerberichte"]:
+                logger.info("Datenimport-Aufräumen: %s", aufgeraeumt)
+        except Exception:
+            logger.exception("Datenimport-Aufräumen fehlgeschlagen")
 
         # Einmal taeglich zur Standard-Scheduler-Stunde -- unabhaengig davon,
         # ob gerade ein Mandant faellig ist (Aufbewahrung gilt plattformweit).
