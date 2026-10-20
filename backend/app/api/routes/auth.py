@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import ValidationError
 from sqlalchemy import func, select
 
-from app.api.deps import AuthContext, get_current_user
+from app.api.deps import AuthContext, get_current_user, get_current_user_mfa_einrichtung
 from app.core.config import get_settings
 from app.core.rate_limit import (
     client_ip,
@@ -15,8 +15,6 @@ from app.core.rate_limit import (
 )
 from app.core.security import (
     TokenType,
-    create_access_token,
-    create_refresh_token,
     create_user_password_reset_token,
     decode_token,
     hash_password,
@@ -30,6 +28,7 @@ from app.schemas.auth import (
     MIN_PASSWORT_LAENGE,
     CurrentUser,
     LoginRequest,
+    LoginResponse,
     PasswortAendernRequest,
     PasswortVergessenRequest,
     PasswortZuruecksetzenRequest,
@@ -39,7 +38,8 @@ from app.schemas.auth import (
 )
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
 from app.services.audit_service import log_action
-from app.services.auth_service import authenticate
+from app.services.auth_service import authenticate, token_paar_fuer
+from app.services import mfa_service
 from app.services.email_service import EmailNichtKonfiguriert, send_email
 from app.services.token_widerruf_service import widerrufe_tokens
 from app.services.einladung_service import als_angenommen_markieren, resolve_offene_einladung
@@ -52,8 +52,8 @@ _settings = get_settings()
 _logger = logging.getLogger("app.auth")
 
 
-@router.post("/login", response_model=TokenPair)
-async def login(body: LoginRequest, request: Request) -> TokenPair:
+@router.post("/login", response_model=LoginResponse)
+async def login(body: LoginRequest, request: Request) -> LoginResponse:
     ip_key = client_ip(request)
     account_key = body.email.strip().lower()
     login_ip_limiter.check(ip_key)
@@ -64,8 +64,13 @@ async def login(body: LoginRequest, request: Request) -> TokenPair:
         login_ip_limiter.record_failure(ip_key)
         login_account_limiter.record_failure(account_key)
         raise
-    login_ip_limiter.record_success(ip_key)
-    login_account_limiter.record_success(account_key)
+    # Bei aktiver MFA ist erst das Passwort geprueft: die Zaehler werden erst
+    # nach dem zweiten Faktor geleert (mfa.verifizieren). Sonst koennte, wer
+    # das Passwort kennt, die Code-Fehlversuche durch erneutes Anmelden
+    # beliebig oft zuruecksetzen.
+    if not result.mfa_erforderlich:
+        login_ip_limiter.record_success(ip_key)
+        login_account_limiter.record_success(account_key)
     return result
 
 
@@ -95,6 +100,7 @@ async def refresh(body: RefreshRequest) -> TokenPair:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Token widerrufen"
             )
+        mandant = None
         if user.mandant_id is not None:
             mandant = await session.get(Mandant, user.mandant_id)
             if mandant is None or mandant.status != "aktiv":
@@ -102,22 +108,7 @@ async def refresh(body: RefreshRequest) -> TokenPair:
                     status_code=status.HTTP_401_UNAUTHORIZED, detail="Mandant ist nicht aktiv"
                 )
 
-        return TokenPair(
-            access_token=create_access_token(
-                token_version=user.token_version,
-                subject=user.id,
-                role=user.role,
-                mandant_id=user.mandant_id,
-                account_typ_id=user.account_typ_id,
-            ),
-            refresh_token=create_refresh_token(
-                token_version=user.token_version,
-                subject=user.id,
-                role=user.role,
-                mandant_id=user.mandant_id,
-                account_typ_id=user.account_typ_id,
-            ),
-        )
+        return await token_paar_fuer(session, user, mandant)
 
 
 @router.post("/ueberall-abmelden", status_code=status.HTTP_204_NO_CONTENT)
@@ -275,22 +266,7 @@ async def passwort_aendern(
             entity_type="user",
             entity_id=user.id,
         )
-        return TokenPair(
-            access_token=create_access_token(
-                token_version=user.token_version,
-                subject=user.id,
-                role=user.role,
-                mandant_id=user.mandant_id,
-                account_typ_id=user.account_typ_id,
-            ),
-            refresh_token=create_refresh_token(
-                token_version=user.token_version,
-                subject=user.id,
-                role=user.role,
-                mandant_id=user.mandant_id,
-                account_typ_id=user.account_typ_id,
-            ),
-        )
+        return await token_paar_fuer(session, user)
 
 
 @router.post("/registrieren", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
@@ -318,20 +294,11 @@ async def registrieren(body: RegistrierenRequest) -> TokenPair:
         await besetzung_pflegen(session, user, neu=True)
         await als_angenommen_markieren(session, einladung)
 
-        return TokenPair(
-            access_token=create_access_token(
-                token_version=user.token_version,
-                subject=user.id, role=user.role, mandant_id=user.mandant_id, account_typ_id=user.account_typ_id
-            ),
-            refresh_token=create_refresh_token(
-                token_version=user.token_version,
-                subject=user.id, role=user.role, mandant_id=user.mandant_id, account_typ_id=user.account_typ_id
-            ),
-        )
+        return await token_paar_fuer(session, user)
 
 
 @router.get("/me", response_model=CurrentUser)
-async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
+async def me(auth: AuthContext = Depends(get_current_user_mfa_einrichtung)) -> CurrentUser:
     # Looked up via system_session deliberately: during impersonation the
     # token's `sub` is the real super_admin's user id, whose own row has
     # mandant_id = NULL and would be invisible under the impersonated
@@ -347,6 +314,7 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
 
         mandant_name: str | None = None
         deaktivierte_module: list[str] = []
+        mandant = None
         if auth.mandant_id is not None:
             mandant = await session.get(Mandant, auth.mandant_id)
             if mandant is not None:
@@ -403,6 +371,9 @@ async def me(auth: AuthContext = Depends(get_current_user)) -> CurrentUser:
             name=user.name,
             email=user.email,
             impersonated_by=auth.impersonated_by,
+            mfa_aktiv=user.mfa_aktiv,
+            mfa_pflicht=mfa_service.mandant_verlangt_mfa(mandant),
+            mfa_einrichtung_erforderlich=auth.mfa_einrichtung,
             mandant_name=mandant_name,
             deaktivierte_module=deaktivierte_module,
             bottom_nav_items=bottom_nav_items,

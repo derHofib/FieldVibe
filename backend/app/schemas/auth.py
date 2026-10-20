@@ -25,6 +25,17 @@ class TokenPair(BaseModel):
     token_type: str = "bearer"
 
 
+class LoginResponse(BaseModel):
+    """Entweder fertiges Token-Paar oder, bei aktiver MFA, nur der kurzlebige
+    Zwischen-Token fuer POST /api/auth/mfa/verifizieren."""
+
+    access_token: str | None = None
+    refresh_token: str | None = None
+    token_type: str = "bearer"
+    mfa_erforderlich: bool = False
+    mfa_token: str | None = None
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str
 
@@ -98,6 +109,12 @@ class CurrentUser(BaseModel):
     name: str
     email: str
     impersonated_by: UUID | None = None
+    mfa_aktiv: bool = False
+    # Mandant verlangt MFA (firmendaten.mfa_pflicht) -- dann ist Deaktivieren gesperrt.
+    mfa_pflicht: bool = False
+    # Pflicht ist an, der Account hat noch keine MFA: das Token erlaubt nur den
+    # Einrichtungsweg, das Frontend zeigt die Einrichtung statt der App.
+    mfa_einrichtung_erforderlich: bool = False
     deaktivierte_module: list[str] = []
     # Individualisierte Bottom-Nav (siehe app/models/user.py) -- None =
     # Frontend faellt auf die Standardauswahl zurueck.

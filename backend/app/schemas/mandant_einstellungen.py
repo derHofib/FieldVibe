@@ -164,6 +164,13 @@ class MandantEinstellungenUpdate(BaseModel):
 
     @field_validator("firmendaten")
     @classmethod
+    def _mfa_pflicht_pruefen(cls, v: dict | None) -> dict | None:
+        if v is not None and "mfa_pflicht" in v and not isinstance(v["mfa_pflicht"], bool):
+            raise ValueError("mfa_pflicht muss true oder false sein")
+        return v
+
+    @field_validator("firmendaten")
+    @classmethod
     def _portal_verbraucherschutz_pruefen(cls, v: dict | None) -> dict | None:
         if v is None:
             return v

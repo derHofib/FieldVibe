@@ -26,6 +26,7 @@ class TokenType(StrEnum):
     PARTNER_REFRESH = "partner_refresh"
     PARTNER_PASSWORD_RESET = "partner_password_reset"
     USER_PASSWORD_RESET = "user_password_reset"
+    USER_MFA = "user_mfa"
     EINLADUNG = "einladung"
     STREAM = "stream"
 
@@ -101,7 +102,11 @@ def create_access_token(
     mandant_id: UUID | None,
     token_version: int,
     account_typ_id: UUID | None = None,
+    mfa_einrichtung: bool = False,
 ) -> str:
+    # mfa_einrichtung: Pflicht-MFA des Mandanten ist an, der Account hat aber
+    # noch keine -- das Token oeffnet nur die Einrichtungsendpunkte (siehe
+    # app/api/deps.py:get_current_user).
     return _create_token(
         subject=subject,
         role=role,
@@ -110,6 +115,7 @@ def create_access_token(
         token_version=token_version,
         token_type=TokenType.ACCESS,
         expires_delta=timedelta(minutes=_settings.access_token_expire_minutes),
+        extra_claims={"mfa_einrichtung": True} if mfa_einrichtung else None,
     )
 
 
@@ -183,6 +189,23 @@ def create_user_password_reset_token(*, user_id: UUID, token_version: int) -> st
         "tv": token_version,
         "iat": now,
         "exp": now + timedelta(minutes=_settings.user_reset_token_expire_minutes),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
+
+
+def create_user_mfa_token(*, user_id: UUID, token_version: int) -> str:
+    """Zwischenschritt des zweistufigen Logins: Passwort stimmt, der zweite
+    Faktor fehlt noch. Eigener `type` (wie USER_PASSWORD_RESET), damit es weder
+    als Bearer-Token noch als Refresh-Token durchgeht; kein role/mandant_id.
+    Der "tv"-Claim entwertet es bei jedem Widerruf. Mehrfach verwendbar bis
+    zum Ablauf -- die Begrenzung der Code-Versuche leistet der Login-Limiter."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "type": TokenType.USER_MFA.value,
+        "tv": token_version,
+        "iat": now,
+        "exp": now + timedelta(minutes=_settings.mfa_token_expire_minutes),
     }
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_settings.jwt_algorithm)
 

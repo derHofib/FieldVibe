@@ -28,6 +28,8 @@ class AuthContext:
     impersonated_by: UUID | None = None
     account_typ_id: UUID | None = None
     token_version: int = 0
+    # Nur ueber get_current_user_mfa_einrichtung erreichbar (siehe dort).
+    mfa_einrichtung: bool = False
 
 
 def _nicht_authentifiziert(detail: str = "Ungültiges Token") -> HTTPException:
@@ -60,8 +62,27 @@ async def token_version_gueltig(
     return tv
 
 
+MFA_EINRICHTUNG_DETAIL = "MFA-Einrichtung erforderlich"
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AuthContext:
+    return await _auth_context_aus_token(credentials, einrichtung_erlaubt=False)
+
+
+async def get_current_user_mfa_einrichtung(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AuthContext:
+    """Wie get_current_user, akzeptiert aber zusaetzlich das eingeschraenkte
+    Token eines Accounts, der laut Mandanten-Pflicht erst MFA einrichten muss.
+    Nur fuer /me und die MFA-Einrichtungsendpunkte; jeder andere Endpunkt
+    haengt an get_current_user und lehnt solche Tokens ab (fail-closed)."""
+    return await _auth_context_aus_token(credentials, einrichtung_erlaubt=True)
+
+
+async def _auth_context_aus_token(
+    credentials: HTTPAuthorizationCredentials | None, *, einrichtung_erlaubt: bool
 ) -> AuthContext:
     if credentials is None:
         raise HTTPException(
@@ -79,6 +100,10 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token-Typ nicht für API-Zugriff zulässig",
         )
+
+    mfa_einrichtung = payload.get("mfa_einrichtung") is True
+    if mfa_einrichtung and not einrichtung_erlaubt:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=MFA_EINRICHTUNG_DETAIL)
 
     mandant_id = UUID(payload["mandant_id"]) if payload.get("mandant_id") else None
     impersonated_by = (
@@ -99,6 +124,7 @@ async def get_current_user(
         role=payload["role"],
         impersonated_by=impersonated_by,
         account_typ_id=account_typ_id,
+        mfa_einrichtung=mfa_einrichtung,
     )
 
 

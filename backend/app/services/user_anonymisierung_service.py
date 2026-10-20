@@ -11,7 +11,7 @@ from app.models.kunde_zuweisung import KundeZuweisung
 from app.models.mail_account import MailAccount
 from app.models.user import User
 from app.models.vorgang import Vorgang
-from app.services import storage_service
+from app.services import mfa_service, storage_service
 from app.services.organigramm_sync_service import alle_besetzungen_beenden
 
 logger = logging.getLogger(__name__)
@@ -57,6 +57,7 @@ async def anonymisiere_user(
     user.avatar_url = None
     user.bottom_nav_items = None
     user.office_nav_items = None
+    mfa_service.zuruecksetzen(user)
     user.token_version = User.token_version + 1
     await session.flush()
     await session.refresh(user, ["token_version"])

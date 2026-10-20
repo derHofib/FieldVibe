@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.core.config import get_settings
 from app.models.mandant import Mandant
+from app.services.audit_service import log_action
 from app.schemas.mandant_einstellungen import (
     MandantEinstellungenRead,
     MandantEinstellungenUpdate,
@@ -76,7 +77,19 @@ async def update_einstellungen(
         # Mahnwesen-Auto-Versand, ...) speichern jeweils nur ihren eigenen
         # Ausschnitt -- ein blindes Ueberschreiben wuerde sonst die zuletzt
         # gespeicherten Felder der anderen Formulare verwerfen.
+        pflicht_vorher = (mandant.firmendaten or {}).get("mfa_pflicht") is True
         mandant.firmendaten = {**(mandant.firmendaten or {}), **updates["firmendaten"]}
+        pflicht_nachher = mandant.firmendaten.get("mfa_pflicht") is True
+        if pflicht_vorher != pflicht_nachher:
+            await log_action(
+                session,
+                aktion="mfa_pflicht_geaendert",
+                mandant_id=mandant.id,
+                actor_user_id=auth.user_id,
+                entity_type="mandant",
+                entity_id=mandant.id,
+                payload={"mfa_pflicht": pflicht_nachher},
+            )
     if updates.get("standard_lohn_gemeinkosten_prozent") is not None:
         mandant.standard_lohn_gemeinkosten_prozent = updates["standard_lohn_gemeinkosten_prozent"]
     if updates.get("standard_gewinn_wagnis_prozent") is not None:

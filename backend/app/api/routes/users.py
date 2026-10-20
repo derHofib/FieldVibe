@@ -18,6 +18,7 @@ from app.models.user import User
 from app.schemas.einladung import EinladungRead, MitarbeiterEinladungCreate
 from app.schemas.user import BottomNavUpdate, OfficeNavUpdate, UserAuswahl, UserCreate, UserRead, UserUpdate
 from app.services import eskalation_service as esk
+from app.services import mfa_service
 from app.services.audit_service import log_action, log_aenderung
 from app.services.organigramm_sync_service import besetzung_pflegen
 from app.services.einladung_service import (
@@ -556,6 +557,54 @@ async def user_abmelden_erzwingen(
     await log_action(
         session,
         aktion="user_abgemeldet",
+        mandant_id=user.mandant_id,
+        actor_user_id=auth.user_id,
+        entity_type="user",
+        entity_id=user.id,
+        payload={},
+    )
+
+
+@router.post(
+    "/{user_id}/mfa-zuruecksetzen",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles("super_admin", "mandant_admin"))],
+)
+async def user_mfa_zuruecksetzen(
+    user_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Notausgang bei verlorenem Geraet ohne Wiederherstellungscodes: schaltet
+    MFA des Nutzers ab und meldet ihn ueberall ab. Gleiche Rechtegrenzen wie
+    "abmelden"; der eigene Account ist ausgenommen (dafuer gibt es im Profil
+    Passwort + Code), sonst koennte ein gekaperter Admin-Zugang seinen
+    zweiten Faktor einfach entfernen."""
+    if user_id == auth.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Die eigene MFA lässt sich im Profil deaktivieren.",
+        )
+    user = await session.get(User, user_id)
+    if user is None or ist_anonymisiert(user):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+
+    if hat_admin_rechte_im_mandant(auth):
+        if user.mandant_id != auth.mandant_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User nicht gefunden")
+        if ist_plattform_admin(user) or user.role in _PAPIERKORB_ROLLEN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Nicht berechtigt für diesen Account",
+            )
+    if not user.mfa_aktiv:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="MFA ist für diesen Account nicht aktiv")
+
+    mfa_service.zuruecksetzen(user)
+    await widerrufe_tokens(session, user)
+    await log_action(
+        session,
+        aktion="mfa_zurueckgesetzt",
         mandant_id=user.mandant_id,
         actor_user_id=auth.user_id,
         entity_type="user",

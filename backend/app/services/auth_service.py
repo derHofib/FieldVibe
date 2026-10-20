@@ -1,22 +1,52 @@
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.security import (
     create_access_token,
     create_refresh_token,
+    create_user_mfa_token,
     verify_password,
 )
 from app.db.session import system_session
 from app.models.mandant import Mandant
 from app.models.user import User
-from app.schemas.auth import TokenPair
+from app.schemas.auth import LoginResponse, TokenPair
+from app.services import mfa_service
 
 _INVALID_CREDENTIALS = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED, detail="E-Mail oder Passwort falsch"
 )
 
 
-async def authenticate(email: str, password: str) -> TokenPair:
+async def token_paar_fuer(session: AsyncSession, user: User, mandant: Mandant | None = None) -> TokenPair:
+    """Einziger Ausstellungsort fuer Mitarbeiter-Token-Paare. Der Zugriffstoken
+    bekommt das Einrichtungs-Kennzeichen, solange der Mandant MFA verlangt und
+    der Account keine hat -- bei jedem Refresh neu bewertet, damit eine
+    nachtraeglich eingeschaltete Pflicht spaetestens dann greift."""
+    if mandant is None and user.mandant_id is not None:
+        mandant = await session.get(Mandant, user.mandant_id)
+    return TokenPair(
+        access_token=create_access_token(
+            token_version=user.token_version,
+            subject=user.id,
+            role=user.role,
+            mandant_id=user.mandant_id,
+            account_typ_id=user.account_typ_id,
+            mfa_einrichtung=mfa_service.einrichtung_erforderlich(user, mandant),
+        ),
+        refresh_token=create_refresh_token(
+            token_version=user.token_version,
+            subject=user.id,
+            role=user.role,
+            mandant_id=user.mandant_id,
+            account_typ_id=user.account_typ_id,
+        ),
+    )
+
+
+async def authenticate(email: str, password: str) -> LoginResponse:
     """Looks up the user by email across all tenants.
 
     This is the one legitimate pre-authentication use of system_session():
@@ -43,6 +73,7 @@ async def authenticate(email: str, password: str) -> TokenPair:
                 status_code=status.HTTP_403_FORBIDDEN, detail="Account ist deaktiviert"
             )
 
+        mandant = None
         if user.mandant_id is not None:
             mandant_result = await session.execute(
                 select(Mandant).where(Mandant.id == user.mandant_id)
@@ -54,19 +85,10 @@ async def authenticate(email: str, password: str) -> TokenPair:
                     detail="Mandant ist nicht aktiv",
                 )
 
-        return TokenPair(
-            access_token=create_access_token(
-                token_version=user.token_version,
-                subject=user.id,
-                role=user.role,
-                mandant_id=user.mandant_id,
-                account_typ_id=user.account_typ_id,
-            ),
-            refresh_token=create_refresh_token(
-                token_version=user.token_version,
-                subject=user.id,
-                role=user.role,
-                mandant_id=user.mandant_id,
-                account_typ_id=user.account_typ_id,
-            ),
-        )
+        if user.mfa_aktiv:
+            return LoginResponse(
+                mfa_erforderlich=True,
+                mfa_token=create_user_mfa_token(user_id=user.id, token_version=user.token_version),
+            )
+        paar = await token_paar_fuer(session, user, mandant)
+        return LoginResponse(access_token=paar.access_token, refresh_token=paar.refresh_token)

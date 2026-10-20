@@ -43,6 +43,7 @@ from app.api.routes import (
     mail_accounts,
     mail_messages,
     mandant_einstellungen,
+    mfa,
     public_rechtliches,
     mandanten,
     material,
@@ -123,6 +124,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(mfa.router)
 app.include_router(account_typen.router)
 app.include_router(rechte.router)
 app.include_router(organigramm.router)
