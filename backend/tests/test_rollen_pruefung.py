@@ -15,6 +15,10 @@ class _Ergebnis:
     def one(self):
         return self._row
 
+    def all(self):
+        # Besitz-Abfrage: die Fake-Rolle besitzt keine Tabellen.
+        return []
+
 
 class _Conn:
     def __init__(self, row):
@@ -26,7 +30,7 @@ class _Conn:
     async def __aexit__(self, *exc):
         return False
 
-    async def execute(self, _stmt):
+    async def execute(self, _stmt, _params=None):
         return _Ergebnis(self._row)
 
 
@@ -89,3 +93,47 @@ def test_settings_liest_env_variable(monkeypatch):
     assert Settings().erlaube_rls_bypass_rolle is True
     monkeypatch.delenv("FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE")
     assert Settings().erlaube_rls_bypass_rolle is False
+
+
+# --- Tabellenbesitz (Rolle darf RLS nicht selbst abschalten) -----------------
+@pytest.mark.asyncio
+async def test_besitz_abfrage_gegen_echtes_postgres():
+    # Die Test-Rolle hat die Tabellen per Migration angelegt, besitzt sie also;
+    # pg_monitor (eingebaute Rolle ohne Besitz) dient als Rolle ohne Eigentum.
+    async with engine.connect() as conn:
+        eigene = await rollen_pruefung.rls_tabellen_im_besitz(conn)
+        fremde = await rollen_pruefung.rls_tabellen_im_besitz(conn, "pg_monitor")
+    assert "users" in eigene and "mandanten" in eigene
+    assert fremde == []
+
+
+@pytest.mark.asyncio
+async def test_besitz_warnt_standardmaessig(monkeypatch, caplog):
+    monkeypatch.setattr(rollen_pruefung.logger, "disabled", False)
+    monkeypatch.setattr(
+        rollen_pruefung,
+        "get_settings",
+        lambda: SimpleNamespace(erlaube_rls_bypass_rolle=False, db_besitz_verboten=False),
+    )
+    with caplog.at_level(logging.WARNING, logger="app.db.rollen_pruefung"):
+        await pruefe_db_rolle(engine)
+    assert any("besitzt" in r.getMessage() and "RLS-Tabellen" in r.getMessage() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_besitz_bricht_ab_wenn_verboten(monkeypatch):
+    monkeypatch.setattr(
+        rollen_pruefung,
+        "get_settings",
+        lambda: SimpleNamespace(erlaube_rls_bypass_rolle=False, db_besitz_verboten=True),
+    )
+    with pytest.raises(UnsichereDbRolleError, match="RLS-Tabellen"):
+        await pruefe_db_rolle(engine)
+
+
+def test_settings_liest_besitz_schalter(monkeypatch):
+    from app.core.config import Settings
+
+    assert Settings().db_besitz_verboten is False
+    monkeypatch.setenv("FIELDVIBE_DB_BESITZ_VERBOTEN", "1")
+    assert Settings().db_besitz_verboten is True

@@ -24,6 +24,14 @@ set -euo pipefail
 #                   Migrationen) -- fuer scripts/deploy.sh, das den Stack
 #                   danach selbst startet
 #   --compose "..." Compose-Aufruf statt Erkennung ueber DEPLOY_MODE in .env
+#   --getrennter-owner
+#                   zusaetzlich eine Owner-Rolle (APP_DB_OWNER_USER, Standard
+#                   fieldvibe_owner): ihr gehoeren die Tabellen, Migrationen laufen
+#                   als sie; die App-Rolle behaelt nur DML-Rechte und kann RLS nicht
+#                   mehr per ALTER TABLE abschalten. Zugangsdaten landen in
+#                   .env.migration (NICHT in .env, die als env_file in Backend/Worker
+#                   geladen wird); in .env kommt FIELDVIBE_DB_BESITZ_VERBOTEN=1.
+#                   Danach Migrationen immer mit scripts/migrieren.sh bzw. deploy.sh.
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
@@ -35,14 +43,16 @@ err()  { printf '\033[1;31mFehler:\033[0m %s\n' "$*" >&2; exit 1; }
 DRY_RUN=0
 OHNE_BACKUP=0
 NUR_ROLLE=0
+GETRENNTER_OWNER=0
 COMPOSE_ARG=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run)     DRY_RUN=1 ;;
     --ohne-backup) OHNE_BACKUP=1 ;;
     --nur-rolle)   NUR_ROLLE=1 ;;
+    --getrennter-owner) GETRENNTER_OWNER=1 ;;
     --compose)     shift; [[ $# -gt 0 ]] || err "--compose braucht ein Argument."; COMPOSE_ARG="$1" ;;
-    -h|--help)     sed -n '3,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)     sed -n '3,38p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *)             err "Unbekannte Option: $1 (siehe --help)" ;;
   esac
   shift
@@ -110,6 +120,20 @@ fi
 [[ "$APP_PW" =~ ^[A-Za-z0-9._~-]+$ ]] \
   || err "APP_DB_PASSWORD in .env enthaelt Zeichen, die in der DATABASE_URL kodiert werden muessten -- Zeile loeschen, dann erzeugt das Skript ein neues."
 
+# --- Getrennte Owner-Rolle (optional) ---------------------------------------
+MIGR_DATEI=".env.migration"
+get_migr() { grep "^${1}=" "$MIGR_DATEI" 2>/dev/null | head -n1 | cut -d= -f2- || true; }
+OWNER_USER=""; OWNER_PW=""
+if [[ $GETRENNTER_OWNER -eq 1 ]]; then
+  OWNER_USER="$(get_migr APP_DB_OWNER_USER)"; OWNER_USER="${OWNER_USER:-fieldvibe_owner}"
+  OWNER_PW="$(get_migr APP_DB_OWNER_PASSWORD)"
+  [[ -n "$OWNER_PW" ]] || OWNER_PW="$(openssl rand -hex 24)"
+  [[ "$OWNER_USER" =~ ^[a-z_][a-z0-9_]{0,62}$ ]] || err "APP_DB_OWNER_USER='$OWNER_USER' ist ungueltig."
+  [[ "$OWNER_USER" != "$APP_USER" && "$OWNER_USER" != "$PG_USER" ]] \
+    || err "APP_DB_OWNER_USER muss sich von APP_DB_USER und POSTGRES_USER unterscheiden."
+  [[ "$OWNER_PW" =~ ^[A-Za-z0-9._~-]+$ ]] || err "APP_DB_OWNER_PASSWORD in ${MIGR_DATEI} enthaelt unerwartete Zeichen -- Zeile loeschen."
+fi
+
 STAMP="$(date +%Y%m%d-%H%M%S)"
 ENV_BACKUP=".env.vor-app-rolle.${STAMP}"
 URL_ASYNC="postgresql+asyncpg://${APP_USER}:${APP_PW}@postgres:5432/${PG_DB}"
@@ -128,6 +152,7 @@ PLAN
   echo "   2. .env kopieren nach ${ENV_BACKUP}"
   echo "   3. Postgres starten/abwarten: ${COMPOSE[*]} up -d postgres"
   echo "   4. scripts/sql/app_rolle_einrichten.sql als ${PG_USER} in ${PG_DB} ausfuehren (Rolle anlegen, Eigentum uebertragen)"
+  [[ -n "$OWNER_USER" ]] && echo "      mit getrennter Owner-Rolle ${OWNER_USER}: Tabellen gehoeren ihr, ${APP_USER} bekommt nur DML-Rechte; Zugang in ${MIGR_DATEI}"
   echo "   5. .env: APP_DB_USER/APP_DB_PASSWORD, DATABASE_URL, DATABASE_URL_SYNC setzen; FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE entfernen"
   if [[ $NUR_ROLLE -eq 0 ]]; then
     echo "   6. backend und worker neu erzeugen, bis zu 90 s auf 'healthy' warten"
@@ -174,9 +199,12 @@ done
 log "Richte Rolle ${APP_USER} ein und uebertrage das Eigentum an den Tabellen..."
 if ! {
   printf '\\set app_rolle %s\n\\set app_passwort %s\n\\set db_name %s\n' "$APP_USER" "$APP_PW" "$PG_DB"
+  if [[ -n "$OWNER_USER" ]]; then
+    printf '\\set owner_rolle %s\n\\set owner_passwort %s\n' "$OWNER_USER" "$OWNER_PW"
+  fi
   cat scripts/sql/app_rolle_einrichten.sql
 } | "${COMPOSE[@]}" exec -T postgres psql -v ON_ERROR_STOP=1 -U "$PG_USER" -d "$PG_DB" -f - 2>&1 \
-  | sed "s/${APP_PW}/***/g"; then
+  | sed "s/${APP_PW}/***/g; s/${OWNER_PW:-__kein_owner__}/***/g"; then
   err ".env unveraendert (Sicherung: ${ENV_BACKUP}). SQL-Schritt fehlgeschlagen, siehe Ausgabe oben."
 fi
 
@@ -187,6 +215,15 @@ set_env APP_DB_PASSWORD "$APP_PW"
 set_env DATABASE_URL "$URL_ASYNC"
 set_env DATABASE_URL_SYNC "$URL_SYNC"
 del_env FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE
+if [[ -n "$OWNER_USER" ]]; then
+  # Owner-Zugang in eigene Datei: .env wird als env_file in Backend und Worker
+  # geladen, der Owner-Zugang soll dort nie ankommen. Nur scripts/migrieren.sh liest ihn.
+  ( umask 077
+    printf 'APP_DB_OWNER_USER=%s\nAPP_DB_OWNER_PASSWORD=%s\nDATABASE_URL_SYNC=postgresql+psycopg2://%s:%s@postgres:5432/%s\n' \
+      "$OWNER_USER" "$OWNER_PW" "$OWNER_USER" "$OWNER_PW" "$PG_DB" >"$MIGR_DATEI" )
+  set_env FIELDVIBE_DB_BESITZ_VERBOTEN 1
+  log "Owner-Rolle ${OWNER_USER} eingerichtet, Zugang in ${MIGR_DATEI}; Migrationen laufen kuenftig ueber scripts/migrieren.sh."
+fi
 chmod 600 .env
 
 if [[ $NUR_ROLLE -eq 1 ]]; then
@@ -224,7 +261,7 @@ done
 [[ $gesund -eq 1 ]] || rollback
 
 log "Wende Migrationen als ${APP_USER} an..."
-"${COMPOSE[@]}" run --rm backend alembic upgrade head || rollback
+./scripts/migrieren.sh --compose "${COMPOSE[*]}" || rollback
 
 log "Fertig. Backend und Worker laufen als ${APP_USER}; Row-Level-Security ist wirksam."
 echo "  Sicherungen: ${ENV_BACKUP} (die Datei enthaelt das alte Passwort -- nach Kontrolle loeschen)."

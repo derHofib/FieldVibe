@@ -9,6 +9,14 @@
 --     -v app_rolle=fieldvibe_app -v app_passwort=... -v db_name=<db> \
 --     -f scripts/sql/app_rolle_einrichten.sql
 -- Meist ueber scripts/app_rolle_einrichten.sh.
+--
+-- Optional getrennte Owner-Rolle (-v owner_rolle=fieldvibe_owner
+-- -v owner_passwort=...): dann gehoeren Tabellen/Funktionen/Typen der Owner-
+-- Rolle (Migrationen laufen als sie), die App-Rolle bekommt nur DML-Rechte
+-- (SELECT/INSERT/UPDATE/DELETE, Sequenzen, Funktionen) samt Default-Privilegien
+-- fuer kuenftige Migrationen. Eine Rolle, der die Tabellen gehoeren, koennte RLS
+-- per ALTER TABLE selbst abschalten; die App-Rolle kann es so nicht mehr.
+-- Ohne owner_rolle bleibt es beim bisherigen Verhalten (App-Rolle = Eigentuemerin).
 
 \if :{?app_rolle}
 \else
@@ -26,18 +34,29 @@
   \quit
 \endif
 
+\if :{?owner_rolle}
+\else
+  \set owner_rolle ''
+  \set owner_passwort ''
+\endif
+
 -- DO-Bloecke sind Dollar-Quotes, psql ersetzt dort keine Variablen; die
 -- Werte reisen deshalb als Session-Settings hinein und werden im Block per
 -- format(%I/%L) sicher gequotet.
 SELECT set_config('fieldvibe.app_rolle', :'app_rolle', false),
        set_config('fieldvibe.app_passwort', :'app_passwort', false),
-       set_config('fieldvibe.db_name', :'db_name', false) \gset ignore_
+       set_config('fieldvibe.db_name', :'db_name', false),
+       set_config('fieldvibe.owner_rolle', :'owner_rolle', false),
+       set_config('fieldvibe.owner_passwort', :'owner_passwort', false) \gset ignore_
 
 DO $$
 DECLARE
   app text := current_setting('fieldvibe.app_rolle');
   pw  text := current_setting('fieldvibe.app_passwort');
   db  text := current_setting('fieldvibe.db_name');
+  own text := current_setting('fieldvibe.owner_rolle');
+  opw text := current_setting('fieldvibe.owner_passwort');
+  eigner text;  -- Rolle, der die Objekte in public gehoeren sollen
   r   record;
   n   integer;
 BEGIN
@@ -46,6 +65,18 @@ BEGIN
   END IF;
   IF length(pw) < 8 THEN
     RAISE EXCEPTION 'Passwort der App-Rolle ist zu kurz (mindestens 8 Zeichen).';
+  END IF;
+
+  IF own <> '' THEN
+    IF own = app OR own = current_user THEN
+      RAISE EXCEPTION 'Owner-Rolle % muss sich von App-Rolle und ausfuehrendem Admin-User unterscheiden.', own;
+    END IF;
+    IF length(opw) < 8 THEN
+      RAISE EXCEPTION 'Passwort der Owner-Rolle ist zu kurz (mindestens 8 Zeichen).';
+    END IF;
+    eigner := own;
+  ELSE
+    eigner := app;
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = app) THEN
@@ -60,8 +91,25 @@ BEGIN
 
   -- CREATE auf der DB: Migration 0001 legt die (trusted) Extensions
   -- pgcrypto/pg_trgm an, sofern sie noch nicht existieren.
-  EXECUTE format('GRANT CONNECT, CREATE ON DATABASE %I TO %I', db, app);
-  EXECUTE format('GRANT USAGE, CREATE ON SCHEMA public TO %I', app);
+  IF own = '' THEN
+    EXECUTE format('GRANT CONNECT, CREATE ON DATABASE %I TO %I', db, app);
+    EXECUTE format('GRANT USAGE, CREATE ON SCHEMA public TO %I', app);
+  ELSE
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = own) THEN
+      EXECUTE format('CREATE ROLE %I LOGIN', own);
+      RAISE NOTICE 'Owner-Rolle % angelegt.', own;
+    END IF;
+    EXECUTE format(
+      'ALTER ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEROLE NOCREATEDB NOREPLICATION PASSWORD %L',
+      own, opw);
+    EXECUTE format('GRANT CONNECT, CREATE ON DATABASE %I TO %I', db, own);
+    EXECUTE format('GRANT USAGE, CREATE ON SCHEMA public TO %I', own);
+    -- Die App-Rolle darf verbinden und das Schema benutzen, aber nichts anlegen.
+    EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', db, app);
+    EXECUTE format('REVOKE CREATE ON DATABASE %I FROM %I', db, app);
+    EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', app);
+    EXECUTE format('REVOKE CREATE ON SCHEMA public FROM %I', app);
+  END IF;
 
   -- Eigentum uebertragen statt REASSIGN OWNED: das wuerde beim
   -- Bootstrap-User auch Systemobjekte betreffen. Extension-Objekte (deptype
@@ -73,20 +121,20 @@ BEGIN
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public'
       AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
-      AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname = app)
+      AND c.relowner <> (SELECT oid FROM pg_roles WHERE rolname = eigner)
       AND NOT EXISTS (SELECT 1 FROM pg_depend d
                       WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.deptype = 'e')
     ORDER BY (c.relkind = 'S'), c.relname  -- Sequenzen zuletzt: owned-by-Sequenzen ziehen mit der Tabelle um
   LOOP
     -- Owned-by-Sequenzen sind nach dem Tabellen-Wechsel schon umgezogen.
     IF r.relkind = 'S' AND (SELECT relowner FROM pg_class WHERE oid = r.name::regclass)
-                           = (SELECT oid FROM pg_roles WHERE rolname = app) THEN
+                           = (SELECT oid FROM pg_roles WHERE rolname = eigner) THEN
       CONTINUE;
     END IF;
     EXECUTE format('ALTER %s %s OWNER TO %I',
       CASE r.relkind WHEN 'v' THEN 'VIEW' WHEN 'm' THEN 'MATERIALIZED VIEW'
                      WHEN 'S' THEN 'SEQUENCE' WHEN 'f' THEN 'FOREIGN TABLE' ELSE 'TABLE' END,
-      r.name, app);
+      r.name, eigner);
   END LOOP;
 
   FOR r IN
@@ -95,13 +143,13 @@ BEGIN
     JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
       AND p.prokind IN ('f', 'p', 'a')
-      AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname = app)
+      AND p.proowner <> (SELECT oid FROM pg_roles WHERE rolname = eigner)
       AND NOT EXISTS (SELECT 1 FROM pg_depend d
                       WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e')
   LOOP
     EXECUTE format('ALTER %s %s OWNER TO %I',
       CASE r.prokind WHEN 'p' THEN 'PROCEDURE' WHEN 'a' THEN 'AGGREGATE' ELSE 'FUNCTION' END,
-      r.name, app);
+      r.name, eigner);
   END LOOP;
 
   -- Array-/Tabellen-Rowtypes ziehen mit ihrem Basistyp um und werden nicht
@@ -112,12 +160,12 @@ BEGIN
     JOIN pg_namespace n ON n.oid = t.typnamespace
     WHERE n.nspname = 'public'
       AND t.typtype IN ('e', 'd', 'r')
-      AND t.typowner <> (SELECT oid FROM pg_roles WHERE rolname = app)
+      AND t.typowner <> (SELECT oid FROM pg_roles WHERE rolname = eigner)
       AND NOT EXISTS (SELECT 1 FROM pg_depend d
                       WHERE d.classid = 'pg_type'::regclass AND d.objid = t.oid AND d.deptype = 'e')
   LOOP
     EXECUTE format('ALTER %s %s OWNER TO %I',
-      CASE r.typtype WHEN 'd' THEN 'DOMAIN' ELSE 'TYPE' END, r.name, app);
+      CASE r.typtype WHEN 'd' THEN 'DOMAIN' ELSE 'TYPE' END, r.name, eigner);
   END LOOP;
 
   -- Kontrolle: nichts im Schema public darf noch dem Admin gehoeren, sonst
@@ -126,24 +174,24 @@ BEGIN
     (SELECT count(*) FROM pg_class c
       WHERE c.relnamespace = 'public'::regnamespace
         AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
-        AND pg_get_userbyid(c.relowner) <> app
+        AND pg_get_userbyid(c.relowner) <> eigner
         AND NOT EXISTS (SELECT 1 FROM pg_depend d
                         WHERE d.classid = 'pg_class'::regclass AND d.objid = c.oid AND d.deptype = 'e'))
     + (SELECT count(*) FROM pg_proc p
         WHERE p.pronamespace = 'public'::regnamespace
           AND p.prokind IN ('f', 'p', 'a')
-          AND pg_get_userbyid(p.proowner) <> app
+          AND pg_get_userbyid(p.proowner) <> eigner
           AND NOT EXISTS (SELECT 1 FROM pg_depend d
                           WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e'))
     + (SELECT count(*) FROM pg_type t
         WHERE t.typnamespace = 'public'::regnamespace
           AND t.typtype IN ('e', 'd', 'r')
-          AND pg_get_userbyid(t.typowner) <> app
+          AND pg_get_userbyid(t.typowner) <> eigner
           AND NOT EXISTS (SELECT 1 FROM pg_depend d
                           WHERE d.classid = 'pg_type'::regclass AND d.objid = t.oid AND d.deptype = 'e'))
   ) INTO n;
   IF n <> 0 THEN
-    RAISE EXCEPTION 'Eigentumsuebertragung unvollstaendig: % Objekt(e) in public gehoeren nicht %.', n, app;
+    RAISE EXCEPTION 'Eigentumsuebertragung unvollstaendig: % Objekt(e) in public gehoeren nicht %.', n, eigner;
   END IF;
 
   -- FORCE RLS haengt an der Tabelle, nicht am Eigentuemer; die Kontrolle
@@ -155,7 +203,19 @@ BEGIN
     RAISE EXCEPTION '% Tabelle(n) mit RLS aber ohne FORCE ROW LEVEL SECURITY.', n;
   END IF;
 
-  RAISE NOTICE 'App-Rolle % ist eingerichtet, alle Objekte in public gehoeren ihr.', app;
+  IF own <> '' THEN
+    -- DML-Rechte fuer die App-Rolle auf Bestand und, per Default-Privileg, auf
+    -- alles, was die Owner-Rolle kuenftig per Migration anlegt.
+    EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I', app);
+    EXECUTE format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO %I', app);
+    EXECUTE format('GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO %I', app);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I', own, app);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I', own, app);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO %I', own, app);
+    RAISE NOTICE 'Owner-Rolle % besitzt alle Objekte in public, App-Rolle % hat nur DML-Rechte.', own, app;
+  ELSE
+    RAISE NOTICE 'App-Rolle % ist eingerichtet, alle Objekte in public gehoeren ihr.', app;
+  END IF;
 END
 $$;
 

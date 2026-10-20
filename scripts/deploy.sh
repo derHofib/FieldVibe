@@ -248,7 +248,11 @@ fi
 # den Migrationen laufen; bei einer Neuinstallation ist das Schema noch
 # leer. Idempotent, bei jedem Lauf sicher wiederholbar.
 log "Richte die Datenbank-Rolle für die Anwendung ein (Voraussetzung für wirksame Mandantentrennung per Row-Level-Security)..."
-./scripts/app_rolle_einrichten.sh --nur-rolle --compose "${COMPOSE[*]}" \
+# Optional (DB_GETRENNTER_OWNER=1 in der .env oder schon vorhandene .env.migration):
+# getrennte Owner-Rolle, damit die App-Rolle RLS nicht per ALTER TABLE abschalten kann.
+OWNER_ARG=()
+if [[ "$(get_env DB_GETRENNTER_OWNER)" == "1" || -f .env.migration ]]; then OWNER_ARG=(--getrennter-owner); fi
+./scripts/app_rolle_einrichten.sh --nur-rolle ${OWNER_ARG[@]+"${OWNER_ARG[@]}"} --compose "${COMPOSE[*]}" \
   || err "Einrichtung der App-Rolle fehlgeschlagen -- Row-Level-Security wäre sonst wirkungslos, Deployment abgebrochen."
 
 # --- 8a. MinIO-Image bereitstellen -------------------------------------------
@@ -297,7 +301,7 @@ fi
 
 # --- 9. Migrationen ----------------------------------------------------------
 log "Wende Datenbank-Migrationen an..."
-"${COMPOSE[@]}" run --rm backend alembic upgrade head
+./scripts/migrieren.sh --compose "${COMPOSE[*]}"
 
 # --- 10. Ersten Plattform-Administrator anlegen -----------------------------
 read -rp $'\nJetzt einen Plattform-Administrator anlegen? [Y/n] ' create_admin

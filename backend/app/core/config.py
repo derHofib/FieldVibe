@@ -46,6 +46,13 @@ class Settings(BaseSettings):
         default=False, validation_alias="FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE"
     )
 
+    # Start verweigern, wenn die App-Rolle Eigentuemerin der RLS-Tabellen ist
+    # (app/db/rollen_pruefung.py). Aus, solange Migrationen ueber dieselbe Rolle
+    # laufen; an, sobald eine getrennte Owner-Rolle eingerichtet ist.
+    db_besitz_verboten: bool = Field(
+        default=False, validation_alias="FIELDVIBE_DB_BESITZ_VERBOTEN"
+    )
+
     database_url: str = (
         "postgresql+asyncpg://fieldvibe:fieldvibe@localhost:5432/fieldvibe"
     )
