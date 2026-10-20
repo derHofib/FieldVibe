@@ -81,7 +81,14 @@ async def test_mehrere_mandanten_ohne_slug_liefern_keine_firmenangaben(client, m
     resp = await client.get("/api/public/rechtliches")
 
     assert resp.status_code == 200
-    assert resp.json() == {"impressum_url": None, "datenschutz_url": None, "anbieter": None}
+    assert resp.json() == {
+        "impressum_url": None,
+        "datenschutz_url": None,
+        "barrierefreiheit_url": None,
+        "barrierefreiheit_kontakt_email": None,
+        "barrierefreiheit_stand": None,
+        "anbieter": None,
+    }
 
 
 @pytest.mark.asyncio

@@ -29,6 +29,9 @@ def _to_read_model(mandant: Mandant) -> RechtlichesRead:
     return RechtlichesRead(
         impressum_url=_url(fd.get("impressum_url")),
         datenschutz_url=_url(fd.get("datenschutz_url")),
+        barrierefreiheit_url=_url(fd.get("barrierefreiheit_url")),
+        barrierefreiheit_kontakt_email=_text(fd.get("barrierefreiheit_kontakt_email")),
+        barrierefreiheit_stand=_text(fd.get("barrierefreiheit_stand")),
         anbieter=RechtlichesAnbieter(
             name=mandant.name,
             strasse=_text(adresse.get("strasse")),
@@ -47,10 +50,11 @@ def _to_read_model(mandant: Mandant) -> RechtlichesRead:
 
 @router.get("/rechtliches", response_model=RechtlichesRead)
 async def get_rechtliches(portal_slug: str | None = None) -> RechtlichesRead:
-    """Oeffentliche Angaben fuer die Platzhalter-Seiten /impressum und
-    /datenschutz. Mit gueltigem portal_slug der Mandant dieses Kunden, sonst
-    nur bei genau einem aktiven Mandanten dieser -- bei mehreren ohne Kontext
-    bewusst keine Firmenangaben, damit die Route keine Mandanten aufzaehlt."""
+    """Oeffentliche Angaben fuer die Platzhalter-Seiten /impressum,
+    /datenschutz und /barrierefreiheit. Mit gueltigem portal_slug der Mandant
+    dieses Kunden, sonst nur bei genau einem aktiven Mandanten dieser -- bei
+    mehreren ohne Kontext bewusst keine Firmenangaben, damit die Route keine
+    Mandanten aufzaehlt."""
     async with system_session() as session:
         if portal_slug:
             # Gleiches Verhalten wie kundenportal_auth.link_info: unbekannter

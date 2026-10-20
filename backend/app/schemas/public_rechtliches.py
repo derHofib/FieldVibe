@@ -40,4 +40,9 @@ class RechtlichesAnbieter(BaseModel):
 class RechtlichesRead(BaseModel):
     impressum_url: str | None = None
     datenschutz_url: str | None = None
+    # Barrierefreiheitserklaerung (BFSG): externe URL des Betriebs hat Vorrang
+    # vor der Platzhalter-Seite /barrierefreiheit, die Kontakt und Stand zeigt.
+    barrierefreiheit_url: str | None = None
+    barrierefreiheit_kontakt_email: str | None = None
+    barrierefreiheit_stand: str | None = None
     anbieter: RechtlichesAnbieter | None = None

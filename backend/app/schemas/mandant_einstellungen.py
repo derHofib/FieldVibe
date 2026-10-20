@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from decimal import Decimal
 from typing import Literal
 
@@ -18,11 +19,17 @@ Bundesland = Literal[
 
 # Optionale Rechtstext-URLs in Mandant.firmendaten; haben auf den Login-/
 # Portalseiten Vorrang vor den Platzhalter-Seiten (siehe public_rechtliches).
-FIRMENDATEN_URL_KEYS = ("impressum_url", "datenschutz_url")
+FIRMENDATEN_URL_KEYS = ("impressum_url", "datenschutz_url", "barrierefreiheit_url")
 
 # Muss mit e_invoice_service.E_RECHNUNG_MODI uebereinstimmen (hier nicht importiert,
 # damit das Schema nicht die XML-Bibliothek nachzieht).
 E_RECHNUNG_MODI = ("aus", "b2b", "alle")
+
+# Kundenportal-Verbraucherschutz (firmendaten.portal_verbraucherschutz usw.);
+# Bedeutung der Werte siehe app/services/verbraucherschutz_service.py.
+PORTAL_VERBRAUCHERSCHUTZ_MODI = ("aus", "nur_privatkunden")
+WIDERRUFSBELEHRUNG_TEXT_MAX = 20000
+_EMAIL_MUSTER = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 # Schluessel "<Steuerkategorie>:<Satz>" der Erloeskonto-Zuordnung in
 # firmendaten["buchhaltung"]["erloeskonten"] (DATEV-Export, siehe
@@ -153,6 +160,38 @@ class MandantEinstellungenUpdate(BaseModel):
             ergebnis["e_rechnung_modus"] = "alle" if ergebnis["e_rechnung_aktiv"] else "aus"
         if "privatkunden_hinweise" in ergebnis and not isinstance(ergebnis["privatkunden_hinweise"], bool):
             raise ValueError("privatkunden_hinweise muss true oder false sein")
+        return ergebnis
+
+    @field_validator("firmendaten")
+    @classmethod
+    def _portal_verbraucherschutz_pruefen(cls, v: dict | None) -> dict | None:
+        if v is None:
+            return v
+        ergebnis = dict(v)
+        modus = ergebnis.get("portal_verbraucherschutz")
+        if modus is not None and modus not in PORTAL_VERBRAUCHERSCHUTZ_MODI:
+            raise ValueError(f"portal_verbraucherschutz muss einer von {PORTAL_VERBRAUCHERSCHUTZ_MODI} sein")
+        for key, grenze in (
+            ("widerrufsbelehrung_text", WIDERRUFSBELEHRUNG_TEXT_MAX),
+            ("widerrufsbelehrung_version", 60),
+            ("barrierefreiheit_kontakt_email", 254),
+            ("barrierefreiheit_stand", 10),
+        ):
+            wert = ergebnis.get(key)
+            if wert is None:
+                continue
+            if not isinstance(wert, str) or len(wert.strip()) > grenze:
+                raise ValueError(f"{key} muss ein Text mit höchstens {grenze} Zeichen sein")
+            ergebnis[key] = wert.strip()
+        kontakt = ergebnis.get("barrierefreiheit_kontakt_email")
+        if kontakt and not _EMAIL_MUSTER.fullmatch(kontakt):
+            raise ValueError("barrierefreiheit_kontakt_email muss eine E-Mail-Adresse sein")
+        stand = ergebnis.get("barrierefreiheit_stand")
+        if stand:
+            try:
+                date.fromisoformat(stand)
+            except ValueError as exc:
+                raise ValueError("barrierefreiheit_stand muss ein Datum (JJJJ-MM-TT) sein") from exc
         return ergebnis
 
     @field_validator("firmendaten")
