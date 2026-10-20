@@ -64,6 +64,8 @@ class ImportAnalyse(BaseModel):
     vorschlag: list[ImportVorschlag]
     dubletten_arten: list[ImportDublettenArt]
     pflicht_hinweis: str
+    # Jede Gruppe: mindestens eines der Felder muss zugeordnet sein.
+    pflicht_gruppen: list[list[str]]
 
 
 class ImportZeile(BaseModel):

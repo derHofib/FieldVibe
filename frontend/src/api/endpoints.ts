@@ -1,4 +1,11 @@
-import { apiFetch, apiFetchBlob, apiFetchForm } from "./client";
+import { LANGER_REQUEST_TIMEOUT_MS, apiFetch, apiFetchBlob, apiFetchForm } from "./client";
+import type {
+  ImportAnalyse,
+  ImportEntitaet,
+  ImportErgebnis,
+  ImportKonfiguration,
+  ImportLauf,
+} from "../office/datenimport/typen";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import { partnerApiFetch } from "./partnerClient";
 import type {
@@ -2359,4 +2366,35 @@ export const abwesenheitenApi = {
     }),
   kalender: (von: string, bis: string) =>
     apiFetch<AbwesenheitKalenderEintrag[]>(`/api/abwesenheiten/kalender?von=${von}&bis=${bis}`),
+};
+
+export const datenimportApi = {
+  analyse: (datei: File, entitaet: ImportEntitaet, blatt?: string | null) => {
+    const form = new FormData();
+    form.append("datei", datei);
+    form.append("entitaet", entitaet);
+    if (blatt) form.append("blatt", blatt);
+    return apiFetchForm<ImportAnalyse>("/api/import/analyse", form, false, LANGER_REQUEST_TIMEOUT_MS);
+  },
+  probelauf: (id: string, konfig: ImportKonfiguration) =>
+    apiFetch<ImportErgebnis>(
+      `/api/import/${id}/probelauf`,
+      { method: "POST", body: JSON.stringify(konfig) },
+      false,
+      LANGER_REQUEST_TIMEOUT_MS,
+    ),
+  ausfuehren: (id: string, konfig: ImportKonfiguration) =>
+    apiFetch<ImportErgebnis>(
+      `/api/import/${id}/ausfuehren`,
+      { method: "POST", body: JSON.stringify(konfig) },
+      false,
+      LANGER_REQUEST_TIMEOUT_MS,
+    ),
+  rueckgaengig: (id: string) =>
+    apiFetch<ImportLauf>(`/api/import/${id}/rueckgaengig`, { method: "POST" }, false, LANGER_REQUEST_TIMEOUT_MS),
+  verwerfen: (id: string) => apiFetch<void>(`/api/import/${id}`, { method: "DELETE" }),
+  laeufe: () => apiFetch<ImportLauf[]>("/api/import"),
+  fehlerbericht: (id: string, arten = "fehler") =>
+    apiFetchBlob(`/api/import/${id}/fehlerbericht.csv?arten=${encodeURIComponent(arten)}`),
+  vorlage: (entitaet: ImportEntitaet) => apiFetchBlob(`/api/import/vorlagen/${entitaet}.csv`),
 };

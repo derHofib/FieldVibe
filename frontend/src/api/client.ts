@@ -43,9 +43,13 @@ function extractErrorDetail(body: unknown): string | null {
   return null;
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } finally {
@@ -98,10 +102,14 @@ export async function sitzungAusCookieWiederherstellen(): Promise<boolean> {
   }
 }
 
+// Datenimport: Pruefen und Schreiben von bis zu 20.000 Zeilen laeuft synchron im Request.
+export const LANGER_REQUEST_TIMEOUT_MS = 120000;
+
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
   _isRetry = false,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   const token = authStore.getActiveAccessToken();
   const headers = new Headers(options.headers);
@@ -110,19 +118,19 @@ export async function apiFetch<T>(
   const authPfad = istAuthPfad(path);
   if (authPfad) headers.set("X-Refresh-Cookie", "1");
 
-  const resp = await fetchWithTimeout(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-    ...(authPfad ? { credentials: "include" as const } : {}),
-  });
+  const resp = await fetchWithTimeout(
+    `${BASE_URL}${path}`,
+    { ...options, headers, ...(authPfad ? { credentials: "include" as const } : {}) },
+    timeoutMs,
+  );
 
   if (resp.status === 401 && !_isRetry) {
     if (authStore.isImpersonating()) {
       authStore.setImpersonation(null);
-      return apiFetch<T>(path, options, true);
+      return apiFetch<T>(path, options, true, timeoutMs);
     }
     if (await refreshPrimaryToken()) {
-      return apiFetch<T>(path, options, true);
+      return apiFetch<T>(path, options, true, timeoutMs);
     }
   }
 
@@ -148,6 +156,7 @@ export async function apiFetchForm<T>(
   path: string,
   formData: FormData,
   _isRetry = false,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
   const token = authStore.getActiveAccessToken();
   const headers = new Headers();
@@ -157,15 +166,15 @@ export async function apiFetchForm<T>(
     method: "POST",
     headers,
     body: formData,
-  });
+  }, timeoutMs);
 
   if (resp.status === 401 && !_isRetry) {
     if (authStore.isImpersonating()) {
       authStore.setImpersonation(null);
-      return apiFetchForm<T>(path, formData, true);
+      return apiFetchForm<T>(path, formData, true, timeoutMs);
     }
     if (await refreshPrimaryToken()) {
-      return apiFetchForm<T>(path, formData, true);
+      return apiFetchForm<T>(path, formData, true, timeoutMs);
     }
   }
 

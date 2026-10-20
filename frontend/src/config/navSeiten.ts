@@ -6,6 +6,7 @@ import {
   CalendarRange,
   ClipboardList,
   Clock,
+  FileUp,
   Gauge,
   HardHat,
   Hourglass,
@@ -397,6 +398,18 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/integrationen",
     kategorie: "Verwaltung",
     sichtbar: () => true,
+  },
+  {
+    key: "datenimport",
+    label: "Datenimport",
+    icon: FileUp,
+    tone: "teal",
+    route: "/datenimport",
+    kategorie: "Verwaltung",
+    // Assistent mit breiten Tabellen (Zuordnung, Probelauf): nur am Desktop; nur mandant_admin
+    // (Backend: require_roles("mandant_admin")).
+    nurOffice: true,
+    sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin",
   },
   {
     key: "papierkorb",

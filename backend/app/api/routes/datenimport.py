@@ -169,6 +169,7 @@ async def analysiere_import(
             for a in definition.dubletten_arten
         ],
         pflicht_hinweis=definition.pflicht_hinweis,
+        pflicht_gruppen=[list(g) for g in definition.pflicht_gruppen],
     )
 
 
