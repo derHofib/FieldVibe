@@ -1,6 +1,9 @@
 export interface Tokens {
   accessToken: string;
-  refreshToken: string;
+  // Nur Altbestand: das Refresh-Token liegt jetzt als HttpOnly-Cookie am
+  // API-Host. Ein hier noch gespeichertes (aelteres Bundle) wird beim ersten
+  // Refresh einmalig im Body gesendet und danach verworfen (client.ts).
+  refreshToken?: string;
 }
 
 export interface ImpersonationSession {

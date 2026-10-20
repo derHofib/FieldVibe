@@ -223,7 +223,7 @@ import type {
   ZeitplanAntragStatus,
 } from "../types";
 
-import type { LoginResponse, MfaAktiviert, MfaEinrichtung, MfaStatus } from "../types";
+import type { UserTokenPair, LoginResponse, MfaAktiviert, MfaEinrichtung, MfaStatus } from "../types";
 
 export const authApi = {
   login: (email: string, password: string) =>
@@ -232,14 +232,16 @@ export const authApi = {
       body: JSON.stringify({ email, password }),
     }),
   mfaVerifizieren: (mfaToken: string, code: string) =>
-    apiFetch<TokenPair>("/api/auth/mfa/verifizieren", {
+    apiFetch<UserTokenPair>("/api/auth/mfa/verifizieren", {
       method: "POST",
       body: JSON.stringify({ mfa_token: mfaToken, code }),
     }),
   me: () => apiFetch<CurrentUser>("/api/auth/me"),
+  // Loescht das Refresh-Cookie dieses Browsers.
+  abmelden: () => apiFetch<void>("/api/auth/abmelden", { method: "POST" }),
   ueberallAbmelden: () => apiFetch<void>("/api/auth/ueberall-abmelden", { method: "POST" }),
   registrieren: (token: string, name: string, password: string) =>
-    apiFetch<TokenPair>("/api/auth/registrieren", {
+    apiFetch<UserTokenPair>("/api/auth/registrieren", {
       method: "POST",
       body: JSON.stringify({ token, name, password }),
     }),
@@ -256,7 +258,7 @@ export const authApi = {
   // Liefert ein frisches Token-Paar: alle bisherigen Tokens werden serverseitig
   // widerrufen, die aufrufende Sitzung laeuft damit weiter.
   passwortAendern: (oldPassword: string, newPassword: string) =>
-    apiFetch<TokenPair>("/api/auth/passwort-aendern", {
+    apiFetch<UserTokenPair>("/api/auth/passwort-aendern", {
       method: "POST",
       body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
     }),
@@ -272,7 +274,7 @@ export const mfaApi = {
       body: JSON.stringify({ code }),
     }),
   deaktivieren: (password: string, code: string) =>
-    apiFetch<TokenPair>("/api/auth/mfa/deaktivieren", {
+    apiFetch<UserTokenPair>("/api/auth/mfa/deaktivieren", {
       method: "POST",
       body: JSON.stringify({ password, code }),
     }),

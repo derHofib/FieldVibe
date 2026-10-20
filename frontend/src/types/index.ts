@@ -276,6 +276,14 @@ export interface TokenPair {
   token_type: string;
 }
 
+// Mitarbeiter-Login: das Refresh-Token steckt im HttpOnly-Cookie, im Body ist
+// es null (nur Altclients in der Uebergangsfrist bekommen es noch).
+export interface UserTokenPair {
+  access_token: string;
+  refresh_token?: string | null;
+  token_type: string;
+}
+
 // POST /api/auth/login: bei aktiver MFA nur der Zwischen-Token.
 export interface LoginResponse {
   access_token: string | null;
@@ -299,7 +307,7 @@ export interface MfaEinrichtung {
   qr_svg_data_uri: string;
 }
 
-export interface MfaAktiviert extends TokenPair {
+export interface MfaAktiviert extends UserTokenPair {
   wiederherstellungscodes: string[];
 }
 

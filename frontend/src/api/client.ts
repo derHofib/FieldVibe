@@ -1,5 +1,5 @@
 import { authStore } from "./authStore";
-import type { TokenPair } from "../types";
+import type { UserTokenPair } from "../types";
 
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
@@ -53,22 +53,49 @@ async function fetchWithTimeout(url: string, options: RequestInit): Promise<Resp
   }
 }
 
+// Das Refresh-Token ist ein HttpOnly-Cookie am API-Host (Path=/api/auth) und
+// fuer JavaScript unsichtbar. Der Header sagt dem Server, dass es dieses Cookie
+// nutzt und das Token nicht zusaetzlich im Body erwartet.
+const COOKIE_HEADER = { "X-Refresh-Cookie": "1" };
+
+function istAuthPfad(path: string): boolean {
+  return path.startsWith("/api/auth/");
+}
+
+/** Tauscht das Refresh-Cookie (bzw. ein noch gespeichertes Alt-Token) gegen
+ * einen neuen Access-Token. Loescht die Sitzung nur bei klarer Ablehnung, nicht
+ * bei Netz-/Serverproblemen. */
+async function refreshAccessToken(altToken?: string): Promise<boolean> {
+  const resp = await fetchWithTimeout(`${BASE_URL}/api/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...COOKIE_HEADER },
+    body: JSON.stringify(altToken ? { refresh_token: altToken } : {}),
+  });
+  if (!resp.ok) {
+    if (resp.status === 401 || resp.status === 403) authStore.clear();
+    return false;
+  }
+  const data = (await resp.json()) as UserTokenPair;
+  authStore.setPrimary({ accessToken: data.access_token });
+  return true;
+}
+
 async function refreshPrimaryToken(): Promise<boolean> {
   const primary = authStore.getState().primary;
   if (!primary) return false;
+  return refreshAccessToken(primary.refreshToken);
+}
 
-  const resp = await fetchWithTimeout(`${BASE_URL}/api/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: primary.refreshToken }),
-  });
-  if (!resp.ok) {
-    authStore.clear();
+/** Beim App-Start ohne gespeicherten Token: Sitzung aus dem Cookie holen
+ * (z. B. nach Reload oder wenn die andere Shell app./office. schon angemeldet
+ * ist). Liefert false, wenn es keine Sitzung gibt oder der Server nicht erreichbar ist. */
+export async function sitzungAusCookieWiederherstellen(): Promise<boolean> {
+  try {
+    return await refreshAccessToken();
+  } catch {
     return false;
   }
-  const data = (await resp.json()) as TokenPair;
-  authStore.setPrimary({ accessToken: data.access_token, refreshToken: data.refresh_token });
-  return true;
 }
 
 export async function apiFetch<T>(
@@ -80,8 +107,14 @@ export async function apiFetch<T>(
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  const authPfad = istAuthPfad(path);
+  if (authPfad) headers.set("X-Refresh-Cookie", "1");
 
-  const resp = await fetchWithTimeout(`${BASE_URL}${path}`, { ...options, headers });
+  const resp = await fetchWithTimeout(`${BASE_URL}${path}`, {
+    ...options,
+    headers,
+    ...(authPfad ? { credentials: "include" as const } : {}),
+  });
 
   if (resp.status === 401 && !_isRetry) {
     if (authStore.isImpersonating()) {
