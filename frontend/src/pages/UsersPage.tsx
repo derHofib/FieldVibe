@@ -157,6 +157,11 @@ export function UsersPage() {
     mutationFn: usersApi.abmeldenErzwingen,
   });
 
+  const mfaResetMutation = useMutation({
+    mutationFn: usersApi.mfaZuruecksetzen,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: usersApi.remove,
@@ -482,6 +487,20 @@ export function UsersPage() {
                       >
                         Abmelden erzwingen
                       </button>
+                      {u.mfa_aktiv && u.id !== currentUser?.id && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Zwei-Faktor-Anmeldung von ${u.name} zurücksetzen? Der Nutzer wird überall abgemeldet.`)) {
+                              mfaResetMutation.mutate(u.id);
+                            }
+                          }}
+                          disabled={mfaResetMutation.isPending}
+                          title="Bei verlorenem Gerät ohne Wiederherstellungscodes"
+                          className="btn-touch btn-ap disabled:opacity-40"
+                        >
+                          MFA zurücksetzen
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           setDeleteError(null);

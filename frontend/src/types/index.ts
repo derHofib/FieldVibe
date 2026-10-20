@@ -122,6 +122,7 @@ export interface User {
   name: string;
   avatar_url: string | null;
   aktiv: boolean;
+  mfa_aktiv: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -245,6 +246,11 @@ export interface CurrentUser {
   name: string;
   email: string;
   impersonated_by: string | null;
+  mfa_aktiv: boolean;
+  // Mandant verlangt MFA (firmendaten.mfa_pflicht) -- dann nicht deaktivierbar.
+  mfa_pflicht: boolean;
+  // Pflicht ist an, MFA fehlt: das Token erlaubt nur den Einrichtungsweg.
+  mfa_einrichtung_erforderlich: boolean;
   deaktivierte_module: MandantModul[];
   // Individualisierte Bottom-Nav (siehe frontend/src/config/navSeiten.ts) --
   // links: feste Zone (genau 2 Seiten), rotunde: wischbare Zone (beliebig
@@ -268,6 +274,33 @@ export interface TokenPair {
   access_token: string;
   refresh_token: string;
   token_type: string;
+}
+
+// POST /api/auth/login: bei aktiver MFA nur der Zwischen-Token.
+export interface LoginResponse {
+  access_token: string | null;
+  refresh_token: string | null;
+  token_type: string;
+  mfa_erforderlich: boolean;
+  mfa_token: string | null;
+}
+
+export interface MfaStatus {
+  aktiv: boolean;
+  pflicht: boolean;
+  einrichtung_erforderlich: boolean;
+  wiederherstellungscodes_uebrig: number;
+  aktiviert_am: string | null;
+}
+
+export interface MfaEinrichtung {
+  secret: string;
+  otpauth_uri: string;
+  qr_svg_data_uri: string;
+}
+
+export interface MfaAktiviert extends TokenPair {
+  wiederherstellungscodes: string[];
 }
 
 export interface ImpersonateResponse {
@@ -1746,6 +1779,8 @@ export interface MandantFirmendaten {
   // Hinweise für Privatkunden auf Rechnungen (Aufbewahrungspflicht, § 35a-Arbeitskosten);
   // fehlt der Schlüssel, sind sie an.
   privatkunden_hinweise?: boolean;
+  // Alle Mitarbeiter des Betriebs müssen MFA einrichten (Standard: aus).
+  mfa_pflicht?: boolean;
   // Optionale Rechtstext-URLs (http/https): haben auf Login-/Portalseiten
   // Vorrang vor den Platzhalter-Seiten /impressum und /datenschutz.
   impressum_url?: string;

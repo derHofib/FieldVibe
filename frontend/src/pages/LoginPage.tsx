@@ -8,27 +8,47 @@ import { Logo } from "../components/brand/Logo";
 import { RechtlicheLinks } from "../components/RechtlicheLinks";
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginMfa } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
+      if (mfaToken) {
+        await loginMfa(mfaToken, code);
+      } else {
+        const zwischenToken = await login(email, password);
+        if (zwischenToken) {
+          setMfaToken(zwischenToken);
+          return;
+        }
+      }
       // Fuer Nicht-Platform-Admins faengt das Catch-All in App.tsx diesen
       // Pfad ab und leitet zur echten Startseite (Feed/Papierkorb) um.
       navigate("/uebersicht", { replace: true });
     } catch (err) {
+      // Abgelaufener Zwischen-Token (401): zurueck zur Passwort-Eingabe.
+      if (mfaToken && err instanceof ApiError && err.status === 401 && !/Code/.test(err.message)) {
+        zurueckZumPasswort();
+      }
       setError(err instanceof ApiError ? err.message : "Anmeldung fehlgeschlagen");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function zurueckZumPasswort() {
+    setMfaToken(null);
+    setCode("");
+    setPassword("");
   }
 
   return (
@@ -49,31 +69,73 @@ export function LoginPage() {
             </div>
           )}
 
-          <label className="mb-1 block text-sm font-medium text-label">E-Mail</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="field-ap btn-touch mb-4"
-          />
+          {mfaToken ? (
+            <>
+              <p className="mb-4 text-sm text-label2">
+                Gib den 6-stelligen Code aus deiner Authenticator-App ein – oder einen deiner
+                Wiederherstellungscodes.
+              </p>
+              <label htmlFor="mfa-code" className="mb-1 block text-sm font-medium text-label">
+                Code
+              </label>
+              <input
+                id="mfa-code"
+                type="text"
+                required
+                autoFocus
+                autoComplete="one-time-code"
+                inputMode="text"
+                autoCapitalize="characters"
+                spellCheck={false}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="field-ap btn-touch mb-6 tracking-widest"
+              />
+            </>
+          ) : (
+            <>
+              <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-label">E-Mail</label>
+              <input
+                id="login-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="field-ap btn-touch mb-4"
+              />
 
-          <label className="mb-1 block text-sm font-medium text-label">Passwort</label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="field-ap btn-touch mb-6"
-          />
+              <label htmlFor="login-passwort" className="mb-1 block text-sm font-medium text-label">Passwort</label>
+              <input
+                id="login-passwort"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="field-ap btn-touch mb-6"
+              />
+            </>
+          )}
 
           <button
             type="submit"
             disabled={submitting}
             className="btn-touch btn-ap-primary w-full py-2 disabled:opacity-50"
           >
-            {submitting ? "Anmelden…" : "Anmelden"}
+            {submitting ? "Anmelden…" : mfaToken ? "Bestätigen" : "Anmelden"}
           </button>
+
+          {mfaToken && (
+            <button
+              type="button"
+              onClick={() => {
+                zurueckZumPasswort();
+                setError(null);
+              }}
+              className="mt-4 block w-full text-center text-sm text-label2 hover:text-label"
+            >
+              Zurück
+            </button>
+          )}
 
           <Link to="/passwort-vergessen" className="mt-4 block text-center text-sm text-label2 hover:text-label">
             Passwort vergessen?

@@ -7,6 +7,7 @@ import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
+import { MfaKarte } from "./MfaKarte";
 import { PasswortAendernKarte } from "./PasswortAendernKarte";
 
 export function ProfilePage() {
@@ -99,6 +100,7 @@ export function ProfilePage() {
 
       {/* Bei Impersonation gehoert das Profil dem Super-Admin, nicht dem Mandanten-Nutzer. */}
       {!isImpersonating && <PasswortAendernKarte />}
+      {!isImpersonating && <MfaKarte />}
 
       <button
         onClick={ueberallAbmelden}

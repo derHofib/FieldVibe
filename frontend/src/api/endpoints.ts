@@ -223,11 +223,18 @@ import type {
   ZeitplanAntragStatus,
 } from "../types";
 
+import type { LoginResponse, MfaAktiviert, MfaEinrichtung, MfaStatus } from "../types";
+
 export const authApi = {
   login: (email: string, password: string) =>
-    apiFetch<TokenPair>("/api/auth/login", {
+    apiFetch<LoginResponse>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }),
+  mfaVerifizieren: (mfaToken: string, code: string) =>
+    apiFetch<TokenPair>("/api/auth/mfa/verifizieren", {
+      method: "POST",
+      body: JSON.stringify({ mfa_token: mfaToken, code }),
     }),
   me: () => apiFetch<CurrentUser>("/api/auth/me"),
   ueberallAbmelden: () => apiFetch<void>("/api/auth/ueberall-abmelden", { method: "POST" }),
@@ -252,6 +259,27 @@ export const authApi = {
     apiFetch<TokenPair>("/api/auth/passwort-aendern", {
       method: "POST",
       body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    }),
+};
+
+export const mfaApi = {
+  status: () => apiFetch<MfaStatus>("/api/auth/mfa/status"),
+  einrichten: () => apiFetch<MfaEinrichtung>("/api/auth/mfa/einrichten", { method: "POST" }),
+  // Widerruft alle Tokens und liefert ein frisches Paar plus die Wiederherstellungscodes.
+  bestaetigen: (code: string) =>
+    apiFetch<MfaAktiviert>("/api/auth/mfa/bestaetigen", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }),
+  deaktivieren: (password: string, code: string) =>
+    apiFetch<TokenPair>("/api/auth/mfa/deaktivieren", {
+      method: "POST",
+      body: JSON.stringify({ password, code }),
+    }),
+  neueCodes: (password: string, code: string) =>
+    apiFetch<{ wiederherstellungscodes: string[] }>("/api/auth/mfa/wiederherstellungscodes", {
+      method: "POST",
+      body: JSON.stringify({ password, code }),
     }),
 };
 
@@ -325,6 +353,8 @@ export const usersApi = {
       body: JSON.stringify(body),
     }),
   remove: (id: string) => apiFetch<void>(`/api/users/${id}`, { method: "DELETE" }),
+  mfaZuruecksetzen: (id: string) =>
+    apiFetch<void>(`/api/users/${id}/mfa-zuruecksetzen`, { method: "POST" }),
   abmeldenErzwingen: (id: string) =>
     apiFetch<void>(`/api/users/${id}/abmelden`, { method: "POST" }),
   updateOwnBottomNav: (praeferenz: BottomNavPraeferenz) =>

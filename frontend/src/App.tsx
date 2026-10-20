@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AccountTypenPage } from "./pages/AccountTypenPage";
 import { FehlerberichtAnbindung } from "./components/FehlerberichtAnbindung";
+import { MfaErzwingenSeite } from "./components/MfaErzwingenSeite";
 import { FeldLayout } from "./components/FeldLayout";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
@@ -98,6 +99,9 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
   // ein nicht eingeloggter Mitarbeiter-Browser jeden /portal/*-Aufruf auf
   // /login statt /portal/login umleiten.
   if (isLoading) return <div className="p-6">Lädt…</div>;
+
+  // Pflicht-MFA des Betriebs: bis zur Einrichtung nichts anderes anzeigen.
+  if (currentUser?.mfa_einrichtung_erforderlich) return <MfaErzwingenSeite />;
 
   // Platform administration (Mandanten/Accounts/Audit-Log, no Social-UX) is
   // only for a genuine, non-impersonating super_admin. The moment that
