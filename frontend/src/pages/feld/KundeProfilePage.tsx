@@ -242,7 +242,6 @@ function Stammdaten({
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending || leitwegIdFehler(form.leitwegId) !== null || !!kontoFehler}
- (Frontend: DATEV-Stammdaten-Abschnitt, Debitorenkonto im Kundenprofil, Export-Hinweis mit Link zu den Einstellungen)
           className="btn-touch flex-1 rounded-md btn-ap-primary py-2 text-sm font-medium disabled:opacity-50"
         >
           Speichern
@@ -254,13 +253,6 @@ function Stammdaten({
           Abbrechen
         </button>
       </div>
-      {speichernMutation.isError && (
-        <p role="alert" className="text-xs text-st-fehlt">
-          {speichernMutation.error instanceof ApiError
-            ? speichernMutation.error.message
-            : "Stammdaten konnten nicht gespeichert werden."}
-        </p>
-      )}
     </div>
   );
 }
