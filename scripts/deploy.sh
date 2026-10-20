@@ -279,6 +279,22 @@ if [[ "$DEPLOY_MODE" == "domain" ]]; then
   log "Caddy holt beim allerersten Start ein bis zwei Minuten lang die TLS-Zertifikate. Fortschritt: ${COMPOSE[*]} logs -f caddy"
 fi
 
+# --- 8c. MinIO-Service-Account ----------------------------------------------
+# Backend und Worker sollen nicht mit dem MinIO-Root-Zugang laufen, sondern mit
+# einem Service-Account, dessen Policy nur den Foto-Bucket erlaubt. Idempotent;
+# nur bei geaenderten Zugangsdaten werden Backend/Worker neu erzeugt. Scheitert
+# der Schritt (z. B. mc-Syntax anderer MinIO-Version), laeuft der Stack mit dem
+# Root-Zugang weiter -- das ist ein Sicherheitshinweis, kein Deployment-Abbruch.
+log "Richte den MinIO-Service-Account für die Anwendung ein (Bucket-beschränkter Zugang statt Root)..."
+S3_KEY_VORHER="$(get_env S3_ACCESS_KEY):$(get_env S3_SECRET_KEY)"
+if ./scripts/minio-service-account.sh --compose "${COMPOSE[*]}"; then
+  if [[ "$S3_KEY_VORHER" != "$(get_env S3_ACCESS_KEY):$(get_env S3_SECRET_KEY)" ]]; then
+    "${COMPOSE[@]}" up -d --force-recreate --no-deps backend worker
+  fi
+else
+  warn "MinIO-Service-Account konnte nicht eingerichtet werden -- Backend/Worker nutzen weiter den Root-Zugang. Nachholen: ./scripts/minio-service-account.sh (siehe docs/DEPLOYMENT.md, Abschnitt Sicherheit)."
+fi
+
 # --- 9. Migrationen ----------------------------------------------------------
 log "Wende Datenbank-Migrationen an..."
 "${COMPOSE[@]}" run --rm backend alembic upgrade head
