@@ -94,6 +94,8 @@ class UserRead(BaseModel):
     name: str
     avatar_url: str | None
     aktiv: bool
+    # Nur der Status, nie Secret/Codes: Admins sehen, wer MFA nutzt (Reset-Knopf).
+    mfa_aktiv: bool = False
     created_at: datetime
     updated_at: datetime
 

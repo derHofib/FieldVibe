@@ -69,6 +69,7 @@ async def _to_read(session: AsyncSession, user: User) -> UserRead:
         name=user.name,
         avatar_url=user.avatar_url,
         aktiv=user.aktiv,
+        mfa_aktiv=user.mfa_aktiv,
         created_at=user.created_at,
         updated_at=user.updated_at,
     )
