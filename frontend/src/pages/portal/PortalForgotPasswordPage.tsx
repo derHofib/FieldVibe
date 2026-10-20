@@ -25,7 +25,7 @@ export function PortalForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+    <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <Blueprint className="w-full max-w-sm bg-card p-8">
         <h1 className="mb-1 font-heading text-xl font-semibold uppercase tracking-wide text-label">
           Passwort vergessen
@@ -66,7 +66,7 @@ export function PortalForgotPasswordPage() {
           Zurück zur Anmeldung
         </Link>
       </Blueprint>
-      <RechtlicheLinks className="mt-6" />
-    </div>
+      <RechtlicheLinks className="mt-6" barrierefreiheit />
+    </main>
   );
 }

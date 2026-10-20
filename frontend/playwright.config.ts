@@ -5,6 +5,10 @@ import { defineConfig, devices } from "@playwright/test";
  * Abdeckung (v. a. Safari/WebKit fuer die iOS-PWA-Zielgruppe der Feld-App)
  * muss auf einer Maschine mit `npx playwright install webkit` nachgeholt
  * werden. */
+// Lokal/Sandbox: vorinstalliertes Chromium; in der CI PW_CHROMIUM_PATH="" setzen
+// (dann nutzt Playwright sein eigenes, per `playwright install` geladenes).
+const chromiumPfad = process.env.PW_CHROMIUM_PATH ?? "/opt/pw-browsers/chromium";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -21,7 +25,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { executablePath: "/opt/pw-browsers/chromium" },
+        launchOptions: chromiumPfad ? { executablePath: chromiumPfad } : {},
       },
     },
   ],

@@ -203,6 +203,13 @@ Dev-Stack. Verbindliche Konventionen daraus:
   weißem Text** — dafür `text-tint-text` bzw. `bg-tint-solid`/
   `.btn-ap-primary` verwenden (reines `tint` bleibt Icons/Rändern
   vorbehalten, siehe Farbtoken oben)
+- **Kundenportal (BFSG)**: eigene Prüfung über `e2e/portal-a11y.spec.ts` (alle
+  Portal-Seiten hell/dunkel, API gemockt, siehe
+  `docs/phases/PHASE_KUNDENPORTAL_B2C.md`). Primär-Aktionen nie als
+  `bg-st-*-dot` mit weißem Text (zu wenig Kontrast), sondern `.btn-ap-primary`;
+  Fehlermeldungen als `role="alert"` (`Hinweiskasten ton="fehler"`);
+  `--st-arbeit-text` ist im Hellmodus `#8f4000`, damit Orange-Text auf
+  `--st-arbeit-bg` 4.5:1 erreicht
 - Inaktive Segmented-Control-Beschriftung nutzt `text-label`, nicht
   `text-label2` — entspricht auch echten iOS-Segmented-Controls
   (Unterscheidung über Gewicht + Pille, nicht Textfarbe)

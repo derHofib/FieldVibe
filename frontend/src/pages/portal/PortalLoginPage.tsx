@@ -54,15 +54,15 @@ export function PortalLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+    <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm">
         <div className="mb-6 flex items-center justify-center gap-2.5">
           <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center border border-sepstrong text-tint">
-            <Hexagon size={17} strokeWidth={1.5} />
+            <Hexagon size={17} strokeWidth={1.5} aria-hidden="true" />
           </div>
-          <span className="font-heading text-xl font-semibold uppercase tracking-wide text-label">
-            Kunden<span className="text-tint">portal</span>
-          </span>
+          <h1 className="font-heading text-xl font-semibold uppercase tracking-wide text-label">
+            Kunden<span className="text-tint-text">portal</span>
+          </h1>
         </div>
 
         <Blueprint className="bg-card p-8">
@@ -80,7 +80,7 @@ export function PortalLoginPage() {
           </p>
 
           {error && (
-            <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+            <div role="alert" className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
               {error}
             </div>
           )}
@@ -124,8 +124,8 @@ export function PortalLoginPage() {
             Passwort vergessen?
           </Link>
         </Blueprint>
-        <RechtlicheLinks className="mt-6" portalSlug={slug} />
+        <RechtlicheLinks className="mt-6" portalSlug={slug} barrierefreiheit />
       </form>
-    </div>
+    </main>
   );
 }

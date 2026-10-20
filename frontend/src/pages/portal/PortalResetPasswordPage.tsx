@@ -31,7 +31,7 @@ export function PortalResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-card p-4">
+    <main className="flex min-h-screen items-center justify-center bg-card p-4">
       <Blueprint className="w-full max-w-sm bg-card p-8">
         <h1 className="mb-6 font-heading text-xl font-semibold uppercase tracking-wide text-label">
           Neues Passwort setzen
@@ -58,7 +58,7 @@ export function PortalResetPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit}>
             {error && (
-              <div className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
+              <div role="alert" className="mb-4 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt ">
                 {error}
               </div>
             )}
@@ -89,7 +89,7 @@ export function PortalResetPasswordPage() {
           Zurück zur Anmeldung
         </Link>
       </Blueprint>
-      <RechtlicheLinks className="mt-6" />
-    </div>
+      <RechtlicheLinks className="mt-6" barrierefreiheit />
+    </main>
   );
 }

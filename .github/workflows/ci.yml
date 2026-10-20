@@ -172,6 +172,58 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+  # Barrierefreiheit des Kundenportals (axe-core, BFSG/WCAG 2.1 AA): Produktions-
+  # Build hinter `vite preview`, API per page.route gemockt -- kein Backend noetig.
+  # Serious/critical-Befunde lassen den Job scheitern.
+  frontend-a11y:
+    runs-on: ubuntu-latest
+    needs: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend-Abhaengigkeiten installieren
+        working-directory: frontend
+        run: npm ci
+
+      - name: Chromium fuer Playwright installieren
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Preview-Server starten
+        working-directory: frontend
+        run: |
+          npx vite preview --host localhost --port 4173 &
+          for i in $(seq 1 30); do curl -sf http://localhost:4173/ >/dev/null && exit 0; sleep 1; done
+          echo "Preview-Server nicht erreichbar" >&2; exit 1
+
+      - name: Portal-a11y-Spec
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: http://localhost:4173
+          # Leer = Playwrights eigenes Chromium (lokal: /opt/pw-browsers/chromium).
+          PW_CHROMIUM_PATH: ""
+        run: npx playwright test portal-a11y
+
+      - name: Screenshots und Bericht sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-a11y
+          path: |
+            frontend/e2e-screenshots
+            frontend/e2e-report
+          if-no-files-found: ignore
+
   bugreport-mcp:
     runs-on: ubuntu-latest
     steps:
