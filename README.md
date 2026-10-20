@@ -46,7 +46,7 @@ Mandanten gerade ihre konfigurierte tägliche Uhrzeit erreichen (Default
 03:00 UTC, pro Mandant einstellbar über `PATCH /api/mandant/einstellungen`).
 
 - Frontend: http://localhost:5173
-- Backend/Swagger: http://localhost:8000/docs
+- Backend/Swagger: http://localhost:8000/docs (nur mit ENVIRONMENT=development)
 
 Details, Test-Anleitung und Anmeldedaten für die Beispieldaten stehen in
 [`docs/phases/PHASE_1.md`](docs/phases/PHASE_1.md).
