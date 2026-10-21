@@ -97,6 +97,8 @@ services:
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
         VITE_IMPRESSUM_URL: ${VITE_IMPRESSUM_URL:-}
         VITE_DATENSCHUTZ_URL: ${VITE_DATENSCHUTZ_URL:-}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT:-production}
     restart: unless-stopped
     logging: *standard-logging
     depends_on:

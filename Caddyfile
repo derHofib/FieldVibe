@@ -32,6 +32,8 @@
 # diese Policy meldet im Report-Only-Modus nur, falls doch ein Request an den
 # Host geht (Regression nach mapbox-gl-Update). Blockieren wuerde erst die
 # scharf geschaltete Policy -- und die Feld-App im IP-Betrieb hat keine CSP.
+# SENTRY_CSP_HOST bleibt leer (nichts zusaetzlich erlaubt), solange kein Error-Tracking
+# konfiguriert ist; deploy.sh setzt es aus VITE_SENTRY_DSN (https://<host>).
 # Permissions-Policy: Kamera (QR-Scanner) und Geolocation (Standort-Feld)
 # nur fuer die eigene Origin, alles andere aus.
 (header_frontend) {
@@ -39,7 +41,7 @@
 	header {
 		X-Frame-Options "DENY"
 		Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()"
-		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-nDT144fgOivlgAAuKSOvAgN4HN/tZUXQQXkqZhl7Ycs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com; font-src 'self' data:; connect-src 'self' https://{$DOMAIN_API} https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src https://{$DOMAIN_S3}; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-nDT144fgOivlgAAuKSOvAgN4HN/tZUXQQXkqZhl7Ycs='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com; font-src 'self' data:; connect-src 'self' https://{$DOMAIN_API} https://{$DOMAIN_S3} https://api.mapbox.com https://*.tiles.mapbox.com {$SENTRY_CSP_HOST:}; worker-src 'self' blob:; child-src 'self' blob:; frame-src https://{$DOMAIN_S3}; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	}
 }
 

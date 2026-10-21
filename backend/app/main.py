@@ -85,6 +85,7 @@ from app.api.routes import (
 from app.core.audit_kontext import AuditKontextMiddleware
 from app.core.config import get_settings
 from app.services.audit_service import siegel_vor_antwort
+from app.core.error_tracking import init_error_tracking
 from app.core.logging_config import konfiguriere_logging
 from app.core.request_middleware import REQUEST_ID_HEADER, RequestKontextMiddleware
 from app.db.rollen_pruefung import pruefe_db_rolle
@@ -98,6 +99,7 @@ settings = get_settings()
 # Handler an den Root-Logger.
 if not settings.ist_dev_umgebung or settings.log_format:
     konfiguriere_logging(format=settings.log_format_aktiv, level=settings.log_level)
+init_error_tracking(komponente="backend")
 
 
 @asynccontextmanager

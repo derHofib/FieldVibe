@@ -21,6 +21,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.core.config import get_settings
+from app.core.error_tracking import init_error_tracking
 from app.core.logging_config import konfiguriere_logging
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine, system_session
@@ -232,6 +233,7 @@ async def _export_loop() -> None:
 
 
 async def main() -> None:
+    init_error_tracking(komponente="worker")
     await pruefe_db_rolle(engine)
     logger.info(
         "Worker gestartet -- stündlicher Scheduler-Tick, Mail-Sync alle %d Sekunden",

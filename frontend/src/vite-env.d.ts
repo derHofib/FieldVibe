@@ -6,6 +6,9 @@ interface ImportMetaEnv {
   readonly VITE_MAPBOX_TOKEN: string | undefined;
   readonly VITE_IMPRESSUM_URL: string | undefined;
   readonly VITE_DATENSCHUTZ_URL: string | undefined;
+  readonly VITE_SENTRY_DSN: string | undefined;
+  readonly VITE_SENTRY_ENVIRONMENT: string | undefined;
+  readonly VITE_SENTRY_SAMPLE_RATE: string | undefined;
 }
 
 interface ImportMeta {

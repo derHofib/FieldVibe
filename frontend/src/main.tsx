@@ -7,6 +7,7 @@ import { registerSW } from "virtual:pwa-register";
 import { App } from "./App";
 import { authStore } from "./api/authStore";
 import { initFehlerbericht } from "./bugreport";
+import { installFehlerweiterleitung } from "./bugreport/fehlerweiterleitung";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { pruefeGeraeteWeiche } from "./office/geraeteWeiche";
@@ -43,6 +44,16 @@ initFehlerbericht({
   commitSha: __GIT_COMMIT__,
   getSitzung: sitzungAusToken,
 });
+
+// Automatische Fehlermeldung nur mit gesetzter DSN (Build-Arg VITE_SENTRY_DSN); leer = kein Netzverkehr.
+if (import.meta.env.VITE_SENTRY_DSN) {
+  installFehlerweiterleitung({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    release: `${__APP_VERSION__}+${__GIT_COMMIT__}`,
+    environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE,
+    sampleRate: Number(import.meta.env.VITE_SENTRY_SAMPLE_RATE || "1"),
+  });
+}
 
 const istOffice = istOfficeHost();
 

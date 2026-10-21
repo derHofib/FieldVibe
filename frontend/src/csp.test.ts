@@ -24,4 +24,11 @@ describe("CSP-Hash des Inline-Skripts", () => {
     expect(zeile).not.toContain("events.mapbox");
     expect(zeile).toContain("https://api.mapbox.com");
   });
+
+  it("oeffnet connect-src fuer das Error-Tracking nur ueber SENTRY_CSP_HOST (leer = aus)", () => {
+    const caddyfile = readFileSync(path.resolve(__dirname, "../../Caddyfile"), "utf-8");
+    const zeile = caddyfile.split("\n").find((l) => l.trim().startsWith("Content-Security-Policy-Report-Only "));
+    expect(zeile).toContain("{$SENTRY_CSP_HOST:}");
+    expect(zeile).not.toMatch(/sentry\.io|glitchtip/);
+  });
 });

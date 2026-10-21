@@ -43,6 +43,8 @@ services:
       DOMAIN_API: ${DOMAIN_API}
       DOMAIN_S3: ${DOMAIN_S3}
       CADDY_EMAIL: ${CADDY_EMAIL}
+      # Nur gesetzt, wenn VITE_SENTRY_DSN konfiguriert ist (connect-src der CSP).
+      SENTRY_CSP_HOST: ${SENTRY_CSP_HOST:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

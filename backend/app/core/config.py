@@ -64,6 +64,17 @@ class Settings(BaseSettings):
     heartbeat_ping_url: str | None = None
     heartbeat_ping_intervall_sekunden: int = 60
 
+    # --- Error-Tracking (Sentry-kompatibel, z. B. GlitchTip; docs/BETRIEB.md) -----
+    # Leer = aus: das SDK wird nicht einmal initialisiert, es fliesst kein Byte.
+    # Nur EU-gehostet oder selbst betrieben verwenden und AVV abschliessen.
+    sentry_dsn: str | None = None
+    sentry_environment: str | None = None
+    sentry_release: str | None = None
+    # Anteil der Fehler-Events, die gesendet werden (0..1).
+    sentry_sample_rate: float = 1.0
+    # Performance-Traces sind standardmaessig aus (Datenschutz, Kosten).
+    sentry_traces_sample_rate: float = 0.0
+
     # Betriebs-Zeitzone fuer Tagesgrenzen (Zeiterfassung: Tages-/Wochenfilter,
     # Wochenzettel); siehe app/core/zeit.py. Mandanten haben kein eigenes Feld.
     zeitzone: str = Field(default="Europe/Berlin", validation_alias="FIELDVIBE_ZEITZONE")
