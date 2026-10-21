@@ -399,8 +399,8 @@ async def test_kunde_mit_events_zeiterfassung_highlight_und_portal_zugang_kann_e
 async def test_kunde_mit_versendeter_rechnung_kann_nicht_endgueltig_geloescht_werden(
     client, make_mandant, make_user, make_kunde, make_vorgang
 ):
-    # §147 AO/§257 HGB verlangt 10 Jahre Aufbewahrung fuer ausgestellte
-    # Rechnungen -- das DSGVO-Loeschrecht (Art. 17 Abs. 3 lit. b) nimmt genau
+    # §147 AO/§257 HGB/§14b UStG verlangen 8 Jahre Aufbewahrung (seit BEG IV, vorher 10)
+    # fuer ausgestellte Rechnungen -- das DSGVO-Loeschrecht (Art. 17 Abs. 3 lit. b) nimmt genau
     # diesen Fall ausdruecklich aus, das endgueltige Loeschen muss also
     # verweigert werden, auch wenn der ganze Kunde geloescht werden soll.
     mandant = await make_mandant()

@@ -128,7 +128,7 @@ async def upload_board_hintergrund(
         )
 
     alter_key = board.hintergrund_object_key
-    key = storage_service.new_board_hintergrund_key(board_id, file.filename or "grundriss.png")
+    key = storage_service.new_board_hintergrund_key(board.mandant_id, board_id, file.filename or "grundriss.png")
     await storage_service.upload_bytes(key, data, file.content_type)
     board.hintergrund_object_key = key
     await session.flush()
@@ -172,7 +172,7 @@ async def upload_board_anhang(
     file: UploadFile,
     session: AsyncSession = Depends(get_db),
 ) -> BoardAnhangUpload:
-    await _get_board(session, board_id)
+    board = await _get_board(session, board_id)
     data = await file.read()
     if len(data) > _ANHANG_MAX_BYTES:
         raise HTTPException(
@@ -180,7 +180,7 @@ async def upload_board_anhang(
         )
 
     dateiname = file.filename or "anhang"
-    key = storage_service.new_board_anhang_key(board_id, dateiname)
+    key = storage_service.new_board_anhang_key(board.mandant_id, board_id, dateiname)
     await storage_service.upload_bytes(key, data, file.content_type or "application/octet-stream")
     return BoardAnhangUpload(object_key=key, url=storage_service.presigned_get_url(key), dateiname=dateiname)
 

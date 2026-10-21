@@ -293,7 +293,7 @@ async def upload_nachweis_dokument(
         )
 
     alter_key = nachweis.dokument_s3_key
-    key = storage_service.new_partner_nachweis_key(partner_id, file.filename or "nachweis")
+    key = storage_service.new_partner_nachweis_key(nachweis.mandant_id, partner_id, file.filename or "nachweis")
     await storage_service.upload_bytes(key, data, file.content_type or "application/octet-stream")
     nachweis.dokument_s3_key = key
     await session.flush()

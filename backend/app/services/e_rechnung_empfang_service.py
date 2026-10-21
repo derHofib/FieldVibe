@@ -1075,13 +1075,13 @@ async def importiere_e_rechnung(
 
     hochgeladen: list[str] = []
     try:
-        xml_key = storage_service.new_eingangsrechnung_xml_key(eingangsrechnung.id)
+        xml_key = storage_service.new_eingangsrechnung_xml_key(eingangsrechnung.mandant_id, eingangsrechnung.id)
         await storage_service.upload_bytes(xml_key, xml_bytes, "application/xml")
         hochgeladen.append(xml_key)
         eingangsrechnung.xml_object_key = xml_key
         if pdf_bytes is not None:
             beleg_key = storage_service.new_eingangsrechnung_beleg_key(
-                eingangsrechnung.id, dateiname or "rechnung.pdf"
+                eingangsrechnung.mandant_id, eingangsrechnung.id, dateiname or "rechnung.pdf"
             )
             await storage_service.upload_bytes(beleg_key, pdf_bytes, "application/pdf")
             hochgeladen.append(beleg_key)

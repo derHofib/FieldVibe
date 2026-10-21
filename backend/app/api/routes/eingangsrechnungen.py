@@ -537,7 +537,9 @@ async def upload_beleg(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 10 MB)")
 
     alter_key = eingangsrechnung.beleg_object_key
-    key = storage_service.new_eingangsrechnung_beleg_key(eingangsrechnung.id, file.filename or "beleg.pdf")
+    key = storage_service.new_eingangsrechnung_beleg_key(
+        eingangsrechnung.mandant_id, eingangsrechnung.id, file.filename or "beleg.pdf"
+    )
     await storage_service.upload_bytes(key, data, file.content_type)
     eingangsrechnung.beleg_object_key = key
     await session.flush()

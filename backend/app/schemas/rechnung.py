@@ -385,3 +385,18 @@ class RechnungListe(BaseModel):
     summe_netto: Decimal
     summe_brutto: Decimal
     summe_offen: Decimal
+
+
+class ArchivObjektRead(BaseModel):
+    art: Literal["pdf", "xml"]
+    status: Literal["ok", "abweichung", "fehlt", "kein_hash"]
+    hash_gespeichert: str | None
+    hash_berechnet: str | None
+
+
+class ArchivPruefungRead(BaseModel):
+    rechnung_id: UUID
+    rechnungsnummer: str
+    objekte: list[ArchivObjektRead]
+    # True nur, wenn mindestens ein Archivobjekt existiert und alle unveraendert sind.
+    ok: bool

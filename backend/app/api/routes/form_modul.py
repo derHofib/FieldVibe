@@ -909,7 +909,7 @@ async def datei_hochladen(
     if len(data) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)")
 
-    key = storage_service.new_object_key(submission.vorgang_id, file.filename or "datei.jpg")
+    key = storage_service.new_object_key(submission.mandant_id, submission.vorgang_id, file.filename or "datei.jpg")
     await storage_service.upload_bytes(key, data, file.content_type)
     return {
         "field_key": field_key,

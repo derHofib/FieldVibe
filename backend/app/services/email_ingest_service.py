@@ -218,7 +218,7 @@ class _Lauf:
         self.session.add(eingangsrechnung)
         await self.session.flush()
 
-        key = storage_service.new_eingangsrechnung_beleg_key(eingangsrechnung.id, dateiname)
+        key = storage_service.new_eingangsrechnung_beleg_key(eingangsrechnung.mandant_id, eingangsrechnung.id, dateiname)
         await storage_service.upload_bytes(key, pdf_bytes, "application/pdf")
         eingangsrechnung.beleg_object_key = key
         self.zaehler.neue_entwuerfe += 1

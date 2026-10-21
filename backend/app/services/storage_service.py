@@ -1,4 +1,6 @@
+import hashlib
 import uuid
+from datetime import date, datetime, time, timedelta, timezone
 
 import boto3
 from botocore.client import Config as BotoConfig
@@ -41,56 +43,73 @@ async def ensure_bucket() -> None:
         try:
             _internal_client.head_bucket(Bucket=BUCKET)
         except ClientError:
-            _internal_client.create_bucket(Bucket=BUCKET)
+            # Object Lock laesst sich nur beim Anlegen des Buckets einschalten
+            # (das aktiviert zugleich die Versionierung). Ein bestehender Bucket
+            # bleibt unveraendert -- siehe docs/gobd/OBJECT_LOCK.md.
+            if _settings.s3_object_lock:
+                _internal_client.create_bucket(Bucket=BUCKET, ObjectLockEnabledForBucket=True)
+            else:
+                _internal_client.create_bucket(Bucket=BUCKET)
 
     await run_in_threadpool(_ensure)
 
 
-def new_object_key(vorgang_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"vorgaenge/{vorgang_id}/{uuid.uuid4()}.{suffix}"
+def mandant_prefix(mandant_id: uuid.UUID) -> str:
+    return f"mandanten/{mandant_id}/"
 
 
-def new_kunde_logo_key(kunde_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"kunden/{kunde_id}/logo/{uuid.uuid4()}.{suffix}"
+def key_gehoert_zu_mandant(key: str, mandant_id: uuid.UUID) -> bool | None:
+    """True/False fuer Schluessel im Mandanten-Schema (mandanten/<id>/...). None bei
+    Altobjekten (vorgaenge/<id>/..., rechnungen/<id>/... ohne Mandantenpraefix): deren
+    Zuordnung steht nur in der Datenbank (unter RLS), nicht im Schluessel. Altobjekte
+    werden bewusst nicht umgezogen."""
+    if key.startswith("mandanten/"):
+        return key.startswith(mandant_prefix(mandant_id))
+    return None
+
+
+def _endung(filename: str) -> str:
+    return filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+
+
+def new_object_key(mandant_id: uuid.UUID, vorgang_id: uuid.UUID, filename: str) -> str:
+    return f"{mandant_prefix(mandant_id)}vorgaenge/{vorgang_id}/{uuid.uuid4()}.{_endung(filename)}"
+
+
+def new_kunde_logo_key(mandant_id: uuid.UUID, kunde_id: uuid.UUID, filename: str) -> str:
+    return f"{mandant_prefix(mandant_id)}kunden/{kunde_id}/logo/{uuid.uuid4()}.{_endung(filename)}"
 
 
 def new_mandant_logo_key(mandant_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"mandanten/{mandant_id}/logo/{uuid.uuid4()}.{suffix}"
+    return f"{mandant_prefix(mandant_id)}logo/{uuid.uuid4()}.{_endung(filename)}"
 
 
-def new_board_hintergrund_key(board_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"boards/{board_id}/hintergrund/{uuid.uuid4()}.{suffix}"
+def new_board_hintergrund_key(mandant_id: uuid.UUID, board_id: uuid.UUID, filename: str) -> str:
+    return f"{mandant_prefix(mandant_id)}boards/{board_id}/hintergrund/{uuid.uuid4()}.{_endung(filename)}"
 
 
-def new_board_anhang_key(board_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"boards/{board_id}/anhang/{uuid.uuid4()}.{suffix}"
+def new_board_anhang_key(mandant_id: uuid.UUID, board_id: uuid.UUID, filename: str) -> str:
+    return f"{mandant_prefix(mandant_id)}boards/{board_id}/anhang/{uuid.uuid4()}.{_endung(filename)}"
 
 
-def new_rechnung_pdf_key(rechnung_id: uuid.UUID) -> str:
-    return f"rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.pdf"
+def new_rechnung_pdf_key(mandant_id: uuid.UUID, rechnung_id: uuid.UUID) -> str:
+    return f"{mandant_prefix(mandant_id)}rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.pdf"
 
 
-def new_rechnung_xml_key(rechnung_id: uuid.UUID) -> str:
-    return f"rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.xml"
+def new_rechnung_xml_key(mandant_id: uuid.UUID, rechnung_id: uuid.UUID) -> str:
+    return f"{mandant_prefix(mandant_id)}rechnungen/{rechnung_id}/versendet-{uuid.uuid4()}.xml"
 
 
-def new_eingangsrechnung_beleg_key(eingangsrechnung_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"eingangsrechnungen/{eingangsrechnung_id}/beleg/{uuid.uuid4()}.{suffix}"
+def new_eingangsrechnung_beleg_key(mandant_id: uuid.UUID, eingangsrechnung_id: uuid.UUID, filename: str) -> str:
+    return f"{mandant_prefix(mandant_id)}eingangsrechnungen/{eingangsrechnung_id}/beleg/{uuid.uuid4()}.{_endung(filename)}"
 
 
-def new_eingangsrechnung_xml_key(eingangsrechnung_id: uuid.UUID) -> str:
-    return f"eingangsrechnungen/{eingangsrechnung_id}/xml/{uuid.uuid4()}.xml"
+def new_eingangsrechnung_xml_key(mandant_id: uuid.UUID, eingangsrechnung_id: uuid.UUID) -> str:
+    return f"{mandant_prefix(mandant_id)}eingangsrechnungen/{eingangsrechnung_id}/xml/{uuid.uuid4()}.xml"
 
 
-def new_mail_attachment_key(message_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"mail-nachrichten/{message_id}/{uuid.uuid4()}.{suffix}"
+def new_mail_attachment_key(mandant_id: uuid.UUID, message_id: uuid.UUID, filename: str) -> str:
+    return f"{mandant_prefix(mandant_id)}mail-nachrichten/{message_id}/{uuid.uuid4()}.{_endung(filename)}"
 
 
 def new_dsgvo_dokument_key(typ: str, filename: str) -> str:
@@ -98,9 +117,8 @@ def new_dsgvo_dokument_key(typ: str, filename: str) -> str:
     return f"dsgvo/{typ}/{uuid.uuid4()}.{suffix}"
 
 
-def new_partner_nachweis_key(partner_id: uuid.UUID, filename: str) -> str:
-    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return f"partner-nachweise/{partner_id}/{uuid.uuid4()}.{suffix}"
+def new_partner_nachweis_key(mandant_id: uuid.UUID, partner_id: uuid.UUID, filename: str) -> str:
+    return f"{mandant_prefix(mandant_id)}partner-nachweise/{partner_id}/{uuid.uuid4()}.{_endung(filename)}"
 
 
 def new_plan_symbol_key(mandant_id: uuid.UUID, filename: str) -> str:
@@ -121,12 +139,24 @@ def new_import_fehlerbericht_key(mandant_id: uuid.UUID, lauf_id: uuid.UUID) -> s
     return f"mandanten/{mandant_id}/datenimport/{lauf_id}/fehlerbericht-{uuid.uuid4()}.csv"
 
 
-async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
+async def upload_bytes(
+    key: str, data: bytes, content_type: str, *, aufbewahren_bis: date | None = None
+) -> None:
     # SSE-S3 (serverseitig, MinIO-verwalteter Schluessel) verschluesselt
     # Kundenfotos/Unterschriften/Rechnungs-PDFs/Belege "at rest" auf der
     # Festplatte. Braucht trotzdem einen statischen Master-Key auf MinIO-
     # Seite (MINIO_KMS_SECRET_KEY, siehe .env.example/docker-compose.yml) --
     # ohne den lehnt MinIO JEDEN Upload mit "KMS is not configured" ab.
+    zusatz: dict = {}
+    modus = _settings.s3_rechnungen_retention
+    if aufbewahren_bis is not None and modus != "off":
+        # Objekt-Aufbewahrung (WORM) bis Ende des Fristtags; nur mit Object-Lock-Bucket moeglich.
+        zusatz = {
+            "ObjectLockMode": modus.upper(),
+            "ObjectLockRetainUntilDate": datetime.combine(
+                aufbewahren_bis + timedelta(days=1), time.min, tzinfo=timezone.utc
+            ),
+        }
     await run_in_threadpool(
         _internal_client.put_object,
         Bucket=BUCKET,
@@ -134,6 +164,18 @@ async def upload_bytes(key: str, data: bytes, content_type: str) -> None:
         Body=data,
         ContentType=content_type,
         ServerSideEncryption="AES256",
+        **zusatz,
+    )
+
+
+async def upload_file(key: str, fileobj, content_type: str) -> None:
+    """Grosse Dateien (Export-ZIP): Multipart-Upload aus einer Datei, ohne sie in den Speicher zu laden."""
+    await run_in_threadpool(
+        _internal_client.upload_fileobj,
+        fileobj,
+        BUCKET,
+        key,
+        ExtraArgs={"ContentType": content_type, "ServerSideEncryption": "AES256"},
     )
 
 
@@ -145,13 +187,73 @@ async def download_bytes(key: str) -> bytes:
     return await run_in_threadpool(_get)
 
 
+def _sha256_stream(key: str) -> str:
+    obj = _internal_client.get_object(Bucket=BUCKET, Key=key)
+    digest = hashlib.sha256()
+    for chunk in obj["Body"].iter_chunks(chunk_size=1024 * 1024):
+        digest.update(chunk)
+    return digest.hexdigest()
+
+
+async def sha256_object(key: str) -> str:
+    """SHA-256 eines Objekts, gestreamt (kein Komplett-Download in den Speicher)."""
+    return await run_in_threadpool(_sha256_stream, key)
+
+
 async def delete_object(key: str) -> None:
     await run_in_threadpool(_internal_client.delete_object, Bucket=BUCKET, Key=key)
 
 
-def presigned_get_url(key: str, expires_seconds: int = 3600) -> str:
+def _loesche_ziele(ziele: list[dict]) -> None:
+    for i in range(0, len(ziele), 1000):
+        antwort = _internal_client.delete_objects(Bucket=BUCKET, Delete={"Objects": ziele[i : i + 1000], "Quiet": True})
+        if antwort.get("Errors"):
+            erster = antwort["Errors"][0]
+            raise RuntimeError(f"{len(antwort['Errors'])} Objekt(e) nicht geloescht: {erster.get('Code')} {erster.get('Key')}")
+
+
+def _delete_prefix(prefix: str) -> int:
+    # Versionen und Loeschmarker einzeln entfernen: in einem versionierten (Object-Lock-)Bucket legt
+    # ein einfaches DELETE nur einen Marker an, das Objekt bliebe liegen.
+    anzahl = 0
+    try:
+        paginator = _internal_client.get_paginator("list_object_versions")
+        for seite in paginator.paginate(Bucket=BUCKET, Prefix=prefix):
+            ziele = []
+            for eintrag in [*seite.get("Versions", []), *seite.get("DeleteMarkers", [])]:
+                ziel = {"Key": eintrag["Key"]}
+                if eintrag.get("VersionId") not in (None, "null"):
+                    ziel["VersionId"] = eintrag["VersionId"]
+                ziele.append(ziel)
+            _loesche_ziele(ziele)
+            anzahl += len(ziele)
+        return anzahl
+    except ClientError as exc:
+        # Aeltere Service-Accounts duerfen Versionen nicht auflisten (nur ListBucket/DeleteObject, siehe
+        # scripts/minio-service-account.sh): dann gilt der unversionierte Weg.
+        if exc.response.get("Error", {}).get("Code") not in ("AccessDenied", "NotImplemented"):
+            raise
+    anzahl = 0
+    for seite in _internal_client.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix=prefix):
+        ziele = [{"Key": o["Key"]} for o in seite.get("Contents", [])]
+        _loesche_ziele(ziele)
+        anzahl += len(ziele)
+    return anzahl
+
+
+async def delete_prefix(prefix: str) -> int:
+    """Loescht alle Objekte unterhalb von prefix. Verweigert zu allgemeine Praefixe
+    (mindestens zwei Pfadebenen, Schraegstrich am Ende): ein Fehler in der
+    Praefixbildung darf nie einen ganzen Bereich leeren."""
+    if not prefix.endswith("/") or prefix.count("/") < 2 or prefix.startswith("/"):
+        raise ValueError(f"Unzulaessiger Praefix fuer das Loeschen: {prefix!r}")
+    return await run_in_threadpool(_delete_prefix, prefix)
+
+
+def presigned_get_url(key: str, expires_seconds: int = 3600, *, dateiname: str | None = None) -> str:
     # Pure signing computation, no network I/O -- safe to call directly
     # from an async route without a threadpool hop.
-    return _public_client.generate_presigned_url(
-        "get_object", Params={"Bucket": BUCKET, "Key": key}, ExpiresIn=expires_seconds
-    )
+    params = {"Bucket": BUCKET, "Key": key}
+    if dateiname:
+        params["ResponseContentDisposition"] = f'attachment; filename="{dateiname}"'
+    return _public_client.generate_presigned_url("get_object", Params=params, ExpiresIn=expires_seconds)

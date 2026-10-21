@@ -114,8 +114,8 @@ cat > /tmp/fv-policy.json <<POLICY
 {
   "Version": "2012-10-17",
   "Statement": [
-    {"Effect": "Allow", "Action": ["s3:ListBucket", "s3:GetBucketLocation"], "Resource": ["arn:aws:s3:::$FV_BUCKET"]},
-    {"Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"], "Resource": ["arn:aws:s3:::$FV_BUCKET/*"]}
+    {"Effect": "Allow", "Action": ["s3:ListBucket", "s3:ListBucketVersions", "s3:GetBucketLocation"], "Resource": ["arn:aws:s3:::$FV_BUCKET"]},
+    {"Effect": "Allow", "Action": ["s3:GetObject", "s3:GetObjectVersion", "s3:PutObject", "s3:DeleteObject", "s3:DeleteObjectVersion", "s3:PutObjectRetention", "s3:GetObjectRetention"], "Resource": ["arn:aws:s3:::$FV_BUCKET/*"]}
   ]
 }
 POLICY

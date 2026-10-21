@@ -107,6 +107,10 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     # EN16931-Vollstaendigkeitspruefung zum Versand-Zeitpunkt fehlschlug --
     # in beiden Faellen wurde stillschweigend nur ein normales PDF erzeugt.
     xml_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # SHA-256 der beim Versand archivierten Objekte (Migration 0114); NULL bei Altbestand.
+    # Der Pruef-Endpoint vergleicht sie mit dem tatsaechlichen S3-Inhalt.
+    pdf_sha256: Mapped[str | None] = mapped_column(Text, nullable=True)
+    xml_sha256: Mapped[str | None] = mapped_column(Text, nullable=True)
     rechnungsart: Mapped[str] = mapped_column(Text, nullable=False, default="rechnung", server_default="rechnung")
     # Angebot, aus dem Rechnung/Abschlag/Schlussrechnung entstanden ist; die
     # Summe der Abschlaege je Angebot und die Anrechnung laufen darueber.

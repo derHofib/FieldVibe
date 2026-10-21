@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -5,6 +6,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
+from botocore.exceptions import ClientError
 from lxml import etree
 from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +32,7 @@ from app.schemas.rechnung import (
     RechnungVorgangKopf,
     RechnungZahlungRead,
 )
+from app.services.aufbewahrung_service import aufbewahrung_fuer
 from app.services import e_invoice_service, pdf_service, privatkunden_service, steuer_service, storage_service
 from app.services.numbering_service import next_rechnungsnummer
 
@@ -1316,13 +1319,17 @@ async def archiviere_pdf(
         bezug_rechnung=bezug,
         angerechnete_abschlaege=abschlaege,
     )
-    key = storage_service.new_rechnung_pdf_key(rechnung.id)
-    await storage_service.upload_bytes(key, pdf_bytes, "application/pdf")
+    key = storage_service.new_rechnung_pdf_key(rechnung.mandant_id, rechnung.id)
+    aufbewahrung = aufbewahrung_fuer("rechnung", rechnung)
+    bis = aufbewahrung.fristende if aufbewahrung else None
+    await storage_service.upload_bytes(key, pdf_bytes, "application/pdf", aufbewahren_bis=bis)
     rechnung.pdf_object_key = key
+    rechnung.pdf_sha256 = hashlib.sha256(pdf_bytes).hexdigest()
     if xml_bytes is not None:
-        xml_key = storage_service.new_rechnung_xml_key(rechnung.id)
-        await storage_service.upload_bytes(xml_key, xml_bytes, "application/xml")
+        xml_key = storage_service.new_rechnung_xml_key(rechnung.mandant_id, rechnung.id)
+        await storage_service.upload_bytes(xml_key, xml_bytes, "application/xml", aufbewahren_bis=bis)
         rechnung.xml_object_key = xml_key
+        rechnung.xml_sha256 = hashlib.sha256(xml_bytes).hexdigest()
         # GoBD: festhalten, was versendet wurde; spaetere Kundenaenderungen aendern das nicht.
         rechnung.e_rechnung_profil = profil
         rechnung.leitweg_id = (kunde.leitweg_id or "").strip() or None
@@ -1353,3 +1360,50 @@ async def pdf_bytes_fuer(
         logo_bytes=await logo_bytes_laden(mandant),
         bezug_rechnung=bezug,
     )
+
+
+@dataclass(frozen=True)
+class ArchivObjektPruefung:
+    art: str  # "pdf" | "xml"
+    object_key: str
+    status: str  # ok | abweichung | fehlt | kein_hash
+    hash_gespeichert: str | None
+    hash_berechnet: str | None
+
+
+def _archivobjekte(rechnung: Rechnung) -> list[tuple[str, str, str | None]]:
+    objekte = []
+    if rechnung.pdf_object_key:
+        objekte.append(("pdf", rechnung.pdf_object_key, rechnung.pdf_sha256))
+    if rechnung.xml_object_key:
+        objekte.append(("xml", rechnung.xml_object_key, rechnung.xml_sha256))
+    return objekte
+
+
+async def pruefe_archiv(rechnung: Rechnung) -> list[ArchivObjektPruefung]:
+    """Vergleicht den heutigen Inhalt der archivierten Objekte mit dem beim Versand
+    gespeicherten SHA-256. Ohne gespeicherten Hash (Altbestand) laesst sich die
+    Unveraendertheit nicht beweisen -- dann nur der berechnete Wert, Status kein_hash."""
+    ergebnis = []
+    for art, key, gespeichert in _archivobjekte(rechnung):
+        try:
+            berechnet = await storage_service.sha256_object(key)
+        except ClientError:
+            ergebnis.append(ArchivObjektPruefung(art, key, "fehlt", gespeichert, None))
+            continue
+        if gespeichert is None:
+            status = "kein_hash"
+        else:
+            status = "ok" if gespeichert == berechnet else "abweichung"
+        ergebnis.append(ArchivObjektPruefung(art, key, status, gespeichert, berechnet))
+    return ergebnis
+
+
+async def hash_nachtragen(rechnung: Rechnung) -> list[ArchivObjektPruefung]:
+    """Altbestand: setzt fehlende Hashes aus dem aktuellen S3-Inhalt. Beweist nur den
+    Stand ab jetzt, nicht die Unveraendertheit seit dem Versand; die Spalten sind
+    einmalig beschreibbar (Trigger), ein vorhandener Hash bleibt unberuehrt."""
+    for p in await pruefe_archiv(rechnung):
+        if p.status == "kein_hash" and p.hash_berechnet:
+            setattr(rechnung, f"{p.art}_sha256", p.hash_berechnet)
+    return await pruefe_archiv(rechnung)

@@ -169,6 +169,14 @@ def require_roles(*roles: str):
     return checker
 
 
+async def nur_mandant_admin(auth: AuthContext = Depends(get_current_user)) -> AuthContext:
+    """Strenger als require_roles("mandant_admin"): schliesst auch loesch_operativ aus, das sonst
+    ueberall die Rechte eines mandant_admin erbt. Fuer Protokoll, Datenexporte und Aufbewahrung."""
+    if auth.role != "mandant_admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+    return auth
+
+
 def require_module(*modules: str):
     """Sperrt einen Endpunkt, wenn der Mandant ALLE uebergebenen Module
     deaktiviert hat (Mehrfachangabe = "erlaubt, wenn mindestens eines davon

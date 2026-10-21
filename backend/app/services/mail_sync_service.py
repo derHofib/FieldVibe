@@ -310,7 +310,7 @@ async def _speichere_nachricht(
     await session.flush()
 
     for dateiname, inhalt, mimetype, eingebettet in _anhaenge(geparst):
-        key = storage_service.new_mail_attachment_key(nachricht.id, dateiname)
+        key = storage_service.new_mail_attachment_key(nachricht.mandant_id, nachricht.id, dateiname)
         await storage_service.upload_bytes(key, inhalt, mimetype)
         session.add(
             MailAttachment(

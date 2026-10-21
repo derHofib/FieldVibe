@@ -181,7 +181,7 @@ async def upload_foto(
     # der PWA laden dieselbe kleine Datei statt das Original zu skalieren.
     thumbnail = await make_thumbnail(data)
 
-    key = storage_service.new_object_key(vorgang_id, file.filename or "foto.jpg")
+    key = storage_service.new_object_key(auth.mandant_id, vorgang_id, file.filename or "foto.jpg")
     thumbnail_key = f"{key.rsplit('.', 1)[0]}_thumb.jpg"
 
     await storage_service.upload_bytes(key, data, file.content_type)
@@ -251,7 +251,7 @@ async def upload_dokument(
         )
 
     dateiname = file.filename or "dokument"
-    key = storage_service.new_object_key(vorgang_id, dateiname)
+    key = storage_service.new_object_key(auth.mandant_id, vorgang_id, dateiname)
     await storage_service.upload_bytes(key, data, file.content_type or "application/octet-stream")
 
     event = VorgangEvent(
@@ -321,7 +321,7 @@ async def upload_unterschrift(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)"
         )
 
-    key = storage_service.new_object_key(vorgang_id, "unterschrift.png")
+    key = storage_service.new_object_key(auth.mandant_id, vorgang_id, "unterschrift.png")
     await storage_service.upload_bytes(key, data, file.content_type)
 
     event = VorgangEvent(

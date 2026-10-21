@@ -11,6 +11,7 @@ from app.api.deps import (
     AuthContext,
     get_current_user,
     get_db,
+    nur_mandant_admin,
     require_module,
     require_recht,
     require_roles,
@@ -26,6 +27,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.rechnung import (
+    ArchivPruefungRead,
     AbrechenbarerVorgang,
     AbschlaegeAnrechnen,
     GutschriftCreate,
@@ -59,7 +61,9 @@ from app.services.rechnung_service import (
     material_freigeben_fuer_rechnung,
     netto_sql,
     offen_sql,
+    hash_nachtragen,
     pdf_bytes_fuer,
+    pruefe_archiv,
     positionen_fuer,
     positionen_vorschlaege_fuer_vorgang,
     pruefe_versand,
@@ -1121,7 +1125,9 @@ async def update_rechnung(
                 await archiviere_pdf(session, rechnung, mandant, kunde)
             except VersandFehler as exc:
                 raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
-            await _audit(session, auth, "rechnung_versendet", rechnung)
+            await _audit(
+                session, auth, "rechnung_versendet", rechnung, pdf_sha256=rechnung.pdf_sha256, xml_sha256=rechnung.xml_sha256
+            )
         elif neuer_status == "bezahlt":
             if rechnung.rechnungsart == "gutschrift":
                 raise HTTPException(
@@ -1460,6 +1466,64 @@ async def rechnung_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{rechnung.rechnungsnummer}.pdf"'},
     )
+
+
+def _archiv_read(rechnung: Rechnung, pruefungen) -> ArchivPruefungRead:
+    return ArchivPruefungRead(
+        rechnung_id=rechnung.id,
+        rechnungsnummer=rechnung.rechnungsnummer,
+        objekte=[
+            {
+                "art": p.art,
+                "status": p.status,
+                "hash_gespeichert": p.hash_gespeichert,
+                "hash_berechnet": p.hash_berechnet,
+            }
+            for p in pruefungen
+        ],
+        ok=bool(pruefungen) and all(p.status == "ok" for p in pruefungen),
+    )
+
+
+@router.get(
+    "/{rechnung_id}/archiv-pruefung",
+    response_model=ArchivPruefungRead,
+    dependencies=[Depends(nur_mandant_admin)],
+)
+async def archiv_pruefung(
+    rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ArchivPruefungRead:
+    """Vergleicht das archivierte PDF/XML mit dem beim Versand gespeicherten SHA-256."""
+    rechnung = await _rechnung_laden(session, auth, rechnung_id, geloeschte_zulassen=True)
+    pruefungen = await pruefe_archiv(rechnung)
+    if any(p.status in ("abweichung", "fehlt") for p in pruefungen):
+        await _audit(
+            session, auth, "archiv_abweichung_festgestellt", rechnung,
+            befunde={p.art: p.status for p in pruefungen if p.status in ("abweichung", "fehlt")},
+        )
+    return _archiv_read(rechnung, pruefungen)
+
+
+@router.post(
+    "/{rechnung_id}/archiv-pruefung/hash-nachtragen",
+    response_model=ArchivPruefungRead,
+    dependencies=[Depends(nur_mandant_admin)],
+)
+async def archiv_hash_nachtragen(
+    rechnung_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> ArchivPruefungRead:
+    """Altbestand ohne gespeicherten Hash: haelt den heutigen Stand fest (ersetzt nie einen vorhandenen Hash)."""
+    rechnung = await _rechnung_laden(session, auth, rechnung_id, geloeschte_zulassen=True)
+    vorher = {p.art for p in await pruefe_archiv(rechnung) if p.status == "kein_hash"}
+    pruefungen = await hash_nachtragen(rechnung)
+    if vorher:
+        await session.flush()
+        await _audit(session, auth, "archiv_hash_nachgetragen", rechnung, objekte=sorted(vorher))
+    return _archiv_read(rechnung, pruefungen)
 
 
 @router.get("/{rechnung_id}/xml")

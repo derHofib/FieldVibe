@@ -60,6 +60,8 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-${MINIO_ROOT_USER:-fieldvibe}}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-changeme-generate-with-openssl-rand}}
       S3_BUCKET_FOTOS: ${S3_BUCKET_FOTOS:-fieldvibe-fotos}
+      S3_OBJECT_LOCK: ${S3_OBJECT_LOCK:-false}
+      S3_RECHNUNGEN_RETENTION: ${S3_RECHNUNGEN_RETENTION:-off}
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,6 +104,8 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-${MINIO_ROOT_USER:-fieldvibe}}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-changeme-generate-with-openssl-rand}}
       S3_BUCKET_FOTOS: ${S3_BUCKET_FOTOS:-fieldvibe-fotos}
+      S3_OBJECT_LOCK: ${S3_OBJECT_LOCK:-false}
+      S3_RECHNUNGEN_RETENTION: ${S3_RECHNUNGEN_RETENTION:-off}
     depends_on:
       postgres:
         condition: service_healthy

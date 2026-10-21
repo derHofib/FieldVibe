@@ -743,7 +743,7 @@ async def upload_kunde_logo(
         )
 
     alter_key = kunde.logo_object_key
-    key = storage_service.new_kunde_logo_key(kunde_id, file.filename or "logo.png")
+    key = storage_service.new_kunde_logo_key(kunde.mandant_id, kunde_id, file.filename or "logo.png")
     await storage_service.upload_bytes(key, data, file.content_type)
     kunde.logo_object_key = key
     await session.flush()

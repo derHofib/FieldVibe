@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.deps import AuthContext, get_current_user, get_db, nur_mandant_admin
 from app.models.audit_log import AKTEUR_TYPEN, AuditLog
 from app.models.user import User
 from app.schemas.audit import AuditEintragRead, AuditKettenFehler, AuditListe, AuditVerifikation
@@ -18,7 +18,7 @@ from app.services.csv_service import csv_response, formel_sicher
 router = APIRouter(
     prefix="/api/audit",
     tags=["audit"],
-    dependencies=[Depends(require_roles("mandant_admin"))],
+    dependencies=[Depends(nur_mandant_admin)],
 )
 
 _CSV_MAX_ZEILEN = 50000

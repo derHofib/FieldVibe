@@ -1,5 +1,6 @@
 from datetime import date
 from functools import lru_cache
+from typing import Literal
 from urllib.parse import urlsplit
 
 from pydantic import Field, model_validator
@@ -81,6 +82,15 @@ class Settings(BaseSettings):
     s3_secret_key: str = "changeme"
     s3_region: str = "us-east-1"
     s3_bucket_fotos: str = "fieldvibe-fotos"
+    # Optionaler WORM-Schutz fuer archivierte Rechnungen (docs/gobd/OBJECT_LOCK.md).
+    # s3_object_lock: Bucket beim ANLEGEN mit Object Lock erzeugen (MinIO/S3 erlauben das
+    # nur bei der Erstellung). s3_rechnungen_retention: "off" | "governance" | "compliance" --
+    # Archiv-PDF/-XML bekommen eine Objekt-Aufbewahrung bis zum Fristende der Rechnung
+    # (siehe aufbewahrung_service). Beides standardmaessig aus; ungeprueft gegen echtes MinIO.
+    s3_object_lock: bool = Field(default=False, validation_alias="S3_OBJECT_LOCK")
+    s3_rechnungen_retention: Literal["off", "governance", "compliance"] = Field(
+        default="off", validation_alias="S3_RECHNUNGEN_RETENTION"
+    )
 
     # --- Dispo (Abschnitt 4.5): Fahrzeit-Heuristik per Luftlinie ---------
     # Kein Routendienst -- eine grobe Schaetzung (Haversine-Distanz durch
