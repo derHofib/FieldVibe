@@ -174,6 +174,25 @@ Stand und Regeln: `docs/konzepte/DATENIMPORT.md`. Umgesetzt: Kunden, Standorte &
   Import-Fehlerbericht (`csv_service.formel_sicher`).
 - Kein eigener Rechte-Bereich „Import“ (nur mandant_admin/loesch_operativ).
 
+## 13. GoBD-Paket: Lücken (Roadmap 1.9)
+
+Stand und Entscheidungen: `docs/konzepte/GOBD.md`; Dokumente: `docs/gobd/`.
+
+- **Z3-`index.xml` nicht gegen IDEA/DTD validiert** (Struktur aus dem Beschreibungsstandard rekonstruiert, DTD nicht beigelegt).
+  Abnahme per IDEA-Einlesen beim Steuerberater offen. Z1/Z2 nur organisatorisch (kein Prüferzugang).
+- **Object Lock ungetestet gegen echtes MinIO** (nur moto); Docker/Compose nicht ausprobiert. Compose-Durchreichung von
+  `S3_OBJECT_LOCK`/`S3_RECHNUNGEN_RETENTION` nur syntaktisch geprüft. Verlängerung bestehender Retention nicht umgesetzt.
+- **Kein Trigger auf `rechnung_zahlungen`** (additiv nur per Konvention); kein Hash für Eingangsbeleg-PDFs.
+- **Ablaufhemmung der Aufbewahrung** (§ 147 Abs. 3 S. 5 AO) und manuelle „Legal Hold“-Markierung nicht abgebildet; kein Job, der
+  Löschvorschläge vormerkt; keine Oberfläche für Löschvorschläge/S3-Retry-Liste (nur API).
+- **Protokollumfang:** keine Stammdatenänderungen (Kunde, Material), keine Lesezugriffe; Portal- und Partner-Anmeldungen nicht protokolliert;
+  Plattform-Aktionen des Super-Admin ohne Mandantenbezug (`mandant_erstellt`, `mandant_geaendert`) stehen nur im Plattformprotokoll.
+- **Hash-Kette:** Kettenende nur mit extern festgehaltenem Kopf prüfbar; sehr große Protokolle werden bei der Prüfung vollständig gelesen.
+- **Vollexport:** ohne Postfach, Partner-Nachweise, Formular-Dateien (Form-Submissions), Mail-Anhänge; ZIP wird im API-Prozess erzeugt
+  (bei sehr großen Betrieben Worker-Container bevorzugen).
+- **Nummernlücken** durch gelöschte Rechnungsentwürfe (Nummer bei Anlage); Vergabe erst beim Versand wäre ein Umbau des Nummernkreises.
+- Altobjekte im Objektspeicher behalten ihre Schlüssel ohne Mandantenpräfix; keine Migration.
+
 ## Erledigt, zur Einordnung
 
 `v1.0.0` (17.08.2026) markiert den Ausgangsstand nach Zusammenführung
