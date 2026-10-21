@@ -25,6 +25,9 @@ frontend/test-results/
 .env.*
 !.env.example
 
+# Deploy-Zustand (Image-Tags fuer den Rollback, scripts/deploy-lib.sh)
+.deploy-state
+
 # Data
 postgres-data/
 minio-data/

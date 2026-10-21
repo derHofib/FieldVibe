@@ -52,6 +52,10 @@ services:
       retries: 10
 
   backend:
+    # Explizite Image-Namen mit Tag (deploy.sh setzt IMAGE_TAG = Commit-Hash): so bleibt der
+    # Vorgaengerstand auf dem Host liegen und ein Rollback braucht keinen Neubau. Backend
+    # und Worker teilen sich Image und Build-Argumente (identische Layer, ein Build).
+    image: ${IMAGE_REGISTRY:-}fieldvibe-backend:${IMAGE_TAG:-latest}
     build:
       context: ./backend
       args:
@@ -89,6 +93,7 @@ services:
       start_period: 30s
 
   frontend:
+    image: ${IMAGE_REGISTRY:-}fieldvibe-frontend:${IMAGE_TAG:-latest}
     build:
       context: ./frontend
       args:
@@ -112,8 +117,11 @@ services:
       start_period: 10s
 
   worker:
+    image: ${IMAGE_REGISTRY:-}fieldvibe-backend:${IMAGE_TAG:-latest}
     build:
       context: ./backend
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     restart: unless-stopped
     logging: *standard-logging
     command: ["python", "-m", "app.worker"]

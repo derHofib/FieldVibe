@@ -22,10 +22,38 @@ set -euo pipefail
 # Idempotent: bereits gesetzte Secrets/Domains/Modus in einer vorhandenen
 # .env werden nicht ueberschrieben, ein vorhandener Backup-Cron-Eintrag
 # nicht dupliziert -- das Skript kann daher auch spaeter fuer Updates
-# erneut ausgefuehrt werden (git pull + Stack neu bauen + Migrationen).
+# erneut ausgefuehrt werden.
+#
+# Reihenfolge eines Updates (Details und Rollback: docs/DEPLOYMENT.md, docs/BETRIEB.md):
+#   Vorab-Check -> Backup (Abbruch bei Fehlschlag) -> Images bauen -> Datenbank-
+#   Migration VOR dem Rollout -> Rollout -> Health-Gate (/health/ready) -> bei
+#   Fehlschlag automatischer Rollback auf die vorherigen Image-Tags (.deploy-state).
+#
+# Optionen:
+#   --ohne-backup          Backup vor dem Update ueberspringen (nur bewusst!)
+#   --nicht-interaktiv     keine Rueckfragen (Plattform-Administrator wird nicht angelegt)
+#   --health-timeout SEK   Wartezeit des Health-Gates, Standard 300
+#   -h, --help             diese Hilfe
+
+DEPLOY_OHNE_BACKUP=0
+NICHT_INTERAKTIV=0
+DEPLOY_HEALTH_TIMEOUT=300
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --ohne-backup)      DEPLOY_OHNE_BACKUP=1 ;;
+    --nicht-interaktiv) NICHT_INTERAKTIV=1 ;;
+    --health-timeout)   shift; [[ $# -gt 0 && "$1" =~ ^[0-9]+$ ]] || { echo "--health-timeout braucht eine Zahl (Sekunden)." >&2; exit 1; }; DEPLOY_HEALTH_TIMEOUT="$1" ;;
+    -h|--help)          sed -n '4,36p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *)                  echo "Unbekannte Option: $1 (siehe --help)" >&2; exit 1 ;;
+  esac
+  shift
+done
+export DEPLOY_OHNE_BACKUP DEPLOY_HEALTH_TIMEOUT
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
+# shellcheck source=scripts/deploy-lib.sh
+source "$REPO_DIR/scripts/deploy-lib.sh"
 
 log()  { printf '\n\033[1;36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33mWarnung:\033[0m %s\n' "$*" >&2; }
@@ -227,6 +255,21 @@ for legal_var in VITE_IMPRESSUM_URL VITE_DATENSCHUTZ_URL; do
   fi
 done
 
+# --- 6c. Error-Tracking (optional) ---------------------------------------------
+# Die Frontend-DSN wird zur Build-Zeit eingebacken; ihr Host muss in der CSP
+# (connect-src) stehen, sonst blockiert der Browser die Meldungen. Ohne DSN bleibt
+# SENTRY_CSP_HOST leer, die CSP bleibt unveraendert.
+if [[ -n "$(get_env VITE_SENTRY_DSN)" ]]; then
+  SENTRY_HOST="$(get_env VITE_SENTRY_DSN | sed -E 's#^https?://[^@/]*@([^/]+)/.*#https://\1#')"
+  set_env SENTRY_CSP_HOST "$SENTRY_HOST"
+  log "Error-Tracking (Frontend) aktiv: ${SENTRY_HOST}. Nur EU-gehostet oder selbst betrieben, AVV nicht vergessen (docs/BETRIEB.md)."
+elif [[ -n "$(get_env SENTRY_CSP_HOST)" ]]; then
+  set_env SENTRY_CSP_HOST ""
+fi
+if [[ -n "$(get_env SENTRY_DSN)" ]]; then
+  log "Error-Tracking (Backend/Worker) aktiv. Nur EU-gehostet oder selbst betrieben, AVV nicht vergessen (docs/BETRIEB.md)."
+fi
+
 # --- 7. Vorhandenes Repo aktualisieren (falls kein Erststart) --------------
 if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
   if [[ -z "$(git status --porcelain)" ]]; then
@@ -236,6 +279,33 @@ if [[ -d .git ]] && git rev-parse --git-dir &>/dev/null; then
     warn "Lokale Änderungen im Repo gefunden, überspringe 'git pull' -- committe oder verwirf sie zuerst, falls du aktualisieren willst."
   fi
 fi
+
+# GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken (Update-Anzeige im Super-Admin-
+# Bereich, Release-Tag fuer das Error-Tracking) und ist zugleich der Image-Tag dieses
+# Releases: damit bleibt der Vorgaengerstand fuer einen Rollback auf dem Host liegen.
+# Kein git-Repo (Tarball) -> "unknown" fuer die Anzeige, der Tag wird dann ein Zeitstempel.
+GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+export GIT_COMMIT
+IMAGE_TAG="$GIT_COMMIT"
+[[ "$IMAGE_TAG" == "unknown" ]] && IMAGE_TAG="local-$(date +%Y%m%d%H%M%S)"
+if [[ -d .git ]] && [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then IMAGE_TAG="${IMAGE_TAG}-lokal$(date +%H%M%S)"; fi
+# Gleicher Stand erneut (z. B. nur .env geaendert): eigener Tag, sonst ueberschriebe der
+# Neubau das Rollback-Ziel.
+if [[ "$IMAGE_TAG" == "$(deploy_state_lesen CURRENT_TAG)" ]]; then IMAGE_TAG="${IMAGE_TAG}-r$(date +%H%M%S)"; fi
+export IMAGE_TAG
+
+# --- 7b. Vorab-Check ------------------------------------------------------------
+log "Vorab-Check (Docker, Compose-Dateien, Plattenplatz)..."
+deploy_vorabcheck || err "Vorab-Check fehlgeschlagen -- es wurde nichts veraendert."
+
+mkdir -p "$(get_env BACKUP_DIR | grep . || echo /opt/fieldvibe-backups)"
+
+# --- 7c. Backup vor jeder Aenderung ----------------------------------------------
+# Vor Rollen-Umstellung, Migration und Rollout. Scheitert die Sicherung, bricht das
+# Deployment ab (Opt-out: --ohne-backup). Erstinstallation: noch nichts zu sichern.
+deploy_backup || err "Abbruch wegen fehlgeschlagenem Backup (siehe oben)."
+DEPLOY_BACKUP_ERLEDIGT=1
+export DEPLOY_BACKUP_ERLEDIGT
 
 # --- 8. Datenbank-Rolle absichern ------------------------------------------
 # Das offizielle postgres-Image macht POSTGRES_USER zum Bootstrap-Superuser,
@@ -269,42 +339,46 @@ if [[ -n "$MINIO_IMAGE" ]] && ! docker image inspect "$MINIO_IMAGE" &>/dev/null;
   fi
 fi
 
-# --- 8b. Stack starten ------------------------------------------------------
-# GIT_COMMIT wird als Build-Arg ins Backend-Image gebacken -- rein fuer die
-# informative Update-Anzeige im Super-Admin-Bereich (aktueller vs. neuester
-# Commit auf GitHub), siehe app/services/version_service.py. Kein git-
-# Repo (z.B. per curl heruntergeladenes Tarball) -> bleibt "unknown".
-GIT_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-export GIT_COMMIT
-log "Baue und starte den Stack (Postgres, MinIO, Backend, Frontend, Worker$([[ "$DEPLOY_MODE" == "domain" ]] && echo ", Caddy"))..."
-"${COMPOSE[@]}" up -d --build
+# --- 8b. Datenbank und Objektspeicher starten ---------------------------------
+# Nur die Infrastruktur: Backend, Worker und Frontend starten erst NACH der Migration
+# (Abschnitt 9). Frueher kam der ganze Stack vor der Migration hoch -- ein Backend mit
+# neuem Code gegen ein noch altes Schema.
+log "Starte Datenbank und Objektspeicher..."
+"${COMPOSE[@]}" up -d postgres minio
+
+# --- 8c. MinIO-Service-Account ----------------------------------------------
+# Backend und Worker sollen nicht mit dem MinIO-Root-Zugang laufen, sondern mit
+# einem Service-Account, dessen Policy nur den Foto-Bucket erlaubt. Idempotent;
+# geaenderte Zugangsdaten uebernimmt der Rollout (Compose erzeugt Container mit
+# geaenderter Umgebung neu). Scheitert der Schritt (z. B. mc-Syntax anderer
+# MinIO-Version), laeuft der Stack mit dem Root-Zugang weiter -- das ist ein
+# Sicherheitshinweis, kein Deployment-Abbruch.
+log "Richte den MinIO-Service-Account für die Anwendung ein (Bucket-beschränkter Zugang statt Root)..."
+./scripts/minio-service-account.sh --compose "${COMPOSE[*]}" \
+  || warn "MinIO-Service-Account konnte nicht eingerichtet werden -- Backend/Worker nutzen weiter den Root-Zugang. Nachholen: ./scripts/minio-service-account.sh (siehe docs/DEPLOYMENT.md, Abschnitt Sicherheit)."
+
+# --- 9. Release: bauen, migrieren, ausrollen, Health-Gate, ggf. Rollback ------
+log "Release ${IMAGE_TAG}: Images bauen, Migration, Rollout, Health-Gate (Stack: Backend, Frontend, Worker$([[ "$DEPLOY_MODE" == "domain" ]] && echo ", Caddy"))..."
+RELEASE_RC=0
+deploy_release "$IMAGE_TAG" || RELEASE_RC=$?
+case "$RELEASE_RC" in
+  0) ;;
+  "$DEPLOY_RC_BACKUP")        err "Abgebrochen: Backup fehlgeschlagen. Es wurde nichts veraendert." ;;
+  "$DEPLOY_RC_BAUEN")         err "Abgebrochen: Build bzw. Start der Infrastruktur fehlgeschlagen. Die laufende Version ist unveraendert." ;;
+  "$DEPLOY_RC_MIGRATION")     err "Abgebrochen: Migration fehlgeschlagen, nichts ausgerollt. Die laufende Version bleibt aktiv (docs/BETRIEB.md, \"Migration scheitert\")." ;;
+  "$DEPLOY_RC_ROLLBACK_OK")   err "Release ${IMAGE_TAG} hat das Health-Gate nicht bestanden und wurde automatisch zurueckgerollt (Stand $(deploy_state_lesen CURRENT_TAG)). Ursache: ${COMPOSE[*]} logs backend worker" ;;
+  *)                          err "Release ${IMAGE_TAG} hat das Health-Gate nicht bestanden, der Rollback war nicht moeglich bzw. ist fehlgeschlagen. Manuell eingreifen: docs/BETRIEB.md (\"Deploy fehlgeschlagen\")." ;;
+esac
 
 if [[ "$DEPLOY_MODE" == "domain" ]]; then
   log "Caddy holt beim allerersten Start ein bis zwei Minuten lang die TLS-Zertifikate. Fortschritt: ${COMPOSE[*]} logs -f caddy"
 fi
 
-# --- 8c. MinIO-Service-Account ----------------------------------------------
-# Backend und Worker sollen nicht mit dem MinIO-Root-Zugang laufen, sondern mit
-# einem Service-Account, dessen Policy nur den Foto-Bucket erlaubt. Idempotent;
-# nur bei geaenderten Zugangsdaten werden Backend/Worker neu erzeugt. Scheitert
-# der Schritt (z. B. mc-Syntax anderer MinIO-Version), laeuft der Stack mit dem
-# Root-Zugang weiter -- das ist ein Sicherheitshinweis, kein Deployment-Abbruch.
-log "Richte den MinIO-Service-Account für die Anwendung ein (Bucket-beschränkter Zugang statt Root)..."
-S3_KEY_VORHER="$(get_env S3_ACCESS_KEY):$(get_env S3_SECRET_KEY)"
-if ./scripts/minio-service-account.sh --compose "${COMPOSE[*]}"; then
-  if [[ "$S3_KEY_VORHER" != "$(get_env S3_ACCESS_KEY):$(get_env S3_SECRET_KEY)" ]]; then
-    "${COMPOSE[@]}" up -d --force-recreate --no-deps backend worker
-  fi
-else
-  warn "MinIO-Service-Account konnte nicht eingerichtet werden -- Backend/Worker nutzen weiter den Root-Zugang. Nachholen: ./scripts/minio-service-account.sh (siehe docs/DEPLOYMENT.md, Abschnitt Sicherheit)."
-fi
-
-# --- 9. Migrationen ----------------------------------------------------------
-log "Wende Datenbank-Migrationen an..."
-./scripts/migrieren.sh --compose "${COMPOSE[*]}"
-
 # --- 10. Ersten Plattform-Administrator anlegen -----------------------------
-read -rp $'\nJetzt einen Plattform-Administrator anlegen? [Y/n] ' create_admin
+create_admin="n"
+if [[ "$NICHT_INTERAKTIV" != "1" ]]; then
+  read -rp $'\nJetzt einen Plattform-Administrator anlegen? [Y/n] ' create_admin || create_admin="n"
+fi
 if [[ ! "$create_admin" =~ ^[Nn]$ ]]; then
   read -rp "E-Mail: " ADMIN_EMAIL
   read -rp "Name: " ADMIN_NAME
