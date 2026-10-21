@@ -28,6 +28,8 @@ from app.services.datenimport.lauf import raeume_auf as raeume_datenimport_auf
 from app.services.export_job_service import raeume_auf as raeume_exporte_auf
 from app.services.export_job_service import verarbeite_naechsten as verarbeite_export
 from app.services.email_ingest_service import run_email_ingest
+from app.services.heartbeat_service import heartbeat_schleife
+from app.services.job_state_service import heartbeat
 from app.services.fehlerbericht_service import loesche_abgelaufene_fehlerberichte
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
@@ -79,6 +81,7 @@ async def _run_hourly_tick() -> None:
         try:
             email_ergebnis = await run_email_ingest()
             logger.info("E-Mail-Rechnungseingang-Import abgeschlossen: %s", email_ergebnis)
+            await heartbeat("email_ingest")
         except Exception:
             logger.exception("E-Mail-Rechnungseingang-Import fehlgeschlagen")
 
@@ -194,6 +197,7 @@ async def _run_mail_sync_tick() -> None:
             return
         try:
             ergebnis = await run_mail_sync()
+            await heartbeat("mail_sync")
             if ergebnis["konten_synchronisiert"] or ergebnis["fehler"]:
                 logger.info("Mail-Sync abgeschlossen: %s", ergebnis)
         except Exception:
@@ -233,7 +237,7 @@ async def main() -> None:
         "Worker gestartet -- stündlicher Scheduler-Tick, Mail-Sync alle %d Sekunden",
         MAIL_SYNC_INTERVAL_SECONDS,
     )
-    await asyncio.gather(_hourly_loop(), _mail_sync_loop(), _export_loop())
+    await asyncio.gather(_hourly_loop(), _mail_sync_loop(), _export_loop(), heartbeat_schleife())
 
 
 if __name__ == "__main__":

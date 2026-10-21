@@ -93,21 +93,21 @@ def test_konfiguriere_logging_legt_uvicorn_access_still():
 
 
 async def test_antwort_traegt_neue_request_id(client):
-    resp = await client.get("/healthz")
+    resp = await client.get("/health")
     rid = resp.headers["x-request-id"]
     assert len(rid) == 32
-    resp2 = await client.get("/healthz")
+    resp2 = await client.get("/health")
     assert resp2.headers["x-request-id"] != rid
 
 
 async def test_eingehende_request_id_wird_uebernommen_wenn_unverfaenglich(client):
-    resp = await client.get("/healthz", headers={"X-Request-ID": "proxy-req-12345"})
+    resp = await client.get("/health", headers={"X-Request-ID": "proxy-req-12345"})
     assert resp.headers["x-request-id"] == "proxy-req-12345"
 
 
 @pytest.mark.parametrize("boese", ["kurz", "a" * 65, "<script>alert(1)</script>"])
 async def test_unverfaengliche_request_id_wird_ersetzt(client, boese):
-    resp = await client.get("/healthz", headers={"X-Request-ID": boese})
+    resp = await client.get("/health", headers={"X-Request-ID": boese})
     assert resp.headers["x-request-id"] != boese
 
 
@@ -129,5 +129,5 @@ async def test_zugriffslog_mit_ids_ohne_query_und_ohne_token(client, make_mandan
 
 async def test_health_wird_nicht_protokolliert(client, caplog):
     caplog.set_level(logging.INFO, logger="app.access")
-    await client.get("/healthz")
+    await client.get("/health")
     assert not [r for r in caplog.records if r.name == "app.access"]

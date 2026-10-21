@@ -16,6 +16,10 @@ services:
       # (Standard-Subnetze, bei eigenem Netz anpassen). Im .ip.yml-Modus bewusst
       # NICHT setzen -- dort haengt kein Proxy davor, der Header waere faelschbar.
       FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
+      # Backup-Alter in /health/heartbeats (letzter-lauf.json, schreibgeschuetzt eingehaengt).
+      BACKUP_STATUS_DATEI: /backups/letzter-lauf.json
+    volumes:
+      - ${BACKUP_DIR:-/opt/fieldvibe-backups}:/backups:ro
 
   caddy:
     # Auf 2.11 gepinnt: Patch-Updates (2.11.x) ja, kein ungeplanter Sprung auf 2.12+.
@@ -44,9 +48,19 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - backend
-      - frontend
-      - minio
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    # Admin-API (nur im Container erreichbar, nicht publiziert) als Lebenszeichen.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:2019/config/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   caddy-data:

@@ -41,6 +41,29 @@ class Settings(BaseSettings):
     log_format: str | None = None
     log_level: str = "INFO"
 
+    # --- Health/Heartbeats (docs/BETRIEB.md) -------------------------------
+    # Bearer-Token fuer die Details von /health/ready und /health/heartbeats
+    # (externes Monitoring). Leer = nur Plattform-Admins (JWT) sehen sie;
+    # /health und der nackte Status von /health/ready sind immer offen.
+    health_token: str | None = None
+    # Takt des Worker-Lebenszeichens (Datei fuer den Docker-Healthcheck + Zeile in
+    # job_laeufe) und Obergrenzen, ab denen ein Heartbeat als veraltet gilt.
+    worker_heartbeat_datei: str = "/tmp/fieldvibe-worker-heartbeat"
+    heartbeat_intervall_sekunden: int = 30
+    heartbeat_worker_max_alter_sekunden: int = 180
+    heartbeat_mail_sync_max_alter_sekunden: int = 900
+    heartbeat_email_ingest_max_alter_sekunden: int = 3 * 3600 + 900
+    # Ein aktives Postfach ohne erfolgreichen Sync seit so vielen Minuten gilt als veraltet.
+    heartbeat_mail_konto_max_alter_minuten: int = 60
+    # letzter-lauf.json des Backup-Skripts (scripts/backup.sh); Compose haengt das
+    # Backup-Verzeichnis dafuer schreibgeschuetzt ins Backend ein. Leer = Backup-Alter
+    # wird nicht geprueft.
+    backup_status_datei: str | None = None
+    backup_max_alter_stunden: int = 36
+    # healthchecks.io-kompatibler Ping des Workers (GET <url>); leer = kein Netzverkehr.
+    heartbeat_ping_url: str | None = None
+    heartbeat_ping_intervall_sekunden: int = 60
+
     # Betriebs-Zeitzone fuer Tagesgrenzen (Zeiterfassung: Tages-/Wochenfilter,
     # Wochenzettel); siehe app/core/zeit.py. Mandanten haben kein eigenes Feld.
     zeitzone: str = Field(default="Europe/Berlin", validation_alias="FIELDVIBE_ZEITZONE")

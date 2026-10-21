@@ -3,10 +3,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 
 from app.api.routes import (
     fehlerberichte,
+    health,
     rechte,
     organigramm,
     account_typen,
@@ -89,7 +89,7 @@ from app.core.logging_config import konfiguriere_logging
 from app.core.request_middleware import REQUEST_ID_HEADER, RequestKontextMiddleware
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine
-from app.services.scheduler_service import get_last_scheduler_run
+from app.services.health_service import watchdog_schleife
 from app.services.storage_service import ensure_bucket
 from app.services.system_resources_service import resource_sampler_loop
 
@@ -105,8 +105,11 @@ async def lifespan(_: FastAPI):
     await pruefe_db_rolle(engine)
     await ensure_bucket()
     sampler_task = asyncio.create_task(resource_sampler_loop())
+    # Erkennt auch einen toten Worker: die Auswertung laeuft im Backend-Prozess.
+    watchdog_task = asyncio.create_task(watchdog_schleife())
     yield
     sampler_task.cancel()
+    watchdog_task.cancel()
 
 
 def docs_optionen(einstellungen) -> dict:
@@ -142,6 +145,7 @@ app.add_middleware(RequestKontextMiddleware)
 
 app.add_middleware(AuditKontextMiddleware)
 
+app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(mfa.router)
 app.include_router(account_typen.router)
@@ -222,17 +226,3 @@ app.include_router(zeitplan.router)
 app.include_router(zeitplan.vorlagen_router)
 app.include_router(fehlerberichte.router)
 app.include_router(fehlerberichte.service_router)
-
-
-@app.get("/healthz")
-async def healthz() -> dict:
-    async with engine.connect() as conn:
-        await conn.execute(text("SELECT 1"))
-    await ensure_bucket()
-    letzter_scheduler_lauf = await get_last_scheduler_run()
-    return {
-        "status": "ok",
-        "scheduler_letzter_lauf": letzter_scheduler_lauf.isoformat()
-        if letzter_scheduler_lauf
-        else None,
-    }
