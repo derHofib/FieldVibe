@@ -19,6 +19,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.angebot_annahme import AngebotAnnahme
 from app.schemas.angebot import AngebotAbschlagRead, AngebotNachweisRead, AngebotPositionRead, AngebotRead
 from app.services import rechnung_service
+from app.services.audit_service import log_action
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.steuer_service import ist_kleinunternehmer, runde_cent
@@ -317,6 +318,18 @@ async def apply_status_transition(
             mangel.angebot_id = None
 
     angebot.status = neuer_status
+    if actor_user_id is not None and neuer_status in ("versendet", "angenommen", "abgelehnt"):
+        # Portal-Entscheidungen protokolliert angebot_annahme_service.protokolliere
+        # (mit Verweis auf den Nachweis); hier nur die Mitarbeiter-Uebergaenge.
+        await log_action(
+            session,
+            aktion=f"angebot_{neuer_status}",
+            mandant_id=mandant_id,
+            actor_user_id=actor_user_id,
+            entity_type="angebot",
+            entity_id=angebot.id,
+            payload={"angebotsnummer": angebot.angebotsnummer},
+        )
     betroffene_vorgang_ids = {angebot.vorgang_id} if angebot.vorgang_id else set()
     betroffene_vorgang_ids |= {m.vorgang_id for m in maengel}
     for vid in betroffene_vorgang_ids:

@@ -32,6 +32,7 @@ from app.schemas.material import (
     MaterialVerwendungRead,
 )
 from app.services import papierkorb_service
+from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.vorgang_completion_service import VORGANG_STATUS_GESCHLOSSEN
 
@@ -181,7 +182,9 @@ async def list_material(
 
 
 @router.get("/export/csv")
-async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Response:
+async def export_material_csv(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> Response:
     result = await session.execute(
         select(Material, MaterialBestand, Anlage.bezeichnung)
         .join(MaterialBestand, MaterialBestand.material_id == Material.id)
@@ -199,6 +202,9 @@ async def export_material_csv(session: AsyncSession = Depends(get_db)) -> Respon
         ]
         for material, bestand, lager_bezeichnung in result.all()
     ]
+    await export_protokollieren(
+        session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="csv", objekt="material", zeilen=len(rows)
+    )
     return csv_response(
         ["Material", "Einheit", "Lagerort", "Menge", "Mindestbestand", "Einzelpreis (EUR)"],
         rows,

@@ -41,6 +41,7 @@ from app.schemas.zeiterfassung import (
     ZeiterfassungUpdate,
 )
 from app.services import berechtigung_service, papierkorb_service
+from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.event_bus import event_bus
 from app.services.pdf_service import generate_wochenzettel_pdf
@@ -295,6 +296,9 @@ async def export_zeiterfassung_csv(
             ]
         )
 
+    await export_protokollieren(
+        session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="csv", objekt="zeiterfassung", zeilen=len(rows)
+    )
     return csv_response(
         [
             "Datum",

@@ -41,6 +41,8 @@ from app.schemas.rechnung import (
     RechnungZahlungCreate,
 )
 from app.services import papierkorb_service, rechnungsart_service, steuer_service, storage_service
+from app.services.audit_service import log_action
+from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_rechnungsnummer
@@ -348,6 +350,9 @@ async def export_rechnungen_csv(
         ]
         for r in gelesen
     ]
+    await export_protokollieren(
+        session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="csv", objekt="rechnungen", zeilen=len(rows)
+    )
     return csv_response(
         [
             "Rechnungsnummer",
@@ -476,6 +481,7 @@ async def delete_rechnung(
     await papierkorb_service.soft_delete(
         session, entity_typ="rechnung", entity_id=rechnung_id, actor_user_id=auth.user_id
     )
+    await _audit(session, auth, "rechnung_entwurf_geloescht", rechnung)
 
 
 def _steuer_fuer_position(
@@ -613,6 +619,7 @@ async def create_rechnung(
                 payload={"rechnung_id": str(rechnung.id), "status": "entwurf"},
             )
         )
+    await _audit(session, auth, "rechnung_erstellt", rechnung)
     await session.flush()
     return await to_read_model(session, rechnung)
 
@@ -640,6 +647,7 @@ async def create_rechnung_aus_angebot(
     rechnung = await rechnungsart_service.rechnung_aus_angebot(
         session, body, mandant=mandant, actor_user_id=auth.user_id
     )
+    await _audit(session, auth, "rechnung_erstellt", rechnung, angebot_id=str(angebot.id))
     return await to_read_model(session, rechnung)
 
 
@@ -664,6 +672,7 @@ async def abschlaege_anrechnen(
         )
     await rechnungsart_service.abschlaege_anrechnen(session, rechnung, body or AbschlaegeAnrechnen())
     await session.refresh(rechnung)
+    await _audit(session, auth, "abschlaege_angerechnet", rechnung)
     return await to_read_model(session, rechnung)
 
 
@@ -697,6 +706,7 @@ async def create_gutschrift(
     await rechnungsart_service.vorgang_event_gutschrift(session, original, gutschrift, auth.user_id)
     await session.flush()
     await session.refresh(gutschrift)
+    await _audit(session, auth, "gutschrift_erstellt", gutschrift, bezug_rechnung_id=str(original.id))
     return await to_read_model(session, gutschrift)
 
 
@@ -1012,6 +1022,22 @@ async def get_positionsvorschlaege(
     return await positionen_vorschlaege_fuer_vorgang(session, rechnung.vorgang_id, mandant)
 
 
+async def _audit(
+    session: AsyncSession, auth: AuthContext, aktion: str, rechnung: Rechnung, **payload
+) -> None:
+    """Beleg-Ereignis im Mandanten-Protokoll. Nur Referenzen und Belegdaten, keine
+    Kundenstammdaten (die stehen im Beleg selbst)."""
+    await log_action(
+        session,
+        aktion=aktion,
+        mandant_id=rechnung.mandant_id,
+        actor_user_id=auth.user_id,
+        entity_type="rechnung",
+        entity_id=rechnung.id,
+        payload={"rechnungsnummer": rechnung.rechnungsnummer, "rechnungsart": rechnung.rechnungsart, **payload},
+    )
+
+
 async def _auf_bezahlt_setzen(
     session: AsyncSession, rechnung: Rechnung, auth: AuthContext, *, bezahlt_am: datetime
 ) -> None:
@@ -1095,6 +1121,7 @@ async def update_rechnung(
                 await archiviere_pdf(session, rechnung, mandant, kunde)
             except VersandFehler as exc:
                 raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+            await _audit(session, auth, "rechnung_versendet", rechnung)
         elif neuer_status == "bezahlt":
             if rechnung.rechnungsart == "gutschrift":
                 raise HTTPException(
@@ -1123,6 +1150,9 @@ async def update_rechnung(
                     )
                 )
             await _auf_bezahlt_setzen(session, rechnung, auth, bezahlt_am=jetzt)
+            await _audit(session, auth, "rechnung_als_bezahlt_markiert", rechnung, restbetrag=str(offen))
+        elif neuer_status == "storniert":
+            await _audit(session, auth, "rechnung_entwurf_storniert", rechnung)
 
         if rechnung.vorgang_id is not None:
             vorgang = await session.get(Vorgang, rechnung.vorgang_id)
@@ -1218,6 +1248,7 @@ async def storno_rechnung(
                     payload={"rechnung_id": str(rechnung.id), "storno_rechnung_id": str(storno.id)},
                 )
             )
+    await _audit(session, auth, "rechnung_storniert", rechnung, storno_rechnung_id=str(storno.id), storno_rechnungsnummer=storno.rechnungsnummer)
     await session.flush()
     await session.refresh(storno)
     return await to_read_model(session, storno)
@@ -1269,18 +1300,21 @@ async def add_zahlung(
             detail=f"Zahlung übersteigt den offenen Betrag ({offener_betrag} EUR)",
         )
 
-    session.add(
-        RechnungZahlung(
-            mandant_id=rechnung.mandant_id,
-            rechnung_id=rechnung_id,
-            betrag=body.betrag,
-            datum=zahlungsdatum,
-            zahlungsart=body.zahlungsart,
-            notiz=body.notiz,
-            erstellt_von=auth.user_id,
-        )
+    zahlung = RechnungZahlung(
+        mandant_id=rechnung.mandant_id,
+        rechnung_id=rechnung_id,
+        betrag=body.betrag,
+        datum=zahlungsdatum,
+        zahlungsart=body.zahlungsart,
+        notiz=body.notiz,
+        erstellt_von=auth.user_id,
     )
+    session.add(zahlung)
     await session.flush()
+    await _audit(
+        session, auth, "zahlung_gebucht", rechnung,
+        zahlung_id=str(zahlung.id), betrag=str(body.betrag), datum=zahlungsdatum.isoformat(), zahlungsart=body.zahlungsart,
+    )
 
     neuer_offener_betrag = offener_betrag - body.betrag
     neuer_status = status_nach_zahlung(
@@ -1359,18 +1393,21 @@ async def storno_zahlung(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Diese Zahlung wurde bereits storniert"
         )
 
-    session.add(
-        RechnungZahlung(
-            mandant_id=rechnung.mandant_id,
-            rechnung_id=rechnung_id,
-            betrag=-original.betrag,
-            datum=date.today(),
-            erstellt_von=auth.user_id,
-            notiz=f"Storno der Zahlung vom {original.datum.strftime('%d.%m.%Y')}",
-            storniert_zahlung_id=zahlung_id,
-        )
+    gegenbuchung = RechnungZahlung(
+        mandant_id=rechnung.mandant_id,
+        rechnung_id=rechnung_id,
+        betrag=-original.betrag,
+        datum=date.today(),
+        erstellt_von=auth.user_id,
+        notiz=f"Storno der Zahlung vom {original.datum.strftime('%d.%m.%Y')}",
+        storniert_zahlung_id=zahlung_id,
     )
+    session.add(gegenbuchung)
     await session.flush()
+    await _audit(
+        session, auth, "zahlung_storniert", rechnung,
+        zahlung_id=str(zahlung_id), gegenbuchung_id=str(gegenbuchung.id), betrag=str(original.betrag),
+    )
 
     positionen = await positionen_fuer(session, rechnung_id)
     zahlungen = await zahlungen_fuer(session, rechnung_id)
@@ -1502,4 +1539,5 @@ async def send_rechnung_email(
         attachment=(dateiname, pdf_bytes, "application/pdf"),
         weitere_anhaenge=weitere_anhaenge,
     )
+    await _audit(session, auth, "rechnung_email_versendet", rechnung, email_log_id=str(log.id), status=log.status)
     return log

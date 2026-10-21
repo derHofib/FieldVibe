@@ -1,7 +1,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
@@ -15,6 +15,7 @@ from app.api.routes import (
     angebote,
     anlagen,
     anlagen_feld_definitionen,
+    audit,
     audit_log,
     auftraege,
     auswertung,
@@ -79,7 +80,9 @@ from app.api.routes import (
     zeitplan,
     zuweisungen,
 )
+from app.core.audit_kontext import AuditKontextMiddleware
 from app.core.config import get_settings
+from app.services.audit_service import siegel_vor_antwort
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine
 from app.services.scheduler_service import get_last_scheduler_run
@@ -113,6 +116,7 @@ app = FastAPI(
     ),
     version="0.7.0",
     lifespan=lifespan,
+    dependencies=[Depends(siegel_vor_antwort, scope="function")],
     **docs_optionen(settings),
 )
 
@@ -124,6 +128,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(AuditKontextMiddleware)
+
 app.include_router(auth.router)
 app.include_router(mfa.router)
 app.include_router(account_typen.router)
@@ -134,6 +140,7 @@ app.include_router(mandanten.router)
 app.include_router(users.router)
 app.include_router(impersonation.router)
 app.include_router(audit_log.router)
+app.include_router(audit.router)
 app.include_router(version.router)
 app.include_router(dsgvo.router)
 app.include_router(kunden.router)

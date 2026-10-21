@@ -20,7 +20,7 @@ from app.schemas.mfa import (
     MfaWiederherstellungscodes,
 )
 from app.services import mfa_service
-from app.services.audit_service import log_action
+from app.services.audit_service import log_action, login_fehlschlag_protokollieren
 from app.services.auth_service import token_paar_fuer
 from app.services.mfa_service import MfaFehler
 from app.services.token_widerruf_service import widerrufe_tokens
@@ -224,6 +224,23 @@ async def mfa_verifizieren(body: MfaVerifizierenRequest, request: Request, respo
     if payload.get("type") != TokenType.USER_MFA.value:
         raise ungueltig
 
+    fehlschlag: list[tuple] = []
+    try:
+        return await _mfa_verifizieren_pruefen(body, request, response, payload, fehlschlag)
+    except HTTPException:
+        if fehlschlag:
+            await login_fehlschlag_protokollieren(
+                mandant_id=fehlschlag[0][0], user_id=fehlschlag[0][1], grund="mfa_code_falsch"
+            )
+        raise
+
+
+async def _mfa_verifizieren_pruefen(
+    body: MfaVerifizierenRequest, request: Request, response: Response, payload: dict, fehlschlag: list
+) -> TokenPair:
+    ungueltig = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Anmeldung abgelaufen. Bitte erneut anmelden."
+    )
     async with system_session() as session:
         user = (
             await session.execute(select(User).where(User.id == payload["sub"]).with_for_update())
@@ -243,10 +260,22 @@ async def mfa_verifizieren(body: MfaVerifizierenRequest, request: Request, respo
         art = mfa_service.code_verbrauchen(user, body.code)
         if art is None:
             _fehlversuch(ip_key, account_key)
-            # Nichts zu persistieren: die Transaktion wird mit der Exception verworfen;
+            # Erst nach dem Rollback protokollieren: die Zeile ist hier per FOR UPDATE
+            # gesperrt, ein Eintrag in zweiter Transaktion (FK auf users) wuerde warten.
+            fehlschlag.append((user.mandant_id, user.id))
+            # Sonst nichts zu persistieren: die Transaktion wird mit der Exception verworfen;
             # 401 fuer ein falsches Passwort-Aequivalent, wie bei /login.
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_CODE_UNGUELTIG)
         _erfolg(ip_key, account_key)
+        await log_action(
+            session,
+            aktion="login",
+            mandant_id=user.mandant_id,
+            actor_user_id=user.id,
+            entity_type="user",
+            entity_id=user.id,
+            payload={"mfa": art},
+        )
         if art == "wiederherstellung":
             await log_action(
                 session,

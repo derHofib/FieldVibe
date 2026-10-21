@@ -24,6 +24,7 @@ from app.models.rechnung import Rechnung
 from app.models.user import User
 from app.models.vorgang_event import VorgangEvent
 from app.services import verbraucherschutz_service as vs
+from app.services.audit_service import log_action
 from app.services.angebot_service import positionen_fuer, summen
 from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
@@ -76,6 +77,23 @@ async def protokolliere(
     )
     session.add(nachweis)
     await session.flush()
+    # Nur die Verknuepfung zum Nachweis, nicht dessen Inhalt (E-Mail, IP, User-Agent):
+    # die Beweisdaten bleiben in angebot_annahmen, das Protokoll haelt Zeitpunkt und Hash.
+    await log_action(
+        session,
+        aktion=f"angebot_{aktion}",
+        mandant_id=angebot.mandant_id,
+        akteur_typ="portal",
+        entity_type="angebot",
+        entity_id=angebot.id,
+        payload={
+            "angebotsnummer": angebot.angebotsnummer,
+            "annahme_id": str(nachweis.id),
+            "kunden_portal_zugang_id": str(zugang.id),
+            "fassung_sha256": fassung_sha256,
+            "b2c": b2c,
+        },
+    )
     return nachweis
 
 

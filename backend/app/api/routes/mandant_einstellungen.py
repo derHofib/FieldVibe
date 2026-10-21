@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.core.config import get_settings
 from app.models.mandant import Mandant
-from app.services.audit_service import log_action
+from app.services.audit_service import log_action, log_aenderung
 from app.schemas.mandant_einstellungen import (
     MandantEinstellungenRead,
     MandantEinstellungenUpdate,
@@ -19,6 +19,18 @@ router = APIRouter(
 )
 
 _LOGO_MAX_BYTES = 3 * 1024 * 1024
+
+# Schluessel in Mandant.firmendaten, deren Aenderung steuerlich relevant ist
+# (Rechnungsangaben, Konten/DATEV, E-Rechnung-Modus) und deshalb mit Vorher/
+# Nachher ins Protokoll geht.
+STEUERRELEVANTE_FIRMENDATEN = (
+    "steuernummer",
+    "ust_idnr",
+    "ist_kleinunternehmer",
+    "buchhaltung",
+    "e_rechnung_modus",
+    "e_rechnung_aktiv",
+)
 
 
 def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
@@ -78,7 +90,22 @@ async def update_einstellungen(
         # Ausschnitt -- ein blindes Ueberschreiben wuerde sonst die zuletzt
         # gespeicherten Felder der anderen Formulare verwerfen.
         pflicht_vorher = (mandant.firmendaten or {}).get("mfa_pflicht") is True
+        firmendaten_vorher = dict(mandant.firmendaten or {})
         mandant.firmendaten = {**(mandant.firmendaten or {}), **updates["firmendaten"]}
+        geaendert = [
+            k for k in STEUERRELEVANTE_FIRMENDATEN if firmendaten_vorher.get(k) != mandant.firmendaten.get(k)
+        ]
+        if geaendert:
+            await log_aenderung(
+                session,
+                aktion="steuerdaten_geaendert",
+                mandant_id=mandant.id,
+                actor_user_id=auth.user_id,
+                entity_type="mandant",
+                entity_id=mandant.id,
+                vorher={k: firmendaten_vorher.get(k) for k in geaendert},
+                nachher={k: mandant.firmendaten.get(k) for k in geaendert},
+            )
         pflicht_nachher = mandant.firmendaten.get("mfa_pflicht") is True
         if pflicht_vorher != pflicht_nachher:
             await log_action(

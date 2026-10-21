@@ -14,6 +14,7 @@ from app.models.mandant import Mandant
 from app.models.user import User
 from app.schemas.auth import LoginResponse, TokenPair
 from app.services import mfa_service
+from app.services.audit_service import log_action, login_fehlschlag_protokollieren
 
 _INVALID_CREDENTIALS = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED, detail="E-Mail oder Passwort falsch"
@@ -65,10 +66,20 @@ async def authenticate(email: str, password: str) -> LoginResponse:
         )
         user = result.scalar_one_or_none()
 
-        if user is None or not verify_password(password, user.password_hash):
+        if user is None:
+            raise _INVALID_CREDENTIALS
+        # Unbekannte Adressen werden nicht protokolliert: sie haben keinen Mandanten,
+        # und das Protokoll waere sonst per Zufallsanmeldungen aus dem Netz fuellbar.
+        if not verify_password(password, user.password_hash):
+            await login_fehlschlag_protokollieren(
+                mandant_id=user.mandant_id, user_id=user.id, grund="passwort_falsch"
+            )
             raise _INVALID_CREDENTIALS
 
         if not user.aktiv:
+            await login_fehlschlag_protokollieren(
+                mandant_id=user.mandant_id, user_id=user.id, grund="konto_deaktiviert"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Account ist deaktiviert"
             )
@@ -80,6 +91,9 @@ async def authenticate(email: str, password: str) -> LoginResponse:
             )
             mandant = mandant_result.scalar_one_or_none()
             if mandant is None or mandant.status != "aktiv":
+                await login_fehlschlag_protokollieren(
+                    mandant_id=user.mandant_id, user_id=user.id, grund="mandant_inaktiv"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Mandant ist nicht aktiv",
@@ -91,4 +105,12 @@ async def authenticate(email: str, password: str) -> LoginResponse:
                 mfa_token=create_user_mfa_token(user_id=user.id, token_version=user.token_version),
             )
         paar = await token_paar_fuer(session, user, mandant)
+        await log_action(
+            session,
+            aktion="login",
+            mandant_id=user.mandant_id,
+            actor_user_id=user.id,
+            entity_type="user",
+            entity_id=user.id,
+        )
         return LoginResponse(access_token=paar.access_token, refresh_token=paar.refresh_token)

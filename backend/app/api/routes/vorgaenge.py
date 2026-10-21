@@ -46,6 +46,7 @@ from app.schemas.vorgang_abhaengigkeit import (
 )
 from app.services import papierkorb_service
 from app.services.audit_service import log_action
+from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.email_service import send_email_and_log
 from app.services.event_bus import event_bus
@@ -373,6 +374,9 @@ async def export_vorgaenge_csv(
             ]
         )
 
+    await export_protokollieren(
+        session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="csv", objekt="vorgaenge", zeilen=len(rows)
+    )
     return csv_response(
         ["Vorgangsnummer", "Titel", "Kunde", "Anlage", "Status", "Abrechnungsart", "Leistungstyp", "Erstellt am", "Abgeschlossen am"],
         rows,

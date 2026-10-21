@@ -14,4 +14,6 @@ class AuditLogRead(BaseModel):
     entity_type: str | None
     entity_id: UUID | None
     payload: dict
+    akteur_typ: str
+    request_id: str | None
     created_at: datetime

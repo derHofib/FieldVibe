@@ -139,15 +139,51 @@ async def ueberall_abmelden(response: Response, auth: AuthContext = Depends(get_
         if user is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account nicht gültig")
         await widerrufe_tokens(session, user)
+        await log_action(
+            session,
+            aktion="logout_alle_geraete",
+            mandant_id=user.mandant_id,
+            actor_user_id=user.id,
+            entity_type="user",
+            entity_id=user.id,
+        )
     refresh_cookie.loesche_refresh_cookie(response)
 
 
 @router.post("/abmelden", status_code=status.HTTP_204_NO_CONTENT)
-async def abmelden(response: Response) -> None:
+async def abmelden(request: Request, response: Response) -> None:
     """Loescht nur das Refresh-Cookie dieses Browsers (keine Authentifizierung
     noetig: ohne Cookie ist nichts zu tun). Andere Geraete bleiben angemeldet,
     dafuer gibt es /ueberall-abmelden."""
+    await _abmeldung_protokollieren(request)
     refresh_cookie.loesche_refresh_cookie(response)
+
+
+async def _abmeldung_protokollieren(request: Request) -> None:
+    """Den Nutzer nur aus einem gueltigen Refresh-Cookie ableiten; alles andere
+    (kein Cookie, abgelaufen, fremd) ist kein protokollierbares Ereignis und
+    darf das Abmelden nie verhindern."""
+    token = request.cookies.get(refresh_cookie.COOKIE_NAME)
+    if not token:
+        return
+    try:
+        payload = decode_token(token)
+        if payload.get("type") != TokenType.REFRESH.value:
+            return
+        async with system_session() as session:
+            user = await session.get(User, payload["sub"])
+            if user is None or user.mandant_id is None:
+                return
+            await log_action(
+                session,
+                aktion="logout",
+                mandant_id=user.mandant_id,
+                actor_user_id=user.id,
+                entity_type="user",
+                entity_id=user.id,
+            )
+    except Exception:
+        _logger.warning("Abmeldung konnte nicht protokolliert werden", exc_info=True)
 
 
 @router.post("/passwort-vergessen", status_code=status.HTTP_202_ACCEPTED)

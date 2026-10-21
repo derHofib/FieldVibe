@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -129,6 +129,7 @@ async def _auth_context_aus_token(
 
 
 async def get_db(
+    request: Request,
     auth: AuthContext = Depends(get_current_user),
 ) -> AsyncIterator[AsyncSession]:
     """Tenant-scoped DB session. super_admin gets an RLS-bypassing session
@@ -141,6 +142,8 @@ async def get_db(
         else tenant_session(mandant_id=auth.mandant_id, is_super_admin=False)
     )
     async with ctx as session:
+        # Fuer audit_siegel_vor_antwort (app/services/audit_service.py).
+        request.state.audit_session = session
         yield session
 
 

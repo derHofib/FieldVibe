@@ -26,6 +26,7 @@ from app.schemas.eingangsrechnung import (
 )
 from app.services import e_rechnung_empfang_service as empfang
 from app.services import papierkorb_service, storage_service
+from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
 from app.services.eingangsrechnung_service import (
     bezahlter_betrag,
@@ -77,6 +78,7 @@ async def list_eingangsrechnungen(
 @router.get("/export/csv")
 async def export_eingangsrechnungen_csv(
     status_filter: str | None = Query(default=None, alias="status"),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
     stmt = (
@@ -107,6 +109,9 @@ async def export_eingangsrechnungen_csv(
             ]
         )
 
+    await export_protokollieren(
+        session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="csv", objekt="eingangsrechnungen", zeilen=len(rows)
+    )
     return csv_response(
         ["Lieferant", "Rechnungsnummer", "Rechnungsdatum", "Fällig am", "Kategorie", "Status", "Brutto", "Bezahlt", "Offen"],
         rows,

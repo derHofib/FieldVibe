@@ -11,6 +11,7 @@ from app.services.auswertung_service import (
     offene_posten_bericht,
     ust_va_bericht,
 )
+from app.services.audit_service import export_protokollieren
 from app.services.datev_service import DatevKonfigurationFehler
 from app.services.zuweisung_service import erlaubte_kunde_ids
 
@@ -49,7 +50,9 @@ async def get_ust_va_bericht(
 ) -> UstVaBericht:
     if bis < von:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
-    return await ust_va_bericht(session, auth.mandant_id, von, bis)
+    bericht = await ust_va_bericht(session, auth.mandant_id, von, bis)
+    await export_protokollieren(session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="ustva", von=von, bis=bis)
+    return bericht
 
 
 @router.get("/offene-posten", response_model=OffenePostenBericht)
@@ -69,6 +72,8 @@ async def get_datev_export(
     if bis < von:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="'bis' darf nicht vor 'von' liegen")
     try:
-        return await datev_export_csv(session, auth.mandant_id, von, bis)
+        antwort = await datev_export_csv(session, auth.mandant_id, von, bis)
     except (KontoNichtKonfiguriert, DatevKonfigurationFehler) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    await export_protokollieren(session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="datev", von=von, bis=bis)
+    return antwort
