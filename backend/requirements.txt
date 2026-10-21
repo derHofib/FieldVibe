@@ -12,7 +12,7 @@ argon2-cffi==25.1.0
 sse-starlette==3.4.8
 boto3==1.43.70
 python-multipart==0.0.32
-Pillow==12.3.0
+Pillow==13.0.0
 fpdf2==2.8.8
 drafthorse==2025.2.0
 cryptography==50.0.0
