@@ -145,6 +145,13 @@ class Settings(BaseSettings):
     # scheduler_stunde_utc-Konfiguration in ihren mandant_integrationen
     # (siehe app/services/scheduler_service.py, Phase-8-Nacharbeit).
     scheduler_default_stunde_utc: int = 3
+    # Takt, in dem der Worker prueft, welche Jobs faellig sind (app/services/job_runner.py).
+    scheduler_tick_sekunden: int = 60
+    # Pause nach einem fehlgeschlagenen Job-Lauf, bevor er erneut versucht wird.
+    scheduler_retry_minuten: int = 30
+    # Ausfall laenger als so viele Tage: der Lauf wird weiterhin einmal nachgeholt, aber als
+    # ERROR gemeldet (zustandsbasierte Jobs brauchen keine Wiederholung je verpasstem Tag).
+    scheduler_nachholen_max_tage: int = 3
     # Default-Frist (Tage) fuer die Wiedervorlage bei status="wartet_kunde"
     # (siehe app/api/routes/vorgaenge.py), ueberschreibbar pro Mandant via
     # Mandant.wiedervorlage_standard_tage.

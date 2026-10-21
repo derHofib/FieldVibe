@@ -1,12 +1,16 @@
-"""Hintergrund-Worker: prueft stuendlich, welche Mandanten gerade ihre
-konfigurierte taegliche Scheduler-Stunde erreicht haben, und fuehrt fuer
-genau diese den Pruefzyklen-Scheduler, die Mahnwesen-Eskalation, das
-Angebot-Nachfassen und den Kreditorenbuchhaltung-Faelligkeits-Check aus.
-Der E-Mail-Rechnungseingang-Import (siehe email_ingest_service.py) laeuft
-dagegen unabhaengig von der mandantenindividuellen Scheduler-Stunde bei jedem
-stuendlichen Tick fuer
-alle Mandanten mit aktiver IMAP-Integration -- ein neuer Beleg soll nicht
-bis zu 24 Stunden auf die naechste Verarbeitung warten.
+"""Hintergrund-Worker. Drei unabhaengige Schleifen:
+
+- Scheduler: prueft jede Minute (scheduler_tick_sekunden), welche Jobs faellig sind
+  (app/services/job_runner.py). Faellig heisst "letzter erfolgreicher Lauf liegt vor dem
+  juengsten Slot" -- ein verpasster Lauf (Neustart, Ausfall) wird beim naechsten Tick
+  nachgeholt, nicht erst am naechsten Tag. Enthalten: Pruefzyklen, Dauerauftraege,
+  Prioritaet, Wiedervorlage, Angebot-Nachfassen, Mahnwesen, Kreditoren (je zur
+  Scheduler-Stunde des Mandanten) sowie E-Mail-Rechnungseingang und Aufraeumen.
+- Mail-Sync: persoenliche Postfaecher (siehe mail_sync_service.py) in eigenem, kurzem
+  Takt -- eine Stunde Verzoegerung waere fuer einen Outlook-Ersatz spuerbar schlecht,
+  echtes IMAP IDLE ist fuer V1 bewusst zurueckgestellt.
+- Heartbeat: Lebenszeichen fuer Docker-Healthcheck und /health/heartbeats
+  (app/services/heartbeat_service.py).
 
 Laeuft als eigener Compose-Service (siehe docker-compose.yml, Service
 "worker") -- getrennt vom Backend-Container, damit ein API-Neustart/Deploy
@@ -18,175 +22,31 @@ Usage:
 """
 import asyncio
 import logging
-from datetime import datetime, timedelta, timezone
 
 from app.core.config import get_settings
 from app.core.error_tracking import init_error_tracking
-from app.core.logging_config import konfiguriere_logging
+from app.core.logging_config import job_kontext, konfiguriere_logging
 from app.db.rollen_pruefung import pruefe_db_rolle
-from app.db.session import engine, system_session
-from app.services.datenimport.lauf import raeume_auf as raeume_datenimport_auf
+from app.db.session import engine
 from app.services.export_job_service import raeume_auf as raeume_exporte_auf
 from app.services.export_job_service import verarbeite_naechsten as verarbeite_export
-from app.services.email_ingest_service import run_email_ingest
 from app.services.heartbeat_service import heartbeat_schleife
+from app.services.job_runner import fuehre_tick
 from app.services.job_state_service import heartbeat
-from app.services.fehlerbericht_service import loesche_abgelaufene_fehlerberichte
-from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
-from app.services.mahnwesen_service import run_mahnwesen_eskalation
 from app.services.mail_sync_service import run_mail_sync
 from app.services.s3_aufraeumen_service import verarbeite as verarbeite_s3_aufraeumen
-from app.services.scheduler_service import (
-    mandanten_faellig_um,
-    run_angebot_nachfassen,
-    run_dauerauftraege_scheduler,
-    run_prioritaet_scheduler,
-    run_pruefzyklen_scheduler,
-    run_wiedervorlage_scheduler,
-)
-from app.services.worker_lock import mail_sync_lock, worker_lock
+from app.services.worker_lock import mail_sync_lock
 
 konfiguriere_logging(format=get_settings().log_format_aktiv, level=get_settings().log_level)
 logger = logging.getLogger("app.worker")
 
-# Persoenliche Postfaecher (siehe mail_sync_service.py) laufen in einem
-# eigenen, viel kuerzeren Takt als der stuendliche Scheduler-Tick -- eine
-# Stunde Verzoegerung waere fuer einen Outlook-Ersatz spuerbar schlecht,
-# echtes IMAP IDLE (Server-Push) ist fuer V1 bewusst zurueckgestellt.
 MAIL_SYNC_INTERVAL_SECONDS = 120
 # Mandanten-Exporte (Vollexport, Z3) starten nach dem Anfordern sofort im API-Prozess; der
 # Worker holt liegengebliebene Auftraege (Neustart, Absturz) in diesem Takt nach.
 EXPORT_INTERVAL_SECONDS = 30
-
-
-def _seconds_until_next_full_hour(now: datetime | None = None) -> float:
-    now = now or datetime.now(timezone.utc)
-    next_hour = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-    return (next_hour - now).total_seconds()
-
-
-async def _run_hourly_tick() -> None:
-    jetzt = datetime.now(timezone.utc)
-    async with system_session() as session:
-        mandant_ids = await mandanten_faellig_um(session, jetzt.hour)
-
-    async with worker_lock() as acquired:
-        if not acquired:
-            # Ein anderer Worker-Container haelt den Lock bereits fuer
-            # diesen Tick -- kein Grund zur Sorge, der naechste stuendliche
-            # Tick greift wieder (der Zustand in der DB, nicht der Timer,
-            # ist die Quelle der Wahrheit dafuer, was faellig ist).
-            logger.info("Ein anderer Worker hält den Lock bereits, dieser Tick wird übersprungen")
-            return
-
-        try:
-            email_ergebnis = await run_email_ingest()
-            logger.info("E-Mail-Rechnungseingang-Import abgeschlossen: %s", email_ergebnis)
-            await heartbeat("email_ingest")
-        except Exception:
-            logger.exception("E-Mail-Rechnungseingang-Import fehlgeschlagen")
-
-        # Stuendlich, nicht nur zur Standard-Stunde: die Quelldatei eines Imports soll
-        # nach 24 Stunden weg sein, nicht erst nach dem naechsten Tageslauf.
-        try:
-            aufgeraeumt = await raeume_datenimport_auf()
-            if aufgeraeumt["quellen"] or aufgeraeumt["fehlerberichte"]:
-                logger.info("Datenimport-Aufräumen: %s", aufgeraeumt)
-        except Exception:
-            logger.exception("Datenimport-Aufräumen fehlgeschlagen")
-
-        try:
-            entfernt = await raeume_exporte_auf()
-            if entfernt:
-                logger.info("Export-Aufräumen: %d abgelaufene(s) Ergebnis-ZIP entfernt", entfernt)
-        except Exception:
-            logger.exception("Export-Aufräumen fehlgeschlagen")
-
-        # Offene Aufraeumauftraege im Objektspeicher (nach endgueltigem Loeschen); der
-        # Hintergrund-Task der API erledigt die meisten sofort, das hier holt Fehlschlaege nach.
-        try:
-            s3_ergebnis = await verarbeite_s3_aufraeumen()
-            if s3_ergebnis["erledigt"] or s3_ergebnis["fehlgeschlagen"]:
-                logger.info("S3-Aufräumen: %s", s3_ergebnis)
-        except Exception:
-            logger.exception("S3-Aufräumen fehlgeschlagen")
-
-        # Einmal taeglich zur Standard-Scheduler-Stunde -- unabhaengig davon,
-        # ob gerade ein Mandant faellig ist (Aufbewahrung gilt plattformweit).
-        if jetzt.hour == get_settings().scheduler_default_stunde_utc:
-            try:
-                geloescht = await loesche_abgelaufene_fehlerberichte()
-                if geloescht:
-                    logger.info("Fehlerbericht-Aufbewahrung: %d abgelaufene(r) Bericht(e) gelöscht", geloescht)
-            except Exception:
-                logger.exception("Fehlerbericht-Aufbewahrungslauf fehlgeschlagen")
-
-        if not mandant_ids:
-            logger.info("Keine Mandanten für Stunde %02d:00 UTC fällig", jetzt.hour)
-            return
-
-        try:
-            ergebnis = await run_pruefzyklen_scheduler(mandant_ids)
-            logger.info(
-                "Scheduler-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
-                jetzt.hour, len(mandant_ids), ergebnis,
-            )
-        except Exception:
-            logger.exception("Scheduler-Lauf fehlgeschlagen")
-
-        try:
-            dauerauftraege_ergebnis = await run_dauerauftraege_scheduler(mandant_ids)
-            logger.info(
-                "Dauerauftraege-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
-                jetzt.hour, len(mandant_ids), dauerauftraege_ergebnis,
-            )
-        except Exception:
-            logger.exception("Dauerauftraege-Lauf fehlgeschlagen")
-
-        try:
-            prioritaet_ergebnis = await run_prioritaet_scheduler(mandant_ids)
-            logger.info(
-                "Prioritaets-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
-                jetzt.hour, len(mandant_ids), prioritaet_ergebnis,
-            )
-        except Exception:
-            logger.exception("Prioritaets-Lauf fehlgeschlagen")
-
-        try:
-            wiedervorlage_ergebnis = await run_wiedervorlage_scheduler(mandant_ids)
-            logger.info(
-                "Wiedervorlage-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
-                jetzt.hour, len(mandant_ids), wiedervorlage_ergebnis,
-            )
-        except Exception:
-            logger.exception("Wiedervorlage-Lauf fehlgeschlagen")
-
-        try:
-            angebot_ergebnis = await run_angebot_nachfassen(mandant_ids)
-            logger.info(
-                "Angebot-Nachfassen-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
-                jetzt.hour, len(mandant_ids), angebot_ergebnis,
-            )
-        except Exception:
-            logger.exception("Angebot-Nachfassen-Lauf fehlgeschlagen")
-
-        try:
-            mahn_ergebnis = await run_mahnwesen_eskalation(mandant_ids)
-            logger.info(
-                "Mahnwesen-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
-                jetzt.hour, len(mandant_ids), mahn_ergebnis,
-            )
-        except Exception:
-            logger.exception("Mahnwesen-Lauf fehlgeschlagen")
-
-        try:
-            kreditoren_ergebnis = await run_kreditoren_faelligkeits_check(mandant_ids)
-            logger.info(
-                "Kreditorenbuchhaltung-Lauf (Stunde %02d:00 UTC, %d Mandant(en)) abgeschlossen: %s",
-                jetzt.hour, len(mandant_ids), kreditoren_ergebnis,
-            )
-        except Exception:
-            logger.exception("Kreditorenbuchhaltung-Lauf fehlgeschlagen")
+# Aufraeumen abgelaufener Export-ZIPs und offener S3-Loeschauftraege (nach endgueltigem Loeschen);
+# der API-Prozess erledigt die meisten sofort, das hier holt Fehlschlaege nach.
+AUFRAEUM_ALLE_N_EXPORT_TAKTE = 20
 
 
 async def _run_mail_sync_tick() -> None:
@@ -196,24 +56,24 @@ async def _run_mail_sync_tick() -> None:
             # bereits -- der naechste Takt (siehe MAIL_SYNC_INTERVAL_SECONDS)
             # holt das nach.
             return
-        try:
-            ergebnis = await run_mail_sync()
-            await heartbeat("mail_sync")
-            if ergebnis["konten_synchronisiert"] or ergebnis["fehler"]:
-                logger.info("Mail-Sync abgeschlossen: %s", ergebnis)
-        except Exception:
-            logger.exception("Mail-Sync-Tick fehlgeschlagen")
+        with job_kontext("mail_sync"):
+            try:
+                ergebnis = await run_mail_sync()
+                await heartbeat("mail_sync")
+                if ergebnis["konten_synchronisiert"] or ergebnis["fehler"]:
+                    logger.info("Mail-Sync abgeschlossen: %s", ergebnis)
+            except Exception:
+                logger.exception("Mail-Sync-Tick fehlgeschlagen")
 
 
-async def _hourly_loop() -> None:
+async def _scheduler_loop() -> None:
+    # Sofort ein erster Tick: nach einem Neustart/Deploy wird Versaeumtes unmittelbar nachgeholt.
     while True:
-        wartezeit = _seconds_until_next_full_hour()
-        logger.info("Nächster stündlicher Tick in %.0f Sekunden", wartezeit)
-        await asyncio.sleep(wartezeit)
         try:
-            await _run_hourly_tick()
+            await fuehre_tick()
         except Exception:
-            logger.exception("Stündlicher Tick fehlgeschlagen")
+            logger.exception("Scheduler-Tick fehlgeschlagen")
+        await asyncio.sleep(get_settings().scheduler_tick_sekunden)
 
 
 async def _mail_sync_loop() -> None:
@@ -223,6 +83,7 @@ async def _mail_sync_loop() -> None:
 
 
 async def _export_loop() -> None:
+    takt = 0
     while True:
         await asyncio.sleep(EXPORT_INTERVAL_SECONDS)
         try:
@@ -230,16 +91,31 @@ async def _export_loop() -> None:
                 pass
         except Exception:
             logger.exception("Export-Verarbeitung fehlgeschlagen")
+        takt += 1
+        if takt % AUFRAEUM_ALLE_N_EXPORT_TAKTE:
+            continue
+        try:
+            entfernt = await raeume_exporte_auf()
+            if entfernt:
+                logger.info("Export-Aufräumen: %d abgelaufene(s) Ergebnis-ZIP entfernt", entfernt)
+        except Exception:
+            logger.exception("Export-Aufräumen fehlgeschlagen")
+        try:
+            s3_ergebnis = await verarbeite_s3_aufraeumen()
+            if s3_ergebnis["erledigt"] or s3_ergebnis["fehlgeschlagen"]:
+                logger.info("S3-Aufräumen: %s", s3_ergebnis)
+        except Exception:
+            logger.exception("S3-Aufräumen fehlgeschlagen")
 
 
 async def main() -> None:
     init_error_tracking(komponente="worker")
     await pruefe_db_rolle(engine)
     logger.info(
-        "Worker gestartet -- stündlicher Scheduler-Tick, Mail-Sync alle %d Sekunden",
-        MAIL_SYNC_INTERVAL_SECONDS,
+        "Worker gestartet -- Scheduler-Tick alle %d Sekunden, Mail-Sync alle %d Sekunden",
+        get_settings().scheduler_tick_sekunden, MAIL_SYNC_INTERVAL_SECONDS,
     )
-    await asyncio.gather(_hourly_loop(), _mail_sync_loop(), _export_loop(), heartbeat_schleife())
+    await asyncio.gather(_scheduler_loop(), _mail_sync_loop(), _export_loop(), heartbeat_schleife())
 
 
 if __name__ == "__main__":

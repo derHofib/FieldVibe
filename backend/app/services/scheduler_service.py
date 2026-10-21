@@ -102,7 +102,11 @@ async def run_pruefzyklen_scheduler(mandant_ids: list[UUID] | None = None) -> di
         )
         if mandant_ids is not None:
             pruefzyklen_stmt = pruefzyklen_stmt.where(Pruefzyklus.mandant_id.in_(mandant_ids))
-        pruefzyklen = (await session.execute(pruefzyklen_stmt)).scalars().all()
+        # SKIP LOCKED: ein paralleler Lauf (zweiter Worker, manueller Aufruf) bekommt dieselbe Zeile
+        # nicht noch einmal und legt keinen zweiten Vorgang an.
+        pruefzyklen = (
+            await session.execute(pruefzyklen_stmt.with_for_update(skip_locked=True, of=Pruefzyklus))
+        ).scalars().all()
 
         for zyklus in pruefzyklen:
             anlage = await session.get(Anlage, zyklus.anlage_id)
@@ -299,7 +303,9 @@ async def run_dauerauftraege_scheduler(mandant_ids: list[UUID] | None = None) ->
         )
         if mandant_ids is not None:
             stmt = stmt.where(Dauerauftrag.mandant_id.in_(mandant_ids))
-        faellige_ziele = (await session.execute(stmt)).all()
+        faellige_ziele = (
+            await session.execute(stmt.with_for_update(skip_locked=True, of=DauerauftragZiel))
+        ).all()
 
         for ziel, auftrag in faellige_ziele:
             vorgangsnummer = await next_vorgangsnummer(session, auftrag.mandant_id)
@@ -450,7 +456,9 @@ async def run_wiedervorlage_scheduler(mandant_ids: list[UUID] | None = None) -> 
         )
         if mandant_ids is not None:
             stmt = stmt.where(Vorgang.mandant_id.in_(mandant_ids))
-        faellige_vorgaenge = (await session.execute(stmt)).scalars().all()
+        faellige_vorgaenge = (
+            await session.execute(stmt.with_for_update(skip_locked=True))
+        ).scalars().all()
 
         for vorgang in faellige_vorgaenge:
             # Zustaendiger Nutzer bekommt die Erinnerung persoenlich -- ist
@@ -534,7 +542,7 @@ async def run_angebot_nachfassen(mandant_ids: list[UUID] | None = None) -> dict:
         )
         if mandant_ids is not None:
             stmt = stmt.where(Angebot.mandant_id.in_(mandant_ids))
-        faellige = (await session.execute(stmt)).scalars().all()
+        faellige = (await session.execute(stmt.with_for_update(skip_locked=True))).scalars().all()
 
         for angebot in faellige:
             kunde = await session.get(Kunde, angebot.kunde_id)
