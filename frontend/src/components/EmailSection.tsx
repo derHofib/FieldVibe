@@ -154,10 +154,12 @@ export function EmailSection({
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                     e.status === "gesendet"
                       ? "bg-st-erledigt-bg text-st-erledigt  "
-                      : "bg-st-fehlt-bg text-st-fehlt  "
+                      : e.status === "ausstehend"
+                        ? "bg-st-arbeit-bg text-st-arbeit  "
+                        : "bg-st-fehlt-bg text-st-fehlt  "
                   }`}
                 >
-                  {e.status === "gesendet" ? "Gesendet" : "Fehler"}
+                  {e.status === "gesendet" ? "Gesendet" : e.status === "ausstehend" ? "Wird gesendet" : "Fehler"}
                 </span>
               </div>
               <div className="text-xs text-label2">
@@ -165,6 +167,9 @@ export function EmailSection({
                 {new Date(e.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}
                 {e.anhang_dateiname && ` · ${e.anhang_dateiname}`}
               </div>
+              {e.status === "ausstehend" && e.fehlermeldung && (
+                <div className="mt-0.5 text-xs text-label2">{e.fehlermeldung}</div>
+              )}
               {e.status === "fehler" && e.fehlermeldung && (
                 <div className="mt-0.5">
                   <FehlerMeldung meldung={e.fehlermeldung} />

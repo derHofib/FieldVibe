@@ -112,6 +112,12 @@ def new_mail_attachment_key(mandant_id: uuid.UUID, message_id: uuid.UUID, filena
     return f"{mandant_prefix(mandant_id)}mail-nachrichten/{message_id}/{uuid.uuid4()}.{_endung(filename)}"
 
 
+def new_mail_outbox_key(mandant_id: uuid.UUID | None, outbox_id: uuid.UUID, index: int) -> str:
+    # Nur Mandant/Outbox-ID/Index im Schluessel: Dateinamen koennen personenbezogen sein
+    # und stehen ohnehin in der Outbox-Zeile.
+    return f"mail-outbox/{mandant_id or 'plattform'}/{outbox_id}/{index}"
+
+
 def new_dsgvo_dokument_key(typ: str, filename: str) -> str:
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
     return f"dsgvo/{typ}/{uuid.uuid4()}.{suffix}"

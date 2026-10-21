@@ -45,6 +45,7 @@ from app.api.routes import (
     lieferanten,
     maengel,
     mail_accounts,
+    mail_outbox,
     mail_messages,
     mandant_einstellungen,
     mfa,
@@ -215,6 +216,7 @@ app.include_router(papierkorb.router)
 app.include_router(datenimport.router)
 app.include_router(system_resources.router)
 app.include_router(mail_accounts.router)
+app.include_router(mail_outbox.router)
 app.include_router(mail_messages.router)
 app.include_router(partner.router)
 app.include_router(partner_auth.router)

@@ -1,4 +1,4 @@
-"""Hintergrund-Worker. Drei unabhaengige Schleifen:
+"""Hintergrund-Worker. Vier unabhaengige Schleifen:
 
 - Scheduler: prueft jede Minute (scheduler_tick_sekunden), welche Jobs faellig sind
   (app/services/job_runner.py). Faellig heisst "letzter erfolgreicher Lauf liegt vor dem
@@ -9,6 +9,8 @@
 - Mail-Sync: persoenliche Postfaecher (siehe mail_sync_service.py) in eigenem, kurzem
   Takt -- eine Stunde Verzoegerung waere fuer einen Outlook-Ersatz spuerbar schlecht,
   echtes IMAP IDLE ist fuer V1 bewusst zurueckgestellt.
+- Mail-Outbox: versendet die in der Datenbank eingereihten Mails nach dem Commit der
+  ausloesenden Aktion, mit Retry (app/services/mail_outbox_service.py).
 - Heartbeat: Lebenszeichen fuer Docker-Healthcheck und /health/heartbeats
   (app/services/heartbeat_service.py).
 
@@ -33,6 +35,7 @@ from app.services.export_job_service import verarbeite_naechsten as verarbeite_e
 from app.services.heartbeat_service import heartbeat_schleife
 from app.services.job_runner import fuehre_tick
 from app.services.job_state_service import heartbeat
+from app.services.mail_outbox_service import verarbeite_outbox
 from app.services.mail_sync_service import run_mail_sync
 from app.services.s3_aufraeumen_service import verarbeite as verarbeite_s3_aufraeumen
 from app.services.worker_lock import mail_sync_lock
@@ -108,6 +111,20 @@ async def _export_loop() -> None:
             logger.exception("S3-Aufräumen fehlgeschlagen")
 
 
+async def _outbox_loop() -> None:
+    # Kein Advisory-Lock noetig: verarbeite_outbox verteilt die Zeilen per FOR UPDATE SKIP LOCKED,
+    # mehrere Worker duerfen parallel laufen.
+    while True:
+        with job_kontext("mail_outbox"):
+            try:
+                ergebnis = await verarbeite_outbox()
+                if any(ergebnis.values()):
+                    logger.info("Mail-Outbox: %s", ergebnis)
+            except Exception:
+                logger.exception("Mail-Outbox-Durchlauf fehlgeschlagen")
+        await asyncio.sleep(get_settings().mail_outbox_intervall_sekunden)
+
+
 async def main() -> None:
     init_error_tracking(komponente="worker")
     await pruefe_db_rolle(engine)
@@ -115,7 +132,9 @@ async def main() -> None:
         "Worker gestartet -- Scheduler-Tick alle %d Sekunden, Mail-Sync alle %d Sekunden",
         get_settings().scheduler_tick_sekunden, MAIL_SYNC_INTERVAL_SECONDS,
     )
-    await asyncio.gather(_scheduler_loop(), _mail_sync_loop(), _export_loop(), heartbeat_schleife())
+    await asyncio.gather(
+        _scheduler_loop(), _mail_sync_loop(), _outbox_loop(), _export_loop(), heartbeat_schleife()
+    )
 
 
 if __name__ == "__main__":

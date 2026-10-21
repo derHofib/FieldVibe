@@ -1981,7 +1981,7 @@ export interface MailMessageDetail {
 // --- E-Mail-Versand ----------------------------------------------------------
 
 export type EmailEntityTyp = "kunde" | "vorgang" | "angebot" | "rechnung" | "bestellung";
-export type EmailStatus = "gesendet" | "fehler";
+export type EmailStatus = "gesendet" | "fehler" | "ausstehend";
 
 export interface EmailLog {
   id: string;

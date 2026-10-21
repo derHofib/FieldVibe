@@ -180,6 +180,16 @@ class Settings(BaseSettings):
     global_smtp_password: str | None = None
     global_smtp_from_address: str = "account@fieldvibe.de"
 
+    # --- Mail-Outbox (app/services/mail_outbox_service.py) ---------------------
+    # Wartezeit in Minuten vor dem 2., 3., ... Versuch; nach dem letzten Eintrag und einem
+    # weiteren Fehlschlag gilt die Mail als endgueltig fehlgeschlagen (Komma-getrennt, da
+    # pydantic-settings Listen aus ENV nur als JSON liest).
+    mail_outbox_backoff_minuten: str = "1,5,30,120,720"
+    mail_outbox_intervall_sekunden: int = 15
+    # Eine "sending"-Zeile, die so lange haengt, stammt von einem abgestuerzten Worker. Ob die
+    # Mail dabei rausging, ist unbekannt -- sie wird deshalb NICHT erneut gesendet (kein Doppelversand).
+    mail_outbox_sending_timeout_minuten: int = 15
+
     # --- Mail-Postfaecher: Schutz vor SSRF (app/services/mail_netz.py) ------
     # Nur fuer lokale Entwicklung/Tests (z.B. MailHog auf localhost): hebt die
     # Sperre fuer private/Loopback-/Link-local-Ziele auf und erlaubt

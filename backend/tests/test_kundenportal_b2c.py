@@ -24,6 +24,7 @@ from app.models.rechnung import Rechnung
 from app.models.vorgang_event import VorgangEvent
 from app.services import verbraucherschutz_service as vs
 from app.services.angebot_service import berechne_fassung_sha256
+from app.services.mail_outbox_service import verarbeite_outbox
 from tests.conftest import auth_headers, login
 from tests.test_kundenportal import _kunden_login, _make_zugang
 from tests.test_steuer_je_position import _migrieren, _spalten, _sync_engine
@@ -120,6 +121,9 @@ async def _b2c_annehmen(client, ctx, **headers) -> dict:
         json=_b2c_body(version),
     )
     assert r.status_code == 200, r.text
+    # Mails gehen ueber die Outbox und erst nach dem Commit raus -- der Worker-Durchlauf
+    # wird hier von Hand ausgeloest.
+    await verarbeite_outbox()
     return r.json()
 
 
@@ -500,7 +504,7 @@ async def test_b2c_annahme_speichert_belehrung_und_sendet_bestaetigung_mit_pdf(
     assert [(log.status, log.anhang_dateiname) for log in logs] == [("gesendet", dateiname)]
 
 
-async def test_mailfehler_macht_die_annahme_nicht_rueckgaengig_wird_aber_geloggt(
+async def test_mailfehler_macht_die_annahme_nicht_rueckgaengig_wird_wiederholt_und_am_ende_gemeldet(
     client, make_mandant, make_user, make_kunde, monkeypatch, caplog
 ):
     async def _kaputt(session, mandant_id, **kwargs):
@@ -508,20 +512,26 @@ async def test_mailfehler_macht_die_annahme_nicht_rueckgaengig_wird_aber_geloggt
 
     monkeypatch.setattr("app.services.email_service.send_email", _kaputt)
     ctx = await _aufbau(client, make_mandant, make_user, make_kunde)
-    # alembic/env.py ruft fileConfig() (disable_existing_loggers) in der
-    # Session-Fixture auf und schaltet bereits importierte Logger stumm.
-    logging.getLogger("app.services.angebot_annahme_service").disabled = False
+    angebot_id = uuid.UUID(ctx["angebot_id"])
 
     with caplog.at_level(logging.WARNING):
         body = await _b2c_annehmen(client, ctx)
 
     assert body["status"] == "angenommen"
     assert len(await _nachweise(ctx["angebot_id"])) == 1
-    assert any("nicht versendet" in r.message and "SMTP kaputt" in r.message for r in caplog.records)
+    assert any("fehlgeschlagen" in r.message and "SMTP kaputt" in r.message for r in caplog.records)
+    # Transienter Fehler: der Verlauf zeigt "ausstehend" samt Grund und naechstem Versuch.
     async with system_session() as session:
-        (log,) = (
-            await session.execute(select(EmailLog).where(EmailLog.entity_id == uuid.UUID(ctx["angebot_id"])))
-        ).scalars().all()
+        (log,) = (await session.execute(select(EmailLog).where(EmailLog.entity_id == angebot_id))).scalars().all()
+    assert log.status == "ausstehend" and "SMTP kaputt" in log.fehlermeldung and "nächster Versuch" in log.fehlermeldung
+
+    # Plan erschoepft (1 + 5 Wiederholungen): endgueltig "fehler".
+    spaeter = datetime.now(timezone.utc)
+    for _ in range(6):
+        spaeter += timedelta(days=1)
+        await verarbeite_outbox(jetzt=spaeter)
+    async with system_session() as session:
+        (log,) = (await session.execute(select(EmailLog).where(EmailLog.entity_id == angebot_id))).scalars().all()
     assert log.status == "fehler" and "SMTP kaputt" in log.fehlermeldung
 
 
@@ -542,11 +552,13 @@ async def test_annahme_ohne_konfiguriertes_smtp_klappt(client, make_mandant, mak
 
 
 async def _widerruf(client, ctx, **body):
-    return await client.post(
+    antwort = await client.post(
         f"/api/kundenportal/angebote/{ctx['angebot_id']}/widerruf",
         headers={**ctx["h"], "User-Agent": "WiderrufBrowser/2"},
         json={"bestaetigung": True, **body},
     )
+    await verarbeite_outbox()
+    return antwort
 
 
 async def test_widerruf_setzt_status_schreibt_nachweis_und_benachrichtigt(

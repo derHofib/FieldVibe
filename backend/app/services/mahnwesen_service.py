@@ -14,7 +14,7 @@ from app.models.rechnung import Rechnung
 from app.models.user import User
 from app.models.vorgang_event import VorgangEvent
 from app.db.session import system_session
-from app.services.email_service import send_email_and_log
+from app.services.mail_outbox_service import enqueue_email_and_log
 from app.services.pdf_service import generate_mahnung_pdf
 from app.services.rechnung_service import logo_bytes_laden, offene_betraege
 from app.services.zuweisung_service import abrechnung_verantwortliche_user_ids
@@ -146,7 +146,10 @@ async def run_mahnwesen_eskalation(mandant_ids: list[UUID] | None = None) -> dic
                         pauschale,
                         await logo_bytes_laden(mandant),
                     )
-                    await send_email_and_log(
+                    # Outbox statt Direktversand: der Lauf commitet erst am Ende; ein spaeterer Fehler
+                    # darf keine Mahnung hinterlassen, deren Mahnstufe nicht gespeichert wurde (und
+                    # morgen erneut gesendet wird). Der Worker versendet nach dem Commit, mit Retry.
+                    await enqueue_email_and_log(
                         session,
                         rechnung.mandant_id,
                         entity_type="rechnung",

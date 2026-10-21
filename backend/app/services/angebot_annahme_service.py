@@ -26,7 +26,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.services import verbraucherschutz_service as vs
 from app.services.audit_service import log_action
 from app.services.angebot_service import positionen_fuer, summen
-from app.services.email_service import send_email_and_log
+from app.services.mail_outbox_service import enqueue_email_and_log
 from app.services.event_bus import event_bus
 from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 
@@ -255,13 +255,14 @@ async def sende_kundenmail(
     text: str,
     anhang: tuple[str, bytes, str] | None = None,
 ) -> bool:
-    """Mail an den Portal-Zugang. Darf die Portal-Aktion nie rueckgaengig machen:
-    jeder Fehler wird geloggt (zusaetzlich steht er im E-Mail-Verlauf des
-    Angebots), nie hochgereicht. Der Savepoint haelt die Request-Transaktion
-    am Leben, falls der Log-Eintrag selbst scheitert."""
+    """Mail an den Portal-Zugang, ueber die Outbox: die Portal-Aktion haengt weder an der
+    Erreichbarkeit des Mailservers noch wird sie durch einen Mailfehler rueckgaengig gemacht;
+    der Worker sendet nach dem Commit und wiederholt bei Fehlern (Status im E-Mail-Verlauf des
+    Angebots). Rueckgabe: ob die Mail eingereiht wurde. Der Savepoint haelt die
+    Request-Transaktion am Leben, falls das Einreihen selbst scheitert."""
     try:
         async with session.begin_nested():
-            log = await send_email_and_log(
+            await enqueue_email_and_log(
                 session,
                 angebot.mandant_id,
                 entity_type="angebot",
@@ -272,17 +273,9 @@ async def sende_kundenmail(
                 gesendet_von=None,
                 attachment=anhang,
             )
-        if log.status != "gesendet":
-            logger.warning(
-                "Portal-Mail zu Angebot %s nicht versendet (%s): %s",
-                angebot.angebotsnummer,
-                betreff,
-                log.fehlermeldung,
-            )
-            return False
         return True
     except Exception:
-        logger.exception("Portal-Mail zu Angebot %s fehlgeschlagen (%s)", angebot.angebotsnummer, betreff)
+        logger.exception("Portal-Mail zu Angebot %s konnte nicht eingereiht werden (%s)", angebot.angebotsnummer, betreff)
         return False
 
 
@@ -328,7 +321,7 @@ async def benachrichtige_mandant_widerruf(
     for adresse in adressen:
         try:
             async with session.begin_nested():
-                log = await send_email_and_log(
+                await enqueue_email_and_log(
                     session,
                     mandant.id,
                     entity_type="angebot",
@@ -344,7 +337,5 @@ async def benachrichtige_mandant_widerruf(
                     ),
                     gesendet_von=None,
                 )
-            if log.status != "gesendet":
-                logger.warning("Widerruf-Mail an %s nicht versendet: %s", adresse, log.fehlermeldung)
         except Exception:
-            logger.exception("Widerruf-Mail an %s fehlgeschlagen", adresse)
+            logger.exception("Widerruf-Mail an %s konnte nicht eingereiht werden", adresse)
