@@ -1,3 +1,4 @@
+import asyncio
 import os
 import socket
 import uuid
@@ -297,6 +298,19 @@ async def _clean_tables():
                 "RESTART IDENTITY CASCADE"
             )
         )
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _hintergrund_tasks_abwarten(_clean_tables):
+    """Export- und S3-Aufraeum-Tasks starten nach dem COMMIT im Hintergrund (after_commit). Sie
+    muessen vor dem TRUNCATE von _clean_tables fertig sein, sonst blockieren sich beide (Deadlock);
+    die Abhaengigkeit stellt die Abbau-Reihenfolge sicher."""
+    yield
+    from app.services import export_job_service, s3_aufraeumen_service
+
+    tasks = [*export_job_service.hintergrund_tasks(), *s3_aufraeumen_service.hintergrund_tasks()]
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 @pytest_asyncio.fixture

@@ -119,6 +119,9 @@ async def endgueltig_loeschen(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Unbekannter Entitätstyp"
         )
+    protokolldaten = await papierkorb_service.loesch_protokolldaten(
+        session, entity_typ=entity_typ, entity_id=entity_id
+    )
     try:
         geloescht = await papierkorb_service.purge(
             session, entity_typ=entity_typ, entity_id=entity_id
@@ -129,9 +132,9 @@ async def endgueltig_loeschen(
             detail=(
                 "Datensatz kann nicht endgültig gelöscht werden: "
                 f"{exc.entity_typ}{f' ({exc.beleg_nummer})' if exc.beleg_nummer else ''} "
-                "unterliegt der gesetzlichen Aufbewahrungspflicht (§147 AO/§257 HGB, "
-                "10 Jahre) -- das gilt auch bei einem DSGVO-Löschbegehren "
-                "(Art. 17 Abs. 3 lit. b DSGVO)."
+                "unterliegt der gesetzlichen Aufbewahrungspflicht (§ 147 AO, § 257 HGB, "
+                f"§ 14b UStG){f' bis {exc.fristende:%d.%m.%Y}' if exc.fristende else ''} "
+                "-- das gilt auch bei einem DSGVO-Löschbegehren (Art. 17 Abs. 3 lit. b DSGVO)."
             ),
         ) from exc
     except IntegrityError as exc:
@@ -154,4 +157,5 @@ async def endgueltig_loeschen(
         actor_user_id=auth.user_id,
         entity_type=entity_typ,
         entity_id=entity_id,
+        payload=protokolldaten,
     )
