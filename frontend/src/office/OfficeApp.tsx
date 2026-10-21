@@ -56,6 +56,7 @@ import { OfficeDispoPage } from "./dispo/OfficeDispoPage";
 import { OrganigrammPage } from "./organigramm/OrganigrammPage";
 import { OfficeFehlerberichtDetailPage, OfficeFehlerberichtePage } from "./fehlerberichte/OfficeFehlerberichtePage";
 import { OfficePostfachPage } from "./postfach/OfficePostfachPage";
+import { OfficeProtokollPage } from "./protokoll/OfficeProtokollPage";
 import { OfficeProjektePage } from "./projekte/OfficeProjektePage";
 import { OfficeProjektVorlagenPage } from "./projekte/OfficeProjektVorlagenPage";
 import { OfficeRechnungenPage } from "./rechnungen/OfficeRechnungenPage";
@@ -92,6 +93,7 @@ export function OfficeApp() {
         <Route path="/projekte/vorlagen" element={<OfficeProjektVorlagenPage />} />
         <Route path="/auftraege" element={<OfficeAuftraegePage />} />
         <Route path="/datenimport" element={<OfficeDatenimportPage />} />
+        <Route path="/protokoll" element={<OfficeProtokollPage />} />
         {hatOrganigrammRecht && <Route path="/organigramm" element={<OrganigrammPage />} />}
         {hatFehlerberichtRecht && (
           <>

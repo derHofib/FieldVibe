@@ -6,6 +6,12 @@ import type {
   ImportKonfiguration,
   ImportLauf,
 } from "../office/datenimport/typen";
+import {
+  filterQuery,
+  type KettenPruefung,
+  type ProtokollFilter,
+  type ProtokollListe,
+} from "../office/protokoll/protokollUtils";
 import { kundenApiFetch, kundenApiFetchBlob } from "./kundenClient";
 import { partnerApiFetch } from "./partnerClient";
 import type {
@@ -462,6 +468,14 @@ export const auditLogApi = {
     const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
     return apiFetch<AuditLogEntry[]>(`/api/admin/audit-log${qs ? `?${qs}` : ""}`);
   },
+};
+
+export const protokollApi = {
+  liste: (filter: ProtokollFilter, limit: number, offset: number) =>
+    apiFetch<ProtokollListe>(`/api/audit?${filterQuery(filter, { limit, offset })}`),
+  aktionen: () => apiFetch<string[]>("/api/audit/aktionen"),
+  verifizieren: () => apiFetch<KettenPruefung>("/api/audit/verifizieren"),
+  csv: (filter: ProtokollFilter) => apiFetchBlob(`/api/audit/export.csv?${filterQuery(filter)}`),
 };
 
 export const fehlerberichteApi = {

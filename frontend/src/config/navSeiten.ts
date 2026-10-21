@@ -21,6 +21,7 @@ import {
   Plug,
   Receipt,
   Rss,
+  ScrollText,
   Star,
   StickyNote,
   Tags,
@@ -398,6 +399,17 @@ export const NAV_SEITEN: NavSeite[] = [
     route: "/integrationen",
     kategorie: "Verwaltung",
     sichtbar: () => true,
+  },
+  {
+    key: "protokoll",
+    label: "Protokoll",
+    icon: ScrollText,
+    tone: "slate",
+    route: "/protokoll",
+    kategorie: "Verwaltung",
+    // Tabelle mit Details und Integritaetspruefung: nur am Desktop; Backend: require_roles("mandant_admin").
+    nurOffice: true,
+    sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ",
   },
   {
     key: "datenimport",
