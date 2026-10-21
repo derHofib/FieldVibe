@@ -21,6 +21,11 @@ services:
     # Auf 2.11 gepinnt: Patch-Updates (2.11.x) ja, kein ungeplanter Sprung auf 2.12+.
     image: caddy:2.11-alpine
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     ports:
       - "80:80"
       - "443:443"

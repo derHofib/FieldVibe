@@ -21,6 +21,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.core.config import get_settings
+from app.core.logging_config import konfiguriere_logging
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine, system_session
 from app.services.datenimport.lauf import raeume_auf as raeume_datenimport_auf
@@ -42,7 +43,7 @@ from app.services.scheduler_service import (
 )
 from app.services.worker_lock import mail_sync_lock, worker_lock
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+konfiguriere_logging(format=get_settings().log_format_aktiv, level=get_settings().log_level)
 logger = logging.getLogger("app.worker")
 
 # Persoenliche Postfaecher (siehe mail_sync_service.py) laufen in einem

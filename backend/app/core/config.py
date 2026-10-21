@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # DEV_UMGEBUNGEN und die Startpruefung unten.
     environment: str = "production"
 
+    # Log-Format: "json" (eine Zeile pro Eintrag, fuer Log-Sammler) oder "text".
+    # Leer = json ausser in Dev/Test (siehe log_format_aktiv).
+    log_format: str | None = None
+    log_level: str = "INFO"
+
     # Betriebs-Zeitzone fuer Tagesgrenzen (Zeiterfassung: Tages-/Wochenfilter,
     # Wochenzettel); siehe app/core/zeit.py. Mandanten haben kein eigenes Feld.
     zeitzone: str = Field(default="Europe/Berlin", validation_alias="FIELDVIBE_ZEITZONE")
@@ -268,6 +273,12 @@ class Settings(BaseSettings):
     @property
     def ist_dev_umgebung(self) -> bool:
         return self.environment.strip().lower() in DEV_UMGEBUNGEN
+
+    @property
+    def log_format_aktiv(self) -> str:
+        if self.log_format and self.log_format.strip().lower() in ("json", "text"):
+            return self.log_format.strip().lower()
+        return "text" if self.ist_dev_umgebung else "json"
 
     @property
     def api_docs_aktiv(self) -> bool:

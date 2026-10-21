@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging_config import kontext_ergaenzen
 from app.core.security import decode_token
 from app.core.rollen import ist_plattform_admin
 from app.db.session import system_session, tenant_session
@@ -117,6 +118,7 @@ async def _auth_context_aus_token(
     token_version = await token_version_gueltig(
         User, user_id, payload, tv_pflicht=payload.get("type") == "impersonation"
     )
+    kontext_ergaenzen(user_id=user_id, mandant_id=mandant_id)
     return AuthContext(
         user_id=user_id,
         token_version=token_version,

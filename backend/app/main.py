@@ -85,6 +85,8 @@ from app.api.routes import (
 from app.core.audit_kontext import AuditKontextMiddleware
 from app.core.config import get_settings
 from app.services.audit_service import siegel_vor_antwort
+from app.core.logging_config import konfiguriere_logging
+from app.core.request_middleware import REQUEST_ID_HEADER, RequestKontextMiddleware
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine
 from app.services.scheduler_service import get_last_scheduler_run
@@ -92,6 +94,10 @@ from app.services.storage_service import ensure_bucket
 from app.services.system_resources_service import resource_sampler_loop
 
 settings = get_settings()
+# Unter pytest (ENVIRONMENT=test) nicht anfassen: pytest/caplog haengen eigene
+# Handler an den Root-Logger.
+if not settings.ist_dev_umgebung or settings.log_format:
+    konfiguriere_logging(format=settings.log_format_aktiv, level=settings.log_level)
 
 
 @asynccontextmanager
@@ -128,7 +134,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[REQUEST_ID_HEADER],
 )
+# Zuletzt hinzugefuegt = aeusserste Schicht: die Request-ID gilt auch fuer
+# CORS-Preflights und Fehlerantworten der inneren Schichten.
+app.add_middleware(RequestKontextMiddleware)
 
 app.add_middleware(AuditKontextMiddleware)
 
