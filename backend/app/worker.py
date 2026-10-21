@@ -24,11 +24,14 @@ from app.core.config import get_settings
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine, system_session
 from app.services.datenimport.lauf import raeume_auf as raeume_datenimport_auf
+from app.services.export_job_service import raeume_auf as raeume_exporte_auf
+from app.services.export_job_service import verarbeite_naechsten as verarbeite_export
 from app.services.email_ingest_service import run_email_ingest
 from app.services.fehlerbericht_service import loesche_abgelaufene_fehlerberichte
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
 from app.services.mail_sync_service import run_mail_sync
+from app.services.s3_aufraeumen_service import verarbeite as verarbeite_s3_aufraeumen
 from app.services.scheduler_service import (
     mandanten_faellig_um,
     run_angebot_nachfassen,
@@ -47,6 +50,9 @@ logger = logging.getLogger("app.worker")
 # Stunde Verzoegerung waere fuer einen Outlook-Ersatz spuerbar schlecht,
 # echtes IMAP IDLE (Server-Push) ist fuer V1 bewusst zurueckgestellt.
 MAIL_SYNC_INTERVAL_SECONDS = 120
+# Mandanten-Exporte (Vollexport, Z3) starten nach dem Anfordern sofort im API-Prozess; der
+# Worker holt liegengebliebene Auftraege (Neustart, Absturz) in diesem Takt nach.
+EXPORT_INTERVAL_SECONDS = 30
 
 
 def _seconds_until_next_full_hour(now: datetime | None = None) -> float:
@@ -83,6 +89,22 @@ async def _run_hourly_tick() -> None:
                 logger.info("Datenimport-Aufräumen: %s", aufgeraeumt)
         except Exception:
             logger.exception("Datenimport-Aufräumen fehlgeschlagen")
+
+        try:
+            entfernt = await raeume_exporte_auf()
+            if entfernt:
+                logger.info("Export-Aufräumen: %d abgelaufene(s) Ergebnis-ZIP entfernt", entfernt)
+        except Exception:
+            logger.exception("Export-Aufräumen fehlgeschlagen")
+
+        # Offene Aufraeumauftraege im Objektspeicher (nach endgueltigem Loeschen); der
+        # Hintergrund-Task der API erledigt die meisten sofort, das hier holt Fehlschlaege nach.
+        try:
+            s3_ergebnis = await verarbeite_s3_aufraeumen()
+            if s3_ergebnis["erledigt"] or s3_ergebnis["fehlgeschlagen"]:
+                logger.info("S3-Aufräumen: %s", s3_ergebnis)
+        except Exception:
+            logger.exception("S3-Aufräumen fehlgeschlagen")
 
         # Einmal taeglich zur Standard-Scheduler-Stunde -- unabhaengig davon,
         # ob gerade ein Mandant faellig ist (Aufbewahrung gilt plattformweit).
@@ -194,13 +216,23 @@ async def _mail_sync_loop() -> None:
         await _run_mail_sync_tick()
 
 
+async def _export_loop() -> None:
+    while True:
+        await asyncio.sleep(EXPORT_INTERVAL_SECONDS)
+        try:
+            while await verarbeite_export() is not None:
+                pass
+        except Exception:
+            logger.exception("Export-Verarbeitung fehlgeschlagen")
+
+
 async def main() -> None:
     await pruefe_db_rolle(engine)
     logger.info(
         "Worker gestartet -- stündlicher Scheduler-Tick, Mail-Sync alle %d Sekunden",
         MAIL_SYNC_INTERVAL_SECONDS,
     )
-    await asyncio.gather(_hourly_loop(), _mail_sync_loop())
+    await asyncio.gather(_hourly_loop(), _mail_sync_loop(), _export_loop())
 
 
 if __name__ == "__main__":

@@ -3,7 +3,9 @@ from app.models.angebot import Angebot, AngebotPosition
 from app.models.angebot_annahme import AngebotAnnahme
 from app.models.anlage import Anlage
 from app.models.anlagen_feld_definition import AnlagenFeldDefinition
-from app.models.audit_log import AuditLog
+from app.models.audit_log import AuditLog, AuditLogSiegel
+from app.models.mandant_export import MandantExport
+from app.models.s3_loeschauftrag import S3Loeschauftrag
 from app.models.arbeitszeit import ArbeitszeitSoll, Feiertag
 from app.models.auftrag import Auftrag
 from app.models.bestellung import Bestellung, BestellungPosition
@@ -102,6 +104,7 @@ __all__ = [
     "Anlage",
     "AnlagenFeldDefinition",
     "AuditLog",
+    "AuditLogSiegel",
     "Auftrag",
     "Bestellung",
     "BestellungPosition",
@@ -173,6 +176,8 @@ __all__ = [
     "TagAssignment",
     "Termin",
     "User",
+    "MandantExport",
+    "S3Loeschauftrag",
     "Vertrag",
     "Vorgang",
     "VorgangAbhaengigkeit",
