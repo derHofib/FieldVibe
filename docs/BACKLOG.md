@@ -192,6 +192,44 @@ Stand und Entscheidungen: `docs/konzepte/GOBD.md`; Dokumente: `docs/gobd/`.
   (bei sehr großen Betrieben Worker-Container bevorzugen).
 - **Nummernlücken** durch gelöschte Rechnungsentwürfe (Nummer bei Anlage); Vergabe erst beim Versand wäre ein Umbau des Nummernkreises.
 - Altobjekte im Objektspeicher behalten ihre Schlüssel ohne Mandantenpräfix; keine Migration.
+## 13. Betrieb: Rest nach Roadmap 1.3
+
+Stand und Handbuch: `docs/BETRIEB.md`, `docs/DEPLOYMENT.md` (6, 6d). Umgesetzt: Error-Tracking
+(optional), JSON-Logs mit Request-ID, Healthchecks/Heartbeats, zustandsgeführte Jobs, Mail-Outbox,
+Deploy mit Backup/Gate/Rollback, GHCR-Images, Dependabot, Audits.
+
+- **Nie gegen echtes Docker/GHCR/Caddy ausgeführt** (Entwicklungsumgebung ohne Docker-Daemon):
+  `deploy.sh`-Gesamtlauf, Compose-Healthchecks (`depends_on: service_healthy`, Caddy-Admin-API auf
+  `127.0.0.1:2019`, `wget` im Frontend-Image), `{$SENTRY_CSP_HOST:}` im Caddyfile, die CI-Jobs
+  `images`/`pip-audit`/`npm-audit`. Getestet sind nur die Ablauflogik (Shell-Tests mit Stub-`docker`)
+  und die Python-/TypeScript-Seite.
+- **Frontend-Laufzeitkonfiguration**: `VITE_*` werden zur Build-Zeit eingebacken, daher baut `deploy.sh`
+  das Frontend auf dem Server und die GHCR-Frontend-Images sind nur Archiv. Mit einer `config.js`
+  zur Laufzeit ließe sich ein Betrieb ganz aus der Registry (Pull statt Build) und ein schnelleres
+  Rollback ohne lokale Images umsetzen.
+- **Interaktive Mails nicht in der Outbox**: Kunde/Vorgang/Angebot/Rechnung/Bestellung senden synchron
+  (Nutzer sieht das Ergebnis sofort), mit der Ghost-Send-Lücke, dass bei einem Commit-Fehler nach dem SMTP-Erfolg
+  der Verlaufseintrag fehlt. Option: „im Hintergrund senden“ mit Statusanzeige. Einladung und Passwort-Reset
+  bleiben synchron, weil die Antwort den Link zurückgibt, wenn der Versand scheitert.
+- **Outbox-Verwaltung ohne Oberfläche**: nur API (`/api/mail-outbox`); eine Liste „Fehlgeschlagene Mails“
+  gehört in die Integrationen-Seite des Mandanten. Verwaiste Anhänge (`mail-outbox/…`) nach abgebrochenen
+  Requests werden nicht automatisch aufgeräumt.
+- **Jobs**: `run_*`-Funktionen rechnen mit `date.today()` in Serverzeit (UTC) statt in der Betriebs-Zeitzone;
+  die „Obergrenze N Tage“ beim Nachholen ist nur Alarmgrenze (alle Jobs sind zustandsbasiert, ein Lauf holt
+  alles nach) – Entscheidung nötig, falls ein Job je verpasstem Tag etwas erzeugen soll. Mahnstufen springen
+  nach langem Ausfall direkt auf die Zielstufe (bestehendes Verhalten). Kein UNIQUE-Index gegen doppelte
+  Daueraufträge/Prüfvorgänge (Schutz: `offener_vorgang_id`, Advisory-Lock, `SKIP LOCKED`).
+- **Health**: Heartbeats sind je Typ, nicht je Worker-Instanz; Host-Metriken (Platte/RAM) fehlen.
+  Der `mail_konten`-Alarm kennt nur das Alter des letzten erfolgreichen Syncs, keine Fehlerursache je Konto.
+- **Error-Tracking Frontend**: schlanker Eigenbau – kein Stacktrace-Parsing, keine Sourcemaps, kein
+  Release-Upload, keine Breadcrumbs. Bei Bedarf auf `@sentry/browser` umstellen (CSP und Schwärzung bleiben).
+- **Abhängigkeiten**: `pip-audit` meldet `certifi` (Fix 2026.10.19) und `pillow` (Fix 13.0.0, Major-Sprung –
+  Rendering/PDF-Tests prüfen). Auto-Merge für Dependabot ist nicht eingerichtet.
+- **Migrationen**: Rollback der Anwendung ohne Schema-Rollback setzt abwärtskompatible Migrationen voraus;
+  das ist Konvention, kein Test. Die Migrations-Reihenfolge (Migration vor Rollout) lässt die alte Version kurz
+  gegen das neue Schema laufen.
+- **Repository-Standardbranch/Remote-HEAD**: Sache des Repository-Besitzers (GitHub → Settings →
+  Branches); `GITHUB_BRANCH` steuert nur die Update-Anzeige.
 
 ## Erledigt, zur Einordnung
 

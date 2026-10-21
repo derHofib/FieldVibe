@@ -102,9 +102,11 @@ Techniker-Sessions auf `app.` bleiben unberührt.
 Führt die Schritte 1–5 unten (bis auf DNS/Firewall-Freigabe auf
 Provider-Seite) automatisiert aus: Docker installieren, `.env` mit
 generierten Secrets und abgefragten Domains (oder Server-IP, siehe unten)
-anlegen, Stack starten, Migrationen anwenden, ersten Superadmin anlegen,
+anlegen, Backup, Migrationen anwenden, Stack starten und prüfen (Health-Gate, bei
+Fehlschlag automatischer Rollback), ersten Superadmin anlegen,
 Backup-Cron einrichten. Idempotent – kann später erneut ausgeführt werden,
-um zu aktualisieren.
+um zu aktualisieren (Ablauf: Abschnitt „6. Updates“). Optionen: `--ohne-backup`,
+`--nicht-interaktiv`, `--health-timeout <Sekunden>`, `--help`.
 
 ```bash
 git clone https://github.com/derHofib/SocialCRM.git
@@ -727,14 +729,60 @@ Backup) gilt in der Prüfung als Fehler.
 
 ## 6. Updates
 
+Der Standardweg ist `sudo ./scripts/deploy.sh` (auch für Updates, idempotent). Ablauf:
+
+1. **Vorab-Check**: Docker-Daemon erreichbar, Compose-Dateien auflösbar, genug
+   Plattenplatz (Standard ≥ 2 GB, `DEPLOY_MIN_FREI_MB`).
+2. **Backup** (`scripts/backup.sh`) – schlägt es fehl, **bricht das Deployment ab**,
+   bevor etwas verändert wurde. Opt-out nur bewusst: `--ohne-backup`. Erstinstallation
+   (noch keine Datenbank): übersprungen.
+3. **Images bauen** mit dem Commit als Tag (`fieldvibe-backend:<sha>`,
+   `fieldvibe-frontend:<sha>`); der bisherige Stand bleibt unter seinem Tag liegen.
+4. **Datenbank und Objektspeicher starten**, MinIO-Service-Account prüfen.
+5. **Migration vor dem Rollout** (Worker ruht währenddessen). Scheitert sie, wird
+   *nicht* ausgerollt – die laufende Version bleibt aktiv.
+6. **Rollout** (`up -d --no-build`) und **Health-Gate**: wartet bis `--health-timeout`
+   (Standard 300 s), dass Backend (`/health/ready`: Datenbank, Objektspeicher,
+   Migrationsstand), Worker (Heartbeat) und Frontend antworten.
+7. **Automatischer Rollback**, wenn das Gate scheitert: die Container laufen wieder
+   mit den Image-Tags des Vorgängers (`.deploy-state`, Schlüssel `PREVIOUS_TAG`/
+   `CURRENT_TAG`). Exit-Code ≠ 0, Log-Hinweis und `FEHLGESCHLAGEN_TAG` im State.
+
+**Migrationen werden nicht zurückgerollt.** Das Schema bleibt auf dem neuen Stand,
+auch wenn die alte Version zurückkehrt. Das geht nur gut, wenn Migrationen
+abwärtskompatibel sind (Regel: Spalten/Tabellen *hinzufügen*, nie im selben Release
+umbenennen oder löschen – „expand, then contract“). Bei einer inkompatiblen Migration
+hilft nur das Backup vom Anfang des Laufs (`BACKUP_STAMP` in `.deploy-state`):
+`scripts/restore.sh db --stamp <stamp>` – Schritt für Schritt in `docs/BETRIEB.md`.
+
+Auf `/health/ready` ist eine Datenbank, die *neuer* ist als der Code (Rollback nach einer
+Migration), ausdrücklich „bereit“ – sonst könnte ein Rollback nie gesund werden.
+
+Der Rollback ist nur möglich, solange die Vorgänger-Images noch auf dem Host liegen
+(`docker image prune -a` löscht sie). Eine Bestandsinstallation ohne `.deploy-state` bekommt
+beim ersten Lauf den laufenden Stand automatisch als Tag `vorher-<zeit>` gesichert.
+
+Per Hand (nur wenn `deploy.sh` nicht in Frage kommt – ohne Backup-Abbruch, Gate und Rollback):
+
 ```bash
 cd SocialCRM
 git pull
-export GIT_COMMIT="$(git rev-parse --short HEAD)"
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-  run --rm backend alembic upgrade head
+export GIT_COMMIT="$(git rev-parse --short HEAD)" IMAGE_TAG="$GIT_COMMIT"
+C="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+scripts/backup.sh
+$C build backend frontend worker
+$C up -d postgres minio
+$C stop worker
+$C run --rm backend alembic upgrade head      # oder scripts/migrieren.sh --compose "$C"
+$C up -d --no-build --remove-orphans
 ```
+
+**Images aus der Registry (GHCR):** Die CI veröffentlicht bei Push auf `main` und bei Tags `v*`
+`ghcr.io/<owner>/<repo>-backend` und `-frontend` (Tags: Commit, Version, `latest`) als Release-
+Artefakte. `deploy.sh` baut weiterhin auf dem Server: das Frontend braucht die Domains des Servers
+(`VITE_API_BASE_URL` & Co. werden zur Build-Zeit eingebacken), das Frontend-Image aus der CI trägt nur
+die Standard-Argumente. Ein Betrieb ganz ohne Build auf dem Server wäre erst mit einer
+Laufzeit-Konfiguration des Frontends möglich (siehe `docs/BACKLOG.md`).
 
 **Einmalig nach dem Update auf die App-Rolle** (Installationen, die bisher
 als `POSTGRES_USER` liefen oder mit `FIELDVIBE_ERLAUBE_RLS_BYPASS_ROLLE=1`
@@ -759,8 +807,9 @@ idempotent. Benutzer- und Datenbankname kommen aus `POSTGRES_USER`/
 `GIT_COMMIT` wird als Build-Arg ins Backend-Image gebacken und treibt die
 rein informative Update-Anzeige im Super-Admin-Bereich (Menüpunkt
 „Update") -- zeigt den aktuell laufenden Commit neben dem neuesten Commit
-auf GitHub, ohne selbst irgendetwas auszuführen. Ohne das `export` bleibt
-die Anzeige auf „unknown" stehen, das Update selbst funktioniert trotzdem.
+auf GitHub, ohne selbst irgendetwas auszuführen; zugleich ist es der Release-Tag des
+Error-Trackings. `deploy.sh` setzt es selbst; ohne den Wert bleibt die Anzeige auf
+„unknown" stehen, das Update selbst funktioniert trotzdem.
 
 ### Abhängigkeiten aktualisieren (Lockfiles)
 
@@ -923,6 +972,60 @@ probieren (`scripts/backup.sh` zuvor). `restore.sh`/Runbook-Schritte mit
 `alembic` gehen weiter davon aus, dass die App-Rolle migriert; bei getrenntem
 Owner stattdessen `scripts/migrieren.sh` verwenden.
 
+## 6d. Betrieb: Monitoring, Logs, Healthchecks, Mail-Outbox
+
+Alarmkette und Maßnahmen bei Störungen: **`docs/BETRIEB.md`**. Die Konfiguration im Überblick
+(alles optional, Werte in der `.env`, Vorlage `.env.example`):
+
+| Thema | Einstellung | Wirkung |
+| --- | --- | --- |
+| Logs | `LOG_FORMAT=json\|text`, `LOG_LEVEL` | JSON-Zeilen mit `request_id`, `mandant_id`, `user_id`, `job`; Standard `json` (Produktion) |
+| Log-Rotation | Compose (`logging: json-file, max-size 10m, max-file 5`) | Alle Dienste, keine unbegrenzt wachsenden Container-Logs |
+| Health | `HEALTH_TOKEN` | Details von `/health/ready` und `/health/heartbeats` für externes Monitoring |
+| Worker-Ping | `HEARTBEAT_PING_URL` | healthchecks.io-kompatibler Ping des Workers (alle 60 s) |
+| Error-Tracking | `SENTRY_DSN`, `VITE_SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_SAMPLE_RATE` | Sentry-kompatibel (GlitchTip); leer = aus |
+| Mail-Outbox | `MAIL_OUTBOX_BACKOFF_MINUTEN`, `MAIL_OUTBOX_INTERVALL_SEKUNDEN` | Retry-Plan, Worker-Takt |
+| Jobs | `SCHEDULER_TICK_SEKUNDEN`, `SCHEDULER_RETRY_MINUTEN`, `SCHEDULER_NACHHOLEN_MAX_TAGE` | Takt, Pause nach Fehlern, Alarmgrenze für Ausfälle |
+
+**Healthchecks.** `GET /health` (Liveness, kein I/O), `GET /health/ready` (Datenbank, Objektspeicher,
+Migrationsstand = Head; 200/503, ohne Ausweis nur `{"status": …}`), `GET /health/heartbeats`
+(Worker-Tick, Mail-Sync, E-Mail-Rechnungseingang, Postfächer je Mandant, Mail-Outbox, Alter des Backups;
+nur mit `HEALTH_TOKEN` oder als Plattform-Admin, sonst 404). Docker prüft Backend (`/health/ready`), Worker
+(Heartbeat-Datei), Frontend (HTTP) und Caddy; abhängige Dienste starten mit `condition: service_healthy`.
+Das Backup-Alter liest das Backend aus `letzter-lauf.json` (`BACKUP_DIR` wird schreibgeschützt nach
+`/backups` eingehängt, `BACKUP_STATUS_DATEI`).
+
+**Logs.** `docker compose logs -f backend worker`; jede Antwort trägt `X-Request-ID` (kommt aus dem
+Proxy, wenn gültig, sonst neu erzeugt) – dieselbe ID steht in allen Log-Zeilen des Requests und im
+Error-Tracking. Gelogt werden nie Tokens, Passwörter, Request-Bodies oder Query-Strings (Pfade als
+Routenvorlage).
+
+**Datenschutz Error-Tracking.** Standard aus. Wer es einschaltet, überträgt Fehlertexte und Stacktraces an
+den gewählten Dienst: nur **EU-gehostet oder selbst betrieben** (z. B. GlitchTip auf eigenem Server),
+Auftragsverarbeitungsvertrag (AVV) und Eintrag im Verzeichnis der Verarbeitungstätigkeiten nicht vergessen.
+Übertragen werden keine Bodies, Cookies, Header-Werte, Query-Strings, SQL, Nutzer-/E-Mail-Daten (Backend:
+`send_default_pii=False` plus eigener Filter; Frontend: schlanker Eigenbau ohne Session-Replay); Tokens,
+Passwörter und IBANs in Texten werden geschwärzt. Mandant-ID und Request-ID gehen als Tags mit. Die
+Content-Security-Policy öffnet `connect-src` nur für den Host aus `VITE_SENTRY_DSN` (`SENTRY_CSP_HOST`,
+von `deploy.sh` gesetzt).
+
+**Mail-Outbox.** Automatische Mails (Mahnwesen, Bestätigungs-/Widerrufsmails des Kundenportals) gehen
+in die Tabelle `mail_outbox` und werden vom Worker *nach* dem Commit versendet; bei Fehlern wiederholt er
+nach 1 min, 5 min, 30 min, 2 h, 12 h, danach gilt die Mail als fehlgeschlagen (Benachrichtigung an
+Ersteller bzw. Disposition, Log-Event `mail_outbox_failed`). Der E-Mail-Verlauf zeigt „Wird gesendet“
+bis zum Ergebnis. Fehlgeschlagene Mails: `GET /api/mail-outbox` (Administratoren), neu anstoßen mit
+`POST /api/mail-outbox/{id}/wiederholen`. Synchron bleiben bewusst: vom Nutzer ausgelöste Sendungen
+(Kunde, Vorgang, Angebot, Rechnung, Bestellung – der Nutzer braucht das Ergebnis sofort), Einladung und
+Passwort-Reset (bei Fehlschlag liefert die Antwort den Link direkt zurück).
+
+**Abhängigkeiten.** Dependabot (`.github/dependabot.yml`) schlägt wöchentlich gruppierte Updates vor
+(pip, npm, docker, GitHub Actions); die CI führt `pip-audit` und `npm audit --omit=dev --audit-level=high`
+nicht blockierend aus. Nach einem pip-PR die Lockfiles neu erzeugen (siehe „Abhängigkeiten aktualisieren“).
+
+**Repository-Standardbranch.** Auf welchem Branch das Remote-HEAD steht, legt der Repository-Besitzer
+auf GitHub fest (Settings → Branches); `deploy.sh` macht `git pull --ff-only` auf dem ausgecheckten
+Branch, `GITHUB_BRANCH` steuert nur die Update-Anzeige.
+
 ## 7. Deinstallieren
 
 `scripts/uninstall.sh` entfernt eine Installation vollständig: alle
@@ -947,13 +1050,11 @@ die Daten noch gebraucht werden könnten (Wiederherstellen: Abschnitt 5).
   bereits vor dem ersten Start auf den Server zeigen), Port 80 muss von
   außen erreichbar sein (Let's Encrypt HTTP-01-Challenge). Logs:
   `docker compose logs caddy`.
-- **`/healthz` liefert Fehler**: prüft DB-Verbindung und
-  Objektspeicher-Erreichbarkeit sowie den Zeitstempel des letzten
-  Prüfzyklen-Scheduler-Laufs (`scheduler_letzter_lauf`, `null` bedeutet,
-  der `worker`-Container hat noch keinen erfolgreichen Lauf gehabt – bei
-  einem frischen Deployment normal, sollte spätestens einen Tag nach der
-  konfigurierten Scheduler-Stunde des ersten Mandanten (Default 03:00 UTC,
-  siehe `PATCH /api/mandant/einstellungen`) einen Wert haben).
+- **`/health/ready` liefert 503**: Datenbank, Objektspeicher oder Migrationsstand
+  stimmen nicht. Ohne Ausweis steht nur `nicht_bereit` im Body; die Ursache liefert
+  `curl -H "Authorization: Bearer $HEALTH_TOKEN" https://<DOMAIN_API>/health/ready` bzw.
+  `docs/BETRIEB.md`. Der ältere `/healthz` (DB + Objektspeicher + Zeitstempel des letzten
+  Prüfzyklen-Laufs, `scheduler_letzter_lauf`) bleibt für die Super-Admin-Übersicht bestehen.
 - **Fotos laden nicht (403/404 auf presigned URLs)**: `S3_PUBLIC_URL_BASE`
   muss exakt `https://<DOMAIN_S3>` sein (Schema + Host, kein Pfad-Suffix,
   kein Port) – sonst weicht die Signatur vom tatsächlich aufgerufenen URL
