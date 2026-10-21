@@ -42,7 +42,7 @@ export function OfficeProtokollPage() {
     onSuccess: () => setFehler(null),
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ") {
+  if (currentUser && currentUser.role !== "mandant_admin") {
     return <Navigate to="/vorgaenge" replace />;
   }
 

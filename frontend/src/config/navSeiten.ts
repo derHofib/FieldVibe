@@ -409,7 +409,7 @@ export const NAV_SEITEN: NavSeite[] = [
     kategorie: "Verwaltung",
     // Tabelle mit Details und Integritaetspruefung: nur am Desktop; Backend: require_roles("mandant_admin").
     nurOffice: true,
-    sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ",
+    sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin",
   },
   {
     key: "datenimport",

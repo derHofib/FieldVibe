@@ -88,8 +88,19 @@ const AKTION_LABEL: Record<string, string> = {
   export_csv: "Export: CSV",
   export_datev: "Export: DATEV",
   export_ustva: "Auswertung: UStVA",
-  export_z3: "Export: Z3 (Datenträgerüberlassung)",
-  export_vollexport: "Export: Vollexport",
+  export_z3_angefordert: "Z3-Export angefordert",
+  export_z3_fertig: "Z3-Export erstellt",
+  export_z3_download: "Z3-Export heruntergeladen",
+  export_z3_abgelaufen: "Z3-Export entfernt (7 Tage)",
+  export_vollexport_angefordert: "Vollexport angefordert",
+  export_vollexport_fertig: "Vollexport erstellt",
+  export_vollexport_download: "Vollexport heruntergeladen",
+  export_vollexport_abgelaufen: "Vollexport entfernt (7 Tage)",
+  export_vollexport_fehlgeschlagen: "Vollexport fehlgeschlagen",
+  export_z3_fehlgeschlagen: "Z3-Export fehlgeschlagen",
+  archiv_abweichung_festgestellt: "Abweichung im Rechnungsarchiv festgestellt",
+  archiv_hash_nachgetragen: "Archiv-Prüfsumme nachgetragen",
+  aufbewahrung_in_papierkorb: "Beleg nach Fristablauf in den Papierkorb gelegt",
 };
 
 export function aktionLabel(aktion: string): string {

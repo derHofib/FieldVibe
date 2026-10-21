@@ -1,4 +1,5 @@
 import {
+  Archive,
   CalendarClock,
   ClipboardList,
   Clock,
@@ -14,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 
 import { IconBadge, type IconTone } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
+import { istOfficeHost } from "../../office/hostname";
 import { istModulAktiv } from "../../utils/module";
 
 function SettingsLink({
@@ -144,6 +146,16 @@ export function SettingsPage() {
           beschreibung="Firmenlogo/-daten für Angebote, E-Mail-Versand, angebundene Dienste"
           onClick={() => navigate("/integrationen")}
         />
+        {/* Breite Tabelle, nur am Desktop (office.) und nur fuer mandant_admin (Backend: dasselbe). */}
+        {istOfficeHost() && currentUser?.role === "mandant_admin" && (
+          <SettingsLink
+            icon={Archive}
+            tone="teal"
+            label="Daten exportieren"
+            beschreibung="Vollexport als ZIP und Z3-Export für die Finanzverwaltung"
+            onClick={() => navigate("/einstellungen/export")}
+          />
+        )}
       </section>
     </div>
   );

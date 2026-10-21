@@ -6,6 +6,7 @@ import type {
   ImportKonfiguration,
   ImportLauf,
 } from "../office/datenimport/typen";
+import type { ExportDownload, MandantExport } from "../office/export/exportUtils";
 import {
   filterQuery,
   type KettenPruefung,
@@ -476,6 +477,14 @@ export const protokollApi = {
   aktionen: () => apiFetch<string[]>("/api/audit/aktionen"),
   verifizieren: () => apiFetch<KettenPruefung>("/api/audit/verifizieren"),
   csv: (filter: ProtokollFilter) => apiFetchBlob(`/api/audit/export.csv?${filterQuery(filter)}`),
+};
+
+export const exporteApi = {
+  liste: () => apiFetch<MandantExport[]>("/api/exporte"),
+  vollexport: () => apiFetch<MandantExport>("/api/exporte/vollexport", { method: "POST" }),
+  z3: (von: string, bis: string) =>
+    apiFetch<MandantExport>("/api/exporte/z3", { method: "POST", body: JSON.stringify({ von, bis }) }),
+  downloadUrl: (id: string) => apiFetch<ExportDownload>(`/api/exporte/${id}/download-url`),
 };
 
 export const fehlerberichteApi = {
