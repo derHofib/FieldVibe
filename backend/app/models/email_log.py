@@ -8,12 +8,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 EMAIL_ENTITY_TYPEN = ("kunde", "vorgang", "angebot", "rechnung", "bestellung")
-EMAIL_STATUS = ("gesendet", "fehler")
+# "ausstehend": liegt in der Mail-Outbox und wird vom Worker versendet (Migration 0115).
+EMAIL_STATUS = ("gesendet", "fehler", "ausstehend")
 
 
 class EmailLog(Base):
     """Protokoll aller aus FieldVibe heraus versendeten E-Mails -- reines
-    Log, unveraenderlich nach dem Anlegen. entity_type/entity_id verweisen
+    Log; nur der Status wird nachgezogen, wenn eine Outbox-Mail versendet wird
+    oder endgueltig scheitert. entity_type/entity_id verweisen
     auf das Kunde/Vorgang/Angebot/Rechnung/Bestellung, von dem aus die Mail
     verschickt wurde, damit sie dort im Verlauf angezeigt werden kann."""
 
