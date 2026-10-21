@@ -1,0 +1,65 @@
+# Woechentliche Update-Vorschlaege, je Oekosystem gruppiert (ein PR statt vieler).
+# Backend-Abhaengigkeiten liegen als hashgepinnte Lockfiles vor (requirements*.lock);
+# Dependabot bearbeitet requirements.txt/requirements-dev.txt -- das Lockfile danach
+# neu erzeugen (docs/DEPLOYMENT.md, "Abhaengigkeiten aktualisieren").
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      backend-abhaengigkeiten:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      frontend-abhaengigkeiten:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /tools/bugreport-mcp
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      bugreport-mcp-abhaengigkeiten:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      docker-images-backend:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      docker-images-frontend:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns: ["*"]
