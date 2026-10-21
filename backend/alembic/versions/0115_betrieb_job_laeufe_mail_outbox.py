@@ -25,7 +25,7 @@ from sqlalchemy.dialects import postgresql
 
 revision: str = "0115"
 # Bei Zusammenfuehrung mit der GoBD/Audit-Migration 0114 auf "0114" umhaengen.
-down_revision: Union[str, None] = "0113"
+down_revision: Union[str, None] = "0114"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

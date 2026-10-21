@@ -192,7 +192,7 @@ Stand und Entscheidungen: `docs/konzepte/GOBD.md`; Dokumente: `docs/gobd/`.
   (bei sehr großen Betrieben Worker-Container bevorzugen).
 - **Nummernlücken** durch gelöschte Rechnungsentwürfe (Nummer bei Anlage); Vergabe erst beim Versand wäre ein Umbau des Nummernkreises.
 - Altobjekte im Objektspeicher behalten ihre Schlüssel ohne Mandantenpräfix; keine Migration.
-## 13. Betrieb: Rest nach Roadmap 1.3
+## 14. Betrieb: Rest nach Roadmap 1.3
 
 Stand und Handbuch: `docs/BETRIEB.md`, `docs/DEPLOYMENT.md` (6, 6d). Umgesetzt: Error-Tracking
 (optional), JSON-Logs mit Request-ID, Healthchecks/Heartbeats, zustandsgeführte Jobs, Mail-Outbox,
