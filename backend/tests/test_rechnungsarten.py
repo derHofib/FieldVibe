@@ -989,9 +989,14 @@ async def test_op_regel_mahnwesen_mahnt_nur_den_unverrechneten_rest(client, make
     )
     voll_gs = await _ok(await _gutschrift(client, h, voll["id"], alle=True))
     # Selbst eine ueberfaellig datierte Gutschrift wird nie gemahnt.
+    # Testaufbau: die Faelligkeit eines versendeten Belegs ist per Festschreibungs-Trigger (Migration
+    # 0114) unveraenderbar -- nur fuer diese kuenstliche Konstellation wird er kurz ausgesetzt.
     async with system_session() as session:
+        await session.execute(text("ALTER TABLE rechnungen DISABLE TRIGGER trg_rechnungen_festschreibung"))
         gs = await session.get(Rechnung, uuid.UUID(voll_gs["id"]))
         gs.faellig_am = date.today() - timedelta(days=40)
+        await session.flush()
+        await session.execute(text("ALTER TABLE rechnungen ENABLE TRIGGER trg_rechnungen_festschreibung"))
         await session.commit()
 
     ergebnis = await mahnwesen_service.run_mahnwesen_eskalation([mandant.id])
