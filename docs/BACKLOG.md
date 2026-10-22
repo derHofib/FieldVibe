@@ -231,6 +231,34 @@ Deploy mit Backup/Gate/Rollback, GHCR-Images, Dependabot, Audits.
 - **Repository-Standardbranch/Remote-HEAD**: Sache des Repository-Besitzers (GitHub → Settings →
   Branches); `GITHUB_BRANCH` steuert nur die Update-Anzeige.
 
+## 15. Frontend-Aufräumen: Rest nach der ersten Projektdurchsicht
+
+Erledigt (Stand 22.10.2026): „Heute“ überall in Lokalzeit (`heuteIso`/`datumZuIso`,
+Leitplanke im Test `utils/heute.test.ts`), Navigation an die Backend-Berechtigungen
+angeglichen (Konsistenztest `config/navSeiten.test.ts`, Datenexport als Seitenleisten-Eintrag),
+`window.confirm` durch `bestaetigen()` ersetzt, Office/Admin/Portal/Randseiten nachgeladen
+(Startseite 1554 kB -> 509 kB JS), `VorgangDetailPage` in `pages/feld/vorgangDetail/` zerlegt.
+
+Offen:
+
+- **„Heute“ nutzt die Browser-Zeitzone**, nicht die Betriebs-Zeitzone des Mandanten. Das Frontend
+  kennt keine Mandanten-Zeitzone (siehe Punkt „Jobs“ unter 14); sobald das Backend sie liefert,
+  gehört sie in `utils/format.ts` (`heuteIso`) — alle Aufrufer ziehen automatisch nach.
+- **Native `<select>` bleiben** (Design: kurze Listen nativ, lange `SearchableSelect`), sind aber nur
+  zentral gestaltet. Eine Durchsicht, welche der ~130 Selects eigentlich lange Listen haben
+  (Kunden, Anlagen, Material), steht aus.
+- **Feld-Kernseiten bleiben statisch im Hauptbündel** (Offline-Start): `VorgangDetailPage` samt
+  Unterkomponenten, Kunden-/Partner-/Anlagenprofil, Material. Weiteres Splitten ginge nur mit
+  Offline-Test auf einem echten Gerät; der Service-Worker precacht auch alle nachgeladenen Chunks
+  (160 Einträge, ~4,8 MiB).
+- **`mapboxSetup`-Chunk 1,8 MB** (lazy, nur Karten) und `jspdf`/`html2canvas` (lazy) bleiben groß.
+- **Playwright-E2E nicht gelaufen** (`frontend/e2e`, braucht laufendes Backend); Seitenleiste und
+  Dialoge nur per Vitest und Mock-Screenshots geprüft.
+- **Backend-Hinweis aus der Navigations-Prüfung:** `GET /api/users` verlangt `mitarbeiterverwaltung.sehen`,
+  die Einladungsliste dagegen `mandant_admin` — ein `custom`-Nutzer mit dem Recht sieht die Seite
+  „Nutzer verwalten“, aber ohne Einladungen. `/einstellungen` (Verwaltungsübersicht) ist im Office
+  nur noch über Rücksprung-Links erreichbar, nicht über die Seitenleiste.
+
 ## Erledigt, zur Einordnung
 
 `v1.0.0` (17.08.2026) markiert den Ausgangsstand nach Zusammenführung
