@@ -27,15 +27,20 @@ _HINTERGRUND_MAX_BYTES = 8 * 1024 * 1024
 _ANHANG_MAX_BYTES = 15 * 1024 * 1024
 
 
-def _anhang_praefix(board_id: UUID) -> str:
-    return f"boards/{board_id}/anhang/"
+def _anhang_praefixe(mandant_id: UUID, board_id: UUID) -> tuple[str, str]:
+    # Neue Objekte liegen unter dem Mandantenpraefix, Altobjekte (vor dem GoBD-Paket)
+    # unter dem nackten boards/-Schema -- beide muessen lesbar und loeschbar bleiben.
+    return (
+        f"{storage_service.mandant_prefix(mandant_id)}boards/{board_id}/anhang/",
+        f"boards/{board_id}/anhang/",
+    )
 
 
-def _anhang_key_pruefen(board_id: UUID, key: str) -> None:
+def _anhang_key_pruefen(mandant_id: UUID, board_id: UUID, key: str) -> None:
     # Der Key kommt vom Client (steckt im Node-data, nicht in der DB) --
     # ohne diese Pruefung koennte ein Nutzer ueber die Query-Param beliebige
     # Objekte eines fremden Boards/Mandanten abfragen oder loeschen.
-    if not key.startswith(_anhang_praefix(board_id)):
+    if not key.startswith(_anhang_praefixe(mandant_id, board_id)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anhang nicht gefunden")
 
 
@@ -191,8 +196,8 @@ async def get_board_anhang_url(
     key: str,
     session: AsyncSession = Depends(get_db),
 ) -> BoardAnhangUrl:
-    await _get_board(session, board_id)
-    _anhang_key_pruefen(board_id, key)
+    board = await _get_board(session, board_id)
+    _anhang_key_pruefen(board.mandant_id, board_id, key)
     return BoardAnhangUrl(url=storage_service.presigned_get_url(key))
 
 
@@ -202,6 +207,6 @@ async def delete_board_anhang(
     key: str,
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    await _get_board(session, board_id)
-    _anhang_key_pruefen(board_id, key)
+    board = await _get_board(session, board_id)
+    _anhang_key_pruefen(board.mandant_id, board_id, key)
     await storage_service.delete_object(key)
