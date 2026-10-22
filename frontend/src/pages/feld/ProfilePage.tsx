@@ -9,6 +9,7 @@ import { istModulAktiv } from "../../utils/module";
 import { ROLE_LABEL } from "../UsersPage";
 import { MfaKarte } from "./MfaKarte";
 import { PasswortAendernKarte } from "./PasswortAendernKarte";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 export function ProfilePage() {
   const { currentUser, hatRecht, isImpersonating, logout } = useAuth();
@@ -17,7 +18,7 @@ export function ProfilePage() {
   const [abmeldenFehler, setAbmeldenFehler] = useState<string | null>(null);
 
   const ueberallAbmelden = async () => {
-    if (!window.confirm("Auf allen Geräten abmelden? Du musst dich danach überall neu anmelden.")) {
+    if (!await bestaetigen("Auf allen Geräten abmelden? Du musst dich danach überall neu anmelden.")) {
       return;
     }
     setAbmeldenLaeuft(true);

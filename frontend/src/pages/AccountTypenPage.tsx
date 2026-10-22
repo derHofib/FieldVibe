@@ -11,6 +11,7 @@ import { aktionsSpalten, bereichKennt } from "../office/organigramm/rechteMatrix
 import type { AccountTyp } from "../types";
 import type { RechteRegistry } from "../types/organigramm";
 import { AccountTypVorlageSheet } from "./AccountTypVorlageSheet";
+import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
 // Hinweise zu Aktionen, die nicht selbsterklaerend sind (Spaltenkopf-Tooltip).
 const AKTION_HINWEIS: Record<string, string> = {
@@ -318,8 +319,8 @@ export function AccountTypenPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`Account-Typ "${typ.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
+                    onClick={async () => {
+                      if (await bestaetigen(`Account-Typ "${typ.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
                         setDeleteError(null);
                         deleteMutation.mutate(typ.id);
                       }

@@ -31,6 +31,7 @@ import { MeineAufgabenPage } from "../pages/feld/MeineAufgabenPage";
 import { NewVorgangPage } from "../pages/feld/NewVorgangPage";
 import { NotificationsPage } from "../pages/feld/NotificationsPage";
 import { PapierkorbPage } from "../pages/feld/PapierkorbPage";
+import { PlanSymbolePage } from "../pages/feld/PlanSymbolePage";
 import { PartnerPage } from "../pages/feld/PartnerPage";
 import { PartnerProfilePage } from "../pages/feld/PartnerProfilePage";
 import { ProfilePage } from "../pages/feld/ProfilePage";
@@ -177,6 +178,7 @@ export function OfficeApp() {
         <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
         <Route path="/form-schemas" element={<FormSchemasPage />} />
         <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
+        <Route path="/plan-symbole" element={<PlanSymbolePage />} />
         <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
         <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
         <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />

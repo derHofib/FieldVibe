@@ -121,6 +121,7 @@ bestehende Seite das Rahmen-Muster schon konsequent nutzt.
 |---|---|---|
 | `GroupedList`/`GroupedListRow`/`GroupedListValueRow` | `GroupedList.tsx` | iOS-Einstellungen-Liste, `bg-cell`, eingerückte Trennlinie |
 | `Sheet` | `Sheet.tsx` | Mobil: Sheet von unten mit Griff. ≥768px: zentrierter 540px-Dialog. Eine Implementierung für beides |
+| `BestaetigungsDialog` | `BestaetigungsDialog.tsx` | Ersatz für `window.confirm`: `await bestaetigen("… wirklich löschen?")` (liefert `boolean`), `BestaetigungsHost` hängt einmal in `main.tsx`. `role="alertdialog"`, Fokus-Falle, Escape/Hintergrund = Abbrechen, Fokus startet auf „Abbrechen“; Beschriftung und rote Variante folgen dem Verb im Text (löschen, stornieren, …), per Optionen überschreibbar |
 | `SegmentedControl` | `SegmentedControl.tsx` | Umschalter, aktiv = Pille + Fett, inaktiv = `text-label` (nicht `text-label2`, siehe Barrierefreiheit unten) |
 | `StatusPille`/`StatusKreis` | `StatusPille.tsx`, `StatusKreis.tsx` | Status-Anzeige, immer Punkt **und** Text (Farbe nie alleiniger Träger) |
 | `AbschnittskopfA`/`B`, `AbschnittsFusszeile` | `AbschnittsKopf.tsx` | Listen-Überschrift groß (A) bzw. kleine Versal-Gruppen-Überschrift (B) |
@@ -217,7 +218,7 @@ Dev-Stack. Verbindliche Konventionen daraus:
 ## Formulare
 
 Lange Auswahllisten weiterhin als `SearchableSelect` (tippbare Combobox),
-kein natives `<select>`. `.field-ap` für Standard-Eingabefelder (siehe
+kein natives `<select>` für lange Listen. Kurze Auswahlen bleiben native `<select>` (System-Auswahlrad am Handy) und werden zentral in `index.css` gestaltet (eigener Pfeil, Hell/Dunkel). Rückfragen nie per `window.confirm`/`alert`, sondern `bestaetigen()`. `.field-ap` für Standard-Eingabefelder (siehe
 Bausteine oben); bei Feldern mit eigener Breite (`w-20` etc.) die
 Klassen einzeln setzen statt `.field-ap` (setzt `width: 100%`).
 

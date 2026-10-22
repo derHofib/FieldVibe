@@ -12,6 +12,7 @@ import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
 import { E_RECHNUNG_MODI, type ERechnungModus, eRechnungModus } from "../../utils/eRechnungVersand";
 import { istHttpUrl } from "../../utils/rechtliches";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
@@ -585,8 +586,8 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("SMTP-Integration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen("SMTP-Integration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
@@ -689,8 +690,8 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("IMAP-Integration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen("IMAP-Integration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "

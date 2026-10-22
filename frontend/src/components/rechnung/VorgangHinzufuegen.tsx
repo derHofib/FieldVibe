@@ -6,6 +6,7 @@ import { rechnungenApi } from "../../api/endpoints";
 import type { RechnungPositionQuelle, RechnungPositionVorschlag } from "../../types";
 import { formatStunden } from "../../utils/rechnungAbrechnung";
 import { Sheet } from "../apple/Sheet";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const GRUPPEN: { titel: string; quellen: RechnungPositionQuelle[] }[] = [
   { titel: "Arbeitszeit", quellen: ["zeit"] },
@@ -80,11 +81,11 @@ export function VorgangHinzufuegen({
     },
   });
 
-  const bestaetigen = () => {
+  const aufUebernehmen = async () => {
     if (
       zeitGewaehlt &&
       !(Number(stundensatz) > 0) &&
-      !window.confirm("Kein Stundensatz eingetragen. Mit 0 € übernehmen? Du kannst ihn später in der Rechnung eintragen.")
+      !(await bestaetigen("Kein Stundensatz eingetragen. Mit 0 € übernehmen? Du kannst ihn später in der Rechnung eintragen."))
     ) {
       return;
     }
@@ -203,7 +204,7 @@ export function VorgangHinzufuegen({
 
             <button
               disabled={gewaehlt.length === 0 || uebernehmen.isPending}
-              onClick={bestaetigen}
+              onClick={aufUebernehmen}
               className="btn-touch btn-ap btn-ap-primary w-full px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               Übernehmen

@@ -10,6 +10,7 @@ import { SegmentedControl } from "../apple/SegmentedControl";
 import { FehlerStatusPille, SchweregradBadge } from "./Badges";
 import { KontextTabs } from "./KontextTabs";
 import { FEHLER_STATUS, datumZeit, istHttpUrl, kurzCommit, statusLabel } from "./darstellung";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 function Abschnitt({ titel, children }: { titel: string; children: ReactNode }) {
   return (
@@ -392,8 +393,8 @@ export function FehlerberichtDetailAnsicht({
           {kannLoeschen && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm(`${idee ? "Idee" : "Fehlerbericht"} "${detail.titel}" endgültig löschen?`)) loeschen.mutate();
+              onClick={async () => {
+                if (await bestaetigen(`${idee ? "Idee" : "Fehlerbericht"} "${detail.titel}" endgültig löschen?`)) loeschen.mutate();
               }}
               className="btn-touch btn-ap inline-flex items-center gap-1.5 px-3 py-2 text-sm text-st-fehlt hover:bg-st-fehlt-bg"
             >

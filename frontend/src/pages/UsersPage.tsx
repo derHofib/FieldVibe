@@ -9,6 +9,7 @@ import { Sheet } from "../components/apple/Sheet";
 import type { Einladung, EinladungRolle, Role, User } from "../types";
 import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
 import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
+import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -392,8 +393,8 @@ export function UsersPage() {
                           Erneut senden
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Einladung an ${e.email} widerrufen?`)) {
+                          onClick={async () => {
+                            if (await bestaetigen(`Einladung an ${e.email} widerrufen?`)) {
                               revokeMutation.mutate(e.id);
                             }
                           }}
@@ -472,8 +473,8 @@ export function UsersPage() {
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm(`${u.name} auf allen Geräten abmelden?`)) {
+                        onClick={async () => {
+                          if (await bestaetigen(`${u.name} auf allen Geräten abmelden?`)) {
                             abmeldenMutation.mutate(u.id);
                           }
                         }}
@@ -489,8 +490,8 @@ export function UsersPage() {
                       </button>
                       {u.mfa_aktiv && u.id !== currentUser?.id && (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Zwei-Faktor-Anmeldung von ${u.name} zurücksetzen? Der Nutzer wird überall abgemeldet.`)) {
+                          onClick={async () => {
+                            if (await bestaetigen(`Zwei-Faktor-Anmeldung von ${u.name} zurücksetzen? Der Nutzer wird überall abgemeldet.`)) {
                               mfaResetMutation.mutate(u.id);
                             }
                           }}

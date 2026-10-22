@@ -46,6 +46,7 @@ import {
   type SteuerEingabe,
 } from "../../utils/steuer";
 import type { RechnungZahlungsart } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const VORSCHLAG_QUELLE_LABEL: Record<RechnungPositionQuelle, string> = {
   material: "Material",
@@ -548,8 +549,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Rechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen("Rechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
                 deleteMutation.mutate();
               }
             }}
@@ -990,8 +991,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       </span>
                       {Number(z.betrag) > 0 && rechnung.status !== "storniert" && !bereitsStorniert.has(z.id) && (
                         <button
-                          onClick={() => {
-                            if (window.confirm("Diese Zahlung stornieren?")) stornoZahlungMutation.mutate(z.id);
+                          onClick={async () => {
+                            if (await bestaetigen("Diese Zahlung stornieren?")) stornoZahlungMutation.mutate(z.id);
                           }}
                           disabled={stornoZahlungMutation.isPending}
                           className="btn-touch text-xs text-label2 underline-offset-2 hover:underline disabled:opacity-50"
@@ -1085,8 +1086,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             </button>
           )}
           <button
-            onClick={() => {
-              if (window.confirm("Diese Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+            onClick={async () => {
+              if (await bestaetigen("Diese Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
@@ -1100,8 +1101,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       )}
       {rechnung.status === "bezahlt" && !rechnung.ist_storno && (
         <button
-          onClick={() => {
-            if (window.confirm("Diese bereits bezahlte Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+          onClick={async () => {
+            if (await bestaetigen("Diese bereits bezahlte Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
               stornoMutation.mutate();
           }}
           disabled={stornoMutation.isPending}

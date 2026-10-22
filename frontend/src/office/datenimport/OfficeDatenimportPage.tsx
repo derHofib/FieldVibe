@@ -40,6 +40,7 @@ import type {
   ImportModus,
   ZeilenStatus,
 } from "./typen";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const STATUS_KLASSE: Record<ZeilenStatus, string> = {
   neu: "bg-st-neu-bg text-st-neu-text",
@@ -550,8 +551,8 @@ export function OfficeDatenimportPage() {
                 type="button"
                 className="btn-ap inline-flex h-9 items-center gap-1.5 px-4 text-sm"
                 disabled={rueckgaengigMutation.isPending}
-                onClick={() => {
-                  if (window.confirm("Alle durch diesen Import angelegten, seither unveränderten Datensätze in den Papierkorb legen?")) {
+                onClick={async () => {
+                  if (await bestaetigen("Alle durch diesen Import angelegten, seither unveränderten Datensätze in den Papierkorb legen?")) {
                     rueckgaengigMutation.mutate(analyse.import_lauf_id);
                   }
                 }}
@@ -608,8 +609,8 @@ export function OfficeDatenimportPage() {
                         <button
                           type="button"
                           className="text-[13px] font-medium text-tint-text underline"
-                          onClick={() => {
-                            if (window.confirm("Diesen Import rückgängig machen?")) rueckgaengigMutation.mutate(l.id);
+                          onClick={async () => {
+                            if (await bestaetigen("Diesen Import rückgängig machen?")) rueckgaengigMutation.mutate(l.id);
                           }}
                         >
                           Rückgängig

@@ -17,6 +17,7 @@ import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
 import { heuteIso } from "../../utils/format";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -437,9 +438,9 @@ export function AnlageProfilePage() {
           <h1 className="text-lg font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  window.confirm(
+                  await bestaetigen(
                     `${profil.bezeichnung} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
                   )
                 ) {
@@ -634,8 +635,8 @@ export function AnlageProfilePage() {
                 </div>
                 {kannPapierkorbLoeschen && (
                   <button
-                    onClick={() => {
-                      if (window.confirm(`Prüfzyklus "${z.bezeichnung}" wirklich löschen?`)) {
+                    onClick={async () => {
+                      if (await bestaetigen(`Prüfzyklus "${z.bezeichnung}" wirklich löschen?`)) {
                         deletePruefzyklusMutation.mutate(z.id);
                       }
                     }}
@@ -719,8 +720,8 @@ export function AnlageProfilePage() {
               )}
               {kannPapierkorbLoeschen && (
                 <button
-                  onClick={() => {
-                    if (window.confirm("Inventurzyklus wirklich löschen?")) {
+                  onClick={async () => {
+                    if (await bestaetigen("Inventurzyklus wirklich löschen?")) {
                       deleteInventurzyklusMutation.mutate();
                     }
                   }}

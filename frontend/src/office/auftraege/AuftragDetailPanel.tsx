@@ -11,6 +11,7 @@ import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
 import type { Auftrag, AuftragStatus } from "../../types";
 import { AUFTRAG_STATUS_LABEL } from "./AuftraegeTabelle";
 import { Layers } from "lucide-react";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const AUFTRAG_STATUS_OPTIONEN: AuftragStatus[] = ["offen", "in_arbeit", "abgeschlossen", "storniert"];
 
@@ -144,8 +145,8 @@ export function AuftragDetailPanel({ auftrag, onClose }: { auftrag: Auftrag; onC
 
         <div className="border-t border-sep pt-4">
           <button
-            onClick={() => {
-              if (window.confirm(`Auftrag "${aktuell?.titel ?? auftrag.titel}" wirklich löschen?`)) {
+            onClick={async () => {
+              if (await bestaetigen(`Auftrag "${aktuell?.titel ?? auftrag.titel}" wirklich löschen?`)) {
                 loeschen.mutate();
               }
             }}

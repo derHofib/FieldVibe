@@ -1,4 +1,5 @@
 import {
+  Archive,
   BarChart3,
   Bell,
   CalendarCheck,
@@ -55,6 +56,18 @@ export const NAV_KATEGORIE_REIHENFOLGE: NavKategorie[] = [
   "Kommunikation",
   "Verwaltung",
 ];
+
+// mandant_admin und loesch_operativ: das Backend laesst loesch_operativ ueberall durch,
+// wo require_roles("mandant_admin") steht (app/api/deps.py). nur_mandant_admin
+// (Protokoll, Export) schliesst es dagegen aus.
+function istAdmin(currentUser: CurrentUser | undefined): boolean {
+  return currentUser?.role === "mandant_admin" || currentUser?.role === "loesch_operativ";
+}
+
+// loesch_ansicht sieht im Backend ausschliesslich den Papierkorb. Seine Rechte-Matrix ist
+// trotzdem voll (alle Nicht-custom-Rollen), die rechtebasierten Gates liessen sonst jede
+// Seite durch, die dann nur 403 liefert.
+const SEITEN_LOESCH_ANSICHT = new Set(["papierkorb", "profil"]);
 
 export interface NavSeite {
   key: string;
@@ -229,7 +242,9 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "amber",
     route: "/anfragen",
     kategorie: "Arbeit",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "kundenportal"),
+    // /api/vorgang-anfragen verlangt vorgaenge.bearbeiten.
+    sichtbar: ({ currentUser, hatRecht }) =>
+      hatRecht("vorgaenge", "bearbeiten") && istModulAktiv(currentUser, "kundenportal"),
   },
   {
     key: "rechnungen",
@@ -283,7 +298,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "sky",
     route: "/insights",
     kategorie: "Finanzen",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "statistik"),
+    // /api/insights: nur Admin-Rollen, zusaetzlich Modul "statistik".
+    sichtbar: ({ currentUser }) => istAdmin(currentUser) && istModulAktiv(currentUser, "statistik"),
   },
   {
     key: "meldungen",
@@ -313,7 +329,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "violet",
     route: "/highlights",
     kategorie: "Kommunikation",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "highlights"),
+    sichtbar: ({ currentUser, hatRecht }) =>
+      hatRecht("vorgaenge", "sehen") && istModulAktiv(currentUser, "highlights"),
   },
   {
     key: "nutzer",
@@ -322,7 +339,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "amber",
     route: "/accounts",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    // GET /api/users: mandant_admin bzw. custom mit mitarbeiterverwaltung.sehen.
+    sichtbar: ({ hatRecht }) => hatRecht("mitarbeiterverwaltung", "sehen"),
   },
   {
     key: "account_typen",
@@ -331,7 +349,11 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "violet",
     route: "/account-typen",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    // Backend (_verwalter): Admin oder rechte_verwalten im Organigramm bzw. der Mitarbeiterverwaltung.
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istAdmin(currentUser) ||
+      hatRecht("organigramm", "rechte_verwalten") ||
+      hatRecht("mitarbeiterverwaltung", "rechte_verwalten"),
   },
   {
     key: "organigramm",
@@ -351,7 +373,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "emerald",
     route: "/techniker-zuweisungen",
     kategorie: "Verwaltung",
-    sichtbar: ({ hatRecht }) => hatRecht("dispo", "bearbeiten"),
+    // /api/techniker-zuweisungen verlangt kunden.bearbeiten (nicht dispo.bearbeiten).
+    sichtbar: ({ hatRecht }) => hatRecht("kunden", "bearbeiten"),
   },
   {
     key: "abwesenheiten",
@@ -380,7 +403,7 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "rose",
     route: "/anlagen-felder",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    sichtbar: ({ hatRecht }) => hatRecht("kunden", "sehen"),
   },
   {
     key: "formulare",
@@ -398,7 +421,7 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "indigo",
     route: "/integrationen",
     kategorie: "Verwaltung",
-    sichtbar: () => true,
+    sichtbar: ({ currentUser }) => istAdmin(currentUser),
   },
   {
     key: "protokoll",
@@ -418,8 +441,19 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "teal",
     route: "/datenimport",
     kategorie: "Verwaltung",
-    // Assistent mit breiten Tabellen (Zuordnung, Probelauf): nur am Desktop; nur mandant_admin
-    // (Backend: require_roles("mandant_admin")).
+    // Assistent mit breiten Tabellen (Zuordnung, Probelauf): nur am Desktop; Backend:
+    // require_roles("mandant_admin"), also inkl. loesch_operativ.
+    nurOffice: true,
+    sichtbar: ({ currentUser }) => istAdmin(currentUser),
+  },
+  {
+    key: "export",
+    label: "Daten exportieren",
+    icon: Archive,
+    tone: "teal",
+    route: "/einstellungen/export",
+    kategorie: "Verwaltung",
+    // Breite Tabelle, nur am Desktop; Backend: nur_mandant_admin (schliesst loesch_operativ aus).
     nurOffice: true,
     sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin",
   },
@@ -441,7 +475,10 @@ export function sichtbareNavSeiten(
   oberflaeche: "office" | "feld" = "office",
 ): NavSeite[] {
   return NAV_SEITEN.filter(
-    (seite) => (oberflaeche === "feld" || !seite.nurFeld) && seite.sichtbar({ currentUser, hatRecht }),
+    (seite) =>
+      (oberflaeche === "feld" || !seite.nurFeld) &&
+      (currentUser?.role !== "loesch_ansicht" || SEITEN_LOESCH_ANSICHT.has(seite.key)) &&
+      seite.sichtbar({ currentUser, hatRecht }),
   );
 }
 

@@ -19,6 +19,7 @@ import { monatsGrenzen, toDateInput } from "../../utils/zeiterfassung";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { AbwesenheitSheet } from "./AbwesenheitSheet";
 import { AbwesenheitZeile, UrlaubskontoKacheln } from "./AbwesenheitUi";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 type Tab = "offen" | "kalender" | "alle" | "anspruch";
 
@@ -334,8 +335,8 @@ function AlleAntraege() {
                     type="button"
                     className="text-sm font-medium text-st-fehlt disabled:opacity-50"
                     disabled={aktionen.ausstehend}
-                    onClick={() => {
-                      if (a.status === "offen" || window.confirm("Genehmigte Abwesenheit stornieren? Die automatisch erzeugten Zeiteinträge werden entfernt.")) {
+                    onClick={async () => {
+                      if (a.status === "offen" || await bestaetigen("Genehmigte Abwesenheit stornieren? Die automatisch erzeugten Zeiteinträge werden entfernt.")) {
                         aktionen.stornieren.mutate(a.id);
                       }
                     }}

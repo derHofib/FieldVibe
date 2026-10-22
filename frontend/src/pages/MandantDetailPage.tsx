@@ -6,6 +6,7 @@ import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantModul, MandantStatus } from "../types";
+import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -95,9 +96,9 @@ export function MandantDetailPage() {
     stammdatenMutation.mutate();
   }
 
-  function handleStatusChange(status: MandantStatus) {
+  async function handleStatusChange(status: MandantStatus) {
     const frage = STATUS_BESTAETIGUNG[status];
-    if (frage && !window.confirm(frage)) return;
+    if (frage && !await bestaetigen(frage)) return;
     statusMutation.mutate(status);
   }
 

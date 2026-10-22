@@ -14,6 +14,7 @@ import { CaptureRenderer } from "../../components/formModul/CaptureRenderer";
 import { SummaryRenderer } from "../../components/formModul/SummaryRenderer";
 import { EmptyState } from "../../components/EmptyState";
 import { openPdfBlob } from "../../utils/pdf";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 export function FormSubmissionAusfuellenPage() {
   const { id } = useParams<{ id: string }>();
@@ -187,8 +188,8 @@ export function FormSubmissionAusfuellenPage() {
             Speichern
           </button>
           <button
-            onClick={() => {
-              if (window.confirm("Formular abschließen? Danach nicht mehr bearbeitbar.")) {
+            onClick={async () => {
+              if (await bestaetigen("Formular abschließen? Danach nicht mehr bearbeitbar.")) {
                 abschliessenMutation.mutate();
               }
             }}

@@ -11,6 +11,7 @@ import { SeitenPanel } from "../../components/SeitenPanel";
 import { useAuth } from "../../context/AuthContext";
 import type { LeistungsverzeichnisPosition, LvKalkulationsmodus, LvMaterialPosten } from "../../types";
 import { KundenZuweisung } from "./LeistungsverzeichnisPage";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 function euro(wert: string | number): string {
   return `${Number(wert).toFixed(2)} €`;
@@ -506,8 +507,8 @@ function LvPositionFelder({
           <span />
         ) : (
           <button
-            onClick={() => {
-              if (window.confirm(`"${position!.bezeichnung}" wirklich löschen?`)) loeschen.mutate();
+            onClick={async () => {
+              if (await bestaetigen(`"${position!.bezeichnung}" wirklich löschen?`)) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
             className="btn-touch text-xs font-medium text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
@@ -707,8 +708,8 @@ export function LeistungsverzeichnisDetailPage({ layout = "kompakt" }: { layout?
               <Copy size={13} strokeWidth={1.5} /> Duplizieren
             </button>
             <button
-              onClick={() => {
-                if (window.confirm(`"${lv.name}" samt aller Positionen wirklich löschen?`)) loeschen.mutate();
+              onClick={async () => {
+                if (await bestaetigen(`"${lv.name}" samt aller Positionen wirklich löschen?`)) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
               className="btn-touch btn-ap-toolbar text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"

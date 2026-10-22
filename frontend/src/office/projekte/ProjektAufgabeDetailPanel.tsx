@@ -14,6 +14,7 @@ import {
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SymbolKachel, type KachelFarbe } from "../../components/apple/SymbolKachel";
 import type { ChecklistenPunkt, ProjektAufgabe, ProjektAufgabePrioritaet, ProjektSpalte } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const PRIORITAET_OPTIONEN: { wert: ProjektAufgabePrioritaet; label: string }[] = [
   { wert: "niedrig", label: "Niedrig" },
@@ -555,8 +556,8 @@ export function ProjektAufgabeDetailPanel({
             <span />
           ) : (
             <button
-              onClick={() => {
-                if (window.confirm("Aufgabe wirklich löschen?")) loeschen.mutate();
+              onClick={async () => {
+                if (await bestaetigen("Aufgabe wirklich löschen?")) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
               className="text-xs font-medium text-label2 hover:text-st-fehlt disabled:opacity-50"

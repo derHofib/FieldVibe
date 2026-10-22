@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../api/client";
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 import type { Angebot, Rechnung, RechnungPosition } from "../../types";
 import { RechnungDetailPage } from "./RechnungDetailPage";
 
@@ -49,6 +50,8 @@ function pos(teil: Partial<RechnungPosition> = {}): RechnungPosition {
   } as RechnungPosition;
 }
 
+vi.mock("../../components/apple/BestaetigungsDialog", () => ({ bestaetigen: vi.fn() }));
+
 function rechnung(teil: Partial<Rechnung> = {}): Rechnung {
   return {
     id: "r1",
@@ -87,7 +90,7 @@ function zeige(r: Rechnung, bezug?: Rechnung) {
 
 beforeEach(() => {
   recht.abrechnung = true;
-  vi.stubGlobal("confirm", vi.fn(() => true));
+  vi.mocked(bestaetigen).mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -244,5 +247,14 @@ describe("RechnungDetailPage – Rechnungsarten", () => {
     const buttons = await screen.findAllByRole("button", { name: "Stornieren" });
     fireEvent.click(buttons[0]);
     expect(await screen.findByText(/ein Komplett-Storno ist nicht mehr möglich/)).toBeInTheDocument();
+  });
+
+  it("Storno fragt vorher nach und bricht bei Ablehnung ab", async () => {
+    vi.mocked(bestaetigen).mockResolvedValue(false);
+    zeige(rechnung());
+    const buttons = await screen.findAllByRole("button", { name: "Stornieren" });
+    fireEvent.click(buttons[0]);
+    await waitFor(() => expect(bestaetigen).toHaveBeenCalledWith(expect.stringMatching(/stornieren/)));
+    expect(rechnungenApi.storno).not.toHaveBeenCalled();
   });
 });

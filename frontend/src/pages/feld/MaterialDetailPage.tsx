@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 export function MaterialDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -108,8 +109,8 @@ export function MaterialDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Material wirklich löschen? Es wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen("Material wirklich löschen? Es wandert in den Papierkorb.")) {
                 deleteMutation.mutate();
               }
             }}

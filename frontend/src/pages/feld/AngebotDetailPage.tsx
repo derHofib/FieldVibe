@@ -28,6 +28,7 @@ import {
 import { formatIsoTag, heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotMwstSatz, AngebotPosition, AngebotPositionstyp } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const POSITIONSTYP_LABEL: Record<AngebotPositionstyp, string> = {
   material: "Material",
@@ -247,8 +248,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Angebot wirklich löschen? Es wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen("Angebot wirklich löschen? Es wandert in den Papierkorb.")) {
                 deleteMutation.mutate();
               }
             }}

@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { plattformIntegrationenApi } from "../api/endpoints";
 import type { PlattformIntegration } from "../types";
+import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
 function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   const queryClient = useQueryClient();
@@ -93,8 +94,8 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("Globale SMTP-Konfiguration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen("Globale SMTP-Konfiguration wirklich löschen?")) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch border border-st-fehlt px-3 py-1.5 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"

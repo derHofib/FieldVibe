@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { einladungFehlerText, partnerPortalLink, portalZugangStatus } from "../../utils/partnerZugang";
 import type { Adresse, PartnerFreigabeStatus, PartnerNachweisTyp } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const NACHWEIS_TYP_LABEL: Record<PartnerNachweisTyp, string> = {
   freistellungsbescheinigung: "Freistellungsbescheinigung (§48 EStG)",
@@ -527,8 +528,8 @@ function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerE
         )}
         {einladungKopf && kannWiderrufen && (
           <button
-            onClick={() => {
-              if (window.confirm(`Einladung an ${einladungKopf.email} widerrufen?`)) widerrufen.mutate(einladungKopf.id);
+            onClick={async () => {
+              if (await bestaetigen(`Einladung an ${einladungKopf.email} widerrufen?`)) widerrufen.mutate(einladungKopf.id);
             }}
             disabled={arbeitet}
             className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt"
@@ -538,10 +539,10 @@ function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerE
         )}
         {(status.art === "aktiv" || status.art === "gesperrt") && kannSperren && (
           <button
-            onClick={() => {
+            onClick={async () => {
               if (
                 status.art === "gesperrt" ||
-                window.confirm("Zugang sperren? Der Partner kann sich danach nicht mehr anmelden.")
+                await bestaetigen("Zugang sperren? Der Partner kann sich danach nicht mehr anmelden.")
               ) {
                 sperren.mutate({ zugangId: status.zugang.id, aktiv: status.art === "gesperrt" });
               }
@@ -693,8 +694,8 @@ export function PartnerProfilePage() {
             </div>
           </div>
           <button
-            onClick={() => {
-              if (window.confirm(`${partner.name} wirklich löschen?`)) deleteMutation.mutate();
+            onClick={async () => {
+              if (await bestaetigen(`${partner.name} wirklich löschen?`)) deleteMutation.mutate();
             }}
             className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >

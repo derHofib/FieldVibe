@@ -8,6 +8,7 @@ import { App } from "./App";
 import { authStore } from "./api/authStore";
 import { initFehlerbericht } from "./bugreport";
 import { installFehlerweiterleitung } from "./bugreport/fehlerweiterleitung";
+import { BestaetigungsHost } from "./components/apple/BestaetigungsDialog";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { pruefeGeraeteWeiche } from "./office/geraeteWeiche";
@@ -88,6 +89,7 @@ if (!wirdUmgeleitet) {
           <ThemeProvider>
             <AuthProvider>
               <App istOffice={istOffice} />
+              <BestaetigungsHost />
             </AuthProvider>
           </ThemeProvider>
         </BrowserRouter>

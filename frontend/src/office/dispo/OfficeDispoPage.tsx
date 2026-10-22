@@ -22,6 +22,7 @@ import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const START_STUNDE = 7;
 const ENDE_STUNDE = 19;
@@ -728,8 +729,8 @@ function TerminBearbeitenPanel({
 
         <div className="flex items-center justify-between gap-2 pt-2">
           <button
-            onClick={() => {
-              if (window.confirm("Termin wirklich löschen?")) onDelete();
+            onClick={async () => {
+              if (await bestaetigen("Termin wirklich löschen?")) onDelete();
             }}
             className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >

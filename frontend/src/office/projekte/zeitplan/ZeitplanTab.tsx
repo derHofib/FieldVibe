@@ -51,6 +51,7 @@ import {
   type Zoom,
   type ZiehArt,
 } from "./zeitplanLogik";
+import { bestaetigen } from "../../../components/apple/BestaetigungsDialog";
 
 const ZOOM_OPTIONEN: { wert: Zoom; label: string }[] = [
   { wert: "tag", label: "Tag" },
@@ -405,9 +406,9 @@ export function ZeitplanTab({ projektId }: { projektId: string }) {
     );
   }
 
-  function loeschen(e: ZeitplanElement) {
+  async function loeschen(e: ZeitplanElement) {
     const text = e.typ === "phase" ? `Phase „${e.titel}“ wirklich löschen?` : `„${e.titel}“ wirklich löschen?`;
-    if (!window.confirm(text)) return;
+    if (!await bestaetigen(text)) return;
     setFehler(null);
     aendern.mutate(() => zeitplanApi.removeElement(projektId, e.id));
   }

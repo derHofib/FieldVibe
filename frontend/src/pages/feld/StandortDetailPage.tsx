@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -313,8 +314,8 @@ export function StandortDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Standort wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen("Standort wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
                 deleteMutation.mutate();
               }
             }}

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gespeicherteFilterApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { GespeicherterFilter, GespeicherterFilterEntitaet } from "../types";
+import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
 function filtersEqual(a: Record<string, string>, b: Record<string, string>): boolean {
   const aKeys = Object.keys(a).filter((k) => a[k]);
@@ -102,8 +103,8 @@ export function FilterVorlagenLeiste({
                   {v.ist_standard ? "★" : "☆"}
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Filter-Vorlage "${v.name}" löschen?`)) deleteMutation.mutate(v.id);
+                  onClick={async () => {
+                    if (await bestaetigen(`Filter-Vorlage "${v.name}" löschen?`)) deleteMutation.mutate(v.id);
                   }}
                   className={`px-1.5 ${aktiv ? "text-white/80" : "text-label2"}`}
                 >

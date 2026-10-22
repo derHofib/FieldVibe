@@ -9,6 +9,7 @@ import { Sheet } from "../../components/apple/Sheet";
 import { EmptyState } from "../../components/EmptyState";
 import type { ProjektVorlage, ProjektVorlageDetail, ProjektVorlageElement } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 function fehlerText(e: unknown): string {
   return e instanceof ApiError ? e.message : "Die Aktion ist fehlgeschlagen.";
@@ -221,8 +222,8 @@ export function OfficeProjektVorlagenPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm(`Vorlage „${aktiv.name}“ wirklich löschen? Bereits angewendete Zeitpläne bleiben unverändert.`)) {
+                  onClick={async () => {
+                    if (await bestaetigen(`Vorlage „${aktiv.name}“ wirklich löschen? Bereits angewendete Zeitpläne bleiben unverändert.`)) {
                       setFehler(null);
                       loeschen.mutate(aktiv.id);
                     }

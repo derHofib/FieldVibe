@@ -7,6 +7,7 @@ import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import type { Besetzung, BesetzungArt, PositionDetail } from "../../types/organigramm";
 import { besetzungZeitraum, istUnterbesetzt, verstaendlicherFehler } from "./darstellung";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const ART_LABEL: Record<BesetzungArt, string> = { regulaer: "Regulär", vertretung: "Vertretung" };
 
@@ -145,8 +146,8 @@ export function BesetzungTab({
                 b={b}
                 darfBeenden={darfBearbeiten && !archiviert}
                 beendenLaeuft={beenden.isPending}
-                onBeenden={() => {
-                  if (window.confirm(`${b.name ?? "Die Person"} von dieser Position freistellen? Die Besetzung endet sofort und bleibt in der Historie.`)) {
+                onBeenden={async () => {
+                  if (await bestaetigen(`${b.name ?? "Die Person"} von dieser Position freistellen? Die Besetzung endet sofort und bleibt in der Historie.`)) {
                     beenden.mutate(b.id);
                   }
                 }}

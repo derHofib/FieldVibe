@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dsgvoApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { DsgvoDokument, DsgvoDokumentTyp } from "../types";
+import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
 // Muss mit DSGVO_DOKUMENT_TYPEN in backend/app/models/dsgvo_dokument.py
 // uebereinstimmen.
@@ -85,8 +86,8 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
                 Herunterladen
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm(`"${DOKUMENT_LABEL[typ]}" wirklich löschen?`)) removeMutation.mutate();
+                onClick={async () => {
+                  if (await bestaetigen(`"${DOKUMENT_LABEL[typ]}" wirklich löschen?`)) removeMutation.mutate();
                 }}
                 disabled={removeMutation.isPending}
                 className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"

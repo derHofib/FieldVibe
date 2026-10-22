@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { heuteIso } from "../../utils/format";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -298,8 +299,8 @@ export function DauerauftragDetailPage() {
               {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("Dauer-Auftrag wirklich löschen? Bereits erzeugte Vorgänge bleiben erhalten.")) {
+              onClick={async () => {
+                if (await bestaetigen("Dauer-Auftrag wirklich löschen? Bereits erzeugte Vorgänge bleiben erhalten.")) {
                   deleteMutation.mutate();
                 }
               }}

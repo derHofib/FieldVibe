@@ -15,6 +15,7 @@ import type {
 } from "../../../office/boards/types";
 import { leeresInhalt } from "../../../office/boards/types";
 import { NeueNotizSheet, NotizAktionSheet } from "./NotizSheet";
+import { bestaetigen } from "../../../components/apple/BestaetigungsDialog";
 
 // @xyflow/react ist eine schwere Desktop-Bibliothek -- wird nur geladen,
 // wenn tatsaechlich zur Canvas-Ansicht gewechselt wird (Liste ist der
@@ -198,8 +199,8 @@ export function BoardMobilePage() {
             <ChevronLeft size={16} strokeWidth={2.25} /> Boards
           </button>
           <button
-            onClick={() => {
-              if (window.confirm(`Board "${board.name}" wirklich löschen?`)) boardLoeschen.mutate();
+            onClick={async () => {
+              if (await bestaetigen(`Board "${board.name}" wirklich löschen?`)) boardLoeschen.mutate();
             }}
             disabled={boardLoeschen.isPending}
             aria-label="Board löschen"

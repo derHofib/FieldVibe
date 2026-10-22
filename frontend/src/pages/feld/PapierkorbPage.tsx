@@ -6,6 +6,7 @@ import { papierkorbApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
@@ -163,9 +164,9 @@ export function PapierkorbPage() {
                     Wiederherstellen
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
+                        await bestaetigen(
                           `„${anzeigeName(eintrag)}“ endgültig löschen? Das kann nicht rückgängig gemacht werden.`,
                         )
                       ) {

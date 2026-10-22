@@ -11,6 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatDatum } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
 import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBedarfZweck, Tag } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 type MaterialTab = "material" | "bestellwesen";
 
@@ -719,8 +720,8 @@ export function MaterialPage() {
                     </div>
                     {kannLieferantenLoeschen && (
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Lieferant "${l.name}" wirklich löschen?`)) {
+                        onClick={async () => {
+                          if (await bestaetigen(`Lieferant "${l.name}" wirklich löschen?`)) {
                             deleteLieferantMutation.mutate(l.id);
                           }
                         }}

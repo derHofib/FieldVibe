@@ -67,6 +67,7 @@ import type {
   Zeiterfassung,
 } from "../../types";
 import { datumZuIso, heuteIso, tageZwischen } from "../../utils/format";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -1370,7 +1371,7 @@ export function VorgangDetailPage({
       return neu;
     });
   }
-  function handleBuchen() {
+  async function handleBuchen() {
     const stunden = formatSekundenAlsHHMM(
       ausgewaehlteEintraege.reduce(
         (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
@@ -1378,7 +1379,7 @@ export function VorgangDetailPage({
       ),
     );
     if (
-      window.confirm(
+      await bestaetigen(
         `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen? Gebuchte Einträge kannst du danach nicht mehr ändern.`,
       )
     ) {
@@ -2714,11 +2715,11 @@ export function VorgangDetailPage({
             </span>
             {currentUser?.darf_vorgaenge_selbst_uebernehmen && (
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (
                     vorgang.zugewiesener_user_id &&
                     vorgang.zugewiesener_user_id !== currentUser.id &&
-                    !window.confirm(
+                    !await bestaetigen(
                       `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`,
                     )
                   ) {
@@ -3027,8 +3028,8 @@ export function VorgangDetailPage({
                                 {kannPapierkorbLoeschen && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                                    onClick={async () => {
+                                      if (await bestaetigen(`Termin "${t.titel}" wirklich löschen?`)) {
                                         deleteTerminMutation.mutate(t.id);
                                       }
                                     }}
@@ -3079,8 +3080,8 @@ export function VorgangDetailPage({
                       </span>
                       {kannPapierkorbLoeschen && (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                          onClick={async () => {
+                            if (await bestaetigen(`Termin "${t.titel}" wirklich löschen?`)) {
                               deleteTerminMutation.mutate(t.id);
                             }
                           }}
@@ -3199,8 +3200,8 @@ export function VorgangDetailPage({
                     )}
                     {kannPapierkorbLoeschen && (
                       <button
-                        onClick={() => {
-                          if (window.confirm("Mangel wirklich löschen?")) {
+                        onClick={async () => {
+                          if (await bestaetigen("Mangel wirklich löschen?")) {
                             deleteMangelMutation.mutate(m.id);
                           }
                         }}
@@ -3477,8 +3478,8 @@ export function VorgangDetailPage({
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
                 deleteVorgangMutation.mutate();
               }
             }}

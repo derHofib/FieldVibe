@@ -6,6 +6,7 @@ import { pruefmittelApi, usersApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { Pruefmittel, PruefmittelStatus } from "../../types";
 import { heuteIso } from "../../utils/format";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const STATUS_LABEL: Record<PruefmittelStatus, string> = {
   aktiv: "Aktiv",
@@ -211,8 +212,8 @@ export function PruefmittelPage() {
               </div>
               {kannLoeschen && (
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Prüfmittel "${mittel.bezeichnung}" wirklich löschen?`)) {
+                  onClick={async () => {
+                    if (await bestaetigen(`Prüfmittel "${mittel.bezeichnung}" wirklich löschen?`)) {
                       deleteMutation.mutate(mittel.id);
                     }
                   }}

@@ -47,6 +47,7 @@ import type {
   KlebezettelFarbe,
 } from "./types";
 import { leeresInhalt } from "./types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const KLEBEZETTEL_FARBEN: KlebezettelFarbe[] = ["gelb", "blau", "gruen", "rosa"];
 
@@ -359,8 +360,8 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
             <Save size={13} strokeWidth={2} /> Speichern
           </button>
           <button
-            onClick={() => {
-              if (window.confirm(`Board "${board.name}" wirklich löschen?`)) loeschen.mutate();
+            onClick={async () => {
+              if (await bestaetigen(`Board "${board.name}" wirklich löschen?`)) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
             className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-xs font-semibold text-st-fehlt disabled:opacity-50 "

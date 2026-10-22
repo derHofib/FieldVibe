@@ -10,6 +10,7 @@ import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { useAuth } from "../../context/AuthContext";
 import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 import { eRechnungSyntaxLabel, hinweisZeilen } from "../../utils/eRechnung";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -187,8 +188,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
               <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("Entwurf verwerfen (z.B. keine echte Rechnung)? Wandert in den Papierkorb.")) {
+              onClick={async () => {
+                if (await bestaetigen("Entwurf verwerfen (z.B. keine echte Rechnung)? Wandert in den Papierkorb.")) {
                   verwerfenMutation.mutate();
                 }
               }}
@@ -299,8 +300,8 @@ export function EingangsrechnungDetailPage() {
         </button>
         {kannLoeschen && eingangsrechnung.status === "offen" && (
           <button
-            onClick={() => {
-              if (window.confirm("Eingangsrechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen("Eingangsrechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
                 deleteMutation.mutate();
               }
             }}
@@ -575,8 +576,8 @@ export function EingangsrechnungDetailPage() {
 
       {eingangsrechnung.status === "offen" && (
         <button
-          onClick={() => {
-            if (window.confirm("Diese Eingangsrechnung stornieren?")) statusMutation.mutate("storniert");
+          onClick={async () => {
+            if (await bestaetigen("Diese Eingangsrechnung stornieren?")) statusMutation.mutate("storniert");
           }}
           disabled={statusMutation.isPending}
           className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "

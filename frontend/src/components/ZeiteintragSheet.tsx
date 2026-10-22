@@ -9,6 +9,7 @@ import type { Zeiterfassung, ZeiterfassungKategorie } from "../types";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusGesperrt, buchungsstatusZuToken } from "../utils/zeiterfassung";
 import { StatusPille } from "./apple/StatusPille";
 import { Sheet } from "./apple/Sheet";
+import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
 // Lokale Kopie von toLocalInputValue aus VorgangDetailPage.tsx -- dort eine
 // seiten-lokale Hilfsfunktion, kein geteiltes Modul (siehe dortiger
@@ -468,8 +469,8 @@ export function ZeiteintragSheet({
           {istBearbeiten && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm("Zeiteintrag wirklich löschen?")) {
+              onClick={async () => {
+                if (await bestaetigen("Zeiteintrag wirklich löschen?")) {
                   loeschenMutation.mutate();
                 }
               }}

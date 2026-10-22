@@ -37,6 +37,7 @@ import { OrganigrammDruck, OrganigrammListe } from "./OrganigrammListe";
 import { PositionAnlegenSheet } from "./PositionAnlegenSheet";
 import { PositionKontextMenue } from "./PositionKontextMenue";
 import { PositionPanel, type PanelTab } from "./PositionPanel";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 type Ansicht = "diagramm" | "liste";
 
@@ -177,7 +178,7 @@ export function OrganigrammPage() {
   );
   const ungueltigerDrop = useCallback((text: string) => setMeldung({ art: "fehler", text }), []);
 
-  function menueAktion(aktion: KontextAktion, p: Position) {
+  async function menueAktion(aktion: KontextAktion, p: Position) {
     setMenue(null);
     switch (aktion) {
       case "details":
@@ -199,10 +200,10 @@ export function OrganigrammPage() {
         setAnzeigenAls({ positionId: p.id });
         break;
       case "archivieren":
-        if (window.confirm(`Position „${p.titel}“ archivieren? Sie verschwindet aus dem Organigramm, die Historie bleibt erhalten.`)) archivieren.mutate(p.id);
+        if (await bestaetigen(`Position „${p.titel}“ archivieren? Sie verschwindet aus dem Organigramm, die Historie bleibt erhalten.`)) archivieren.mutate(p.id);
         break;
       case "loeschen":
-        if (window.confirm(`Position „${p.titel}“ endgültig löschen? Das kann nicht rückgängig gemacht werden.`)) loeschen.mutate(p.id);
+        if (await bestaetigen(`Position „${p.titel}“ endgültig löschen? Das kann nicht rückgängig gemacht werden.`)) loeschen.mutate(p.id);
         break;
     }
   }

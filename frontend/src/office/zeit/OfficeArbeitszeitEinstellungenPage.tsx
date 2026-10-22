@@ -14,6 +14,7 @@ import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import { toDateInput } from "../../utils/zeiterfassung";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const WOCHENTAG_LABEL: Record<SollWochentagFeld, string> = {
   stunden_mo: "Mo",
@@ -159,11 +160,11 @@ function FeiertageAbschnitt() {
     onError: (err) => setFehler(fehlerText(err)),
   });
 
-  function handleGenerieren() {
+  async function handleGenerieren() {
     if (
       bundesland &&
       bundesland.bundesland === null &&
-      !window.confirm(
+      !await bestaetigen(
         "Es ist kein Bundesland gesetzt. Es entstehen nur die bundesweiten Feiertage. Trotzdem generieren?",
       )
     ) {

@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { openPdfBlob } from "../../utils/pdf";
 import type { BestellungStatus } from "../../types";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -101,8 +102,8 @@ export function BestellungDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Bestellung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen("Bestellung wirklich löschen? Sie wandert in den Papierkorb.")) {
                 deleteMutation.mutate();
               }
             }}

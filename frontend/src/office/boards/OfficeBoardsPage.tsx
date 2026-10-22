@@ -7,6 +7,7 @@ import { boardsApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import type { BoardTyp } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const TYP_ICON: Record<BoardTyp, typeof LayoutGrid> = {
   frei: LayoutGrid,
@@ -133,9 +134,9 @@ export function OfficeBoardsPage() {
                     <span
                       role="button"
                       tabIndex={0}
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
+                        if (await bestaetigen(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
                       }}
                       className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-label2 hover:text-st-fehlt dark:hover:text-st-fehlt"
                     >

@@ -35,6 +35,7 @@ import type {
   User,
 } from "../../types";
 import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
   return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
@@ -816,8 +817,8 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
         </div>
       </div>
       <button
-        onClick={() => {
-          if (window.confirm(`"${position.bezeichnung}" wirklich löschen?`)) removeMutation.mutate();
+        onClick={async () => {
+          if (await bestaetigen(`"${position.bezeichnung}" wirklich löschen?`)) removeMutation.mutate();
         }}
         disabled={removeMutation.isPending}
         className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
@@ -1286,9 +1287,9 @@ export function KundeProfilePage() {
                 Datenexport
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
+                    await bestaetigen(
                       `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
                     )
                   ) {

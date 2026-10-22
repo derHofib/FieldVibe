@@ -551,6 +551,28 @@ textarea.field-ap {
   font-size: 16px;
 }
 
+/* Native <select> bleibt bewusst nativ (Mobil: System-Auswahlrad, Tastatur,
+   Screenreader -- lange Listen nutzen SearchableSelect), bekommt aber ein
+   einheitliches Aussehen: eigener Pfeil statt Browser-Chrome, Platz dafuer
+   rechts. Der Pfeil ist ein Daten-URI und kann keine Variablen lesen, daher
+   eine Hell-/Dunkel-Variante. Mehrfach-/Listen-Selects bleiben unberuehrt. */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%236c6c70' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 12px 8px;
+  text-overflow: ellipsis;
+}
+.dark select:not([multiple]):not([size]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23aeaeb2' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+}
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* Suchfeld (Abschnitt 4.2) -- randlos, Fuellung statt Rahmen. Groesse
    (Desktop 28px/Radius 8 vs. Mobil 36px/Radius 10) wird von der
    aufrufenden Komponente (SearchField.tsx) per Prop gesteuert. */

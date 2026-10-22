@@ -18,6 +18,7 @@ import {
   buchungsstatusZuToken,
   formatUhrzeit,
 } from "../../utils/zeiterfassung";
+import { bestaetigen } from "../../components/apple/BestaetigungsDialog";
 
 const BUCHUNGSSTATUS_OPTIONEN: ZeiterfassungBuchungsstatus[] = ["vermerkt", "vorgemerkt", "gebucht", "abgerechnet"];
 
@@ -204,7 +205,7 @@ export function ZeitenBuchenPage() {
       return neu;
     });
   }
-  function handleBuchen() {
+  async function handleBuchen() {
     const stunden = formatSekundenAlsHHMM(
       ausgewaehlteEintraege.reduce(
         (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
@@ -212,7 +213,7 @@ export function ZeitenBuchenPage() {
       ),
     );
     if (
-      window.confirm(
+      await bestaetigen(
         `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen? Gebuchte Einträge kannst du danach nicht mehr ändern.`,
       )
     ) {
