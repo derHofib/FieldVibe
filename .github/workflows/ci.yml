@@ -45,6 +45,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install --require-hashes -r requirements-dev.lock
 
+      # Das eingecheckte API-Schema (Grundlage fuer die spaetere Typ-Erzeugung im
+      # Frontend, siehe docs/BACKLOG.md) muss zum Code passen. Der App-Import
+      # braucht weder Datenbank noch Netz.
+      - name: OpenAPI-Schema aktuell?
+        run: PYTHON=python ./scripts/openapi-exportieren.sh --pruefen
+
       # Das postgres-Image macht POSTGRES_USER (fieldvibe) zum Bootstrap-
       # Superuser, der RLS immer umgeht und sich nicht herabstufen laesst
       # (ALTER ROLE ... NOSUPERUSER scheitert). tests/conftest.py und die App-

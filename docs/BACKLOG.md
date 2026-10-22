@@ -223,8 +223,10 @@ Deploy mit Backup/Gate/Rollback, GHCR-Images, Dependabot, Audits.
   Der `mail_konten`-Alarm kennt nur das Alter des letzten erfolgreichen Syncs, keine Fehlerursache je Konto.
 - **Error-Tracking Frontend**: schlanker Eigenbau – kein Stacktrace-Parsing, keine Sourcemaps, kein
   Release-Upload, keine Breadcrumbs. Bei Bedarf auf `@sentry/browser` umstellen (CSP und Schwärzung bleiben).
-- **Abhängigkeiten**: `pip-audit` meldet `certifi` (Fix 2026.10.19) und `pillow` (Fix 13.0.0, Major-Sprung –
-  Rendering/PDF-Tests prüfen). Auto-Merge für Dependabot ist nicht eingerichtet.
+- **Abhängigkeiten**: Stand 22.10.2026 sind `certifi` 2026.10.19, `pillow` 13.0.0 und `pypdf` 6.21.2 eingespielt
+  (`pip-audit` auf `requirements-dev.lock` meldet nichts mehr). Auto-Merge für Dependabot ist nicht eingerichtet.
+  Die Basisimages (`python:3.12-slim`, `node:24-alpine`, `postgres:16-alpine`, `caddy:2.11-alpine`) sind nur auf
+  Tag, nicht auf Digest gepinnt – Rebuilds ziehen Sicherheitsupdates automatisch, sind aber nicht bitgleich.
 - **Migrationen**: Rollback der Anwendung ohne Schema-Rollback setzt abwärtskompatible Migrationen voraus;
   das ist Konvention, kein Test. Die Migrations-Reihenfolge (Migration vor Rollout) lässt die alte Version kurz
   gegen das neue Schema laufen.
@@ -258,6 +260,37 @@ Offen:
   die Einladungsliste dagegen `mandant_admin` — ein `custom`-Nutzer mit dem Recht sieht die Seite
   „Nutzer verwalten“, aber ohne Einladungen. `/einstellungen` (Verwaltungsübersicht) ist im Office
   nur noch über Rücksprung-Links erreichbar, nicht über die Seitenleiste.
+## 15. API-Typen für das Frontend aus OpenAPI
+
+Vorbereitung ist da, das Frontend nutzt sie noch nicht: `scripts/openapi-exportieren.sh` schreibt das
+Schema der FastAPI-App nach `docs/api/openapi.json` (ohne Datenbank/Netz, `ENVIRONMENT=development`);
+der CI-Schritt „OpenAPI-Schema aktuell?“ im Job `backend-tests` bricht ab, wenn die eingecheckte Datei
+nicht zum Code passt (`--pruefen`). Nach jeder Änderung an Routen/Schemas die Datei neu erzeugen und
+mit committen (am besten mit den Paketversionen aus `backend/requirements.lock`, sonst Scheindifferenzen).
+
+Später im Frontend einführen (nicht Teil dieses Punkts):
+
+- `npm i -D openapi-typescript` (Version pinnen, `package-lock.json` mitcommitten).
+- Script in `frontend/package.json`, z. B.
+  `"api:typen": "openapi-typescript ../docs/api/openapi.json -o src/api/schema.d.ts"`.
+- Erzeugte Datei einchecken und in CI aktuell halten (Typen neu erzeugen, dann auf Diff prüfen);
+  handgeschriebene Typen in `src/api/` schrittweise durch `components["schemas"][...]` ersetzen.
+- Listen-Endpunkte liefern die Gesamtzahl im Header `X-Total-Count` (nicht im Schema der Antwort) –
+  das braucht im Fetch-Wrapper einen eigenen Zugriff auf `response.headers`.
+
+## 16. Paginierung: Stand und Rest
+
+Listen-Endpunkte (Kunden, Anlagen, Standorte, Angebote, Eingangsrechnungen, Material, Termine,
+Benachrichtigungen, Bestellungen, Lieferanten, Zeiterfassung, Mängel, Aufträge, Projekte) nehmen optional
+`limit` (Standard und Maximum 1000) und `offset`, sortieren stabil (Tiebreaker `id`) und melden die
+Gesamtzahl im Header `X-Total-Count` (`app/api/paginierung.py`). Vorgänge (Standard 50, Maximum 200) und
+Rechnungen (Summen im Body) hatten schon ein Limit. **Grenze:** ein Mandant mit mehr als 1000 Zeilen in
+einer dieser Listen sieht ohne Blättern nur die ersten 1000 – das Frontend muss dann über `X-Total-Count`
+nachladen (bisher nicht umgesetzt).
+
+Noch unbegrenzt (bewusst nicht angefasst, wachsen kaum oder sind an einen Datensatz gebunden):
+E-Mail-Verläufe je Beleg, Vorgangs-Events, Verträge, Abwesenheiten, Prüfzyklen/Prüfmittel, Daueraufträge,
+Leistungsverzeichnis-Positionen, Papierkorb, Kundenportal-Listen, Partnerportal-Listen, Tag-Zuordnungen.
 
 ## Erledigt, zur Einordnung
 
