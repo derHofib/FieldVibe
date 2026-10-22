@@ -566,7 +566,7 @@ async def positionen_neu_ordnen(
     bestehende = {p.id: p for p in await positionen_fuer(session, angebot_id)}
     if len(body.position_ids) != len(set(body.position_ids)) or set(body.position_ids) != set(bestehende):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Die Liste muss genau die vorhandenen Positionen je einmal enthalten",
         )
     for nummer, position_id in enumerate(body.position_ids, start=1):

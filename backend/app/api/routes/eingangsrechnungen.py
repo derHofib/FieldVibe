@@ -272,7 +272,7 @@ async def import_e_rechnung(
             raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from None
         # Form wie Pydantic-422 ({msg}-Liste): der Frontend-Client fuegt sie zu einer Meldung zusammen.
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=[{"msg": m, "type": f"e_rechnung_{exc.grund}"} for m in exc.meldungen],
         ) from None
     await session.refresh(eingangsrechnung)

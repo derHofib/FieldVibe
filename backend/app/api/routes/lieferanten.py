@@ -32,7 +32,7 @@ async def _kreditorenkonto_pruefen(session: AsyncSession, mandant_id: UUID, kont
     try:
         await datev_service.personenkonto_fuer_mandant_pruefen(session, mandant_id, konto, "kreditor")
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
 
 
 async def _flush_mit_kontofehler(session: AsyncSession) -> None:

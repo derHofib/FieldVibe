@@ -269,7 +269,7 @@ async def set_recht(
     await esk.typ_im_scope_pruefen(session, akteur, typ.id)
     if body.aktion not in aktionen_fuer_bereich(body.bereich):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Diese Aktion gibt es für diesen Bereich nicht",
         )
     result = await session.execute(

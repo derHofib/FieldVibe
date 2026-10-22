@@ -226,12 +226,12 @@ async def antwort_auf_angebot(
     if belehrung is not None:
         if body.bestaetigung is not True:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Die Beauftragung muss ausdrücklich als zahlungspflichtig bestätigt werden",
             )
         if body.belehrung_version != belehrung.version:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Die Widerrufsbelehrung fehlt oder wurde aktualisiert – bitte die Seite neu laden",
             )
     fassung_konflikt = HTTPException(
@@ -322,7 +322,7 @@ async def widerruf_angebot(
     im Portal schickt `bestaetigung: true`."""
     if body.bestaetigung is not True:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Der Widerruf muss ausdrücklich bestätigt werden",
         )
     angebot = await _require_own_angebot(session, auth, angebot_id)

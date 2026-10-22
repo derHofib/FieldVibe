@@ -225,7 +225,7 @@ async def import_fehlerbericht(
 ) -> Response:
     gewaehlt = tuple(a for a in dict.fromkeys(t.strip() for t in arten.split(",")) if a)
     if not gewaehlt or not set(gewaehlt) <= _ARTEN_ERLAUBT:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Unbekannte Berichtsart")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Unbekannte Berichtsart")
     lauf = await _lauf(session, lauf_id)
     try:
         inhalt = await lauf_service.fehlerbericht_fuer(session, lauf, auth.user_id, gewaehlt)

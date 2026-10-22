@@ -328,7 +328,7 @@ async def get_effektiv(
     """„Anzeigen als …“: effektive Rechte eines Nutzers bzw. einer Position."""
     if (user_id is None) == (position_id is None):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Genau eines von user_id oder position_id angeben",
         )
     _mandant(auth)
@@ -472,7 +472,7 @@ async def update_position(
     for pflicht in ("titel", "typ", "geplant", "soll_besetzung", "reihenfolge"):
         if pflicht in aenderungen and aenderungen[pflicht] is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"{pflicht} darf nicht leer sein"
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=f"{pflicht} darf nicht leer sein"
             )
     ist_wurzel = position.parent_id is None
     vorher = org.position_snapshot(position)
@@ -483,7 +483,7 @@ async def update_position(
         neuer_parent_id = aenderungen["parent_id"]
         if neuer_parent_id is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Eine Position braucht eine übergeordnete Position",
             )
         neuer_parent = await _position(session, auth, neuer_parent_id)
@@ -519,7 +519,7 @@ async def update_position(
     endgueltig_bis = aenderungen.get("gueltig_bis", position.gueltig_bis)
     if endgueltig_ab and endgueltig_bis and endgueltig_bis < endgueltig_ab:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="gueltig_bis darf nicht vor gueltig_ab liegen"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="gueltig_bis darf nicht vor gueltig_ab liegen"
         )
 
     async with esk.verwaltung_bleibt_erhalten(session, mandant_id):
@@ -771,11 +771,11 @@ async def create_besetzung(
     bis = _aware(body.gueltig_bis)
     if body.art == "vertretung" and bis is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Eine Vertretung braucht ein Enddatum (gueltig_bis)"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Eine Vertretung braucht ein Enddatum (gueltig_bis)"
         )
     if bis is not None and bis <= von:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="gueltig_bis muss nach gueltig_von liegen"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="gueltig_bis muss nach gueltig_von liegen"
         )
 
     ziel = await session.get(User, body.user_id)
@@ -876,7 +876,7 @@ async def update_besetzung(
     neues_ende = _aware(body.gueltig_bis) or jetzt
     if neues_ende <= besetzung.gueltig_von:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Das Ende muss nach dem Beginn der Besetzung liegen"
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Das Ende muss nach dem Beginn der Besetzung liegen"
         )
     vorher = org.besetzung_snapshot(besetzung)
     async with esk.verwaltung_bleibt_erhalten(session, mandant_id):
@@ -910,7 +910,7 @@ def _doppelte_pruefen(eintraege: list[RechtOverrideIn]) -> None:
     for e in eintraege:
         if (e.bereich, e.aktion) in gesehen:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail=f"Das Recht „{e.bereich}.{e.aktion}“ ist mehrfach angegeben",
             )
         gesehen.add((e.bereich, e.aktion))

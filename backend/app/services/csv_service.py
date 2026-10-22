@@ -1,5 +1,6 @@
 import csv
 import io
+import re
 
 from fastapi import Response
 
@@ -13,6 +14,17 @@ def formel_sicher(wert):
     if isinstance(wert, str) and wert.startswith(_FORMEL_ANFAENGE):
         return "'" + wert
     return wert
+
+
+# Reine Zahlen (auch deutsch formatiert, auch negativ) sind keine Formel und
+# muessen Zahlen bleiben -- die Exporte reichen Betraege als Text durch.
+_ZAHL = re.compile(r"^[+-]?(?:\d+(?:[.,]\d+)?|\d{1,3}(?:\.\d{3})+(?:,\d+)?)$")
+
+
+def _zelle_schuetzen(wert):
+    if isinstance(wert, str) and _ZAHL.match(wert):
+        return wert
+    return formel_sicher(wert)
 
 
 def csv_bytes(header: list[str], rows: list[list], *, formelschutz: bool = False) -> bytes:
@@ -29,11 +41,11 @@ def csv_response(header: list[str], rows: list[list], filename: str) -> Response
     weil das deutsche Excel beim CSV-Import genau das erwartet (Komma ist
     dort das Dezimaltrennzeichen). utf-8-sig (mit BOM) statt reinem utf-8,
     damit Excel unter Windows Umlaute automatisch korrekt erkennt statt sie
-    als Mojibake darzustellen."""
+    als Mojibake darzustellen. Textzellen laufen durch den Formelschutz."""
     buffer = io.StringIO()
     writer = csv.writer(buffer, delimiter=";")
-    writer.writerow(header)
-    writer.writerows(rows)
+    writer.writerow([_zelle_schuetzen(h) for h in header])
+    writer.writerows([[_zelle_schuetzen(z) for z in zeile] for zeile in rows])
     content = buffer.getvalue().encode("utf-8-sig")
     return Response(
         content=content,

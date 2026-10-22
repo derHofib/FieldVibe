@@ -55,7 +55,7 @@ def _konflikt(detail: str) -> HTTPException:
 
 
 def _unverarbeitbar(detail: str) -> HTTPException:
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=detail)
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail)
 
 
 def _datum(wert: datetime) -> str:

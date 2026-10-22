@@ -501,7 +501,7 @@ def _steuer_fuer_position(
             kleinunternehmer=kleinunternehmer,
         )
     except steuer_service.SteuerFehler as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
 
 
 def _pruefe_13b_beim_anlegen(kunde: Kunde, rechnung_leistungsdatum: date | None) -> None:
@@ -510,7 +510,7 @@ def _pruefe_13b_beim_anlegen(kunde: Kunde, rechnung_leistungsdatum: date | None)
     probleme = steuer_service.pruefe_13b_voraussetzungen(kunde, rechnung_leistungsdatum)
     if probleme:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Reverse Charge (§ 13b UStG) nicht möglich: " + "; ".join(probleme),
         )
 
@@ -1002,7 +1002,7 @@ async def update_position(
                 kleinunternehmer=steuer_service.ist_kleinunternehmer(mandant),
             )
         except steuer_service.SteuerFehler as exc:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
         if steuer.kategorie == "AE":
             _pruefe_13b_beim_anlegen(await session.get(Kunde, rechnung.kunde_id), rechnung.leistungsdatum)
         position.steuer_kategorie, position.steuer_satz = steuer.kategorie, steuer.satz
@@ -1117,14 +1117,14 @@ async def update_rechnung(
             probleme += await rechnungsart_service.pruefe_abzuege_fuer_versand(session, rechnung)
             if probleme:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=versand_meldung(probleme)
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=versand_meldung(probleme)
                 )
             rechnung.versendet_am = jetzt
             rechnung.status = neuer_status
             try:
                 await archiviere_pdf(session, rechnung, mandant, kunde)
             except VersandFehler as exc:
-                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
             await _audit(
                 session, auth, "rechnung_versendet", rechnung, pdf_sha256=rechnung.pdf_sha256, xml_sha256=rechnung.xml_sha256
             )

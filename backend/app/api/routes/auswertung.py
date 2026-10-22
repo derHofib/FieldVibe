@@ -74,6 +74,6 @@ async def get_datev_export(
     try:
         antwort = await datev_export_csv(session, auth.mandant_id, von, bis)
     except (KontoNichtKonfiguriert, DatevKonfigurationFehler) as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     await export_protokollieren(session, mandant_id=auth.mandant_id, actor_user_id=auth.user_id, art="datev", von=von, bis=bis)
     return antwort
