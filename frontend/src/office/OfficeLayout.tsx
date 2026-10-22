@@ -33,6 +33,7 @@ import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl"
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
 import { heuteIso } from "../utils/format";
+import { SeitenRahmen } from "../components/Nachladen";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
  * dieselbe Quelle, aus der die Tab-Bar der Handy-App gespeist wird. Damit
@@ -410,7 +411,9 @@ export function OfficeLayout() {
           </header>
 
           <main className="px-5 py-5">
-            <Outlet />
+            <SeitenRahmen>
+              <Outlet />
+            </SeitenRahmen>
           </main>
         </div>
       </div>

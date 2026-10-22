@@ -6,7 +6,7 @@ import { authApi } from "../../api/endpoints";
 import { IconBadge } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
-import { ROLE_LABEL } from "../UsersPage";
+import { ROLE_LABEL } from "../../utils/rollen";
 import { MfaKarte } from "./MfaKarte";
 import { PasswortAendernKarte } from "./PasswortAendernKarte";
 import { bestaetigen } from "../../components/apple/BestaetigungsDialog";

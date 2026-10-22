@@ -1,5 +1,3 @@
-import { domToBlob } from "modern-screenshot";
-
 export const IGNORIEREN_ATTRIBUT = "data-fehlerbericht-ignorieren";
 
 export function ignoriereWidgetKnoten(node: Node): boolean {
@@ -9,6 +7,8 @@ export function ignoriereWidgetKnoten(node: Node): boolean {
 // Viewport-Ausschnitt: die Seite wird in Fenstergröße gerendert und um die
 // Scrollposition verschoben, statt die gesamte Dokumenthöhe aufzunehmen.
 export async function nimmScreenshot(): Promise<Blob> {
+  // Nachgeladen: die Bibliothek wird nur beim Erfassen eines Fehlerberichts gebraucht.
+  const { domToBlob } = await import("modern-screenshot");
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const hintergrund = getComputedStyle(document.body).backgroundColor;
   const blob = await domToBlob(document.documentElement, {

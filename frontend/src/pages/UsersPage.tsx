@@ -9,15 +9,9 @@ import { Sheet } from "../components/apple/Sheet";
 import type { Einladung, EinladungRolle, Role, User } from "../types";
 import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
 import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
+import { ROLE_LABEL } from "../utils/rollen";
 import { bestaetigen } from "../components/apple/BestaetigungsDialog";
 
-export const ROLE_LABEL: Record<Role, string> = {
-  super_admin: "Super-Admin",
-  mandant_admin: "Mandanten-Admin",
-  custom: "Account-Typ",
-  loesch_ansicht: "Papierkorb (nur Ansicht)",
-  loesch_operativ: "Papierkorb (operativ)",
-};
 
 // Nur super_admin darf diese Rollen vergeben (siehe app/api/routes/users.py).
 // "custom" fehlt hier bewusst: ein Account-Typ ist an genau einen Mandanten

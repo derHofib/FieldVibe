@@ -1,4 +1,3 @@
-import jsQR from "jsqr";
 import { useEffect, useRef, useState } from "react";
 
 interface QrScannerProps {
@@ -42,10 +41,16 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
       }
     }
 
+    // jsQR (~130 kB) erst laden, wenn der Scanner wirklich geoeffnet wird.
+    let jsQR: typeof import("jsqr").default | null = null;
+    import("jsqr").then((m) => {
+      jsQR = m.default;
+    });
+
     function tick() {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
+      if (jsQR && video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d");

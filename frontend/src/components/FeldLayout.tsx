@@ -4,6 +4,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { BottomNav } from "./BottomNav";
 import { ImpersonationBanner } from "./ImpersonationBanner";
+import { SeitenRahmen } from "./Nachladen";
 
 // Deckt sich mit den vier Tabs in BottomNav.tsx -- hier nur fuer den
 // unsichtbaren Seiten-h1 gebraucht (siehe unten), deshalb nicht von dort
@@ -52,7 +53,9 @@ export function FeldLayout() {
          * (hier <main>) liegen, sonst meldet axe "region". AbschnittskopfA
          * (h2) darunter bleibt die eigentliche, sichtbare Seitenueberschrift. */}
         <h1 className="sr-only">{seitentitel}</h1>
-        <Outlet />
+        <SeitenRahmen>
+          <Outlet />
+        </SeitenRahmen>
       </main>
       <BottomNav />
     </div>

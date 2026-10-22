@@ -1,48 +1,23 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
-import { AccountTypenPage } from "./pages/AccountTypenPage";
 import { FehlerberichtAnbindung } from "./components/FehlerberichtAnbindung";
 import { MfaErzwingenSeite } from "./components/MfaErzwingenSeite";
 import { FeldLayout } from "./components/FeldLayout";
-import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
-import { AuditLogPage } from "./pages/AuditLogPage";
-import { BugfixDetailPage, BugfixesPage } from "./pages/BugfixesPage";
-import { DsgvoPage } from "./pages/DsgvoPage";
-import { EinstellungenPage } from "./pages/EinstellungenPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
-import { MandantDetailPage } from "./pages/MandantDetailPage";
-import { MandantenPage } from "./pages/MandantenPage";
 import { BarrierefreiheitPage, DatenschutzPage, ImpressumPage } from "./pages/RechtlichesPage";
 import { RegistrierenPage } from "./pages/RegistrierenPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import { UebersichtPage } from "./pages/UebersichtPage";
-import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
-import { AngebotDetailPage } from "./pages/feld/AngebotDetailPage";
 import { AnlagenFelderPage } from "./pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
-import { AuswertungPage } from "./pages/feld/AuswertungPage";
-import { BestellungDetailPage } from "./pages/feld/BestellungDetailPage";
-import { BoardMobilePage } from "./pages/feld/boards/BoardMobilePage";
-import { BoardsUebersichtPage } from "./pages/feld/boards/BoardsUebersichtPage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
-import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
-import { EingangsrechnungDetailPage } from "./pages/feld/EingangsrechnungDetailPage";
 import { FeedPage } from "./pages/feld/FeedPage";
-import { FormSchemaEditorPage } from "./pages/feld/FormSchemaEditorPage";
-import { FormSchemasPage } from "./pages/feld/FormSchemasPage";
-import { PlanSymbolePage } from "./pages/feld/PlanSymbolePage";
 import { FormSubmissionAusfuellenPage } from "./pages/feld/FormSubmissionAusfuellenPage";
-import { HighlightsPage } from "./pages/feld/HighlightsPage";
-import { InsightsPage } from "./pages/feld/InsightsPage";
-import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
-import { LeistungsverzeichnisDetailPage } from "./pages/feld/LeistungsverzeichnisDetailPage";
-import { LeistungsverzeichnisPage } from "./pages/feld/LeistungsverzeichnisPage";
 import { KundenPage } from "./pages/feld/KundenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
@@ -51,31 +26,60 @@ import { MeineAufgabenPage } from "./pages/feld/MeineAufgabenPage";
 import { MehrPage } from "./pages/feld/MehrPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
-import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
 import { PartnerPage } from "./pages/feld/PartnerPage";
 import { PartnerProfilePage } from "./pages/feld/PartnerProfilePage";
-import { PostfachNachrichtPage } from "./pages/feld/PostfachNachrichtPage";
-import { PostfachPage } from "./pages/feld/PostfachPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
 import { ProjektePageMobil } from "./pages/feld/ProjektePageMobil";
-import { ProjektZeitplanMobilPage } from "./pages/feld/ProjektZeitplanMobilPage";
-import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
-import { RechnungenPage } from "./pages/feld/RechnungenPage";
-import { RechnungseingangPage } from "./pages/feld/RechnungseingangPage";
 import { SearchPage } from "./pages/feld/SearchPage";
-import { OfficeArbeitszeitEinstellungenPage } from "./office/zeit/OfficeArbeitszeitEinstellungenPage";
-import { OfficeAbwesenheitenPage } from "./office/zeit/OfficeAbwesenheitenPage";
-import { SettingsPage } from "./pages/feld/SettingsPage";
 import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
-import { StatistikPage } from "./pages/feld/StatistikPage";
-import { TeamZeitenPage } from "./pages/feld/TeamZeitenPage";
-import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
-import { ZeitenBuchenPage } from "./pages/feld/ZeitenBuchenPage";
-import { UpdatePage } from "./pages/UpdatePage";
-import { KundenPortalApp } from "./portal/KundenPortalApp";
-import { PartnerPortalApp } from "./partner/PartnerPortalApp";
+import { SeitenRahmen, lazyMitRetry } from "./components/Nachladen";
+
+// Nachgeladen: wird erst beim Aufruf der Route geholt (siehe components/Nachladen.tsx).
+const AccountTypenPage = lazyMitRetry(() => import("./pages/AccountTypenPage").then((m) => ({ default: m.AccountTypenPage })));
+const Layout = lazyMitRetry(() => import("./components/Layout").then((m) => ({ default: m.Layout })));
+const AuditLogPage = lazyMitRetry(() => import("./pages/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
+const BugfixDetailPage = lazyMitRetry(() => import("./pages/BugfixesPage").then((m) => ({ default: m.BugfixDetailPage })));
+const BugfixesPage = lazyMitRetry(() => import("./pages/BugfixesPage").then((m) => ({ default: m.BugfixesPage })));
+const DsgvoPage = lazyMitRetry(() => import("./pages/DsgvoPage").then((m) => ({ default: m.DsgvoPage })));
+const EinstellungenPage = lazyMitRetry(() => import("./pages/EinstellungenPage").then((m) => ({ default: m.EinstellungenPage })));
+const MandantDetailPage = lazyMitRetry(() => import("./pages/MandantDetailPage").then((m) => ({ default: m.MandantDetailPage })));
+const MandantenPage = lazyMitRetry(() => import("./pages/MandantenPage").then((m) => ({ default: m.MandantenPage })));
+const UebersichtPage = lazyMitRetry(() => import("./pages/UebersichtPage").then((m) => ({ default: m.UebersichtPage })));
+const UsersPage = lazyMitRetry(() => import("./pages/UsersPage").then((m) => ({ default: m.UsersPage })));
+const AngebotDetailPage = lazyMitRetry(() => import("./pages/feld/AngebotDetailPage").then((m) => ({ default: m.AngebotDetailPage })));
+const AuswertungPage = lazyMitRetry(() => import("./pages/feld/AuswertungPage").then((m) => ({ default: m.AuswertungPage })));
+const BestellungDetailPage = lazyMitRetry(() => import("./pages/feld/BestellungDetailPage").then((m) => ({ default: m.BestellungDetailPage })));
+const BoardMobilePage = lazyMitRetry(() => import("./pages/feld/boards/BoardMobilePage").then((m) => ({ default: m.BoardMobilePage })));
+const BoardsUebersichtPage = lazyMitRetry(() => import("./pages/feld/boards/BoardsUebersichtPage").then((m) => ({ default: m.BoardsUebersichtPage })));
+const DispoBoardPage = lazyMitRetry(() => import("./pages/feld/DispoBoardPage").then((m) => ({ default: m.DispoBoardPage })));
+const EingangsrechnungDetailPage = lazyMitRetry(() => import("./pages/feld/EingangsrechnungDetailPage").then((m) => ({ default: m.EingangsrechnungDetailPage })));
+const FormSchemaEditorPage = lazyMitRetry(() => import("./pages/feld/FormSchemaEditorPage").then((m) => ({ default: m.FormSchemaEditorPage })));
+const FormSchemasPage = lazyMitRetry(() => import("./pages/feld/FormSchemasPage").then((m) => ({ default: m.FormSchemasPage })));
+const PlanSymbolePage = lazyMitRetry(() => import("./pages/feld/PlanSymbolePage").then((m) => ({ default: m.PlanSymbolePage })));
+const HighlightsPage = lazyMitRetry(() => import("./pages/feld/HighlightsPage").then((m) => ({ default: m.HighlightsPage })));
+const InsightsPage = lazyMitRetry(() => import("./pages/feld/InsightsPage").then((m) => ({ default: m.InsightsPage })));
+const IntegrationenPage = lazyMitRetry(() => import("./pages/feld/IntegrationenPage").then((m) => ({ default: m.IntegrationenPage })));
+const LeistungsverzeichnisDetailPage = lazyMitRetry(() => import("./pages/feld/LeistungsverzeichnisDetailPage").then((m) => ({ default: m.LeistungsverzeichnisDetailPage })));
+const LeistungsverzeichnisPage = lazyMitRetry(() => import("./pages/feld/LeistungsverzeichnisPage").then((m) => ({ default: m.LeistungsverzeichnisPage })));
+const PapierkorbPage = lazyMitRetry(() => import("./pages/feld/PapierkorbPage").then((m) => ({ default: m.PapierkorbPage })));
+const PostfachNachrichtPage = lazyMitRetry(() => import("./pages/feld/PostfachNachrichtPage").then((m) => ({ default: m.PostfachNachrichtPage })));
+const PostfachPage = lazyMitRetry(() => import("./pages/feld/PostfachPage").then((m) => ({ default: m.PostfachPage })));
+const ProjektZeitplanMobilPage = lazyMitRetry(() => import("./pages/feld/ProjektZeitplanMobilPage").then((m) => ({ default: m.ProjektZeitplanMobilPage })));
+const RechnungDetailPage = lazyMitRetry(() => import("./pages/feld/RechnungDetailPage").then((m) => ({ default: m.RechnungDetailPage })));
+const RechnungenPage = lazyMitRetry(() => import("./pages/feld/RechnungenPage").then((m) => ({ default: m.RechnungenPage })));
+const RechnungseingangPage = lazyMitRetry(() => import("./pages/feld/RechnungseingangPage").then((m) => ({ default: m.RechnungseingangPage })));
+const OfficeArbeitszeitEinstellungenPage = lazyMitRetry(() => import("./office/zeit/OfficeArbeitszeitEinstellungenPage").then((m) => ({ default: m.OfficeArbeitszeitEinstellungenPage })));
+const OfficeAbwesenheitenPage = lazyMitRetry(() => import("./office/zeit/OfficeAbwesenheitenPage").then((m) => ({ default: m.OfficeAbwesenheitenPage })));
+const SettingsPage = lazyMitRetry(() => import("./pages/feld/SettingsPage").then((m) => ({ default: m.SettingsPage })));
+const StatistikPage = lazyMitRetry(() => import("./pages/feld/StatistikPage").then((m) => ({ default: m.StatistikPage })));
+const TeamZeitenPage = lazyMitRetry(() => import("./pages/feld/TeamZeitenPage").then((m) => ({ default: m.TeamZeitenPage })));
+const TechnikerZuweisungenPage = lazyMitRetry(() => import("./pages/feld/TechnikerZuweisungenPage").then((m) => ({ default: m.TechnikerZuweisungenPage })));
+const ZeitenBuchenPage = lazyMitRetry(() => import("./pages/feld/ZeitenBuchenPage").then((m) => ({ default: m.ZeitenBuchenPage })));
+const UpdatePage = lazyMitRetry(() => import("./pages/UpdatePage").then((m) => ({ default: m.UpdatePage })));
+const KundenPortalApp = lazyMitRetry(() => import("./portal/KundenPortalApp").then((m) => ({ default: m.KundenPortalApp })));
+const PartnerPortalApp = lazyMitRetry(() => import("./partner/PartnerPortalApp").then((m) => ({ default: m.PartnerPortalApp })));
 
 // Nachgeladen statt fest importiert: Handy-Nutzer sollen den Desktop-Code nie
 // herunterladen. Gleiches Muster wie das lazy MapboxFeedMap im Feed.
@@ -120,8 +124,8 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
   return (
     <FehlerberichtAnbindung>
     <Routes>
-      <Route path="/portal/*" element={<KundenPortalApp />} />
-      <Route path="/partnerportal/*" element={<PartnerPortalApp />} />
+      <Route path="/portal/*" element={<SeitenRahmen><KundenPortalApp /></SeitenRahmen>} />
+      <Route path="/partnerportal/*" element={<SeitenRahmen><PartnerPortalApp /></SeitenRahmen>} />
 
       {/* Oeffentlich fuer alle (angemeldet oder nicht, auch auf dem Office-
           Host): die Pflichtlinks muessen ueberall erreichbar sein. Spezifischer
@@ -151,7 +155,7 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
       )}
 
       {isAuthenticated && isPlatformAdmin && (
-        <Route element={<Layout />}>
+        <Route element={<SeitenRahmen><Layout /></SeitenRahmen>}>
           <Route path="/uebersicht" element={<UebersichtPage />} />
           <Route path="/mandanten" element={<MandantenPage />} />
           <Route path="/mandanten/:id" element={<MandantDetailPage />} />

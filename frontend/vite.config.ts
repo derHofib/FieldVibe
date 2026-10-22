@@ -41,6 +41,21 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        // Stabile Vendor-Chunks: ein Deploy, der nur App-Code aendert, laesst
+        // React/Router/Query im Browser- und Service-Worker-Cache gueltig.
+        codeSplitting: {
+          groups: [
+            { name: "vendor-react", test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 30 },
+            { name: "vendor-router", test: /node_modules[\\/](react-router|react-router-dom)[\\/]/, priority: 20 },
+            { name: "vendor-query", test: /node_modules[\\/]@tanstack[\\/](react-query|query-core)[\\/]/, priority: 10 },
+          ],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
   },
