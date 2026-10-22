@@ -21,6 +21,7 @@ import { VorgaengeKanban } from "./VorgaengeKanban";
 import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
 import { VorgaengeTabelle } from "./VorgaengeTabelle";
+import { heuteIso } from "../../utils/format";
 
 type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
 
@@ -41,12 +42,6 @@ function gespeicherteAnsicht(): Ansicht {
     // privater Modus -- dann eben jedes Mal die Standardansicht
   }
   return "liste";
-}
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
 }
 
 const LEER_FILTER: Record<string, string> = {};

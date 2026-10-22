@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { pruefmittelApi, usersApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { Pruefmittel, PruefmittelStatus } from "../../types";
+import { heuteIso } from "../../utils/format";
 
 const STATUS_LABEL: Record<PruefmittelStatus, string> = {
   aktiv: "Aktiv",
@@ -13,11 +14,8 @@ const STATUS_LABEL: Record<PruefmittelStatus, string> = {
 };
 
 function faelligkeitsFarbe(datum: string): string {
-  const heute = new Date().toISOString().slice(0, 10);
-  if (datum < heute) return "text-st-fehlt ";
-  const in7Tagen = new Date();
-  in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
+  if (datum < heuteIso()) return "text-st-fehlt ";
+  if (datum <= heuteIso(7)) return "text-st-arbeit ";
   return "text-label2";
 }
 
@@ -84,7 +82,7 @@ export function PruefmittelPage() {
   const markiereKalibriert = (mittel: Pruefmittel) => {
     updateMutation.mutate({
       id: mittel.id,
-      body: { letzte_kalibrierung_am: new Date().toISOString().slice(0, 10) },
+      body: { letzte_kalibrierung_am: heuteIso() },
     });
   };
 

@@ -1,5 +1,6 @@
 import type { IconTone } from "../components/IconBadge";
 import type { RechnungStatus } from "../types";
+import { heuteIso } from "../utils/format";
 
 // Backend kennt keinen eigenen "ueberfaellig"-Status (siehe RechnungStatus) --
 // wird clientseitig aus Faelligkeitsdatum + Status abgeleitet, analog zu
@@ -7,7 +8,7 @@ import type { RechnungStatus } from "../types";
 export function istRechnungUeberfaellig(rechnung: { faellig_am: string | null; status: RechnungStatus }): boolean {
   if (!rechnung.faellig_am) return false;
   if (rechnung.status === "bezahlt" || rechnung.status === "storniert") return false;
-  return rechnung.faellig_am < new Date().toISOString().slice(0, 10);
+  return rechnung.faellig_am < heuteIso();
 }
 
 // Ersetzt die bisher dreifach duplizierten STATUS_LABEL-Maps

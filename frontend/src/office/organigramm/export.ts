@@ -1,3 +1,4 @@
+import { datumZuIso } from "../../utils/format";
 import { besetzungText, POSITION_STATUS_LABEL } from "./darstellung";
 import type { ListenZeile } from "./liste";
 
@@ -46,7 +47,7 @@ export function positionenCsv(zeilen: ListenZeile[]): string {
 }
 
 export function csvDateiname(heute: Date = new Date()): string {
-  return `organigramm-${heute.toISOString().slice(0, 10)}.csv`;
+  return `organigramm-${datumZuIso(heute)}.csv`;
 }
 
 /** Download im Browser; BOM, damit Excel UTF-8 (Umlaute) erkennt. */

@@ -5,6 +5,7 @@ import { ApiError } from "../api/client";
 import { leistungsverzeichnisApi, vorgaengeApi, zeiterfassungApi } from "../api/endpoints";
 import type { ZeiterfassungKategorie } from "../types";
 import { SearchableSelect } from "./SearchableSelect";
+import { heuteIso } from "../utils/format";
 
 const KATEGORIE_OPTIONEN: { value: ZeiterfassungKategorie; label: string }[] = [
   { value: "verwaltung", label: "Verwaltung" },
@@ -16,10 +17,6 @@ const KATEGORIE_OPTIONEN: { value: ZeiterfassungKategorie; label: string }[] = [
   { value: "sonstiges", label: "Sonstiges" },
   { value: "auftrag", label: "Vorgang (nachgetragen)" },
 ];
-
-function heuteAlsInput(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** Datum + lokale Uhrzeit (aus <input type="time">) zu einem UTC-ISO-String --
  * new Date("YYYY-MM-DDTHH:mm") interpretiert ohne Zeitzonen-Suffix immer die
@@ -38,7 +35,7 @@ export function ZeiterfassungManuellForm({
   /** YYYY-MM-DD; ohne Angabe wie bisher "heute". */
   vorbelegtesDatum?: string;
 }) {
-  const [datum, setDatum] = useState(vorbelegtesDatum ?? heuteAlsInput());
+  const [datum, setDatum] = useState(vorbelegtesDatum ?? heuteIso());
   const [startZeit, setStartZeit] = useState("08:00");
   const [endeZeit, setEndeZeit] = useState("16:00");
   const [kategorie, setKategorie] = useState<ZeiterfassungKategorie>("verwaltung");

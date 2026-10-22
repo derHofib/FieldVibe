@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { heuteIso } from "../../utils/format";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -25,7 +26,7 @@ export function DauerauftragDetailPage() {
   const [editIntervall, setEditIntervall] = useState<string | null>(null);
   const [anlagenBearbeiten, setAnlagenBearbeiten] = useState(false);
   const [ausgewaehlteAnlageIds, setAusgewaehlteAnlageIds] = useState<string[]>([]);
-  const [neueFaelligkeit, setNeueFaelligkeit] = useState(new Date().toISOString().slice(0, 10));
+  const [neueFaelligkeit, setNeueFaelligkeit] = useState(heuteIso());
 
   const { data: dauerauftrag, isLoading } = useQuery({
     queryKey: ["dauerauftrag", id],

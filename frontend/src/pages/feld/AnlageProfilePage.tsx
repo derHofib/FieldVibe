@@ -16,6 +16,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
+import { heuteIso } from "../../utils/format";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -35,11 +36,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 function faelligkeitsFarbe(datum: string): string {
-  const heute = new Date().toISOString().slice(0, 10);
-  if (datum < heute) return "text-st-fehlt ";
-  const in7Tagen = new Date();
-  in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
+  if (datum < heuteIso()) return "text-st-fehlt ";
+  if (datum <= heuteIso(7)) return "text-st-arbeit ";
   return "text-label2";
 }
 
@@ -383,7 +381,7 @@ export function AnlageProfilePage() {
   const markiereGeprueftMutation = useMutation({
     mutationFn: (pruefzyklusId: string) =>
       pruefzyklenApi.update(pruefzyklusId, {
-        letzte_pruefung_am: new Date().toISOString().slice(0, 10),
+        letzte_pruefung_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
   });
@@ -397,7 +395,7 @@ export function AnlageProfilePage() {
   const inventurDurchgefuehrtMutation = useMutation({
     mutationFn: () =>
       inventurzyklenApi.update(inventurzyklus!.id, {
-        letzte_inventur_am: new Date().toISOString().slice(0, 10),
+        letzte_inventur_am: heuteIso(),
       }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });

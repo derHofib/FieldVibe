@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { pruefeERechnungDatei } from "../../utils/eRechnung";
 import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
+import { heuteIso } from "../../utils/format";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf",
@@ -43,7 +44,7 @@ export function RechnungseingangPage() {
     lieferantId: "",
     lieferantName: "",
     rechnungsnummerLieferant: "",
-    rechnungsdatum: new Date().toISOString().slice(0, 10),
+    rechnungsdatum: heuteIso(),
     faelligAm: "",
     betragNetto: "",
     kategorie: "",
@@ -84,7 +85,7 @@ export function RechnungseingangPage() {
         lieferantId: "",
         lieferantName: "",
         rechnungsnummerLieferant: "",
-        rechnungsdatum: new Date().toISOString().slice(0, 10),
+        rechnungsdatum: heuteIso(),
         skontoProzent: "",
         skontoTage: "",
         faelligAm: "",

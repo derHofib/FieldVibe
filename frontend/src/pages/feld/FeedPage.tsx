@@ -19,6 +19,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
+import { heuteIso } from "../../utils/format";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -35,12 +36,6 @@ const LEISTUNGSTYP_LABEL: Record<string, string> = {
   beratung: "Beratung",
   planung: "Planung",
 };
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
-}
 
 // Ampel-Symbol der Story-Kacheln -- kein Vorgangs-Status, sondern eine
 // eigene Dringlichkeits-Ampel (siehe stories-Endpoint), deshalb ueber die

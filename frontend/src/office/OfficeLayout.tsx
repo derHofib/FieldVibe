@@ -32,6 +32,7 @@ import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
+import { heuteIso } from "../utils/format";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
  * dieselbe Quelle, aus der die Tab-Bar der Handy-App gespeist wird. Damit
@@ -47,12 +48,6 @@ function geladeneEingeklappteKategorien(): Record<string, boolean> {
   } catch {
     return {};
   }
-}
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
 }
 
 const ROLLE_LABEL: Record<string, string> = {

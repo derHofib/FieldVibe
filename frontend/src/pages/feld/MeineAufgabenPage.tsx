@@ -17,6 +17,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { ProjektAufgabeDetailPanel } from "../../office/projekte/ProjektAufgabeDetailPanel";
 import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
+import { heuteIso } from "../../utils/format";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-slate-100 text-label dark:bg-stone-500/15 ",
@@ -29,16 +30,6 @@ const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
   mittel: "Mittel",
   hoch: "Hoch",
 };
-
-function heuteIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function inTagenIso(n: number): string {
-  const datum = new Date();
-  datum.setDate(datum.getDate() + n);
-  return datum.toISOString().slice(0, 10);
-}
 
 type Gruppe = "ueberfaellig" | "heute" | "woche" | "spaeter" | "ohne";
 
@@ -103,7 +94,7 @@ export function MeineAufgabenPage() {
 
   const { offen, erledigt, gruppen } = useMemo(() => {
     const heute = heuteIso();
-    const in7Tagen = inTagenIso(7);
+    const in7Tagen = heuteIso(7);
     const alle = aufgaben ?? [];
     const offen = alle.filter((a) => !a.erledigt_am);
     const erledigt = alle.filter((a) => a.erledigt_am);

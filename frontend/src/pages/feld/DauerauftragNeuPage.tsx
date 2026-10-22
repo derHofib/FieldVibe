@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { DauerauftragModus, Leistungstyp, VorgangAbrechnungsart } from "../../types";
+import { heuteIso } from "../../utils/format";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "wartung", label: "Wartung" },
@@ -36,7 +37,7 @@ export function DauerauftragNeuPage() {
   const [abrechnungsart, setAbrechnungsart] = useState<VorgangAbrechnungsart>("wartungsvertrag");
   const [intervallTage, setIntervallTage] = useState("7");
   const [naechsteFaelligkeit, setNaechsteFaelligkeit] = useState(
-    new Date().toISOString().slice(0, 10)
+    heuteIso()
   );
   const [modus, setModus] = useState<DauerauftragModus>("rollierend");
   const [toleranzFrueh, setToleranzFrueh] = useState("");

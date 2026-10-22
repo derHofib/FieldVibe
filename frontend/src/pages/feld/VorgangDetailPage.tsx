@@ -66,6 +66,7 @@ import type {
   VorgangStatus,
   Zeiterfassung,
 } from "../../types";
+import { datumZuIso, heuteIso, tageZwischen } from "../../utils/format";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -422,7 +423,7 @@ function addTage(d: Date, n: number): Date {
 }
 
 function tagesSchluessel(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 function leereAdresse(adresse: Adresse | null | undefined): { strasse: string; plz: string; ort: string } {
@@ -3513,19 +3514,16 @@ export function VorgangDetailPage({
           {vorgang.faelligkeit_am && (
             <span
               className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
-                vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+                vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
                 !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
                   ? "border-st-fehlt text-st-fehlt"
                   : "border-sep text-label"
               }`}
             >
               <Clock size={13} strokeWidth={1.5} />
-              {vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+              {vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
               !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
-                ? `${Math.round(
-                    (new Date().setHours(0, 0, 0, 0) - new Date(vorgang.faelligkeit_am).setHours(0, 0, 0, 0)) /
-                      (1000 * 60 * 60 * 24),
-                  )} Tage überfällig`
+                ? `${tageZwischen(vorgang.faelligkeit_am.slice(0, 10), heuteIso())} Tage überfällig`
                 : `Fällig: ${new Date(vorgang.faelligkeit_am).toLocaleDateString("de-DE")}`}
             </span>
           )}

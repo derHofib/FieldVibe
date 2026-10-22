@@ -7,6 +7,7 @@ import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import type { Termin, TerminWarnung } from "../../types";
+import { datumZuIso } from "../../utils/format";
 
 const WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 const OFFENE_VORGANG_STATUS = ["neu", "geplant", "in_arbeit", "wartet_kunde"];
@@ -27,7 +28,7 @@ function addDays(d: Date, n: number): Date {
 }
 
 function dateKey(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 function formatDayLabel(d: Date): string {

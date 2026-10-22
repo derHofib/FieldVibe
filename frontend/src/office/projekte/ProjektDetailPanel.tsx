@@ -16,6 +16,7 @@ import { formatSekundenAlsHHMM } from "../../utils/duration";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusZuToken } from "../../utils/zeiterfassung";
 import { KennzahlKarte } from "../OfficeUi";
 import { ZeitplanTab } from "./zeitplan/ZeitplanTab";
+import { datumZuIso } from "../../utils/format";
 
 // Fuer den Termine-Wochenkalender -- gleiche Rechenlogik wie in
 // VorgangDetailPage.tsx (dort Kommentar zu WOCHENTAGE) und
@@ -37,7 +38,7 @@ function addTage(d: Date, n: number): Date {
   return date;
 }
 function tagesSchluessel(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 const TABS: { key: "uebersicht" | "zeit" | "termine" | "positionen" | "zeitplan"; label: string }[] = [
