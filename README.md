@@ -19,12 +19,17 @@ Stand:
 | 6 – Geschäftsprozesse | ✅ siehe [`docs/phases/PHASE_6.md`](docs/phases/PHASE_6.md) |
 | 7 – Ausbau | ✅ siehe [`docs/phases/PHASE_7.md`](docs/phases/PHASE_7.md) |
 | Nacharbeiten (kein Lastenheft-Abschnitt) | ✅ siehe [`docs/phases/PHASE_8.md`](docs/phases/PHASE_8.md) |
+| Desktop-Oberfläche `office.<domain>` | ✅ siehe [`docs/phases/PHASE_9.md`](docs/phases/PHASE_9.md) |
+| Postfach (IMAP/SMTP-Client) | ✅ siehe [`docs/phases/PHASE_10.md`](docs/phases/PHASE_10.md) |
+| Kundenportal B2C-rechtssicher | ✅ siehe [`docs/phases/PHASE_KUNDENPORTAL_B2C.md`](docs/phases/PHASE_KUNDENPORTAL_B2C.md) |
+
+Offene Punkte und Ideen: [`docs/BACKLOG.md`](docs/BACKLOG.md).
 
 ## Tech-Stack
 
 - **DB**: PostgreSQL 16 (UUID-PKs, JSONB, Row Level Security, `pg_trgm`)
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.x (async), Alembic, Pydantic v2
-- **Frontend**: React 18 + TypeScript, Vite, TanStack Query, Tailwind CSS, PWA (Service Worker + IndexedDB-Offline-Outbox)
+- **Frontend**: React 19 + TypeScript, Vite, TanStack Query, Tailwind CSS, PWA (Service Worker + IndexedDB-Offline-Outbox)
 - **Auth**: JWT (Access + Refresh), Argon2id
 - **Objektspeicher**: MinIO (S3-kompatibel) für Fotos
 - **Deployment (lokal)**: Docker Compose, ein Container je Dienst
@@ -75,10 +80,16 @@ sudo ./scripts/deploy.sh
 backend/    FastAPI-App, Alembic-Migrationen, pytest-Tests
 frontend/   React-App: Super-Admin-Dashboard + Feld-App (Feed/Chat/Suche/...) + Kundenportal (/portal)
 docs/phases/  Phasen-spezifische READMEs
+docs/konzepte/ Fachkonzepte (GoBD, E-Rechnung/XRechnung, DATEV, Datenimport, Zeiterfassung, Organigramm)
+docs/gobd/    Verfahrensdokumentation, Konformitätserklärung (Entwurf), Object Lock
+docs/BETRIEB.md  Betriebs-Runbook (Alarmkette, Checkliste für den Ernstfall)
+docs/BACKLOG.md  Offene Punkte und Ideen
+docs/api/openapi.json  Eingechecktes API-Schema (Erzeugung: scripts/openapi-exportieren.sh)
 docs/DEPLOYMENT.md             Produktions-Deployment (Abschnitt 15)
 scripts/deploy.sh              Automatisiertes Produktions-Deployment (siehe docs/DEPLOYMENT.md)
 scripts/uninstall.sh            Installation vollständig entfernen (siehe docs/DEPLOYMENT.md)
 scripts/backup.sh, restore.sh, backup-pruefen.sh  Backup mit austauschbaren Zielen, Restore, Test-Restore (siehe docs/DEPLOYMENT.md, Abschnitt 5)
+scripts/openapi-exportieren.sh  OpenAPI-Schema nach docs/api/openapi.json (--pruefen für CI)
 scripts/tests/run.sh           Shell-Tests der Backup-Skripte (ohne Docker: bash scripts/tests/run.sh)
 docker-compose.yml             Basis-Stack (Postgres, MinIO, Backend, Frontend, Worker)
 docker-compose.override.yml    Lokale Entwicklung (Hot-Reload, offene Ports)

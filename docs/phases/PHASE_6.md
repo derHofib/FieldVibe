@@ -129,5 +129,6 @@ senden → als bezahlt markieren.
 - ~~Keine Teil-/Sammelrechnungen mit eigenen Positionen und keine
   automatische Mahnwesen-Eskalation~~ -- überholt: Positionen, Sammelrechnung
   über mehrere Vorgänge (`rechnung_service.vorgang_uebernehmen`) und
-  Mahnwesen-Eskalation (Worker) gibt es inzwischen. Weiterhin offen:
-  Abschlags-/Schlussrechnung mit Anrechnung und Teilstorno.
+  Mahnwesen-Eskalation (Worker) gibt es inzwischen, ebenso Abschlags-/
+  Schlussrechnung mit Anrechnung (`rechnungsart_service`) und Gutschriften
+  zu einer bestehenden Rechnung (Komplett-Storno bleibt ein eigener Weg).
