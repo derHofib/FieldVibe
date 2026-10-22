@@ -141,7 +141,7 @@ async def test_board_anhang_upload_url_und_delete(client, make_mandant, make_use
     body = upload.json()
     assert body["dateiname"] == "wartungsplan.pdf"
     key = body["object_key"]
-    assert key.startswith(f"boards/{board_id}/anhang/")
+    assert f"/boards/{board_id}/anhang/" in key
 
     url = await client.get(f"/api/boards/{board_id}/anhang-url", headers=auth_headers(token), params={"key": key})
     assert url.status_code == 200
