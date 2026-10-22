@@ -49,7 +49,9 @@ assert_enthaelt "$T/stub.log" "mc mb --ignore-existing fvroot/fieldvibe-fotos" "
 assert_enthaelt "$T/stub.log" "svcacct add" "Service-Account angelegt"
 assert_enthaelt "$T/stub.log" "--name fieldvibe-app fvroot rootuser" "gebunden an den Root-Benutzer, mit Namen"
 assert_enthaelt "$T/policy.json" '"arn:aws:s3:::fieldvibe-fotos/*"' "Objekt-Rechte nur auf den Bucket"
-assert_enthaelt "$T/policy.json" '"s3:GetObject", "s3:PutObject", "s3:DeleteObject"' "nur Objekt-Lese/Schreib/Loesch-Rechte"
+for aktion in s3:GetObject s3:PutObject s3:DeleteObject; do
+  assert_enthaelt "$T/policy.json" "\"$aktion\"" "Objekt-Recht $aktion vorhanden"
+done
 assert_enthaelt_nicht "$T/policy.json" "s3:*" "keine Wildcard-Aktion"
 assert_enthaelt_nicht "$T/policy.json" "admin:" "keine Admin-Rechte"
 assert_enthaelt_nicht "$OUT" "$(grep '^S3_SECRET_KEY=' "$REPO/.env" | cut -d= -f2)" "Secret nicht in der Ausgabe"

@@ -260,7 +260,7 @@ Offen:
   die Einladungsliste dagegen `mandant_admin` — ein `custom`-Nutzer mit dem Recht sieht die Seite
   „Nutzer verwalten“, aber ohne Einladungen. `/einstellungen` (Verwaltungsübersicht) ist im Office
   nur noch über Rücksprung-Links erreichbar, nicht über die Seitenleiste.
-## 15. API-Typen für das Frontend aus OpenAPI
+## 17. API-Typen für das Frontend aus OpenAPI
 
 Vorbereitung ist da, das Frontend nutzt sie noch nicht: `scripts/openapi-exportieren.sh` schreibt das
 Schema der FastAPI-App nach `docs/api/openapi.json` (ohne Datenbank/Netz, `ENVIRONMENT=development`);
