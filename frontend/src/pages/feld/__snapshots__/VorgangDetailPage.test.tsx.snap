@@ -1,0 +1,3915 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`VorgangDetailPage – Aktionen rufen die API > fehlender Vorgang zeigt Fehlerzustand > Fehlerzustand 1`] = `
+"button: ← Zurück
+p: Vorgang konnte nicht geladen werden."
+`;
+
+exports[`VorgangDetailPage – Aufbau > dicht (Office-Inspektor) > dicht (Office-Inspektor) 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – Aufbau > dicht, breit (Vollbild) > dicht, breit (Vollbild) 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  h2: Verlauf
+  span: Interne Ansicht
+  button: Umschalten
+  button: Alle
+  button: Kommentare
+  button: System
+  button: E-Mail
+  span: 21.10.2026, 11:00:00
+  span: Kommentar
+  span: Kundensichtbar
+  span: Material liegt bereit
+  div: Status: ? → ? · 20.10.2026, 11:00:00
+  textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  label: Auch an Partner Elektro Nord
+    input type=checkbox value=on
+  button aria-label=Erwähnen title=Erwähnen: @
+  button aria-label=Foto anhängen title=Foto anhängen
+  button aria-label=Dokument anhängen title=Dokument anhängen
+  button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – Aufbau > kompakt, Unterseite Positionen > kompakt, Unterseite Positionen 1`] = `
+"button: ← Zurück zum Vorgang
+div: V-2026-0042
+h1: Sicherungskasten tauschen
+p: Muster GmbH
+h2: Positionen
+button: + Material bestellen
+button: + Material verwenden
+button: + Leistung verwenden
+span: 5 ×
+  span: Bestellung · offen
+button: Entfernen
+h3: Verwendet
+span: 2 ×
+button: + Angebot aus diesem Vorgang erstellen
+button: + Rechnung aus diesem Vorgang erstellen"
+`;
+
+exports[`VorgangDetailPage – Aufbau > kompakt, Unterseite Verlauf > kompakt, Unterseite Verlauf 1`] = `
+"button: ← Zurück zum Vorgang
+div: V-2026-0042
+h1: Sicherungskasten tauschen
+p: Muster GmbH
+h2: Verlauf
+span: Interne Ansicht
+button: Umschalten
+button: Alle
+button: Kommentare
+button: System
+button: E-Mail
+span: 21.10.2026, 11:00:00
+span: Kommentar
+span: Kundensichtbar
+span: Material liegt bereit
+div: Status: ? → ? · 20.10.2026, 11:00:00
+textarea placeholder=Kommentar schreiben… value=
+[verborgen] input type=file value=
+[verborgen] input type=file value=
+label: Auch an Partner Elektro Nord
+  input type=checkbox value=on
+button aria-label=Erwähnen title=Erwähnen: @
+button aria-label=Foto anhängen title=Foto anhängen
+button aria-label=Dokument anhängen title=Dokument anhängen
+button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – Aufbau > kompakt, Unterseite Zeit > kompakt, Unterseite Zeit 1`] = `
+"button: ← Zurück zum Vorgang
+div: V-2026-0042
+h1: Sicherungskasten tauschen
+p: Muster GmbH
+h2: Arbeitszeit
+button: + Zeit nachtragen
+span: Bisher 2:30 Std. · 12.0 km
+input placeholder=Tätigkeit (optional) value=
+button title=: Zeit starten
+div: Di., 20.10.
+input type=checkbox value=on
+button
+  div: 09:00 – 11:30
+    span: · Mia Muster
+  div: Kasten demontiert
+  span: 2:30 Std.
+  span: 12 km
+  span: Vermerkt"
+`;
+
+exports[`VorgangDetailPage – Aufbau > kompakt, voll > kompakt, voll 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+a href=#abschnitt-uebersicht: Übersicht
+button type=button: Zeit
+a href=#abschnitt-termine: Termine
+a href=#abschnitt-maengel: Mängel
+button type=button: Positionen
+button type=button: Verlauf
+button type=button
+  span: Zeit
+  span: 2:30 Std. · 12.0 km
+a href=#abschnitt-termine
+  span: Nächster Termin
+  span: 23.10.
+a href=#abschnitt-maengel
+  span: Mängel
+  span: 1 offen
+button type=button
+  span: Positionen
+  span: 2
+button type=button
+  span: Verlauf
+  span: 2 Einträge
+div: V-2026-0042
+h1: Sicherungskasten tauschen
+button: Entstanden aus Vorgang V-2026-0001
+button: Muster GmbH
+span: ·
+button: Hauptverteilung
+button: Bearbeiten
+span: Adresse
+button: Bearbeiten
+p: Hauptstr. 1, 10115 Berlin
+div: Keine Kartenposition verfügbar
+span: Weitere Anlagen
+button: + Hinzufügen
+button: Zweite Anlage
+button aria-label=Zweite Anlage entfernen: ✕
+p: Alter Kasten, FI defekt.
+label: Status:
+select id=vorgang-status-select value=in_arbeit
+  option: Neu
+  option: Geplant
+  option: In Arbeit
+  option: Wartet auf Kunde
+  option: Abgeschlossen
+  option: Abgerechnet
+  option: Storniert
+label: Priorität
+  select value=2
+    option: 1
+    option: 2
+    option: 3
+    option: 4
+    option: 5
+button: + Folge-Vorgang
+span: Zugewiesen an:
+  span: Mia Muster
+button disabled: Von mir übernommen
+span: Folge-Vorgänge:
+button: V-2026-0050 · Folgeauftrag · In Arbeit
+h2: Termine
+button: + Termin planen
+div: Montage
+div: 23.10.26, 10:00
+span: Geplant
+h2: Mängel
+button: Protokoll
+button: + Mangel melden
+p: FI löst nicht aus
+span: Hoch
+span: Offen
+button: Behoben
+button: Verwerfen
+button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+h2: Nachunternehmer
+button: Elektro Nord
+div: Honorar: 120.00 EUR netto
+span: Wartet auf Rückmeldung
+button: Aufheben
+button type=button: Zeit erfassen"
+`;
+
+exports[`VorgangDetailPage – Tabs im dichten Layout > Tab Mängel zeigt nur sein Panel > Tab Mängel 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=false id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=true id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  [verborgen] div: V-2026-0042
+  [verborgen] h1: Sicherungskasten tauschen
+  [verborgen] button: Entstanden aus Vorgang V-2026-0001
+  [verborgen] button: Muster GmbH
+  [verborgen] span: ·
+  [verborgen] button: Hauptverteilung
+  [verborgen] button: Bearbeiten
+  [verborgen] span: Adresse
+  [verborgen] button: Bearbeiten
+  [verborgen] p: Hauptstr. 1, 10115 Berlin
+  [verborgen] div: Keine Kartenposition verfügbar
+  [verborgen] span: Weitere Anlagen
+  [verborgen] button: + Hinzufügen
+  [verborgen] button: Zweite Anlage
+  [verborgen] button aria-label=Zweite Anlage entfernen: ✕
+  [verborgen] p: Alter Kasten, FI defekt.
+  [verborgen] label: Status:
+  [verborgen] select id=vorgang-status-select value=in_arbeit
+    [verborgen] option: Neu
+    [verborgen] option: Geplant
+    [verborgen] option: In Arbeit
+    [verborgen] option: Wartet auf Kunde
+    [verborgen] option: Abgeschlossen
+    [verborgen] option: Abgerechnet
+    [verborgen] option: Storniert
+  [verborgen] label: Priorität
+    [verborgen] select value=2
+      [verborgen] option: 1
+      [verborgen] option: 2
+      [verborgen] option: 3
+      [verborgen] option: 4
+      [verborgen] option: 5
+  [verborgen] button: + Folge-Vorgang
+  [verborgen] span: Zugewiesen an:
+    [verborgen] span: Mia Muster
+  [verborgen] button disabled: Von mir übernommen
+  [verborgen] span: Folge-Vorgänge:
+  [verborgen] button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  h2: Mängel
+  button: Protokoll
+  button: + Mangel melden
+  p: FI löst nicht aus
+  span: Hoch
+  span: Offen
+  button: Behoben
+  button: Verwerfen
+  button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  [verborgen] h2: Nachunternehmer
+  [verborgen] button: Elektro Nord
+  [verborgen] div: Honorar: 120.00 EUR netto
+  [verborgen] span: Wartet auf Rückmeldung
+  [verborgen] button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – Tabs im dichten Layout > Tab Positionen zeigt nur sein Panel > Tab Positionen 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=false id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=true id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  [verborgen] div: V-2026-0042
+  [verborgen] h1: Sicherungskasten tauschen
+  [verborgen] button: Entstanden aus Vorgang V-2026-0001
+  [verborgen] button: Muster GmbH
+  [verborgen] span: ·
+  [verborgen] button: Hauptverteilung
+  [verborgen] button: Bearbeiten
+  [verborgen] span: Adresse
+  [verborgen] button: Bearbeiten
+  [verborgen] p: Hauptstr. 1, 10115 Berlin
+  [verborgen] div: Keine Kartenposition verfügbar
+  [verborgen] span: Weitere Anlagen
+  [verborgen] button: + Hinzufügen
+  [verborgen] button: Zweite Anlage
+  [verborgen] button aria-label=Zweite Anlage entfernen: ✕
+  [verborgen] p: Alter Kasten, FI defekt.
+  [verborgen] label: Status:
+  [verborgen] select id=vorgang-status-select value=in_arbeit
+    [verborgen] option: Neu
+    [verborgen] option: Geplant
+    [verborgen] option: In Arbeit
+    [verborgen] option: Wartet auf Kunde
+    [verborgen] option: Abgeschlossen
+    [verborgen] option: Abgerechnet
+    [verborgen] option: Storniert
+  [verborgen] label: Priorität
+    [verborgen] select value=2
+      [verborgen] option: 1
+      [verborgen] option: 2
+      [verborgen] option: 3
+      [verborgen] option: 4
+      [verborgen] option: 5
+  [verborgen] button: + Folge-Vorgang
+  [verborgen] span: Zugewiesen an:
+    [verborgen] span: Mia Muster
+  [verborgen] button disabled: Von mir übernommen
+  [verborgen] span: Folge-Vorgänge:
+  [verborgen] button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  h2: Positionen
+  button: + Material bestellen
+  button: + Material verwenden
+  button: + Leistung verwenden
+  th: Menge
+  th: Material
+  th: Zweck
+  th: Status
+  td: 5 ×
+  td: Bestellung
+  td: offen
+  button: Entfernen
+  h3: Verwendet
+  th: Typ
+  th: Bezeichnung
+  th: Menge
+  td: 2
+  button: + Angebot aus diesem Vorgang erstellen
+  button: + Rechnung aus diesem Vorgang erstellen
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  [verborgen] h2: Nachunternehmer
+  [verborgen] button: Elektro Nord
+  [verborgen] div: Honorar: 120.00 EUR netto
+  [verborgen] span: Wartet auf Rückmeldung
+  [verborgen] button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – Tabs im dichten Layout > Tab Termine zeigt nur sein Panel > Tab Termine 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=false id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=true id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  [verborgen] div: V-2026-0042
+  [verborgen] h1: Sicherungskasten tauschen
+  [verborgen] button: Entstanden aus Vorgang V-2026-0001
+  [verborgen] button: Muster GmbH
+  [verborgen] span: ·
+  [verborgen] button: Hauptverteilung
+  [verborgen] button: Bearbeiten
+  [verborgen] span: Adresse
+  [verborgen] button: Bearbeiten
+  [verborgen] p: Hauptstr. 1, 10115 Berlin
+  [verborgen] div: Keine Kartenposition verfügbar
+  [verborgen] span: Weitere Anlagen
+  [verborgen] button: + Hinzufügen
+  [verborgen] button: Zweite Anlage
+  [verborgen] button aria-label=Zweite Anlage entfernen: ✕
+  [verborgen] p: Alter Kasten, FI defekt.
+  [verborgen] label: Status:
+  [verborgen] select id=vorgang-status-select value=in_arbeit
+    [verborgen] option: Neu
+    [verborgen] option: Geplant
+    [verborgen] option: In Arbeit
+    [verborgen] option: Wartet auf Kunde
+    [verborgen] option: Abgeschlossen
+    [verborgen] option: Abgerechnet
+    [verborgen] option: Storniert
+  [verborgen] label: Priorität
+    [verborgen] select value=2
+      [verborgen] option: 1
+      [verborgen] option: 2
+      [verborgen] option: 3
+      [verborgen] option: 4
+      [verborgen] option: 5
+  [verborgen] button: + Folge-Vorgang
+  [verborgen] span: Zugewiesen an:
+    [verborgen] span: Mia Muster
+  [verborgen] button disabled: Von mir übernommen
+  [verborgen] span: Folge-Vorgänge:
+  [verborgen] button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  h2: Termine
+  button: + Termin planen
+  button type=button: ← Vorherige Woche
+  button type=button disabled: Diese Woche
+  button type=button: Nächste Woche →
+  span: 19.10. – 25.10.2026
+  div: Mo 19.10.
+  div: Di 20.10.
+  div: Mi 21.10.
+  div: Do 22.10.
+  div: Fr 23.10.
+  div: 10:00
+  div: Montage
+  div: Sa 24.10.
+  div: So 25.10.
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  [verborgen] h2: Nachunternehmer
+  [verborgen] button: Elektro Nord
+  [verborgen] div: Honorar: 120.00 EUR netto
+  [verborgen] span: Wartet auf Rückmeldung
+  [verborgen] button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – Tabs im dichten Layout > Tab Verlauf zeigt nur sein Panel > Tab Verlauf 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=false id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=true id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  [verborgen] div: V-2026-0042
+  [verborgen] h1: Sicherungskasten tauschen
+  [verborgen] button: Entstanden aus Vorgang V-2026-0001
+  [verborgen] button: Muster GmbH
+  [verborgen] span: ·
+  [verborgen] button: Hauptverteilung
+  [verborgen] button: Bearbeiten
+  [verborgen] span: Adresse
+  [verborgen] button: Bearbeiten
+  [verborgen] p: Hauptstr. 1, 10115 Berlin
+  [verborgen] div: Keine Kartenposition verfügbar
+  [verborgen] span: Weitere Anlagen
+  [verborgen] button: + Hinzufügen
+  [verborgen] button: Zweite Anlage
+  [verborgen] button aria-label=Zweite Anlage entfernen: ✕
+  [verborgen] p: Alter Kasten, FI defekt.
+  [verborgen] label: Status:
+  [verborgen] select id=vorgang-status-select value=in_arbeit
+    [verborgen] option: Neu
+    [verborgen] option: Geplant
+    [verborgen] option: In Arbeit
+    [verborgen] option: Wartet auf Kunde
+    [verborgen] option: Abgeschlossen
+    [verborgen] option: Abgerechnet
+    [verborgen] option: Storniert
+  [verborgen] label: Priorität
+    [verborgen] select value=2
+      [verborgen] option: 1
+      [verborgen] option: 2
+      [verborgen] option: 3
+      [verborgen] option: 4
+      [verborgen] option: 5
+  [verborgen] button: + Folge-Vorgang
+  [verborgen] span: Zugewiesen an:
+    [verborgen] span: Mia Muster
+  [verborgen] button disabled: Von mir übernommen
+  [verborgen] span: Folge-Vorgänge:
+  [verborgen] button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  [verborgen] h2: Nachunternehmer
+  [verborgen] button: Elektro Nord
+  [verborgen] div: Honorar: 120.00 EUR netto
+  [verborgen] span: Wartet auf Rückmeldung
+  [verborgen] button: Aufheben
+div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  h2: Verlauf
+  span: Interne Ansicht
+  button: Umschalten
+  button: Alle
+  button: Kommentare
+  button: System
+  button: E-Mail
+  span: 21.10.2026, 11:00:00
+  span: Kommentar
+  span: Kundensichtbar
+  span: Material liegt bereit
+  div: Status: ? → ? · 20.10.2026, 11:00:00
+  textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  label: Auch an Partner Elektro Nord
+    input type=checkbox value=on
+  button aria-label=Erwähnen title=Erwähnen: @
+  button aria-label=Foto anhängen title=Foto anhängen
+  button aria-label=Dokument anhängen title=Dokument anhängen
+  button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – Tabs im dichten Layout > Tab Zeit zeigt nur sein Panel > Tab Zeit 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=false id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=true id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  [verborgen] div: V-2026-0042
+  [verborgen] h1: Sicherungskasten tauschen
+  [verborgen] button: Entstanden aus Vorgang V-2026-0001
+  [verborgen] button: Muster GmbH
+  [verborgen] span: ·
+  [verborgen] button: Hauptverteilung
+  [verborgen] button: Bearbeiten
+  [verborgen] span: Adresse
+  [verborgen] button: Bearbeiten
+  [verborgen] p: Hauptstr. 1, 10115 Berlin
+  [verborgen] div: Keine Kartenposition verfügbar
+  [verborgen] span: Weitere Anlagen
+  [verborgen] button: + Hinzufügen
+  [verborgen] button: Zweite Anlage
+  [verborgen] button aria-label=Zweite Anlage entfernen: ✕
+  [verborgen] p: Alter Kasten, FI defekt.
+  [verborgen] label: Status:
+  [verborgen] select id=vorgang-status-select value=in_arbeit
+    [verborgen] option: Neu
+    [verborgen] option: Geplant
+    [verborgen] option: In Arbeit
+    [verborgen] option: Wartet auf Kunde
+    [verborgen] option: Abgeschlossen
+    [verborgen] option: Abgerechnet
+    [verborgen] option: Storniert
+  [verborgen] label: Priorität
+    [verborgen] select value=2
+      [verborgen] option: 1
+      [verborgen] option: 2
+      [verborgen] option: 3
+      [verborgen] option: 4
+      [verborgen] option: 5
+  [verborgen] button: + Folge-Vorgang
+  [verborgen] span: Zugewiesen an:
+    [verborgen] span: Mia Muster
+  [verborgen] button disabled: Von mir übernommen
+  [verborgen] span: Folge-Vorgänge:
+  [verborgen] button: V-2026-0050 · Folgeauftrag · In Arbeit
+div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  h2: Arbeitszeit
+  button: + Zeit nachtragen
+  span: Bisher 2:30 Std. · 12.0 km
+  input placeholder=Tätigkeit (optional) value=
+  button title=: Zeit starten
+  th: Techniker
+  th: Tätigkeit
+  th: Datum
+  th: Von–Bis
+  th: Dauer
+  th: Status
+  input type=checkbox value=on
+  td: Mia Muster
+  td: Kasten demontiert
+  td: 20.10.2026
+  td: 09:00 – 11:30
+  td: 2:30 Std.
+    span: · 12 km
+  span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  [verborgen] h2: Nachunternehmer
+  [verborgen] button: Elektro Nord
+  [verborgen] div: Honorar: 120.00 EUR netto
+  [verborgen] span: Wartet auf Rückmeldung
+  [verborgen] button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Adresse bearbeiten > offen: Adresse bearbeiten 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  input placeholder=Straße + Hausnr. value=Hauptstr. 1
+  input placeholder=PLZ value=10115
+  input placeholder=Ort value=Berlin
+  button: Speichern
+  button: Abbrechen
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Anlage hinzufügen > offen: Anlage hinzufügen 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  select value=
+    option: Anlage wählen…
+    option: Lager Nord
+  button disabled: OK
+  button: Abbrechen
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Erwähnen > offen: Erwähnen 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] button: Mia Muster
+  [verborgen] button: Tom Techniker
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Folge-Vorgang > offen: Folge-Vorgang 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  p: Folge-Vorgang anlegen: übernimmt Kunde/Anlage/Standort sowie offene Angebots- Materialpositionen dieses Vorgangs. Dieser Vorgang bleibt dabei unverändert.
+  select value=stoerung
+    option: Störung
+    option: Installation
+    option: Wartung
+    option: Prüfung
+    option: Beratung
+    option: Planung
+  button: Anlegen
+  button: Abbrechen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Leistung verwenden > offen: Leistung verwenden 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: Abbrechen
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+  [verborgen] p: Für diesen Kunden ist kein Leistungsverzeichnis hinterlegt.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Mangel melden > offen: Mangel melden 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: Abbrechen
+  [verborgen] textarea placeholder=Was ist defekt? value=
+  [verborgen] select value=mittel
+    [verborgen] option: Niedrig
+    [verborgen] option: Mittel
+    [verborgen] option: Hoch
+    [verborgen] option: Kritisch
+  [verborgen] button disabled: Erfassen
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Material bestellen > offen: Material bestellen 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: Abbrechen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] input type=text placeholder=Material wählen… value=
+  [verborgen] input type=number placeholder=Menge value=
+  [verborgen] select value=bestellung
+    [verborgen] option: Zur Bestellung
+    [verborgen] option: Für Angebot
+  [verborgen] input type=text placeholder=Notiz (optional) value=
+  [verborgen] button disabled: Vormerken
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Material verwenden > offen: Material verwenden 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: Abbrechen
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+  [verborgen] input type=text placeholder=Material wählen… value=
+  [verborgen] input type=number placeholder=Menge value=
+  [verborgen] button disabled: Erfassen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Partner ändern > offen: Partner ändern 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Status wartet auf Kunde > offen: Status wartet auf Kunde 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  p: Wartet auf Kunde: Nach wie vielen Tagen soll FieldVibe dich erinnern, nachzufragen?
+  input type=number placeholder=14 value=
+  button: Übernehmen
+  button: Abbrechen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Termin planen > offen: Termin planen 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: Abbrechen
+  [verborgen] input placeholder=Titel value=
+  [verborgen] select value=u1
+    [verborgen] option: Mia Muster
+    [verborgen] option: Tom Techniker
+  [verborgen] input type=datetime-local value=2026-10-22T11:00
+  [verborgen] input type=datetime-local value=2026-10-22T12:00
+  [verborgen] button disabled: Anlegen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Unterschrift erfassen > offen: Unterschrift erfassen 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden
+  [verborgen] input placeholder=Name des Unterzeichners value=
+  [verborgen] button: Löschen
+  [verborgen] button disabled: Speichern
+  [verborgen] button: Abbrechen"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Verlauf-Filter System > offen: Verlauf-Filter System 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Zeit nachtragen > offen: Zeit nachtragen 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  button: Bearbeiten
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
+
+exports[`VorgangDetailPage – geöffnete Formulare > Zuordnung bearbeiten > offen: Zuordnung bearbeiten 1`] = `
+"button: ← Zurück
+button: Vorgang löschen
+span: Hauptverteilung
+span: 2 Tage überfällig
+div role=tablist aria-label=Vorgangs-Abschnitte
+  button role=tab aria-selected=true id=tab-abschnitt-uebersicht type=button: Übersicht
+  button role=tab aria-selected=false id=tab-abschnitt-zeit type=button: Zeit
+  button role=tab aria-selected=false id=tab-abschnitt-termine type=button: Termine
+  button role=tab aria-selected=false id=tab-abschnitt-maengel type=button: Mängel
+  button role=tab aria-selected=false id=tab-abschnitt-material type=button: Positionen
+  button role=tab aria-selected=false id=tab-abschnitt-verlauf type=button: Verlauf
+dt: Status
+dd: In Arbeit
+dt: Priorität
+dd: 2
+dt: Zugewiesen an
+dd: Mia Muster
+dt: Fälligkeit
+dd: 20.10.2026
+dt: Leistungstyp
+dd: Installation
+dt: Abrechnungsart
+dd: Nach Aufwand
+dt: Erstellt am
+dd: 1.10.2026
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht id=abschnitt-uebersicht
+  div: V-2026-0042
+  h1: Sicherungskasten tauschen
+  button: Entstanden aus Vorgang V-2026-0001
+  button: Muster GmbH
+  span: ·
+  button: Hauptverteilung
+  label: Kunde
+  select value=
+  label: Anlage (optional)
+  select value=a1
+    option: Keine Anlage
+    option: Hauptverteilung
+    option: Lager Nord
+  button: Speichern
+  button: Abbrechen
+  span: Adresse
+  button: Bearbeiten
+  p: Hauptstr. 1, 10115 Berlin
+  div: Keine Kartenposition verfügbar
+  span: Weitere Anlagen
+  button: + Hinzufügen
+  button: Zweite Anlage
+  button aria-label=Zweite Anlage entfernen: ✕
+  p: Alter Kasten, FI defekt.
+  label: Status:
+  select id=vorgang-status-select value=in_arbeit
+    option: Neu
+    option: Geplant
+    option: In Arbeit
+    option: Wartet auf Kunde
+    option: Abgeschlossen
+    option: Abgerechnet
+    option: Storniert
+  label: Priorität
+    select value=2
+      option: 1
+      option: 2
+      option: 3
+      option: 4
+      option: 5
+  button: + Folge-Vorgang
+  span: Zugewiesen an:
+    span: Mia Muster
+  button disabled: Von mir übernommen
+  span: Folge-Vorgänge:
+  button: V-2026-0050 · Folgeauftrag · In Arbeit
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-zeit id=abschnitt-zeit
+  [verborgen] h2: Arbeitszeit
+  [verborgen] button: + Zeit nachtragen
+  [verborgen] span: Bisher 2:30 Std. · 12.0 km
+  [verborgen] input placeholder=Tätigkeit (optional) value=
+  [verborgen] button title=: Zeit starten
+  [verborgen] th: Techniker
+  [verborgen] th: Tätigkeit
+  [verborgen] th: Datum
+  [verborgen] th: Von–Bis
+  [verborgen] th: Dauer
+  [verborgen] th: Status
+  [verborgen] input type=checkbox value=on
+  [verborgen] td: Mia Muster
+  [verborgen] td: Kasten demontiert
+  [verborgen] td: 20.10.2026
+  [verborgen] td: 09:00 – 11:30
+  [verborgen] td: 2:30 Std.
+    [verborgen] span: · 12 km
+  [verborgen] span: Vermerkt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-termine id=abschnitt-termine
+  [verborgen] h2: Termine
+  [verborgen] button: + Termin planen
+  [verborgen] button type=button: ← Vorherige Woche
+  [verborgen] button type=button disabled: Diese Woche
+  [verborgen] button type=button: Nächste Woche →
+  [verborgen] span: 19.10. – 25.10.2026
+  [verborgen] div: Mo 19.10.
+  [verborgen] div: Di 20.10.
+  [verborgen] div: Mi 21.10.
+  [verborgen] div: Do 22.10.
+  [verborgen] div: Fr 23.10.
+  [verborgen] div: 10:00
+  [verborgen] div: Montage
+  [verborgen] div: Sa 24.10.
+  [verborgen] div: So 25.10.
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-maengel id=abschnitt-maengel
+  [verborgen] h2: Mängel
+  [verborgen] button: Protokoll
+  [verborgen] button: + Mangel melden
+  [verborgen] p: FI löst nicht aus
+  [verborgen] span: Hoch
+  [verborgen] span: Offen
+  [verborgen] button: Behoben
+  [verborgen] button: Verwerfen
+  [verborgen] button: Angebot aus offenen Mängeln erstellen
+h2: Verknüpfte Aufgaben
+p: Material bestellen
+span: mittel
+span: 1/2 erledigt
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-material id=abschnitt-material
+  [verborgen] h2: Positionen
+  [verborgen] button: + Material bestellen
+  [verborgen] button: + Material verwenden
+  [verborgen] button: + Leistung verwenden
+  [verborgen] th: Menge
+  [verborgen] th: Material
+  [verborgen] th: Zweck
+  [verborgen] th: Status
+  [verborgen] td: 5 ×
+  [verborgen] td: Bestellung
+  [verborgen] td: offen
+  [verborgen] button: Entfernen
+  [verborgen] h3: Verwendet
+  [verborgen] th: Typ
+  [verborgen] th: Bezeichnung
+  [verborgen] th: Menge
+  [verborgen] td: 2
+  [verborgen] button: + Angebot aus diesem Vorgang erstellen
+  [verborgen] button: + Rechnung aus diesem Vorgang erstellen
+div role=tabpanel aria-labelledby=tab-abschnitt-uebersicht
+  h2: Nachunternehmer
+  button: Elektro Nord
+  div: Honorar: 120.00 EUR netto
+  span: Wartet auf Rückmeldung
+  button: Aufheben
+[verborgen] div role=tabpanel aria-labelledby=tab-abschnitt-verlauf id=abschnitt-verlauf
+  [verborgen] h2: Verlauf
+  [verborgen] span: Interne Ansicht
+  [verborgen] button: Umschalten
+  [verborgen] button: Alle
+  [verborgen] button: Kommentare
+  [verborgen] button: System
+  [verborgen] button: E-Mail
+  [verborgen] span: 21.10.2026, 11:00:00
+  [verborgen] span: Kommentar
+  [verborgen] span: Kundensichtbar
+  [verborgen] span: Material liegt bereit
+  [verborgen] div: Status: ? → ? · 20.10.2026, 11:00:00
+  [verborgen] textarea placeholder=Kommentar schreiben… value=
+  [verborgen] input type=file value=
+  [verborgen] input type=file value=
+  [verborgen] label: Auch an Partner Elektro Nord
+    [verborgen] input type=checkbox value=on
+  [verborgen] button aria-label=Erwähnen title=Erwähnen: @
+  [verborgen] button aria-label=Foto anhängen title=Foto anhängen
+  [verborgen] button aria-label=Dokument anhängen title=Dokument anhängen
+  [verborgen] button aria-label=Unterschrift erfassen title=Unterschrift erfassen
+  [verborgen] button aria-label=Für Kunde sichtbar umschalten title=Nur intern – antippen um für Kunde sichtbar zu machen
+  [verborgen] button disabled: Senden"
+`;
