@@ -88,6 +88,7 @@ from app.core.config import get_settings
 from app.services.audit_service import siegel_vor_antwort
 from app.core.error_tracking import init_error_tracking
 from app.core.logging_config import konfiguriere_logging
+from app.api.paginierung import TOTAL_COUNT_HEADER
 from app.core.request_middleware import REQUEST_ID_HEADER, RequestKontextMiddleware
 from app.db.rollen_pruefung import pruefe_db_rolle
 from app.db.session import engine
@@ -140,7 +141,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=[REQUEST_ID_HEADER],
+    expose_headers=[REQUEST_ID_HEADER, TOTAL_COUNT_HEADER],
 )
 # Zuletzt hinzugefuegt = aeusserste Schicht: die Request-ID gilt auch fuer
 # CORS-Preflights und Fehlerantworten der inneren Schichten.

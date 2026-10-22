@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
@@ -13,6 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.projekt import Projekt, ProjektAufgabe, ProjektSpalte
@@ -159,13 +160,15 @@ async def _pruefe_aufgaben_scope(
 
 @router.get("", response_model=list[ProjektRead])
 async def list_projekte(
-    vertrag_id: UUID | None = Query(default=None), session: AsyncSession = Depends(get_db)
+    response: Response,
+    vertrag_id: UUID | None = Query(default=None),
+    seite: Seite = Depends(seitenparameter),
+    session: AsyncSession = Depends(get_db),
 ) -> list[Projekt]:
-    stmt = select(Projekt).where(Projekt.geloescht_am.is_(None)).order_by(Projekt.created_at)
+    stmt = select(Projekt).where(Projekt.geloescht_am.is_(None)).order_by(Projekt.created_at, Projekt.id)
     if vertrag_id:
         stmt = stmt.where(Projekt.vertrag_id == vertrag_id)
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await seite_laden(session, stmt, seite, response)
 
 
 @router.post(

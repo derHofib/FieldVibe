@@ -15,6 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.core.zeit import in_lokal, montag_der_woche, tagesbeginn_utc, tagesende_utc
 from app.models.anlage import Anlage
 from app.models.leistungsverzeichnis import LeistungsverzeichnisKunde, LeistungsverzeichnisPosition
@@ -154,6 +155,8 @@ def _protokoll(
 
 @router.get("", response_model=list[ZeiterfassungRead])
 async def list_zeiterfassung(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     vorgang_id: UUID | None = Query(default=None),
     techniker_id: UUID | None = Query(default=None),
     von: date | None = Query(default=None),
@@ -172,7 +175,7 @@ async def list_zeiterfassung(
     stmt = (
         select(Zeiterfassung)
         .where(Zeiterfassung.geloescht_am.is_(None))
-        .order_by(Zeiterfassung.start_at.desc())
+        .order_by(Zeiterfassung.start_at.desc(), Zeiterfassung.id)
     )
     if buchungsstatus:
         stmt = stmt.where(Zeiterfassung.buchungsstatus == buchungsstatus)
@@ -218,8 +221,7 @@ async def list_zeiterfassung(
         nutzer = await _mitarbeiter_scope(session, auth)
         if nutzer is not None:
             stmt = stmt.where(Zeiterfassung.techniker_id.in_(nutzer))
-    result = await session.execute(stmt)
-    return await _mit_vorgang_kontext(session, list(result.scalars().all()))
+    return await _mit_vorgang_kontext(session, await seite_laden(session, stmt, seite, response))
 
 
 @router.get(

@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.auftrag import Auftrag
 from app.models.kunde import Kunde
 from app.models.projekt import Projekt
@@ -72,13 +73,15 @@ async def _anreichern(session: AsyncSession, auftraege: list[Auftrag]) -> list[A
 
 @router.get("", response_model=list[AuftragRead])
 async def list_auftraege(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     projekt_id: UUID | None = Query(default=None),
     kunde_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[AuftragRead]:
-    stmt = select(Auftrag).where(Auftrag.geloescht_am.is_(None)).order_by(Auftrag.created_at.desc())
+    stmt = select(Auftrag).where(Auftrag.geloescht_am.is_(None)).order_by(Auftrag.created_at.desc(), Auftrag.id)
     if projekt_id:
         stmt = stmt.where(Auftrag.projekt_id == projekt_id)
     if kunde_id:
@@ -88,8 +91,7 @@ async def list_auftraege(
     erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
     if erlaubte_kunden is not None:
         stmt = stmt.where(or_(Auftrag.kunde_id.is_(None), Auftrag.kunde_id.in_(erlaubte_kunden)))
-    result = await session.execute(stmt)
-    return await _anreichern(session, list(result.scalars().all()))
+    return await _anreichern(session, await seite_laden(session, stmt, seite, response))
 
 
 @router.post(

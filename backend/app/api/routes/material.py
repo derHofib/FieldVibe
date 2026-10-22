@@ -14,6 +14,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.anlage import Anlage
 from app.models.material import Material, MaterialBestand, MaterialBewegung, MaterialVerwendung
 from app.models.tag import TagAssignment
@@ -142,10 +143,12 @@ async def _material_read(
 
 @router.get("", response_model=list[MaterialRead])
 async def list_material(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     lager_id: UUID | None = Query(default=None),
     session: AsyncSession = Depends(get_db),
 ) -> list[MaterialRead]:
-    stmt = select(Material).where(Material.geloescht_am.is_(None)).order_by(Material.bezeichnung)
+    stmt = select(Material).where(Material.geloescht_am.is_(None)).order_by(Material.bezeichnung, Material.id)
     if lager_id is not None:
         # Nur Material, das an diesem Lagerort tatsaechlich vorhanden ist --
         # ein Bestand-Datensatz mit menge=0 ist nur ein Ueberbleibsel einer
@@ -157,8 +160,7 @@ async def list_material(
                 )
             )
         )
-    result = await session.execute(stmt)
-    materialien = list(result.scalars().all())
+    materialien = await seite_laden(session, stmt, seite, response)
     if not materialien:
         return []
 

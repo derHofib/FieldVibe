@@ -2,7 +2,7 @@ import secrets
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +15,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.core.security import hash_password
 from app.models.angebot import Angebot
 from app.models.anlage import Anlage
@@ -80,18 +81,19 @@ router = APIRouter(
 
 @router.get("", response_model=list[KundeRead], dependencies=[Depends(require_recht("kunden", "sehen"))])
 async def list_kunden(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     q: str | None = Query(default=None, description="Suche in Name/Kundennummer"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Kunde]:
-    stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name)
+    stmt = select(Kunde).where(Kunde.geloescht_am.is_(None)).order_by(Kunde.name, Kunde.id)
     if q:
         stmt = stmt.where(Kunde.name.ilike(f"%{q}%"))
     erlaubt = await erlaubte_kunde_ids(session, auth)
     if erlaubt is not None:
         stmt = stmt.where(Kunde.id.in_(erlaubt))
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await seite_laden(session, stmt, seite, response)
 
 
 @router.post(

@@ -13,6 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.mandant import Mandant
 from app.models.mangel import MANGEL_SCHWEREGRADE, Mangel
 from app.models.vorgang import Vorgang
@@ -48,12 +49,14 @@ _ERLAUBTE_DIREKTE_STATUS = ("behoben", "abgelehnt")
 
 @router.get("", response_model=list[MangelRead])
 async def list_maengel(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     vorgang_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Mangel]:
-    stmt = select(Mangel).where(Mangel.geloescht_am.is_(None)).order_by(Mangel.created_at.desc())
+    stmt = select(Mangel).where(Mangel.geloescht_am.is_(None)).order_by(Mangel.created_at.desc(), Mangel.id)
     if vorgang_id:
         stmt = stmt.where(Mangel.vorgang_id == vorgang_id)
     if status_filter:
@@ -63,8 +66,7 @@ async def list_maengel(
         stmt = stmt.where(
             Mangel.vorgang_id.in_(select(Vorgang.id).where(Vorgang.kunde_id.in_(erlaubte_kunden)))
         )
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await seite_laden(session, stmt, seite, response)
 
 
 @router.get("/protokoll/pdf")

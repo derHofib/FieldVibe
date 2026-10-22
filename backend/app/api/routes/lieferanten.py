@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.lieferant import Lieferant
 from app.schemas.lieferant import LieferantCreate, LieferantRead, LieferantUpdate
 from app.services import datev_service, papierkorb_service
@@ -44,11 +45,13 @@ async def _flush_mit_kontofehler(session: AsyncSession) -> None:
 @router.get(
     "", response_model=list[LieferantRead], dependencies=[Depends(require_recht("material", "sehen"))]
 )
-async def list_lieferanten(session: AsyncSession = Depends(get_db)) -> list[Lieferant]:
-    result = await session.execute(
-        select(Lieferant).where(Lieferant.geloescht_am.is_(None)).order_by(Lieferant.name)
-    )
-    return list(result.scalars().all())
+async def list_lieferanten(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
+    session: AsyncSession = Depends(get_db),
+) -> list[Lieferant]:
+    stmt = select(Lieferant).where(Lieferant.geloescht_am.is_(None)).order_by(Lieferant.name, Lieferant.id)
+    return await seite_laden(session, stmt, seite, response)
 
 
 @router.post(

@@ -13,6 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.eingangsrechnung import Eingangsrechnung, EingangsrechnungPosition, EingangsrechnungZahlung
 from app.models.lieferant import Lieferant
 from app.models.vorgang import Vorgang
@@ -52,6 +53,8 @@ _BELEG_MAX_BYTES = 10 * 1024 * 1024
 
 @router.get("", response_model=list[EingangsrechnungRead])
 async def list_eingangsrechnungen(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     lieferant_id: UUID | None = Query(default=None),
     vorgang_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
@@ -61,7 +64,7 @@ async def list_eingangsrechnungen(
     stmt = (
         select(Eingangsrechnung)
         .where(Eingangsrechnung.geloescht_am.is_(None))
-        .order_by(Eingangsrechnung.rechnungsdatum.desc())
+        .order_by(Eingangsrechnung.rechnungsdatum.desc(), Eingangsrechnung.id)
     )
     if lieferant_id:
         stmt = stmt.where(Eingangsrechnung.lieferant_id == lieferant_id)
@@ -71,8 +74,7 @@ async def list_eingangsrechnungen(
         stmt = stmt.where(Eingangsrechnung.status == status_filter)
     if kategorie:
         stmt = stmt.where(Eingangsrechnung.kategorie == kategorie)
-    result = await session.execute(stmt)
-    return [await to_read_model(session, e) for e in result.scalars().all()]
+    return [await to_read_model(session, e) for e in await seite_laden(session, stmt, seite, response)]
 
 
 @router.get("/export/csv")

@@ -14,6 +14,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.bestellung import Bestellung, BestellungPosition
 from app.models.email_log import EmailLog
 from app.models.lieferant import Lieferant
@@ -47,13 +48,17 @@ router = APIRouter(
 @router.get(
     "", response_model=list[BestellungRead], dependencies=[Depends(require_recht("material", "sehen"))]
 )
-async def list_bestellungen(session: AsyncSession = Depends(get_db)) -> list[BestellungRead]:
-    result = await session.execute(
+async def list_bestellungen(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
+    session: AsyncSession = Depends(get_db),
+) -> list[BestellungRead]:
+    stmt = (
         select(Bestellung)
         .where(Bestellung.geloescht_am.is_(None))
-        .order_by(Bestellung.created_at.desc())
+        .order_by(Bestellung.created_at.desc(), Bestellung.id)
     )
-    return [await to_read_model(session, b) for b in result.scalars().all()]
+    return [await to_read_model(session, b) for b in await seite_laden(session, stmt, seite, response)]
 
 
 @router.get(

@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.notification import Notification
 from app.schemas.notification import NotificationRead
 
@@ -17,6 +18,8 @@ router = APIRouter(
 
 @router.get("", response_model=list[NotificationRead])
 async def list_notifications(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     nur_ungelesen: bool = Query(default=False),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -28,8 +31,7 @@ async def list_notifications(
     )
     if nur_ungelesen:
         stmt = stmt.where(Notification.gelesen_am.is_(None))
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await seite_laden(session, stmt, seite, response)
 
 
 @router.post("/{notification_id}/gelesen", response_model=NotificationRead)

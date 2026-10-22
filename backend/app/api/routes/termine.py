@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.core.rollen import ist_mitarbeiter_account
 from app.models.termin import Termin
 from app.models.user import User
@@ -75,6 +76,8 @@ async def _load_vorgang_and_techniker(
 
 @router.get("", response_model=list[TerminRead])
 async def list_termine(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     techniker_id: UUID | None = Query(default=None),
     vorgang_id: UUID | None = Query(default=None),
     projekt_id: UUID | None = Query(default=None),
@@ -83,7 +86,7 @@ async def list_termine(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Termin]:
-    stmt = select(Termin).where(Termin.geloescht_am.is_(None)).order_by(Termin.start_at.asc())
+    stmt = select(Termin).where(Termin.geloescht_am.is_(None)).order_by(Termin.start_at.asc(), Termin.id)
     erlaubt = await erlaubte_user_ids(session, auth, "dispo")
     if erlaubt is not None:
         stmt = stmt.where(Termin.techniker_id.in_(erlaubt))
@@ -100,8 +103,7 @@ async def list_termine(
         stmt = stmt.where(Termin.ende_at >= von)
     if bis:
         stmt = stmt.where(Termin.start_at <= bis)
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await seite_laden(session, stmt, seite, response)
 
 
 @router.get("/{termin_id}", response_model=TerminRead)

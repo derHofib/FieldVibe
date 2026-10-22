@@ -14,6 +14,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.angebot import Angebot, AngebotPosition
 from app.models.email_log import EmailLog
 from app.models.kunde import Kunde
@@ -67,13 +68,15 @@ router = APIRouter(
 
 @router.get("", response_model=list[AngebotRead])
 async def list_angebote(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     kunde_id: UUID | None = Query(default=None),
     vorgang_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[AngebotRead]:
-    stmt = select(Angebot).where(Angebot.geloescht_am.is_(None)).order_by(Angebot.created_at.desc())
+    stmt = select(Angebot).where(Angebot.geloescht_am.is_(None)).order_by(Angebot.created_at.desc(), Angebot.id)
     if kunde_id:
         stmt = stmt.where(Angebot.kunde_id == kunde_id)
     if vorgang_id:
@@ -83,8 +86,7 @@ async def list_angebote(
     erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
     if erlaubte_kunden is not None:
         stmt = stmt.where(Angebot.kunde_id.in_(erlaubte_kunden))
-    result = await session.execute(stmt)
-    return [await to_read_model(session, a) for a in result.scalars().all()]
+    return [await to_read_model(session, a) for a in await seite_laden(session, stmt, seite, response)]
 
 
 async def _angebot_laden(

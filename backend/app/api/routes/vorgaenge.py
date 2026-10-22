@@ -14,6 +14,7 @@ from app.api.deps import (
     require_recht,
     require_roles,
 )
+from app.api.paginierung import Seite, seite_laden
 from app.core.config import get_settings
 from app.models.anlage import Anlage
 from app.models.auftrag import Auftrag
@@ -84,6 +85,7 @@ router = APIRouter(
 
 @router.get("", response_model=list[VorgangRead], dependencies=[Depends(require_recht("vorgaenge", "sehen"))])
 async def list_vorgaenge(
+    response: Response,
     status_filter: str | None = Query(default=None, alias="status"),
     kunde_id: UUID | None = Query(default=None),
     anlage_id: UUID | None = Query(default=None),
@@ -97,6 +99,7 @@ async def list_vorgaenge(
     faellig_von: date | None = Query(default=None),
     faellig_bis: date | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Vorgang]:
@@ -104,7 +107,6 @@ async def list_vorgaenge(
         select(Vorgang)
         .where(Vorgang.geloescht_am.is_(None))
         .order_by(Vorgang.last_activity_at.desc(), Vorgang.id.desc())
-        .limit(limit)
     )
     if status_filter:
         stmt = stmt.where(Vorgang.status == status_filter)
@@ -138,8 +140,7 @@ async def list_vorgaenge(
     scope_klausel = await vorgang_scope_filter(session, auth)
     if scope_klausel is not None:
         stmt = stmt.where(scope_klausel)
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await seite_laden(session, stmt, Seite(limit=limit, offset=offset), response)
 
 
 async def _validate_anlage_fuer_kunde(

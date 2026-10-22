@@ -1,10 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
+from app.api.paginierung import Seite, seite_laden, seitenparameter
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
 from app.models.standort import Standort
@@ -37,12 +38,14 @@ async def _require_own_kunde(session: AsyncSession, kunde_id: UUID) -> Kunde:
     "", response_model=list[StandortRead], dependencies=[Depends(require_recht("kunden", "sehen"))]
 )
 async def list_standorte(
+    response: Response,
+    seite: Seite = Depends(seitenparameter),
     kunde_id: UUID | None = Query(default=None),
     aktiv: bool | None = Query(default=None),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[Standort]:
-    stmt = select(Standort).where(Standort.geloescht_am.is_(None)).order_by(Standort.bezeichnung)
+    stmt = select(Standort).where(Standort.geloescht_am.is_(None)).order_by(Standort.bezeichnung, Standort.id)
     if kunde_id:
         stmt = stmt.where(Standort.kunde_id == kunde_id)
     if aktiv is not None:
@@ -50,8 +53,7 @@ async def list_standorte(
     erlaubt = await erlaubte_kunde_ids(session, auth)
     if erlaubt is not None:
         stmt = stmt.where(Standort.kunde_id.in_(erlaubt))
-    result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return await seite_laden(session, stmt, seite, response)
 
 
 @router.post(
