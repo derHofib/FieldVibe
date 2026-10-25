@@ -2,7 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { authStore } from "./authStore";
-import { ApiError, apiFetch, apiFetchBlob, sitzungAusCookieWiederherstellen } from "./client";
+import { ApiError, apiFetch, apiFetchAlleSeiten, apiFetchBlob, sitzungAusCookieWiederherstellen } from "./client";
+import { kundenApi } from "./endpoints";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -103,5 +104,88 @@ describe("Refresh per HttpOnly-Cookie", () => {
     await apiFetch("/api/vorgaenge");
     expect(fetchMock.mock.calls[0][1].credentials).toBe("include");
     expect(fetchMock.mock.calls[1][1].credentials).toBeUndefined();
+  });
+});
+
+describe("apiFetchAlleSeiten", () => {
+  function seite(zeilen: unknown[], gesamt?: number) {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (gesamt !== undefined) headers["X-Total-Count"] = String(gesamt);
+    return new Response(JSON.stringify(zeilen), { status: 200, headers });
+  }
+  const zeilen = (von: number, anzahl: number) => Array.from({ length: anzahl }, (_, i) => ({ id: von + i }));
+
+  it("lädt bei vollständiger erster Seite nichts nach", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(seite(zeilen(0, 3), 3));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await apiFetchAlleSeiten("/api/kunden")).toHaveLength(3);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/kunden\?limit=1000&offset=0$/);
+  });
+
+  it("blättert anhand von X-Total-Count über alle Seiten", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(seite(zeilen(0, 1000), 2500))
+      .mockResolvedValueOnce(seite(zeilen(1000, 1000), 2500))
+      .mockResolvedValueOnce(seite(zeilen(2000, 500), 2500));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const alle = await apiFetchAlleSeiten<{ id: number }>("/api/anlagen");
+    expect(alle.map((z) => z.id)).toEqual(zeilen(0, 2500).map((z) => z.id));
+    expect(fetchMock.mock.calls.map(([url]) => new URL(url).searchParams.get("offset"))).toEqual(["0", "1000", "2000"]);
+  });
+
+  it("hängt die Seitenparameter an einen bestehenden Querystring an", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(seite([], 0));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await apiFetchAlleSeiten("/api/material?lager_id=l1");
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/api\/material\?lager_id=l1&limit=1000&offset=0$/);
+  });
+
+  it("liefert ohne X-Total-Count nur die erste Seite", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(seite(zeilen(0, 1000)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await apiFetchAlleSeiten("/api/termine")).toHaveLength(1000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("bricht bei leerer Folgeseite ab, auch wenn die Gesamtzahl noch nicht erreicht ist", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(seite(zeilen(0, 1000), 1500))
+      .mockResolvedValueOnce(seite([], 1500));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await apiFetchAlleSeiten("/api/maengel")).toHaveLength(1000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("wirft den Fehler einer Folgeseite statt ein Teilergebnis zu liefern", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(seite(zeilen(0, 1000), 1200))
+        .mockResolvedValueOnce(json(500, { detail: "kaputt" })),
+    );
+
+    const fehler = await apiFetchAlleSeiten("/api/angebote").catch((e) => e);
+    expect(fehler).toBeInstanceOf(ApiError);
+    expect(fehler.status).toBe(500);
+  });
+
+  it("kundenApi.list liefert mehr als 1000 Kunden", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(seite(zeilen(0, 1000), 1001))
+      .mockResolvedValueOnce(seite(zeilen(1000, 1), 1001));
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await kundenApi.list("Müller")).toHaveLength(1001);
+    expect(fetchMock.mock.calls[1][0]).toMatch(/\/api\/kunden\?q=M%C3%BCller&limit=1000&offset=1000$/);
   });
 });

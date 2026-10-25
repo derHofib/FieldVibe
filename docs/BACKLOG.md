@@ -285,8 +285,10 @@ Benachrichtigungen, Bestellungen, Lieferanten, Zeiterfassung, Mängel, Aufträge
 `limit` (Standard und Maximum 1000) und `offset`, sortieren stabil (Tiebreaker `id`) und melden die
 Gesamtzahl im Header `X-Total-Count` (`app/api/paginierung.py`). Vorgänge (Standard 50, Maximum 200) und
 Rechnungen (Summen im Body) hatten schon ein Limit. **Grenze:** ein Mandant mit mehr als 1000 Zeilen in
-einer dieser Listen sieht ohne Blättern nur die ersten 1000 – das Frontend muss dann über `X-Total-Count`
-nachladen (bisher nicht umgesetzt).
+einer dieser Listen sieht ohne Blättern nur die ersten 1000. Das Frontend lädt deshalb alle Seiten nach
+(`apiFetchAlleSeiten` in `frontend/src/api/client.ts`, Abbruch über `X-Total-Count`); die Listen werden in der
+Oberfläche clientseitig gefiltert und sortiert. **Rest:** sehr große Mandanten laden dadurch bei jedem Öffnen
+alle Zeilen – serverseitige Suche/Filter und echtes Blättern je Ansicht wären der nächste Schritt.
 
 Noch unbegrenzt (bewusst nicht angefasst, wachsen kaum oder sind an einen Datensatz gebunden):
 E-Mail-Verläufe je Beleg, Vorgangs-Events, Verträge, Abwesenheiten, Prüfzyklen/Prüfmittel, Daueraufträge,
