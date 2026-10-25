@@ -111,6 +111,15 @@ export async function apiFetch<T>(
   _isRetry = false,
   timeoutMs: number = REQUEST_TIMEOUT_MS,
 ): Promise<T> {
+  return (await apiFetchMitHeadern<T>(path, options, _isRetry, timeoutMs)).daten;
+}
+
+async function apiFetchMitHeadern<T>(
+  path: string,
+  options: RequestInit,
+  _isRetry: boolean,
+  timeoutMs: number,
+): Promise<{ daten: T; headers: Headers }> {
   const token = authStore.getActiveAccessToken();
   const headers = new Headers(options.headers);
   headers.set("Content-Type", "application/json");
@@ -127,10 +136,10 @@ export async function apiFetch<T>(
   if (resp.status === 401 && !_isRetry) {
     if (authStore.isImpersonating()) {
       authStore.setImpersonation(null);
-      return apiFetch<T>(path, options, true, timeoutMs);
+      return apiFetchMitHeadern<T>(path, options, true, timeoutMs);
     }
     if (await refreshPrimaryToken()) {
-      return apiFetch<T>(path, options, true, timeoutMs);
+      return apiFetchMitHeadern<T>(path, options, true, timeoutMs);
     }
   }
 
@@ -145,8 +154,35 @@ export async function apiFetch<T>(
     throw new ApiError(resp.status, detail);
   }
 
-  if (resp.status === 204) return undefined as T;
-  return (await resp.json()) as T;
+  if (resp.status === 204) return { daten: undefined as T, headers: resp.headers };
+  return { daten: (await resp.json()) as T, headers: resp.headers };
+}
+
+// Entspricht MAX_LIMIT in backend/app/api/paginierung.py.
+const SEITEN_LIMIT = 1000;
+
+/** Die großen Listen-Endpunkte liefern höchstens SEITEN_LIMIT Zeilen und die
+ * Gesamtzahl in X-Total-Count. Die Oberfläche filtert und sortiert diese Listen
+ * clientseitig (auch in Auswahllisten), braucht also alle Zeilen -- daher hier
+ * seitenweise nachladen statt Blättern in jeder einzelnen Ansicht. */
+export async function apiFetchAlleSeiten<T>(path: string): Promise<T[]> {
+  const trenner = path.includes("?") ? "&" : "?";
+  const alle: T[] = [];
+  for (;;) {
+    const { daten, headers } = await apiFetchMitHeadern<T[]>(
+      `${path}${trenner}limit=${SEITEN_LIMIT}&offset=${alle.length}`,
+      {},
+      false,
+      REQUEST_TIMEOUT_MS,
+    );
+    alle.push(...daten);
+    const gesamt = Number(headers.get("X-Total-Count"));
+    // Ohne Header (älteres Backend) gibt es nichts zum Nachladen; eine leere
+    // Seite heißt, dass zwischen den Abrufen Zeilen gelöscht wurden.
+    if (!headers.has("X-Total-Count") || !Number.isFinite(gesamt) || daten.length === 0 || alle.length >= gesamt) {
+      return alle;
+    }
+  }
 }
 
 /** Like apiFetch, but for multipart/form-data (file uploads): the browser

@@ -1,4 +1,4 @@
-import { LANGER_REQUEST_TIMEOUT_MS, apiFetch, apiFetchBlob, apiFetchForm } from "./client";
+import { LANGER_REQUEST_TIMEOUT_MS, apiFetch, apiFetchAlleSeiten, apiFetchBlob, apiFetchForm } from "./client";
 import type {
   ImportAnalyse,
   ImportEntitaet,
@@ -551,14 +551,14 @@ export const searchApi = {
 
 export const notificationsApi = {
   list: (nurUngelesen = false) =>
-    apiFetch<NotificationEntry[]>(`/api/notifications?nur_ungelesen=${nurUngelesen}`),
+    apiFetchAlleSeiten<NotificationEntry>(`/api/notifications?nur_ungelesen=${nurUngelesen}`),
   markRead: (id: number) =>
     apiFetch<NotificationEntry>(`/api/notifications/${id}/gelesen`, { method: "POST" }),
   markAllRead: () => apiFetch<void>("/api/notifications/gelesen", { method: "POST" }),
 };
 
 export const kundenApi = {
-  list: (q?: string) => apiFetch<Kunde[]>(`/api/kunden${q ? `?q=${encodeURIComponent(q)}` : ""}`),
+  list: (q?: string) => apiFetchAlleSeiten<Kunde>(`/api/kunden${q ? `?q=${encodeURIComponent(q)}` : ""}`),
   get: (id: string) => apiFetch<Kunde>(`/api/kunden/${id}`),
   profil: (id: string) => apiFetch<KundeProfil>(`/api/kunden/${id}/profil`),
   create: (body: {
@@ -693,7 +693,7 @@ export const anlagenApi = {
     if (aktiv !== undefined) params.set("aktiv", String(aktiv));
     if (standortId) params.set("standort_id", standortId);
     const qs = params.toString();
-    return apiFetch<Anlage[]>(`/api/anlagen${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Anlage>(`/api/anlagen${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Anlage>(`/api/anlagen/${id}`),
   profil: (id: string) => apiFetch<AnlageProfil>(`/api/anlagen/${id}/profil`),
@@ -754,7 +754,7 @@ export const standorteApi = {
     if (kundeId) params.set("kunde_id", kundeId);
     if (aktiv !== undefined) params.set("aktiv", String(aktiv));
     const qs = params.toString();
-    return apiFetch<Standort[]>(`/api/standorte${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Standort>(`/api/standorte${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Standort>(`/api/standorte/${id}`),
   profil: (id: string) => apiFetch<StandortProfil>(`/api/standorte/${id}/profil`),
@@ -1230,7 +1230,7 @@ export const zeiterfassungApi = {
       body: body ? JSON.stringify(body) : undefined,
     }),
   list: (vorgangId: string) =>
-    apiFetch<Zeiterfassung[]>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
+    apiFetchAlleSeiten<Zeiterfassung>(`/api/zeiterfassung?vorgang_id=${vorgangId}`),
   listFuerZeitraum: (params: {
     techniker_id?: string;
     von?: string;
@@ -1247,7 +1247,7 @@ export const zeiterfassungApi = {
   }) => {
     const entries = Object.entries(params).filter(([, v]) => v !== undefined) as [string, string | number | boolean][];
     const qs = new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
-    return apiFetch<Zeiterfassung[]>(`/api/zeiterfassung${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Zeiterfassung>(`/api/zeiterfassung${qs ? `?${qs}` : ""}`);
   },
   statistik: (technikerId?: string) =>
     apiFetch<ZeiterfassungStatistik>(
@@ -1325,7 +1325,7 @@ export const zeiterfassungApi = {
 export const termineApi = {
   list: (params: Record<string, string> = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return apiFetch<Termin[]>(`/api/termine${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Termin>(`/api/termine${qs ? `?${qs}` : ""}`);
   },
   create: (body: {
     vorgang_id: string;
@@ -1441,7 +1441,7 @@ export const pruefmittelApi = {
 export const maengelApi = {
   list: (params: Record<string, string> = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return apiFetch<Mangel[]>(`/api/maengel${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Mangel>(`/api/maengel${qs ? `?${qs}` : ""}`);
   },
   create: (body: { vorgang_id: string; anlage_id?: string | null; beschreibung: string; schweregrad?: string }) =>
     apiFetch<Mangel>("/api/maengel", { method: "POST", body: JSON.stringify(body) }),
@@ -1454,7 +1454,7 @@ export const maengelApi = {
 export const angeboteApi = {
   list: (params: Record<string, string> = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return apiFetch<Angebot[]>(`/api/angebote${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Angebot>(`/api/angebote${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Angebot>(`/api/angebote/${id}`),
   create: (body: { kunde_id: string; vorgang_id?: string | null; gueltig_bis?: string; mwst_satz?: AngebotMwstSatz }) =>
@@ -1597,7 +1597,7 @@ export const rechnungenApi = {
 export const eingangsrechnungenApi = {
   list: (params: Record<string, string> = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return apiFetch<Eingangsrechnung[]>(`/api/eingangsrechnungen${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Eingangsrechnung>(`/api/eingangsrechnungen${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Eingangsrechnung>(`/api/eingangsrechnungen/${id}`),
   create: (body: {
@@ -1692,7 +1692,7 @@ export const highlightsApi = {
 
 export const materialApi = {
   list: (lagerId?: string) =>
-    apiFetch<Material[]>(`/api/material${lagerId ? `?lager_id=${lagerId}` : ""}`),
+    apiFetchAlleSeiten<Material>(`/api/material${lagerId ? `?lager_id=${lagerId}` : ""}`),
   get: (id: string) => apiFetch<Material>(`/api/material/${id}`),
   create: (body: {
     bezeichnung: string;
@@ -1822,7 +1822,7 @@ export const leistungsverzeichnisApi = {
 };
 
 export const lieferantenApi = {
-  list: () => apiFetch<Lieferant[]>("/api/lieferanten"),
+  list: () => apiFetchAlleSeiten<Lieferant>("/api/lieferanten"),
   create: (body: { name: string; email?: string; telefon?: string; notiz?: string; kreditorenkonto?: string }) =>
     apiFetch<Lieferant>("/api/lieferanten", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: Partial<Pick<Lieferant, "name" | "email" | "telefon" | "notiz">> & { kreditorenkonto?: string | null }) =>
@@ -1841,7 +1841,7 @@ export const materialBedarfeApi = {
 };
 
 export const bestellungenApi = {
-  list: () => apiFetch<Bestellung[]>("/api/bestellungen"),
+  list: () => apiFetchAlleSeiten<Bestellung>("/api/bestellungen"),
   get: (id: string) => apiFetch<Bestellung>(`/api/bestellungen/${id}`),
   createFromBedarfe: (materialBedarfIds: string[], lieferantId?: string, notiz?: string, liefertermin?: string) =>
     apiFetch<Bestellung>("/api/bestellungen/from-bedarfe", {
@@ -1983,7 +1983,7 @@ export const navKategorienApi = {
 export const projekteApi = {
   list: (filter?: { vertrag_id?: string }) => {
     const qs = filter?.vertrag_id ? `?vertrag_id=${filter.vertrag_id}` : "";
-    return apiFetch<Projekt[]>(`/api/projekte${qs}`);
+    return apiFetchAlleSeiten<Projekt>(`/api/projekte${qs}`);
   },
   get: (id: string) => apiFetch<Projekt>(`/api/projekte/${id}`),
   create: (body: { name: string; beschreibung?: string; vertrag_id?: string }) =>
@@ -2152,7 +2152,7 @@ export const auftraegeApi = {
     if (filter?.kunde_id) params.set("kunde_id", filter.kunde_id);
     if (filter?.status) params.set("status", filter.status);
     const qs = params.toString();
-    return apiFetch<Auftrag[]>(`/api/auftraege${qs ? `?${qs}` : ""}`);
+    return apiFetchAlleSeiten<Auftrag>(`/api/auftraege${qs ? `?${qs}` : ""}`);
   },
   get: (id: string) => apiFetch<Auftrag>(`/api/auftraege/${id}`),
   create: (body: { titel: string; beschreibung?: string; projekt_id?: string | null; kunde_id?: string | null }) =>
