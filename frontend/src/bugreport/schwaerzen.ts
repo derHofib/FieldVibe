@@ -88,7 +88,8 @@ export function istDenylistSchluessel(schluessel: string, cfg: SchwaerzConfig): 
 export function maskiereMuster(text: string, cfg: SchwaerzConfig, mitTelefon = cfg.maskiereTelefon): string {
   let t = text.replace(JWT_REGEX, ENTFERNT).replace(BEARER_REGEX, `$1 ${ENTFERNT}`);
   if (cfg.maskiereIban) t = t.replace(IBAN_REGEX, "[iban]");
-  if (cfg.maskiereEmail) t = t.replace(EMAIL_REGEX, "[email]");
+  // EMAIL_REGEX probiert ohne "@" von jeder Stelle bis zum Textende -- quadratisch bei langen Texten.
+  if (cfg.maskiereEmail && t.includes("@")) t = t.replace(EMAIL_REGEX, "[email]");
   if (mitTelefon) t = t.replace(TELEFON_REGEX, "[telefon]");
   return t;
 }
