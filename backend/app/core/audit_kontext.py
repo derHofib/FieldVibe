@@ -28,15 +28,13 @@ class AuditKontextMiddleware:
                     request_id = kandidat
                 break
         request_id = request_id or uuid.uuid4().hex
+        # Die innere RequestKontextMiddleware uebernimmt die ID und setzt den Antwort-Header,
+        # damit Audit-Protokoll und Logs dieselbe ID tragen.
+        scope.setdefault("state", {})["request_id"] = request_id
         client = scope.get("client")
         tokens = audit_service.kontext_setzen(request_id, client[0] if client else None)
 
-        async def send_mit_id(nachricht) -> None:
-            if nachricht["type"] == "http.response.start":
-                nachricht.setdefault("headers", []).append((b"x-request-id", request_id.encode()))
-            await send(nachricht)
-
         try:
-            await self.app(scope, receive, send_mit_id)
+            await self.app(scope, receive, send)
         finally:
             audit_service.kontext_zuruecksetzen(tokens)

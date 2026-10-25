@@ -35,7 +35,10 @@ class RequestKontextMiddleware:
         eingehend = next(
             (v.decode("latin-1") for k, v in scope["headers"] if k == b"x-request-id"), None
         )
-        request_id = eingehend if eingehend and _GUELTIGE_ID.match(eingehend) else uuid.uuid4().hex
+        request_id = (
+            scope.get("state", {}).get("request_id")
+            or (eingehend if eingehend and _GUELTIGE_ID.match(eingehend) else uuid.uuid4().hex)
+        )
         kontext_neu(request_id=request_id)
         scope.setdefault("state", {})["request_id"] = request_id
 

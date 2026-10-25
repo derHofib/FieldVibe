@@ -295,7 +295,7 @@ async def test_nachweis_upload_und_url(client, make_mandant, make_user, make_par
     )
     assert upload.status_code == 200
     key = upload.json()["dokument_s3_key"]
-    assert key.startswith(f"partner-nachweise/{partner.id}/")
+    assert key.startswith(f"mandanten/{mandant.id}/partner-nachweise/{partner.id}/")
 
     url = await client.get(
         f"/api/partner/{partner.id}/nachweise/{nachweis_id}/url", headers=auth_headers(token)
