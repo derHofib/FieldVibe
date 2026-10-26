@@ -1,4 +1,4 @@
-FROM node:24-alpine AS base
+FROM node:26-alpine AS base
 WORKDIR /app
 COPY package*.json ./
 
@@ -29,7 +29,7 @@ ENV VITE_SENTRY_ENVIRONMENT=$VITE_SENTRY_ENVIRONMENT
 COPY . .
 RUN npm run build
 
-FROM node:24-alpine AS production
+FROM node:26-alpine AS production
 WORKDIR /app
 RUN npm install -g serve@14
 COPY --from=build /app/dist ./dist
