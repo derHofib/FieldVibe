@@ -37,3 +37,7 @@ class Vertrag(SoftDeleteMixin, TimestampMixin, Base):
     laufzeit_von: Mapped[date | None] = mapped_column(Date)
     laufzeit_bis: Mapped[date | None] = mapped_column(Date)
     aktiv: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # SLA-Richtlinie dieses Vertrags (docs/konzepte/SLA.md); NULL = Mandanten-Standard.
+    sla_richtlinie_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sla_richtlinien.id"), nullable=True, index=True
+    )

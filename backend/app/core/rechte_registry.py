@@ -62,6 +62,7 @@ _BEREICHE: tuple[RechteBereichDef, ...] = (
         scopes=_VOLLE_KETTE,
     ),
     _bereich("fehlerberichte", "Fehlerberichte", zusatz=("freigeben",)),
+    _bereich("sla", "SLA-Richtlinien"),
     _bereich("organigramm", "Organigramm", zusatz=("rechte_verwalten",), scopes=_VOLLE_KETTE),
 )
 

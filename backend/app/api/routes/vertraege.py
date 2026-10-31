@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.anlage import Anlage
 from app.models.kunde import Kunde
+from app.models.sla import SlaRichtlinie
 from app.models.vertrag import Vertrag
 from app.schemas.vertrag import VertragCreate, VertragRead, VertragUpdate
 from app.services import papierkorb_service
@@ -23,6 +24,15 @@ router = APIRouter(
     tags=["vertraege"],
     dependencies=[Depends(require_roles("mandant_admin", "loesch_operativ"))],
 )
+
+
+async def _sla_richtlinie_pruefen(session: AsyncSession, richtlinie_id: UUID | None) -> None:
+    # RLS blendet fremde Richtlinien aus: get() liefert dann None.
+    if richtlinie_id is not None and await session.get(SlaRichtlinie, richtlinie_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="SLA-Richtlinie nicht gefunden oder gehört nicht zum eigenen Mandanten",
+        )
 
 
 @router.get("", response_model=list[VertragRead])
@@ -48,6 +58,7 @@ async def create_vertrag(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Vertrag:
+    await _sla_richtlinie_pruefen(session, body.sla_richtlinie_id)
     if await session.get(Kunde, body.kunde_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,6 +86,7 @@ async def create_vertrag(
         konditionen=body.konditionen,
         laufzeit_von=body.laufzeit_von,
         laufzeit_bis=body.laufzeit_bis,
+        sla_richtlinie_id=body.sla_richtlinie_id,
     )
     session.add(vertrag)
     await session.flush()
@@ -106,6 +118,8 @@ async def update_vertrag(
     # Anlegen eines Vertrags also nur ueber create_vertrag() aendern, dort
     # bereits geprueft.
     changes = body.model_dump(exclude_unset=True)
+    if "sla_richtlinie_id" in changes:
+        await _sla_richtlinie_pruefen(session, changes["sla_richtlinie_id"])
     for field, value in changes.items():
         setattr(vertrag, field, value)
     await session.flush()

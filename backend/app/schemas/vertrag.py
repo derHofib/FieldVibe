@@ -15,6 +15,7 @@ class VertragCreate(BaseModel):
     konditionen: dict = {}
     laufzeit_von: date | None = None
     laufzeit_bis: date | None = None
+    sla_richtlinie_id: UUID | None = None
 
 
 class VertragUpdate(BaseModel):
@@ -23,6 +24,7 @@ class VertragUpdate(BaseModel):
     laufzeit_von: date | None = None
     laufzeit_bis: date | None = None
     aktiv: bool | None = None
+    sla_richtlinie_id: UUID | None = None
 
 
 class VertragRead(BaseModel):
@@ -37,5 +39,6 @@ class VertragRead(BaseModel):
     laufzeit_von: date | None
     laufzeit_bis: date | None
     aktiv: bool
+    sla_richtlinie_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
