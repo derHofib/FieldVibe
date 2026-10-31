@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 import httpx
+from zoneinfo import ZoneInfo
 import pytest
 from lxml import etree
 from sqlalchemy import select, update
@@ -69,7 +70,9 @@ async def test_z3_struktur_index_xml_und_tabellen(client, make_mandant, make_use
     await client.patch(f"/api/rechnungen/{r2['id']}", headers=h, json={"status": "versendet"})
     await client.post(f"/api/rechnungen/{r2['id']}/storno", headers=h)
 
-    heute = date.today()
+    # Der Export formatiert in Mandantenzeit; date.today() waere zwischen 22/23 und 24 Uhr UTC einen Tag zurueck.
+    heute = datetime.now(ZoneInfo("Europe/Berlin")).date()
+    heute_utc = date.today()  # Zahlungsdatum kommt aus dem Server-Default date.today()
     archiv = await _z3_laden(client, h, f"{heute.year}-01-01", f"{heute.year}-12-31")
     namen = set(archiv.namelist())
     assert {"index.xml", "README.txt", "manifest.json", "rechnungen.csv", "rechnungspositionen.csv", "zahlungen.csv",
@@ -122,7 +125,7 @@ async def test_z3_struktur_index_xml_und_tabellen(client, make_mandant, make_use
     positionen = _tabelle(archiv, "rechnungspositionen.csv")
     assert positionen[1][:6] == [r["rechnungsnummer"], "1", "Montage Schalter ä", "2,00", "Std", "50,00"]
     zahlungen = _tabelle(archiv, "zahlungen.csv")
-    assert zahlungen[1] == [r["rechnungsnummer"], heute.strftime("%d.%m.%Y"), "50,00", "bar", "N"]
+    assert zahlungen[1] == [r["rechnungsnummer"], heute_utc.strftime("%d.%m.%Y"), "50,00", "bar", "N"]
 
     kunden = _tabelle(archiv, "kunden.csv")
     assert [z[0] for z in kunden[1:]] == ["K-100"]
