@@ -82,6 +82,17 @@ def _erloeskonto(
     raise KontoNichtKonfiguriert(gruppe.kategorie, schluessel)
 
 
+_DATEV_BELEGART = {"abschlag": "Abschlag", "schluss": "Schlussrechnung", "gutschrift": "Gutschrift"}
+
+
+def _beleg_bezeichnung(rechnung: Rechnung) -> str:
+    # Storno-Belege behalten rechnungsart "rechnung" (siehe models/rechnung.py);
+    # der Buchhalter soll sie im Buchungstext trotzdem von der Rechnung unterscheiden.
+    if rechnung.ist_storno:
+        return "Storno"
+    return _DATEV_BELEGART.get(rechnung.rechnungsart, "Rechnung")
+
+
 async def ust_va_bericht(session: AsyncSession, mandant_id: UUID, von: date, bis: date) -> UstVaBericht:
     """Aggregiert Umsatzsteuer (aus versendeten Ausgangsrechnungen, inkl.
     Storno-Belegen mit negativen Betraegen -- siehe Rechnung.ist_storno)
@@ -331,8 +342,7 @@ async def datev_export_csv(session: AsyncSession, mandant_id: UUID, von: date, b
                     bu_schluessel=bu_schluessel,
                     belegdatum=rechnung.versendet_am.date(),
                     belegfeld1=rechnung.rechnungsnummer,
-                    buchungstext=f"{'Gutschrift' if rechnung.rechnungsart == 'gutschrift' else 'Rechnung'} "
-                    f"{rechnung.rechnungsnummer} {kunde.name}",
+                    buchungstext=f"{_beleg_bezeichnung(rechnung)} {rechnung.rechnungsnummer} {kunde.name}",
                 )
             )
     sammelkonto = datev_service.kreditoren_sammelkonto(stammdaten.sachkontenlaenge)
