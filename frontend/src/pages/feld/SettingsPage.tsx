@@ -6,6 +6,7 @@ import {
   type LucideIcon,
   Plug,
   Tags,
+  Timer,
   TrendingUp,
   UserCog,
   Users,
@@ -147,6 +148,15 @@ export function SettingsPage() {
           onClick={() => navigate("/integrationen")}
         />
         {/* Breite Tabelle, nur am Desktop (office.) und nur fuer mandant_admin (Backend: dasselbe). */}
+        {istOfficeHost() && currentUser?.role === "mandant_admin" && (
+          <SettingsLink
+            icon={Timer}
+            tone="amber"
+            label="SLA-Richtlinien"
+            beschreibung="Reaktions- und Lösungsfristen mit Eskalation"
+            onClick={() => navigate("/einstellungen/sla")}
+          />
+        )}
         {istOfficeHost() && currentUser?.role === "mandant_admin" && (
           <SettingsLink
             icon={Archive}

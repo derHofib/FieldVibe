@@ -6,6 +6,7 @@ import type {
   ImportKonfiguration,
   ImportLauf,
 } from "../office/datenimport/typen";
+import type { SlaAuswertung, SlaRichtlinie, SlaRichtlinieEingabe } from "../office/sla/slaUtils";
 import type { ExportDownload, MandantExport } from "../office/export/exportUtils";
 import {
   filterQuery,
@@ -477,6 +478,17 @@ export const protokollApi = {
   aktionen: () => apiFetch<string[]>("/api/audit/aktionen"),
   verifizieren: () => apiFetch<KettenPruefung>("/api/audit/verifizieren"),
   csv: (filter: ProtokollFilter) => apiFetchBlob(`/api/audit/export.csv?${filterQuery(filter)}`),
+};
+
+export const slaApi = {
+  richtlinien: () => apiFetch<SlaRichtlinie[]>("/api/sla/richtlinien"),
+  anlegen: (body: SlaRichtlinieEingabe) =>
+    apiFetch<SlaRichtlinie>("/api/sla/richtlinien", { method: "POST", body: JSON.stringify(body) }),
+  aendern: (id: string, body: Partial<SlaRichtlinieEingabe>) =>
+    apiFetch<SlaRichtlinie>(`/api/sla/richtlinien/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  loeschen: (id: string) => apiFetch<void>(`/api/sla/richtlinien/${id}`, { method: "DELETE" }),
+  auswertung: (von: string, bis: string) =>
+    apiFetch<SlaAuswertung>(`/api/sla/auswertung?von=${encodeURIComponent(von)}&bis=${encodeURIComponent(bis)}`),
 };
 
 export const exporteApi = {

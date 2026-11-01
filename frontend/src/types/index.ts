@@ -1714,7 +1714,8 @@ export type RechteBereich =
   | "partner"
   | "projekte"
   | "fehlerberichte"
-  | "organigramm";
+  | "organigramm"
+  | "sla";
 export type RechteAktion =
   | "sehen"
   | "erstellen"
