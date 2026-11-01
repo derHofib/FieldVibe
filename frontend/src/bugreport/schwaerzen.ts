@@ -70,7 +70,9 @@ export const STANDARD_CONFIG: SchwaerzConfig = erstelleSchwaerzConfig();
 
 const JWT_REGEX = /eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*/g;
 const BEARER_REGEX = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]{8,}/gi;
-const EMAIL_REGEX = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
+// Lookbehind: ohne ihn startet die Suche an jeder Stelle eines langen Tokens neu (quadratisch,
+// 50.000 Zeichen ohne "@" brauchten Sekunden).
+const EMAIL_REGEX = /(?<![A-Za-z0-9._%+-])[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 const IBAN_REGEX = /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b/g;
 // Nur Nummern mit fuehrender 0/00/+ -- sonst wuerden ISO-Daten, IDs und
 // Millisekunden-Zeitstempel im Freitext faelschlich maskiert.
