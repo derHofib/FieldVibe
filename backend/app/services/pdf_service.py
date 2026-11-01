@@ -848,6 +848,9 @@ def generate_rechnung_pdf(
     storno = rechnung.ist_storno
     gutschrift = rechnung.rechnungsart == "gutschrift"
     titel = "Stornorechnung" if storno else _RECHNUNGSART_TITEL.get(rechnung.rechnungsart, "Rechnung")
+    # Überzahlung durch angerechnete Abschläge: der Kunde soll erkennen, dass er etwas zurückbekommt.
+    if rechnung.rechnungsart == "schluss" and rechnung.betrag_netto < 0:
+        titel = "Schlussrechnung (Guthaben)"
 
     paare = [
         ("Rechnungsnummer", rechnung.rechnungsnummer),

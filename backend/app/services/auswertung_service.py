@@ -90,6 +90,8 @@ def _beleg_bezeichnung(rechnung: Rechnung) -> str:
     # der Buchhalter soll sie im Buchungstext trotzdem von der Rechnung unterscheiden.
     if rechnung.ist_storno:
         return "Storno"
+    if rechnung.rechnungsart == "schluss" and rechnung.betrag_netto < 0:
+        return "Schlussrechnung Guthaben"
     return _DATEV_BELEGART.get(rechnung.rechnungsart, "Rechnung")
 
 

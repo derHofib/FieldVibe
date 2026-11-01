@@ -16,4 +16,9 @@ from app.services.auswertung_service import _beleg_bezeichnung
     ],
 )
 def test_buchungstext_nennt_die_belegart(art, storno, erwartet):
-    assert _beleg_bezeichnung(SimpleNamespace(rechnungsart=art, ist_storno=storno)) == erwartet
+    assert _beleg_bezeichnung(SimpleNamespace(rechnungsart=art, ist_storno=storno, betrag_netto=100)) == erwartet
+
+
+def test_negative_schlussrechnung_ist_guthaben():
+    beleg = SimpleNamespace(rechnungsart="schluss", ist_storno=False, betrag_netto=-400)
+    assert _beleg_bezeichnung(beleg) == "Schlussrechnung Guthaben"
