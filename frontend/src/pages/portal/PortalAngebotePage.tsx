@@ -5,14 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
-import type { AngebotStatus } from "../../types";
-
-const STATUS_LABEL: Record<AngebotStatus, string> = {
-  entwurf: "Entwurf",
-  versendet: "Versendet",
-  angenommen: "Angenommen",
-  abgelehnt: "Abgelehnt",
-};
+import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_LABEL } from "./status";
 
 export function PortalAngebotePage() {
   const navigate = useNavigate();
@@ -23,7 +16,7 @@ export function PortalAngebotePage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Ihre Angebote</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Angebote</h1>
       {isLoading ? (
         <SkeletonList count={3} />
       ) : !angebote || angebote.length === 0 ? (
@@ -34,15 +27,15 @@ export function PortalAngebotePage() {
             <button
               key={a.id}
               onClick={() => navigate(`/portal/angebote/${a.id}`)}
-              className="card-interactive btn-touch block w-full rounded-lg bg-white p-4 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="card-interactive btn-touch block w-full card-ap p-4 text-left"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">{a.angebotsnummer}</div>
-                  <div className="font-medium text-slate-800 dark:text-stone-100">{a.gesamt_brutto} EUR</div>
+                  <div className="text-xs text-label2">Angebot Nr. {a.angebotsnummer}</div>
+                  <div className="font-medium text-label">{a.gesamt_brutto} EUR</div>
                 </div>
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-                  {STATUS_LABEL[a.status]}
+                <span className={`px-2 py-1 text-xs font-semibold ${ANGEBOT_STATUS_BADGE[a.status]}`}>
+                  {ANGEBOT_STATUS_LABEL[a.status]}
                 </span>
               </div>
             </button>

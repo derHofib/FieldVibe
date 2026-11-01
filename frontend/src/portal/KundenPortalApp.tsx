@@ -4,6 +4,7 @@ import { PortalLayout } from "../components/PortalLayout";
 import { KundenAuthProvider, useKundenAuth } from "../context/KundenAuthContext";
 import { PortalAnfragenPage } from "../pages/portal/PortalAnfragenPage";
 import { PortalAngebotDetailPage } from "../pages/portal/PortalAngebotDetailPage";
+import { PortalAngebotWiderrufPage } from "../pages/portal/PortalAngebotWiderrufPage";
 import { PortalAngebotePage } from "../pages/portal/PortalAngebotePage";
 import { PortalForgotPasswordPage } from "../pages/portal/PortalForgotPasswordPage";
 import { PortalLoginPage } from "../pages/portal/PortalLoginPage";
@@ -41,6 +42,7 @@ function KundenPortalRoutes() {
           <Route path="anfragen" element={<PortalAnfragenPage />} />
           <Route path="angebote" element={<PortalAngebotePage />} />
           <Route path="angebote/:id" element={<PortalAngebotDetailPage />} />
+          <Route path="angebote/:id/widerruf" element={<PortalAngebotWiderrufPage />} />
           <Route path="rechnungen" element={<PortalRechnungenPage />} />
           <Route path="*" element={<Navigate to="/portal/vorgaenge" replace />} />
         </Route>

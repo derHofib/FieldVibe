@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from app.schemas.vorgang import SlaInfo
+
 
 class FeedCard(BaseModel):
     id: UUID
@@ -26,6 +28,7 @@ class FeedCard(BaseModel):
     geo_lat: float | None = None
     geo_lng: float | None = None
     zugewiesener_name: str | None = None
+    sla: SlaInfo | None = None
 
 
 class FeedResponse(BaseModel):

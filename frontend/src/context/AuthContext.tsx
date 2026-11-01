@@ -2,6 +2,8 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -9,8 +11,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { authApi, mandantenApi } from "../api/endpoints";
 import { authStore } from "../api/authStore";
+import { sitzungAusCookieWiederherstellen } from "../api/client";
+import { MfaCodesAnzeige } from "../components/MfaCodesAnzeige";
 import { clearAllOfflineData } from "../offline/db";
-import type { CurrentUser, RechteAktion, RechteBereich, TokenPair } from "../types";
+import type { CurrentUser, RechteAktion, RechteBereich, UserTokenPair } from "../types";
 
 interface AuthContextValue {
   currentUser: CurrentUser | undefined;
@@ -22,12 +26,19 @@ interface AuthContextValue {
   // liefert das bewusst false, nicht true, damit UI-Elemente nicht kurz
   // aufblitzen, bevor /api/auth/me zurueck ist.
   hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean;
-  login: (email: string, password: string) => Promise<void>;
+  // Liefert den MFA-Zwischen-Token, wenn der Account einen zweiten Faktor
+  // braucht (dann ist noch niemand angemeldet), sonst null.
+  login: (email: string, password: string) => Promise<string | null>;
+  loginMfa: (mfaToken: string, code: string) => Promise<void>;
   // Direktes Einloggen mit einem bereits ausgestellten Token-Paar -- fuer
   // die Registrierungsseite (RegistrierenPage.tsx), die von
   // POST /api/auth/registrieren bereits fertige Tokens statt einer
   // E-Mail/Passwort-Kombination zurueckbekommt.
-  loginMitToken: (tokens: TokenPair) => Promise<void>;
+  loginMitToken: (tokens: UserTokenPair) => Promise<void>;
+  // Zeigt frisch erzeugte Wiederherstellungscodes vollbildig, bis sie
+  // bestaetigt wurden -- an dieser Stelle (statt in der aufrufenden Karte),
+  // weil die Pflicht-Einrichtungsseite nach dem Aktivieren sofort verschwindet.
+  zeigeMfaCodes: (codes: string[]) => void;
   logout: () => void;
   startImpersonation: (mandantId: string) => Promise<void>;
   endImpersonation: () => void;
@@ -38,7 +49,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const authState = useSyncExternalStore(authStore.subscribe, authStore.getState);
   const queryClient = useQueryClient();
+  const [mfaCodes, setMfaCodes] = useState<string[] | null>(null);
   const hasToken = authStore.getActiveAccessToken() !== null;
+  // Ohne gespeicherten Access-Token einmal still versuchen, die Sitzung aus dem
+  // HttpOnly-Refresh-Cookie zu holen, bevor die Login-Seite erscheint.
+  const [sitzungGeprueft, setSitzungGeprueft] = useState(hasToken);
+  useEffect(() => {
+    if (sitzungGeprueft) return;
+    let aktiv = true;
+    void sitzungAusCookieWiederherstellen().finally(() => {
+      if (aktiv) setSitzungGeprueft(true);
+    });
+    return () => {
+      aktiv = false;
+    };
+  }, [sitzungGeprueft]);
 
   const meQuery = useQuery({
     queryKey: ["me", authState.primary?.accessToken, authState.impersonation?.accessToken],
@@ -49,24 +74,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const tokens = await authApi.login(email, password);
-      authStore.setPrimary({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+      const antwort = await authApi.login(email, password);
+      if (antwort.mfa_erforderlich && antwort.mfa_token) return antwort.mfa_token;
+      authStore.setPrimary({ accessToken: antwort.access_token as string });
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      return null;
+    },
+    [queryClient],
+  );
+
+  const loginMfa = useCallback(
+    async (mfaToken: string, code: string) => {
+      const tokens = await authApi.mfaVerifizieren(mfaToken, code);
+      authStore.setPrimary({ accessToken: tokens.access_token });
       await queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     [queryClient],
   );
 
   const loginMitToken = useCallback(
-    async (tokens: TokenPair) => {
-      authStore.setPrimary({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+    async (tokens: UserTokenPair) => {
+      authStore.setPrimary({ accessToken: tokens.access_token });
       await queryClient.invalidateQueries({ queryKey: ["me"] });
     },
     [queryClient],
   );
 
   const logout = useCallback(() => {
+    // Cookie serverseitig loeschen (es ist fuer JS nicht erreichbar); ein
+    // Fehlschlag darf das lokale Abmelden nicht aufhalten.
+    void authApi.abmelden().catch(() => undefined);
     authStore.clear();
     queryClient.clear();
+    setMfaCodes(null);
     // Geraet kann von mehreren Technikern geteilt sein (Firmenhandy) -- ohne
     // das wuerden Kunden-/Vorgangsdaten des vorherigen Nutzers sichtbar
     // bleiben und dessen noch nicht synchronisierte Outbox-Eintraege spaeter
@@ -124,18 +164,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value: AuthContextValue = {
     currentUser: meQuery.data,
-    isLoading: hasToken && meQuery.isLoading,
+    isLoading: !sitzungGeprueft || (hasToken && meQuery.isLoading),
     isAuthenticated: !!meQuery.data,
     isImpersonating: authState.impersonation !== null,
     hatRecht,
     login,
+    loginMfa,
     loginMitToken,
+    zeigeMfaCodes: setMfaCodes,
     logout,
     startImpersonation,
     endImpersonation,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {mfaCodes && <MfaCodesAnzeige codes={mfaCodes} onFertig={() => setMfaCodes(null)} />}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextValue {

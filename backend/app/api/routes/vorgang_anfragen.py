@@ -17,8 +17,10 @@ from app.schemas.vorgang_anfrage import (
     VorgangAnfrageAnnehmen,
     VorgangAnfrageRead,
 )
+from app.services import sla_service
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
+from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugriff
 
 router = APIRouter(
     prefix="/api/vorgang-anfragen",
@@ -33,6 +35,7 @@ router = APIRouter(
 @router.get("", response_model=list[VorgangAnfrageRead])
 async def list_anfragen(
     status_filter: str | None = Query(default=None, alias="status"),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[VorgangAnfrage]:
     stmt = (
@@ -42,15 +45,27 @@ async def list_anfragen(
     )
     if status_filter:
         stmt = stmt.where(VorgangAnfrage.status == status_filter)
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(VorgangAnfrage.kunde_id.in_(erlaubte_kunden))
     result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
 @router.get("/{anfrage_id}", response_model=VorgangAnfrageRead)
-async def get_anfrage(anfrage_id: UUID, session: AsyncSession = Depends(get_db)) -> VorgangAnfrage:
+async def get_anfrage(
+    anfrage_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangAnfrage:
+    return await _require_anfrage(session, auth, anfrage_id)
+
+
+async def _require_anfrage(session: AsyncSession, auth: AuthContext, anfrage_id: UUID) -> VorgangAnfrage:
     anfrage = await session.get(VorgangAnfrage, anfrage_id)
     if anfrage is None or anfrage.geloescht_am is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
+    await require_kunde_zugriff(session, auth, anfrage.kunde_id, "Anfrage nicht gefunden")
     return anfrage
 
 
@@ -69,9 +84,7 @@ async def annehmen(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorgangAnfrage:
-    anfrage = await session.get(VorgangAnfrage, anfrage_id)
-    if anfrage is None or anfrage.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
+    anfrage = await _require_anfrage(session, auth, anfrage_id)
     _require_offen(anfrage)
 
     # Zwischen Anfrage und Annahme koennen Anlage/Standort inzwischen
@@ -113,6 +126,8 @@ async def annehmen(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Vorgangsnummer bereits vergeben"
         ) from exc
+    # Die Uhr startet mit dem Eingang der Anfrage, nicht mit deren Annahme.
+    await sla_service.initialisieren(session, vorgang, start=anfrage.created_at)
 
     session.add(
         VorgangEvent(
@@ -147,9 +162,7 @@ async def ablehnen(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> VorgangAnfrage:
-    anfrage = await session.get(VorgangAnfrage, anfrage_id)
-    if anfrage is None or anfrage.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Anfrage nicht gefunden")
+    anfrage = await _require_anfrage(session, auth, anfrage_id)
     _require_offen(anfrage)
 
     anfrage.status = "abgelehnt"

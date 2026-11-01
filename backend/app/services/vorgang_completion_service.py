@@ -12,6 +12,7 @@ from app.models.pruefzyklus import Pruefzyklus
 from app.models.vorgang import Vorgang
 from app.models.vorgang_anlage import VorgangAnlage
 from app.models.vorgang_event import VorgangEvent
+from app.services import sla_service
 from app.services.date_utils import add_intervall
 from app.services.numbering_service import next_vorgangsnummer
 
@@ -44,6 +45,7 @@ async def close_vorgang(
     vorgang.status = "abgeschlossen"
     if vorgang.abgeschlossen_am is None:
         vorgang.abgeschlossen_am = datetime.now(timezone.utc)
+    await sla_service.status_gewechselt(session, vorgang, alter_status, "abgeschlossen")
 
     session.add(
         VorgangEvent(
@@ -194,6 +196,7 @@ async def create_folge_vorgang(
     )
     session.add(folge_vorgang)
     await session.flush()
+    await sla_service.initialisieren(session, folge_vorgang)
 
     weitere_anlagen = (
         await session.execute(

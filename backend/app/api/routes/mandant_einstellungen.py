@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.core.config import get_settings
 from app.models.mandant import Mandant
+from app.services.audit_service import log_action, log_aenderung
 from app.schemas.mandant_einstellungen import (
     MandantEinstellungenRead,
     MandantEinstellungenUpdate,
@@ -18,6 +19,18 @@ router = APIRouter(
 )
 
 _LOGO_MAX_BYTES = 3 * 1024 * 1024
+
+# Schluessel in Mandant.firmendaten, deren Aenderung steuerlich relevant ist
+# (Rechnungsangaben, Konten/DATEV, E-Rechnung-Modus) und deshalb mit Vorher/
+# Nachher ins Protokoll geht.
+STEUERRELEVANTE_FIRMENDATEN = (
+    "steuernummer",
+    "ust_idnr",
+    "ist_kleinunternehmer",
+    "buchhaltung",
+    "e_rechnung_modus",
+    "e_rechnung_aktiv",
+)
 
 
 def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
@@ -37,6 +50,12 @@ def _to_read_model(mandant: Mandant) -> MandantEinstellungenRead:
         ),
         firmendaten=mandant.firmendaten,
         logo_object_key=mandant.logo_object_key,
+        standard_lohn_gemeinkosten_prozent=mandant.standard_lohn_gemeinkosten_prozent,
+        standard_gewinn_wagnis_prozent=mandant.standard_gewinn_wagnis_prozent,
+        km_satz_netto=mandant.km_satz_netto,
+        fahrzeit_satz_netto=mandant.fahrzeit_satz_netto,
+        fahrzeit_abrechnung=mandant.fahrzeit_abrechnung,
+        bundesland=mandant.bundesland,
     )
 
 
@@ -70,7 +89,46 @@ async def update_einstellungen(
         # Mahnwesen-Auto-Versand, ...) speichern jeweils nur ihren eigenen
         # Ausschnitt -- ein blindes Ueberschreiben wuerde sonst die zuletzt
         # gespeicherten Felder der anderen Formulare verwerfen.
+        pflicht_vorher = (mandant.firmendaten or {}).get("mfa_pflicht") is True
+        firmendaten_vorher = dict(mandant.firmendaten or {})
         mandant.firmendaten = {**(mandant.firmendaten or {}), **updates["firmendaten"]}
+        geaendert = [
+            k for k in STEUERRELEVANTE_FIRMENDATEN if firmendaten_vorher.get(k) != mandant.firmendaten.get(k)
+        ]
+        if geaendert:
+            await log_aenderung(
+                session,
+                aktion="steuerdaten_geaendert",
+                mandant_id=mandant.id,
+                actor_user_id=auth.user_id,
+                entity_type="mandant",
+                entity_id=mandant.id,
+                vorher={k: firmendaten_vorher.get(k) for k in geaendert},
+                nachher={k: mandant.firmendaten.get(k) for k in geaendert},
+            )
+        pflicht_nachher = mandant.firmendaten.get("mfa_pflicht") is True
+        if pflicht_vorher != pflicht_nachher:
+            await log_action(
+                session,
+                aktion="mfa_pflicht_geaendert",
+                mandant_id=mandant.id,
+                actor_user_id=auth.user_id,
+                entity_type="mandant",
+                entity_id=mandant.id,
+                payload={"mfa_pflicht": pflicht_nachher},
+            )
+    if updates.get("standard_lohn_gemeinkosten_prozent") is not None:
+        mandant.standard_lohn_gemeinkosten_prozent = updates["standard_lohn_gemeinkosten_prozent"]
+    if updates.get("standard_gewinn_wagnis_prozent") is not None:
+        mandant.standard_gewinn_wagnis_prozent = updates["standard_gewinn_wagnis_prozent"]
+    if "km_satz_netto" in updates:
+        mandant.km_satz_netto = updates["km_satz_netto"]
+    if "fahrzeit_satz_netto" in updates:
+        mandant.fahrzeit_satz_netto = updates["fahrzeit_satz_netto"]
+    if updates.get("fahrzeit_abrechnung") is not None:
+        mandant.fahrzeit_abrechnung = updates["fahrzeit_abrechnung"]
+    if "bundesland" in updates:
+        mandant.bundesland = updates["bundesland"]
     await session.flush()
     await session.refresh(mandant)
     return _to_read_model(mandant)

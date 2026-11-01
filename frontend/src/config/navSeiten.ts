@@ -1,18 +1,29 @@
 import {
   BarChart3,
   Bell,
-  Briefcase,
+  CalendarCheck,
   CalendarDays,
+  CalendarRange,
   ClipboardList,
   Clock,
+  FileUp,
   Gauge,
+  HardHat,
+  Hourglass,
   Inbox,
+  KanbanSquare,
+  Layers,
+  ListChecks,
   type LucideIcon,
   Mail,
+  Network,
+  Package,
   Plug,
   Receipt,
   Rss,
+  ScrollText,
   Star,
+  StickyNote,
   Tags,
   Timer,
   Trash2,
@@ -25,14 +36,14 @@ import {
 
 import type { IconTone } from "../components/IconBadge";
 import { istModulAktiv } from "../utils/module";
-import type { CurrentUser, RechteAktion, RechteBereich } from "../types";
+import type { CurrentUser, NavKategorienRead, RechteAktion, RechteBereich } from "../types";
 
-// Einzige Quelle der Wahrheit fuer jede Seite, die ein Nutzer sich in die
-// individualisierbare Bottom-Nav legen kann (siehe components/BottomNav.tsx
-// + pages/feld/BottomNavSettingsPage.tsx). "sichtbar" spiegelt exakt dieselben
-// Rechte-/Modul-Gates, die die jeweilige Seite bzw. ihr bisheriger Einstiegs-
-// punkt (GeschaeftPage/DispoBoardPage/FeedPage/ProfilePage/SettingsPage)
-// schon vorher verwendet hat -- keine neuen Berechtigungen, nur ein neuer,
+// Einzige Quelle der Wahrheit fuer jede Seite in der Office-Seitenleiste
+// (office/OfficeLayout.tsx) und im "Mehr"-Tab der Feld-App
+// (pages/feld/MehrPage.tsx). "sichtbar" spiegelt exakt dieselben Rechte-/
+// Modul-Gates, die die jeweilige Seite bzw. ihr bisheriger Einstiegspunkt
+// (GeschaeftPage/DispoBoardPage/FeedPage/ProfilePage/SettingsPage) schon
+// vorher verwendet hat -- keine neuen Berechtigungen, nur ein neuer,
 // zentraler Ort dafuer.
 export type NavKategorie = "Arbeit" | "Finanzen" | "Kommunikation" | "Verwaltung";
 
@@ -56,6 +67,12 @@ export interface NavSeite {
     currentUser: CurrentUser | undefined;
     hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean;
   }) => boolean;
+  // Nur in der Office-Seitenleiste anwaehlbar, taucht im "Mehr"-Tab der
+  // Feld-App nicht auf -- siehe pages/feld/MehrPage.tsx.
+  nurOffice?: boolean;
+  // Gegenstueck: nur im "Mehr"-Tab der Feld-App, nicht in der Office-Seitenleiste
+  // (dort fuehrt /projekte auf das Kanban, das ein Nutzer ohne projekte.sehen nicht oeffnen darf).
+  nurFeld?: boolean;
 }
 
 export const NAV_SEITEN: NavSeite[] = [
@@ -78,6 +95,15 @@ export const NAV_SEITEN: NavSeite[] = [
     sichtbar: () => true,
   },
   {
+    key: "boards",
+    label: "Boards",
+    icon: StickyNote,
+    tone: "indigo",
+    route: "/boards",
+    kategorie: "Arbeit",
+    sichtbar: () => true,
+  },
+  {
     key: "dispo",
     label: "Dispo",
     icon: CalendarDays,
@@ -88,16 +114,83 @@ export const NAV_SEITEN: NavSeite[] = [
       hatRecht("dispo", "sehen") && istModulAktiv(currentUser, "dispo"),
   },
   {
-    key: "geschaeft",
-    label: "Geschäft",
-    icon: Briefcase,
+    key: "projekte",
+    label: "Projekte",
+    icon: KanbanSquare,
+    tone: "amber",
+    route: "/projekte",
+    kategorie: "Arbeit",
+    // Kanban mit Drag&Drop ist am Desktop gebaut, nicht fuer die schmale
+    // Feld-App-Spalte -- siehe office/OfficeProjektePage.tsx.
+    nurOffice: true,
+    sichtbar: ({ hatRecht }) => hatRecht("projekte", "sehen"),
+  },
+  {
+    key: "zeitplaene",
+    label: "Zeitpläne",
+    icon: CalendarRange,
+    tone: "amber",
+    route: "/projekte",
+    kategorie: "Arbeit",
+    // Techniker ohne projekte.sehen: die Projekte-Seite der Feld-App zeigt dann
+    // "Meine Zeitpläne" statt der Projektliste (pages/feld/ProjektePageMobil.tsx).
+    nurFeld: true,
+    sichtbar: ({ hatRecht }) => hatRecht("projekte", "zeitplan_sehen") && !hatRecht("projekte", "sehen"),
+  },
+  {
+    key: "auftraege",
+    label: "Aufträge",
+    icon: Layers,
+    tone: "teal",
+    route: "/auftraege",
+    kategorie: "Arbeit",
+    // Tabellen-Ansicht mit Sortierung -- wie "projekte" am Desktop gebaut,
+    // nutzt denselben Rechte-Bereich (siehe app/models/auftrag.py).
+    nurOffice: true,
+    sichtbar: ({ hatRecht }) => hatRecht("projekte", "sehen"),
+  },
+  {
+    key: "meine-aufgaben",
+    label: "Meine Aufgaben",
+    icon: ListChecks,
+    tone: "violet",
+    route: "/meine-aufgaben",
+    kategorie: "Arbeit",
+    // Bewusst KEIN Rechte-Gate: private Aufgaben (Projekt-Aufgaben ohne
+    // Projekt) sind fuer jeden Nutzer nutzbar, unabhaengig vom Rechte-
+    // Bereich "projekte" (der nur das Kanban-Board schuetzt). Reine Liste,
+    // kein Drag&Drop -- deshalb anders als "projekte" auch in der Feld-App.
+    sichtbar: () => true,
+  },
+  {
+    key: "kunden",
+    label: "Kundenverwaltung",
+    icon: Users,
     tone: "emerald",
-    route: "/geschaeft",
+    route: "/kunden",
     kategorie: "Arbeit",
     sichtbar: ({ currentUser, hatRecht }) =>
-      (hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung")) ||
-      (hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung")) ||
-      (hatRecht("material", "sehen") && istModulAktiv(currentUser, "material")),
+      hatRecht("kunden", "sehen") && istModulAktiv(currentUser, "kundenverwaltung"),
+  },
+  {
+    key: "partner",
+    label: "Partner & Nachunternehmer",
+    icon: HardHat,
+    tone: "amber",
+    route: "/partner",
+    kategorie: "Arbeit",
+    sichtbar: ({ currentUser, hatRecht }) =>
+      istModulAktiv(currentUser, "nachunternehmer") && hatRecht("partner", "sehen"),
+  },
+  {
+    key: "material",
+    label: "Material",
+    icon: Package,
+    tone: "amber",
+    route: "/material",
+    kategorie: "Arbeit",
+    sichtbar: ({ currentUser, hatRecht }) =>
+      hatRecht("material", "sehen") && istModulAktiv(currentUser, "material"),
   },
   {
     key: "zeiterfassung",
@@ -106,7 +199,19 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "cyan",
     route: "/statistik",
     kategorie: "Arbeit",
-    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "statistik"),
+    sichtbar: ({ currentUser }) => istModulAktiv(currentUser, "zeiterfassung"),
+  },
+  {
+    key: "zeiten_buchen",
+    label: "Zeiten buchen",
+    icon: Hourglass,
+    tone: "cyan",
+    route: "/zeiten-buchen",
+    kategorie: "Arbeit",
+    // Nur fuer Buchungsberechtigte (Konzept 7.3) -- ohne das Recht gibt es
+    // dort nichts zu tun (kein Techniker vermerkt/bucht fuer sich selbst).
+    sichtbar: ({ currentUser }) =>
+      !!currentUser?.darf_zeiten_buchen && istModulAktiv(currentUser, "zeiterfassung"),
   },
   {
     key: "pruefmittel",
@@ -119,7 +224,7 @@ export const NAV_SEITEN: NavSeite[] = [
   },
   {
     key: "anfragen",
-    label: "Auftragsanfragen",
+    label: "Vorgangsanfragen",
     icon: Inbox,
     tone: "amber",
     route: "/anfragen",
@@ -128,13 +233,24 @@ export const NAV_SEITEN: NavSeite[] = [
   },
   {
     key: "rechnungen",
-    label: "Rechnungen",
+    label: "Rechnungen & Angebote",
     icon: Receipt,
     tone: "cyan",
     route: "/rechnungen",
     kategorie: "Finanzen",
     sichtbar: ({ currentUser, hatRecht }) =>
       hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung"),
+  },
+  {
+    key: "leistungsverzeichnis",
+    label: "Leistungsverzeichnis",
+    icon: ClipboardList,
+    tone: "cyan",
+    route: "/leistungsverzeichnis",
+    kategorie: "Finanzen",
+    // Gleiches Recht wie der Endpunkt selbst (haengt fachlich am Kunden,
+    // siehe app/api/routes/leistungsverzeichnis.py).
+    sichtbar: ({ hatRecht }) => hatRecht("kunden", "sehen"),
   },
   {
     key: "rechnungseingang",
@@ -153,8 +269,12 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "indigo",
     route: "/auswertung",
     kategorie: "Finanzen",
+    // Das Backend sperrt /api/auswertung fuer Nutzer mit Kundeneinschraenkung
+    // komplett (403) -- Menuepunkt gar nicht erst anbieten.
     sichtbar: ({ currentUser, hatRecht }) =>
-      hatRecht("abrechnung", "sehen") && istModulAktiv(currentUser, "abrechnung"),
+      hatRecht("abrechnung", "sehen") &&
+      istModulAktiv(currentUser, "abrechnung") &&
+      !currentUser?.nur_zugewiesene_kunden,
   },
   {
     key: "kennzahlen",
@@ -214,6 +334,17 @@ export const NAV_SEITEN: NavSeite[] = [
     sichtbar: () => true,
   },
   {
+    key: "organigramm",
+    label: "Organigramm",
+    icon: Network,
+    tone: "indigo",
+    route: "/organigramm",
+    kategorie: "Verwaltung",
+    // Diagramm mit Drag&Drop und breiter Rechte-Matrix: nur am Desktop (Office).
+    nurOffice: true,
+    sichtbar: ({ hatRecht }) => hatRecht("organigramm", "sehen"),
+  },
+  {
     key: "techniker_zuweisungen",
     label: "Techniker-Zuweisungen",
     icon: Wrench,
@@ -223,13 +354,24 @@ export const NAV_SEITEN: NavSeite[] = [
     sichtbar: ({ hatRecht }) => hatRecht("dispo", "bearbeiten"),
   },
   {
+    key: "abwesenheiten",
+    label: "Abwesenheiten",
+    icon: CalendarCheck,
+    tone: "cyan",
+    route: "/abwesenheiten",
+    kategorie: "Verwaltung",
+    sichtbar: ({ currentUser }) =>
+      !!currentUser?.darf_abwesenheiten_verwalten && istModulAktiv(currentUser, "zeiterfassung"),
+  },
+  {
     key: "team_zeiten",
     label: "Team-Zeiten",
     icon: Clock,
     tone: "cyan",
     route: "/team-zeiten",
     kategorie: "Verwaltung",
-    sichtbar: ({ hatRecht }) => hatRecht("mitarbeiterverwaltung", "bearbeiten"),
+    sichtbar: ({ hatRecht, currentUser }) =>
+      hatRecht("mitarbeiterverwaltung", "bearbeiten") && istModulAktiv(currentUser, "zeiterfassung"),
   },
   {
     key: "anlagen_felder",
@@ -245,7 +387,7 @@ export const NAV_SEITEN: NavSeite[] = [
     label: "Formulare",
     icon: ClipboardList,
     tone: "violet",
-    route: "/formulare",
+    route: "/form-schemas",
     kategorie: "Verwaltung",
     sichtbar: ({ hatRecht }) => hatRecht("formulare", "sehen"),
   },
@@ -259,6 +401,29 @@ export const NAV_SEITEN: NavSeite[] = [
     sichtbar: () => true,
   },
   {
+    key: "protokoll",
+    label: "Protokoll",
+    icon: ScrollText,
+    tone: "slate",
+    route: "/protokoll",
+    kategorie: "Verwaltung",
+    // Tabelle mit Details und Integritaetspruefung: nur am Desktop; Backend: require_roles("mandant_admin").
+    nurOffice: true,
+    sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin",
+  },
+  {
+    key: "datenimport",
+    label: "Datenimport",
+    icon: FileUp,
+    tone: "teal",
+    route: "/datenimport",
+    kategorie: "Verwaltung",
+    // Assistent mit breiten Tabellen (Zuordnung, Probelauf): nur am Desktop; nur mandant_admin
+    // (Backend: require_roles("mandant_admin")).
+    nurOffice: true,
+    sichtbar: ({ currentUser }) => currentUser?.role === "mandant_admin",
+  },
+  {
     key: "papierkorb",
     label: "Papierkorb",
     icon: Trash2,
@@ -270,60 +435,54 @@ export const NAV_SEITEN: NavSeite[] = [
   },
 ];
 
-// Bottom-Nav-Layout (siehe components/BottomNav.tsx): links vom Neu-Button
-// eine feste, nicht wischbare Zone mit genau LINKS_SLOT_ANZAHL Seiten,
-// rechts vom Neu-Button eine wischbare "Rotunde" beliebiger Laenge (das
-// zentrierte Icon gross, die Nachbarn kleiner). Beide Zonen sind frei
-// konfigurierbar (siehe pages/feld/BottomNavSettingsPage.tsx).
-export const LINKS_SLOT_ANZAHL = 2;
-
-// Standardbelegung fuer Nutzer ohne eigene Praeferenz (bottom_nav_items ===
-// null) -- entspricht dem bisherigen Verhalten: Feed/Profil fest, der Rest
-// wie im vormaligen "Mehr"-Menue.
-export const STANDARD_LINKS = ["feed", "profil"];
-export const STANDARD_ROTUNDE = [
-  "meldungen",
-  "dispo",
-  "geschaeft",
-  "rechnungen",
-  "rechnungseingang",
-  "buchhaltung",
-  "papierkorb",
-];
-
 export function sichtbareNavSeiten(
   currentUser: CurrentUser | undefined,
   hatRecht: (bereich: RechteBereich, aktion: RechteAktion) => boolean,
+  oberflaeche: "office" | "feld" = "office",
 ): NavSeite[] {
-  return NAV_SEITEN.filter((seite) => seite.sichtbar({ currentUser, hatRecht }));
-}
-
-// Gemeinsam von BottomNav.tsx und BottomNavSettingsPage.tsx genutzt, damit
-// beide garantiert dieselbe feste Zone berechnen. Filtert auf gerade
-// sichtbare Seiten, kappt auf LINKS_SLOT_ANZAHL und fuellt bei Bedarf (leere
-// oder zu kurze gespeicherte Auswahl, aeltere Daten) aus STANDARD_LINKS auf,
-// damit die feste Zone nie eine kaputte Luecke zeigt.
-export function effektiveLinks(
-  gespeichert: string[] | null | undefined,
-  sichtbareSeiten: NavSeite[],
-): string[] {
-  const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
-  const basis = (gespeichert ?? STANDARD_LINKS)
-    .filter((key) => sichtbareKeys.has(key))
-    .slice(0, LINKS_SLOT_ANZAHL);
-  if (basis.length >= LINKS_SLOT_ANZAHL) return basis;
-  const auffuellen = STANDARD_LINKS.filter(
-    (key) => sichtbareKeys.has(key) && !basis.includes(key),
+  return NAV_SEITEN.filter(
+    (seite) => (oberflaeche === "feld" || !seite.nurFeld) && seite.sichtbar({ currentUser, hatRecht }),
   );
-  return [...basis, ...auffuellen].slice(0, LINKS_SLOT_ANZAHL);
 }
 
-// Analog fuer die wischbare Rotunde rechts -- keine Mindestlaenge, keine
-// Pflicht-Keys (Feed/Profil leben jetzt ausschliesslich in effektiveLinks).
-export function effektiveRotunde(
-  gespeichert: string[] | null | undefined,
-  sichtbareSeiten: NavSeite[],
-): string[] {
-  const sichtbareKeys = new Set(sichtbareSeiten.map((seite) => seite.key));
-  return (gespeichert ?? STANDARD_ROTUNDE).filter((key) => sichtbareKeys.has(key));
+export interface NavGruppe {
+  name: string;
+  seiten: NavSeite[];
+}
+
+// Gruppierung fuer die Office-Seitenleiste (siehe office/OfficeLayout.tsx).
+// custom === undefined oder custom.kategorien leer -> der Mandant hat die
+// Menue-Kategorien noch nie angepasst, dann gelten unveraendert die vier
+// hart codierten Standardkategorien. Sobald custom.kategorien etwas
+// enthaelt, ersetzt das komplett: Reihenfolge/Namen kommen aus custom,
+// jede sichtbare Seite ohne (noch) passende Zuordnung -- z.B. ein erst
+// nach dem letzten Speichern neu hinzugekommener Menuepunkt -- landet
+// gesammelt in einer angehaengten "Weitere"-Gruppe, statt zu verschwinden.
+export function effektiveNavGruppen(
+  angezeigt: NavSeite[],
+  custom: NavKategorienRead | undefined,
+): NavGruppe[] {
+  if (!custom || custom.kategorien.length === 0) {
+    return NAV_KATEGORIE_REIHENFOLGE.map((kategorie) => ({
+      name: kategorie as string,
+      seiten: angezeigt.filter((seite) => seite.kategorie === kategorie),
+    })).filter((gruppe) => gruppe.seiten.length > 0);
+  }
+
+  const gruppen: NavGruppe[] = [...custom.kategorien]
+    .sort((a, b) => a.reihenfolge - b.reihenfolge)
+    .map((k) => ({ name: k.name, seiten: [] }));
+  const gruppeNachName = new Map(gruppen.map((g) => [g.name, g]));
+  const weitere: NavSeite[] = [];
+
+  for (const seite of angezeigt) {
+    const kategorieName = custom.zuordnungen[seite.key];
+    const ziel = kategorieName ? gruppeNachName.get(kategorieName) : undefined;
+    if (ziel) ziel.seiten.push(seite);
+    else weitere.push(seite);
+  }
+
+  const ergebnis = gruppen.filter((g) => g.seiten.length > 0);
+  if (weitere.length > 0) ergebnis.push({ name: "Weitere", seiten: weitere });
+  return ergebnis;
 }

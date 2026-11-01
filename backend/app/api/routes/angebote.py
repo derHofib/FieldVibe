@@ -30,16 +30,29 @@ from app.schemas.angebot import (
     AngebotAusVorgangCreate,
     AngebotCreate,
     AngebotPositionCreate,
+    AngebotPositionenNeuOrdnen,
+    AngebotPositionUpdate,
     AngebotRead,
     AngebotUpdate,
 )
 from app.schemas.email import EmailLogRead, EmailMitAnhangSenden
 from app.services import papierkorb_service
-from app.services.angebot_service import apply_status_transition, positionen_fuer, to_read_model
+from app.services.angebot_service import (
+    apply_status_transition,
+    effektiver_mwst_satz,
+    positionen_fuer,
+    positionen_neu_nummerieren,
+    to_read_model,
+)
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_angebotsnummer
 from app.services.pdf_service import generate_angebot_pdf
 from app.services.storage_service import download_bytes
+from app.services.zuweisung_service import (
+    erlaubte_kunde_ids,
+    require_kunde_zugewiesen,
+    require_kunde_zugriff,
+)
 
 router = APIRouter(
     prefix="/api/angebote",
@@ -57,6 +70,7 @@ async def list_angebote(
     kunde_id: UUID | None = Query(default=None),
     vorgang_id: UUID | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[AngebotRead]:
     stmt = select(Angebot).where(Angebot.geloescht_am.is_(None)).order_by(Angebot.created_at.desc())
@@ -66,15 +80,36 @@ async def list_angebote(
         stmt = stmt.where(Angebot.vorgang_id == vorgang_id)
     if status_filter:
         stmt = stmt.where(Angebot.status == status_filter)
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = stmt.where(Angebot.kunde_id.in_(erlaubte_kunden))
     result = await session.execute(stmt)
     return [await to_read_model(session, a) for a in result.scalars().all()]
 
 
-@router.get("/{angebot_id}", response_model=AngebotRead)
-async def get_angebot(angebot_id: UUID, session: AsyncSession = Depends(get_db)) -> AngebotRead:
+async def _angebot_laden(
+    session: AsyncSession,
+    auth: AuthContext,
+    angebot_id: UUID,
+    *,
+    geloeschte_zulassen: bool = False,
+) -> Angebot:
+    """Papierkorb + Einschraenkung auf zugewiesene Kunden
+    (nur_zugewiesene_kunden) -> 404."""
     angebot = await session.get(Angebot, angebot_id)
-    if angebot is None or angebot.geloescht_am is not None:
+    if angebot is None or (angebot.geloescht_am is not None and not geloeschte_zulassen):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    await require_kunde_zugriff(session, auth, angebot.kunde_id, "Angebot nicht gefunden")
+    return angebot
+
+
+@router.get("/{angebot_id}", response_model=AngebotRead)
+async def get_angebot(
+    angebot_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
     return await to_read_model(session, angebot)
 
 
@@ -91,9 +126,7 @@ async def delete_angebot(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    angebot = await session.get(Angebot, angebot_id)
-    if angebot is None or angebot.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    angebot = await _angebot_laden(session, auth, angebot_id)
     if angebot.status != "entwurf":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -104,12 +137,15 @@ async def delete_angebot(
     )
 
 
-async def _validate_kunde_vorgang(session: AsyncSession, kunde_id: UUID, vorgang_id: UUID | None) -> None:
+async def _validate_kunde_vorgang(
+    session: AsyncSession, auth: AuthContext, kunde_id: UUID, vorgang_id: UUID | None
+) -> None:
     if await session.get(Kunde, kunde_id) is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Kunde nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    await require_kunde_zugewiesen(session, auth, kunde_id)
     if vorgang_id is not None:
         vorgang = await session.get(Vorgang, vorgang_id)
         if vorgang is None:
@@ -121,6 +157,10 @@ async def _validate_kunde_vorgang(session: AsyncSession, kunde_id: UUID, vorgang
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Vorgang gehört nicht zum angegebenen Kunden"
             )
+
+
+async def _standard_mwst_satz(session: AsyncSession, auth: AuthContext) -> Decimal:
+    return effektiver_mwst_satz(await session.get(Mandant, auth.mandant_id), None)
 
 
 def _neue_positionen(angebot_id: UUID, mandant_id: UUID, eintraege: list[AngebotPositionCreate]) -> list[AngebotPosition]:
@@ -154,7 +194,8 @@ async def create_angebot(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> AngebotRead:
-    await _validate_kunde_vorgang(session, body.kunde_id, body.vorgang_id)
+    await _validate_kunde_vorgang(session, auth, body.kunde_id, body.vorgang_id)
+    mandant = await session.get(Mandant, auth.mandant_id)
 
     angebotsnummer = await next_angebotsnummer(session, auth.mandant_id)
     angebot = Angebot(
@@ -164,6 +205,7 @@ async def create_angebot(
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=body.gueltig_bis,
+        mwst_satz=effektiver_mwst_satz(mandant, body.mwst_satz),
     )
     session.add(angebot)
     await session.flush()
@@ -216,6 +258,7 @@ async def create_angebot_from_maengel(
             detail="Alle Mängel müssen zum selben Kunden gehören",
         )
     kunde_id = next(iter(kunde_ids))
+    await require_kunde_zugewiesen(session, auth, kunde_id)
     # Ein gemeinsamer Vorgang wird uebernommen, wenn alle Maengel aus
     # demselben Vorgang stammen -- sonst bleibt vorgang_id leer und die
     # Verknuepfung laeuft ausschliesslich ueber die einzelnen Maengel.
@@ -229,6 +272,7 @@ async def create_angebot_from_maengel(
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=body.gueltig_bis,
+        mwst_satz=await _standard_mwst_satz(session, auth),
     )
     session.add(angebot)
     await session.flush()
@@ -284,6 +328,7 @@ async def _angebot_aus_bedarfen(
             detail="Alle Materialbedarfe müssen zum selben Kunden gehören",
         )
     kunde_id = next(iter(kunde_ids))
+    await require_kunde_zugewiesen(session, auth, kunde_id)
     gemeinsamer_vorgang_id = next(iter(vorgang_ids)) if len(vorgang_ids) == 1 else None
 
     # Mehrere Bedarfe desselben Materials (z.B. aus verschiedenen
@@ -311,6 +356,7 @@ async def _angebot_aus_bedarfen(
         angebotsnummer=angebotsnummer,
         erstellt_von=auth.user_id,
         gueltig_bis=gueltig_bis,
+        mwst_satz=await _standard_mwst_satz(session, auth),
     )
     session.add(angebot)
     await session.flush()
@@ -411,6 +457,7 @@ async def create_angebot_from_vorgang(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Vorgang nicht gefunden oder gehört nicht zum eigenen Mandanten",
         )
+    await require_kunde_zugewiesen(session, auth, vorgang.kunde_id)
 
     bedarfe = list(
         (
@@ -435,6 +482,7 @@ async def create_angebot_from_vorgang(
             angebotsnummer=angebotsnummer,
             erstellt_von=auth.user_id,
             gueltig_bis=body.gueltig_bis,
+            mwst_satz=await _standard_mwst_satz(session, auth),
         )
         session.add(angebot)
         await session.flush()
@@ -456,11 +504,10 @@ async def create_angebot_from_vorgang(
 async def add_position(
     angebot_id: UUID,
     body: AngebotPositionCreate,
+    auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> AngebotRead:
-    angebot = await session.get(Angebot, angebot_id)
-    if angebot is None or angebot.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    angebot = await _angebot_laden(session, auth, angebot_id)
     if angebot.status != "entwurf":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Positionen können nur im Entwurf ergänzt werden"
@@ -485,6 +532,96 @@ async def add_position(
     return await to_read_model(session, angebot)
 
 
+def _nur_im_entwurf(angebot: Angebot) -> None:
+    if angebot.status != "entwurf":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Angebot ist nicht mehr bearbeitbar")
+
+
+async def _position_laden(session: AsyncSession, angebot_id: UUID, position_id: UUID) -> AngebotPosition:
+    position = await session.get(AngebotPosition, position_id)
+    if position is None or position.angebot_id != angebot_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Position nicht gefunden")
+    return position
+
+
+@router.post(
+    "/{angebot_id}/positionen/neu-ordnen",
+    response_model=AngebotRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def positionen_neu_ordnen(
+    angebot_id: UUID,
+    body: AngebotPositionenNeuOrdnen,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
+    _nur_im_entwurf(angebot)
+
+    bestehende = {p.id: p for p in await positionen_fuer(session, angebot_id)}
+    if len(body.position_ids) != len(set(body.position_ids)) or set(body.position_ids) != set(bestehende):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Die Liste muss genau die vorhandenen Positionen je einmal enthalten",
+        )
+    for nummer, position_id in enumerate(body.position_ids, start=1):
+        bestehende[position_id].position = nummer
+    await session.flush()
+    return await to_read_model(session, angebot)
+
+
+@router.patch(
+    "/{angebot_id}/positionen/{position_id}",
+    response_model=AngebotRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def update_position(
+    angebot_id: UUID,
+    position_id: UUID,
+    body: AngebotPositionUpdate,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
+    _nur_im_entwurf(angebot)
+    position = await _position_laden(session, angebot_id, position_id)
+
+    for feld in body.model_fields_set:
+        setattr(position, feld, getattr(body, feld))
+    await session.flush()
+    return await to_read_model(session, angebot)
+
+
+@router.delete(
+    "/{angebot_id}/positionen/{position_id}",
+    response_model=AngebotRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def delete_position(
+    angebot_id: UUID,
+    position_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
+    _nur_im_entwurf(angebot)
+    position = await _position_laden(session, angebot_id, position_id)
+
+    await session.delete(position)
+    await session.flush()
+    await positionen_neu_nummerieren(session, angebot_id)
+    return await to_read_model(session, angebot)
+
+
 @router.patch(
     "/{angebot_id}",
     response_model=AngebotRead,
@@ -499,12 +636,24 @@ async def update_angebot(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> AngebotRead:
-    angebot = await session.get(Angebot, angebot_id)
-    if angebot is None or angebot.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    angebot = await _angebot_laden(session, auth, angebot_id)
 
     if body.gueltig_bis is not None:
+        # Verlaengern ist der Weg, ein abgelaufenes (noch versendetes) Angebot
+        # wieder annehmbar zu machen; nach Annahme/Ablehnung ist es bedeutungslos.
+        if angebot.status not in ("entwurf", "versendet"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Die Gültigkeit kann nur im Entwurf oder bei versendeten Angeboten geändert werden",
+            )
         angebot.gueltig_bis = body.gueltig_bis
+
+    if body.mwst_satz is not None:
+        mandant = await session.get(Mandant, auth.mandant_id)
+        neuer_satz = effektiver_mwst_satz(mandant, body.mwst_satz)
+        if neuer_satz != angebot.mwst_satz:
+            _nur_im_entwurf(angebot)
+            angebot.mwst_satz = neuer_satz
 
     if body.status is not None:
         await apply_status_transition(
@@ -529,9 +678,7 @@ async def angebot_pdf(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Response:
-    angebot = await session.get(Angebot, angebot_id)
-    if angebot is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    angebot = await _angebot_laden(session, auth, angebot_id, geloeschte_zulassen=True)
     kunde = await session.get(Kunde, angebot.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
 
@@ -545,11 +692,11 @@ async def angebot_pdf(
 
 @router.get("/{angebot_id}/emails", response_model=list[EmailLogRead])
 async def list_angebot_emails(
-    angebot_id: UUID, session: AsyncSession = Depends(get_db)
+    angebot_id: UUID,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
 ) -> list[EmailLog]:
-    angebot = await session.get(Angebot, angebot_id)
-    if angebot is None or angebot.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    angebot = await _angebot_laden(session, auth, angebot_id)
     result = await session.execute(
         select(EmailLog)
         .where(EmailLog.entity_type == "angebot", EmailLog.entity_id == angebot_id)
@@ -573,9 +720,7 @@ async def send_angebot_email(
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> EmailLog:
-    angebot = await session.get(Angebot, angebot_id)
-    if angebot is None or angebot.geloescht_am is not None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Angebot nicht gefunden")
+    angebot = await _angebot_laden(session, auth, angebot_id)
     kunde = await session.get(Kunde, angebot.kunde_id)
     mandant = await session.get(Mandant, auth.mandant_id)
     pdf_bytes = await _angebot_pdf_bytes(session, mandant, angebot, kunde)

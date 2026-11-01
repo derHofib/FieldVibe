@@ -3,14 +3,20 @@ from dataclasses import dataclass
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging_config import kontext_ergaenzen
 from app.core.security import decode_token
+from app.core.rollen import ist_plattform_admin
 from app.db.session import system_session, tenant_session
+from app.models.kundenportal import KundenportalZugang
 from app.models.mandant import Mandant
-from app.services.rechte_service import hat_recht
+from app.models.partner_zugang import PartnerZugang
+from app.models.user import User
+from app.services import berechtigung_service
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -22,10 +28,62 @@ class AuthContext:
     role: str
     impersonated_by: UUID | None = None
     account_typ_id: UUID | None = None
+    token_version: int = 0
+    # Nur ueber get_current_user_mfa_einrichtung erreichbar (siehe dort).
+    mfa_einrichtung: bool = False
+
+
+def _nicht_authentifiziert(detail: str = "Ungültiges Token") -> HTTPException:
+    return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+
+
+async def token_version_gueltig(
+    modell, account_id: UUID, payload: dict, *, tv_pflicht: bool = False
+) -> int:
+    """Prueft den "tv"-Claim gegen den aktuellen Zaehler des Accounts und
+    liefert ihn zurueck. Ein fehlender Claim gilt als 0 (vor Einfuehrung des
+    Widerrufs ausgestellte Tokens bleiben so bis zu ihrem Ablauf gueltig --
+    sonst wuerde der Deploy alle Nutzer ausloggen und die Feld-App die
+    Offline-Outbox leeren); nach dem ersten Widerruf (Zaehler > 0) sind sie
+    sofort ungueltig. tv_pflicht=True (Impersonation, Stream-Tickets, nie im
+    Altbestand) verlangt den Claim. Ueber system_session, weil die
+    Mandanten-RLS-Session erst aus dem Token entstuende, den wir gerade
+    pruefen; gelesen wird ausschliesslich der Zaehler des Token-Subjects."""
+    tv = payload.get("tv")
+    if tv is None and not tv_pflicht:
+        tv = 0
+    if not isinstance(tv, int) or isinstance(tv, bool):
+        raise _nicht_authentifiziert()
+    async with system_session() as session:
+        aktuell = await session.scalar(
+            select(modell.token_version).where(modell.id == account_id)
+        )
+    if aktuell is None or aktuell != tv:
+        raise _nicht_authentifiziert()
+    return tv
+
+
+MFA_EINRICHTUNG_DETAIL = "MFA-Einrichtung erforderlich"
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AuthContext:
+    return await _auth_context_aus_token(credentials, einrichtung_erlaubt=False)
+
+
+async def get_current_user_mfa_einrichtung(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+) -> AuthContext:
+    """Wie get_current_user, akzeptiert aber zusaetzlich das eingeschraenkte
+    Token eines Accounts, der laut Mandanten-Pflicht erst MFA einrichten muss.
+    Nur fuer /me und die MFA-Einrichtungsendpunkte; jeder andere Endpunkt
+    haengt an get_current_user und lehnt solche Tokens ab (fail-closed)."""
+    return await _auth_context_aus_token(credentials, einrichtung_erlaubt=True)
+
+
+async def _auth_context_aus_token(
+    credentials: HTTPAuthorizationCredentials | None, *, einrichtung_erlaubt: bool
 ) -> AuthContext:
     if credentials is None:
         raise HTTPException(
@@ -44,6 +102,10 @@ async def get_current_user(
             detail="Token-Typ nicht für API-Zugriff zulässig",
         )
 
+    mfa_einrichtung = payload.get("mfa_einrichtung") is True
+    if mfa_einrichtung and not einrichtung_erlaubt:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=MFA_EINRICHTUNG_DETAIL)
+
     mandant_id = UUID(payload["mandant_id"]) if payload.get("mandant_id") else None
     impersonated_by = (
         UUID(payload["impersonated_by"]) if payload.get("impersonated_by") else None
@@ -51,28 +113,39 @@ async def get_current_user(
     account_typ_id = (
         UUID(payload["account_typ_id"]) if payload.get("account_typ_id") else None
     )
+    user_id = UUID(payload["sub"])
+    # Bei Impersonation ist sub der echte Super-Admin -- dessen Zaehler gilt.
+    token_version = await token_version_gueltig(
+        User, user_id, payload, tv_pflicht=payload.get("type") == "impersonation"
+    )
+    kontext_ergaenzen(user_id=user_id, mandant_id=mandant_id)
     return AuthContext(
-        user_id=UUID(payload["sub"]),
+        user_id=user_id,
+        token_version=token_version,
         mandant_id=mandant_id,
         role=payload["role"],
         impersonated_by=impersonated_by,
         account_typ_id=account_typ_id,
+        mfa_einrichtung=mfa_einrichtung,
     )
 
 
 async def get_db(
+    request: Request,
     auth: AuthContext = Depends(get_current_user),
 ) -> AsyncIterator[AsyncSession]:
     """Tenant-scoped DB session. super_admin gets an RLS-bypassing session
     reserved for cross-tenant platform administration; every other role is
     hard-pinned to its own mandant_id via Row Level Security."""
-    is_super_admin = auth.role == "super_admin"
+    is_super_admin = ist_plattform_admin(auth)
     ctx = (
         system_session()
         if is_super_admin
         else tenant_session(mandant_id=auth.mandant_id, is_super_admin=False)
     )
     async with ctx as session:
+        # Fuer audit_siegel_vor_antwort (app/services/audit_service.py).
+        request.state.audit_session = session
         yield session
 
 
@@ -96,6 +169,14 @@ def require_roles(*roles: str):
         return auth
 
     return checker
+
+
+async def nur_mandant_admin(auth: AuthContext = Depends(get_current_user)) -> AuthContext:
+    """Strenger als require_roles("mandant_admin"): schliesst auch loesch_operativ aus, das sonst
+    ueberall die Rechte eines mandant_admin erbt. Fuer Protokoll, Datenexporte und Aufbewahrung."""
+    if auth.role != "mandant_admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Keine Berechtigung für diese Aktion")
+    return auth
 
 
 def require_module(*modules: str):
@@ -126,21 +207,18 @@ def require_module(*modules: str):
 def require_recht(bereich: str, aktion: str = "sehen"):
     """Zusaetzlich zu require_roles: schraenkt frei vom mandant_admin
     definierte Account-Typen (role == 'custom', siehe app/models/account_typ.py)
-    gemaess ihrer individuellen Rechte-Matrix ein (siehe
-    app/services/rechte_service.py). super_admin/mandant_admin sind hier immer
-    erlaubt -- deren Zugriff wird ausschliesslich ueber require_roles an der
-    jeweiligen Route gesteuert und bleibt von dieser Matrix unberuehrt."""
+    gemaess ihrer effektiven Rechte ein -- aufgeloest von der Rechte-Engine
+    (app/services/berechtigung_service.py: aktive Besetzungen im Organigramm,
+    Typ-Basis, Overrides). Alle anderen Rollen (super_admin, mandant_admin,
+    loesch_*) sind hier immer erlaubt; deren Zugriff wird ausschliesslich ueber
+    require_roles an der jeweiligen Route gesteuert. Die Aufloesung ist pro
+    Request gecacht (mehrere require_recht an einer Route = eine Aufloesung)."""
 
     async def checker(
         auth: AuthContext = Depends(get_current_user),
         session: AsyncSession = Depends(get_db),
     ) -> AuthContext:
-        if auth.role != "custom":
-            return auth
-        erlaubt = await hat_recht(
-            session, account_typ_id=auth.account_typ_id, bereich=bereich, aktion=aktion
-        )
-        if not erlaubt:
+        if not await berechtigung_service.hat_recht(session, auth, bereich, aktion):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Keine Berechtigung für diese Aktion",
@@ -177,8 +255,10 @@ async def get_current_kunde(
             detail="Token-Typ nicht für das Kundenportal zulässig",
         )
 
+    zugang_id = UUID(payload["sub"])
+    await token_version_gueltig(KundenportalZugang, zugang_id, payload)
     return KundenAuthContext(
-        zugang_id=UUID(payload["sub"]),
+        zugang_id=zugang_id,
         mandant_id=UUID(payload["mandant_id"]),
         kunde_id=UUID(payload["kunde_id"]),
     )
@@ -246,8 +326,10 @@ async def get_current_partner(
             detail="Token-Typ nicht für das Partnerportal zulässig",
         )
 
+    zugang_id = UUID(payload["sub"])
+    await token_version_gueltig(PartnerZugang, zugang_id, payload)
     return PartnerAuthContext(
-        zugang_id=UUID(payload["sub"]),
+        zugang_id=zugang_id,
         mandant_id=UUID(payload["mandant_id"]),
         partner_id=UUID(payload["partner_id"]),
     )

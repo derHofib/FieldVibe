@@ -1,0 +1,133 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { ListChecks } from "lucide-react";
+import { useState } from "react";
+
+import { ApiError } from "../api/client";
+import { kundenApi, rechnungenApi } from "../api/endpoints";
+import { SearchableSelect } from "./SearchableSelect";
+
+type Modus = "pauschal" | "einzelposten";
+
+/** Gemeinsame Rechnung-Anlage fuer Mobile (RechnungenPage) und Desktop
+ * (OfficeRechnungenPage) -- ersetzt die vormalige Schnellanlage in der
+ * inzwischen aufgeteilten GeschaeftPage, die immer einen Gesamtbetrag
+ * verlangte. "Einzelposten" legt die Rechnung leer an (wie beim Angebot
+ * schon laenger ueblich) und der Aufrufer navigiert danach zur Detailseite,
+ * wo Positionen erfasst werden -- "Pauschalbetrag" bleibt fuer die schnelle
+ * Ein-Zeilen-Rechnung erhalten. */
+export function NeueRechnungForm({
+  onAbbrechen,
+  onErfolg,
+}: {
+  onAbbrechen: () => void;
+  onErfolg: (rechnungId: string) => void;
+}) {
+  const [modus, setModus] = useState<Modus>("einzelposten");
+  const [kundeId, setKundeId] = useState("");
+  const [betragNetto, setBetragNetto] = useState("");
+  const [leistungsdatum, setLeistungsdatum] = useState("");
+
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+
+  const erstellen = useMutation({
+    mutationFn: () =>
+      rechnungenApi.create({
+        kunde_id: kundeId,
+        betrag_netto: modus === "pauschal" ? betragNetto : undefined,
+        leistungsdatum: leistungsdatum || undefined,
+      }),
+    onSuccess: (rechnung) => {
+      onErfolg(rechnung.id);
+    },
+  });
+
+  return (
+    <div className="space-y-3 card-ap p-4">
+      <div className="flex rounded-full bg-fill p-1">
+        {(["pauschal", "einzelposten"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setModus(m)}
+            className={`flex-1 rounded-full py-1.5 text-xs font-semibold ${
+              modus === m
+                ? "btn-ap-primary text-white"
+                : "text-label2"
+            }`}
+          >
+            {m === "pauschal" ? "Pauschalbetrag" : "Einzelposten"}
+          </button>
+        ))}
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+        <SearchableSelect
+          value={kundeId}
+          onChange={setKundeId}
+          placeholder="Kunde wählen…"
+          options={(kunden ?? []).map((k) => ({ value: k.id, label: `${k.name} (${k.kundennummer})` }))}
+        />
+      </div>
+
+      {modus === "pauschal" ? (
+        <>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-label2">
+              Betrag netto (EUR)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={betragNetto}
+              onChange={(e) => setBetragNetto(e.target.value)}
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-label2">
+              Leistungsdatum (optional)
+            </label>
+            <input
+              type="date"
+              value={leistungsdatum}
+              onChange={(e) => setLeistungsdatum(e.target.value)}
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+            <p className="mt-1 text-xs text-label2">
+              Nur nötig, wenn abweichend vom Rechnungsdatum.
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-start gap-2 rounded-lg border border-dashed border-cyan-200 bg-cyan-50/60 p-3 dark:border-cyan-500/30 dark:bg-cyan-500/10">
+            <ListChecks size={16} strokeWidth={2} className="mt-0.5 shrink-0 text-cyan-700 dark:text-cyan-300" />
+            <p className="text-xs text-cyan-800 dark:text-cyan-200">
+              Nach dem Anlegen fügst du Vorgänge oder einzelne Positionen hinzu.
+            </p>
+          </div>
+        </>
+      )}
+
+      {erstellen.isError && (
+        <p className="text-xs text-st-fehlt">
+          {erstellen.error instanceof ApiError ? erstellen.error.message : "Rechnung konnte nicht angelegt werden"}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button
+          disabled={!kundeId || (modus === "pauschal" && !betragNetto) || erstellen.isPending}
+          onClick={() => erstellen.mutate()}
+          className="btn-touch flex-1 rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          Rechnung anlegen
+        </button>
+        <button onClick={onAbbrechen} className="btn-touch px-2 text-sm font-medium text-label2">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  );
+}

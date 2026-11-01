@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr
 
 EmailEntityTyp = Literal["kunde", "vorgang", "angebot", "rechnung", "bestellung"]
-EmailStatus = Literal["gesendet", "fehler"]
+EmailStatus = Literal["gesendet", "fehler", "ausstehend"]
 
 
 class EmailSenden(BaseModel):

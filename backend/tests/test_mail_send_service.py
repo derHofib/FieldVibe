@@ -26,14 +26,13 @@ def _account(**overrides) -> MailAccount:
 async def test_sende_nachricht_starttls_login_und_envelope():
     account = _account()
     smtp_instance = MagicMock()
-    with patch("app.services.mail_send_service.smtplib.SMTP", return_value=smtp_instance) as smtp_cls:
+    with patch("app.services.mail_send_service.verbinde_smtp", return_value=smtp_instance) as smtp_cls:
         await sende_nachricht(
             account, an=["kunde@example.de"], cc=["kollege@example.de"], bcc=["chef@example.de"],
             betreff="Terminvorschlag", text="Wie besprochen.",
         )
 
-    smtp_cls.assert_called_once_with("smtp.example.de", 587, timeout=20)
-    smtp_instance.starttls.assert_called_once()
+    smtp_cls.assert_called_once_with("smtp.example.de", 587, "starttls", 20)
     smtp_instance.login.assert_called_once_with("technik@example.de", "geheim")
     smtp_instance.send_message.assert_called_once()
 
@@ -50,21 +49,20 @@ async def test_sende_nachricht_starttls_login_und_envelope():
 
 
 @pytest.mark.asyncio
-async def test_sende_nachricht_ssl_verwendet_smtp_ssl():
+async def test_sende_nachricht_ssl_wird_an_verbindungsaufbau_durchgereicht():
     account = _account(smtp_verschluesselung="ssl", smtp_port=465)
     smtp_instance = MagicMock()
-    with patch("app.services.mail_send_service.smtplib.SMTP_SSL", return_value=smtp_instance) as smtp_cls:
+    with patch("app.services.mail_send_service.verbinde_smtp", return_value=smtp_instance) as smtp_cls:
         await sende_nachricht(account, an=["kunde@example.de"], betreff="X", text="Y")
 
-    smtp_cls.assert_called_once_with("smtp.example.de", 465, timeout=20)
-    smtp_instance.starttls.assert_not_called()
+    smtp_cls.assert_called_once_with("smtp.example.de", 465, "ssl", 20)
 
 
 @pytest.mark.asyncio
 async def test_sende_nachricht_haengt_signatur_an():
     account = _account(signatur="Mit freundlichen Grüßen\nTechnik-Team")
     smtp_instance = MagicMock()
-    with patch("app.services.mail_send_service.smtplib.SMTP", return_value=smtp_instance):
+    with patch("app.services.mail_send_service.verbinde_smtp", return_value=smtp_instance):
         await sende_nachricht(account, an=["kunde@example.de"], betreff="X", text="Hallo!")
 
     nachricht = smtp_instance.send_message.call_args[0][0]
@@ -77,7 +75,7 @@ async def test_sende_nachricht_haengt_signatur_an():
 async def test_sende_nachricht_setzt_threading_header():
     account = _account()
     smtp_instance = MagicMock()
-    with patch("app.services.mail_send_service.smtplib.SMTP", return_value=smtp_instance):
+    with patch("app.services.mail_send_service.verbinde_smtp", return_value=smtp_instance):
         await sende_nachricht(
             account, an=["kunde@example.de"], betreff="Re: Anfrage", text="Antwort",
             in_reply_to="<original@kunde.de>", references="<original@kunde.de>",

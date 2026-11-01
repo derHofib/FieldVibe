@@ -9,17 +9,17 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_recht, r
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang_event import VorgangEventCreate, VorgangEventRead
+from app.services import sla_service
 from app.services import storage_service
 from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
 from app.services.photo_service import make_thumbnail
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
 from app.services.vorgang_completion_service import (
     VORGANG_STATUS_GESCHLOSSEN,
     close_vorgang,
 )
 from app.services.vorgang_event_service import to_read_model as _to_read_model
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import require_vorgang_zugriff
 
 router = APIRouter(
     prefix="/api/vorgaenge/{vorgang_id}/events",
@@ -39,11 +39,7 @@ async def _require_own_vorgang(
     vorgang = await session.get(Vorgang, vorgang_id)
     if vorgang is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
-    beschraenkt = await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    )
-    if beschraenkt and vorgang.kunde_id not in await assigned_kunde_ids(session, auth.user_id):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vorgang nicht gefunden")
+    await require_vorgang_zugriff(session, auth, vorgang)
     return vorgang
 
 
@@ -95,6 +91,12 @@ async def create_event(
             response.status_code = status.HTTP_200_OK
             return _to_read_model(existing_event)
 
+    if body.partner_sichtbar and (body.event_type != "kommentar" or vorgang.partner_id is None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Nur Kommentare an Vorgängen mit zugewiesenem Partner können für den Partner freigegeben werden",
+        )
+
     event = VorgangEvent(
         mandant_id=auth.mandant_id,
         vorgang_id=vorgang_id,
@@ -105,6 +107,7 @@ async def create_event(
         ref_entity_type=body.ref_entity_type,
         ref_entity_id=body.ref_entity_id,
         kundensichtbar=body.kundensichtbar,
+        partner_sichtbar=body.partner_sichtbar,
         client_uuid=body.client_uuid,
     )
     session.add(event)
@@ -114,6 +117,9 @@ async def create_event(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Event-Konflikt"
         ) from exc
+
+    if body.event_type == "kommentar":
+        await sla_service.mitarbeiter_reaktion(session, vorgang)
 
     if body.body:
         await extract_and_notify_mentions(
@@ -179,7 +185,7 @@ async def upload_foto(
     # der PWA laden dieselbe kleine Datei statt das Original zu skalieren.
     thumbnail = await make_thumbnail(data)
 
-    key = storage_service.new_object_key(vorgang_id, file.filename or "foto.jpg")
+    key = storage_service.new_object_key(auth.mandant_id, vorgang_id, file.filename or "foto.jpg")
     thumbnail_key = f"{key.rsplit('.', 1)[0]}_thumb.jpg"
 
     await storage_service.upload_bytes(key, data, file.content_type)
@@ -212,6 +218,73 @@ async def upload_foto(
         auth.mandant_id,
         "vorgang_event",
         {"vorgang_id": str(vorgang_id), "event_id": event.id, "event_type": "foto"},
+    )
+
+    return _to_read_model(event)
+
+
+@router.post("/dokument", response_model=VorgangEventRead, status_code=status.HTTP_201_CREATED)
+async def upload_dokument(
+    vorgang_id: UUID,
+    file: UploadFile,
+    response: Response,
+    kundensichtbar: bool = Form(default=False),
+    body: str | None = Form(default=None),
+    client_uuid: UUID | None = Form(default=None),
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> VorgangEventRead:
+    """Beliebige Dateien (PDF, Word, Excel, ...) am Vorgang -- Gegenstueck zu
+    upload_foto, aber ohne Bild-Einschraenkung und ohne Thumbnail."""
+    vorgang = await _require_own_vorgang(session, auth, vorgang_id)
+    _require_offen(vorgang)
+
+    if client_uuid is not None:
+        existing = await session.execute(
+            select(VorgangEvent).where(VorgangEvent.client_uuid == client_uuid)
+        )
+        existing_event = existing.scalar_one_or_none()
+        if existing_event is not None:
+            response.status_code = status.HTTP_200_OK
+            return _to_read_model(existing_event)
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)"
+        )
+
+    dateiname = file.filename or "dokument"
+    key = storage_service.new_object_key(auth.mandant_id, vorgang_id, dateiname)
+    await storage_service.upload_bytes(key, data, file.content_type or "application/octet-stream")
+
+    event = VorgangEvent(
+        mandant_id=auth.mandant_id,
+        vorgang_id=vorgang_id,
+        event_type="dokument",
+        author_user_id=auth.user_id,
+        body=body,
+        payload={
+            "key": key,
+            "dateiname": dateiname,
+            "content_type": file.content_type,
+            "size": len(data),
+        },
+        kundensichtbar=kundensichtbar,
+        client_uuid=client_uuid,
+    )
+    session.add(event)
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Event-Konflikt"
+        ) from exc
+
+    await event_bus.publish(
+        auth.mandant_id,
+        "vorgang_event",
+        {"vorgang_id": str(vorgang_id), "event_id": event.id, "event_type": "dokument"},
     )
 
     return _to_read_model(event)
@@ -252,7 +325,7 @@ async def upload_unterschrift(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)"
         )
 
-    key = storage_service.new_object_key(vorgang_id, "unterschrift.png")
+    key = storage_service.new_object_key(auth.mandant_id, vorgang_id, "unterschrift.png")
     await storage_service.upload_bytes(key, data, file.content_type)
 
     event = VorgangEvent(

@@ -4,8 +4,17 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
   readonly VITE_MAPBOX_TOKEN: string | undefined;
+  readonly VITE_IMPRESSUM_URL: string | undefined;
+  readonly VITE_DATENSCHUTZ_URL: string | undefined;
+  readonly VITE_SENTRY_DSN: string | undefined;
+  readonly VITE_SENTRY_ENVIRONMENT: string | undefined;
+  readonly VITE_SENTRY_SAMPLE_RATE: string | undefined;
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Per `define` in vite.config.ts ersetzt (package.json-Version bzw. GIT_COMMIT beim Build).
+declare const __APP_VERSION__: string;
+declare const __GIT_COMMIT__: string;

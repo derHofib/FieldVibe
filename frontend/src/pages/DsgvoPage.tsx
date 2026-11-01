@@ -62,17 +62,17 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
   }
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+    <div className="card-ap p-4">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="font-medium text-slate-800 dark:text-stone-100">{DOKUMENT_LABEL[typ]}</div>
+          <div className="font-medium text-label">{DOKUMENT_LABEL[typ]}</div>
           {dokument ? (
-            <div className="mt-1 text-xs text-slate-500 dark:text-stone-400">
+            <div className="mt-1 text-xs text-label2">
               {dokument.dateiname} · {formatGroesse(dokument.groesse_bytes)} · hochgeladen am{" "}
               {new Date(dokument.updated_at).toLocaleDateString("de-DE")}
             </div>
           ) : (
-            <div className="mt-1 text-xs text-slate-400 dark:text-stone-500">Noch kein Dokument hochgeladen</div>
+            <div className="mt-1 text-xs text-label2">Noch kein Dokument hochgeladen</div>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -80,7 +80,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
             <>
               <button
                 onClick={handleDownload}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+                className="btn-touch rounded-md border border-sep px-3 py-2 text-sm font-medium text-label hover:bg-fill"
               >
                 Herunterladen
               </button>
@@ -89,7 +89,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
                   if (window.confirm(`"${DOKUMENT_LABEL[typ]}" wirklich löschen?`)) removeMutation.mutate();
                 }}
                 disabled={removeMutation.isPending}
-                className="btn-touch rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+                className="btn-touch rounded-md border border-st-fehlt px-3 py-2 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
               >
                 Löschen
               </button>
@@ -98,7 +98,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
           <button
             onClick={() => inputRef.current?.click()}
             disabled={uploadMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+            className="btn-touch btn-ap-primary"
           >
             {uploadMutation.isPending ? "Lädt hoch…" : dokument ? "Ersetzen" : "Hochladen"}
           </button>
@@ -111,7 +111,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
           />
         </div>
       </div>
-      {error && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-2 text-sm text-st-fehlt ">{error}</p>}
     </div>
   );
 }
@@ -126,7 +126,7 @@ export function DsgvoPage() {
 
   return (
     <div className="max-w-2xl space-y-4">
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <p className="text-sm text-label2">
         Zentrale Ablage der DSGVO-Pflichtdokumente (AVV-Vorlage, Datenschutzerklärung, Impressum,
         Löschkonzept, TOM-Dokument, Meldeprozess, Verarbeitungsverzeichnis). Erlaubt sind PDF, Word
         (.doc/.docx) oder Bilddateien (max. 10 MB).

@@ -46,7 +46,7 @@ Mandanten gerade ihre konfigurierte tägliche Uhrzeit erreichen (Default
 03:00 UTC, pro Mandant einstellbar über `PATCH /api/mandant/einstellungen`).
 
 - Frontend: http://localhost:5173
-- Backend/Swagger: http://localhost:8000/docs
+- Backend/Swagger: http://localhost:8000/docs (nur mit ENVIRONMENT=development)
 
 Details, Test-Anleitung und Anmeldedaten für die Beispieldaten stehen in
 [`docs/phases/PHASE_1.md`](docs/phases/PHASE_1.md).
@@ -78,7 +78,8 @@ docs/phases/  Phasen-spezifische READMEs
 docs/DEPLOYMENT.md             Produktions-Deployment (Abschnitt 15)
 scripts/deploy.sh              Automatisiertes Produktions-Deployment (siehe docs/DEPLOYMENT.md)
 scripts/uninstall.sh            Installation vollständig entfernen (siehe docs/DEPLOYMENT.md)
-scripts/backup.sh, restore.sh  Backup-Automatisierung (siehe docs/DEPLOYMENT.md)
+scripts/backup.sh, restore.sh, backup-pruefen.sh  Backup mit austauschbaren Zielen, Restore, Test-Restore (siehe docs/DEPLOYMENT.md, Abschnitt 5)
+scripts/tests/run.sh           Shell-Tests der Backup-Skripte (ohne Docker: bash scripts/tests/run.sh)
 docker-compose.yml             Basis-Stack (Postgres, MinIO, Backend, Frontend, Worker)
 docker-compose.override.yml    Lokale Entwicklung (Hot-Reload, offene Ports)
 docker-compose.prod.yml        Produktions-Overlay (Caddy-Reverse-Proxy, TLS)

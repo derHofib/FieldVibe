@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
@@ -13,6 +13,7 @@ from app.models.pruefzyklus import Pruefzyklus
 from app.models.termin import Termin
 from app.models.vorgang import Vorgang
 from app.schemas.story import Ampel, StoriesResponse, StoryItem
+from app.services.zuweisung_service import erlaubte_kunde_ids
 
 router = APIRouter(
     prefix="/api/stories",
@@ -40,6 +41,7 @@ async def get_stories(
     jetzt = datetime.now(timezone.utc)
     heute_datum = jetzt.date()
     schwelle = jetzt - timedelta(days=WARTET_KUNDE_SCHWELLE_TAGE)
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
 
     # "heute": die eigene Tagesplanung des Aufrufers -- die Story-Leiste ist
     # eine persönliche Kurzübersicht, kein Dispo-Board für das ganze Team
@@ -72,12 +74,19 @@ async def get_stories(
     horizont = heute_datum + timedelta(days=settings.pruefzyklus_vorlauf_tage)
     fristen: list[StoryItem] = []
 
-    pruefzyklen_result = await session.execute(
+    pruefzyklen_stmt = (
         select(Pruefzyklus, Anlage.bezeichnung)
         .join(Anlage, Anlage.id == Pruefzyklus.anlage_id)
         .where(Pruefzyklus.aktiv.is_(True), Pruefzyklus.naechste_pruefung_am <= horizont)
         .order_by(Pruefzyklus.naechste_pruefung_am.asc())
     )
+    if erlaubte_kunden is not None:
+        # Interne Objekte (Fahrzeug/Lager, kunde_id NULL) bleiben sichtbar --
+        # nur Kundenanlagen fremder Kunden fallen raus.
+        pruefzyklen_stmt = pruefzyklen_stmt.where(
+            or_(Anlage.kunde_id.is_(None), Anlage.kunde_id.in_(erlaubte_kunden))
+        )
+    pruefzyklen_result = await session.execute(pruefzyklen_stmt)
     for zyklus, anlage_bezeichnung in pruefzyklen_result.all():
         # naechste_pruefung_am ist seit der waehlbaren Intervall-Einheit ein
         # Zeitstempel (siehe app/models/pruefzyklus.py) -- fuer den
@@ -133,11 +142,14 @@ async def get_stories(
             )
         )
 
-    result = await session.execute(
+    wartet_stmt = (
         select(Vorgang)
         .where(Vorgang.status == "wartet_kunde", Vorgang.last_activity_at < schwelle)
         .order_by(Vorgang.last_activity_at.asc())
     )
+    if erlaubte_kunden is not None:
+        wartet_stmt = wartet_stmt.where(Vorgang.kunde_id.in_(erlaubte_kunden))
+    result = await session.execute(wartet_stmt)
     wartet_kunde = [
         StoryItem(
             titel=f"{v.vorgangsnummer}: {v.titel}",

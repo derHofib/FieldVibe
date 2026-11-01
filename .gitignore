@@ -15,10 +15,18 @@ frontend/dist/
 frontend/dev-dist/
 *.tsbuildinfo
 
+# Playwright (Phase D, siehe docs/ui-redesign/REVIEW.md)
+frontend/e2e-report/
+frontend/e2e-screenshots/
+frontend/test-results/
+
 # Env / secrets
 .env
 .env.*
 !.env.example
+
+# Deploy-Zustand (Image-Tags fuer den Rollback, scripts/deploy-lib.sh)
+.deploy-state
 
 # Data
 postgres-data/
@@ -30,3 +38,6 @@ backups/
 .vscode/
 .idea/
 .DS_Store
+
+# E-Rechnungs-Pruefwerkzeug (scripts/e-rechnung/installieren.sh)
+.cache/

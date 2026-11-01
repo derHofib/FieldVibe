@@ -1,10 +1,12 @@
 import {
+  Archive,
+  CalendarClock,
   ClipboardList,
   Clock,
-  LayoutGrid,
   type LucideIcon,
   Plug,
   Tags,
+  Timer,
   TrendingUp,
   UserCog,
   Users,
@@ -14,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 
 import { IconBadge, type IconTone } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
+import { istOfficeHost } from "../../office/hostname";
 import { istModulAktiv } from "../../utils/module";
 
 function SettingsLink({
@@ -32,14 +35,14 @@ function SettingsLink({
   return (
     <button
       onClick={onClick}
-      className="card-interactive btn-touch flex w-full items-center gap-3 rounded-lg bg-white p-4 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+      className="card-interactive btn-touch flex w-full items-center gap-3 card-ap p-4 text-left"
     >
       <IconBadge icon={icon} tone={tone} />
       <span className="min-w-0 flex-1">
-        <span className="block font-medium text-slate-800 dark:text-stone-100">{label}</span>
-        <span className="block text-xs text-slate-500 dark:text-stone-400">{beschreibung}</span>
+        <span className="block font-medium text-label">{label}</span>
+        <span className="block text-xs text-label2">{beschreibung}</span>
       </span>
-      <span className="text-slate-300 dark:text-stone-600">›</span>
+      <span className="text-label2">›</span>
     </button>
   );
 }
@@ -51,14 +54,14 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Einstellungen</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <h1 className="text-lg font-bold text-label">Einstellungen</h1>
+        <p className="mt-1 text-sm text-label2">
           Verwaltung für {currentUser?.mandant_name ?? "diesen Mandanten"}.
         </p>
       </div>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Team
         </h2>
         <SettingsLink
@@ -91,10 +94,19 @@ export function SettingsPage() {
             onClick={() => navigate("/team-zeiten")}
           />
         )}
+        {currentUser?.darf_abwesenheiten_verwalten && istModulAktiv(currentUser, "zeiterfassung") && (
+          <SettingsLink
+            icon={CalendarClock}
+            tone="cyan"
+            label="Arbeitszeit"
+            beschreibung="Soll-Zeit je Mitarbeiter, Feiertage und Bundesland"
+            onClick={() => navigate("/einstellungen/arbeitszeit")}
+          />
+        )}
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Betrieb
         </h2>
         <SettingsLink
@@ -109,8 +121,8 @@ export function SettingsPage() {
             icon={ClipboardList}
             tone="violet"
             label="Formulare"
-            beschreibung="Checklisten & Protokolle für Auftragstypen erstellen"
-            onClick={() => navigate("/formulare")}
+            beschreibung="Checklisten & Protokolle für Leistungstypen erstellen"
+            onClick={() => navigate("/form-schemas")}
           />
         )}
         {istModulAktiv(currentUser, "statistik") && (
@@ -125,20 +137,7 @@ export function SettingsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
-          Darstellung
-        </h2>
-        <SettingsLink
-          icon={LayoutGrid}
-          tone="cyan"
-          label="Menüleiste anpassen"
-          beschreibung="Welche Seiten unten in der Navigation sichtbar sind"
-          onClick={() => navigate("/einstellungen/menueleiste")}
-        />
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Unternehmen
         </h2>
         <SettingsLink
@@ -148,6 +147,25 @@ export function SettingsPage() {
           beschreibung="Firmenlogo/-daten für Angebote, E-Mail-Versand, angebundene Dienste"
           onClick={() => navigate("/integrationen")}
         />
+        {/* Breite Tabelle, nur am Desktop (office.) und nur fuer mandant_admin (Backend: dasselbe). */}
+        {istOfficeHost() && currentUser?.role === "mandant_admin" && (
+          <SettingsLink
+            icon={Timer}
+            tone="amber"
+            label="SLA-Richtlinien"
+            beschreibung="Reaktions- und Lösungsfristen mit Eskalation"
+            onClick={() => navigate("/einstellungen/sla")}
+          />
+        )}
+        {istOfficeHost() && currentUser?.role === "mandant_admin" && (
+          <SettingsLink
+            icon={Archive}
+            tone="teal"
+            label="Daten exportieren"
+            beschreibung="Vollexport als ZIP und Z3-Export für die Finanzverwaltung"
+            onClick={() => navigate("/einstellungen/export")}
+          />
+        )}
       </section>
     </div>
   );

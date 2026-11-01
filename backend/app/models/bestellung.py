@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, ForeignKey, Numeric, SmallInteger, Text, UniqueConstraint
@@ -35,6 +36,8 @@ class Bestellung(SoftDeleteMixin, TimestampMixin, Base):
     bestellnummer: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="entwurf")
     notiz: Mapped[str | None] = mapped_column(Text)
+    # Treibt das Datum verknuepfter Zeitplan-Meilensteine (projekt_aufgaben.bestellung_id).
+    liefertermin: Mapped[date | None] = mapped_column(nullable=True)
     erstellt_von: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )

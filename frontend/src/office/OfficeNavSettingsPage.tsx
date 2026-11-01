@@ -72,14 +72,14 @@ export function OfficeNavSettingsPage() {
       <div>
         <button
           onClick={() => navigate(-1)}
-          className="text-sm text-slate-500 dark:text-stone-400"
+          className="text-sm text-label2"
         >
           ‹ Zurück
         </button>
-        <h1 className="mt-1 text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h1 className="mt-1 text-lg font-bold text-label">
           Seitenleiste anpassen
         </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-stone-400">
+        <p className="mt-1 text-sm text-label2">
           Wähle, welche Bereiche in deiner Office-Seitenleiste erscheinen sollen. Die Auswahl
           gilt nur für dich und ändert nichts an deinen eigentlichen Rechten.
         </p>
@@ -87,10 +87,10 @@ export function OfficeNavSettingsPage() {
 
       {gruppen.map(({ kategorie, seiten }) => (
         <section key={kategorie} className="space-y-2">
-          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-stone-500">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
             {kategorie}
           </h2>
-          <div className="divide-y divide-slate-100 rounded-lg bg-white shadow-xs dark:divide-stone-800 dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="divide-y divide-sep rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 ">
             {seiten.map((seite) => (
               <label
                 key={seite.key}
@@ -100,10 +100,10 @@ export function OfficeNavSettingsPage() {
                   type="checkbox"
                   checked={auswahl.has(seite.key)}
                   onChange={() => toggle(seite.key)}
-                  className="size-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 dark:border-stone-600 dark:bg-stone-800"
+                  className="size-4 rounded border-sep text-cyan-600 focus:ring-cyan-500 dark:bg-stone-800"
                 />
                 <IconBadge icon={seite.icon} tone={seite.tone} size="sm" />
-                <span className="min-w-0 flex-1 truncate font-medium text-slate-800 dark:text-stone-100">
+                <span className="min-w-0 flex-1 truncate font-medium text-label">
                   {seite.label}
                 </span>
               </label>
@@ -116,13 +116,13 @@ export function OfficeNavSettingsPage() {
         <button
           onClick={speichern}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+          className="btn-ap-primary flex-1"
         >
           {speichernMutation.isPending ? "Speichern…" : "Speichern"}
         </button>
         <button
           onClick={zuruecksetzen}
-          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch flex items-center justify-center gap-2 rounded-lg bg-card px-4 py-2.5 text-sm font-medium text-label shadow-xs dark:shadow-none dark:ring-1 "
         >
           <RotateCcw size={16} /> Alle anzeigen
         </button>

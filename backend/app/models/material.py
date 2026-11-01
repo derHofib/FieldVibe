@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 MATERIAL_BEWEGUNG_TYPEN = ("eingang", "umlagerung", "verwendung", "korrektur")
+MATERIAL_ABRECHNUNGSSTATUS = ("offen", "abgerechnet")
 
 
 class Material(SoftDeleteMixin, TimestampMixin, Base):
@@ -110,6 +111,10 @@ class MaterialVerwendung(Base):
     __tablename__ = "material_verwendungen"
     __table_args__ = (
         CheckConstraint("menge > 0", name="ck_material_verwendungen_menge_positiv"),
+        CheckConstraint(
+            f"abrechnungsstatus IN {MATERIAL_ABRECHNUNGSSTATUS}",
+            name="ck_material_verwendungen_abrechnungsstatus_valid",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -133,4 +138,14 @@ class MaterialVerwendung(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), nullable=False
+    )
+    # Spiegel zu Zeiterfassung.buchungsstatus/abgerechnet_rechnung_id: eine in
+    # eine Rechnung uebernommene Verwendung ist Rechnungsgrundlage und
+    # gesperrt. Die Sperre beruehrt Bestand/Bewegungen nicht -- die wurden
+    # schon bei der Verwendung gebucht.
+    abrechnungsstatus: Mapped[str] = mapped_column(
+        Text, nullable=False, default="offen", server_default="offen"
+    )
+    abgerechnet_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id", ondelete="SET NULL"), nullable=True, index=True
     )

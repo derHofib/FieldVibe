@@ -1,8 +1,9 @@
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import AfterValidator, BaseModel, EmailStr, field_validator
 
-from app.schemas.user import BottomNavUpdate, OfficeNavUpdate
+from app.schemas.user import MIN_PASSWORT_LAENGE, BottomNavUpdate, OfficeNavUpdate
 
 
 class LoginRequest(BaseModel):
@@ -20,12 +21,31 @@ class LoginRequest(BaseModel):
 
 class TokenPair(BaseModel):
     access_token: str
-    refresh_token: str
+    # None bei Mitarbeiter-Antworten fuer Cookie-Clients (HttpOnly-Cookie statt
+    # Body, siehe app/core/refresh_cookie.py); Portal/Partner liefern es weiter.
+    refresh_token: str | None = None
     token_type: str = "bearer"
+
+
+class LoginResponse(BaseModel):
+    """Entweder fertiges Token-Paar oder, bei aktiver MFA, nur der kurzlebige
+    Zwischen-Token fuer POST /api/auth/mfa/verifizieren."""
+
+    access_token: str | None = None
+    refresh_token: str | None = None
+    token_type: str = "bearer"
+    mfa_erforderlich: bool = False
+    mfa_token: str | None = None
 
 
 class RefreshRequest(BaseModel):
     refresh_token: str
+
+
+class UserRefreshRequest(BaseModel):
+    """Mitarbeiter-Refresh: ohne Token im Body kommt es aus dem Cookie."""
+
+    refresh_token: str | None = None
 
 
 class RegistrierenRequest(BaseModel):
@@ -38,6 +58,36 @@ class RegistrierenRequest(BaseModel):
     token: str
     name: str
     password: str
+
+
+def _mindestlaenge(v: str) -> str:
+    if len(v) < MIN_PASSWORT_LAENGE:
+        raise ValueError(f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben")
+    return v
+
+
+# Nur fuer die Passwort-vergessen/-aendern-Endpunkte: registrieren (8 Zeichen)
+# und die Admin-Funktion "Passwort direkt setzen" behalten ihre bisherige Regel.
+NeuesPasswort = Annotated[str, AfterValidator(_mindestlaenge)]
+
+
+class PasswortVergessenRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def _normalize_email(cls, v: str) -> str:
+        return v.strip().lower()
+
+
+class PasswortZuruecksetzenRequest(BaseModel):
+    token: str
+    new_password: NeuesPasswort
+
+
+class PasswortAendernRequest(BaseModel):
+    old_password: str
+    new_password: NeuesPasswort
 
 
 class CurrentUser(BaseModel):
@@ -55,9 +105,24 @@ class CurrentUser(BaseModel):
     # app/services/rechte_service.py) -- steuert, ob das Frontend den
     # "Ticket übernehmen"-Button auf der Vorgang-Detailseite anzeigt.
     darf_vorgaenge_selbst_uebernehmen: bool = False
+    # Gespiegelt aus AccountTyp.darf_zeiten_buchen (siehe
+    # app/services/rechte_service.py:darf_zeiten_buchen) -- steuert im
+    # Frontend die gesamte Buchungs-Oberflaeche (Auswahl/Aktionsleiste im
+    # Zeit-Tab, Seite "Zeiten buchen", fremden Timer beenden).
+    darf_zeiten_buchen: bool = False
+    # Gespiegelt aus AccountTyp.darf_abwesenheiten_verwalten (siehe
+    # app/services/rechte_service.py) -- Soll-Zeit/Feiertage pflegen,
+    # fremdes Soll/Saldo lesen.
+    darf_abwesenheiten_verwalten: bool = False
     name: str
     email: str
     impersonated_by: UUID | None = None
+    mfa_aktiv: bool = False
+    # Mandant verlangt MFA (firmendaten.mfa_pflicht) -- dann ist Deaktivieren gesperrt.
+    mfa_pflicht: bool = False
+    # Pflicht ist an, der Account hat noch keine MFA: das Token erlaubt nur den
+    # Einrichtungsweg, das Frontend zeigt die Einrichtung statt der App.
+    mfa_einrichtung_erforderlich: bool = False
     deaktivierte_module: list[str] = []
     # Individualisierte Bottom-Nav (siehe app/models/user.py) -- None =
     # Frontend faellt auf die Standardauswahl zurueck.
@@ -72,6 +137,10 @@ class CurrentUser(BaseModel):
     # das Frontend kann so unconditionell auf dieser Matrix pruefen, statt
     # Rollennamen fest zu verdrahten.
     rechte: dict[str, list[str]] = {}
+    # Reichweite je Recht (Bereich -> Aktion -> Scope, siehe
+    # app/core/rechte_registry.py); nur vorhandene Rechte, role != "custom"
+    # bekommt "mandant". Noch ohne UI-Auswertung.
+    rechte_scopes: dict[str, dict[str, str]] = {}
 
 
 class ImpersonateResponse(BaseModel):

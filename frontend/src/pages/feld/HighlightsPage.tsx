@@ -24,13 +24,13 @@ export function HighlightsPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
-      <h1 className="flex items-center gap-1.5 text-lg font-bold text-slate-800 dark:text-stone-100">
-        <Star size={19} strokeWidth={2} className="text-amber-500" /> Highlights
+      <h1 className="flex items-center gap-1.5 text-lg font-bold text-label">
+        <Star size={19} strokeWidth={2} className="text-st-arbeit" /> Highlights
       </h1>
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <p className="text-sm text-label2">
         Markierte Fotos aus abgeschlossenen und laufenden Vorgängen – eine kleine Werkschau.
       </p>
 
@@ -46,7 +46,7 @@ export function HighlightsPage() {
           text={
             <>
               Noch keine Highlights. Im Vorgangs-Chat lässt sich jedes Foto mit{" "}
-              <Star size={12} strokeWidth={2} className="inline text-amber-500" /> markieren.
+              <Star size={12} strokeWidth={2} className="inline text-st-arbeit" /> markieren.
             </>
           }
         />
@@ -55,7 +55,7 @@ export function HighlightsPage() {
           {highlights!.map((h) => (
             <div
               key={h.id}
-              className="card-interactive group relative overflow-hidden rounded-lg bg-white shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="card-interactive group relative overflow-hidden rounded-lg bg-card shadow-xs dark:shadow-none dark:ring-1 "
             >
               <button
                 onClick={() => navigate(`/vorgaenge/${h.vorgang_id}`)}
@@ -69,10 +69,10 @@ export function HighlightsPage() {
                   />
                 )}
                 <div className="p-2">
-                  <div className="line-clamp-1 text-xs font-medium text-slate-700 dark:text-stone-300">
+                  <div className="line-clamp-1 text-xs font-medium text-label">
                     {h.titel ?? h.vorgang_titel}
                   </div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">{h.vorgangsnummer}</div>
+                  <div className="text-xs text-label2">{h.vorgangsnummer}</div>
                 </div>
               </button>
               {/* Spiegelt app/api/routes/highlights.py:delete_highlight -- nur

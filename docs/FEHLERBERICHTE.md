@@ -1,0 +1,92 @@
+# In-App-Fehlerberichte (Betreiber-Überblick)
+
+## Funktionsweise
+
+Nutzer melden Fehler direkt in der App (Beschreibung, Schweregrad, optional
+Screenshot). Das Frontend hängt technischen Kontext an (Route, App-Version,
+Commit, Klickpfad, Konsolenfehler, fehlgeschlagene Requests). Berichte liegen
+mandantengetrennt (RLS) in der Datenbank, Screenshots im S3/MinIO-Speicher.
+Gleichartige Fehler erhalten denselben Fingerprint und werden als mögliche
+Duplikate markiert. Super-Admin und Mandanten-Admin sehen die Berichte in der
+App; Claude greift über die Service-API (`/api/service/fehlerberichte`) zu,
+siehe `docs/BUGFIX_WORKFLOW.md`.
+
+## Ideen und Änderungswünsche
+
+Neben Fehlern können Mitarbeiter Ideen melden (`art` = `idee`; gleiches Recht
+`fehlerberichte.erstellen`). Ideen sind Produktwünsche: „Was soll sich ändern?“
+(Beschreibung) und „Warum / Nutzen“ (erwartet), Priorität statt Schweregrad
+(`blockierend` ist für Ideen nicht erlaubt). Es gibt keine Fingerprint-/
+Duplikaterkennung. Die Statuswerte sind dieselben; für Ideen heißen sie:
+`neu` = Eingegangen, `gesichtet` = **Freigegeben**, `in_arbeit` = In Umsetzung,
+`behoben` = **Umgesetzt**, `abgelehnt`, `duplikat`.
+
+**Freigabe-Ablauf:** Ideen werden nur umgesetzt, wenn der Super-Admin sie
+freigegeben hat.
+
+1. Mitarbeiter meldet die Idee (Status `neu`).
+2. Nur der Super-Admin ändert Status/Duplikat/Notiz einer Idee (Mandanten-
+   Admins erhalten 403). Freigabe = Status `gesichtet`; dabei wird
+   `freigegeben_am` gesetzt, ablehnen oder zurück auf `neu` löscht es wieder.
+3. Claude bearbeitet nur freigegebene Ideen (`gesichtet`/`in_arbeit`). Die
+   Service-API erzwingt das: `in_arbeit`/`behoben` auf nicht freigegebene Ideen
+   ergibt 409, `gesichtet`/`neu`/`abgelehnt`/`duplikat` auf Ideen 403.
+4. Umsetzung als PR (nicht gemergt), danach `behoben` mit PR-Link. Details:
+   `docs/BUGFIX_WORKFLOW.md`.
+
+## Recht „Fehlerberichte"
+
+Rechte-Bereich `fehlerberichte` (sehen, erstellen, bearbeiten, löschen) in der
+Rechte-Matrix der Account-Typen. „erstellen" bedeutet melden. Wer Berichte
+melden oder einsehen soll, braucht das jeweilige Recht.
+
+## Datenschutz
+
+- Schwärzung doppelt: im Frontend vor dem Senden und serverseitig als zweite
+  Verteidigungslinie (Tokens, Authorization-/Cookie-Header, Passwort-/PIN-
+  artige Schlüssel, JWTs).
+- Aufbewahrung: `FIELDVIBE_FEHLERBERICHT_AUFBEWAHRUNG_TAGE` (Standard 90).
+  Danach löscht der Worker Berichte samt Screenshots.
+- Der Service-Zugriff ist lesend über alle Mandanten und schreibend nur für
+  Status (bei Ideen eingeschränkt, s. o.), Lösungsnotiz, Fix-Commit und PR-URL; jeder Zugriff wird im Audit-Log
+  protokolliert (`fehlerbericht.service_zugriff`).
+- Berichte können Kundendaten enthalten. Der Workflow verbietet, sie in
+  Commits/PRs zu übernehmen. Prüfen, ob die Weitergabe an Claude zu eurer
+  Auftragsverarbeitung/Datenschutzerklärung passt.
+
+## Service-Token einrichten
+
+1. Token erzeugen: `docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm backend python -m app.cli fehlerbericht-token`
+   (bzw. mit `docker-compose.ip.yml` statt `.prod.yml`).
+   Die Ausgabe enthält Klartext-Token (nur einmal sichtbar) und Hash.
+2. Hash in die `.env` des Servers: `FIELDVIBE_FEHLERBERICHT_TOKEN_HASH=<hash>`.
+3. Backend neu starten (`docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d backend`). Ohne Hash antwortet
+   die Service-API mit 404.
+4. Klartext-Token als Umgebungsvariable `FIELDVIBE_BUGREPORT_TOKEN` (zusammen
+   mit `FIELDVIBE_API_URL`, z. B. `https://api.fieldvibe.de`) in der
+   Claude-Code-Cloud-Umgebung hinterlegen (Secrets der Umgebung), nie im Repo.
+5. API-Domain in die Netzwerk-Allowlist der Claude-Code-Umgebung eintragen.
+   Für Screenshots im MCP-Server zusätzlich die Domain des S3-Speichers
+   (presigned URLs), sonst kommen nur URLs statt Bilder.
+6. Test: `scripts/fehlerberichte.sh liste`.
+
+Sperre: 10 Fehlversuche (falsches Token) je IP und 15 Minuten führen zu 429 --
+in der Zeit wird auch das richtige Token abgewiesen.
+
+## Geplante Claude-Code-Routine
+
+Beispiel-Prompt:
+
+> Arbeite offene Fehlerberichte gemäß docs/BUGFIX_WORKFLOW.md ab, max. 3 pro
+> Lauf. Starte mit `scripts/fehlerberichte.sh liste neu fehler` (blockierend/
+> hoch zuerst). Danach, falls noch Kapazität: freigegebene Ideen
+> (`scripts/fehlerberichte.sh liste gesichtet - idee`), nie `neu` oder
+> `abgelehnt`. Unklare Ideen nicht raten, sondern per `notiz` rückfragen.
+> Nichts mergen.
+
+## Token-Rotation
+
+Neues Token erzeugen (Schritt 1), neuen Hash in `.env` ersetzen, Backend
+neu starten (das alte Token ist sofort ungültig), neues Token in der
+Claude-Umgebung eintragen. Bei Verdacht auf Leck sofort rotieren; der Hash
+allein ist nicht verwendbar.

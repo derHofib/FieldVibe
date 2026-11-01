@@ -1,11 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
 import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
-import type { Einladung, EinladungRolle, Role } from "../types";
+import { Sheet } from "../components/apple/Sheet";
+import type { Einladung, EinladungRolle, Role, User } from "../types";
+import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
+import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -43,7 +46,7 @@ function LinkKopierenButton({ link }: { link: string }) {
         setKopiert(true);
         setTimeout(() => setKopiert(false), 1500);
       }}
-      className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+      className="btn-touch btn-ap"
     >
       {kopiert ? "Kopiert ✓" : "Link kopieren"}
     </button>
@@ -64,7 +67,37 @@ export function UsersPage() {
   const [mandantId, setMandantId] = useState<string>("");
   const [letzteEinladung, setLetzteEinladung] = useState<Einladung | null>(null);
 
-  const { data: users, isLoading } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const [versteckteAnzeigen, setVersteckteAnzeigen] = useState(false);
+  const klickZeiten = useRef<number[]>([]);
+  const [loeschZiel, setLoeschZiel] = useState<User | null>(null);
+  const [loeschBestaetigung, setLoeschBestaetigung] = useState("");
+
+  useEffect(() => {
+    function aufTaste(e: KeyboardEvent) {
+      if (istVersteckteTastenkombi(e)) {
+        e.preventDefault();
+        setVersteckteAnzeigen(true);
+      }
+    }
+    document.addEventListener("keydown", aufTaste);
+    return () => document.removeEventListener("keydown", aufTaste);
+  }, []);
+
+  function aufUeberschriftKlick() {
+    const { zeiten, erreicht } = klickFolge(klickZeiten.current, Date.now());
+    klickZeiten.current = zeiten;
+    if (erreicht) setVersteckteAnzeigen(true);
+  }
+
+  function versteckteAusblenden() {
+    setVersteckteAnzeigen(false);
+    if (role === "loesch_ansicht" || role === "loesch_operativ") setRole("mandant_admin");
+  }
+
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users", { versteckte: versteckteAnzeigen }],
+    queryFn: versteckteAnzeigen ? usersApi.listMitVersteckten : usersApi.list,
+  });
   const { data: mandanten } = useQuery({
     queryKey: ["mandanten"],
     queryFn: mandantenApi.list,
@@ -120,17 +153,38 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
   });
 
+  const abmeldenMutation = useMutation({
+    mutationFn: usersApi.abmeldenErzwingen,
+  });
+
+  const mfaResetMutation = useMutation({
+    mutationFn: usersApi.mfaZuruecksetzen,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users"] }),
+  });
+
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: usersApi.remove,
     onSuccess: () => {
       setDeleteError(null);
+      setLoeschZiel(null);
+      setLoeschBestaetigung("");
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
   const kannEingeladenWerden = istEinladungsfaehig(role);
+  const verfuegbareRollen = (isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).filter(
+    (r) => versteckteAnzeigen || (r !== "loesch_ansicht" && r !== "loesch_operativ"),
+  );
+  const loeschErwartet = loeschZiel ? loeschZiel.name.trim() || loeschZiel.email : "";
+  const loeschBestaetigt = loeschZiel !== null && loeschBestaetigung.trim() === loeschErwartet;
+
+  function loeschDialogSchliessen() {
+    setLoeschZiel(null);
+    setLoeschBestaetigung("");
+  }
 
   function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -172,52 +226,53 @@ export function UsersPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">
+        <h2 className="mb-4 text-lg font-bold text-label">
           {kannEingeladenWerden ? "Kollegen einladen" : "Neuen Account anlegen"}
         </h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Name</label>
+              <label className="mb-1 block text-sm font-medium text-label">Name</label>
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               />
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">E-Mail</label>
+            <label className="mb-1 block text-sm font-medium text-label">E-Mail</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Passwort</label>
+              <label className="mb-1 block text-sm font-medium text-label">Passwort</label>
               <input
                 type="password"
                 required
-                minLength={8}
+                minLength={MIN_PASSWORT_LAENGE}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               />
+              <p className="mt-1 text-xs text-label2">Mindestens {MIN_PASSWORT_LAENGE} Zeichen.</p>
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Rolle</label>
+            <label className="mb-1 block text-sm font-medium text-label">Rolle</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
-              className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
             >
-              {(isSuperAdmin ? SUPER_ADMIN_ROLLEN : MANDANT_ADMIN_ROLLEN).map((value) => (
+              {verfuegbareRollen.map((value) => (
                 <option key={value} value={value}>
                   {value === "custom" ? "Account-Typ…" : ROLE_LABEL[value]}
                 </option>
@@ -226,7 +281,7 @@ export function UsersPage() {
           </div>
           {role === "custom" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+              <label className="mb-1 block text-sm font-medium text-label">
                 Account-Typ
               </label>
               {accountTypen && accountTypen.length > 0 ? (
@@ -234,7 +289,7 @@ export function UsersPage() {
                   required
                   value={accountTypId}
                   onChange={(e) => setAccountTypId(e.target.value)}
-                  className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                  className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
                 >
                   <option value="" disabled>
                     Bitte wählen…
@@ -249,7 +304,7 @@ export function UsersPage() {
               ) : (
                 <Link
                   to="/account-typen"
-                  className="text-sm font-medium text-blue-700 hover:underline dark:text-blue-400"
+                  className="text-sm font-medium text-tint-text hover:underline"
                 >
                   Noch keine Account-Typen — jetzt anlegen →
                 </Link>
@@ -258,12 +313,12 @@ export function UsersPage() {
           )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Mandant</label>
+              <label className="mb-1 block text-sm font-medium text-label">Mandant</label>
               <select
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
-                className="btn-touch rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
               >
                 <option value="" disabled>
                   Bitte wählen…
@@ -279,14 +334,14 @@ export function UsersPage() {
           <button
             type="submit"
             disabled={createMutation.isPending || einladenMutation.isPending}
-            className="btn-touch rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-cyan-600 dark:hover:bg-cyan-500"
+            className="btn-touch btn-ap-primary"
           >
             {kannEingeladenWerden ? "Einladen" : "Anlegen"}
           </button>
         </form>
-        {formError && <p className="mt-2 text-sm text-red-700 dark:text-red-400">{formError}</p>}
+        {formError && <p className="mt-2 text-sm text-st-fehlt ">{formError}</p>}
         {letzteEinladung && (
-          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md bg-cyan-50 px-4 py-3 text-sm text-cyan-900 dark:bg-cyan-500/10 dark:text-cyan-200">
+          <div className="mt-3 flex flex-wrap items-center gap-3 border border-st-erledigt px-4 py-3 text-sm text-st-erledigt ">
             <span>
               Einladung an <strong>{letzteEinladung.email}</strong> verschickt.
             </span>
@@ -299,9 +354,9 @@ export function UsersPage() {
 
       {einladungen && einladungen.length > 0 && (
         <section>
-          <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Offene Einladungen</h2>
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
+          <h2 className="mb-4 text-lg font-bold text-label">Offene Einladungen</h2>
+          <table className="w-full card-ap text-left">
+            <thead className="text-sm text-label2">
               <tr>
                 <th className="px-4 py-3">E-Mail</th>
                 <th className="px-4 py-3">Rolle</th>
@@ -309,19 +364,19 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
+            <tbody className="divide-y divide-sep text-sm">
               {einladungen
                 .filter((e) => e.status === "offen")
                 .map((e) => (
                   <tr key={e.id}>
-                    <td className="px-4 py-3 text-slate-800 dark:text-stone-100">{e.email}</td>
-                    <td className="px-4 py-3 text-slate-700 dark:text-stone-300">{einladungRolleLabel(e)}</td>
+                    <td className="px-4 py-3 text-label">{e.email}</td>
+                    <td className="px-4 py-3 text-label">{einladungRolleLabel(e)}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        className={`border px-2 py-0.5 text-xs font-semibold ${
                           e.abgelaufen
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
-                            : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-400"
+                            ? "border-st-arbeit text-st-arbeit "
+                            : "border-sep text-label2"
                         }`}
                       >
                         {e.abgelaufen ? "Abgelaufen" : "Offen"}
@@ -332,7 +387,7 @@ export function UsersPage() {
                         {e.registrierungslink && <LinkKopierenButton link={e.registrierungslink} />}
                         <button
                           onClick={() => resendMutation.mutate(e.id)}
-                          className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                          className="btn-touch btn-ap"
                         >
                           Erneut senden
                         </button>
@@ -342,7 +397,7 @@ export function UsersPage() {
                               revokeMutation.mutate(e.id);
                             }
                           }}
-                          className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                          className="btn-touch border border-st-fehlt px-3 py-2 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
                         >
                           Widerrufen
                         </button>
@@ -356,13 +411,23 @@ export function UsersPage() {
       )}
 
       <section>
-        <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Accounts</h2>
-        {deleteError && <p className="mb-2 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
+        <h2 className="mb-4 text-lg font-bold text-label" onClick={aufUeberschriftKlick}>
+          Accounts
+        </h2>
+        {versteckteAnzeigen && (
+          <p className="mb-2 flex items-center gap-2 text-sm text-label2">
+            Versteckte Accounts werden angezeigt
+            <button type="button" onClick={versteckteAusblenden} className="font-medium text-tint-text hover:underline">
+              Ausblenden
+            </button>
+          </p>
+        )}
+        {deleteError && <p className="mb-2 text-sm text-st-fehlt ">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+          <p className="text-label2">Lädt…</p>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-            <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">
+          <table className="w-full card-ap text-left">
+            <thead className="text-sm text-label2">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">E-Mail</th>
@@ -372,25 +437,25 @@ export function UsersPage() {
                 <th className="px-4 py-3">Aktion</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm dark:divide-stone-800">
+            <tbody className="divide-y divide-sep text-sm">
               {users?.map((u) => (
                 <tr key={u.id}>
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-stone-100">{u.name}</td>
-                  <td className="px-4 py-3 text-slate-500 dark:text-stone-400">{u.email}</td>
-                  <td className="px-4 py-3 text-slate-700 dark:text-stone-300">
+                  <td className="px-4 py-3 font-medium text-label">{u.name}</td>
+                  <td className="px-4 py-3 text-label2">{u.email}</td>
+                  <td className="px-4 py-3 text-label">
                     {u.role === "custom" ? u.account_typ_name ?? "Account-Typ" : ROLE_LABEL[u.role]}
                   </td>
                   {isSuperAdmin && (
-                    <td className="px-4 py-3 text-slate-500 dark:text-stone-400">
+                    <td className="px-4 py-3 text-label2">
                       {u.mandant_id ? mandantNameById.get(u.mandant_id) ?? "–" : "–"}
                     </td>
                   )}
                   <td className="px-4 py-3">
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      className={`border px-2 py-0.5 text-xs font-semibold ${
                         u.aktiv
-                          ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300"
-                          : "bg-slate-200 text-slate-600 dark:bg-stone-700 dark:text-stone-400"
+                          ? "border-st-erledigt text-st-erledigt "
+                          : "border-sep text-label2"
                       }`}
                     >
                       {u.aktiv ? "Aktiv" : "Deaktiviert"}
@@ -402,20 +467,49 @@ export function UsersPage() {
                         onClick={() =>
                           toggleActiveMutation.mutate({ id: u.id, aktiv: !u.aktiv })
                         }
-                        className="btn-touch rounded-md bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                        className="btn-touch btn-ap"
                       >
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
                       </button>
                       <button
                         onClick={() => {
-                          if (window.confirm(`${u.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
-                            setDeleteError(null);
-                            deleteMutation.mutate(u.id);
+                          if (window.confirm(`${u.name} auf allen Geräten abmelden?`)) {
+                            abmeldenMutation.mutate(u.id);
                           }
+                        }}
+                        disabled={u.id === currentUser?.id || abmeldenMutation.isPending}
+                        title={
+                          u.id === currentUser?.id
+                            ? "Eigenes Konto: im Profil „Auf allen Geräten abmelden“"
+                            : "Alle Sitzungen dieses Nutzers beenden"
+                        }
+                        className="btn-touch btn-ap disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Abmelden erzwingen
+                      </button>
+                      {u.mfa_aktiv && u.id !== currentUser?.id && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm(`Zwei-Faktor-Anmeldung von ${u.name} zurücksetzen? Der Nutzer wird überall abgemeldet.`)) {
+                              mfaResetMutation.mutate(u.id);
+                            }
+                          }}
+                          disabled={mfaResetMutation.isPending}
+                          title="Bei verlorenem Gerät ohne Wiederherstellungscodes"
+                          className="btn-touch btn-ap disabled:opacity-40"
+                        >
+                          MFA zurücksetzen
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setDeleteError(null);
+                          setLoeschBestaetigung("");
+                          setLoeschZiel(u);
                         }}
                         disabled={u.id === currentUser?.id}
                         title={u.id === currentUser?.id ? "Eigener Account kann nicht gelöscht werden" : undefined}
-                        className="btn-touch rounded-md bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+                        className="btn-touch border border-st-fehlt px-3 py-2 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-st-fehlt-dot"
                       >
                         Löschen
                       </button>
@@ -427,6 +521,49 @@ export function UsersPage() {
           </table>
         )}
       </section>
+
+      <Sheet
+        offen={loeschZiel !== null}
+        onClose={loeschDialogSchliessen}
+        titel="Account löschen"
+        links={
+          <button type="button" onClick={loeschDialogSchliessen} className="text-[17px] text-tint-text">
+            Abbrechen
+          </button>
+        }
+        rechts={
+          <button
+            type="button"
+            disabled={!loeschBestaetigt || deleteMutation.isPending}
+            onClick={() => loeschZiel && deleteMutation.mutate(loeschZiel.id)}
+            className="text-[17px] font-semibold text-st-fehlt disabled:opacity-40"
+          >
+            Löschen
+          </button>
+        }
+      >
+        {loeschZiel && (
+          <div className="space-y-4 p-4">
+            <p className="text-[15px] text-label">
+              Account von {loeschZiel.name || loeschZiel.email} endgültig löschen? Persönliche Daten werden
+              unwiderruflich entfernt. Zeiterfassungen, Rechnungen und Verlauf bleiben erhalten und werden als
+              „Gelöschter Nutzer“ angezeigt.
+            </p>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-label">
+                Zur Bestätigung „{loeschErwartet}“ eintippen
+              </label>
+              <input
+                value={loeschBestaetigung}
+                onChange={(e) => setLoeschBestaetigung(e.target.value)}
+                autoComplete="off"
+                className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
+              />
+            </div>
+            {deleteError && <p className="text-sm text-st-fehlt">{deleteError}</p>}
+          </div>
+        )}
+      </Sheet>
     </div>
   );
 }
