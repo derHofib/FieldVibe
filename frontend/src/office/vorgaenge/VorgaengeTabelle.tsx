@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { StatusPille } from "../../components/apple/StatusPille";
+import { SlaBadge } from "../../components/SlaBadge";
 import { vorgangStatusZuToken } from "../../components/apple/status";
 import { STATUS_LABEL, istUeberfaellig } from "../../config/vorgangDarstellung";
 import type { FeedCard } from "../../types";
@@ -31,6 +32,11 @@ const SPALTEN = [
     cell: (info) => <StatusPille status={vorgangStatusZuToken(info.getValue())} label={STATUS_LABEL[info.getValue()]} />,
   }),
   spalten.accessor("prioritaet", { header: "Prio." }),
+  spalten.accessor((v) => v.sla?.status ?? "", {
+    id: "sla",
+    header: "SLA",
+    cell: (info) => <SlaBadge sla={info.row.original.sla} />,
+  }),
   spalten.accessor("faelligkeit_am", {
     header: "Fällig",
     cell: (info) => {

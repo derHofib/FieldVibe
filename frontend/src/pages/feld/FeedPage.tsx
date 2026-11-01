@@ -9,6 +9,7 @@ import Blueprint from "../../components/Blueprint";
 import { FilterChip } from "../../components/apple/FilterChip";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { StatusPille } from "../../components/apple/StatusPille";
+import { SlaBadge } from "../../components/SlaBadge";
 import { statusDotFarbe, vorgangStatusZuToken } from "../../components/apple/status";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
@@ -163,6 +164,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
               </span>
             )}
             <StatusPille status={vorgangStatusZuToken(card.status)} label={STATUS_LABEL[card.status]} />
+            {card.sla && card.sla.status !== "erfuellt" && <SlaBadge sla={card.sla} />}
             <span className="whitespace-nowrap text-xs text-label2">
               {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
             </span>

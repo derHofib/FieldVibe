@@ -455,6 +455,18 @@ export interface VorgangKennzahlen {
   abgeschlossene_vorgaenge_zeitraum: number;
 }
 
+export type SlaStatus = "ok" | "gefaehrdet" | "verletzt" | "pausiert" | "erfuellt";
+
+export interface SlaInfo {
+  status: SlaStatus;
+  reaktion_faellig_am: string | null;
+  loesung_faellig_am: string | null;
+  reagiert_am: string | null;
+  geloest_am: string | null;
+  reaktion_ergebnis: "erfuellt" | "verletzt" | null;
+  loesung_ergebnis: "erfuellt" | "verletzt" | null;
+}
+
 export interface Vorgang {
   id: string;
   vorgangsnummer: string;
@@ -486,6 +498,7 @@ export interface Vorgang {
   partner_freigabe_status: PartnerFreigabeStatus | null;
   partner_ablehnung_grund: string | null;
   partner_honorar_netto: string | null;
+  sla: SlaInfo | null;
   created_at: string;
   updated_at: string;
 }
@@ -724,6 +737,7 @@ export interface FeedCard {
   geo_lat: number | null;
   geo_lng: number | null;
   zugewiesener_name: string | null;
+  sla: SlaInfo | null;
 }
 
 export interface FeedResponse {

@@ -35,6 +35,7 @@ import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
 import { Sheet } from "../../components/apple/Sheet";
 import { StatusPille } from "../../components/apple/StatusPille";
+import { SlaBadge } from "../../components/SlaBadge";
 import { ZeiteintragSheet } from "../../components/ZeiteintragSheet";
 import { useAuth } from "../../context/AuthContext";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
@@ -3503,8 +3504,9 @@ export function VorgangDetailPage({
       {/* Fakten-Leiste: die wichtigsten Eckdaten auf einen Blick, bevor man
           in die Karte darunter eintaucht (siehe Design-Vorschlag "Feed und
           Detail neu gedacht"). */}
-      {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id) && (
+      {(anlage?.bezeichnung || standort?.bezeichnung || vorgang.faelligkeit_am || !vorgang.zugewiesener_user_id || vorgang.sla) && (
         <div className="flex flex-wrap gap-1.5">
+          <SlaBadge sla={vorgang.sla} />
           {(anlage?.bezeichnung || standort?.bezeichnung) && (
             <span className="flex items-center gap-1.5 border border-sep px-2.5 py-1 text-xs font-medium text-label">
               <Building2 size={13} strokeWidth={1.5} /> {anlage?.bezeichnung ?? standort?.bezeichnung}

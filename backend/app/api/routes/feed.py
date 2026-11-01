@@ -346,6 +346,7 @@ async def get_feed(
                 timer_laeuft=vorgang.id in vorgaenge_mit_laufendem_timer,
                 dauerauftrag_id=vorgang.dauerauftrag_id,
                 zugewiesener_name=zugewiesener_name,
+                sla=vorgang.sla,
             )
         )
 
