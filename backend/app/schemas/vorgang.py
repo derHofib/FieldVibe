@@ -103,6 +103,16 @@ class VorgangUpdate(BaseModel):
         return v
 
 
+class SlaInfo(BaseModel):
+    status: Literal["ok", "gefaehrdet", "verletzt", "pausiert", "erfuellt"]
+    reaktion_faellig_am: datetime | None
+    loesung_faellig_am: datetime | None
+    reagiert_am: datetime | None
+    geloest_am: datetime | None
+    reaktion_ergebnis: Literal["erfuellt", "verletzt"] | None
+    loesung_ergebnis: Literal["erfuellt", "verletzt"] | None
+
+
 class VorgangRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -138,5 +148,6 @@ class VorgangRead(BaseModel):
     partner_freigabe_status: PartnerFreigabeStatus | None
     partner_ablehnung_grund: str | None
     partner_honorar_netto: Decimal | None
+    sla: SlaInfo | None = None
     created_at: datetime
     updated_at: datetime

@@ -44,7 +44,7 @@ from app.schemas.vorgang_abhaengigkeit import (
     VorgangAbhaengigkeitenListe,
     VorgangAbhaengigkeitRead,
 )
-from app.services import papierkorb_service
+from app.services import papierkorb_service, sla_service
 from app.services.audit_service import log_action
 from app.services.audit_service import export_protokollieren
 from app.services.csv_service import csv_response
@@ -283,6 +283,7 @@ async def create_vorgang(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Vorgangsnummer bereits vergeben"
         ) from exc
+    await sla_service.initialisieren(session, vorgang)
 
     # Dubletten zur Haupt-Anlage vermeiden (z.B. wenn dieselbe Anlage sowohl
     # als anlage_id als auch in der Standort-Checkliste ausgewaehlt wurde).
@@ -573,6 +574,8 @@ async def update_vorgang(
         )
     alter_status = vorgang.status
     alter_kunde_id = vorgang.kunde_id
+    alte_prioritaet = vorgang.prioritaet
+    alter_vertrag_id = vorgang.vertrag_id
 
     if "kunde_id" in changes:
         neuer_kunde_id = changes["kunde_id"]
@@ -744,6 +747,7 @@ async def update_vorgang(
                     payload={"von": alter_status, "nach": changes["status"]},
                 )
             )
+            await sla_service.status_gewechselt(session, vorgang, alter_status, changes["status"])
             if changes["status"] == "wartet_kunde":
                 mandant = await session.get(Mandant, auth.mandant_id)
                 tage = (
@@ -758,6 +762,11 @@ async def update_vorgang(
                 # eine noch ausstehende Wiedervorlage bezog sich auf den
                 # Warte-Zustand und ist damit hinfaellig.
                 vorgang.wiedervorlage_am = None
+
+    if "prioritaet" in changes and changes["prioritaet"] != alte_prioritaet:
+        await sla_service.prioritaet_geaendert(session, vorgang)
+    if "vertrag_id" in changes and changes["vertrag_id"] != alter_vertrag_id:
+        await sla_service.vertrag_geaendert(session, vorgang)
 
     await session.flush()
     if changes:
@@ -841,6 +850,7 @@ async def uebernehmen(
     vorgang.zugewiesener_user_id = auth.user_id
     if alter_status == "neu":
         vorgang.status = "in_arbeit"
+        await sla_service.status_gewechselt(session, vorgang, "neu", "in_arbeit")
 
     author = await session.get(User, auth.user_id)
     session.add(

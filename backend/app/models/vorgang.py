@@ -168,3 +168,26 @@ class Vorgang(SoftDeleteMixin, TimestampMixin, Base):
     partner_freigabe_status: Mapped[str | None] = mapped_column(Text, nullable=True)
     partner_ablehnung_grund: Mapped[str | None] = mapped_column(Text, nullable=True)
     partner_honorar_netto: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+
+    # SLA (docs/konzepte/SLA.md): Snapshot und Messwerte, geschrieben ausschliesslich
+    # von app/services/sla_service.py. sla_laeuft_seit = NULL: Uhr steht oder erledigt.
+    sla_richtlinie_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sla_richtlinien.id"), nullable=True
+    )
+    sla_start_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_laeuft_seit: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_reaktion_faellig_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_loesung_faellig_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_reagiert_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_geloest_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_reaktion_ergebnis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sla_loesung_ergebnis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sla_reaktion_verbraucht_min: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+    sla_loesung_verbraucht_min: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+
+    @property
+    def sla(self) -> dict | None:
+        """Abgeleitete Anzeige fuer VorgangRead (nicht persistiert)."""
+        from app.services.sla_service import sla_info
+
+        return sla_info(self)

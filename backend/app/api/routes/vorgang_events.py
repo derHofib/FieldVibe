@@ -9,6 +9,7 @@ from app.api.deps import AuthContext, get_current_user, get_db, require_recht, r
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.vorgang_event import VorgangEventCreate, VorgangEventRead
+from app.services import sla_service
 from app.services import storage_service
 from app.services.event_bus import event_bus
 from app.services.mention_service import extract_and_notify_mentions
@@ -116,6 +117,9 @@ async def create_event(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Event-Konflikt"
         ) from exc
+
+    if body.event_type == "kommentar":
+        await sla_service.mitarbeiter_reaktion(session, vorgang)
 
     if body.body:
         await extract_and_notify_mentions(

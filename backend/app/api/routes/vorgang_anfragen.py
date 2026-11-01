@@ -17,6 +17,7 @@ from app.schemas.vorgang_anfrage import (
     VorgangAnfrageAnnehmen,
     VorgangAnfrageRead,
 )
+from app.services import sla_service
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
 from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugriff
@@ -125,6 +126,8 @@ async def annehmen(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Vorgangsnummer bereits vergeben"
         ) from exc
+    # Die Uhr startet mit dem Eingang der Anfrage, nicht mit deren Annahme.
+    await sla_service.initialisieren(session, vorgang, start=anfrage.created_at)
 
     session.add(
         VorgangEvent(
