@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     heartbeat_worker_max_alter_sekunden: int = 180
     heartbeat_mail_sync_max_alter_sekunden: int = 900
     heartbeat_email_ingest_max_alter_sekunden: int = 3 * 3600 + 900
+    # Viertelstuendlicher Job: nach einer Stunde ohne Lauf stimmt etwas nicht.
+    heartbeat_sla_max_alter_sekunden: int = 3600
     # Ein aktives Postfach ohne erfolgreichen Sync seit so vielen Minuten gilt als veraltet.
     heartbeat_mail_konto_max_alter_minuten: int = 60
     # letzter-lauf.json des Backup-Skripts (scripts/backup.sh); Compose haengt das

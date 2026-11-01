@@ -150,3 +150,20 @@ class SlaRichtlinieRead(BaseModel):
     stufen: list[SlaStufeRead] = []
     created_at: datetime
     updated_at: datetime
+
+
+class SlaFristAuswertung(BaseModel):
+    erfuellt: int
+    verletzt: int
+    offen: int
+    quote_prozent: float | None  # erfuellt / (erfuellt + verletzt), None ohne abgeschlossene Faelle
+    median_minuten: float | None
+    p90_minuten: float | None
+
+
+class SlaAuswertung(BaseModel):
+    von: datetime
+    bis: datetime
+    vorgaenge: int
+    reaktion: SlaFristAuswertung
+    loesung: SlaFristAuswertung

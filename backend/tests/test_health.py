@@ -247,3 +247,17 @@ async def test_pinge_extern_loggt_keine_url(monkeypatch, caplog):
     caplog.set_level(logging.WARNING, logger="app.heartbeat")
     assert await heartbeat_service.pinge_extern("https://hc.example/geheim") is False
     assert "geheim" not in caplog.text
+
+
+async def test_heartbeats_sla_eskalation_nur_mit_aktiver_richtlinie(make_mandant):
+    from app.models.sla import SlaRichtlinie
+
+    assert "sla_eskalation" not in {e["name"] for e in await health_service.heartbeats()}
+    mandant = await make_mandant()
+    async with system_session() as session:
+        session.add(SlaRichtlinie(mandant_id=mandant.id, name="H", kalender="rund_um_die_uhr", ziele={}, aktiv=True))
+    eintraege = {e["name"]: e for e in await health_service.heartbeats()}
+    assert eintraege["sla_eskalation"]["status"] == "fehler"  # nie gelaufen
+    await heartbeat("sla_eskalation")
+    eintraege = {e["name"]: e for e in await health_service.heartbeats()}
+    assert eintraege["sla_eskalation"]["status"] == "ok"

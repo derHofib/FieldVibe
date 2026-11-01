@@ -43,6 +43,7 @@ Details nur mit einem Plattform-Admin-Login abrufbar, anonym antwortet der Pfad 
 | `mail_sync` | Persönliche Postfächer wurden synchronisiert (nur wenn aktive Postfächer existieren) | 900 s |
 | `mail_konten` | Aktive Postfächer ohne erfolgreichen Sync seit > 60 min, mit betroffenen Mandanten | 60 min (`warnung`) |
 | `email_ingest` | Stündlicher Import von E-Mail-Rechnungen (nur mit aktiver IMAP-Integration) | gut 3 h |
+| `sla_eskalation` | Viertelstündlicher SLA-Eskalationsjob (nur wenn eine aktive SLA-Richtlinie existiert) | 60 min |
 | `mail_outbox` | Wartende, hängende und endgültig fehlgeschlagene Mails | `fehler`, sobald `failed` > 0 oder `pending` länger als 10 min überfällig |
 | `backup` | Alter und Status aus `letzter-lauf.json` | 36 h |
 

@@ -183,3 +183,45 @@ def test_sla_info_statusableitung():
     assert sla_info(verletzt)["status"] == "verletzt"
     # Verletzte Reaktion bleibt auch bei offener Loesung sichtbar.
     assert sla_info(_fake(sla_reaktion_ergebnis="verletzt", sla_reagiert_am=start), jetzt=start)["status"] == "verletzt"
+
+
+@pytest.mark.asyncio
+async def test_auswertung_zaehlt_nur_eigenen_mandanten_und_validiert(
+    client, make_mandant, make_user, make_kunde
+):
+    from sqlalchemy import update
+
+    from app.db.session import system_session
+    from app.models.vorgang import Vorgang
+
+    h, kunde, _ = await _setup(client, make_mandant, make_user, make_kunde)
+    erfuellt = (await client.post("/api/vorgaenge", headers=h, json=_vorgang(kunde))).json()
+    verletzt = (await client.post("/api/vorgaenge", headers=h, json=_vorgang(kunde))).json()
+    jetzt = datetime.now(timezone.utc)
+    async with system_session() as session:
+        await session.execute(
+            update(Vorgang).where(Vorgang.id == erfuellt["id"]).values(
+                sla_reaktion_ergebnis="erfuellt", sla_reagiert_am=jetzt, sla_start_am=jetzt - timedelta(minutes=10)
+            )
+        )
+        await session.execute(
+            update(Vorgang).where(Vorgang.id == verletzt["id"]).values(
+                sla_reaktion_ergebnis="verletzt", sla_reagiert_am=jetzt, sla_start_am=jetzt - timedelta(minutes=90)
+            )
+        )
+    # Fremder Mandant mit eigenem Vorgang darf nicht mitzaehlen.
+    h2, kunde2, _ = await _setup(client, make_mandant, make_user, make_kunde)
+    await client.post("/api/vorgaenge", headers=h2, json=_vorgang(kunde2))
+
+    params = {"von": (jetzt - timedelta(days=1)).isoformat(), "bis": (jetzt + timedelta(days=1)).isoformat()}
+    resp = await client.get("/api/sla/auswertung", headers=h, params=params)
+    assert resp.status_code == 200, resp.text
+    daten = resp.json()
+    assert daten["vorgaenge"] == 2
+    assert daten["reaktion"]["erfuellt"] == 1 and daten["reaktion"]["verletzt"] == 1
+    assert daten["reaktion"]["quote_prozent"] == 50.0
+    assert daten["reaktion"]["median_minuten"] == 50.0
+    assert daten["loesung"]["offen"] == 2 and daten["loesung"]["quote_prozent"] is None
+
+    umgekehrt = {"von": params["bis"], "bis": params["von"]}
+    assert (await client.get("/api/sla/auswertung", headers=h, params=umgekehrt)).status_code == 422

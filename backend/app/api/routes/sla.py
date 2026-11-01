@@ -1,5 +1,7 @@
 """SLA-Richtlinien (docs/konzepte/SLA.md, Phase 2): Verwaltung. Fristberechnung,
 Vorgangsintegration und Eskalation folgen in den Phasen 3 und 4."""
+import statistics
+from datetime import datetime
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,9 +12,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_recht, require_roles
 from app.models.sla import SlaEskalationsstufe, SlaRichtlinie
 from app.models.vertrag import Vertrag
-from app.schemas.sla import SlaRichtlinieCreate, SlaRichtlinieRead, SlaRichtlinieUpdate, SlaStufe
+from app.models.vorgang import Vorgang
+from app.schemas.sla import (
+    SlaAuswertung,
+    SlaFristAuswertung,
+    SlaRichtlinieCreate,
+    SlaRichtlinieRead,
+    SlaRichtlinieUpdate,
+    SlaStufe,
+)
 
 router = APIRouter(prefix="/api/sla/richtlinien", tags=["sla"])
+auswertung_router = APIRouter(prefix="/api/sla", tags=["sla"])
 
 _LESEN = [
     Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
@@ -157,3 +168,55 @@ async def delete_richtlinie(richtlinie_id: UUID, session: AsyncSession = Depends
             detail="Die Richtlinie ist Verträgen zugeordnet – bitte deaktivieren statt löschen",
         )
     await session.delete(richtlinie)
+
+
+def _frist_auswertung(zeilen: list[tuple[str | None, datetime | None, datetime | None]]) -> SlaFristAuswertung:
+    """zeilen: (Ergebnis, Start, Ende). Dauer ist Wanduhrzeit zwischen Eingang und Ereignis."""
+    erfuellt = sum(1 for e, _, _ in zeilen if e == "erfuellt")
+    verletzt = sum(1 for e, _, _ in zeilen if e == "verletzt")
+    dauern = sorted((ende - start).total_seconds() / 60 for e, start, ende in zeilen if e and start and ende)
+    abgeschlossen = erfuellt + verletzt
+    return SlaFristAuswertung(
+        erfuellt=erfuellt,
+        verletzt=verletzt,
+        offen=len(zeilen) - abgeschlossen,
+        quote_prozent=round(erfuellt * 100 / abgeschlossen, 1) if abgeschlossen else None,
+        median_minuten=round(statistics.median(dauern), 1) if dauern else None,
+        p90_minuten=round(dauern[min(len(dauern) - 1, int(len(dauern) * 0.9))], 1) if dauern else None,
+    )
+
+
+@auswertung_router.get("/auswertung", response_model=SlaAuswertung, dependencies=_LESEN)
+async def auswertung(
+    von: datetime,
+    bis: datetime,
+    vertrag_id: UUID | None = None,
+    kunde_id: UUID | None = None,
+    techniker_id: UUID | None = None,
+    session: AsyncSession = Depends(get_db),
+) -> SlaAuswertung:
+    """Erfuellungsquote der Vorgaenge mit SLA, deren Frist im Zeitraum begann.
+    Maßgeblich sind die Messwerte am Vorgang, nicht die heutige Richtlinie."""
+    if bis <= von:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="„bis“ muss nach „von“ liegen")
+    stmt = select(Vorgang).where(
+        Vorgang.sla_richtlinie_id.is_not(None),
+        Vorgang.sla_start_am >= von,
+        Vorgang.sla_start_am < bis,
+        Vorgang.geloescht_am.is_(None),
+        Vorgang.status != "storniert",
+    )
+    if vertrag_id:
+        stmt = stmt.where(Vorgang.vertrag_id == vertrag_id)
+    if kunde_id:
+        stmt = stmt.where(Vorgang.kunde_id == kunde_id)
+    if techniker_id:
+        stmt = stmt.where(Vorgang.zugewiesener_user_id == techniker_id)
+    vorgaenge = list((await session.execute(stmt)).scalars())
+    return SlaAuswertung(
+        von=von,
+        bis=bis,
+        vorgaenge=len(vorgaenge),
+        reaktion=_frist_auswertung([(v.sla_reaktion_ergebnis, v.sla_start_am, v.sla_reagiert_am) for v in vorgaenge]),
+        loesung=_frist_auswertung([(v.sla_loesung_ergebnis, v.sla_start_am, v.sla_geloest_am) for v in vorgaenge]),
+    )

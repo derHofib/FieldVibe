@@ -19,6 +19,7 @@ from app.db.session import engine, system_session
 from app.models.integration import MandantIntegration
 from app.models.mail_account import MailAccount
 from app.models.mail_outbox import MailOutbox
+from app.models.sla import SlaRichtlinie
 from app.services import storage_service
 from app.services.job_state_service import lade_laeufe
 
@@ -176,6 +177,15 @@ async def heartbeats(jetzt: datetime | None = None) -> list[dict]:
         if imap_aktiv:
             ergebnis.append(_eintrag(
                 "email_ingest", ingest.letzter_lauf_am if ingest else None, s.heartbeat_email_ingest_max_alter_sekunden, jetzt,
+            ))
+
+        sla_aktiv = (await session.execute(
+            select(func.count()).select_from(SlaRichtlinie).where(SlaRichtlinie.aktiv.is_(True))
+        )).scalar_one()
+        if sla_aktiv:
+            sla_lauf = (await lade_laeufe(session, "sla_eskalation")).get(None)
+            ergebnis.append(_eintrag(
+                "sla_eskalation", sla_lauf.letzter_lauf_am if sla_lauf else None, s.heartbeat_sla_max_alter_sekunden, jetzt,
             ))
 
         outbox = (await session.execute(
