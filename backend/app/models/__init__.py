@@ -75,7 +75,7 @@ from app.models.pruefmittel import Pruefmittel
 from app.models.pruefzyklus import Pruefzyklus
 from app.models.rechnung import Rechnung, RechnungPosition, RechnungZahlung
 from app.models.standort import Standort
-from app.models.sla import SlaEskalationsstufe, SlaRichtlinie
+from app.models.sla import SlaEskalation, SlaEskalationsstufe, SlaRichtlinie
 from app.models.tag import Tag, TagAssignment
 from app.models.termin import Termin
 from app.models.user import User
@@ -177,6 +177,7 @@ __all__ = [
     "RechnungPosition",
     "RechnungZahlung",
     "Standort",
+    "SlaEskalation",
     "SlaEskalationsstufe",
     "SlaRichtlinie",
     "Tag",

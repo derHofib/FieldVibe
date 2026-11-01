@@ -1,6 +1,13 @@
 # Konzept: SLA- und Reaktionszeit-Management
 
-Status: **Entwurf zur Abstimmung** (nichts umgesetzt) – Stand: 31.10.2026
+Status: **Phasen 1–4 umgesetzt** (Kalender, Richtlinien, Vorgangsintegration, Eskalations-Worker);
+Phasen 5–6 (Frontend, Auswertung) offen – Stand: 01.11.2026
+
+Abweichungen vom Entwurf: Ergebnis je Fristart (`sla_reaktion_ergebnis`, `sla_loesung_ergebnis`) statt
+eines gemeinsamen; Uhr als Laufabschnitte (`sla_laeuft_seit`, `sla_*_verbraucht_min`) statt Restminuten;
+Prioritätsregeln je Richtlinie/Vertrag (`prioritaet_regeln`: Leistungstyp → Priorität, hebt nur an);
+kein expliziter `sla_richtlinie_id`-Override pro Vorgang (offen). Der Job `sla_eskalation` läuft im neuen
+Takt `viertelstuendlich`; ein eigener Health-Check dafür fehlt noch.
 
 ## 1. Anlass und Ziel
 

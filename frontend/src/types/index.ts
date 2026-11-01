@@ -758,7 +758,7 @@ export interface SearchResponse {
   treffer: SearchHit[];
 }
 
-export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot" | "anfrage" | "eingangsrechnung" | "partner_kommentar" | "zeitplan_antrag";
+export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot" | "anfrage" | "eingangsrechnung" | "partner_kommentar" | "zeitplan_antrag" | "sla";
 
 export interface NotificationEntry {
   id: number;

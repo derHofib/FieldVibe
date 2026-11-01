@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, SmallInteger, Text, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, SmallInteger, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -56,3 +56,22 @@ class SlaEskalationsstufe(TimestampMixin, Base):
     aktion: Mapped[str] = mapped_column(Text, nullable=False)
     empfaenger: Mapped[str] = mapped_column(Text, nullable=False)
     position: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+
+
+class SlaEskalation(Base):
+    """Protokoll ausgeloester Stufen; Unique (vorgang, stufe) macht den Worker idempotent."""
+
+    __tablename__ = "sla_eskalationen"
+    __table_args__ = (UniqueConstraint("vorgang_id", "stufe_id", name="uq_sla_eskalationen_vorgang_stufe"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    mandant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False)
+    vorgang_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vorgaenge.id", ondelete="CASCADE"), nullable=False
+    )
+    stufe_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sla_eskalationsstufen.id", ondelete="CASCADE"), nullable=False
+    )
+    fortschritt_prozent: Mapped[int] = mapped_column(nullable=False)
+    empfaenger_anzahl: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
+    ausgeloest_am: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)

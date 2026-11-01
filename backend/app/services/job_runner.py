@@ -30,6 +30,7 @@ from app.services.fehlerbericht_service import loesche_abgelaufene_fehlerbericht
 from app.services.job_state_service import lade_laeufe, markiere_lauf
 from app.services.kreditorenbuchhaltung_service import run_kreditoren_faelligkeits_check
 from app.services.mahnwesen_service import run_mahnwesen_eskalation
+from app.services.sla_service import SLA_ESKALATION_JOB, run_sla_eskalation
 from app.services.scheduler_service import (
     run_angebot_nachfassen,
     run_dauerauftraege_scheduler,
@@ -68,10 +69,12 @@ async def _fehlerbericht_aufbewahrung() -> dict:
     return {"geloescht": await loesche_abgelaufene_fehlerberichte()}
 
 
-# (Name, Funktion, Taktung): "stuendlich" = ein Lauf je UTC-Stunde, "taeglich" = einer je
+# (Name, Funktion, Taktung): "viertelstuendlich" = einer je Viertelstunde (SLA-Fristen),
+# "stuendlich" = ein Lauf je UTC-Stunde, "taeglich" = einer je
 # UTC-Tag ab scheduler_default_stunde_utc (Aufbewahrung gilt plattformweit).
 SYSTEM_JOBS: dict[str, tuple[SystemJob, str]] = {
     "email_ingest": (_email_ingest, "stuendlich"),
+    SLA_ESKALATION_JOB: (run_sla_eskalation, "viertelstuendlich"),
     # Stuendlich: die Quelldatei eines Imports soll nach 24 Stunden weg sein, nicht erst am naechsten Tag.
     "datenimport_aufraeumen": (_datenimport_aufraeumen, "stuendlich"),
     "fehlerbericht_aufbewahrung": (_fehlerbericht_aufbewahrung, "taeglich"),
@@ -170,11 +173,12 @@ async def _fuehre_taeglichen_job(job: str, funktion: MandantenJob, jetzt: dateti
 
 async def _fuehre_systemjob(job: str, funktion: SystemJob, takt: str, jetzt: datetime) -> bool:
     s = get_settings()
-    slot = (
-        jetzt.replace(minute=0, second=0, microsecond=0)
-        if takt == "stuendlich"
-        else letzter_slot(jetzt, s.scheduler_default_stunde_utc)
-    )
+    if takt == "viertelstuendlich":
+        slot = jetzt.replace(minute=jetzt.minute - jetzt.minute % 15, second=0, microsecond=0)
+    elif takt == "stuendlich":
+        slot = jetzt.replace(minute=0, second=0, microsecond=0)
+    else:
+        slot = letzter_slot(jetzt, s.scheduler_default_stunde_utc)
     async with system_session() as session:
         lauf = (await lade_laeufe(session, job)).get(None)
     if not ist_faellig(lauf, slot, jetzt, s.scheduler_retry_minuten):

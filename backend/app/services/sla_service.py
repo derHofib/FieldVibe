@@ -11,13 +11,21 @@ dort steuert die Toleranz in prioritaet_service die Dringlichkeit."""
 from datetime import date, datetime, time, timezone
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import system_session
 from app.models.mandant import Mandant
-from app.models.sla import SlaRichtlinie
+from app.models.notification import Notification
+from app.models.organigramm import Position, PositionBesetzung
+from app.models.sla import SlaEskalation, SlaEskalationsstufe, SlaRichtlinie
+from app.models.user import User
 from app.models.vertrag import Vertrag
 from app.models.vorgang import Vorgang
+from app.services.event_bus import event_bus
+from app.services.mail_outbox_service import enqueue_email
+from app.services.zuweisung_service import dispo_verantwortliche_user_ids
 from app.services.sla_kalender import SlaKalender, add_geschaeftsminuten, geschaeftsminuten_zwischen
 
 FristArt = Literal["reaktion", "loesung"]
@@ -249,3 +257,178 @@ def sla_info(vorgang: Vorgang, *, jetzt: datetime | None = None) -> dict | None:
         if gesamt > 0 and (jetzt - start).total_seconds() / gesamt >= GEFAEHRDET_AB:
             return {**info, "status": "gefaehrdet"}
     return {**info, "status": "ok"}
+
+
+# --- Eskalation (Worker) ---------------------------------------------------------
+
+SLA_ESKALATION_JOB = "sla_eskalation"
+_EMPFAENGER_TEXT = {"reaktion": "Reaktionsfrist", "loesung": "Lösungsfrist"}
+
+
+async def _vorgesetzte(session: AsyncSession, vorgang: Vorgang, jetzt: datetime) -> set:
+    """Aktive Besetzer der uebergeordneten Positionen des Zustaendigen (Organigramm)."""
+    if vorgang.zugewiesener_user_id is None:
+        return set()
+    eigene = (
+        await session.execute(
+            select(PositionBesetzung.position_id).where(
+                PositionBesetzung.user_id == vorgang.zugewiesener_user_id,
+                PositionBesetzung.mandant_id == vorgang.mandant_id,
+                PositionBesetzung.gueltig_von <= jetzt,
+                or_(PositionBesetzung.gueltig_bis.is_(None), PositionBesetzung.gueltig_bis > jetzt),
+            )
+        )
+    ).scalars().all()
+    if not eigene:
+        return set()
+    eltern = set(
+        (await session.execute(select(Position.parent_id).where(Position.id.in_(eigene), Position.parent_id.is_not(None))))
+        .scalars()
+        .all()
+    )
+    if not eltern:
+        return set()
+    return set(
+        (
+            await session.execute(
+                select(PositionBesetzung.user_id).where(
+                    PositionBesetzung.position_id.in_(eltern),
+                    PositionBesetzung.gueltig_von <= jetzt,
+                    or_(PositionBesetzung.gueltig_bis.is_(None), PositionBesetzung.gueltig_bis > jetzt),
+                )
+            )
+        ).scalars()
+    )
+
+
+async def _admin_ids(session: AsyncSession, mandant_id) -> set:
+    return set(
+        (
+            await session.execute(
+                select(User.id).where(User.mandant_id == mandant_id, User.role == "mandant_admin", User.aktiv.is_(True))
+            )
+        ).scalars()
+    )
+
+
+async def _empfaenger(session: AsyncSession, vorgang: Vorgang, art: str, jetzt: datetime) -> list[User]:
+    if art == "zugewiesener":
+        ids = {vorgang.zugewiesener_user_id} if vorgang.zugewiesener_user_id else set()
+        if not ids:  # Niemand zustaendig: Auffangnetz wie bei den anderen Fristlaeufen.
+            ids = await dispo_verantwortliche_user_ids(session, vorgang.mandant_id)
+    elif art == "dispo":
+        ids = await dispo_verantwortliche_user_ids(session, vorgang.mandant_id)
+    elif art == "vorgesetzter":
+        ids = await _vorgesetzte(session, vorgang, jetzt) or await _admin_ids(session, vorgang.mandant_id)
+    else:
+        ids = await _admin_ids(session, vorgang.mandant_id)
+    if not ids:
+        ids = await _admin_ids(session, vorgang.mandant_id)
+    if not ids:
+        return []
+    return list(
+        (await session.execute(select(User).where(User.id.in_(ids), User.aktiv.is_(True)))).scalars()
+    )
+
+
+def _fortschritt(vorgang: Vorgang, art: FristArt, ziel: int, kal: SlaKalender, jetzt: datetime) -> int:
+    verbraucht = getattr(vorgang, f"sla_{art}_verbraucht_min")
+    if vorgang.sla_laeuft_seit is not None:
+        verbraucht += geschaeftsminuten_zwischen(vorgang.sla_laeuft_seit, jetzt, kal)
+    return verbraucht * 100 // ziel
+
+
+async def run_sla_eskalation(jetzt: datetime | None = None) -> dict:
+    """Systemjob (viertelstuendlich): loest faellige Eskalationsstufen genau einmal je
+    Vorgang und Stufe aus. Zustandsbasiert: ein nachgeholter Lauf feuert verpasste
+    Stufen einmalig, pausierte und erledigte Fristen bleiben ruhig."""
+    jetzt = jetzt or _jetzt()
+    ausgeloest = 0
+    async with system_session() as session:
+        vorgaenge = (
+            await session.execute(
+                select(Vorgang)
+                .where(
+                    Vorgang.sla_richtlinie_id.is_not(None),
+                    Vorgang.sla_laeuft_seit.is_not(None),
+                    Vorgang.geloescht_am.is_(None),
+                    Vorgang.status.notin_(ABGESCHLOSSEN_STATUS),
+                )
+                .with_for_update(skip_locked=True)
+            )
+        ).scalars().all()
+        stufen_cache: dict = {}
+        richtlinien_cache: dict = {}
+        for vorgang in vorgaenge:
+            rid = vorgang.sla_richtlinie_id
+            if rid not in richtlinien_cache:
+                richtlinie = await session.get(SlaRichtlinie, rid)
+                stufen_cache[rid] = list(
+                    (await session.execute(select(SlaEskalationsstufe).where(SlaEskalationsstufe.richtlinie_id == rid)))
+                    .scalars()
+                    .all()
+                )
+                richtlinien_cache[rid] = richtlinie
+            richtlinie = richtlinien_cache[rid]
+            if richtlinie is None or not stufen_cache[rid]:
+                continue
+            mandant = await session.get(Mandant, vorgang.mandant_id)
+            kal = kalender_von(richtlinie, mandant.bundesland if mandant else None)
+            for stufe in stufen_cache[rid]:
+                art: FristArt = stufe.frist_art  # type: ignore[assignment]
+                if not _offen(vorgang, art):
+                    continue
+                ziel = ziel_min(richtlinie, vorgang.prioritaet, art)
+                if not ziel:
+                    continue
+                stand = _fortschritt(vorgang, art, ziel, kal, jetzt)
+                if stand < stufe.schwelle_prozent:
+                    continue
+                eingefuegt = await session.execute(
+                    pg_insert(SlaEskalation)
+                    .values(
+                        mandant_id=vorgang.mandant_id, vorgang_id=vorgang.id, stufe_id=stufe.id,
+                        fortschritt_prozent=stand,
+                    )
+                    .on_conflict_do_nothing(constraint="uq_sla_eskalationen_vorgang_stufe")
+                    .returning(SlaEskalation.id)
+                )
+                eskalation_id = eingefuegt.scalar_one_or_none()
+                if eskalation_id is None:
+                    continue
+                empfaenger = await _empfaenger(session, vorgang, stufe.empfaenger, jetzt)
+                await _benachrichtigen(session, vorgang, stufe, stand, empfaenger)
+                await session.execute(
+                    update(SlaEskalation).where(SlaEskalation.id == eskalation_id).values(empfaenger_anzahl=len(empfaenger))
+                )
+                ausgeloest += 1
+    return {"eskalationen": ausgeloest}
+
+
+async def _benachrichtigen(
+    session: AsyncSession, vorgang: Vorgang, stufe: SlaEskalationsstufe, stand: int, empfaenger: list[User]
+) -> None:
+    frist = _EMPFAENGER_TEXT[stufe.frist_art]
+    verletzt = stand >= 100
+    titel = (
+        f"SLA {'verletzt' if verletzt else 'gefährdet'}: {vorgang.vorgangsnummer} – {frist} zu {stand} % verbraucht"
+    )
+    for user in empfaenger:
+        session.add(
+            Notification(
+                mandant_id=vorgang.mandant_id, user_id=user.id, typ="sla", titel=titel,
+                ref_entity_type="vorgang", ref_entity_id=vorgang.id,
+            )
+        )
+        await event_bus.publish(
+            vorgang.mandant_id, "notification",
+            {"typ": "sla", "user_id": str(user.id), "vorgang_id": str(vorgang.id), "vorgangsnummer": vorgang.vorgangsnummer},
+        )
+        if stufe.aktion == "mail" and user.email:
+            await enqueue_email(
+                session, vorgang.mandant_id, to=user.email, subject=titel,
+                body=(
+                    f"{titel}\n\nVorgang: {vorgang.titel}\nPriorität: {vorgang.prioritaet}\n"
+                    "Bitte im FieldVibe prüfen und den Vorgang bearbeiten."
+                ),
+            )
