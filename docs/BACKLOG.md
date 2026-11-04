@@ -115,9 +115,11 @@ Texte selbst (Platzhalter-Hinweis bleibt, bis URLs hinterlegt sind), Mandanten-
 Kontext im Partnerportal und auf den Kundenportal-Seiten ohne Slug (Registrieren,
 Passwort zurücksetzen) bei mehreren aktiven Mandanten.
 
-## 9. Angebot: Gliederung, Alternativ-/Bedarfspositionen, Varianten, Textbausteine (Roadmap 3.1)
+## 9. Angebot: Alternativ-/Bedarfspositionen, Varianten, Textbausteine (Roadmap 3.1)
 
-Angebote sind bisher eine flache Positionsliste mit festem Einleitungs- und Schlusstext im PDF. Offen sind Gliederung (Titel/Zwischensummen), Alternativ- und Bedarfspositionen, Varianten sowie frei wählbare Textbausteine für Einleitung und Schluss.
+Gliederung (Titel, Ordnungszahlen, Zwischensummen), Lohn-/Materialanteil je Position und die Übernahme mehrerer LV-Positionen auf einmal sind umgesetzt (Migration 0116, `POST /api/angebote/{id}/positionen/aus-lv`, `services/angebot_gliederung.py`). Entscheidungen: Titel sind Zeilen mit `zeilentyp="titel"`, Ordnungszahl und Zwischensumme werden berechnet; Einzelpositionen aus dem LV stehen vor den Gruppen, damit sie nicht in eine Zwischensumme rutschen; Rechnungen aus dem Angebot übernehmen keine Titelzeilen; die Annahme-Fassung enthält Titel nur, wenn welche existieren (Hash bestehender Angebote bleibt gleich); das Kundenportal zeigt die Gliederung, aber keinen Lohn-/Materialanteil.
+
+Offen sind Alternativ- und Bedarfspositionen, Varianten sowie frei wählbare Textbausteine für Einleitung und Schluss; ebenso Lohn/Material als Spalten im Kunden-PDF (bewusst nur intern), Unterpunkte einzeln wählen in der Oberfläche (das Backend kann es) und Umordnen ganzer Gruppen (Titel wandern nur einzeln).
 
 ## 10. DATEV-Export: Abnahme und Lücken (Roadmap 1.7)
 

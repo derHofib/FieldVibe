@@ -38,7 +38,11 @@ export function AngebotPositionSheet({
     einheit: position.einheit,
     einzelpreis: position.einzelpreis,
     positionstyp: position.positionstyp,
+    lohn: position.einzelpreis_lohn ?? "",
+    material: position.einzelpreis_material ?? "",
   });
+  const istTitel = position.zeilentyp === "titel";
+  const mitAnteilen = position.einzelpreis_lohn !== null || position.einzelpreis_material !== null;
   const [fehler, setFehler] = useState<string | null>(null);
   const [loeschenBestaetigen, setLoeschenBestaetigen] = useState(false);
 
@@ -52,12 +56,21 @@ export function AngebotPositionSheet({
 
   const speichern = useMutation({
     mutationFn: () =>
-      angeboteApi.updatePosition(angebotId, position.id, {
+      istTitel
+        ? angeboteApi.updatePosition(angebotId, position.id, { beschreibung: form.beschreibung.trim() })
+        : angeboteApi.updatePosition(angebotId, position.id, {
         artikelnummer: form.artikelnummer.trim() || null,
         beschreibung: form.beschreibung.trim(),
         menge: form.menge.replace(",", "."),
         einheit: form.einheit.trim(),
-        einzelpreis: form.einzelpreis.replace(",", "."),
+        // Entweder Gesamtpreis oder Anteile: ein Gesamtpreis allein würde
+        // die Aufteilung verwerfen.
+        ...(mitAnteilen
+          ? {
+              einzelpreis_lohn: (form.lohn || "0").replace(",", "."),
+              einzelpreis_material: (form.material || "0").replace(",", "."),
+            }
+          : { einzelpreis: form.einzelpreis.replace(",", ".") }),
         positionstyp: form.positionstyp,
       }),
     onSuccess: nachErfolg,
@@ -72,7 +85,11 @@ export function AngebotPositionSheet({
 
   function absenden(e: FormEvent) {
     e.preventDefault();
-    const problem = validierePosition(form);
+    const problem = istTitel
+      ? form.beschreibung.trim()
+        ? null
+        : "Bezeichnung fehlt"
+      : validierePosition({ ...form, einzelpreis: mitAnteilen ? "0" : form.einzelpreis });
     setFehler(problem);
     if (!problem) speichern.mutate();
   }
@@ -101,6 +118,8 @@ export function AngebotPositionSheet({
       <form id={FORM_ID} onSubmit={absenden} className="space-y-4 p-4">
         {fehler && <FehlerMeldung meldung={fehler} alsKasten />}
 
+        {!istTitel && (
+          <>
         <SegmentedControl
           ariaLabel="Positionstyp"
           optionen={TYP_OPTIONEN}
@@ -122,6 +141,9 @@ export function AngebotPositionSheet({
           />
         </div>
 
+          </>
+        )}
+
         <div>
           <label htmlFor="angebot-pos-beschreibung" className="mb-1 block text-xs font-medium text-label2">
             Beschreibung
@@ -134,6 +156,7 @@ export function AngebotPositionSheet({
           />
         </div>
 
+        {!istTitel && (
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label htmlFor="angebot-pos-menge" className="mb-1 block text-xs font-medium text-label2">
@@ -161,6 +184,27 @@ export function AngebotPositionSheet({
               className="field-ap"
             />
           </div>
+          {mitAnteilen ? (
+            <div className="col-span-3 grid grid-cols-2 gap-3">
+              {([["lohn", "Lohn (€)"], ["material", "Material (€)"]] as const).map(([feld, label]) => (
+                <div key={feld}>
+                  <label htmlFor={`angebot-pos-${feld}`} className="mb-1 block text-xs font-medium text-label2">
+                    {label}
+                  </label>
+                  <input
+                    id={`angebot-pos-${feld}`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputMode="decimal"
+                    value={form[feld]}
+                    onChange={(e) => setForm({ ...form, [feld]: e.target.value })}
+                    className="field-ap"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div>
             <label htmlFor="angebot-pos-preis" className="mb-1 block text-xs font-medium text-label2">
               Preis (€)
@@ -176,7 +220,9 @@ export function AngebotPositionSheet({
               className="field-ap"
             />
           </div>
+          )}
         </div>
+        )}
 
         <div className="border-t-[0.5px] border-sep pt-4">
           {loeschenBestaetigen ? (
