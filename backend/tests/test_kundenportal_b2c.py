@@ -13,6 +13,7 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import DBAPIError
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from app.core.zeit import in_lokal
 from app.db.session import system_session, tenant_session
 from app.main import app
 from app.models.angebot import Angebot, AngebotPosition
@@ -659,7 +660,10 @@ async def test_widerrufsfrist_14_tage(client, make_mandant, make_user, make_kund
     async def annahme_vor(tage: int) -> None:
         async with system_session() as session:
             angebot = await session.get(Angebot, uuid.UUID(ctx["angebot_id"]))
-            angebot.angenommen_am = datetime.now(timezone.utc) - timedelta(days=tage)
+            # Mittag Ortszeit, damit der Test nicht von der Tageszeit abhaengt: kurz vor
+            # Mitternacht liegen "heute" in UTC und in Ortszeit auf verschiedenen Tagen.
+            mittag = in_lokal(datetime.now(timezone.utc)).replace(hour=12, minute=0, second=0, microsecond=0)
+            angebot.angenommen_am = (mittag - timedelta(days=tage)).astimezone(timezone.utc)
 
     await annahme_vor(15)
     r = await _widerruf(client, ctx)
