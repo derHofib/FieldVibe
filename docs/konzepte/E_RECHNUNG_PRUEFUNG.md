@@ -27,7 +27,7 @@ cd backend && pytest tests/test_e_rechnung_konformitaet.py
   Einzelsatz, Mischsatz, Z, E, AE, alle Kategorien gemischt, Kleinunternehmer, Storno (auch
   mit allen Kategorien und Rundung), Rundungsrandfälle, mit/ohne Fälligkeit, ohne Positionen,
   private/öffentliche Kunden und eine Negativkontrolle (absichtlich verletzte BR-Z-10).
-  Ohne installiertes Werkzeug werden sie übersprungen (Job `backend-tests`).
+  Ohne installiertes Werkzeug werden sie übersprungen; `backend-tests` installiert es in CI daher ebenfalls.
   `E_RECHNUNG_XML_DIR=<dir>` legt die erzeugten XML zur Fehlersuche ab.
 - **CI:** Job `e-rechnung-konformitaet` in `.github/workflows/ci.yml` installiert das Werkzeug
   und lässt die Tests laufen; Überspringen macht den Job rot. Es sind keine Release-Downloads

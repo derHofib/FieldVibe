@@ -58,6 +58,11 @@ jobs:
           psql -h localhost -U fieldvibe -d fieldvibe -v ON_ERROR_STOP=1
           -c "CREATE ROLE fieldvibe_test LOGIN PASSWORD 'fieldvibe_test' NOSUPERUSER NOBYPASSRLS CREATEDB;"
 
+      # Ohne das Werkzeug werden die Konformitaetstests in `pytest` still
+      # uebersprungen (Java ist auf ubuntu-latest vorinstalliert).
+      - name: E-Rechnungs-Pruefwerkzeug installieren
+        run: scripts/e-rechnung/installieren.sh
+
       # JWT_SECRET/S3_*-Defaults kommen aus tests/conftest.py
       # (os.environ.setdefault) -- moto stellt den S3-Mock selbst, kein MinIO
       # noetig. Nur die DB-URLs zeigen auf die Testrolle statt auf den
@@ -73,8 +78,8 @@ jobs:
   # Geschaeftsregeln und die BR-DE-Regeln (Schematron). Das Werkzeug kommt komplett aus Maven
   # Central und gepinnten Commits von ConnectingEurope/eInvoicing-EN16931 und
   # itplr-kosit/xrechnung-schematron (siehe scripts/e-rechnung/pins.sh, jede Datei mit
-  # SHA-256 geprueft) -- keine Release-Downloads noetig. Im Job backend-tests werden
-  # diese Tests mangels Werkzeug uebersprungen.
+  # SHA-256 geprueft) -- keine Release-Downloads noetig. Dieser Job schlaegt
+  # bei uebersprungenen Tests fehl; backend-tests installiert das Werkzeug ebenfalls.
   e-rechnung-konformitaet:
     runs-on: ubuntu-latest
     services:
