@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
-import { angeboteApi, kundenApi, leistungsverzeichnisApi, mandantEinstellungenApi } from "../../api/endpoints";
+import { angeboteApi, kundenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { AngebotAbrechnung } from "../../components/angebot/AngebotAbrechnung";
+import { AngebotLvUebernahme } from "../../components/angebot/AngebotLvUebernahme";
 import { AngebotNachweis } from "../../components/angebot/AngebotNachweis";
 import { AngebotPositionSheet } from "../../components/angebot/AngebotPositionSheet";
 import { GueltigkeitSheet } from "../../components/angebot/GueltigkeitSheet";
@@ -14,7 +15,6 @@ import { StatusPille } from "../../components/apple/StatusPille";
 import { EmailSection } from "../../components/EmailSection";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerMeldung, Hinweiskasten } from "../../components/Hinweiskasten";
-import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import {
   ANGEBOT_STATUS_LABEL,
@@ -52,11 +52,15 @@ function PositionInhalt({ p }: { p: AngebotPosition }) {
             {POSITIONSTYP_LABEL.arbeitszeit}
           </span>
         )}
+        {p.ordnungszahl && <span className="mr-1.5 text-xs text-label2">{p.ordnungszahl}</span>}
         {p.artikelnummer && <span className="mr-1.5 text-xs text-label2">{p.artikelnummer}</span>}
         {p.beschreibung}
       </div>
       <div className="text-xs text-label2">
         {p.menge} {p.einheit} × {p.einzelpreis} EUR
+        {p.einzelpreis_lohn !== null && p.einzelpreis_material !== null && (
+          <> (Lohn {p.einzelpreis_lohn} · Material {p.einzelpreis_material})</>
+        )}
       </div>
     </>
   );
@@ -82,8 +86,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     einzelpreis: "0",
     positionstyp: "material",
   });
-  const [lvAuswahl, setLvAuswahl] = useState("");
-  const [lvSplitMenge, setLvSplitMenge] = useState("1");
+  const [lvOffen, setLvOffen] = useState(false);
+  const [titelText, setTitelText] = useState<string | null>(null);
   const [bearbeitetePosition, setBearbeitetePosition] = useState<AngebotPosition | null>(null);
   const [gueltigkeitOffen, setGueltigkeitOffen] = useState(false);
 
@@ -119,12 +123,6 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
     retry: false,
   });
   const kleinunternehmer = einstellungen?.firmendaten.ist_kleinunternehmer === true;
-  const { data: leistungsverzeichnis } = useQuery({
-    queryKey: ["leistungsverzeichnis", angebot?.kunde_id],
-    queryFn: () => leistungsverzeichnisApi.list(angebot!.kunde_id),
-    enabled: showForm && !!angebot,
-  });
-
   const addPositionMutation = useMutation({
     mutationFn: () =>
       angeboteApi.addPosition(id!, {
@@ -145,45 +143,22 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         einzelpreis: "0",
         positionstyp: "material",
       });
-      setLvAuswahl("");
       queryClient.invalidateQueries({ queryKey: ["angebot", id] });
     },
   });
 
-  const lvPosition = (leistungsverzeichnis ?? []).find((p) => p.id === lvAuswahl);
-  // Eine LV-Position mit Kalkulation (Modus "berechnet" oder mit
-  // Unterpunkten) hat lohn_gesamt/material_gesamt > 0 -- dann wird sie als
-  // zwei Angebotspositionen (Lohn/Material) uebernommen statt als eine
-  // manuell ausgefuellte, siehe Ausarbeitung "Leistungsverzeichnis als
-  // Kalkulator".
-  const lvHatSplit =
-    !!lvPosition && (Number(lvPosition.lohn_gesamt) > 0 || Number(lvPosition.material_gesamt) > 0);
-
-  const addSplitPositionenMutation = useMutation({
-    mutationFn: async () => {
-      if (Number(lvPosition!.lohn_gesamt) > 0) {
-        await angeboteApi.addPosition(id!, {
-          beschreibung: `${lvPosition!.bezeichnung} – Lohn`,
-          menge: lvSplitMenge,
-          einheit: lvPosition!.einheit,
-          einzelpreis: lvPosition!.lohn_gesamt,
-          positionstyp: "arbeitszeit",
-        });
-      }
-      if (Number(lvPosition!.material_gesamt) > 0) {
-        await angeboteApi.addPosition(id!, {
-          beschreibung: `${lvPosition!.bezeichnung} – Material`,
-          menge: lvSplitMenge,
-          einheit: lvPosition!.einheit,
-          einzelpreis: lvPosition!.material_gesamt,
-          positionstyp: "material",
-        });
-      }
-    },
+  const addTitelMutation = useMutation({
+    mutationFn: (ebene: 1 | 2) =>
+      angeboteApi.addPosition(id!, {
+        beschreibung: titelText!.trim(),
+        menge: "0",
+        einheit: "",
+        einzelpreis: "0",
+        zeilentyp: "titel",
+        ebene,
+      }),
     onSuccess: () => {
-      setShowForm(false);
-      setLvAuswahl("");
-      setLvSplitMenge("1");
+      setTitelText(null);
       queryClient.invalidateQueries({ queryKey: ["angebot", id] });
     },
   });
@@ -235,7 +210,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   const istEntwurf = angebot.status === "entwurf";
   const ablauf = ablaufAnzeige(angebot, heuteIso());
   const positionIds = angebot.positionen.map((p) => p.id);
-  const mutationFehler = [statusMutation, neuOrdnenMutation, mwstMutation]
+  const mutationFehler = [statusMutation, neuOrdnenMutation, mwstMutation, addTitelMutation]
     .map((m) => (m.error instanceof ApiError ? m.error.message : m.isError ? "Aktion fehlgeschlagen" : null))
     .find(Boolean);
 
@@ -321,91 +296,51 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-label2">Positionen</h2>
           {istEntwurf && (
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-tint "
-            >
-              {showForm ? "Abbrechen" : "+ Position"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setTitelText((t) => (t === null ? "" : null))}
+                className="btn-touch text-xs font-medium text-tint "
+              >
+                {titelText === null ? "+ Titel" : "Abbrechen"}
+              </button>
+              <button
+                onClick={() => setShowForm((v) => !v)}
+                className="btn-touch text-xs font-medium text-tint "
+              >
+                {showForm ? "Abbrechen" : "+ Position"}
+              </button>
+            </div>
           )}
         </div>
 
+        {istEntwurf && titelText !== null && (
+          <div className="mb-3 flex gap-2">
+            <input
+              value={titelText}
+              onChange={(e) => setTitelText(e.target.value)}
+              placeholder="Titel, z. B. Elektro Erdgeschoss"
+              aria-label="Titel"
+              className="min-w-0 flex-1 border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+            <button
+              disabled={!titelText.trim() || addTitelMutation.isPending}
+              onClick={() => addTitelMutation.mutate(1)}
+              className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+            >
+              Hinzufügen
+            </button>
+          </div>
+        )}
+
         {showForm && (
           <div className="mb-3 space-y-2 border border-sepstrong p-3">
-            {(leistungsverzeichnis ?? []).length > 0 && (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-label">
-                  Aus Leistungsverzeichnis wählen (optional)
-                </label>
-                <SearchableSelect
-                  value={lvAuswahl}
-                  onChange={(v) => {
-                    setLvAuswahl(v);
-                    setLvSplitMenge("1");
-                    const position = (leistungsverzeichnis ?? []).find((p) => p.id === v);
-                    const hatSplit =
-                      position && (Number(position.lohn_gesamt) > 0 || Number(position.material_gesamt) > 0);
-                    if (position && !hatSplit) {
-                      setForm({
-                        ...form,
-                        beschreibung: position.bezeichnung,
-                        menge: "1",
-                        einheit: position.einheit,
-                        einzelpreis: position.einzelpreis,
-                        positionstyp: position.ist_stundensatz ? "arbeitszeit" : "material",
-                      });
-                    }
-                  }}
-                  placeholder="Position wählen…"
-                  options={(leistungsverzeichnis ?? []).map((p) => ({
-                    value: p.id,
-                    label: p.bezeichnung,
-                    sublabel: `${p.einzelpreis} €/${p.einheit}`,
-                  }))}
-                />
-              </div>
-            )}
-
-            {lvHatSplit ? (
-              <div className="space-y-2">
-                <p className="text-xs text-label2">
-                  Wird als zwei Positionen übernommen:{" "}
-                  {Number(lvPosition!.lohn_gesamt) > 0 && (
-                    <>
-                      Lohn <strong className="text-label">{lvPosition!.lohn_gesamt} €</strong>
-                    </>
-                  )}
-                  {Number(lvPosition!.lohn_gesamt) > 0 && Number(lvPosition!.material_gesamt) > 0 && ", "}
-                  {Number(lvPosition!.material_gesamt) > 0 && (
-                    <>
-                      Material{" "}
-                      <strong className="text-label">{lvPosition!.material_gesamt} €</strong>
-                    </>
-                  )}{" "}
-                  (je {lvPosition!.einheit}).
-                </p>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-label">
-                    Menge ({lvPosition!.einheit})
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={lvSplitMenge}
-                    onChange={(e) => setLvSplitMenge(e.target.value)}
-                    className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                  />
-                </div>
-                <button
-                  disabled={!lvSplitMenge || addSplitPositionenMutation.isPending}
-                  onClick={() => addSplitPositionenMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-                >
-                  Hinzufügen
-                </button>
-              </div>
-            ) : (
-              <>
+            <button
+              type="button"
+              onClick={() => setLvOffen(true)}
+              className="btn-touch w-full rounded-md bg-fill px-3 py-2 text-sm font-medium text-tint"
+            >
+              Aus Leistungsverzeichnis übernehmen…
+            </button>
             <div className="flex gap-1.5">
               {(["material", "arbeitszeit"] as AngebotPositionstyp[]).map((typ) => (
                 <button
@@ -465,8 +400,6 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
             >
               Hinzufügen
             </button>
-              </>
-            )}
           </div>
         )}
 
@@ -475,7 +408,12 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         ) : (
           <div className="space-y-1.5">
             {angebot.positionen.map((p, index) => (
-              <div key={p.id} className="flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm">
+              <div
+                key={p.id}
+                className={`flex items-center justify-between gap-2 rounded-md bg-fill p-2 text-sm ${
+                  p.zeilentyp === "titel" ? "mt-2 font-semibold" : p.ordnungszahl?.includes(".") ? "ml-3" : ""
+                }`}
+              >
                 {istEntwurf ? (
                   <button
                     type="button"
@@ -490,7 +428,9 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
                     <PositionInhalt p={p} />
                   </div>
                 )}
-                <div className="shrink-0 font-medium text-label">{p.gesamt} EUR</div>
+                <div className="shrink-0 font-medium text-label">
+                  {p.zeilentyp === "titel" ? (p.zwischensumme ? `Σ ${p.zwischensumme} EUR` : "") : `${p.gesamt} EUR`}
+                </div>
                 {istEntwurf && angebot.positionen.length > 1 && (
                   <div className="flex shrink-0 flex-col">
                     <button
@@ -542,6 +482,11 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
             </div>
           )}
           <div className="text-right">
+            {Number(angebot.summe_lohn) > 0 && Number(angebot.summe_material) > 0 && (
+              <div className="text-xs text-label3">
+                davon Lohn {angebot.summe_lohn} EUR · Material {angebot.summe_material} EUR
+              </div>
+            )}
             <div className="text-label2">Netto: {angebot.gesamt_netto} EUR</div>
             <div className="font-semibold text-label">Brutto: {angebot.gesamt_brutto} EUR</div>
           </div>
@@ -622,6 +567,16 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
           angebotId={angebot.id}
           position={bearbeitetePosition}
           onClose={() => setBearbeitetePosition(null)}
+        />
+      )}
+      {lvOffen && (
+        <AngebotLvUebernahme
+          angebotId={angebot.id}
+          kundeId={angebot.kunde_id}
+          onClose={() => {
+            setLvOffen(false);
+            setShowForm(false);
+          }}
         />
       )}
       {gueltigkeitOffen && (
