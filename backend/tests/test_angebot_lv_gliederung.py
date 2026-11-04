@@ -224,3 +224,20 @@ def test_fassung_bestehender_angebote_bleibt_unveraendert():
     titel = AngebotPosition(position=2, zeilentyp="titel", ebene=1, beschreibung="T", menge=Decimal("0"),
                             einheit="", einzelpreis=Decimal("0"))
     assert '"zeilentyp":"titel"' in kanonische_fassung(_pdf_angebot(), pos + [titel])
+
+
+@pytest.mark.asyncio
+async def test_portal_zeigt_gliederung_ohne_interne_kalkulation(client, make_mandant, make_user, make_kunde):
+    from tests.test_kundenportal import _kunden_login, _make_zugang
+
+    s = await _setup(client, make_mandant, make_user, make_kunde)
+    await client.post(s.url, headers=s.h, json={"lv_id": str(s.lv.id),
+                                               "eintraege": [{"lv_position_id": str(s.haupt.id)}]})
+    await client.patch(f"/api/angebote/{s.angebot['id']}", headers=s.h, json={"status": "versendet"})
+    await _make_zugang(s.mandant, s.kunde, email="portal-lv@example.de")
+    token = (await _kunden_login(client, "portal-lv@example.de", "kunden-pw-123"))["access_token"]
+    resp = await client.get(f"/api/kundenportal/angebote/{s.angebot['id']}", headers=auth_headers(token))
+    assert resp.status_code == 200, resp.text
+    pos = resp.json()["positionen"]
+    assert pos[0]["zeilentyp"] == "titel" and pos[0]["zwischensumme"] == "80.00"
+    assert all("einzelpreis_lohn" not in p and "lv_position_id" not in p for p in pos)
