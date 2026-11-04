@@ -26,7 +26,14 @@ import { ImpersonationBanner } from "../components/ImpersonationBanner";
 import { Monogramm } from "../components/apple/Monogramm";
 import { Logo } from "../components/brand/Logo";
 import { ThemeToggle } from "../components/ThemeToggle";
-import { effektiveNavGruppen, sichtbareNavSeiten } from "../config/navSeiten";
+import {
+  effektiveNavGruppen,
+  seiteInWorkspace,
+  sichtbareNavSeiten,
+  verfuegbareWorkspaces,
+  workspaceStartRoute,
+  type WorkspaceKey,
+} from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { useVorgemerkteZeitenAnzahl } from "../hooks/useVorgemerkteZeitenAnzahl";
@@ -39,6 +46,7 @@ import { mobileUrl } from "./hostname";
  * anderen fehlen, und die sichtbar()-Praedikate (Rechte + aktive Module)
  * gelten hier automatisch mit. */
 const SIDEBAR_STORAGE_KEY = "fieldvibe-office-sidebar-eingeklappt";
+const WORKSPACE_STORAGE_KEY = "fieldvibe-office-workspace";
 const KATEGORIEN_STORAGE_KEY = "fieldvibe-office-sidebar-kategorien-eingeklappt";
 
 function geladeneEingeklappteKategorien(): Record<string, boolean> {
@@ -109,6 +117,14 @@ export function OfficeLayout() {
     geladeneEingeklappteKategorien,
   );
 
+  const [workspaceKey, setWorkspaceKey] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
+
   const sidebarUmschalten = () => {
     setEingeklappt((prev) => {
       const naechster = !prev;
@@ -139,7 +155,27 @@ export function OfficeLayout() {
     queryFn: () => navKategorienApi.get(),
     staleTime: 5 * 60 * 1000,
   });
-  const gruppen = effektiveNavGruppen(angezeigt, customKategorien);
+  // Workspace-Filter greift vor den Menue-Kategorien; nicht verfuegbarer oder
+  // nie gewaehlter Workspace -> erster verfuegbarer.
+  const workspaces = verfuegbareWorkspaces(angezeigt);
+  const aktiverWorkspace = workspaces.find((w) => w.key === workspaceKey) ?? workspaces[0];
+  const imWorkspace = aktiverWorkspace
+    ? angezeigt.filter((seite) => seiteInWorkspace(seite, aktiverWorkspace))
+    : angezeigt;
+  const gruppen = effektiveNavGruppen(imWorkspace, customKategorien);
+
+  const workspaceWechseln = (key: WorkspaceKey) => {
+    const ziel = workspaces.find((w) => w.key === key);
+    if (!ziel) return;
+    setWorkspaceKey(key);
+    try {
+      localStorage.setItem(WORKSPACE_STORAGE_KEY, key);
+    } catch {
+      // Merken ist nur Komfort.
+    }
+    const route = workspaceStartRoute(ziel, angezeigt);
+    if (route) navigate(route);
+  };
 
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
   const aktiveProjekte = (projekte ?? []).filter((p) => !p.archiviert).slice(0, 6);
@@ -200,7 +236,34 @@ export function OfficeLayout() {
             </button>
           </div>
 
-          {!eingeklappt && (
+          {workspaces.length > 1 && (
+            <div
+              role="tablist"
+              aria-label="Workspace"
+              className={`mb-3 flex gap-1 ${eingeklappt ? "flex-col" : "flex-wrap"}`}
+            >
+              {workspaces.map((w) => {
+                const aktiv = w.key === aktiverWorkspace?.key;
+                return (
+                  <button
+                    key={w.key}
+                    role="tab"
+                    aria-selected={aktiv}
+                    title={eingeklappt ? w.label : undefined}
+                    onClick={() => workspaceWechseln(w.key)}
+                    className={`flex h-[28px] items-center justify-center rounded-[7px] text-xs font-medium ${
+                      eingeklappt ? "px-0" : "gap-1.5 px-2.5"
+                    } ${aktiv ? "bg-fill2 text-label" : "text-label2 hover:bg-fill hover:text-label"}`}
+                  >
+                    <w.icon size={14} strokeWidth={2} className={aktiv ? "text-tint" : ""} />
+                    {!eingeklappt && w.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {!eingeklappt && aktiverWorkspace?.key === "operativ" && (
             <div className="mb-4 grid grid-cols-2 gap-2">
               <SchnellfilterKachel
                 icon={CalendarDays}
