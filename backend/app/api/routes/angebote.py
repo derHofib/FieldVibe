@@ -624,6 +624,9 @@ async def positionen_aus_lv(
         if p.eltern_position_id in nach_id:
             kinder[p.eltern_position_id].append(p)
     oberste = [p for p in lv_positionen if p.eltern_position_id not in nach_id]
+    # Einzelpositionen vor den Gruppen: eine Position nach einem Titel gehoert
+    # zu ihm und ginge sonst in dessen Zwischensumme ein.
+    oberste.sort(key=lambda p: bool(kinder[p.id]))
 
     # (lv_position, menge) in LV-Reihenfolge; Titel nur fuer Hauptpunkte.
     zeilen: list[tuple[LeistungsverzeichnisPosition | None, LeistungsverzeichnisPosition | None, Decimal]] = []
@@ -757,9 +760,9 @@ async def update_position(
         setattr(position, feld, getattr(body, feld))
     if anteile_geaendert:
         if position.einzelpreis_lohn is not None or position.einzelpreis_material is not None:
-            position.einzelpreis = (position.einzelpreis_lohn or Decimal("0")) + (
-                position.einzelpreis_material or Decimal("0")
-            )
+            position.einzelpreis = (
+                (position.einzelpreis_lohn or Decimal("0")) + (position.einzelpreis_material or Decimal("0"))
+            ).quantize(Decimal("0.01"))
     elif "einzelpreis" in gesetzt:
         # Ein neuer Gesamtpreis macht die alte Aufteilung falsch.
         position.einzelpreis_lohn = None
