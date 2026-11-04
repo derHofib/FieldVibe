@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 from app.services.steuer_service import runde_cent
 
 AngebotPositionstyp = Literal["material", "arbeitszeit"]
+AngebotZeilentyp = Literal["position", "titel"]
 ERLAUBTE_MWST_SAETZE = (Decimal("19.00"), Decimal("7.00"), Decimal("0.00"))
 
 
@@ -24,6 +25,23 @@ class AngebotPositionCreate(BaseModel):
     einheit: str = "Stk"
     einzelpreis: Decimal = Decimal("0")
     positionstyp: AngebotPositionstyp = "material"
+    zeilentyp: AngebotZeilentyp = "position"
+    ebene: int = Field(default=1, ge=1, le=2)
+    einzelpreis_lohn: Decimal | None = Field(default=None, ge=0)
+    einzelpreis_material: Decimal | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _titel_und_anteile(self) -> "AngebotPositionCreate":
+        if self.zeilentyp == "titel":
+            # Titel tragen weder Menge noch Preis, sonst ginge Geld an einer
+            # Zeile durch, die in Summen und Rechnung nicht vorkommt.
+            self.menge = Decimal("0")
+            self.einzelpreis = Decimal("0")
+            self.einzelpreis_lohn = None
+            self.einzelpreis_material = None
+        elif self.einzelpreis_lohn is not None or self.einzelpreis_material is not None:
+            self.einzelpreis = (self.einzelpreis_lohn or Decimal("0")) + (self.einzelpreis_material or Decimal("0"))
+        return self
 
 
 class AngebotPositionUpdate(BaseModel):
@@ -33,12 +51,15 @@ class AngebotPositionUpdate(BaseModel):
     einheit: str | None = Field(default=None, min_length=1)
     einzelpreis: Decimal | None = Field(default=None, ge=0)
     positionstyp: AngebotPositionstyp | None = None
+    ebene: int | None = Field(default=None, ge=1, le=2)
+    einzelpreis_lohn: Decimal | None = Field(default=None, ge=0)
+    einzelpreis_material: Decimal | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _kein_explizites_null(self) -> "AngebotPositionUpdate":
         # Nur die Artikelnummer ist leerbar; bei den Pflichtfeldern wuerde ein
         # explizites null sonst stillschweigend ignoriert statt abgelehnt.
-        for feld in ("beschreibung", "menge", "einheit", "einzelpreis", "positionstyp"):
+        for feld in ("beschreibung", "menge", "einheit", "einzelpreis", "positionstyp", "ebene"):
             if feld in self.model_fields_set and getattr(self, feld) is None:
                 raise ValueError(f"{feld} darf nicht leer sein")
         return self
@@ -59,11 +80,32 @@ class AngebotPositionRead(BaseModel):
     einheit: str
     einzelpreis: Decimal
     positionstyp: AngebotPositionstyp
+    zeilentyp: AngebotZeilentyp = "position"
+    ebene: int = 1
+    lv_position_id: UUID | None = None
+    einzelpreis_lohn: Decimal | None = None
+    einzelpreis_material: Decimal | None = None
+    # Vom Service gesetzt (berechnet, nicht gespeichert).
+    ordnungszahl: str | None = None
+    zwischensumme: Decimal | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def gesamt(self) -> Decimal:
         return runde_cent(self.menge * self.einzelpreis)
+
+
+class AngebotAusLvEintrag(BaseModel):
+    lv_position_id: UUID
+    menge: Decimal = Field(default=Decimal("1"), gt=0)
+
+
+class AngebotAusLv(BaseModel):
+    lv_id: UUID
+    # Ein Hauptpunkt zieht alle seine Unterpunkte nach; ein Unterpunkt-Eintrag
+    # setzt dessen Menge (sonst gilt die des Hauptpunkts).
+    eintraege: list[AngebotAusLvEintrag] = Field(min_length=1)
+    mit_gliederung: bool = True
 
 
 class AngebotCreate(BaseModel):
@@ -149,6 +191,9 @@ class AngebotRead(BaseModel):
     gesamt_netto: Decimal
     gesamt_brutto: Decimal
     ist_abgelaufen: bool
+    # Netto-Summen nach Anteil; Zeilen ohne Anteile zaehlen nach positionstyp.
+    summe_lohn: Decimal = Decimal("0.00")
+    summe_material: Decimal = Decimal("0.00")
     # Hash der aktuellen Fassung -- derselbe Wert, den der Nachweis bei Annahme
     # festhaelt; Abweichung zum Nachweis = Angebot wurde danach geaendert.
     fassung_sha256: str = ""

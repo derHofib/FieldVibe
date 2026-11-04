@@ -19,6 +19,7 @@ from app.models.vorgang_event import VorgangEvent
 from app.models.angebot_annahme import AngebotAnnahme
 from app.schemas.angebot import AngebotAbschlagRead, AngebotNachweisRead, AngebotPositionRead, AngebotRead
 from app.services import rechnung_service
+from app.services.angebot_gliederung import ist_titel, ordnungszahlen, zeilensumme, zwischensummen
 from app.services.audit_service import log_action
 from app.services.event_bus import event_bus
 from app.services.numbering_service import next_vorgangsnummer
@@ -38,14 +39,47 @@ async def positionen_fuer(session: AsyncSession, angebot_id: UUID) -> list[Angeb
 def summen(positionen: list[AngebotPosition], mwst_satz: Decimal) -> tuple[Decimal, Decimal]:
     # Wie bei Rechnungen: Netto auf Cent runden, Steuer aus dem gerundeten
     # Netto -- sonst weicht das Angebot vom spaeteren Beleg um einen Cent ab.
-    netto = runde_cent(sum((p.menge * p.einzelpreis for p in positionen), Decimal("0")))
+    netto = runde_cent(sum((p.menge * p.einzelpreis for p in positionen if not ist_titel(p)), Decimal("0")))
     return netto, netto + runde_cent(netto * mwst_satz / Decimal("100"))
+
+
+def lohn_material_summen(positionen: list[AngebotPosition]) -> tuple[Decimal, Decimal]:
+    lohn = material = Decimal("0")
+    for p in positionen:
+        if ist_titel(p):
+            continue
+        if p.einzelpreis_lohn is not None or p.einzelpreis_material is not None:
+            lohn += runde_cent(p.menge * (p.einzelpreis_lohn or Decimal("0")))
+            material += runde_cent(p.menge * (p.einzelpreis_material or Decimal("0")))
+        elif p.positionstyp == "arbeitszeit":
+            lohn += zeilensumme(p)
+        else:
+            material += zeilensumme(p)
+    return lohn, material
 
 
 def _dez(wert: Decimal) -> str:
     # Feste zwei Nachkommastellen: Decimal("10") und Decimal("10.00") muessen
     # denselben Hash ergeben, egal ob frisch berechnet oder aus der DB geladen.
     return format(Decimal(wert).quantize(Decimal("0.01")), "f")
+
+
+def _fassung_zeile(p: AngebotPosition) -> dict:
+    zeile = {
+        "position": p.position,
+        "beschreibung": unicodedata.normalize("NFC", p.beschreibung),
+        "menge": _dez(p.menge),
+        "einheit": unicodedata.normalize("NFC", p.einheit),
+        "einzelpreis": _dez(p.einzelpreis),
+        "gesamt": _dez(runde_cent(p.menge * p.einzelpreis)),
+    }
+    # Nur Titel bekommen Zusatzschluessel: die Fassung (und damit der Hash)
+    # bestehender Angebote bleibt byte-identisch. Lohn-/Materialanteil sind
+    # nur eine Aufteilung von einzelpreis und gehoeren nicht in die Fassung.
+    if ist_titel(p):
+        zeile["zeilentyp"] = "titel"
+        zeile["ebene"] = p.ebene
+    return zeile
 
 
 def kanonische_fassung(angebot: Angebot, positionen: list[AngebotPosition]) -> str:
@@ -65,15 +99,7 @@ def kanonische_fassung(angebot: Angebot, positionen: list[AngebotPosition]) -> s
         "mwst_satz": _dez(angebot.mwst_satz),
         "gueltig_bis": angebot.gueltig_bis.isoformat() if angebot.gueltig_bis else None,
         "positionen": [
-            {
-                "position": p.position,
-                "beschreibung": unicodedata.normalize("NFC", p.beschreibung),
-                "menge": _dez(p.menge),
-                "einheit": unicodedata.normalize("NFC", p.einheit),
-                "einzelpreis": _dez(p.einzelpreis),
-                "gesamt": _dez(runde_cent(p.menge * p.einzelpreis)),
-            }
-            for p in sorted(positionen, key=lambda p: p.position)
+            _fassung_zeile(p) for p in sorted(positionen, key=lambda p: p.position)
         ],
         "gesamt_netto": _dez(netto),
         "gesamt_brutto": _dez(brutto),
@@ -111,6 +137,18 @@ async def positionen_neu_nummerieren(session: AsyncSession, angebot_id: UUID) ->
     await session.flush()
 
 
+def _positionen_lesen(positionen: list[AngebotPosition]) -> list[AngebotPositionRead]:
+    oz = ordnungszahlen(positionen)
+    zs = zwischensummen(positionen)
+    gelesen = []
+    for p in positionen:
+        r = AngebotPositionRead.model_validate(p)
+        r.ordnungszahl = oz[p.id]
+        r.zwischensumme = zs.get(p.id)
+        gelesen.append(r)
+    return gelesen
+
+
 async def to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
     positionen = await positionen_fuer(session, angebot.id)
     netto, brutto = summen(positionen, angebot.mwst_satz)
@@ -126,6 +164,8 @@ async def to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
                 "positionen",
                 "gesamt_netto",
                 "gesamt_brutto",
+                "summe_lohn",
+                "summe_material",
                 "ist_abgelaufen",
                 "abschlaege",
                 "abgerechnet_netto",
@@ -136,7 +176,9 @@ async def to_read_model(session: AsyncSession, angebot: Angebot) -> AngebotRead:
                 "letzter_nachweis",
             )
         },
-        positionen=[AngebotPositionRead.model_validate(p) for p in positionen],
+        positionen=_positionen_lesen(positionen),
+        summe_lohn=lohn_material_summen(positionen)[0],
+        summe_material=lohn_material_summen(positionen)[1],
         gesamt_netto=netto,
         gesamt_brutto=brutto,
         ist_abgelaufen=ist_abgelaufen(angebot),
