@@ -173,6 +173,11 @@ class AngebotPositionPortalRead(BaseModel):
     einheit: str
     einzelpreis: Decimal
     gesamt: Decimal
+    # Gliederung ja, interne Kalkulation (Lohn-/Materialanteil, LV-Herkunft) nein.
+    zeilentyp: str = "position"
+    ebene: int = 1
+    ordnungszahl: str | None = None
+    zwischensumme: Decimal | None = None
 
 
 class AngebotPortalRead(BaseModel):

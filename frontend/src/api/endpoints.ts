@@ -43,7 +43,9 @@ import type {
   Angebot,
   AngebotMwstSatz,
   AngebotPosition,
+  AngebotAusLvEintrag,
   AngebotPositionstyp,
+  AngebotZeilentyp,
   AngebotPositionUpdate,
   Anlage,
   AnlagenFeldDefinition,
@@ -1479,8 +1481,16 @@ export const angeboteApi = {
     body: Pick<AngebotPosition, "beschreibung" | "menge" | "einheit" | "einzelpreis"> & {
       artikelnummer?: string;
       positionstyp?: AngebotPositionstyp;
+      zeilentyp?: AngebotZeilentyp;
+      ebene?: 1 | 2;
+      einzelpreis_lohn?: string;
+      einzelpreis_material?: string;
     },
   ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen`, { method: "POST", body: JSON.stringify(body) }),
+  positionenAusLv: (
+    id: string,
+    body: { lv_id: string; eintraege: AngebotAusLvEintrag[]; mit_gliederung: boolean },
+  ) => apiFetch<Angebot>(`/api/angebote/${id}/positionen/aus-lv`, { method: "POST", body: JSON.stringify(body) }),
   updatePosition: (id: string, positionId: string, body: AngebotPositionUpdate) =>
     apiFetch<Angebot>(`/api/angebote/${id}/positionen/${positionId}`, { method: "PATCH", body: JSON.stringify(body) }),
   removePosition: (id: string, positionId: string) =>

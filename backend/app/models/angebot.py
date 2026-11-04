@@ -19,6 +19,7 @@ from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 ANGEBOT_STATUS = ("entwurf", "versendet", "angenommen", "abgelehnt", "widerrufen")
 ANGEBOT_POSITIONSTYPEN = ("material", "arbeitszeit")
+ANGEBOT_ZEILENTYPEN = ("position", "titel")
 
 
 class Angebot(SoftDeleteMixin, TimestampMixin, Base):
@@ -80,3 +81,13 @@ class AngebotPosition(Base):
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     positionstyp: Mapped[str] = mapped_column(Text, nullable=False, default="material")
+    # Titel gliedern nur (Menge/Preis 0); Ordnungszahl und Zwischensumme werden
+    # berechnet, siehe angebot_gliederung.
+    zeilentyp: Mapped[str] = mapped_column(Text, nullable=False, default="position")
+    ebene: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+    # Nur Herkunft; der Preis ist beim Uebernehmen kopiert (Snapshot).
+    lv_position_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("leistungsverzeichnis_positionen.id", ondelete="SET NULL"), nullable=True
+    )
+    einzelpreis_lohn: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    einzelpreis_material: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)

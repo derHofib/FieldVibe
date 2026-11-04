@@ -24,7 +24,13 @@ from app.models.material_bedarf import MaterialBedarf
 from app.models.user import User
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
+from app.models.leistungsverzeichnis import (
+    Leistungsverzeichnis,
+    LeistungsverzeichnisKunde,
+    LeistungsverzeichnisPosition,
+)
 from app.schemas.angebot import (
+    AngebotAusLv,
     AngebotAusMaengelnCreate,
     AngebotAusMaterialBedarfenCreate,
     AngebotAusVorgangCreate,
@@ -47,6 +53,7 @@ from app.services.angebot_service import (
 from app.services.email_service import send_email_and_log
 from app.services.numbering_service import next_angebotsnummer
 from app.services.pdf_service import generate_angebot_pdf
+from app.services.steuer_service import runde_cent
 from app.services.storage_service import download_bytes
 from app.services.zuweisung_service import (
     erlaubte_kunde_ids,
@@ -175,6 +182,10 @@ def _neue_positionen(angebot_id: UUID, mandant_id: UUID, eintraege: list[Angebot
             einheit=e.einheit,
             einzelpreis=e.einzelpreis,
             positionstyp=e.positionstyp,
+            zeilentyp=e.zeilentyp,
+            ebene=e.ebene,
+            einzelpreis_lohn=e.einzelpreis_lohn,
+            einzelpreis_material=e.einzelpreis_material,
         )
         for i, e in enumerate(eintraege)
     ]
@@ -526,8 +537,150 @@ async def add_position(
             einheit=body.einheit,
             einzelpreis=body.einzelpreis,
             positionstyp=body.positionstyp,
+            zeilentyp=body.zeilentyp,
+            ebene=body.ebene,
+            einzelpreis_lohn=body.einzelpreis_lohn,
+            einzelpreis_material=body.einzelpreis_material,
         )
     )
+    await session.flush()
+    return await to_read_model(session, angebot)
+
+
+def _anteile(lv_pos: LeistungsverzeichnisPosition) -> tuple[Decimal, Decimal | None, Decimal | None]:
+    """(einzelpreis, lohn, material) fuer die Uebernahme. Der Split gilt nur,
+    wenn er sich zum LV-Einzelpreis aufaddiert -- bei gemischten Hauptpunkten
+    (Festpreis-Unterpunkte ohne Split) stimmt lohn+material nicht mit
+    einzelpreis ueberein; dann zaehlt allein der Einzelpreis. Ein Rundungs-
+    Cent landet im Materialanteil, damit die Summen-Pruefung der DB haelt."""
+    preis = lv_pos.einzelpreis
+    lohn, material = lv_pos.lohn_gesamt, lv_pos.material_gesamt
+    if (lohn > 0 or material > 0) and abs(lohn + material - preis) <= Decimal("0.01"):
+        lohn = runde_cent(lohn)
+        return preis, lohn, preis - lohn
+    return preis, None, None
+
+
+@router.post(
+    "/{angebot_id}/positionen/aus-lv",
+    response_model=AngebotRead,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("abrechnung", "bearbeiten")),
+    ],
+)
+async def positionen_aus_lv(
+    angebot_id: UUID,
+    body: AngebotAusLv,
+    auth: AuthContext = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AngebotRead:
+    angebot = await _angebot_laden(session, auth, angebot_id)
+    _nur_im_entwurf(angebot)
+
+    lv = await session.get(Leistungsverzeichnis, body.lv_id)
+    if lv is None or lv.geloescht_am is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Leistungsverzeichnis nicht gefunden")
+    kunden_ids = set(
+        (
+            await session.execute(
+                select(LeistungsverzeichnisKunde.kunde_id).where(
+                    LeistungsverzeichnisKunde.leistungsverzeichnis_id == lv.id
+                )
+            )
+        ).scalars()
+    )
+    # Keine Zuweisung heisst "gilt fuer alle Kunden".
+    if kunden_ids and angebot.kunde_id not in kunden_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Das Leistungsverzeichnis ist diesem Kunden nicht zugewiesen",
+        )
+
+    lv_positionen = (
+        (
+            await session.execute(
+                select(LeistungsverzeichnisPosition)
+                .where(
+                    LeistungsverzeichnisPosition.leistungsverzeichnis_id == lv.id,
+                    LeistungsverzeichnisPosition.geloescht_am.is_(None),
+                )
+                .order_by(LeistungsverzeichnisPosition.bezeichnung)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    nach_id = {p.id: p for p in lv_positionen}
+    mengen = {e.lv_position_id: e.menge for e in body.eintraege}
+    if len(mengen) != len(body.eintraege) or not set(mengen) <= set(nach_id):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Eintraege muessen verschiedene Positionen dieses Leistungsverzeichnisses sein",
+        )
+
+    kinder: dict[UUID, list[LeistungsverzeichnisPosition]] = defaultdict(list)
+    for p in lv_positionen:
+        if p.eltern_position_id in nach_id:
+            kinder[p.eltern_position_id].append(p)
+    oberste = [p for p in lv_positionen if p.eltern_position_id not in nach_id]
+    # Einzelpositionen vor den Gruppen: eine Position nach einem Titel gehoert
+    # zu ihm und ginge sonst in dessen Zwischensumme ein.
+    oberste.sort(key=lambda p: bool(kinder[p.id]))
+
+    # (lv_position, menge) in LV-Reihenfolge; Titel nur fuer Hauptpunkte.
+    zeilen: list[tuple[LeistungsverzeichnisPosition | None, LeistungsverzeichnisPosition | None, Decimal]] = []
+    for p in oberste:
+        if kinder[p.id]:
+            gewaehlt = [k for k in kinder[p.id] if k.id in mengen or p.id in mengen]
+            if not gewaehlt:
+                continue
+            if body.mit_gliederung:
+                zeilen.append((p, None, Decimal("0")))
+            for k in gewaehlt:
+                zeilen.append((None, k, mengen.get(k.id, mengen.get(p.id, Decimal("1")))))
+        elif p.id in mengen:
+            zeilen.append((None, p, mengen[p.id]))
+
+    bestehende = await positionen_fuer(session, angebot_id)
+    nummer = max((b.position for b in bestehende), default=0)
+    for titel, lv_pos, menge in zeilen:
+        nummer += 1
+        if titel is not None:
+            session.add(
+                AngebotPosition(
+                    mandant_id=angebot.mandant_id,
+                    angebot_id=angebot_id,
+                    position=nummer,
+                    beschreibung=titel.bezeichnung,
+                    menge=Decimal("0"),
+                    einheit="",
+                    einzelpreis=Decimal("0"),
+                    positionstyp="material",
+                    zeilentyp="titel",
+                    ebene=1,
+                    lv_position_id=titel.id,
+                )
+            )
+            continue
+        preis, lohn, material = _anteile(lv_pos)
+        session.add(
+            AngebotPosition(
+                mandant_id=angebot.mandant_id,
+                angebot_id=angebot_id,
+                position=nummer,
+                beschreibung=lv_pos.bezeichnung,
+                menge=menge,
+                einheit=lv_pos.einheit,
+                einzelpreis=preis,
+                einzelpreis_lohn=lohn,
+                einzelpreis_material=material,
+                positionstyp="arbeitszeit"
+                if lv_pos.ist_stundensatz or (lohn is not None and lohn > 0 and material == 0)
+                else "material",
+                lv_position_id=lv_pos.id,
+            )
+        )
     await session.flush()
     return await to_read_model(session, angebot)
 
@@ -592,8 +745,28 @@ async def update_position(
     _nur_im_entwurf(angebot)
     position = await _position_laden(session, angebot_id, position_id)
 
-    for feld in body.model_fields_set:
+    gesetzt = body.model_fields_set
+    if position.zeilentyp == "titel" and gesetzt - {"beschreibung", "ebene"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Titel haben nur Bezeichnung und Ebene"
+        )
+    anteile_geaendert = bool(gesetzt & {"einzelpreis_lohn", "einzelpreis_material"})
+    if anteile_geaendert and "einzelpreis" in gesetzt:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Entweder Einzelpreis oder Lohn-/Materialanteile angeben, nicht beides",
+        )
+    for feld in gesetzt:
         setattr(position, feld, getattr(body, feld))
+    if anteile_geaendert:
+        if position.einzelpreis_lohn is not None or position.einzelpreis_material is not None:
+            position.einzelpreis = (
+                (position.einzelpreis_lohn or Decimal("0")) + (position.einzelpreis_material or Decimal("0"))
+            ).quantize(Decimal("0.01"))
+    elif "einzelpreis" in gesetzt:
+        # Ein neuer Gesamtpreis macht die alte Aufteilung falsch.
+        position.einzelpreis_lohn = None
+        position.einzelpreis_material = None
     await session.flush()
     return await to_read_model(session, angebot)
 

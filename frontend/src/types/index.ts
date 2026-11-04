@@ -580,6 +580,10 @@ export interface PortalAngebotPosition {
   einheit: string;
   einzelpreis: string;
   gesamt: string;
+  zeilentyp?: AngebotZeilentyp;
+  ebene?: 1 | 2;
+  ordnungszahl?: string | null;
+  zwischensumme?: string | null;
 }
 
 export interface PortalAngebot {
@@ -1037,6 +1041,7 @@ export interface Mangel {
 
 export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt" | "widerrufen";
 export type AngebotPositionstyp = "material" | "arbeitszeit";
+export type AngebotZeilentyp = "position" | "titel";
 
 export interface AngebotPosition {
   id: string;
@@ -1048,6 +1053,15 @@ export interface AngebotPosition {
   einzelpreis: string;
   positionstyp: AngebotPositionstyp;
   gesamt: string;
+  // Gliederung: Titel tragen weder Menge noch Preis; Ordnungszahl und
+  // Zwischensumme berechnet das Backend.
+  zeilentyp: AngebotZeilentyp;
+  ebene: 1 | 2;
+  lv_position_id: string | null;
+  einzelpreis_lohn: string | null;
+  einzelpreis_material: string | null;
+  ordnungszahl: string | null;
+  zwischensumme: string | null;
 }
 
 /** Letzter Portal-Nachweis (Annahme/Ablehnung/Widerruf) eines Angebots. */
@@ -1087,6 +1101,8 @@ export interface Angebot {
   positionen: AngebotPosition[];
   gesamt_netto: string;
   gesamt_brutto: string;
+  summe_lohn?: string;
+  summe_material?: string;
   // Berechnet im Backend (versendet und gueltig_bis vor dem heutigen Betriebstag).
   ist_abgelaufen: boolean;
   // Abrechnung (nicht stornierte Abschlagsrechnungen, Entwuerfe eingeschlossen).
@@ -1116,6 +1132,15 @@ export interface AngebotPositionUpdate {
   einheit?: string;
   einzelpreis?: string;
   positionstyp?: AngebotPositionstyp;
+  ebene?: 1 | 2;
+  // Entweder einzelpreis ODER die Anteile (Summe wird serverseitig gebildet).
+  einzelpreis_lohn?: string | null;
+  einzelpreis_material?: string | null;
+}
+
+export interface AngebotAusLvEintrag {
+  lv_position_id: string;
+  menge: string;
 }
 
 export type RechnungStatus = "entwurf" | "versendet" | "teilweise_bezahlt" | "bezahlt" | "storniert";

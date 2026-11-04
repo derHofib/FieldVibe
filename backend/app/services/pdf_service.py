@@ -23,6 +23,7 @@ from app.models.vorgang import Vorgang
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.zeiterfassung import ZEITERFASSUNG_KATEGORIE_LABEL
 from app.services import privatkunden_service, steuer_service
+from app.services.angebot_gliederung import ist_titel, ordnungszahlen, zwischensummen
 from app.services.steuer_service import SteuerGruppe
 
 # Freitext im Formular-Baukasten (Feldlabels, Antworten) kommt direkt vom
@@ -366,7 +367,9 @@ def _b_positionshoehe(pdf: FPDF, p: AngebotPosition | RechnungPosition) -> float
     return hoehe
 
 
-def _b_position(pdf: FPDF, p: AngebotPosition | RechnungPosition, mit_linie: bool) -> Decimal:
+def _b_position(
+    pdf: FPDF, p: AngebotPosition | RechnungPosition, mit_linie: bool, nummer: str | None = None
+) -> Decimal:
     """Zeichnet die Position ohne Seitenumbruch-Pruefung (macht der Aufrufer
     ueber _b_positionshoehe), damit eine Position nie geteilt wird."""
     zeilen = _b_beschreibung_zeilen(pdf, p)
@@ -378,7 +381,7 @@ def _b_position(pdf: FPDF, p: AngebotPosition | RechnungPosition, mit_linie: boo
     pdf.set_font("Helvetica", "", 9)
     _set_grau(pdf)
     pdf.set_xy(_B_X_POS, yt)
-    pdf.cell(_B_SPALTEN[0], _B_ZEILE, str(p.position))
+    pdf.cell(_B_SPALTEN[0], _B_ZEILE, nummer or str(p.position))
 
     pdf.set_font("Helvetica", "", 9.5)
     _set_text(pdf)
@@ -423,6 +426,72 @@ def _b_zwischensumme(pdf: FPDF, betrag: Decimal) -> None:
     _set_text(pdf)
 
 
+_B_TITEL_ZEILE = 5.0
+
+
+def _b_titel_zeilen(pdf: FPDF, p: AngebotPosition) -> list[str]:
+    pdf.set_font("Helvetica", "B", 10)
+    return pdf.multi_cell(
+        _B_X_ENDE - _B_X_BESCHR, _B_TITEL_ZEILE, _pdf_safe_text(p.beschreibung), dry_run=True, output="LINES"
+    ) or [""]
+
+
+def _b_titel(pdf: FPDF, p: AngebotPosition, nummer: str) -> None:
+    zeilen = _b_titel_zeilen(pdf, p)
+    y = pdf.get_y() + (4 if p.ebene == 1 else 2)
+    pdf.set_font("Helvetica", "B", 10 if p.ebene == 1 else 9.5)
+    _set_text(pdf)
+    pdf.set_xy(_B_X_POS, y)
+    pdf.cell(_B_SPALTEN[0], _B_TITEL_ZEILE, nummer)
+    for i, zeile in enumerate(zeilen):
+        pdf.set_xy(_B_X_BESCHR, y + i * _B_TITEL_ZEILE)
+        pdf.cell(_B_X_ENDE - _B_X_BESCHR, _B_TITEL_ZEILE, zeile)
+    pdf.set_y(y + len(zeilen) * _B_TITEL_ZEILE + 1)
+
+
+def _beleg_positionen_gegliedert(pdf: FPDF, positionen: list[AngebotPosition], hoehe_nach_letzter: float) -> Decimal:
+    """Angebot mit Titelzeilen: Positionen in Reihenfolge, Titel mit
+    Ordnungszahl, nach jeder Gruppe eine Zwischensumme. Ein Titel bleibt mit
+    seiner ersten Zeile zusammen, die letzte Zeile mit Zwischensumme bzw.
+    Summenblock."""
+    sortiert = sorted(positionen, key=lambda x: x.position)
+    oz = ordnungszahlen(sortiert)
+    zs = zwischensummen(sortiert)
+    _b_kopfzeile(pdf)
+    gesamt = Decimal("0")
+    offen: list[AngebotPosition] = []
+
+    def zwischensumme_schliessen(bis_ebene: int) -> None:
+        while offen and offen[-1].ebene >= bis_ebene:
+            t = offen.pop()
+            if not _b_platz(pdf, _B_ZWISCHENSUMME_HOEHE):
+                _b_neue_seite(pdf)
+            _b_zwischensumme(pdf, zs[t.id].quantize(_CENT))
+
+    for i, p in enumerate(sortiert):
+        letzte = i == len(sortiert) - 1
+        if ist_titel(p):
+            zwischensumme_schliessen(p.ebene)
+            folge = _b_positionshoehe(pdf, sortiert[i + 1]) if not letzte and not ist_titel(sortiert[i + 1]) else 0.0
+            hoehe = len(_b_titel_zeilen(pdf, p)) * _B_TITEL_ZEILE + 5 + folge
+            if letzte:
+                hoehe += hoehe_nach_letzter
+            if not _b_platz(pdf, hoehe):
+                _b_neue_seite(pdf)
+            _b_titel(pdf, p, oz[p.id])
+            offen.append(p)
+            continue
+        hoehe = _b_positionshoehe(pdf, p)
+        if letzte:
+            hoehe += hoehe_nach_letzter + (_B_ZWISCHENSUMME_HOEHE * len(offen))
+        if not _b_platz(pdf, hoehe):
+            _b_neue_seite(pdf)
+        naechster_ist_titel = letzte or ist_titel(sortiert[i + 1])
+        gesamt += _b_position(pdf, p, mit_linie=not naechster_ist_titel, nummer=oz[p.id])
+    zwischensumme_schliessen(1)
+    return gesamt
+
+
 def _beleg_positionen(
     pdf: FPDF,
     positionen: list[AngebotPosition] | list[RechnungPosition],
@@ -435,6 +504,8 @@ def _beleg_positionen(
     den Summenblock + Abschluss direkt unter der letzten Position brauchen:
     passt er nicht mehr, wandert die letzte Position mit auf die neue Seite,
     damit der Summenblock nie allein steht."""
+    if any(ist_titel(p) for p in positionen):
+        return _beleg_positionen_gegliedert(pdf, positionen, hoehe_nach_letzter)
     sortiert = sorted(positionen, key=lambda x: x.position)
     ohne_vorgang = [p for p in sortiert if getattr(p, "vorgang_id", None) is None]
     gruppen: dict[UUID, list] = {}

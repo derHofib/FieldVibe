@@ -338,6 +338,8 @@ async def rechnung_aus_angebot(
     else:
         nummer = 1
         for p in angebot_positionen:
+            if p.zeilentyp == "titel":
+                continue
             session.add(
                 _position(
                     rechnung,
