@@ -486,3 +486,81 @@ export function effektiveNavGruppen(
   if (weitere.length > 0) ergebnis.push({ name: "Weitere", seiten: weitere });
   return ergebnis;
 }
+
+export type WorkspaceKey = "operativ" | "sales" | "finanzen" | "verwaltung";
+
+export interface Workspace {
+  key: WorkspaceKey;
+  label: string;
+  icon: LucideIcon;
+  // Reihenfolge = Prioritaet der Startseite: die erste fuer den Nutzer
+  // sichtbare Seite ist das Ziel beim Wechsel in den Workspace.
+  start: string[];
+  seiten: string[];
+}
+
+// Seiten, die in jedem Workspace erreichbar bleiben (taegliche Kommunikation).
+export const WORKSPACE_GEMEINSAM = ["feed", "boards", "postfach", "profil"];
+
+export const WORKSPACES: Workspace[] = [
+  {
+    key: "operativ",
+    label: "Operativ",
+    icon: Wrench,
+    start: ["dispo", "auftraege", "meine-aufgaben", "projekte"],
+    seiten: [
+      "dispo", "projekte", "zeitplaene", "auftraege", "meine-aufgaben", "material", "pruefmittel",
+      "zeiterfassung", "zeiten_buchen", "team_zeiten", "abwesenheiten", "techniker_zuweisungen",
+      "meldungen", "partner",
+    ],
+  },
+  {
+    key: "sales",
+    label: "Sales",
+    icon: TrendingUp,
+    start: ["anfragen", "kunden"],
+    seiten: ["anfragen", "kunden", "highlights", "leistungsverzeichnis", "kennzahlen"],
+  },
+  {
+    key: "finanzen",
+    label: "Finanzen",
+    icon: Receipt,
+    start: ["rechnungen", "buchhaltung"],
+    seiten: ["rechnungen", "rechnungseingang", "buchhaltung", "leistungsverzeichnis", "kennzahlen"],
+  },
+  {
+    key: "verwaltung",
+    label: "Verwaltung",
+    icon: UserCog,
+    start: ["nutzer", "protokoll"],
+    seiten: [
+      "nutzer", "account_typen", "organigramm", "anlagen_felder", "formulare", "integrationen",
+      "datenimport", "protokoll", "papierkorb",
+    ],
+  },
+];
+
+const ALLE_ZUGEORDNET = new Set([...WORKSPACES.flatMap((w) => w.seiten), ...WORKSPACE_GEMEINSAM]);
+
+export function seiteInWorkspace(seite: NavSeite, workspace: Workspace): boolean {
+  if (WORKSPACE_GEMEINSAM.includes(seite.key)) return true;
+  if (workspace.seiten.includes(seite.key)) return true;
+  // Neue, noch keinem Workspace zugeordnete Seiten duerfen nicht verschwinden.
+  return workspace.key === "verwaltung" && !ALLE_ZUGEORDNET.has(seite.key);
+}
+
+// Nur Workspaces anbieten, in denen der Nutzer mindestens eine eigene Seite sieht
+// (die gemeinsamen Seiten allein rechtfertigen keinen Workspace).
+export function verfuegbareWorkspaces(sichtbar: NavSeite[]): Workspace[] {
+  return WORKSPACES.filter((w) =>
+    sichtbar.some((s) => !WORKSPACE_GEMEINSAM.includes(s.key) && seiteInWorkspace(s, w)),
+  );
+}
+
+export function workspaceStartRoute(workspace: Workspace, sichtbar: NavSeite[]): string | undefined {
+  for (const key of workspace.start) {
+    const treffer = sichtbar.find((s) => s.key === key);
+    if (treffer) return treffer.route;
+  }
+  return sichtbar.find((s) => seiteInWorkspace(s, workspace))?.route;
+}
