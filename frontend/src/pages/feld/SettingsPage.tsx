@@ -17,6 +17,7 @@ import { IconBadge, type IconTone } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istOfficeHost } from "../../office/hostname";
 import { istModulAktiv } from "../../utils/module";
+import { istAdminRolle } from "../../utils/rollen";
 
 function SettingsLink({
   icon,
@@ -49,6 +50,8 @@ function SettingsLink({
 export function SettingsPage() {
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
+  const zeigeKennzahlen = istAdminRolle(currentUser) && istModulAktiv(currentUser, "statistik");
+  const zeigeBetrieb = hatRecht("kunden", "sehen") || hatRecht("formulare", "sehen") || zeigeKennzahlen;
 
   return (
     <div className="space-y-6">
@@ -63,13 +66,17 @@ export function SettingsPage() {
         <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
           Team
         </h2>
-        <SettingsLink
-          icon={Users}
-          tone="amber"
-          label="Nutzer verwalten"
-          beschreibung="Accounts anlegen, Account-Typ zuweisen, deaktivieren"
-          onClick={() => navigate("/accounts")}
-        />
+        {/* Custom-Rollen duerfen die Seite oeffnen, das Backend sperrt aber /api/users und
+            die Integrationen fuer sie -- diese Links nur fuer Admin-Rollen. */}
+        {istAdminRolle(currentUser) && (
+          <SettingsLink
+            icon={Users}
+            tone="amber"
+            label="Nutzer verwalten"
+            beschreibung="Accounts anlegen, Account-Typ zuweisen, deaktivieren"
+            onClick={() => navigate("/accounts")}
+          />
+        )}
         <SettingsLink
           icon={UserCog}
           tone="violet"
@@ -77,14 +84,16 @@ export function SettingsPage() {
           beschreibung="Eigene Account-Typen definieren und ihre Rechte-Matrix einstellen"
           onClick={() => navigate("/account-typen")}
         />
-        <SettingsLink
-          icon={Wrench}
-          tone="emerald"
-          label="Techniker-Zuweisungen"
-          beschreibung="Welcher Account sieht welche Kunden"
-          onClick={() => navigate("/techniker-zuweisungen")}
-        />
-        {hatRecht("mitarbeiterverwaltung", "bearbeiten") && (
+        {hatRecht("dispo", "bearbeiten") && hatRecht("kunden", "bearbeiten") && (
+          <SettingsLink
+            icon={Wrench}
+            tone="emerald"
+            label="Techniker-Zuweisungen"
+            beschreibung="Welcher Account sieht welche Kunden"
+            onClick={() => navigate("/techniker-zuweisungen")}
+          />
+        )}
+        {hatRecht("mitarbeiterverwaltung", "bearbeiten") && istModulAktiv(currentUser, "zeiterfassung") && (
           <SettingsLink
             icon={Clock}
             tone="cyan"
@@ -104,59 +113,67 @@ export function SettingsPage() {
         )}
       </section>
 
-      <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
-          Betrieb
-        </h2>
-        <SettingsLink
-          icon={Tags}
-          tone="rose"
-          label="Anlagen-Zusatzfelder"
-          beschreibung="Eigene Felder je Anlagentyp definieren"
-          onClick={() => navigate("/anlagen-felder")}
-        />
-        {hatRecht("formulare", "sehen") && (
-          <SettingsLink
-            icon={ClipboardList}
-            tone="violet"
-            label="Formulare"
-            beschreibung="Checklisten & Protokolle für Leistungstypen erstellen"
-            onClick={() => navigate("/form-schemas")}
-          />
-        )}
-        {istModulAktiv(currentUser, "statistik") && (
-          <SettingsLink
-            icon={TrendingUp}
-            tone="sky"
-            label="Kennzahlen"
-            beschreibung="Auslastung, Kennzahlen, Auswertungen"
-            onClick={() => navigate("/insights")}
-          />
-        )}
-      </section>
+      {zeigeBetrieb && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+            Betrieb
+          </h2>
+          {hatRecht("kunden", "sehen") && (
+            <SettingsLink
+              icon={Tags}
+              tone="rose"
+              label="Anlagen-Zusatzfelder"
+              beschreibung="Eigene Felder je Anlagentyp definieren"
+              onClick={() => navigate("/anlagen-felder")}
+            />
+          )}
+          {hatRecht("formulare", "sehen") && (
+            <SettingsLink
+              icon={ClipboardList}
+              tone="violet"
+              label="Formulare"
+              beschreibung="Checklisten & Protokolle für Leistungstypen erstellen"
+              onClick={() => navigate("/form-schemas")}
+            />
+          )}
+          {zeigeKennzahlen && (
+            <SettingsLink
+              icon={TrendingUp}
+              tone="sky"
+              label="Kennzahlen"
+              beschreibung="Auslastung, Kennzahlen, Auswertungen"
+              onClick={() => navigate("/insights")}
+            />
+          )}
+        </section>
+      )}
 
-      <section className="space-y-2">
-        <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
-          Unternehmen
-        </h2>
-        <SettingsLink
-          icon={Plug}
-          tone="indigo"
-          label="Firmendaten & Integrationen"
-          beschreibung="Firmenlogo/-daten für Angebote, E-Mail-Versand, angebundene Dienste"
-          onClick={() => navigate("/integrationen")}
-        />
-        {/* Breite Tabelle, nur am Desktop (office.) und nur fuer mandant_admin (Backend: dasselbe). */}
-        {istOfficeHost() && currentUser?.role === "mandant_admin" && (
-          <SettingsLink
-            icon={Archive}
-            tone="teal"
-            label="Daten exportieren"
-            beschreibung="Vollexport als ZIP und Z3-Export für die Finanzverwaltung"
-            onClick={() => navigate("/einstellungen/export")}
-          />
-        )}
-      </section>
+      {istAdminRolle(currentUser) && (
+        <section className="space-y-2">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-label2">
+            Unternehmen
+          </h2>
+          {istAdminRolle(currentUser) && (
+            <SettingsLink
+              icon={Plug}
+              tone="indigo"
+              label="Firmendaten & Integrationen"
+              beschreibung="Firmenlogo/-daten für Angebote, E-Mail-Versand, angebundene Dienste"
+              onClick={() => navigate("/integrationen")}
+            />
+          )}
+          {/* Breite Tabelle, nur am Desktop (office.) und nur fuer mandant_admin (Backend: dasselbe). */}
+          {istOfficeHost() && currentUser?.role === "mandant_admin" && (
+            <SettingsLink
+              icon={Archive}
+              tone="teal"
+              label="Daten exportieren"
+              beschreibung="Vollexport als ZIP und Z3-Export für die Finanzverwaltung"
+              onClick={() => navigate("/einstellungen/export")}
+            />
+          )}
+        </section>
+      )}
     </div>
   );
 }
