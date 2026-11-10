@@ -1,17 +1,19 @@
-import { Clock, LogOut, Search, Settings, Smartphone } from "lucide-react";
+import { ChevronDown, Clock, LogOut, Moon, Search, Settings, Smartphone, Sun } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { ImpersonationBanner } from "../components/ImpersonationBanner";
-import { ThemeToggle } from "../components/ThemeToggle";
+import { AktionsMenue } from "../components/AktionsMenue";
 import { IconBadge } from "../components/IconBadge";
 import { NAV_KATEGORIE_REIHENFOLGE, sichtbareNavSeiten, type NavKategorie } from "../config/navSeiten";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useAppLiveDaten } from "../hooks/useAppLiveDaten";
 import { weicheAus } from "./geraeteWeiche";
 import { mobileUrl } from "./hostname";
 import { aktiverNavKey, fuerOffice } from "./navAktiv";
+import { Tooltip } from "./OfficeUi";
 
 /** Die Seitenleiste wird vollstaendig aus config/navSeiten.ts erzeugt --
  * dieselbe Quelle, aus der die Bottom-Nav der Handy-App gespeist wird. Damit
@@ -23,6 +25,7 @@ export function OfficeLayout() {
   const navigate = useNavigate();
   const { outboxCount, isOnline } = useAppLiveDaten();
 
+  const { theme, toggleTheme } = useTheme();
   const { pathname } = useLocation();
 
   const sichtbar = fuerOffice(sichtbareNavSeiten(currentUser, hatRecht));
@@ -101,20 +104,6 @@ export function OfficeLayout() {
             ))}
           </nav>
 
-          <button
-            onClick={() => navigate("/einstellungen/seitenleiste")}
-            className="mt-3 flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60"
-          >
-            <Settings size={14} strokeWidth={2} />
-            Seitenleiste anpassen
-          </button>
-          <button
-            onClick={zurMobilenAnsicht}
-            className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-50 dark:text-stone-500 dark:hover:bg-stone-800/60"
-          >
-            <Smartphone size={14} strokeWidth={2} />
-            Zur mobilen Ansicht
-          </button>
         </aside>
 
         <div className="min-w-0 flex-1">
@@ -127,24 +116,47 @@ export function OfficeLayout() {
                 <Clock size={13} strokeWidth={2.25} /> {outboxCount}
               </span>
             )}
-            <span className="text-sm text-slate-600 dark:text-stone-300">{currentUser?.name}</span>
-            <button
-              onClick={() => navigate("/suche")}
-              aria-label="Suche"
-              title="Suche"
-              className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
-            >
-              <Search size={18} strokeWidth={2} />
-            </button>
-            <ThemeToggle />
-            <button
-              onClick={logout}
-              aria-label="Abmelden"
-              title="Abmelden"
-              className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
-            >
-              <LogOut size={18} strokeWidth={2} />
-            </button>
+            <Tooltip text="Suche">
+              <button
+                onClick={() => navigate("/suche")}
+                aria-label="Suche"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              >
+                <Search size={18} strokeWidth={2} />
+              </button>
+            </Tooltip>
+            <Tooltip text={theme === "dark" ? "Helles Design" : "Dunkles Design"}>
+              <button
+                onClick={toggleTheme}
+                aria-label={theme === "dark" ? "Helles Design" : "Dunkles Design"}
+                className="flex h-9 w-9 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              >
+                {theme === "dark" ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+              </button>
+            </Tooltip>
+            <AktionsMenue
+              label="Benutzermenü"
+              eintraege={[
+                {
+                  label: "Seitenleiste anpassen",
+                  icon: Settings,
+                  onClick: () => navigate("/einstellungen/seitenleiste"),
+                },
+                { label: "Zur mobilen Ansicht", icon: Smartphone, onClick: zurMobilenAnsicht },
+                "trenner",
+                { label: "Abmelden", icon: LogOut, onClick: logout, destruktiv: true },
+              ]}
+              ausloeser={({ offen }) => (
+                <span
+                  className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-stone-300 dark:hover:bg-stone-800 ${
+                    offen ? "bg-slate-100 dark:bg-stone-800" : ""
+                  }`}
+                >
+                  {currentUser?.name}
+                  <ChevronDown size={14} strokeWidth={2} />
+                </span>
+              )}
+            />
           </header>
 
           <main className="px-5 py-5">

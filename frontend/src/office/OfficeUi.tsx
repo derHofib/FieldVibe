@@ -6,6 +6,23 @@ import type { ReactNode } from "react";
  * der Handy-App fehl am Platz. Farben/Toene kommen weiterhin aus dem
  * bestehenden System (siehe docs/DESIGN.md). */
 
+/** Sofort sichtbarer Tooltip für Icon-Buttons (hover und Tastaturfokus). Das
+ * native title-Attribut erscheint erst nach ~1 s und nie bei Fokus. Der Text
+ * ist zusätzlich per aria-label am Button zu setzen -- hier nur Darstellung. */
+export function Tooltip({ text, children }: { text: string; children: ReactNode }) {
+  return (
+    <span className="group relative inline-flex">
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute top-full right-0 z-40 mt-1.5 rounded-md bg-slate-800 px-2 py-1 text-xs font-medium whitespace-nowrap text-white opacity-0 shadow-md transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 dark:bg-stone-700"
+      >
+        {text}
+      </span>
+    </span>
+  );
+}
+
 export function SeitenKopf({
   titel,
   anzahl,
