@@ -6,6 +6,7 @@ import { exportApi, insightsApi } from "../../api/endpoints";
 import { downloadBlob } from "../../utils/download";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { VorgangStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",
@@ -29,7 +30,7 @@ function Kachel({ label, wert }: { label: string; wert: string }) {
 export function InsightsPage() {
   const navigate = useNavigate();
 
-  const { data: insights, isLoading } = useQuery({
+  const { data: insights, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["insights"],
     queryFn: insightsApi.get,
   });
@@ -51,6 +52,7 @@ export function InsightsPage() {
     onSuccess: (blob) => downloadBlob(blob, "Eingangsrechnungen.csv"),
   });
 
+  if (ladeFehler && !insights) return <FehlerZustand fehler={ladeFehler} was="Die Kennzahlen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading || !insights) return <p className="text-center text-label2">Lädt…</p>;
 
   const gesamtVorgaenge = Object.values(insights.vorgaenge_nach_status).reduce((a, b) => a + b, 0);

@@ -19,6 +19,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -300,7 +301,7 @@ export function FeedPage() {
 
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error: ladeFehler, refetch: neuLaden } =
     useVorgangsListe(filter);
 
   // Die Liste zeigt bewusst nur Seite fuer Seite ("Mehr laden"), aber die
@@ -527,6 +528,8 @@ export function FeedPage() {
       {ansicht === "karte" ? (
         isLoading ? (
           <div className="h-[65vh] w-full animate-pulse rounded-lg bg-fill" />
+        ) : ladeFehler && !data ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
         ) : punkte.length === 0 ? (
           <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
         ) : (
@@ -550,6 +553,8 @@ export function FeedPage() {
         <>
           {isLoading ? (
             <SkeletonList count={4} />
+          ) : ladeFehler && !data ? (
+            <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
           ) : cards.length === 0 ? (
             <EmptyState
               icon={Inbox}

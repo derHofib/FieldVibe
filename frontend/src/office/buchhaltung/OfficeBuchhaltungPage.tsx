@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { OffenerPostenEintrag } from "../../types";
 import { KennzahlKarte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 function euro(betrag: string): string {
   const zahl = Number(betrag);
@@ -22,7 +23,7 @@ export function OfficeBuchhaltungPage() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const eingeschraenkt = currentUser?.nur_zugewiesene_kunden === true;
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["auswertung", "offene-posten"],
     queryFn: () => auswertungApi.offenePosten(),
     enabled: !eingeschraenkt,
@@ -49,6 +50,8 @@ export function OfficeBuchhaltungPage() {
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !data ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Auswertung" onErneut={() => void neuLaden()} />
       ) : !data ? (
         <EmptyState icon={Receipt} text="Keine Auswertung verfügbar." />
       ) : (

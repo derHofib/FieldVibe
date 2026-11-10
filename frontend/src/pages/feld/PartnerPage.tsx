@@ -8,6 +8,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 /** Partner-/Nachunternehmer-Verwaltung -- Firmen, denen einzelne Vorgaenge
  * (komplett oder als Teilleistung) delegiert werden koennen, siehe
@@ -33,7 +34,7 @@ export function PartnerPage() {
     notiz: "",
   });
 
-  const { data: partner, isLoading } = useQuery({
+  const { data: partner, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["partner"],
     queryFn: () => partnerApi.list(),
     enabled: kannSehen,
@@ -192,6 +193,8 @@ export function PartnerPage() {
         )}
         {isLoading ? (
           <SkeletonList count={3} />
+        ) : ladeFehler && !partner ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Partner" onErneut={() => void neuLaden()} />
         ) : (partner ?? []).length === 0 ? (
           <EmptyState icon={HardHat} text="Noch keine Partner/Nachunternehmer angelegt." />
         ) : partnerGefiltert.length === 0 ? (

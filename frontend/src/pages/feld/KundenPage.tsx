@@ -12,6 +12,7 @@ import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { type ERechnungFormat, leitwegIdFehler } from "../../utils/eRechnungVersand";
 import { istModulAktiv } from "../../utils/module";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 /** Eigenstaendige Kundenverwaltung -- vormals der "kunden"-Tab in der
  * inzwischen aufgeteilten GeschaeftPage (siehe Git-Historie). Rechnungen/
@@ -41,7 +42,7 @@ export function KundenPage() {
     eRechnungFormat: "" as ERechnungFormat | "",
   });
 
-  const { data: kunden, isLoading: kundenLoading } = useQuery({
+  const { data: kunden, isLoading: kundenLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["kunden"],
     queryFn: () => kundenApi.list(),
     enabled: kannSehen,
@@ -238,6 +239,8 @@ export function KundenPage() {
         )}
         {kundenLoading ? (
           <SkeletonList count={3} />
+        ) : ladeFehler && !kunden ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Kunden" onErneut={() => void neuLaden()} />
         ) : (kunden ?? []).length === 0 ? (
           <EmptyState icon={Users} text="Keine Kunden vorhanden." />
         ) : kundenGefiltert.length === 0 ? (

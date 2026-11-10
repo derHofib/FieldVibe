@@ -16,6 +16,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -348,7 +349,7 @@ export function AnlageProfilePage() {
   const [intervallEinheit, setIntervallEinheit] = useState<PruefzyklusEinheit>("monat");
   const [inventurIntervallTage, setInventurIntervallTage] = useState("90");
 
-  const { data: profil, isLoading } = useQuery({
+  const { data: profil, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["anlage-profil", id],
     queryFn: () => anlagenApi.profil(id!),
     enabled: !!id,
@@ -426,7 +427,9 @@ export function AnlageProfilePage() {
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
+  if (ladeFehler && !profil) return <FehlerZustand fehler={ladeFehler} was="Die Anlage" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
+
 
   return (
     <div className="space-y-4">

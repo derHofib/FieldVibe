@@ -11,6 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatDatum } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
 import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBedarfZweck, Tag } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 type MaterialTab = "material" | "bestellwesen";
 
@@ -346,7 +347,7 @@ export function MaterialPage() {
 
   const bestellwesenAktiv = tab === "bestellwesen" && materialAktiv;
 
-  const { data: material, isLoading: materialLoading } = useQuery({
+  const { data: material, isLoading: materialLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["material"],
     queryFn: () => materialApi.list(),
     enabled: materialAktiv,
@@ -649,6 +650,8 @@ export function MaterialPage() {
 
           {materialLoading ? (
             <SkeletonList count={3} />
+          ) : ladeFehler && !material ? (
+            <FehlerZustand fehler={ladeFehler} was="Das Material" onErneut={() => void neuLaden()} />
           ) : (material ?? []).length === 0 ? (
             <EmptyState icon={Package} text="Kein Material erfasst." />
           ) : materialGefiltert.length === 0 ? (

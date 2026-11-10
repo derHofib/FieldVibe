@@ -10,6 +10,7 @@ import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { SeitenKopf, TabellenRahmen } from "../../office/OfficeUi";
 import type { Leistungsverzeichnis } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 /** Mehrfachauswahl von Kunden -- SearchableSelect kennt nur Einzelauswahl,
  * deshalb hier: gewaehlte Kunden als entfernbare Chips, darunter dieselbe
@@ -341,7 +342,7 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
   const [neuesLv, setNeuesLv] = useState(false);
 
-  const { data: lvs, isLoading } = useQuery({
+  const { data: lvs, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["leistungsverzeichnisse"],
     queryFn: () => leistungsverzeichnisseApi.list(),
   });
@@ -373,6 +374,8 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !lvs ? (
+        <FehlerZustand fehler={ladeFehler} was="Das Leistungsverzeichnis" onErneut={() => void neuLaden()} />
       ) : !lvs || lvs.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Leistungsverzeichnisse angelegt." />
       ) : layout === "dicht" ? (

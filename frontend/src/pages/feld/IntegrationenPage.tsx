@@ -11,6 +11,7 @@ import { PortalVerbraucherschutzSection } from "../../components/PortalVerbrauch
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
 import { E_RECHNUNG_MODI, type ERechnungModus, eRechnungModus } from "../../utils/eRechnungVersand";
 import { istHttpUrl } from "../../utils/rechtliches";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
@@ -718,7 +719,7 @@ export function IntegrationenPage() {
   const [imapMailbox, setImapMailbox] = useState("INBOX");
   const [imapSecret, setImapSecret] = useState("");
 
-  const { data: integrationen, isLoading } = useQuery({
+  const { data: integrationen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["integrationen"],
     queryFn: integrationenApi.list,
   });
@@ -769,6 +770,7 @@ export function IntegrationenPage() {
     },
   });
 
+  if (ladeFehler && !integrationen) return <FehlerZustand fehler={ladeFehler} was="Die Integrationen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading) return <p className="text-center text-label2">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");

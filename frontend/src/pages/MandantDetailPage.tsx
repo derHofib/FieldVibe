@@ -6,6 +6,7 @@ import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantModul, MandantStatus } from "../types";
+import { FehlerZustand } from "../components/FehlerZustand";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -46,7 +47,7 @@ export function MandantDetailPage() {
   const queryClient = useQueryClient();
   const { startImpersonation, isImpersonating } = useAuth();
 
-  const { data: mandant, isLoading } = useQuery({
+  const { data: mandant, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["mandanten", id],
     queryFn: () => mandantenApi.get(id!),
     // super_admin-only endpoint: siehe MandantenPage fuer den Impersonation-
@@ -110,6 +111,7 @@ export function MandantDetailPage() {
     moduleMutation.mutate(naechste);
   }
 
+  if (ladeFehler && !mandant) return <FehlerZustand fehler={ladeFehler} was="Der Mandant" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading) return <p className="text-label2">Lädt…</p>;
   if (!mandant) return <p className="text-label2">Mandant nicht gefunden.</p>;
 

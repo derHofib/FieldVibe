@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { pruefeERechnungDatei } from "../../utils/eRechnung";
 import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf",
@@ -54,7 +55,7 @@ export function RechnungseingangPage() {
   const [importFehler, setImportFehler] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: eingangsrechnungen } = useQuery({
+  const { data: eingangsrechnungen, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["eingangsrechnungen", statusFilter],
     queryFn: () => eingangsrechnungenApi.list(statusFilter ? { status: statusFilter } : {}),
     enabled: abrechnungAktiv && kannSehen,
@@ -279,7 +280,10 @@ export function RechnungseingangPage() {
       </div>
 
       <div className="space-y-2">
-        {(eingangsrechnungen ?? []).length === 0 && (
+        {ladeFehler && !eingangsrechnungen && (
+          <FehlerZustand fehler={ladeFehler} was="Die Eingangsrechnungen" onErneut={() => void neuLaden()} />
+        )}
+        {!ladeFehler && (eingangsrechnungen ?? []).length === 0 && (
           <p className="text-sm text-label2">Keine Eingangsrechnungen.</p>
         )}
         {(eingangsrechnungen ?? []).map((e) => (

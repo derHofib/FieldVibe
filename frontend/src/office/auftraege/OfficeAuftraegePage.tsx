@@ -9,6 +9,7 @@ import type { Auftrag } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { AuftraegeTabelle } from "./AuftraegeTabelle";
 import { AuftragDetailPanel } from "./AuftragDetailPanel";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 /** Tabellen-Ansicht aller Auftraege (Projekt->Auftrag->Vorgang, siehe
  * app/models/auftrag.py) -- analog zu OfficeVorgaengePage.tsx, aber ohne
@@ -22,7 +23,7 @@ export function OfficeAuftraegePage() {
   const [neuerKundeId, setNeuerKundeId] = useState("");
   const [ausgewaehlterAuftrag, setAusgewaehlterAuftrag] = useState<Auftrag | null>(null);
 
-  const { data: auftraege, isLoading } = useQuery({
+  const { data: auftraege, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["auftraege"],
     queryFn: () => auftraegeApi.list(),
   });
@@ -112,6 +113,8 @@ export function OfficeAuftraegePage() {
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !auftraege ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Aufträge" onErneut={() => void neuLaden()} />
       ) : !auftraege || auftraege.length === 0 ? (
         <EmptyState icon={Layers} text="Noch kein Auftrag angelegt." />
       ) : (

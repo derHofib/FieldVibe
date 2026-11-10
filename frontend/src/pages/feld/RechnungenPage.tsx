@@ -22,6 +22,7 @@ import {
   rechnungsartVon,
 } from "../../utils/rechnungsart";
 import type { AngebotStatus, RechnungStatus, Rechnungsart, RechnungenFilter } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 type Bereich = "rechnungen" | "angebote";
 
@@ -42,7 +43,7 @@ function AngeboteListe() {
   const [kundeId, setKundeId] = useState("");
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
-  const { data: angebote, isLoading } = useQuery({ queryKey: ["angebote"], queryFn: () => angeboteApi.list() });
+  const { data: angebote, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({ queryKey: ["angebote"], queryFn: () => angeboteApi.list() });
 
   const erstellen = useMutation({
     mutationFn: () => angeboteApi.create({ kunde_id: kundeId }),
@@ -84,6 +85,8 @@ function AngeboteListe() {
       <div className="space-y-2">
         {isLoading ? (
           <SkeletonList count={3} />
+        ) : ladeFehler && !angebote ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Angebote" onErneut={() => void neuLaden()} />
         ) : (angebote ?? []).length === 0 ? (
           <EmptyState icon={FileCheck2} text="Keine Angebote vorhanden." />
         ) : (
@@ -135,7 +138,7 @@ export function RechnungenPage() {
     limit: SEITENGROESSE * seiten,
   };
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error: rechnungenFehler, refetch: rechnungenNeu } = useQuery({
     queryKey: ["rechnungen-uebersicht", filter],
     queryFn: () => rechnungenApi.list(filter),
     enabled: abrechnungAktiv && kannSehen && bereich === "rechnungen",
@@ -308,6 +311,8 @@ export function RechnungenPage() {
           <div className="space-y-2">
             {isLoading ? (
               <SkeletonList count={5} />
+            ) : rechnungenFehler && !data ? (
+              <FehlerZustand fehler={rechnungenFehler} was="Die Rechnungen" onErneut={() => void rechnungenNeu()} />
             ) : eintraege.length === 0 ? (
               <EmptyState icon={Receipt} text="Keine Rechnungen für diesen Filter." />
             ) : (

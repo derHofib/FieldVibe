@@ -17,6 +17,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { ProjektAufgabeDetailPanel } from "../../office/projekte/ProjektAufgabeDetailPanel";
 import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-slate-100 text-label dark:bg-stone-500/15 ",
@@ -74,7 +75,7 @@ export function MeineAufgabenPage() {
   const [panelAufgabe, setPanelAufgabe] = useState<ProjektAufgabe | null | undefined>(undefined);
   const [zeigeErledigt, setZeigeErledigt] = useState(false);
 
-  const { data: aufgaben, isLoading } = useQuery({
+  const { data: aufgaben, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["projekt-aufgaben", "meine"],
     queryFn: () => projektAufgabenApi.list({ mir_zugewiesen: true }),
   });
@@ -146,6 +147,8 @@ export function MeineAufgabenPage() {
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !aufgaben ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Aufgaben" onErneut={() => void neuLaden()} />
       ) : offen.length === 0 ? (
         <EmptyState icon={ListChecks} text="Keine offenen Aufgaben." />
       ) : (

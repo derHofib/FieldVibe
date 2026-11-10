@@ -30,6 +30,7 @@ import { SeitenPanel } from "../../components/SeitenPanel";
 import type { FormLogicEffekt, FormLogicRule, FormSchemaDetail, FormView, FormViewTyp, Leistungstyp } from "../../types";
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { describeCondition } from "../../utils/ruleConditionBuilder";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const VIEW_TYPEN: FormViewTyp[] = ["capture", "print", "summary", "table", "public"];
 const LEISTUNGSTYPEN = Object.keys(LEISTUNGSTYP_LABEL) as Leistungstyp[];
@@ -320,7 +321,7 @@ export function FormSchemaEditorPage() {
   const [fehler, setFehler] = useState<string | null>(null);
   const [tab, setTab] = useState<EditorTab>("felder");
 
-  const { data: schema, isLoading } = useQuery({
+  const { data: schema, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["form-schema", id],
     queryFn: () => formModulApi.getSchema(id!),
     enabled: !!id,
@@ -399,6 +400,7 @@ export function FormSchemaEditorPage() {
     onSuccess: invalidate,
   });
 
+  if (ladeFehler && !schema) return <FehlerZustand fehler={ladeFehler} was="Das Formular" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading) return <p className="text-center text-sm text-label2">Lädt…</p>;
   if (!schema) return <EmptyState icon={FileText} text="Schema nicht gefunden." />;
 

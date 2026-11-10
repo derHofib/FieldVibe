@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { boardsApi } from "../../../api/endpoints";
 import { EmptyState } from "../../../components/EmptyState";
 import type { BoardTyp } from "../../../types";
+import { FehlerZustand } from "../../../components/FehlerZustand";
 
 const TYP_ICON: Record<BoardTyp, typeof LayoutGrid> = {
   frei: LayoutGrid,
@@ -54,7 +55,7 @@ export function BoardsUebersichtPage() {
   const [name, setName] = useState("");
   const [typ, setTyp] = useState<BoardTyp>("frei");
 
-  const { data: boards, isLoading } = useQuery({ queryKey: ["boards"], queryFn: () => boardsApi.list() });
+  const { data: boards, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({ queryKey: ["boards"], queryFn: () => boardsApi.list() });
 
   const erstellen = useMutation({
     mutationFn: () => boardsApi.create({ name: name.trim(), board_typ: typ }),
@@ -141,6 +142,8 @@ export function BoardsUebersichtPage() {
 
       {isLoading ? (
         <p className="py-8 text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !boards ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Boards" onErneut={() => void neuLaden()} />
       ) : gefiltert.length === 0 ? (
         <EmptyState icon={StickyNote} text="Noch keine Boards angelegt." />
       ) : (

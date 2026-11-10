@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 export function MaterialDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +32,7 @@ export function MaterialDetailPage() {
   });
   const [neuerTag, setNeuerTag] = useState("");
 
-  const { data: material } = useQuery({
+  const { data: material, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["material-detail", id],
     queryFn: () => materialApi.get(id!),
     enabled: !!id,
@@ -93,7 +94,9 @@ export function MaterialDetailPage() {
     },
   });
 
+  if (ladeFehler && !material) return <FehlerZustand fehler={ladeFehler} was="Das Material" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (!material) return <p className="text-center text-label2">Lädt…</p>;
+
 
   const zugewieseneTags = (material.tag_ids ?? [])
     .map((tagId) => alleTags?.find((t) => t.id === tagId))

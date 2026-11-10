@@ -6,10 +6,11 @@ import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { STATUS_BADGE, STATUS_LABEL } from "../../config/vorgangDarstellung";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 export function PortalVorgaengePage() {
   const navigate = useNavigate();
-  const { data: vorgaenge, isLoading } = useQuery({
+  const { data: vorgaenge, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-vorgaenge"],
     queryFn: kundenportalApi.vorgaenge,
   });
@@ -19,6 +20,8 @@ export function PortalVorgaengePage() {
       <h1 className="text-lg font-bold text-label">Ihre Vorgänge</h1>
       {isLoading ? (
         <SkeletonList count={3} />
+      ) : ladeFehler && !vorgaenge ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
       ) : !vorgaenge || vorgaenge.length === 0 ? (
         <EmptyState icon={Inbox} text="Keine Vorgänge vorhanden." />
       ) : (

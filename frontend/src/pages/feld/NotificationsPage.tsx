@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { istOfficeHost } from "../../office/hostname";
 import type { NotificationEntry } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 function targetPath(n: NotificationEntry): string | null {
   if (n.ref_entity_type === "vorgang" && n.ref_entity_id) return `/vorgaenge/${n.ref_entity_id}`;
@@ -24,7 +25,7 @@ export function NotificationsPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: notifications, isLoading } = useQuery({
+  const { data: notifications, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => notificationsApi.list(),
   });
@@ -61,6 +62,8 @@ export function NotificationsPage() {
 
       {isLoading ? (
         <SkeletonList count={4} />
+      ) : ladeFehler && !notifications ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Benachrichtigungen" onErneut={() => void neuLaden()} />
       ) : !notifications || notifications.length === 0 ? (
         <EmptyState icon={Bell} text="Keine Benachrichtigungen." />
       ) : (

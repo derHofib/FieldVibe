@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { plattformIntegrationenApi } from "../api/endpoints";
 import type { PlattformIntegration } from "../types";
+import { FehlerZustand } from "../components/FehlerZustand";
 
 function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   const queryClient = useQueryClient();
@@ -115,7 +116,7 @@ export function EinstellungenPage() {
   const [fromAddress, setFromAddress] = useState("account@fieldvibe.de");
   const [secret, setSecret] = useState("");
 
-  const { data: integrationen, isLoading } = useQuery({
+  const { data: integrationen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["plattform-integrationen"],
     queryFn: plattformIntegrationenApi.list,
   });
@@ -138,6 +139,7 @@ export function EinstellungenPage() {
     },
   });
 
+  if (ladeFehler && !integrationen) return <FehlerZustand fehler={ladeFehler} was="Die Einstellungen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading) return <p className="text-center text-label2">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");

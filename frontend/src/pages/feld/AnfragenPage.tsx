@@ -4,6 +4,7 @@ import { useState } from "react";
 import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
   installation: "Installation",
@@ -177,7 +178,7 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
 export function AnfragenPage() {
   const [statusFilter, setStatusFilter] = useState<"offen" | "alle">("offen");
 
-  const { data: anfragen, isLoading } = useQuery({
+  const { data: anfragen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["vorgang-anfragen", statusFilter],
     queryFn: () => vorgangAnfragenApi.list(statusFilter === "offen" ? "offen" : undefined),
   });
@@ -203,6 +204,8 @@ export function AnfragenPage() {
 
       {isLoading ? (
         <p className="text-center text-label2">Lädt…</p>
+      ) : ladeFehler && !anfragen ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Anfragen" onErneut={() => void neuLaden()} />
       ) : !anfragen || anfragen.length === 0 ? (
         <p className="text-center text-sm text-label2">Keine Anfragen vorhanden.</p>
       ) : (

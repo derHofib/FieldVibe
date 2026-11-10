@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -284,7 +285,7 @@ export function StandortDetailPage() {
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
   const kannLoeschen = hatRecht("kunden", "loeschen");
 
-  const { data: profil, isLoading } = useQuery({
+  const { data: profil, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["standort-profil", id],
     queryFn: () => standorteApi.profil(id!),
     enabled: !!id,
@@ -303,7 +304,9 @@ export function StandortDetailPage() {
     },
   });
 
+  if (ladeFehler && !profil) return <FehlerZustand fehler={ladeFehler} was="Der Standort" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
+
 
   return (
     <div className="space-y-4">

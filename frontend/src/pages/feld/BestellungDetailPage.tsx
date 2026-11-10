@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { openPdfBlob } from "../../utils/pdf";
 import type { BestellungStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -31,7 +32,7 @@ export function BestellungDetailPage() {
     },
   });
 
-  const { data: bestellung } = useQuery({
+  const { data: bestellung, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["bestellung", id],
     queryFn: () => bestellungenApi.get(id!),
     enabled: !!id,
@@ -76,7 +77,9 @@ export function BestellungDetailPage() {
     onSuccess: openPdfBlob,
   });
 
+  if (ladeFehler && !bestellung) return <FehlerZustand fehler={ladeFehler} was="Die Bestellung" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (!bestellung) return <p className="text-center text-label2">Lädt…</p>;
+
 
   const lieferant = lieferanten?.find((l) => l.id === bestellung.lieferant_id);
   const gesamtRichtwert = bestellung.positionen.reduce(

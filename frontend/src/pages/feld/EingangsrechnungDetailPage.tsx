@@ -10,6 +10,7 @@ import { Hinweiskasten } from "../../components/Hinweiskasten";
 import { useAuth } from "../../context/AuthContext";
 import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 import { eRechnungSyntaxLabel, hinweisZeilen } from "../../utils/eRechnung";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -216,7 +217,7 @@ export function EingangsrechnungDetailPage() {
   const [showZahlungForm, setShowZahlungForm] = useState(false);
   const [zahlungBetrag, setZahlungBetrag] = useState("");
 
-  const { data: eingangsrechnung } = useQuery({
+  const { data: eingangsrechnung, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["eingangsrechnung", id],
     queryFn: () => eingangsrechnungenApi.get(id!),
     enabled: !!id,
@@ -283,7 +284,9 @@ export function EingangsrechnungDetailPage() {
     },
   });
 
+  if (ladeFehler && !eingangsrechnung) return <FehlerZustand fehler={ladeFehler} was="Die Eingangsrechnung" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (!eingangsrechnung) return <p className="text-center text-label2">Lädt…</p>;
+
 
   if (eingangsrechnung.status === "entwurf") {
     return <EntwurfBestaetigenView eingangsrechnung={eingangsrechnung} />;

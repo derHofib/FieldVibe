@@ -21,6 +21,7 @@ import { VorgaengeKanban } from "./VorgaengeKanban";
 import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
 import { VorgaengeTabelle } from "./VorgaengeTabelle";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
 
@@ -103,7 +104,7 @@ export function OfficeVorgaengePage() {
 
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error: ladeFehler, refetch: neuLaden } =
     useVorgangsListe(filter);
 
   // Kanban und Raster zeigen alle Treffer nebeneinander -- eine seitenweise
@@ -294,6 +295,8 @@ export function OfficeVorgaengePage() {
 
       {isLoading ? (
         <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !data ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
       ) : vorgaenge.length === 0 ? (
         <EmptyState
           icon={Inbox}

@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_LABEL: Record<string, string> = { draft: "Entwurf", published: "Veröffentlicht", archived: "Archiviert" };
 
@@ -18,7 +19,7 @@ export function FormSchemasPage() {
   const [beschreibung, setBeschreibung] = useState("");
   const [fehler, setFehler] = useState<string | null>(null);
 
-  const { data: schemas, isLoading } = useQuery({
+  const { data: schemas, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["form-schemas"],
     queryFn: () => formModulApi.listSchemas(),
   });
@@ -102,6 +103,8 @@ export function FormSchemasPage() {
 
       {isLoading ? (
         <p className="text-center text-sm text-label2">Lädt…</p>
+      ) : ladeFehler && !schemas ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Formulare" onErneut={() => void neuLaden()} />
       ) : !schemas || schemas.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Formular-Schemas angelegt." />
       ) : (

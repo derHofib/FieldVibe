@@ -19,6 +19,7 @@ import {
   rechnungsartVon,
 } from "../../utils/rechnungsart";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 type Bereich = "rechnungen" | "angebote";
 
@@ -164,7 +165,8 @@ export function OfficeRechnungenPage() {
           label: ANGEBOT_STATUS_LABEL[a.status],
         }));
 
-  const laedt = bereich === "rechnungen" ? rechnungen.isLoading : angebote.isLoading;
+  const aktuelleAbfrage = bereich === "rechnungen" ? rechnungen : angebote;
+  const laedt = aktuelleAbfrage.isLoading;
   const aktiv = gewaehlt && eintraege.some((e) => e.id === gewaehlt) ? gewaehlt : eintraege[0]?.id;
 
   return (
@@ -222,6 +224,12 @@ export function OfficeRechnungenPage() {
 
       {laedt ? (
         <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+      ) : aktuelleAbfrage.error && !aktuelleAbfrage.data ? (
+        <FehlerZustand
+          fehler={aktuelleAbfrage.error}
+          was={bereich === "rechnungen" ? "Die Rechnungen" : "Die Angebote"}
+          onErneut={() => void aktuelleAbfrage.refetch()}
+        />
       ) : eintraege.length === 0 ? (
         <EmptyState
           icon={bereich === "rechnungen" ? Receipt : FileCheck2}

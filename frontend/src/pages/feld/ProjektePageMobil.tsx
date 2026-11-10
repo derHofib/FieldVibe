@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { formatKurz, parseTag } from "../../office/projekte/zeitplan/zeitplanLogik";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 /** Mobile Projektliste (Abschnitt 5, "Projekte"-Tab): das bestehende
  * Kanban-Board (office/OfficeProjektePage.tsx) ist fuer die Desktop-Breite
@@ -27,7 +28,7 @@ export function ProjektePageMobil() {
 /** Feld-App-Einstieg fuer Nutzer ohne projekte.sehen: Projekte, in denen sie mitarbeiten. */
 function MeineZeitplaeneMobil() {
   const navigate = useNavigate();
-  const { data: projekte, isLoading } = useQuery({
+  const { data: projekte, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["meine-zeitplaene"],
     queryFn: zeitplanApi.meine,
   });
@@ -39,6 +40,8 @@ function MeineZeitplaeneMobil() {
       <div className="px-4">
         {isLoading ? (
           <SkeletonList count={4} />
+        ) : ladeFehler && !projekte ? (
+          <FehlerZustand fehler={ladeFehler} was="Deine Zeitpläne" onErneut={() => void neuLaden()} />
         ) : liste.length === 0 ? (
           <EmptyState icon={CalendarRange} text="Aktuell bist du in keinem Projekt eingeplant." />
         ) : (
@@ -78,7 +81,7 @@ function MeineZeitplaeneMobil() {
 
 function ProjektListeMobil() {
   const navigate = useNavigate();
-  const { data: projekte, isLoading } = useQuery({
+  const { data: projekte, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["projekte"],
     queryFn: () => projekteApi.list(),
   });
@@ -94,6 +97,8 @@ function ProjektListeMobil() {
       <div className="px-4">
         {isLoading ? (
           <SkeletonList count={4} />
+        ) : ladeFehler && !projekte ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Projekte" onErneut={() => void neuLaden()} />
         ) : aktive.length === 0 ? (
           <EmptyState icon={Folder} text="Keine aktiven Projekte. Neue Projekte werden im Büro angelegt." />
         ) : (

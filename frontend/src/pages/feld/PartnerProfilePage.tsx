@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { istModulAktiv } from "../../utils/module";
 import { einladungFehlerText, partnerPortalLink, portalZugangStatus } from "../../utils/partnerZugang";
 import type { Adresse, PartnerFreigabeStatus, PartnerNachweisTyp } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const NACHWEIS_TYP_LABEL: Record<PartnerNachweisTyp, string> = {
   freistellungsbescheinigung: "Freistellungsbescheinigung (§48 EStG)",
@@ -659,7 +660,7 @@ export function PartnerProfilePage() {
   const { currentUser, hatRecht } = useAuth();
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const { data: partner, isLoading } = useQuery({
+  const { data: partner, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["partner", id],
     queryFn: () => partnerApi.get(id!),
     enabled: !!id,
@@ -673,7 +674,9 @@ export function PartnerProfilePage() {
   });
 
   if (!istModulAktiv(currentUser, "nachunternehmer")) return null;
+  if (ladeFehler && !partner) return <FehlerZustand fehler={ladeFehler} was="Der Partner" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading || !partner) return <p className="text-center text-label2">Lädt…</p>;
+
 
   return (
     <div className="space-y-4">

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { auditLogApi, mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
+import { FehlerZustand } from "../components/FehlerZustand";
 
 export function AuditLogPage() {
   const { isImpersonating } = useAuth();
@@ -20,7 +21,7 @@ export function AuditLogPage() {
     queryFn: mandantenApi.list,
     enabled: !isImpersonating,
   });
-  const { data: entries, isLoading } = useQuery({
+  const { data: entries, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["audit-log", { mandantId, aktion, von, bis }],
     queryFn: () =>
       auditLogApi.list({
@@ -98,6 +99,8 @@ export function AuditLogPage() {
 
       {isLoading ? (
         <p className="text-label2">Lädt…</p>
+      ) : ladeFehler && !entries ? (
+        <FehlerZustand fehler={ladeFehler} was="Das Protokoll" onErneut={() => void neuLaden()} />
       ) : (
         <table className="w-full overflow-hidden rounded-lg bg-card text-left shadow-xs dark:shadow-none dark:ring-1 ">
           <thead className="bg-fill text-sm text-label ">

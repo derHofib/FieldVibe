@@ -6,6 +6,7 @@ import { papierkorbApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
@@ -51,7 +52,7 @@ export function PapierkorbPage() {
 
   const istOperativ = currentUser?.role === "loesch_operativ";
 
-  const { data: eintraege, isLoading } = useQuery({
+  const { data: eintraege, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["papierkorb", filter],
     queryFn: () => papierkorbApi.list(filter || undefined),
   });
@@ -118,6 +119,8 @@ export function PapierkorbPage() {
 
       {isLoading ? (
         <p className="text-label2">Lädt…</p>
+      ) : ladeFehler && !eintraege ? (
+        <FehlerZustand fehler={ladeFehler} was="Der Papierkorb" onErneut={() => void neuLaden()} />
       ) : !eintraege || eintraege.length === 0 ? (
         <p className="rounded-lg bg-card p-4 text-sm text-label2 shadow-xs ">
           Der Papierkorb ist leer.

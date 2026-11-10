@@ -9,6 +9,7 @@ import { SkeletonList } from "../../components/Skeleton";
 import { RECHNUNG_STATUS_LABEL, istRechnungUeberfaellig } from "../../utils/buchhaltung";
 import { openPdfBlob } from "../../utils/pdf";
 import type { PortalRechnung } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 function RechnungZeile({ rechnung }: { rechnung: PortalRechnung }) {
   const [fehler, setFehler] = useState<string | null>(null);
@@ -59,7 +60,7 @@ function RechnungZeile({ rechnung }: { rechnung: PortalRechnung }) {
 }
 
 export function PortalRechnungenPage() {
-  const { data: rechnungen, isLoading } = useQuery({
+  const { data: rechnungen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-rechnungen"],
     queryFn: kundenportalApi.rechnungen,
   });
@@ -69,6 +70,8 @@ export function PortalRechnungenPage() {
       <h1 className="text-lg font-bold text-label">Ihre Rechnungen</h1>
       {isLoading ? (
         <SkeletonList count={3} />
+      ) : ladeFehler && !rechnungen ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Rechnungen" onErneut={() => void neuLaden()} />
       ) : !rechnungen || rechnungen.length === 0 ? (
         <EmptyState icon={Receipt} text="Keine Rechnungen vorhanden." />
       ) : (

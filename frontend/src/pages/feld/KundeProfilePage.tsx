@@ -35,6 +35,7 @@ import type {
   User,
 } from "../../types";
 import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
   return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
@@ -1200,7 +1201,7 @@ export function KundeProfilePage() {
 
   const kundenverwaltungAktiv = istModulAktiv(currentUser, "kundenverwaltung");
 
-  const { data: profil, isLoading: profilLoading } = useQuery({
+  const { data: profil, isLoading: profilLoading, error: profilFehler, refetch: profilNeu } = useQuery({
     queryKey: ["kunde-profil", id],
     queryFn: () => kundenApi.profil(id!),
     enabled: !!id && kundenverwaltungAktiv,
@@ -1258,6 +1259,8 @@ export function KundeProfilePage() {
     );
   }
 
+  if (profilFehler && !profil)
+    return <FehlerZustand fehler={profilFehler} was="Der Kunde" zurueck onErneut={() => void profilNeu()} className="py-6" />;
   if (profilLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
 
   const kannVerwalten = hatRecht("kunden", "bearbeiten");

@@ -6,6 +6,7 @@ import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantStatus } from "../types";
+import { FehlerZustand } from "../components/FehlerZustand";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -27,7 +28,7 @@ export function MandantenPage() {
   const [slug, setSlug] = useState("");
   const [branche, setBranche] = useState("elektro");
 
-  const { data: mandanten, isLoading } = useQuery({
+  const { data: mandanten, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["mandanten"],
     queryFn: mandantenApi.list,
     // super_admin-only endpoint: an impersonation token is scoped as
@@ -102,6 +103,8 @@ export function MandantenPage() {
         <h2 className="mb-4 text-lg font-bold text-label">Mandanten</h2>
         {isLoading ? (
           <p className="text-label2">Lädt…</p>
+        ) : ladeFehler && !mandanten ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Mandanten" onErneut={() => void neuLaden()} />
         ) : (
           <table className="w-full overflow-hidden rounded-lg bg-card text-left shadow-xs dark:shadow-none dark:ring-1 ">
             <thead className="bg-fill text-sm text-label ">

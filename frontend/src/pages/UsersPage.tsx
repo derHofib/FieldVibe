@@ -9,6 +9,7 @@ import { Sheet } from "../components/apple/Sheet";
 import type { Einladung, EinladungRolle, Role, User } from "../types";
 import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
 import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
+import { FehlerZustand } from "../components/FehlerZustand";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -94,7 +95,7 @@ export function UsersPage() {
     if (role === "loesch_ansicht" || role === "loesch_operativ") setRole("mandant_admin");
   }
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["users", { versteckte: versteckteAnzeigen }],
     queryFn: versteckteAnzeigen ? usersApi.listMitVersteckten : usersApi.list,
   });
@@ -425,6 +426,8 @@ export function UsersPage() {
         {deleteError && <p className="mb-2 text-sm text-st-fehlt ">{deleteError}</p>}
         {isLoading ? (
           <p className="text-label2">Lädt…</p>
+        ) : ladeFehler && !users ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Nutzer" onErneut={() => void neuLaden()} />
         ) : (
           <table className="w-full card-ap text-left">
             <thead className="text-sm text-label2">

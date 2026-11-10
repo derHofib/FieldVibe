@@ -11,6 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import { montagDerWoche, toDateInput } from "../../utils/zeiterfassung";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 /** "offene Vorgaenge je Techniker" als schlichte horizontale Balken statt
  * einer Chart-Bibliothek -- passend zum bisher chart-freien Frontend, ein
@@ -32,7 +33,7 @@ function TechnikerBalken({ name, anzahl, max }: { name: string; anzahl: number; 
 export function TeamKennzahlen() {
   const [projektId, setProjektId] = useState("");
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
-  const { data: kennzahlen, isLoading } = useQuery({
+  const { data: kennzahlen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["vorgang-kennzahlen", projektId],
     queryFn: () => statistikApi.vorgangKennzahlen(projektId ? { projekt_id: projektId } : {}),
   });
@@ -59,7 +60,9 @@ export function TeamKennzahlen() {
         </select>
       </div>
 
-      {isLoading || !kennzahlen ? (
+      {ladeFehler && !kennzahlen ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Kennzahlen" onErneut={() => void neuLaden()} />
+      ) : isLoading || !kennzahlen ? (
         <p className="py-4 text-center text-sm text-label2">Lädt…</p>
       ) : (
         <>

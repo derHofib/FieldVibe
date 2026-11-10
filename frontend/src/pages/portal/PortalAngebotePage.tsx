@@ -6,10 +6,11 @@ import { kundenportalApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_LABEL } from "./status";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 export function PortalAngebotePage() {
   const navigate = useNavigate();
-  const { data: angebote, isLoading } = useQuery({
+  const { data: angebote, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-angebote"],
     queryFn: kundenportalApi.angebote,
   });
@@ -19,6 +20,8 @@ export function PortalAngebotePage() {
       <h1 className="text-lg font-bold text-label">Ihre Angebote</h1>
       {isLoading ? (
         <SkeletonList count={3} />
+      ) : ladeFehler && !angebote ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Angebote" onErneut={() => void neuLaden()} />
       ) : !angebote || angebote.length === 0 ? (
         <EmptyState icon={FileText} text="Keine Angebote vorhanden." />
       ) : (

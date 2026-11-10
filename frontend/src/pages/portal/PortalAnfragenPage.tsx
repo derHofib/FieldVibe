@@ -7,6 +7,7 @@ import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import type { Leistungstyp, VorgangAnfrageStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "stoerung", label: "Störung" },
@@ -260,7 +261,7 @@ function NeueAnfrage() {
 }
 
 export function PortalAnfragenPage() {
-  const { data: anfragen, isLoading } = useQuery({
+  const { data: anfragen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["portal-anfragen"],
     queryFn: kundenportalApi.anfragen,
   });
@@ -272,6 +273,8 @@ export function PortalAnfragenPage() {
 
       {isLoading ? (
         <SkeletonList count={3} />
+      ) : ladeFehler && !anfragen ? (
+        <FehlerZustand fehler={ladeFehler} was="Die Anfragen" onErneut={() => void neuLaden()} />
       ) : !anfragen || anfragen.length === 0 ? (
         <EmptyState icon={MessageSquareText} text="Noch keine Anfragen gestellt." />
       ) : (

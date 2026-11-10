@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -27,7 +28,7 @@ export function DauerauftragDetailPage() {
   const [ausgewaehlteAnlageIds, setAusgewaehlteAnlageIds] = useState<string[]>([]);
   const [neueFaelligkeit, setNeueFaelligkeit] = useState(new Date().toISOString().slice(0, 10));
 
-  const { data: dauerauftrag, isLoading } = useQuery({
+  const { data: dauerauftrag, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dauerauftrag", id],
     queryFn: () => dauerauftraegeApi.get(id!),
     enabled: !!id,
@@ -84,7 +85,9 @@ export function DauerauftragDetailPage() {
     setAnlagenBearbeiten(true);
   }
 
+  if (ladeFehler && !dauerauftrag) return <FehlerZustand fehler={ladeFehler} was="Der Dauerauftrag" zurueck onErneut={() => void neuLaden()} className="py-6" />;
   if (isLoading || !dauerauftrag) return <p className="text-center text-label2">Lädt…</p>;
+
 
   return (
     <div className="space-y-4">

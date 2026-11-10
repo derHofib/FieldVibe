@@ -18,6 +18,7 @@ import {
   buchungsstatusZuToken,
   formatUhrzeit,
 } from "../../utils/zeiterfassung";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const BUCHUNGSSTATUS_OPTIONEN: ZeiterfassungBuchungsstatus[] = ["vermerkt", "vorgemerkt", "gebucht", "abgerechnet"];
 
@@ -106,7 +107,7 @@ export function ZeitenBuchenPage() {
   const { data: auftraege } = useQuery({ queryKey: ["auftraege"], queryFn: () => auftraegeApi.list(), enabled: darfZeitenBuchen });
   const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: darfZeitenBuchen });
 
-  const { data: eintraege, isLoading } = useQuery({
+  const { data: eintraege, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: [
       "zeiterfassung-buchen-liste",
       technikerId,
@@ -304,6 +305,8 @@ export function ZeitenBuchenPage() {
       <div className="card-ap p-3">
         {isLoading ? (
           <p className="text-sm text-label2">Lädt…</p>
+        ) : ladeFehler && !eintraege ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Zeiten" onErneut={() => void neuLaden()} />
         ) : gruppen.length === 0 ? (
           <EmptyState icon={Hourglass} text="Keine Zeiteinträge für diese Filter." />
         ) : (
