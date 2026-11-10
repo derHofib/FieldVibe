@@ -19,8 +19,7 @@ from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.models.zeiterfassung import Zeiterfassung
 from app.schemas.feed import FeedCard, FeedResponse
-from app.services.rechte_service import ist_auf_zugewiesene_kunden_beschraenkt
-from app.services.zuweisung_service import assigned_kunde_ids
+from app.services.zuweisung_service import vorgang_scope_filter
 
 router = APIRouter(
     prefix="/api/feed",
@@ -117,6 +116,7 @@ async def get_feed(
     kunde_id: UUID | None = Query(default=None),
     anlage_id: UUID | None = Query(default=None),
     standort_id: UUID | None = Query(default=None),
+    projekt_id: UUID | None = Query(default=None),
     tag: str | None = Query(default=None, description="Tag-Label ohne '#'"),
     leistungstyp: str | None = Query(default=None),
     abrechnungsart: str | None = Query(default=None),
@@ -125,6 +125,10 @@ async def get_feed(
     unbisponiert: bool = Query(
         default=False,
         description="Nur offene Vorgaenge ohne aktiven Termin (Dispo-Rueckstand)",
+    ),
+    nur_meine: bool = Query(
+        default=False,
+        description="Nur Vorgaenge, die dem angemeldeten User zugewiesen sind (Feed-Tab 'Meine Vorgaenge')",
     ),
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -154,6 +158,8 @@ async def get_feed(
             ),
         )
 
+    if nur_meine:
+        stmt = stmt.where(Vorgang.zugewiesener_user_id == auth.user_id)
     if status_filter:
         status_liste = [s for s in status_filter.split(",") if s]
         if status_liste:
@@ -164,6 +170,8 @@ async def get_feed(
         stmt = stmt.where(Vorgang.anlage_id == anlage_id)
     if standort_id:
         stmt = stmt.where(Vorgang.standort_id == standort_id)
+    if projekt_id:
+        stmt = stmt.where(Vorgang.projekt_id == projekt_id)
     if leistungstyp:
         stmt = stmt.where(Vorgang.leistungstyp == leistungstyp)
     if abrechnungsart:
@@ -177,10 +185,9 @@ async def get_feed(
             Vorgang.faelligkeit_am
             < datetime.combine(faellig_bis + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc)
         )
-    if await ist_auf_zugewiesene_kunden_beschraenkt(
-        session, role=auth.role, account_typ_id=auth.account_typ_id
-    ):
-        stmt = stmt.where(Vorgang.kunde_id.in_(await assigned_kunde_ids(session, auth.user_id)))
+    scope_klausel = await vorgang_scope_filter(session, auth)
+    if scope_klausel is not None:
+        stmt = stmt.where(scope_klausel)
     if tag:
         stmt = stmt.where(
             Vorgang.id.in_(

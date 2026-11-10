@@ -25,7 +25,7 @@ export function OfficePostfachPage() {
   const aktivesKonto = accounts?.find((a) => a.id === aktivesKontoId) ?? accounts?.[0];
 
   if (isLoading) {
-    return <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
   }
 
   if (!accounts || accounts.length === 0 || ansicht.art === "konto-neu") {
@@ -62,7 +62,7 @@ export function OfficePostfachPage() {
           <select
             value={aktivesKonto.id}
             onChange={(e) => setAktivesKontoId(e.target.value)}
-            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
+            className="rounded-lg border border-sep bg-white px-2.5 py-1.5 text-xs text-label dark:bg-stone-800 "
           >
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
@@ -74,21 +74,21 @@ export function OfficePostfachPage() {
         <button
           onClick={() => setAnsicht({ art: "konto-bearbeiten" })}
           title="Postfach-Einstellungen"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label2 hover:bg-fill"
         >
           <Settings size={15} strokeWidth={2} />
         </button>
         <button
           onClick={() => setAnsicht({ art: "konto-neu" })}
           title="Weiteres Postfach verbinden"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-sep text-label2 hover:bg-fill"
         >
           <Plus size={15} strokeWidth={2} />
         </button>
       </SeitenKopf>
 
       {aktivesKonto.letzter_sync_fehler && (
-        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+        <p className="mb-3 flex items-center gap-1.5 rounded-lg bg-st-arbeit-bg px-3 py-2 text-xs font-medium text-st-arbeit ">
           <Mail size={13} strokeWidth={2} /> Letzter Abgleich fehlgeschlagen: {aktivesKonto.letzter_sync_fehler}
         </p>
       )}

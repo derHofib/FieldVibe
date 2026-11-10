@@ -2,16 +2,23 @@ import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AccountTypenPage } from "./pages/AccountTypenPage";
+import { FehlerberichtAnbindung } from "./components/FehlerberichtAnbindung";
+import { MfaErzwingenSeite } from "./components/MfaErzwingenSeite";
 import { FeldLayout } from "./components/FeldLayout";
+import { RouteGuard } from "./components/RouteGuard";
 import { Layout } from "./components/Layout";
 import { useAuth } from "./context/AuthContext";
 import { AuditLogPage } from "./pages/AuditLogPage";
+import { BugfixDetailPage, BugfixesPage } from "./pages/BugfixesPage";
 import { DsgvoPage } from "./pages/DsgvoPage";
 import { EinstellungenPage } from "./pages/EinstellungenPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MandantDetailPage } from "./pages/MandantDetailPage";
 import { MandantenPage } from "./pages/MandantenPage";
+import { BarrierefreiheitPage, DatenschutzPage, ImpressumPage } from "./pages/RechtlichesPage";
 import { RegistrierenPage } from "./pages/RegistrierenPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { UebersichtPage } from "./pages/UebersichtPage";
 import { UsersPage } from "./pages/UsersPage";
 import { AnfragenPage } from "./pages/feld/AnfragenPage";
@@ -20,41 +27,57 @@ import { AnlagenFelderPage } from "./pages/feld/AnlagenFelderPage";
 import { AnlageProfilePage } from "./pages/feld/AnlageProfilePage";
 import { AuswertungPage } from "./pages/feld/AuswertungPage";
 import { BestellungDetailPage } from "./pages/feld/BestellungDetailPage";
-import { BottomNavSettingsPage } from "./pages/feld/BottomNavSettingsPage";
+import { BoardMobilePage } from "./pages/feld/boards/BoardMobilePage";
+import { BoardsUebersichtPage } from "./pages/feld/boards/BoardsUebersichtPage";
 import { DauerauftragDetailPage } from "./pages/feld/DauerauftragDetailPage";
 import { DauerauftragNeuPage } from "./pages/feld/DauerauftragNeuPage";
 import { DauerauftraegePage } from "./pages/feld/DauerauftraegePage";
 import { DispoBoardPage } from "./pages/feld/DispoBoardPage";
 import { EingangsrechnungDetailPage } from "./pages/feld/EingangsrechnungDetailPage";
 import { FeedPage } from "./pages/feld/FeedPage";
-import { FormularAusfuellenPage } from "./pages/feld/FormularAusfuellenPage";
-import { FormularDetailPage } from "./pages/feld/FormularDetailPage";
-import { FormularePage } from "./pages/feld/FormularePage";
-import { GeschaeftPage } from "./pages/feld/GeschaeftPage";
+import { FormSchemaEditorPage } from "./pages/feld/FormSchemaEditorPage";
+import { FormSchemasPage } from "./pages/feld/FormSchemasPage";
+import { PlanSymbolePage } from "./pages/feld/PlanSymbolePage";
+import { FormSubmissionAusfuellenPage } from "./pages/feld/FormSubmissionAusfuellenPage";
 import { HighlightsPage } from "./pages/feld/HighlightsPage";
 import { InsightsPage } from "./pages/feld/InsightsPage";
 import { IntegrationenPage } from "./pages/feld/IntegrationenPage";
+import { LeistungsverzeichnisDetailPage } from "./pages/feld/LeistungsverzeichnisDetailPage";
+import { LeistungsverzeichnisPage } from "./pages/feld/LeistungsverzeichnisPage";
+import { KundenPage } from "./pages/feld/KundenPage";
 import { KundeProfilePage } from "./pages/feld/KundeProfilePage";
 import { MaterialDetailPage } from "./pages/feld/MaterialDetailPage";
+import { MaterialPage } from "./pages/feld/MaterialPage";
+import { MeineAufgabenPage } from "./pages/feld/MeineAufgabenPage";
+import { MehrPage } from "./pages/feld/MehrPage";
 import { NewVorgangPage } from "./pages/feld/NewVorgangPage";
 import { NotificationsPage } from "./pages/feld/NotificationsPage";
 import { PapierkorbPage } from "./pages/feld/PapierkorbPage";
+import { PartnerPage } from "./pages/feld/PartnerPage";
+import { PartnerProfilePage } from "./pages/feld/PartnerProfilePage";
 import { PostfachNachrichtPage } from "./pages/feld/PostfachNachrichtPage";
 import { PostfachPage } from "./pages/feld/PostfachPage";
 import { PruefmittelPage } from "./pages/feld/PruefmittelPage";
 import { ProfilePage } from "./pages/feld/ProfilePage";
+import { ProjektePageMobil } from "./pages/feld/ProjektePageMobil";
+import { ProjektZeitplanMobilPage } from "./pages/feld/ProjektZeitplanMobilPage";
 import { RechnungDetailPage } from "./pages/feld/RechnungDetailPage";
 import { RechnungenPage } from "./pages/feld/RechnungenPage";
 import { RechnungseingangPage } from "./pages/feld/RechnungseingangPage";
 import { SearchPage } from "./pages/feld/SearchPage";
+import { OfficeArbeitszeitEinstellungenPage } from "./office/zeit/OfficeArbeitszeitEinstellungenPage";
+import { OfficeAbwesenheitenPage } from "./office/zeit/OfficeAbwesenheitenPage";
 import { SettingsPage } from "./pages/feld/SettingsPage";
 import { StandortDetailPage } from "./pages/feld/StandortDetailPage";
 import { StatistikPage } from "./pages/feld/StatistikPage";
 import { TeamZeitenPage } from "./pages/feld/TeamZeitenPage";
 import { TechnikerZuweisungenPage } from "./pages/feld/TechnikerZuweisungenPage";
 import { VorgangDetailPage } from "./pages/feld/VorgangDetailPage";
+import { ZeitenBuchenPage } from "./pages/feld/ZeitenBuchenPage";
 import { UpdatePage } from "./pages/UpdatePage";
 import { KundenPortalApp } from "./portal/KundenPortalApp";
+import { PartnerPortalApp } from "./partner/PartnerPortalApp";
+import { NichtGefunden } from "./components/NichtGefunden";
 
 // Nachgeladen statt fest importiert: Handy-Nutzer sollen den Desktop-Code nie
 // herunterladen. Gleiches Muster wie das lazy MapboxFeedMap im Feed.
@@ -64,7 +87,7 @@ const OfficeAppLazy = lazy(() =>
 
 function OfficeApp() {
   return (
-    <Suspense fallback={<div className="p-6 text-slate-500 dark:text-stone-400">Lädt…</div>}>
+    <Suspense fallback={<div className="p-6 text-label2">Lädt…</div>}>
       <OfficeAppLazy />
     </Suspense>
   );
@@ -78,6 +101,9 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
   // ein nicht eingeloggter Mitarbeiter-Browser jeden /portal/*-Aufruf auf
   // /login statt /portal/login umleiten.
   if (isLoading) return <div className="p-6">Lädt…</div>;
+
+  // Pflicht-MFA des Betriebs: bis zur Einrichtung nichts anderes anzeigen.
+  if (currentUser?.mfa_einrichtung_erforderlich) return <MfaErzwingenSeite />;
 
   // Platform administration (Mandanten/Accounts/Audit-Log, no Social-UX) is
   // only for a genuine, non-impersonating super_admin. The moment that
@@ -94,14 +120,25 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
   const standardStartseite = currentUser?.role === "loesch_ansicht" ? "/papierkorb" : "/feed";
 
   return (
+    <FehlerberichtAnbindung>
     <Routes>
       <Route path="/portal/*" element={<KundenPortalApp />} />
+      <Route path="/partnerportal/*" element={<PartnerPortalApp />} />
+
+      {/* Oeffentlich fuer alle (angemeldet oder nicht, auch auf dem Office-
+          Host): die Pflichtlinks muessen ueberall erreichbar sein. Spezifischer
+          als der Office-Catch-all /* und der Login-Redirect *. */}
+      <Route path="/impressum" element={<ImpressumPage />} />
+      <Route path="/datenschutz" element={<DatenschutzPage />} />
+      <Route path="/barrierefreiheit" element={<BarrierefreiheitPage />} />
 
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
       <Route path="/registrieren" element={<RegistrierenPage />} />
+      <Route path="/passwort-vergessen" element={<ForgotPasswordPage />} />
+      <Route path="/passwort-zuruecksetzen" element={<ResetPasswordPage />} />
 
       {!isAuthenticated && <Route path="*" element={<Navigate to="/login" replace />} />}
 
@@ -122,59 +159,83 @@ export function App({ istOffice = false }: { istOffice?: boolean }) {
           <Route path="/mandanten/:id" element={<MandantDetailPage />} />
           <Route path="/accounts" element={<UsersPage />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
+          <Route path="/bugfixes" element={<BugfixesPage />} />
+          <Route path="/bugfixes/:id" element={<BugfixDetailPage />} />
           <Route path="/dsgvo" element={<DsgvoPage />} />
           <Route path="/update" element={<UpdatePage />} />
           <Route path="/einstellungen" element={<EinstellungenPage />} />
-          <Route path="*" element={<Navigate to="/uebersicht" replace />} />
+          <Route path="/" element={<Navigate to="/uebersicht" replace />} />
+          <Route path="*" element={<NichtGefunden startRoute="/uebersicht" startLabel="Zur Übersicht" />} />
         </Route>
       )}
 
       {isAuthenticated && !isPlatformAdmin && !istOffice && (
         <Route element={<FeldLayout />}>
-          <Route path="/feed" element={<FeedPage />} />
-          <Route path="/suche" element={<SearchPage />} />
-          <Route path="/neu" element={<NewVorgangPage />} />
-          <Route path="/benachrichtigungen" element={<NotificationsPage />} />
-          <Route path="/profil" element={<ProfilePage />} />
-          <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
-          <Route path="/kunden/:id" element={<KundeProfilePage />} />
-          <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
-          <Route path="/standorte/:id" element={<StandortDetailPage />} />
-          <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
-          <Route path="/formulare" element={<FormularePage />} />
-          <Route path="/formulare/:id" element={<FormularDetailPage />} />
-          <Route path="/vorgang-formulare/:id" element={<FormularAusfuellenPage />} />
-          <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
-          <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
-          <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
-          <Route path="/dispo" element={<DispoBoardPage />} />
-          <Route path="/pruefmittel" element={<PruefmittelPage />} />
-          <Route path="/geschaeft" element={<GeschaeftPage />} />
-          <Route path="/anfragen" element={<AnfragenPage />} />
-          <Route path="/angebote/:id" element={<AngebotDetailPage />} />
-          <Route path="/rechnungen" element={<RechnungenPage />} />
-          <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
-          <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
-          <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
-          <Route path="/auswertung" element={<AuswertungPage />} />
-          <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
-          <Route path="/material/:id" element={<MaterialDetailPage />} />
-          <Route path="/highlights" element={<HighlightsPage />} />
-          <Route path="/postfach" element={<PostfachPage />} />
-          <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/integrationen" element={<IntegrationenPage />} />
-          <Route path="/accounts" element={<UsersPage />} />
-          <Route path="/account-typen" element={<AccountTypenPage />} />
-          <Route path="/einstellungen" element={<SettingsPage />} />
-          <Route path="/einstellungen/menueleiste" element={<BottomNavSettingsPage />} />
-          <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
-          <Route path="/statistik" element={<StatistikPage />} />
-          <Route path="/team-zeiten" element={<TeamZeitenPage />} />
-          <Route path="/papierkorb" element={<PapierkorbPage />} />
-          <Route path="*" element={<Navigate to={standardStartseite} replace />} />
+          <Route element={<RouteGuard oberflaeche="feld" />}>
+            <Route path="/feed" element={<FeedPage />} />
+            <Route path="/suche" element={<SearchPage />} />
+            <Route path="/neu" element={<NewVorgangPage />} />
+            <Route path="/benachrichtigungen" element={<NotificationsPage />} />
+            <Route path="/profil" element={<ProfilePage />} />
+            <Route path="/vorgaenge/:id" element={<VorgangDetailPage />} />
+            <Route path="/vorgaenge/:id/zeit" element={<VorgangDetailPage ansicht="zeit" />} />
+            <Route path="/vorgaenge/:id/verlauf" element={<VorgangDetailPage ansicht="verlauf" />} />
+            <Route path="/vorgaenge/:id/positionen" element={<VorgangDetailPage ansicht="positionen" />} />
+            <Route path="/kunden/:id" element={<KundeProfilePage />} />
+            <Route path="/partner/:id" element={<PartnerProfilePage />} />
+            <Route path="/anlagen/:id" element={<AnlageProfilePage />} />
+            <Route path="/standorte/:id" element={<StandortDetailPage />} />
+            <Route path="/anlagen-felder" element={<AnlagenFelderPage />} />
+            <Route path="/form-submissions/:id" element={<FormSubmissionAusfuellenPage />} />
+            <Route path="/form-schemas" element={<FormSchemasPage />} />
+            <Route path="/form-schemas/:id" element={<FormSchemaEditorPage />} />
+            <Route path="/plan-symbole" element={<PlanSymbolePage />} />
+            <Route path="/dauerauftraege" element={<DauerauftraegePage />} />
+            <Route path="/dauerauftraege/neu" element={<DauerauftragNeuPage />} />
+            <Route path="/dauerauftraege/:id" element={<DauerauftragDetailPage />} />
+            <Route path="/dispo" element={<DispoBoardPage />} />
+            <Route path="/meine-aufgaben" element={<MeineAufgabenPage />} />
+            <Route path="/mehr" element={<MehrPage />} />
+            <Route path="/projekte" element={<ProjektePageMobil />} />
+            <Route path="/projekte/:id/zeitplan" element={<ProjektZeitplanMobilPage />} />
+            <Route path="/boards" element={<BoardsUebersichtPage />} />
+            <Route path="/boards/:id" element={<BoardMobilePage />} />
+            <Route path="/pruefmittel" element={<PruefmittelPage />} />
+            <Route path="/kunden" element={<KundenPage />} />
+            <Route path="/partner" element={<PartnerPage />} />
+            <Route path="/material" element={<MaterialPage />} />
+            <Route path="/anfragen" element={<AnfragenPage />} />
+            <Route path="/angebote/:id" element={<AngebotDetailPage />} />
+            <Route path="/rechnungen" element={<RechnungenPage />} />
+            <Route path="/rechnungen/:id" element={<RechnungDetailPage />} />
+            <Route path="/rechnungseingang" element={<RechnungseingangPage />} />
+            <Route path="/rechnungseingang/:id" element={<EingangsrechnungDetailPage />} />
+            <Route path="/auswertung" element={<AuswertungPage />} />
+            <Route path="/bestellungen/:id" element={<BestellungDetailPage />} />
+            <Route path="/material/:id" element={<MaterialDetailPage />} />
+            <Route path="/highlights" element={<HighlightsPage />} />
+            <Route path="/postfach" element={<PostfachPage />} />
+            <Route path="/postfach/:id" element={<PostfachNachrichtPage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/integrationen" element={<IntegrationenPage />} />
+            <Route path="/leistungsverzeichnis" element={<LeistungsverzeichnisPage />} />
+            <Route path="/leistungsverzeichnis/:id" element={<LeistungsverzeichnisDetailPage />} />
+            <Route path="/accounts" element={<UsersPage />} />
+            <Route path="/account-typen" element={<AccountTypenPage />} />
+            <Route path="/einstellungen" element={<SettingsPage />} />
+            <Route path="/einstellungen/arbeitszeit" element={<OfficeArbeitszeitEinstellungenPage />} />
+            <Route path="/abwesenheiten" element={<OfficeAbwesenheitenPage />} />
+            <Route path="/techniker-zuweisungen" element={<TechnikerZuweisungenPage />} />
+            <Route path="/statistik" element={<StatistikPage />} />
+            <Route path="/team-zeiten" element={<TeamZeitenPage />} />
+            <Route path="/zeiten-buchen" element={<ZeitenBuchenPage />} />
+            <Route path="/papierkorb" element={<PapierkorbPage />} />
+            <Route path="/" element={<Navigate to={standardStartseite} replace />} />
+            <Route path="*" element={<NichtGefunden startRoute={standardStartseite} />} />
+          </Route>
         </Route>
       )}
     </Routes>
+    </FehlerberichtAnbindung>
   );
 }

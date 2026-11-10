@@ -99,6 +99,10 @@ class EingangsrechnungRead(BaseModel):
     status: str
     bezahlt_am: datetime | None
     beleg_object_key: str | None
+    e_rechnung_syntax: str | None
+    hat_xml: bool
+    xml_sha256: str | None
+    import_hinweis: str | None
     notiz: str | None
     erstellt_von: UUID | None
     email_absender: str | None

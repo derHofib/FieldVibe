@@ -1,5 +1,6 @@
 from uuid import UUID
 
+import anyio
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,7 @@ from app.schemas.integration import (
     MandantIntegrationRead,
     MandantIntegrationUpdate,
 )
+from app.services.mail_service import MailVerbindungFehler, pruefe_smtp_ziel
 
 router = APIRouter(
     prefix="/api/integrationen",
@@ -28,6 +30,20 @@ router = APIRouter(
 # echte Zugangsdaten/API-Dokumentation zu bauen waere geraten statt
 # fundiert -- bleibt bewusst offen, bis eine konkrete Integration ansteht.
 ERLAUBTE_TYPEN = ("smtp", "imap")
+
+
+async def _pruefe_smtp_ziel(typ: str, config: dict) -> None:
+    host = config.get("host")
+    if typ != "smtp" or not host:
+        return
+    try:
+        port = int(config.get("port", 587))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ungültiger SMTP-Port") from exc
+    try:
+        await anyio.to_thread.run_sync(pruefe_smtp_ziel, str(host), port)
+    except MailVerbindungFehler as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
 def _to_read_model(integration: MandantIntegration) -> MandantIntegrationRead:
@@ -60,6 +76,7 @@ async def create_integration(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unbekannter Integrationstyp: {body.typ}",
         )
+    await _pruefe_smtp_ziel(body.typ, body.config)
     integration = MandantIntegration(
         mandant_id=auth.mandant_id,
         typ=body.typ,
@@ -84,6 +101,8 @@ async def update_integration(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Integration nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True, exclude={"secret"})
+    if changes.get("config") is not None:
+        await _pruefe_smtp_ziel(integration.typ, changes["config"])
     for field, value in changes.items():
         setattr(integration, field, value)
     # "secret" separat behandelt: nur wenn der Client den Key ueberhaupt

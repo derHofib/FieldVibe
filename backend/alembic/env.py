@@ -10,7 +10,9 @@ from app.models import *  # noqa: F401,F403  (registers models on Base.metadata)
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Ohne disable_existing_loggers=False wuerde fileConfig alle bereits angelegten
+    # App-Logger stummschalten, wenn Migrationen im selben Prozess laufen (Tests).
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Binding this here means Base.metadata.naming_convention (app/db/base.py)
 # is also active during migrations, not just for autogenerate diffing.

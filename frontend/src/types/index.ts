@@ -1,3 +1,5 @@
+import type { FehlerberichtKontext } from "../bugreport/typen";
+
 export type MandantStatus = "aktiv" | "pausiert" | "gekuendigt";
 
 // Antwort von GET /healthz (unauthentifiziert, fuer Infra-Monitoring UND
@@ -78,7 +80,7 @@ export type Role =
   | "loesch_operativ";
 
 // Muss mit MANDANT_MODULE in backend/app/models/mandant.py uebereinstimmen.
-// "vorgaenge" (Auftrag + Chat/Foto/Status/Unterschrift + Zeit start/stopp,
+// "vorgaenge" (Vorgang + Chat/Foto/Status/Unterschrift + Zeit start/stopp,
 // Kunde per Dropdown waehlen oder inline anlegen) ist bewusst NICHT Teil
 // dieser Liste -- das ist der nicht abschaltbare Boden.
 export type MandantModul =
@@ -89,10 +91,12 @@ export type MandantModul =
   | "abrechnung"
   | "kundenportal"
   | "dauerauftrag"
+  | "zeiterfassung"
   | "statistik"
   | "fahrzeuge"
   | "highlights"
   | "karten"
+  | "nachunternehmer"
   | "postfach";
 
 export interface Mandant {
@@ -118,9 +122,15 @@ export interface User {
   name: string;
   avatar_url: string | null;
   aktiv: boolean;
+  mfa_aktiv: boolean;
   created_at: string;
   updated_at: string;
 }
+
+export type UserAuswahl = Pick<
+  User,
+  "id" | "name" | "avatar_url" | "role" | "account_typ_id" | "account_typ_name" | "nur_zugewiesene_kunden" | "aktiv"
+>;
 
 // Nur "mandant_admin"/"custom" -- fuer super_admin und die Papierkorb-Rollen
 // gibt es keinen Einladungsweg (siehe app/schemas/einladung.py), die bleiben
@@ -200,6 +210,21 @@ export interface OfficeNavPraeferenz {
   items: string[] | null;
 }
 
+// Frei konfigurierbare Menue-Kategorien fuer die Office-Seitenleiste (siehe
+// config/navSeiten.ts: NAV_KATEGORIE_REIHENFOLGE ist der Fallback, wenn
+// kategorien hier leer ist -- der Mandant hat dann noch nie etwas
+// angepasst).
+export interface NavKategorieEintrag {
+  name: string;
+  reihenfolge: number;
+}
+
+export interface NavKategorienRead {
+  kategorien: NavKategorieEintrag[];
+  // nav_key -> Kategorie-Name
+  zuordnungen: Record<string, string>;
+}
+
 export interface CurrentUser {
   id: string;
   mandant_id: string | null;
@@ -211,9 +236,21 @@ export interface CurrentUser {
   // Steuert den "Ticket übernehmen"-Button auf der Vorgang-Detailseite
   // (siehe app/services/rechte_service.py:darf_vorgang_selbst_uebernehmen).
   darf_vorgaenge_selbst_uebernehmen: boolean;
+  // Steuert die Buchungs-Oberfläche in der Zeiterfassung (siehe
+  // app/services/rechte_service.py:darf_zeiten_buchen) -- Auswahl/
+  // Aktionsleiste im Zeit-Tab, Seite "Zeiten buchen", fremden Timer beenden.
+  darf_zeiten_buchen: boolean;
+  // Soll-Zeit, Feiertage, Bundesland pflegen und fremdes Soll/Saldo lesen
+  // (app/services/rechte_service.py, Konzept ZEITERFASSUNG.md Abschnitt 12).
+  darf_abwesenheiten_verwalten: boolean;
   name: string;
   email: string;
   impersonated_by: string | null;
+  mfa_aktiv: boolean;
+  // Mandant verlangt MFA (firmendaten.mfa_pflicht) -- dann nicht deaktivierbar.
+  mfa_pflicht: boolean;
+  // Pflicht ist an, MFA fehlt: das Token erlaubt nur den Einrichtungsweg.
+  mfa_einrichtung_erforderlich: boolean;
   deaktivierte_module: MandantModul[];
   // Individualisierte Bottom-Nav (siehe frontend/src/config/navSeiten.ts) --
   // links: feste Zone (genau 2 Seiten), rotunde: wischbare Zone (beliebig
@@ -226,12 +263,52 @@ export interface CurrentUser {
   // app/api/routes/auth.py:me) -- role != "custom" bekommt immer alle
   // Bereiche/Aktionen.
   rechte: Partial<Record<RechteBereich, RechteAktion[]>>;
+  // Reichweite je Recht (Bereich -> Aktion -> Scope, siehe
+  // backend/app/core/rechte_registry.py); noch ohne UI-Auswertung.
+  rechte_scopes?: Partial<Record<RechteBereich, Partial<Record<RechteAktion, RechteScope>>>>;
 }
+
+export type RechteScope = "eigene" | "team" | "teilbaum" | "bereich" | "mandant";
 
 export interface TokenPair {
   access_token: string;
   refresh_token: string;
   token_type: string;
+}
+
+// Mitarbeiter-Login: das Refresh-Token steckt im HttpOnly-Cookie, im Body ist
+// es null (nur Altclients in der Uebergangsfrist bekommen es noch).
+export interface UserTokenPair {
+  access_token: string;
+  refresh_token?: string | null;
+  token_type: string;
+}
+
+// POST /api/auth/login: bei aktiver MFA nur der Zwischen-Token.
+export interface LoginResponse {
+  access_token: string | null;
+  refresh_token: string | null;
+  token_type: string;
+  mfa_erforderlich: boolean;
+  mfa_token: string | null;
+}
+
+export interface MfaStatus {
+  aktiv: boolean;
+  pflicht: boolean;
+  einrichtung_erforderlich: boolean;
+  wiederherstellungscodes_uebrig: number;
+  aktiviert_am: string | null;
+}
+
+export interface MfaEinrichtung {
+  secret: string;
+  otpauth_uri: string;
+  qr_svg_data_uri: string;
+}
+
+export interface MfaAktiviert extends UserTokenPair {
+  wiederherstellungscodes: string[];
 }
 
 export interface ImpersonateResponse {
@@ -274,6 +351,14 @@ export interface Kunde {
   adresse: Adresse | null;
   notiz: string | null;
   ust_idnr: string | null;
+  // Ablauf der Bescheinigung USt 1 TG (§ 13b Abs. 2 Nr. 4 UStG), ISO-Datum.
+  ust_13b_nachweis_bis?: string | null;
+  // Routing-Kennung öffentlicher Auftraggeber (BT-10 der XRechnung).
+  leitweg_id?: string | null;
+  // Profil der E-Rechnung; null = Automatik (mit Leitweg-ID XRechnung, sonst ZUGFeRD).
+  e_rechnung_format?: "zugferd" | "xrechnung" | null;
+  // DATEV-Personenkonto; wird beim ersten Export automatisch vergeben.
+  debitorenkonto?: string | null;
   portal_slug: string;
   logo_object_key: string | null;
   created_at: string;
@@ -330,6 +415,15 @@ export interface Standort {
   updated_at: string;
 }
 
+// Whitelist des Kundenportals (siehe StandortPortalRead im Backend).
+export interface PortalStandort {
+  id: string;
+  bezeichnung: string;
+  adresse: Adresse;
+  aktiv: boolean;
+  created_at: string;
+}
+
 export type VorgangStatus =
   | "neu"
   | "geplant"
@@ -348,6 +442,19 @@ export type VorgangAbrechnungsart =
 
 export type Leistungstyp = "installation" | "pruefung" | "wartung" | "stoerung" | "beratung" | "planung";
 
+export interface TechnikerOffeneVorgaenge {
+  techniker_id: string;
+  techniker_name: string;
+  anzahl_offen: number;
+}
+
+export interface VorgangKennzahlen {
+  offene_vorgaenge_gesamt: number;
+  offene_vorgaenge_je_techniker: TechnikerOffeneVorgaenge[];
+  durchschnittliche_durchlaufzeit_tage: number | null;
+  abgeschlossene_vorgaenge_zeitraum: number;
+}
+
 export interface Vorgang {
   id: string;
   vorgangsnummer: string;
@@ -356,6 +463,8 @@ export interface Vorgang {
   standort_id: string | null;
   vertrag_id: string | null;
   parent_vorgang_id: string | null;
+  projekt_id: string | null;
+  auftrag_id: string | null;
   dauerauftrag_id: string | null;
   titel: string;
   beschreibung: string | null;
@@ -373,11 +482,15 @@ export interface Vorgang {
   erstellt_von_kundenportal_zugang_id: string | null;
   erstellt_von: string | null;
   wiedervorlage_am: string | null;
+  partner_id: string | null;
+  partner_freigabe_status: PartnerFreigabeStatus | null;
+  partner_ablehnung_grund: string | null;
+  partner_honorar_netto: string | null;
   created_at: string;
   updated_at: string;
 }
 
-// --- Auftragsanfragen (Kundenportal) ----------------------------------------
+// --- Vorgangsanfragen (Kundenportal) ----------------------------------------
 
 export type VorgangAnfrageStatus = "offen" | "angenommen" | "abgelehnt";
 
@@ -412,7 +525,10 @@ export type VorgangEventType =
   | "termin"
   | "rechnung_status"
   | "system"
-  | "unterschrift";
+  | "unterschrift"
+  | "eingangsrechnung_status"
+  | "formular"
+  | "leistung";
 
 export interface VorgangEvent {
   id: number;
@@ -421,6 +537,7 @@ export interface VorgangEvent {
   author_user_id: string | null;
   is_system: boolean;
   kundensichtbar: boolean;
+  partner_sichtbar?: boolean;
   body: string | null;
   payload: Record<string, unknown>;
   ref_entity_type: string | null;
@@ -430,6 +547,143 @@ export interface VorgangEvent {
   foto_url: string | null;
   foto_thumbnail_url: string | null;
   unterschrift_url: string | null;
+  dokument_url: string | null;
+  dokument_dateiname: string | null;
+}
+
+// Kundenportal-Sicht (Backend: VorgangPortalRead/VorgangEventPortalRead) --
+// bewusst ohne Honorar-/Partner-/Nutzer-Felder.
+export interface PortalVorgang {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
+  beschreibung: string | null;
+  leistungstyp: Leistungstyp;
+  status: VorgangStatus;
+  faelligkeit_am: string | null;
+  anlage_id: string | null;
+  standort_id: string | null;
+  abgeschlossen_am: string | null;
+  last_activity_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Kundenportal-Sicht auf Angebote/Rechnungen/Anlagen/Anfragen (Backend:
+// *PortalRead-Schemas) -- bewusst ohne interne Felder (Ersteller, Vorgang-
+// Bezug, Mahn-/Zahlungs-Interna, Positions-Herkunft, Anlagen-Notizen).
+export interface PortalAngebotPosition {
+  id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  gesamt: string;
+  zeilentyp?: AngebotZeilentyp;
+  ebene?: 1 | 2;
+  ordnungszahl?: string | null;
+  zwischensumme?: string | null;
+}
+
+export interface PortalAngebot {
+  id: string;
+  angebotsnummer: string;
+  status: AngebotStatus;
+  mwst_satz: string;
+  gueltig_bis: string | null;
+  versendet_am: string | null;
+  angenommen_am: string | null;
+  abgelehnt_am: string | null;
+  created_at: string;
+  positionen: PortalAngebotPosition[];
+  gesamt_netto: string;
+  gesamt_brutto: string;
+  ist_abgelaufen: boolean;
+  widerrufen_am: string | null;
+  fassung_sha256: string;
+  /** B2C-Ablauf (Button-Loesung, Widerruf) gilt fuer diesen Kunden. */
+  verbraucherschutz: boolean;
+  widerruf_moeglich: boolean;
+  widerruf_frist_bis: string | null;
+  widerruf_hinweis: string | null;
+  nachweis_referenz: string | null;
+}
+
+export interface PortalVerbraucherschutz {
+  verbraucherschutz: boolean;
+  widerrufsfrist_tage: number;
+  belehrung: { version: string; text: string; ist_platzhalter: boolean } | null;
+  widerrufsformular_text: string | null;
+}
+
+export interface PortalRechnungPosition {
+  id: string;
+  position: number;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  gesamt: string;
+}
+
+export interface PortalRechnung {
+  id: string;
+  rechnungsnummer: string;
+  status: RechnungStatus;
+  betrag_netto: string;
+  mwst_satz: string;
+  betrag_brutto: string;
+  bezahlter_betrag: string;
+  offener_betrag: string;
+  ist_ueberfaellig: boolean;
+  faellig_am: string | null;
+  leistungsdatum: string | null;
+  versendet_am: string | null;
+  bezahlt_am: string | null;
+  ist_storno: boolean;
+  created_at: string;
+  positionen: PortalRechnungPosition[];
+}
+
+export interface PortalAnlage {
+  id: string;
+  standort_id: string | null;
+  bezeichnung: string;
+  adresse: Adresse;
+  anlagentyp: string | null;
+  hersteller: string | null;
+  modell: string | null;
+  seriennummer: string | null;
+  aktiv: boolean;
+  created_at: string;
+}
+
+export interface PortalVorgangAnfrage {
+  id: string;
+  standort_id: string | null;
+  anlage_id: string | null;
+  titel: string;
+  beschreibung: string | null;
+  leistungstyp: Leistungstyp;
+  status: VorgangAnfrageStatus;
+  ablehnungsgrund: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PortalVorgangEvent {
+  id: number;
+  vorgang_id: string;
+  event_type: VorgangEventType;
+  is_system: boolean;
+  body: string | null;
+  created_at: string;
+  foto_url: string | null;
+  foto_thumbnail_url: string | null;
+  unterschrift_url: string | null;
+  dokument_url: string | null;
+  dokument_dateiname: string | null;
 }
 
 export interface Tag {
@@ -508,7 +762,7 @@ export interface SearchResponse {
   treffer: SearchHit[];
 }
 
-export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot";
+export type NotificationTyp = "mention" | "frist" | "zuweisung" | "angebot" | "anfrage" | "eingangsrechnung" | "partner_kommentar" | "zeitplan_antrag";
 
 export interface NotificationEntry {
   id: number;
@@ -612,20 +866,45 @@ export type ZeiterfassungKategorie =
   | "pause"
   | "urlaub"
   | "krankheit"
+  | "freizeitausgleich"
   | "sonstiges";
+
+// Muss mit ZeiterfassungBuchungsstatus in backend/app/schemas/zeiterfassung.py
+// uebereinstimmen (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 6.1).
+export type ZeiterfassungBuchungsstatus = "vermerkt" | "vorgemerkt" | "gebucht" | "abgerechnet";
 
 export interface Zeiterfassung {
   id: string;
   vorgang_id: string | null;
-  // Transient, vom Backend aufgeloest -- siehe _mit_vorgangsnummern in
+  // Transient, vom Backend aufgeloest -- siehe _mit_vorgang_kontext in
   // backend/app/api/routes/zeiterfassung.py.
   vorgangsnummer: string | null;
+  vorgang_kunde_id: string | null;
+  vorgang_auftrag_id: string | null;
+  vorgang_projekt_id: string | null;
   techniker_id: string;
   start_at: string;
   ende_at: string | null;
   taetigkeit: string | null;
   abrechenbar: boolean;
   kategorie: ZeiterfassungKategorie;
+  lv_position_id: string | null;
+  buchungsstatus: ZeiterfassungBuchungsstatus;
+  vorgemerkt_von: string | null;
+  vorgemerkt_am: string | null;
+  gebucht_von: string | null;
+  gebucht_am: string | null;
+  // Fahrten mit km (Stufe 3, docs/konzepte/ZEITERFASSUNG.md Abschnitt 11) --
+  // km/fahrzeug_id sind nur bei kategorie="fahrzeit" gesetzt, quelle wird
+  // ausschliesslich vom Server vergeben.
+  km: string | null;
+  fahrzeug_id: string | null;
+  quelle: "timer" | "manuell";
+  // Gesetzt bei automatisch aus einem Abwesenheitsantrag erzeugten Eintraegen.
+  abwesenheit_id?: string | null;
+  // km-Anteil getrennt von den Stunden abgerechnet (Migration 0097) -- die
+  // Stunden zeigt buchungsstatus "abgerechnet".
+  km_abgerechnet_rechnung_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -634,6 +913,32 @@ export interface ZeiterfassungStatistik {
   wochenstunden: string;
   monatsstunden: string;
   jahresstunden: string;
+}
+
+export interface ZeiterfassungStatusSumme {
+  arbeitszeit_stunden: string;
+  fahrzeit_stunden: string;
+  km: string;
+}
+
+// "Zeit"-Block im Auftrag-/Projekt-Panel (Stufe 4, docs/konzepte/
+// ZEITERFASSUNG.md Abschnitt 7.4).
+export interface ZeiterfassungSummenNachStatus {
+  vermerkt: ZeiterfassungStatusSumme;
+  vorgemerkt: ZeiterfassungStatusSumme;
+  gebucht: ZeiterfassungStatusSumme;
+  abgerechnet: ZeiterfassungStatusSumme;
+}
+
+export interface ZeiterfassungAenderung {
+  id: string;
+  aktion: string;
+  feld: string | null;
+  alter_wert: unknown;
+  neuer_wert: unknown;
+  grund: string | null;
+  geaendert_von: string | null;
+  geaendert_am: string;
 }
 
 // --- Steuerung (Phase 5) --------------------------------------------------
@@ -734,8 +1039,9 @@ export interface Mangel {
   updated_at: string;
 }
 
-export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt";
+export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt" | "widerrufen";
 export type AngebotPositionstyp = "material" | "arbeitszeit";
+export type AngebotZeilentyp = "position" | "titel";
 
 export interface AngebotPosition {
   id: string;
@@ -747,6 +1053,29 @@ export interface AngebotPosition {
   einzelpreis: string;
   positionstyp: AngebotPositionstyp;
   gesamt: string;
+  // Gliederung: Titel tragen weder Menge noch Preis; Ordnungszahl und
+  // Zwischensumme berechnet das Backend.
+  zeilentyp: AngebotZeilentyp;
+  ebene: 1 | 2;
+  lv_position_id: string | null;
+  einzelpreis_lohn: string | null;
+  einzelpreis_material: string | null;
+  ordnungszahl: string | null;
+  zwischensumme: string | null;
+}
+
+/** Letzter Portal-Nachweis (Annahme/Ablehnung/Widerruf) eines Angebots. */
+export interface AngebotNachweis {
+  id: string;
+  aktion: "annahme" | "ablehnung" | "widerruf";
+  zugang_email: string;
+  zugang_name: string;
+  ip: string;
+  user_agent: string;
+  fassung_sha256: string;
+  b2c_flag: boolean;
+  belehrung_version: string | null;
+  created_at: string;
 }
 
 export interface Angebot {
@@ -761,15 +1090,97 @@ export interface Angebot {
   versendet_am: string | null;
   angenommen_am: string | null;
   abgelehnt_am: string | null;
+  // Vorgang aus der Annahme (neu angelegt oder der bereits verknuepfte); beim
+  // Maengel-Pfad leer, dort haengt der Reparatur-Vorgang an den Maengeln.
+  auftrag_vorgang_id: string | null;
+  nachgefasst_am: string | null;
+  // Nur ueber den Widerrufsbutton im Kundenportal (Verbraucher) gesetzt.
+  widerrufen_am?: string | null;
   created_at: string;
   updated_at: string;
   positionen: AngebotPosition[];
   gesamt_netto: string;
   gesamt_brutto: string;
+  summe_lohn?: string;
+  summe_material?: string;
+  // Berechnet im Backend (versendet und gueltig_bis vor dem heutigen Betriebstag).
+  ist_abgelaufen: boolean;
+  // Abrechnung (nicht stornierte Abschlagsrechnungen, Entwuerfe eingeschlossen).
+  abschlaege?: AngebotAbschlag[];
+  abgerechnet_netto?: string;
+  rest_netto?: string;
+  schlussrechnung_id?: string | null;
+  // Rechnung ohne Abschlaege (aus dem Angebot erstellt).
+  rechnung_id?: string | null;
+  fassung_sha256?: string;
+  letzter_nachweis?: AngebotNachweis | null;
+}
+
+export interface AngebotAbschlag {
+  rechnung_id: string;
+  rechnungsnummer: string;
+  status: string;
+  netto: string;
+}
+
+export type AngebotMwstSatz = "19" | "7" | "0";
+
+export interface AngebotPositionUpdate {
+  artikelnummer?: string | null;
+  beschreibung?: string;
+  menge?: string;
+  einheit?: string;
+  einzelpreis?: string;
+  positionstyp?: AngebotPositionstyp;
+  ebene?: 1 | 2;
+  // Entweder einzelpreis ODER die Anteile (Summe wird serverseitig gebildet).
+  einzelpreis_lohn?: string | null;
+  einzelpreis_material?: string | null;
+}
+
+export interface AngebotAusLvEintrag {
+  lv_position_id: string;
+  menge: string;
 }
 
 export type RechnungStatus = "entwurf" | "versendet" | "teilweise_bezahlt" | "bezahlt" | "storniert";
+export type Rechnungsart = "rechnung" | "abschlag" | "schluss" | "gutschrift";
 export type RechnungZahlungsart = "ueberweisung" | "bar" | "karte" | "lastschrift" | "sonstiges";
+
+// Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher eine Position
+// stammt -- steuert beim Entfernen, ob/welche Zeiterfassung-Eintraege
+// wieder auf "gebucht" zurueckgesetzt werden. undefined/null bei manuell
+// eingetragenen Positionen.
+export type RechnungPositionQuelle = "material" | "zeit" | "fahrzeit" | "fahrtkosten" | "leistung";
+
+// Steuerkategorien nach EN 16931 (Steuer je Position, Migration 0104).
+export type RechnungSteuerKategorie = "S" | "Z" | "E" | "AE";
+
+// Steuergrund je Position (Migration 0105): Pflicht bei Z (pv_12_3), AE
+// (reverse_charge_13b) und E (sonstige_befreiung + Text); Kleinunternehmer
+// bekommen kleinunternehmer_19 serverseitig.
+export type RechnungSteuerGrund =
+  | "pv_12_3"
+  | "reverse_charge_13b"
+  | "kleinunternehmer_19"
+  | "sonstige_befreiung";
+
+// Steuerfelder einer Position wie sie Create/PATCH annehmen.
+export interface RechnungSteuerFelder {
+  steuer_kategorie: RechnungSteuerKategorie;
+  steuer_satz: string;
+  steuer_grund: RechnungSteuerGrund | null;
+  steuer_grund_text: string | null;
+}
+
+export interface RechnungSteuerGruppe {
+  kategorie: RechnungSteuerKategorie;
+  satz: string;
+  netto: string;
+  steuer: string;
+  hinweis?: string | null;
+  hinweise?: string[];
+}
 
 export interface RechnungPosition {
   id: string;
@@ -779,6 +1190,51 @@ export interface RechnungPosition {
   einheit: string;
   einzelpreis: string;
   gesamt: string;
+  quelle: RechnungPositionQuelle | null;
+  vorgang_id: string | null;
+  lv_position_id?: string | null;
+  material_id?: string | null;
+  steuer_kategorie?: RechnungSteuerKategorie;
+  steuer_satz?: string;
+  steuer_grund?: RechnungSteuerGrund | null;
+  steuer_grund_text?: string | null;
+  // Abzugsposition einer Schlussrechnung: die angerechnete Abschlagsrechnung.
+  abschlag_rechnung_id?: string | null;
+  // Gutschriftsposition: die Originalposition, die sie zuruecknimmt.
+  bezug_position_id?: string | null;
+  // Menge, die bereits durch Gutschriften zurueckgenommen ist.
+  bereits_gutgeschrieben?: string;
+}
+
+// Offene, noch nicht abgerechnete Stunden eines Vorgangs (Einzelposten-
+// Rechnung) -- getrennt nach Stunden mit und ohne hinterlegten SVS.
+export interface AbrechenbarerVorgang {
+  vorgang_id: string;
+  vorgangsnummer: string;
+  titel: string;
+  stunden_ohne_svs: string;
+  stunden_mit_svs: string;
+  // Anzahl offener Materialposten des Vorgangs.
+  material_offen: number;
+}
+
+// Vom Backend bei jedem Aufruf frisch aus Material-Verwendungen und
+// Zeiterfassung des verknuepften Vorgangs berechnet -- kein persistiertes
+// Objekt, daher keine id.
+export interface RechnungPositionVorschlag {
+  quelle: RechnungPositionQuelle;
+  beschreibung: string;
+  menge: string;
+  einheit: string;
+  einzelpreis: string;
+  lv_position_id?: string | null;
+  material_id?: string | null;
+}
+
+export interface RechnungVorgangRef {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
 }
 
 export interface RechnungZahlung {
@@ -797,6 +1253,20 @@ export interface RechnungZahlungCreate {
   datum?: string;
   zahlungsart?: RechnungZahlungsart;
   notiz?: string;
+}
+
+export interface AngerechneterAbschlag {
+  rechnung_id: string;
+  rechnungsnummer: string;
+  datum: string;
+  netto: string;
+}
+
+export interface GutschriftKurz {
+  rechnung_id: string;
+  rechnungsnummer: string;
+  // Mit Vorzeichen wie auf dem Gutschriftsbeleg (negativ).
+  brutto: string;
 }
 
 export interface Rechnung {
@@ -819,7 +1289,10 @@ export interface Rechnung {
   created_at: string;
   updated_at: string;
   positionen: RechnungPosition[];
+  vorgaenge: RechnungVorgangRef[];
   betrag_brutto: string;
+  betrag_steuer?: string;
+  steuergruppen?: RechnungSteuerGruppe[];
   ist_ueberfaellig: boolean;
   tage_ueberfaellig: number;
   zahlungen: RechnungZahlung[];
@@ -827,6 +1300,35 @@ export interface Rechnung {
   offener_betrag: string;
   // Nur gesetzt, wenn beim Versand ein ZUGFeRD-Hybrid-PDF archiviert wurde.
   xml_object_key: string | null;
+  // Beim Versand festgehalten: Profil der E-Rechnung und die darin enthaltene Leitweg-ID.
+  e_rechnung_profil?: "en16931" | "xrechnung" | null;
+  leitweg_id?: string | null;
+  rechnungsart?: Rechnungsart;
+  angebot_id?: string | null;
+  // Nur Gutschriften: Ursprungsrechnung und Grund.
+  bezug_rechnung_id?: string | null;
+  gutschrift_grund?: string | null;
+  // Nur Schlussrechnungen.
+  angerechnete_abschlaege?: AngerechneterAbschlag[];
+  // Am Original: nicht stornierte Gutschriften.
+  gutschriften?: GutschriftKurz[];
+}
+
+export interface RechnungAusAngebotCreate {
+  angebot_id: string;
+  rechnungsart: "rechnung" | "abschlag" | "schluss";
+  // Nur bei abschlag, genau eines von beiden.
+  abschlag_prozent?: string;
+  abschlag_netto?: string;
+  faellig_am?: string;
+  leistungsdatum?: string;
+}
+
+export interface RechnungGutschriftCreate {
+  // Genau eines von positionen/alle.
+  positionen?: { position_id: string; menge: string }[];
+  alle?: boolean;
+  grund: string;
 }
 
 export interface RechnungListe {
@@ -850,6 +1352,7 @@ export interface RechnungenFilter {
   betrag_bis?: string;
   nur_offen?: boolean;
   nur_ueberfaellig?: boolean;
+  rechnungsart?: Rechnungsart;
   sort?: string;
   limit?: number;
   offset?: number;
@@ -902,6 +1405,10 @@ export interface Eingangsrechnung {
   status: EingangsrechnungStatus;
   bezahlt_am: string | null;
   beleg_object_key: string | null;
+  e_rechnung_syntax: "cii" | "ubl" | null;
+  hat_xml: boolean;
+  xml_sha256: string | null;
+  import_hinweis: string | null;
   notiz: string | null;
   erstellt_von: string | null;
   email_absender: string | null;
@@ -966,6 +1473,119 @@ export interface MaterialVerwendung {
   created_at: string;
 }
 
+export interface MaterialVerwendungMitDetails extends MaterialVerwendung {
+  material_bezeichnung: string;
+  material_einheit: string;
+}
+
+// --- Leistungsverzeichnis (LV) ---------------------------------------------
+
+export type LvKalkulationsmodus = "festpreis" | "berechnet";
+
+export interface LvMaterialPosten {
+  bezeichnung: string;
+  menge: string;
+  einzelpreis: string;
+  material_id: string | null;
+}
+
+// Kopf-Entitaet: buendelt Positionen und traegt selbst die Kunden-Zuweisung.
+export interface Leistungsverzeichnis {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  // Leer = gilt fuer alle Kunden. Ein LV kann keinem, einem oder mehreren
+  // Kunden zugewiesen sein.
+  kunden_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeistungsverzeichnisPosition {
+  id: string;
+  leistungsverzeichnis_id: string;
+  // Gesetzt = Unterpunkt eines Hauptpunkts, eine Ebene tief.
+  eltern_position_id: string | null;
+  bezeichnung: string;
+  einheit: string;
+  // Im Modus "berechnet" oder mit Unterpunkten serverseitig ermittelt statt
+  // frei editierbar -- siehe app/api/routes/leistungsverzeichnis.py.
+  einzelpreis: string;
+  ist_stundensatz: boolean;
+  notiz: string | null;
+  kalkulationsmodus: LvKalkulationsmodus;
+  lohn_minuten: number | null;
+  lohn_stundensatz: string | null;
+  lohn_gemeinkosten_prozent: string;
+  material_posten: LvMaterialPosten[];
+  material_aufschlag_prozent: string;
+  gewinn_wagnis_prozent: string;
+  lohn_gesamt: string;
+  material_gesamt: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeistungsverzeichnisVerwendung {
+  id: string;
+  lv_position_id: string;
+  vorgang_id: string;
+  menge: string;
+  verwendet_von: string;
+  created_at: string;
+}
+
+export interface LeistungsverzeichnisVerwendungMitDetails extends LeistungsverzeichnisVerwendung {
+  lv_bezeichnung: string;
+  lv_einheit: string;
+  lv_einzelpreis: string;
+}
+
+// --- Partner/Nachunternehmer -----------------------------------------------
+
+export interface Partner {
+  id: string;
+  name: string;
+  gewerk: string | null;
+  ansprechpartner: Ansprechpartner[];
+  telefon: string | null;
+  email: string | null;
+  adresse: Adresse | null;
+  notiz: string | null;
+  aktiv: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PartnerNachweisTyp =
+  | "freistellungsbescheinigung"
+  | "haftpflichtversicherung"
+  | "gewerbeanmeldung"
+  | "handwerksrolle"
+  | "avv_dsgvo"
+  | "sonstiges";
+
+export interface PartnerNachweis {
+  id: string;
+  partner_id: string;
+  typ: PartnerNachweisTyp;
+  gueltig_bis: string | null;
+  dokument_s3_key: string | null;
+  notiz: string | null;
+  abgelaufen: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PartnerFreigabeStatus = "vorgeschlagen" | "angenommen" | "abgelehnt";
+
+export interface VorgangPartnerZuweisungResponse {
+  vorgang_id: string;
+  partner_id: string | null;
+  partner_freigabe_status: PartnerFreigabeStatus | null;
+  freistellungsbescheinigung_warnung: boolean;
+}
+
 export type MaterialBewegungTyp = "eingang" | "umlagerung" | "verwendung" | "korrektur";
 
 export interface MaterialBewegung {
@@ -986,6 +1606,7 @@ export interface Lieferant {
   email: string | null;
   telefon: string | null;
   notiz: string | null;
+  kreditorenkonto?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1040,6 +1661,8 @@ export interface Bestellung {
   bestellnummer: string;
   status: BestellungStatus;
   notiz: string | null;
+  /** "YYYY-MM-DD"; wirkt auf Zeitplan-Meilensteine. */
+  liefertermin: string | null;
   erstellt_von: string;
   created_at: string;
   updated_at: string;
@@ -1064,6 +1687,8 @@ export interface CurrentKunde {
   kunde_name: string;
   name: string;
   email: string;
+  // Mandanten-Kontext fuer die Rechtstext-Links im angemeldeten Portal.
+  portal_slug: string | null;
 }
 
 export interface KundenportalZugang {
@@ -1096,8 +1721,23 @@ export type RechteBereich =
   | "abrechnung"
   | "statistik"
   | "mitarbeiterverwaltung"
-  | "formulare";
-export type RechteAktion = "sehen" | "erstellen" | "bearbeiten" | "loeschen";
+  | "formulare"
+  | "partner"
+  | "projekte"
+  | "fehlerberichte"
+  | "organigramm";
+export type RechteAktion =
+  | "sehen"
+  | "erstellen"
+  | "bearbeiten"
+  | "loeschen"
+  | "exportieren"
+  // Nur in einzelnen Bereichen (siehe GET /api/rechte/registry).
+  | "freigeben"
+  | "rechte_verwalten"
+  // Nur im Bereich "projekte": Zeitplan lesen bzw. Änderungen daran beantragen.
+  | "zeitplan_sehen"
+  | "zeitplan_beantragen";
 
 export interface RechteMatrixEintrag {
   bereich: RechteBereich;
@@ -1112,6 +1752,8 @@ export interface AccountTyp {
   farbe: string | null;
   nur_zugewiesene_kunden: boolean;
   darf_vorgaenge_selbst_uebernehmen: boolean;
+  darf_zeiten_buchen: boolean;
+  darf_abwesenheiten_verwalten: boolean;
   reihenfolge: number;
   anzahl_nutzer: number;
 }
@@ -1122,6 +1764,8 @@ export interface AccountTypCreate {
   farbe?: string | null;
   nur_zugewiesene_kunden?: boolean;
   darf_vorgaenge_selbst_uebernehmen?: boolean;
+  darf_zeiten_buchen?: boolean;
+  darf_abwesenheiten_verwalten?: boolean;
 }
 
 export interface AccountTypUpdate {
@@ -1130,6 +1774,8 @@ export interface AccountTypUpdate {
   farbe?: string | null;
   nur_zugewiesene_kunden?: boolean;
   darf_vorgaenge_selbst_uebernehmen?: boolean;
+  darf_zeiten_buchen?: boolean;
+  darf_abwesenheiten_verwalten?: boolean;
   reihenfolge?: number;
 }
 
@@ -1159,6 +1805,40 @@ export interface MandantFirmendaten {
   // EN16931-Pflichtangaben vorhanden sind -- sonst stiller Fallback auf ein
   // normales PDF (siehe e_invoice_service.pruefe_en16931_vollstaendigkeit).
   e_rechnung_aktiv?: boolean;
+  // Wann Rechnungen als E-Rechnung versendet werden: nie / nur an gewerbliche Kunden / an alle.
+  // Fehlt der Schlüssel, gilt e_rechnung_aktiv (true = alle). e_rechnung_aktiv wird vom Backend
+  // aus dem Modus abgeleitet.
+  e_rechnung_modus?: "aus" | "b2b" | "alle";
+  // Hinweise für Privatkunden auf Rechnungen (Aufbewahrungspflicht, § 35a-Arbeitskosten);
+  // fehlt der Schlüssel, sind sie an.
+  privatkunden_hinweise?: boolean;
+  // Alle Mitarbeiter des Betriebs müssen MFA einrichten (Standard: aus).
+  mfa_pflicht?: boolean;
+  // Optionale Rechtstext-URLs (http/https): haben auf Login-/Portalseiten
+  // Vorrang vor den Platzhalter-Seiten /impressum und /datenschutz.
+  impressum_url?: string;
+  datenschutz_url?: string;
+  // Erlöskonten je Steuerkategorie für den DATEV-Export; Schlüssel
+  // "S:19.00" | "S:7.00" | "Z:0.00" | "E:0.00" | "AE:0.00".
+  // DATEV-Stammdaten (Header des Buchungsstapels) liegen daneben; ohne
+  // berater_nr/mandant_nr blockiert der Export.
+  buchhaltung?: {
+    erloeskonten?: Record<string, { konto: string; bu: string }>;
+    berater_nr?: number;
+    mandant_nr?: number;
+    wirtschaftsjahr_beginn_monat?: number;
+    kontenrahmen?: "SKR03" | "SKR04";
+    sachkontenlaenge?: number;
+  };
+  // Kundenportal-Verbraucherschutz (B2C-Ablauf fuer Privatkunden). Fehlender
+  // Key (Bestandsmandant) gilt als "aus".
+  portal_verbraucherschutz?: "aus" | "nur_privatkunden";
+  widerrufsbelehrung_text?: string;
+  widerrufsbelehrung_version?: string;
+  // Barrierefreiheitserklaerung (BFSG): Kontakt, Stand (JJJJ-MM-TT), optionale externe URL.
+  barrierefreiheit_kontakt_email?: string;
+  barrierefreiheit_stand?: string;
+  barrierefreiheit_url?: string;
 }
 
 export interface MandantEinstellungen {
@@ -1168,6 +1848,45 @@ export interface MandantEinstellungen {
   effektive_wiedervorlage_standard_tage: number;
   firmendaten: MandantFirmendaten;
   logo_object_key: string | null;
+  // Vorbelegung fuer NEU angelegte Leistungsverzeichnis-Positionen im Modus
+  // "berechnet" -- wirkt nicht rueckwirkend auf bereits angelegte Positionen.
+  standard_lohn_gemeinkosten_prozent: string;
+  standard_gewinn_wagnis_prozent: string;
+  // Fahrzeit-Abrechnung (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt
+  // 5.3/8) -- km_satz_netto=null heisst "aus", auch wenn fahrzeit_abrechnung
+  // km/zeit_und_km waehlt.
+  km_satz_netto: string | null;
+  // Eigener Stundensatz fuer "Fahrzeit"-Vorschlaege; null = Preis 0.
+  fahrzeit_satz_netto: string | null;
+  fahrzeit_abrechnung: FahrzeitAbrechnung;
+}
+
+export type FahrzeitAbrechnung = "keine" | "zeit" | "km" | "zeit_und_km";
+
+// Oeffentliche Angaben fuer die Platzhalter-Seiten /impressum und
+// /datenschutz (GET /api/public/rechtliches). anbieter=null: kein eindeutiger
+// Mandant (mehrere Mandanten ohne portal_slug).
+export interface RechtlichesAnbieter {
+  name: string;
+  strasse: string | null;
+  plz: string | null;
+  ort: string | null;
+  land: string | null;
+  telefon: string | null;
+  email: string | null;
+  website: string | null;
+  geschaeftsfuehrung: string | null;
+  handelsregister: string | null;
+  ust_idnr: string | null;
+}
+
+export interface Rechtliches {
+  impressum_url: string | null;
+  datenschutz_url: string | null;
+  barrierefreiheit_url?: string | null;
+  barrierefreiheit_kontakt_email?: string | null;
+  barrierefreiheit_stand?: string | null;
+  anbieter: RechtlichesAnbieter | null;
 }
 
 export interface MandantLogoUrl {
@@ -1287,7 +2006,7 @@ export interface MailMessageDetail {
 // --- E-Mail-Versand ----------------------------------------------------------
 
 export type EmailEntityTyp = "kunde" | "vorgang" | "angebot" | "rechnung" | "bestellung";
-export type EmailStatus = "gesendet" | "fehler";
+export type EmailStatus = "gesendet" | "fehler" | "ausstehend";
 
 export interface EmailLog {
   id: string;
@@ -1311,10 +2030,20 @@ export interface UstVaSatzZeile {
   steuer: string;
 }
 
+// Umsaetze ohne Steuer (Z, AE, E ausser Kleinunternehmer); die Kennzahl ordnet
+// der Steuerberater zu und ist daher leer.
+export interface UstVaKategorieZeile {
+  kategorie: RechnungSteuerKategorie;
+  bezeichnung: string;
+  netto: string;
+  kennzahl: string | null;
+}
+
 export interface UstVaBericht {
   von: string;
   bis: string;
   umsatzsteuer_saetze: UstVaSatzZeile[];
+  sonstige_umsaetze?: UstVaKategorieZeile[];
   vorsteuer_saetze: UstVaSatzZeile[];
   summe_umsatzsteuer: string;
   summe_vorsteuer: string;
@@ -1345,27 +2074,10 @@ export interface OffenePostenBericht {
   kreditoren_buckets: OffenePostenBucket[];
 }
 
-// --- Formular-Baukasten ------------------------------------------------------
-
-export type FormularfeldTyp =
-  | "text"
-  | "textarea"
-  | "zahl"
-  | "datum"
-  | "dropdown"
-  | "mehrfachauswahl"
-  | "ja_nein"
-  | "bewertung"
-  | "foto"
-  | "unterschrift"
-  | "gps"
-  | "qr_scan"
-  | "abschnitt";
-
-// Nutzbare Breite einer A4-Seite in mm -- Obergrenze fuer x_mm + breite_mm
-// eines frei positionierten Formularfelds, siehe NUTZBARE_BREITE_MM in
-// backend/app/models/formular.py.
-export const FORMULAR_NUTZBARE_BREITE_MM = 180;
+// --- Formular-Modul: geteiltes Vokabular ----------------------------------
+// FormularfeldDatenquelle wird sowohl vom (entfernten) alten Modell als
+// Referenz genannt als auch von FormField.datenquelle unten verwendet --
+// eigenstaendiger Abschnitt statt Teil des alten Formular-Baukasten-Blocks.
 
 export type FormularfeldDatenquelle =
   | "vorgang.vorgangsnummer"
@@ -1386,75 +2098,806 @@ export type FormularfeldDatenquelle =
   | "anlage.seriennummer"
   | "anlage.anlagentyp"
   | "standort.bezeichnung"
-  | "standort.adresse";
+  | "standort.adresse"
+  | "system.jetzt";
 
-export interface Formularfeld {
+// --- Formular-Modul v2 (Trennung Erfassung/Visualisierung) ----------------
+// Siehe backend/app/schemas/form_modul.py -- key-basierte Referenzen statt
+// UUIDs (form_fields.key/form_groups.key), damit Regeln/Layouts stabil
+// bleiben.
+
+export type FormFeldTyp =
+  | "text"
+  | "textarea"
+  | "zahl"
+  | "datum"
+  | "dropdown"
+  | "mehrfachauswahl"
+  | "ja_nein"
+  | "bewertung"
+  | "foto"
+  | "unterschrift"
+  | "gps"
+  | "qr_scan"
+  | "datei"
+  | "email"
+  | "telefon"
+  | "betrag"
+  | "adresse"
+  | "foto_plan";
+
+export type FormSchemaStatus = "draft" | "published" | "archived";
+export type FormViewTyp = "capture" | "print" | "summary" | "table" | "public";
+export type FormPraesentationsTyp =
+  | "heading"
+  | "richtext"
+  | "divider"
+  | "spacer"
+  | "callout"
+  | "image"
+  | "computed_text";
+export type FormLogicEffekt = "show" | "hide" | "require" | "readonly" | "set_value";
+export type FormSubmissionStatus = "offen" | "abgeschlossen";
+
+export interface FormGroup {
   id: string;
-  feld_typ: FormularfeldTyp;
-  label: string;
+  key: string;
+  label: Record<string, string>;
+  repeatable: boolean;
+  min_items: number | null;
+  max_items: number | null;
+  reihenfolge: number;
+}
+
+export interface FormField {
+  id: string;
+  key: string;
+  feld_typ: FormFeldTyp;
+  label: Record<string, string>;
   hilfetext: string | null;
   pflichtfeld: boolean;
-  reihenfolge: number;
+  validation: Record<string, unknown>;
+  default_value: unknown;
   optionen: Record<string, unknown>;
-  seite: number;
-  x_mm: number;
-  y_mm: number;
-  breite_mm: number;
-  hoehe_mm: number;
+  group_key: string | null;
   datenquelle: FormularfeldDatenquelle | null;
+  reihenfolge: number;
 }
 
-export interface FormularfeldPosition {
-  id: string;
-  seite: number;
-  x_mm: number;
-  y_mm: number;
-  breite_mm: number;
-  hoehe_mm: number;
-}
-
-export interface FormularAuftragstypZuordnung {
+export interface FormAuftragstypZuordnungV2 {
   id: string;
   leistungstyp: Leistungstyp;
   pflicht_vor_abschluss: boolean;
 }
 
-export interface Formular {
+// Mandanten-eigene Symbol-Bibliothek fuer den Feldtyp "foto_plan" (Wallbox,
+// Leitungsschutzschalter, Leitungsweg, ...), siehe api/routes/plan_symbole.py.
+export interface PlanSymbol {
+  id: string;
+  name: string;
+  content_type: string;
+  url: string;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Wert eines "foto_plan"-Feldes: das Hintergrundfoto bleibt unveraendert,
+// jede Markierung liegt als eigener Eintrag mit RELATIVEN Koordinaten
+// (0..1 von Bildbreite/-hoehe) vor -- unabhaengig von der tatsaechlichen
+// Anzeigegroesse. Kein eigenes Backend-Datenmodell dafuer (siehe Migration
+// 0081), lebt strukturiert im form_submissions.values-JSON wie "adresse"/
+// "gps" auch.
+export interface PlanMarkierungSymbol {
+  art: "symbol";
+  symbol_id: string;
+  x: number;
+  y: number;
+  winkel: number;
+}
+export interface PlanMarkierungLinie {
+  art: "linie";
+  punkte: { x: number; y: number }[];
+  farbe: string;
+}
+export type PlanMarkierung = PlanMarkierungSymbol | PlanMarkierungLinie;
+
+export interface FotoPlanWert {
+  foto: { key: string; url: string; content_type: string } | null;
+  markierungen: PlanMarkierung[];
+}
+
+export interface FormSchema {
   id: string;
   name: string;
   beschreibung: string | null;
-  aktiv: boolean;
+  version: number;
+  status: FormSchemaStatus;
+  vorgaenger_id: string | null;
   erstellt_von: string | null;
-  anzahl_seiten: number;
-  snap_mm: number | null;
   created_at: string;
   updated_at: string;
-  felder: Formularfeld[];
-  zuordnungen: FormularAuftragstypZuordnung[];
 }
 
-export interface FormularVerfuegbar {
+export interface FormSchemaDetail extends FormSchema {
+  groups: FormGroup[];
+  fields: FormField[];
+  zuordnungen: FormAuftragstypZuordnungV2[];
+}
+
+export interface FormView {
+  id: string;
+  schema_id: string;
+  type: FormViewTyp;
+  name: string;
+  konfiguration: Record<string, unknown>;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FormViewFieldLayout {
+  id: string;
+  field_key: string;
+  seite: number;
+  x_mm: number;
+  y_mm: number;
+  breite_mm: number;
+  hoehe_mm: number;
+}
+
+export interface FormPresentationElement {
+  id: string;
+  type: FormPraesentationsTyp;
+  inhalt: Record<string, unknown>;
+  reihenfolge: number;
+  seite: number;
+  x_mm: number | null;
+  y_mm: number | null;
+  breite_mm: number | null;
+  hoehe_mm: number | null;
+}
+
+export interface FormLogicRule {
+  id: string;
+  view_id: string | null;
+  target_key: string;
+  effect: FormLogicEffekt;
+  condition: unknown;
+  value: unknown;
+  reihenfolge: number;
+}
+
+export interface FormFieldState {
+  visible: boolean;
+  required: boolean;
+  readonly: boolean;
+}
+
+export interface FormViewResolved {
+  view: FormView;
+  layouts: FormViewFieldLayout[];
+  elements: FormPresentationElement[];
+  states: Record<string, FormFieldState>;
+}
+
+export interface FormSchemaVerfuegbar {
   id: string;
   name: string;
   beschreibung: string | null;
   pflicht_vor_abschluss: boolean;
 }
 
-export interface VorgangFormular {
+export interface FormSubmission {
   id: string;
   vorgang_id: string;
-  formular_id: string;
-  formular_snapshot: {
-    snapshot_version?: number;
-    name: string;
-    anzahl_seiten?: number;
-    felder: Formularfeld[];
-  };
-  antworten: Record<string, unknown>;
-  status: "offen" | "abgeschlossen";
+  schema_id: string;
+  schema_name: string;
+  schema_version: number;
+  values: Record<string, unknown>;
+  status: FormSubmissionStatus;
   ausgefuellt_von: string | null;
   kundensichtbar: boolean;
   abgeschlossen_am: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// --- Boards (Miro-artiges Whiteboard, Office) -----------------------------
+
+export type BoardTyp = "frei" | "bauplanung" | "prozess";
+
+// inhalt_json ist bewusst lose typisiert (Record statt festem Schema): der
+// tatsaechliche Node-/Edge-Aufbau folgt @xyflow/react's eigenen Node<T>/
+// Edge<T>-Typen aus office/boards/, nicht diesem API-Typ -- hier zaehlt nur,
+// dass es ein JSON-Objekt ist, das unveraendert durchgereicht wird.
+export interface Board {
+  id: string;
+  name: string;
+  board_typ: BoardTyp;
+  inhalt_json: Record<string, unknown>;
+  hintergrund_object_key: string | null;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardListItem {
+  id: string;
+  name: string;
+  board_typ: BoardTyp;
+  erstellt_von: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BoardHintergrundUrl {
+  url: string | null;
+}
+
+export interface BoardAnhangUpload {
+  object_key: string;
+  url: string;
+  dateiname: string;
+}
+
+export interface BoardAnhangUrl {
+  url: string;
+}
+
+// --- Projekte (Asana-artiges Kanban, Office-only) ---------------------------
+
+export type ProjektAufgabePrioritaet = "niedrig" | "mittel" | "hoch";
+
+export interface ChecklistenPunkt {
+  text: string;
+  erledigt: boolean;
+}
+
+export interface VorgangAbhaengigkeit {
+  id: string;
+  vorgang_id: string;
+  blockiert_von_id: string;
+  erstellt_von: string | null;
+  created_at: string;
+}
+
+export interface VorgangAbhaengigkeitenListe {
+  blockiert_von: VorgangAbhaengigkeit[];
+  blockiert: VorgangAbhaengigkeit[];
+}
+
+export interface Projekt {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  archiviert: boolean;
+  vertrag_id: string | null;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ZeitplanTyp = "phase" | "schritt" | "meilenstein";
+export type ZeitplanVerschiebeModus = "bei_konflikt" | "immer";
+
+export interface ZeitplanElement {
+  id: string;
+  typ: ZeitplanTyp;
+  titel: string;
+  phase_id: string | null;
+  start_am: string | null;
+  ende_am: string | null;
+  fortschritt: number;
+  plan_reihenfolge: number;
+  zugewiesen_an: string | null;
+  zugewiesen_name: string | null;
+  erledigt: boolean;
+  /** Nur Schritte: verknüpfter Vorgang (Server setzt bei abgeschlossen/abgerechnet erledigt + 100 %). */
+  vorgang: ZeitplanVorgangRef | null;
+  /** Dispo-Termine des verknüpften Vorgangs. */
+  termine: ZeitplanTermin[];
+  /** Nur Meilensteine: verknüpfte Bestellung (Lieferung). */
+  bestellung: ZeitplanBestellungRef | null;
+  /** true bei verknüpfter Bestellung: Datum kommt aus dem Liefertermin. */
+  datum_gesperrt: boolean;
+  /** Nur Schritte: Fremdgewerk / Nachunternehmer. */
+  partner: { id: string; name: string } | null;
+  /** Gesamtpuffer in Tagen (null: nicht berechenbar, z. B. ohne Datum). */
+  puffer_tage: number | null;
+  /** Liegt auf dem kritischen Pfad (jede Verzögerung verschiebt das Projektende). */
+  kritisch: boolean;
+  basis_start_am: string | null;
+  basis_ende_am: string | null;
+  /** Positiv = später als im Basisplan; null ohne Vergleich bzw. ohne Basisplan-Eintrag. */
+  abweichung_tage: number | null;
+  /** Anzahl offener Änderungsanträge (Techniker) zu diesem Element. */
+  offene_antraege: number;
+}
+
+export interface ZeitplanVorgangRef {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
+  status: VorgangStatus;
+}
+
+export interface ZeitplanTermin {
+  id: string;
+  start: string;
+  ende: string | null;
+  techniker_name: string | null;
+}
+
+export interface ZeitplanBestellungRef {
+  id: string;
+  bestellnummer: string;
+  status: BestellungStatus;
+  liefertermin: string | null;
+  lieferant_name: string | null;
+}
+
+export interface ZeitplanVorgangAuswahl extends ZeitplanVorgangRef {
+  gehoert_zum_projekt: boolean;
+}
+
+export type ZeitplanAbhaengigkeitArt = "ende_anfang" | "anfang_anfang" | "ende_ende";
+
+/** Eigener Zeitplan-Eintrag des Partnerportals (GET /api/partnerportal/zeitplan). */
+export interface PartnerZeitplanEintrag {
+  id: string;
+  titel: string;
+  projekt_name: string;
+  phase_titel: string | null;
+  start_am: string | null;
+  ende_am: string | null;
+  fortschritt: number;
+  erledigt: boolean;
+}
+
+export interface ZeitplanAbhaengigkeit {
+  id: string;
+  vorgaenger_id: string;
+  nachfolger_id: string;
+  art: ZeitplanAbhaengigkeitArt;
+  versatz_tage: number;
+  kritisch: boolean;
+}
+
+export interface Zeitplan {
+  projekt_id: string;
+  verschiebe_modus: ZeitplanVerschiebeModus;
+  elemente: ZeitplanElement[];
+  abhaengigkeiten: ZeitplanAbhaengigkeit[];
+}
+
+export type ZeitplanAntragArt = "verschieben" | "dauer_aendern" | "problem";
+export type ZeitplanAntragStatus = "offen" | "angenommen" | "abgelehnt" | "zurueckgezogen";
+
+export interface ZeitplanAntrag {
+  id: string;
+  element_id: string;
+  element_titel: string;
+  art: ZeitplanAntragArt;
+  gewuenschter_start_am: string | null;
+  gewuenschtes_ende_am: string | null;
+  aktueller_start_am: string | null;
+  aktuelles_ende_am: string | null;
+  begruendung: string;
+  status: ZeitplanAntragStatus;
+  antwort: string | null;
+  erstellt_von: string;
+  erstellt_von_name: string | null;
+  erstellt_am: string;
+  bearbeitet_von_name: string | null;
+  bearbeitet_am: string | null;
+}
+
+export interface ZeitplanAntragCreate {
+  element_id: string;
+  art: ZeitplanAntragArt;
+  gewuenschter_start_am?: string | null;
+  gewuenschtes_ende_am?: string | null;
+  begruendung: string;
+}
+
+/** Antwort von annehmen/ablehnen/zurückziehen: der Antrag mit neuem Status plus der komplette Zeitplan. */
+export interface ZeitplanAntragEntscheidung {
+  antrag: ZeitplanAntrag;
+  zeitplan: Zeitplan;
+}
+
+export interface MeinZeitplan {
+  id: string;
+  name: string;
+  naechster_schritt_titel: string | null;
+  naechster_schritt_start: string | null;
+}
+
+export interface ZeitplanBasisplan {
+  id: string;
+  name: string;
+  erstellt_am: string;
+  erstellt_von_name: string | null;
+  anzahl_elemente: number;
+}
+
+export interface ZeitplanStraffenAenderung {
+  element_id: string;
+  titel: string;
+  alt_start_am: string;
+  alt_ende_am: string;
+  neu_start_am: string;
+  neu_ende_am: string;
+}
+
+export interface ZeitplanStraffenAntwort {
+  aenderungen: ZeitplanStraffenAenderung[];
+  /** Nur bei vorschau=false. */
+  zeitplan: Zeitplan | null;
+}
+
+export interface ProjektVorlage {
+  id: string;
+  name: string;
+  beschreibung: string | null;
+  anzahl_elemente: number;
+  dauer_tage: number;
+}
+
+export interface ProjektVorlageElement {
+  ref: string;
+  typ: ZeitplanTyp;
+  titel: string;
+  phase_ref: string | null;
+  offset_tage: number;
+  dauer_tage: number;
+  reihenfolge: number;
+}
+
+export interface ProjektVorlageAbhaengigkeit {
+  vorgaenger_ref: string;
+  nachfolger_ref: string;
+  art: ZeitplanAbhaengigkeitArt;
+  versatz_tage: number;
+}
+
+export interface ProjektVorlageDetail extends ProjektVorlage {
+  elemente: ProjektVorlageElement[];
+  abhaengigkeiten: ProjektVorlageAbhaengigkeit[];
+}
+
+export interface ZeitplanElementCreate {
+  typ: ZeitplanTyp;
+  titel: string;
+  phase_id?: string | null;
+  start_am?: string | null;
+  ende_am?: string | null;
+  zugewiesen_an?: string | null;
+  vorgang_id?: string | null;
+  bestellung_id?: string | null;
+  partner_id?: string | null;
+}
+
+export interface ZeitplanElementUpdate {
+  titel?: string;
+  start_am?: string | null;
+  ende_am?: string | null;
+  fortschritt?: number;
+  phase_id?: string | null;
+  plan_reihenfolge?: number;
+  zugewiesen_an?: string | null;
+  /** null = Verknüpfung lösen. */
+  vorgang_id?: string | null;
+  bestellung_id?: string | null;
+  partner_id?: string | null;
+}
+
+export type AuftragStatus = "offen" | "in_arbeit" | "abgeschlossen" | "storniert";
+
+export interface Auftrag {
+  id: string;
+  projekt_id: string | null;
+  kunde_id: string | null;
+  titel: string;
+  beschreibung: string | null;
+  status: AuftragStatus;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+  // Transient vom Backend angereichert (siehe app/api/routes/auftraege.py).
+  kunde_name: string | null;
+  vorgaenge_gesamt: number;
+}
+
+export interface ProjektSpalte {
+  id: string;
+  projekt_id: string;
+  name: string;
+  reihenfolge: number;
+}
+
+export interface ProjektAufgabe {
+  id: string;
+  // NULL = private Aufgabe (kein Kanban-Board, nur fuer
+  // zugewiesen_an/erstellt_von sichtbar) -- siehe app/models/projekt.py.
+  projekt_id: string | null;
+  spalte_id: string | null;
+  // Gesetzt = Unteraufgabe; erscheint nicht als eigene Karte auf dem Board,
+  // nur eine Ebene tief (keine Unteraufgaben von Unteraufgaben).
+  eltern_aufgabe_id: string | null;
+  titel: string;
+  beschreibung: string | null;
+  faelligkeit_am: string | null;
+  prioritaet: ProjektAufgabePrioritaet;
+  zugewiesen_an: string | null;
+  erledigt_am: string | null;
+  vorgang_id: string | null;
+  anlage_id: string | null;
+  kunde_id: string | null;
+  standort_id: string | null;
+  checkliste: ChecklistenPunkt[];
+  zusatzfelder: Record<string, string>;
+  erstellt_von: string;
+  created_at: string;
+  updated_at: string;
+  // Nur in der angereicherten Listenansicht befuellt (siehe
+  // ProjektAufgabeMitDetails im Backend).
+  zugewiesener_name?: string | null;
+  vorgang_vorgangsnummer?: string | null;
+  vorgang_kunde_name?: string | null;
+  anlage_name?: string | null;
+  kunde_name?: string | null;
+  standort_name?: string | null;
+  unteraufgaben_gesamt?: number;
+  unteraufgaben_erledigt?: number;
+}
+
+// --- Partnerportal (eigener Token-Typ, siehe api/partnerAuthStore.ts) -------
+
+export interface CurrentPartner {
+  zugang_id: string;
+  partner_id: string;
+  partner_name: string;
+  name: string;
+  email: string;
+  mandant_name: string;
+  mandant_logo_url: string | null;
+}
+
+/** Eintrag im Partnerportal-Verlauf (Backend: PartnerKommentarRead) -- nur
+ * eigene und vom Betrieb ausdrücklich freigegebene Kommentare. */
+export interface PartnerKommentar {
+  id: number;
+  text: string;
+  erstellt_am: string;
+  autor: "partner" | "betrieb";
+  autor_name: string;
+}
+
+export interface PartnerZugang {
+  id: string;
+  partner_id: string;
+  email: string;
+  name: string;
+  aktiv: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Auftrag aus Sicht des Partners (PartnerVorgangRead) -- bewusst ohne
+ * interne Felder; Honorar ist die netto vereinbarte Vergütung des Partners. */
+export interface PartnerVorgang {
+  id: string;
+  vorgangsnummer: string;
+  titel: string;
+  beschreibung: string | null;
+  leistungstyp: string;
+  status: VorgangStatus;
+  partner_freigabe_status: PartnerFreigabeStatus | null;
+  partner_ablehnung_grund: string | null;
+  partner_honorar_netto: string | null;
+  kunde_name: string;
+  anlage_bezeichnung: string | null;
+  anlage_adresse: Adresse | null;
+  last_activity_at: string;
+  created_at: string;
+}
+
+export type PartnerStatusSetzbar = "in_arbeit" | "wartet_kunde" | "abgeschlossen";
+
+export type FehlerberichtStatus = "neu" | "gesichtet" | "in_arbeit" | "behoben" | "abgelehnt" | "duplikat";
+export type FehlerberichtArt = "fehler" | "idee";
+export type FehlerberichtSchweregrad = "niedrig" | "mittel" | "hoch" | "blockierend";
+
+export interface FehlerberichtListItem {
+  id: string;
+  art: FehlerberichtArt;
+  mandant_id: string;
+  mandant_name: string | null;
+  melder_name: string | null;
+  titel: string;
+  schweregrad: FehlerberichtSchweregrad;
+  status: FehlerberichtStatus;
+  route: string | null;
+  app_version: string | null;
+  commit_sha: string | null;
+  duplikat_von_id: string | null;
+  hat_screenshot: boolean;
+  erledigt_am: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FehlerberichtDetail extends FehlerberichtListItem {
+  beschreibung: string;
+  erwartet: string | null;
+  schritte: string | null;
+  // Jede Kategorie kann fehlen (Melder waehlt aus, was mitgeschickt wird).
+  kontext: FehlerberichtKontext;
+  screenshot_original_url: string | null;
+  screenshot_annotiert_url: string | null;
+  loesungsnotiz: string | null;
+  fix_commit: string | null;
+  fix_pr_url: string | null;
+  // Zeitpunkt der Freigabe einer Idee (Status gesichtet); fehlt bei Fehlern.
+  freigegeben_am?: string | null;
+}
+
+export interface FehlerberichtUpdate {
+  status?: FehlerberichtStatus;
+  loesungsnotiz?: string | null;
+  fix_commit?: string | null;
+  fix_pr_url?: string | null;
+  duplikat_von_id?: string | null;
+}
+
+export interface FehlerberichtZaehler {
+  neu: number;
+  gesichtet: number;
+  in_arbeit: number;
+  behoben: number;
+  abgelehnt: number;
+  duplikat: number;
+  gesamt: number;
+}
+
+export interface FehlerberichtListenFilter {
+  art?: FehlerberichtArt;
+  status?: FehlerberichtStatus;
+  schweregrad?: FehlerberichtSchweregrad;
+  seit?: string;
+  q?: string;
+  mandant_id?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// --- Arbeitszeit: Soll, Feiertage, Saldo (Konzept ZEITERFASSUNG.md 12) -----
+
+// Stunden kommen als Strings mit 2 Nachkommastellen (Decimal) vom Backend.
+export type Bundesland =
+  | "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV"
+  | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH";
+
+export const SOLL_WOCHENTAG_FELDER = [
+  "stunden_mo",
+  "stunden_di",
+  "stunden_mi",
+  "stunden_do",
+  "stunden_fr",
+  "stunden_sa",
+  "stunden_so",
+] as const;
+export type SollWochentagFeld = (typeof SOLL_WOCHENTAG_FELDER)[number];
+
+export type ArbeitszeitSollSetzen = { gueltig_ab: string } & Record<SollWochentagFeld, string>;
+
+export type ArbeitszeitSoll = ArbeitszeitSollSetzen & {
+  id: string;
+  user_id: string;
+  created_at: string;
+};
+
+export interface Feiertag {
+  id: string;
+  datum: string;
+  bezeichnung: string;
+}
+
+export interface FeiertageGenerierenErgebnis {
+  angelegt: number;
+  uebersprungen: number;
+  feiertage: Feiertag[];
+}
+
+export type SaldoAbwesenheit = "urlaub" | "krankheit" | "freizeitausgleich";
+
+export interface SaldoTag {
+  datum: string;
+  soll: string;
+  ist: string;
+  saldo: string;
+  feiertag: boolean;
+  abwesenheit: SaldoAbwesenheit | null;
+}
+
+export interface Saldo {
+  soll_stunden: string;
+  ist_stunden: string;
+  saldo_stunden: string;
+  tage: SaldoTag[];
+}
+
+// --- Abwesenheiten (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 13) ---------
+// Decimal-Felder kommen als String vom Backend.
+
+export type AbwesenheitArt = "urlaub" | "krankheit" | "freizeitausgleich";
+export type AbwesenheitStatus = "offen" | "genehmigt" | "abgelehnt" | "zurueckgezogen";
+
+export interface Abwesenheit {
+  id: string;
+  user_id: string;
+  user_name: string;
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  halber_tag_von: boolean;
+  halber_tag_bis: boolean;
+  tage: string;
+  status: AbwesenheitStatus;
+  notiz: string | null;
+  antwort: string | null;
+  erstellt_von: string;
+  erstellt_am: string;
+  bearbeitet_von: string | null;
+  bearbeitet_am: string | null;
+}
+
+export interface AbwesenheitCreate {
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  halber_tag_von?: boolean;
+  halber_tag_bis?: boolean;
+  notiz?: string | null;
+  user_id?: string;
+}
+
+export interface Urlaubskonto {
+  user_id: string;
+  jahr: number;
+  anspruch: string;
+  resturlaub: string;
+  resturlaub_verfaellt_am: string | null;
+  resturlaub_verfallen: string;
+  genommen: string;
+  beantragt: string;
+  verbleibend: string;
+}
+
+export interface UrlaubsanspruchSetzen {
+  tage: string;
+  resturlaub_tage: string;
+  resturlaub_verfaellt_am?: string | null;
+}
+
+export interface Urlaubsanspruch {
+  user_id: string;
+  jahr: number;
+  tage: string;
+  resturlaub_tage: string;
+  resturlaub_verfaellt_am: string | null;
+}
+
+export interface AbwesenheitKalenderEintrag {
+  id: string;
+  user_id: string;
+  user_name: string;
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  halber_tag_von: boolean;
+  halber_tag_bis: boolean;
+  tage: string;
 }

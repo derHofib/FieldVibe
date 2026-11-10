@@ -1,6 +1,7 @@
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, SmallInteger, String, Text
+from sqlalchemy import CheckConstraint, Numeric, SmallInteger, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +12,25 @@ from app.db.base import Base, TimestampMixin
 # plus Kunde per Dropdown waehlen oder inline anlegen) ist bewusst NICHT Teil
 # dieser Liste -- das ist der nicht abschaltbare Boden, ohne den "Auftraege
 # tracken" ueberhaupt nicht ginge (ein Vorgang braucht zwingend einen Kunden).
+# "zeiterfassung" und "statistik" waren frueher ein einziges Modul (siehe
+# docs/BACKLOG.md) und sind rein informativ getrennt: "zeiterfassung" blendet
+# die eigene Zeiterfassungs-Uebersicht (Profil-Kachel, /statistik-Formular +
+# Wochenliste, Team-Zeiten) im Frontend aus, "statistik" die Auswertung/den
+# Export (Kennzahlen-Kacheln, CSV/PDF) -- der Start/Stopp-Timer direkt am
+# Vorgang gehoert weiterhin zum "vorgaenge"-Boden oben und bleibt in jedem
+# Fall aktiv, backend-seitig gibt es dafuer daher keine neue Sperre.
+# Muss mit der CHECK-Constraint ck_mandanten_fahrzeit_abrechnung_valid
+# (Migration 0086) uebereinstimmen. Steuert die Fahrzeit/Fahrtkosten-
+# Rechnungsvorschlaege (siehe rechnung_service.positionen_vorschlaege_fuer_vorgang).
+MANDANT_FAHRZEIT_ABRECHNUNG = ("keine", "zeit", "km", "zeit_und_km")
+
+# Muss mit der CHECK-Constraint ck_mandanten_bundesland_valid (Migration 0100)
+# uebereinstimmen (ISO-3166-2:DE ohne "DE-"-Praefix).
+MANDANT_BUNDESLAENDER = (
+    "BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV",
+    "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH",
+)
+
 MANDANT_MODULE = (
     "kundenverwaltung",
     "dispo",
@@ -19,6 +39,7 @@ MANDANT_MODULE = (
     "abrechnung",
     "kundenportal",
     "dauerauftrag",
+    "zeiterfassung",
     "statistik",
     "fahrzeuge",
     "highlights",
@@ -41,6 +62,21 @@ class Mandant(TimestampMixin, Base):
         CheckConstraint(
             "wiedervorlage_standard_tage IS NULL OR wiedervorlage_standard_tage > 0",
             name="ck_mandanten_wiedervorlage_standard_tage_valid",
+        ),
+        CheckConstraint(
+            "km_satz_netto IS NULL OR km_satz_netto >= 0", name="ck_mandanten_km_satz_netto_nicht_negativ"
+        ),
+        CheckConstraint(
+            "fahrzeit_satz_netto IS NULL OR fahrzeit_satz_netto >= 0",
+            name="ck_mandanten_fahrzeit_satz_netto_nicht_negativ",
+        ),
+        CheckConstraint(
+            f"bundesland IS NULL OR bundesland IN {MANDANT_BUNDESLAENDER}",
+            name="ck_mandanten_bundesland_valid",
+        ),
+        CheckConstraint(
+            f"fahrzeit_abrechnung IN {MANDANT_FAHRZEIT_ABRECHNUNG}",
+            name="ck_mandanten_fahrzeit_abrechnung_valid",
         ),
     )
 
@@ -79,3 +115,23 @@ class Mandant(TimestampMixin, Base):
     # Kunde.adresse -- spart eine Migration pro zusaetzlichem Feld.
     firmendaten: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     logo_object_key: Mapped[str | None] = mapped_column(Text)
+    # Vorbelegung fuer neu angelegte Leistungsverzeichnis-Positionen im Modus
+    # "berechnet" (siehe LeistungsverzeichnisPosition) -- wirkt NUR beim
+    # Anlegen, spaeter geaenderte Mandant-Defaults rechnen bereits
+    # bestehende Positionen bewusst nicht rueckwirkend neu.
+    standard_lohn_gemeinkosten_prozent: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0")
+    )
+    standard_gewinn_wagnis_prozent: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, default=Decimal("0")
+    )
+    # Fahrzeit-Abrechnung (Stufe 4, docs/konzepte/ZEITERFASSUNG.md Abschnitt
+    # 5.3/8) -- beide NULL/'keine' aendert am bisherigen Verhalten nichts.
+    km_satz_netto: Mapped[Decimal | None] = mapped_column(Numeric(6, 2), nullable=True)
+    fahrzeit_abrechnung: Mapped[str] = mapped_column(Text, nullable=False, default="keine")
+    # Eigener Stundensatz fuer "fahrzeit"-Vorschlaege; NULL = Preis 0 (der
+    # Nutzer sieht den Hinweis "Fahrzeit-Satz fehlt").
+    fahrzeit_satz_netto: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
+    # Steuert die Feiertagsgenerierung (app/services/arbeitszeit_service.py);
+    # NULL = nur bundesweite Feiertage.
+    bundesland: Mapped[str | None] = mapped_column(Text, nullable=True)

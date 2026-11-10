@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import AuthContext, get_current_user, get_db, require_roles
 from app.models.user import User
 from app.schemas.papierkorb import PapierkorbEintragRead
+from app.models.zeiterfassung_aenderung import ZeiterfassungAenderung
 from app.services import papierkorb_service
 from app.services.audit_service import log_action
 
@@ -73,11 +74,25 @@ async def wiederherstellen(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Unbekannter Entitätstyp"
         )
-    obj = await papierkorb_service.restore(session, entity_typ=entity_typ, entity_id=entity_id)
+    obj = await papierkorb_service.restore(
+        session, entity_typ=entity_typ, entity_id=entity_id, actor_user_id=auth.user_id
+    )
     if obj is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Datensatz nicht im Papierkorb gefunden",
+        )
+    # Zeiterfassung hat als einzige Entitaet ein eigenes Aenderungsprotokoll
+    # (docs/konzepte/ZEITERFASSUNG.md, Abschnitt 5.2) -- der generische
+    # Papierkorb-Service kennt es bewusst nicht, deshalb der Sonderfall hier.
+    if entity_typ == "zeiterfassung":
+        session.add(
+            ZeiterfassungAenderung(
+                mandant_id=auth.mandant_id,
+                zeiterfassung_id=entity_id,
+                aktion="wiederhergestellt",
+                geaendert_von=auth.user_id,
+            )
         )
     await log_action(
         session,
@@ -104,6 +119,9 @@ async def endgueltig_loeschen(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Unbekannter Entitätstyp"
         )
+    protokolldaten = await papierkorb_service.loesch_protokolldaten(
+        session, entity_typ=entity_typ, entity_id=entity_id
+    )
     try:
         geloescht = await papierkorb_service.purge(
             session, entity_typ=entity_typ, entity_id=entity_id
@@ -114,9 +132,9 @@ async def endgueltig_loeschen(
             detail=(
                 "Datensatz kann nicht endgültig gelöscht werden: "
                 f"{exc.entity_typ}{f' ({exc.beleg_nummer})' if exc.beleg_nummer else ''} "
-                "unterliegt der gesetzlichen Aufbewahrungspflicht (§147 AO/§257 HGB, "
-                "10 Jahre) -- das gilt auch bei einem DSGVO-Löschbegehren "
-                "(Art. 17 Abs. 3 lit. b DSGVO)."
+                "unterliegt der gesetzlichen Aufbewahrungspflicht (§ 147 AO, § 257 HGB, "
+                f"§ 14b UStG){f' bis {exc.fristende:%d.%m.%Y}' if exc.fristende else ''} "
+                "-- das gilt auch bei einem DSGVO-Löschbegehren (Art. 17 Abs. 3 lit. b DSGVO)."
             ),
         ) from exc
     except IntegrityError as exc:
@@ -139,4 +157,5 @@ async def endgueltig_loeschen(
         actor_user_id=auth.user_id,
         entity_type=entity_typ,
         entity_id=entity_id,
+        payload=protokolldaten,
     )

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarX, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
@@ -71,7 +71,7 @@ export function DispoBoardPage() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const weekEnd = addDays(weekStart, 7);
 
-  const { data: technikerListe } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
   // aktive mandant_admin/custom-Account kann als Techniker fuer einen
   // Termin eingeplant werden, seit die vier festen Rollen entfallen sind.
@@ -111,8 +111,6 @@ export function DispoBoardPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
     },
   });
-
-  if (currentUser && !hatRecht("dispo", "sehen")) return <Navigate to="/feed" replace />;
 
   const terminenNachTechnikerUndTag = new Map<string, Map<string, Termin[]>>();
   for (const t of termine ?? []) {
@@ -172,14 +170,14 @@ export function DispoBoardPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+        <button onClick={() => navigate(-1)} className="text-sm text-label2">
           ← Zurück
         </button>
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Dispo-Board</h1>
+        <h1 className="text-lg font-bold text-label">Dispo-Board</h1>
         {istModulAktiv(currentUser, "pruefzyklen") ? (
           <button
             onClick={() => navigate("/pruefmittel")}
-            className="text-sm text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+            className="text-sm text-tint underline-offset-2 hover:underline "
           >
             Prüfmittel →
           </button>
@@ -189,36 +187,33 @@ export function DispoBoardPage() {
       </div>
 
       <div className="space-y-2 md:hidden">
-        <div className="flex items-center justify-between rounded-lg bg-white p-2 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="card-ap flex items-center justify-between p-2">
           <button
             onClick={() => tagWechseln(-1)}
             aria-label="Vorheriger Tag"
-            className="btn-touch flex items-center justify-center rounded-md bg-slate-100 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch flex items-center justify-center rounded-md bg-fill text-label"
           >
-            <ChevronLeft size={20} strokeWidth={2} />
+            <ChevronLeft size={20} strokeWidth={2} aria-hidden="true" />
           </button>
-          <span className="text-sm font-semibold text-slate-700 dark:text-stone-200">
+          <span className="text-sm font-semibold text-label">
             {gewaehlterTag.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" })}
           </span>
           <button
             onClick={() => tagWechseln(1)}
             aria-label="Nächster Tag"
-            className="btn-touch flex items-center justify-center rounded-md bg-slate-100 dark:bg-stone-800 dark:text-stone-300"
+            className="btn-touch flex items-center justify-center rounded-md bg-fill text-label"
           >
-            <ChevronRight size={20} strokeWidth={2} />
+            <ChevronRight size={20} strokeWidth={2} aria-hidden="true" />
           </button>
         </div>
-        <div className="grid grid-cols-7 gap-1" role="tablist" aria-label="Wochentag">
+        <div className="grid grid-cols-7 gap-1" role="group" aria-label="Wochentag">
           {days.map((day, i) => (
             <button
               key={i}
-              role="tab"
-              aria-selected={i === tagIndex}
+              aria-pressed={i === tagIndex}
               onClick={() => setTagIndex(i)}
               className={`btn-touch flex flex-col items-center justify-center rounded-lg py-1 text-xs ${
-                i === tagIndex
-                  ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 font-semibold text-white"
-                  : "bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                i === tagIndex ? "bg-tint-solid font-semibold text-white" : "card-ap text-label"
               }`}
             >
               {WOCHENTAGE[i]}
@@ -228,26 +223,26 @@ export function DispoBoardPage() {
         </div>
       </div>
 
-      <div className="hidden items-center justify-between rounded-lg bg-white p-3 shadow-xs md:flex dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="hidden items-center justify-between card-ap p-3 md:flex">
         <button
           onClick={() => setWeekOffset((w) => w - 1)}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm "
         >
           ← Vorherige Woche
         </button>
-        <span className="text-sm font-medium text-slate-700 dark:text-stone-300">
+        <span className="text-sm font-medium text-label">
           {formatDayLabel(weekStart)} – {formatDayLabel(addDays(weekStart, 6))}
         </span>
         <button
           onClick={() => setWeekOffset((w) => w + 1)}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm "
         >
           Nächste Woche →
         </button>
       </div>
 
       {warnungen.length > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+        <div className="rounded-lg border border-st-arbeit bg-st-arbeit-bg p-3 text-sm text-st-arbeit ">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -274,19 +269,19 @@ export function DispoBoardPage() {
             ende: toLocalInputValue(ende),
           });
         }}
-        className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-medium text-white"
+        className="btn-touch rounded-md btn-ap-primary px-4 py-2 text-sm font-medium"
       >
         + Neuer Termin
       </button>
 
       {showForm && form && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3 card-ap p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Vorgang</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Vorgang</label>
             <select
               value={form.vorgangId}
               onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               <option value="">Bitte wählen…</option>
               {wahlbareVorgaenge.map((v) => (
@@ -297,11 +292,11 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
             <select
               value={form.technikerId}
               onChange={(e) => setForm({ ...form, technikerId: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             >
               {technikers.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -311,31 +306,31 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Titel</label>
             <input
               value={form.titel}
               onChange={(e) => setForm({ ...form, titel: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               placeholder="z.B. E-Check Hauptverteilung"
             />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
+              <label className="mb-1 block text-xs font-medium text-label2">Start</label>
               <input
                 type="datetime-local"
                 value={form.start}
                 onChange={(e) => setForm({ ...form, start: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
+              <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
               <input
                 type="datetime-local"
                 value={form.ende}
                 onChange={(e) => setForm({ ...form, ende: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           </div>
@@ -345,7 +340,7 @@ export function DispoBoardPage() {
                 setShowForm(false);
                 setForm(null);
               }}
-              className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm dark:bg-stone-800 dark:text-stone-300"
+              className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm "
             >
               Abbrechen
             </button>
@@ -360,7 +355,7 @@ export function DispoBoardPage() {
                   ende_at: new Date(form.ende).toISOString(),
                 })
               }
-              className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+              className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
             >
               Anlegen
             </button>
@@ -375,19 +370,17 @@ export function DispoBoardPage() {
           <div className="space-y-3">
             {tagesTermine.map(({ tech, eintraege }) => (
               <section key={tech.id}>
-                <h2 className="mb-1 text-sm font-semibold text-slate-500 dark:text-stone-400">{tech.name}</h2>
+                <h2 className="mb-1 text-sm font-semibold text-label2">{tech.name}</h2>
                 <div className="space-y-2">
                   {eintraege.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => navigate(`/vorgaenge/${t.vorgang_id}`)}
-                      className={`card-interactive btn-touch flex w-full flex-col items-start rounded-lg p-3 text-left text-sm shadow-xs ${
-                        t.status === "abgesagt"
-                          ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
-                          : "bg-white text-slate-800 dark:bg-stone-900 dark:text-stone-100 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                      className={`card-interactive card-ap btn-touch flex w-full flex-col items-start p-3 text-left text-sm ${
+                        t.status === "abgesagt" ? "text-label2 line-through" : "text-label"
                       }`}
                     >
-                      <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      <span className="text-xs font-semibold text-tint">
                         {formatTime(t.start_at)}–{formatTime(t.ende_at)}
                       </span>
                       <span className="font-medium">{t.titel}</span>
@@ -400,17 +393,17 @@ export function DispoBoardPage() {
         )}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-lg bg-white shadow-xs md:block dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="hidden overflow-x-auto rounded-lg bg-card shadow-xs md:block dark:shadow-none dark:ring-1 ">
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead>
-            <tr className="border-b border-slate-200 dark:border-stone-800">
-              <th className="w-40 p-2 text-left text-xs font-semibold text-slate-500 dark:text-stone-400">
+            <tr className="border-b border-sep">
+              <th className="w-40 p-2 text-left text-xs font-semibold text-label2">
                 Techniker
               </th>
               {days.map((day, i) => (
                 <th
                   key={i}
-                  className="w-32 p-2 text-left text-xs font-semibold text-slate-500 dark:text-stone-400"
+                  className="w-32 p-2 text-left text-xs font-semibold text-label2"
                 >
                   {WOCHENTAGE[i]} {formatDayLabel(day)}
                 </th>
@@ -419,8 +412,8 @@ export function DispoBoardPage() {
           </thead>
           <tbody>
             {technikers.map((tech) => (
-              <tr key={tech.id} className="border-b border-slate-100 dark:border-stone-800">
-                <td className="p-2 align-top text-sm font-medium text-slate-700 dark:text-stone-300">
+              <tr key={tech.id} className="border-b border-sep ">
+                <td className="p-2 align-top text-sm font-medium text-label">
                   {tech.name}
                 </td>
                 {days.map((day, i) => {
@@ -445,8 +438,8 @@ export function DispoBoardPage() {
                           title={t.titel}
                           className={`btn-touch cursor-grab rounded-md p-1.5 text-xs shadow-xs ${
                             t.status === "abgesagt"
-                              ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
-                              : "bg-blue-50 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300"
+                              ? "bg-fill text-label2 line-through"
+                              : "bg-tintbg text-tint  "
                           }`}
                         >
                           <div className="font-semibold">

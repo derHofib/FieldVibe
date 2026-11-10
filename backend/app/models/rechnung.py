@@ -20,7 +20,24 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 RECHNUNG_STATUS = ("entwurf", "versendet", "teilweise_bezahlt", "bezahlt", "storniert")
+# Muss mit der CHECK-Constraint aus Migration 0108 uebereinstimmen. Storno-
+# Belege behalten 'rechnung' und sind ueber ist_storno gekennzeichnet.
+RECHNUNGSARTEN = ("rechnung", "abschlag", "schluss", "gutschrift")
+# Muss mit der CHECK-Constraint aus Migration 0109 uebereinstimmen.
+E_RECHNUNG_PROFILE = ("en16931", "xrechnung")
 RECHNUNG_ZAHLUNGSARTEN = ("ueberweisung", "bar", "karte", "lastschrift", "sonstiges")
+
+# Muss mit der CHECK-Constraint ck_rechnung_positionen_quelle_valid
+# (Migration 0086) uebereinstimmen. NULL = manuell eingetragene Position.
+RECHNUNG_POSITION_QUELLEN = ("material", "zeit", "fahrzeit", "fahrtkosten", "leistung")
+
+# Steuerkategorien nach EN 16931 / UNTDID 5305: S = Regel-/ermaessigter Satz,
+# Z = 0 % (z. B. PV nach § 12 Abs. 3 UStG), E = steuerbefreit (z. B.
+# Kleinunternehmer § 19), AE = Reverse Charge (§ 13b UStG). Muss mit den
+# CHECK-Constraints aus Migration 0104 uebereinstimmen.
+RECHNUNG_STEUER_KATEGORIEN = ("S", "Z", "E", "AE")
+# Muss mit den Schluesseln von steuer_service.STEUER_GRUENDE uebereinstimmen.
+RECHNUNG_STEUER_GRUENDE = ("pv_12_3", "reverse_charge_13b", "kleinunternehmer_19", "sonstige_befreiung")
 
 
 class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
@@ -28,6 +45,15 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("mandant_id", "rechnungsnummer", name="uq_rechnungen_mandant_rechnungsnummer"),
         CheckConstraint(f"status IN {RECHNUNG_STATUS}", name="ck_rechnungen_status_valid"),
+        CheckConstraint(f"rechnungsart IN {RECHNUNGSARTEN}", name="ck_rechnungen_rechnungsart_valid"),
+        CheckConstraint(
+            "gutschrift_grund IS NULL OR char_length(gutschrift_grund) <= 200",
+            name="ck_rechnungen_gutschrift_grund_laenge",
+        ),
+        CheckConstraint(
+            f"e_rechnung_profil IS NULL OR e_rechnung_profil IN {E_RECHNUNG_PROFILE}",
+            name="ck_rechnungen_e_rechnung_profil_valid",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -81,10 +107,53 @@ class Rechnung(SoftDeleteMixin, TimestampMixin, Base):
     # EN16931-Vollstaendigkeitspruefung zum Versand-Zeitpunkt fehlschlug --
     # in beiden Faellen wurde stillschweigend nur ein normales PDF erzeugt.
     xml_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # SHA-256 der beim Versand archivierten Objekte (Migration 0114); NULL bei Altbestand.
+    # Der Pruef-Endpoint vergleicht sie mit dem tatsaechlichen S3-Inhalt.
+    pdf_sha256: Mapped[str | None] = mapped_column(Text, nullable=True)
+    xml_sha256: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rechnungsart: Mapped[str] = mapped_column(Text, nullable=False, default="rechnung", server_default="rechnung")
+    # Angebot, aus dem Rechnung/Abschlag/Schlussrechnung entstanden ist; die
+    # Summe der Abschlaege je Angebot und die Anrechnung laufen darueber.
+    angebot_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("angebote.id"), nullable=True, index=True
+    )
+    # Nur bei Gutschriften: die Ursprungsrechnung.
+    bezug_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id"), nullable=True, index=True
+    )
+    # Nur bei Gutschriften: Grund, steht auf dem Beleg (PDF und E-Rechnung).
+    gutschrift_grund: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Beim Versand festgehalten (GoBD): Profil der erzeugten E-Rechnung und die
+    # Leitweg-ID, die darin stand. NULL bei Entwuerfen und Belegen ohne E-Rechnung.
+    e_rechnung_profil: Mapped[str | None] = mapped_column(Text, nullable=True)
+    leitweg_id: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class RechnungPosition(Base):
     __tablename__ = "rechnung_positionen"
+    __table_args__ = (
+        CheckConstraint(
+            f"quelle IS NULL OR quelle IN {RECHNUNG_POSITION_QUELLEN}", name="ck_rechnung_positionen_quelle_valid"
+        ),
+        CheckConstraint(
+            f"steuer_kategorie IN {RECHNUNG_STEUER_KATEGORIEN}",
+            name="ck_rechnung_positionen_steuer_kategorie_valid",
+        ),
+        CheckConstraint(
+            "steuer_kategorie = 'S' OR steuer_satz = 0", name="ck_rechnung_positionen_steuer_satz_zu_kategorie"
+        ),
+        CheckConstraint(
+            "steuer_satz >= 0 AND steuer_satz <= 100", name="ck_rechnung_positionen_steuer_satz_bereich"
+        ),
+        CheckConstraint(
+            f"steuer_grund IS NULL OR steuer_grund IN {RECHNUNG_STEUER_GRUENDE}",
+            name="ck_rechnung_positionen_steuer_grund_valid",
+        ),
+        CheckConstraint(
+            "steuer_grund_text IS NULL OR char_length(steuer_grund_text) <= 200",
+            name="ck_rechnung_positionen_steuer_grund_text_laenge",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -100,6 +169,50 @@ class RechnungPosition(Base):
     menge: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False, default=Decimal("1"))
     einheit: Mapped[str] = mapped_column(Text, nullable=False, default="Stk")
     einzelpreis: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    # Steuer je Position (Migration 0104). Die Anlage-Stellen setzen beides
+    # bewusst (Vorbelegung aus dem Beleg siehe steuer_service); der ORM-Default
+    # spiegelt nur Rechnung.mwst_satz und faengt direkt gebaute Positionen
+    # (Tests, Skripte) ab. Kein DB-Default fuer den Satz.
+    steuer_kategorie: Mapped[str] = mapped_column(Text, nullable=False, default="S", server_default="S")
+    steuer_satz: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("19.00"))
+    # Grund fuer Z/E/AE (Migration 0105); NULL bei S und bei Altbestand E/0.
+    steuer_grund: Mapped[str | None] = mapped_column(Text)
+    steuer_grund_text: Mapped[str | None] = mapped_column(Text)
+    # Stufe 4 (docs/konzepte/ZEITERFASSUNG.md Abschnitt 8): woher diese
+    # Position stammt -- steuert beim Entfernen, welche Zeiterfassung-
+    # Eintraege wieder auf 'gebucht' zurueckgesetzt werden (siehe
+    # app/services/rechnung_service.py). NULL bei manuell eingetragenen
+    # Positionen.
+    quelle: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Sammelrechnung: aus welchem Vorgang die Position stammt -- Grundlage
+    # fuers gezielte Entsperren der Zeiterfassung dieses einen Vorgangs.
+    # NULL bei manuellen Positionen und Altbestand ohne Vorgangsbezug.
+    vorgang_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("vorgaenge.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Nur bei quelle="leistung": Grundlage fuers gezielte Freigeben der
+    # SVS-gekoppelten Zeit dieser LV-Position beim Entfernen der Position.
+    lv_position_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("leistungsverzeichnis_positionen.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    # Nur bei quelle="material": Grundlage fuers gezielte Freigeben der
+    # MaterialVerwendungen dieses Materials am Vorgang beim Entfernen.
+    material_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("material.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    # Nur bei der Abzugsposition einer Schlussrechnung: die angerechnete
+    # Abschlagsrechnung. Steuerfelder der Position sind identisch zu denen des
+    # Abschlags, damit die Gruppenrechnung die Reststeuer von selbst ergibt.
+    abschlag_rechnung_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnungen.id"), nullable=True, index=True
+    )
+    # Nur bei Gutschriftspositionen: die Originalposition, die sie zuruecknehmen.
+    bezug_position_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("rechnung_positionen.id"), nullable=True, index=True
+    )
 
 
 class RechnungZahlung(Base):

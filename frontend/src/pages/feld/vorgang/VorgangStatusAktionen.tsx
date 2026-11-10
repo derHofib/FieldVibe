@@ -1,29 +1,10 @@
 import { ArrowRight, ChevronDown, CircleCheck, Play, RotateCcw } from "lucide-react";
 
-import { AktionsMenue, type AktionsMenueEintrag } from "../../../components/AktionsMenue";
-import type { IconTone } from "../../../components/IconBadge";
-import { StatusBadge } from "../../../components/StatusBadge";
+import { PulldownMenu, type PulldownItem } from "../../../components/apple/PulldownMenu";
+import { StatusPille } from "../../../components/apple/StatusPille";
+import { vorgangStatusZuToken } from "../../../components/apple/status";
+import { STATUS_LABEL } from "../../../config/vorgangDarstellung";
 import type { VorgangStatus } from "../../../types";
-
-export const VORGANG_STATUS_LABEL: Record<VorgangStatus, string> = {
-  neu: "Neu",
-  geplant: "Geplant",
-  in_arbeit: "In Arbeit",
-  wartet_kunde: "Wartet auf Kunde",
-  abgeschlossen: "Abgeschlossen",
-  abgerechnet: "Abgerechnet",
-  storniert: "Storniert",
-};
-
-const STATUS_TONE: Record<VorgangStatus, IconTone> = {
-  neu: "sky",
-  geplant: "violet",
-  in_arbeit: "amber",
-  wartet_kunde: "amber",
-  abgeschlossen: "emerald",
-  abgerechnet: "slate",
-  storniert: "slate",
-};
 
 // "abgerechnet" fehlt bewusst: das Backend lässt es nicht per PATCH zu
 // (VorgangStatusSetzbar), es entsteht nur über die bezahlte Rechnung.
@@ -53,41 +34,40 @@ export function VorgangStatusAktionen({
 }) {
   const schritt = NAECHSTER_SCHRITT[status];
   const wiederOeffnen = status === "abgeschlossen" || status === "storniert" || status === "abgerechnet";
-  const eintraege: (AktionsMenueEintrag | "trenner")[] = SETZBAR.filter(
-    (s) => s !== status && s !== schritt?.nach && s !== "storniert",
-  ).map((s) => ({
-    label: wiederOeffnen ? `Wieder öffnen als „${VORGANG_STATUS_LABEL[s]}“` : `Status: ${VORGANG_STATUS_LABEL[s]}`,
-    icon: ArrowRight,
-    onClick: () => onWaehle(s),
-  }));
+  const items: PulldownItem[] = SETZBAR.filter((s) => s !== status && s !== schritt?.nach && s !== "storniert").map(
+    (s) => ({
+      label: wiederOeffnen ? `Wieder öffnen als „${STATUS_LABEL[s]}“` : `Status: ${STATUS_LABEL[s]}`,
+      icon: ArrowRight,
+      onSelect: () => onWaehle(s),
+    }),
+  );
   if (status !== "storniert") {
-    eintraege.push("trenner", {
-      label: "Vorgang stornieren",
-      destruktiv: true,
-      onClick: () => onWaehle("storniert"),
-    });
+    items.push("trenner", { label: "Vorgang stornieren", destruktiv: true, onSelect: () => onWaehle("storniert") });
   }
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
-      <StatusBadge label={VORGANG_STATUS_LABEL[status]} tone={STATUS_TONE[status]} />
+      <StatusPille status={vorgangStatusZuToken(status)} label={STATUS_LABEL[status]} />
       {darfAendern && schritt && (
-        <button
-          onClick={() => onWaehle(schritt.nach)}
-          disabled={pending}
-          className="btn-touch btn-clay flex items-center gap-1.5 rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          <schritt.icon size={15} strokeWidth={2.25} /> {schritt.label}
+        <button onClick={() => onWaehle(schritt.nach)} disabled={pending} className="btn-touch btn-ap-primary px-4">
+          <schritt.icon size={15} strokeWidth={2} aria-hidden="true" /> {schritt.label}
         </button>
       )}
-      {darfAendern && eintraege.length > 0 && (
-        <AktionsMenue
-          label="Status ändern"
-          eintraege={eintraege}
-          ausloeser={() => (
-            <span className="btn-touch flex items-center gap-1 rounded-full bg-slate-100 px-3 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-              Status ändern <ChevronDown size={14} strokeWidth={2} />
-            </span>
+      {darfAendern && items.length > 0 && (
+        <PulldownMenu
+          ariaLabel="Status ändern"
+          items={items}
+          trigger={({ offen, toggeln, triggerRef }) => (
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={toggeln}
+              aria-haspopup="menu"
+              aria-expanded={offen}
+              className="btn-touch btn-ap px-3"
+            >
+              Status ändern <ChevronDown size={14} strokeWidth={2} aria-hidden="true" />
+            </button>
           )}
         />
       )}

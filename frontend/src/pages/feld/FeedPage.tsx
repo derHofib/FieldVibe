@@ -1,19 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
-import { Inbox, List, Map as MapIcon, Plus, Repeat, ScanLine, Search, Star, TriangleAlert, Users } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { anlagenApi, kundenApi, storiesApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import { anlagenApi, kundenApi, storiesApi, vorgaengeApi } from "../../api/endpoints";
+import Blueprint from "../../components/Blueprint";
+import { FilterChip } from "../../components/apple/FilterChip";
+import { SegmentedControl } from "../../components/apple/SegmentedControl";
+import { StatusPille } from "../../components/apple/StatusPille";
+import { statusDotFarbe, vorgangStatusZuToken } from "../../components/apple/status";
 import { EmptyState } from "../../components/EmptyState";
 import { FilterVorlagenLeiste } from "../../components/FilterVorlagenLeiste";
-import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { QrScanner } from "../../components/QrScanner";
+import type { FeedMapPunkt } from "../../components/MapboxFeedMap";
 import { SkeletonList } from "../../components/Skeleton";
+import { GRUPPEN_LABEL, STATUS_LABEL, filterChipLabel, gruppiereNachFaelligkeit } from "../../config/vorgangDarstellung";
 import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import { istModulAktiv } from "../../utils/module";
 import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und soll nur
 // geladen werden, wenn die Kartenansicht tatsaechlich geoeffnet wird (siehe
@@ -21,29 +28,6 @@ import type { FeedCard, StoryItem, VorgangStatus } from "../../types";
 const MapboxFeedMap = lazy(() =>
   import("../../components/MapboxFeedMap").then((m) => ({ default: m.MapboxFeedMap })),
 );
-
-const STATUS_HEX: Record<VorgangStatus, string> = {
-  neu: "#3b82f6",
-  geplant: "#a855f7",
-  in_arbeit: "#f59e0b",
-  wartet_kunde: "#f97316",
-  abgeschlossen: "#22c55e",
-  abgerechnet: "#64748b",
-  storniert: "#94a3b8",
-};
-
-// Etwas heller/weniger gesaettigt als STATUS_HEX -- dient als ausfadender
-// Rahmen um die Feed-Karte (.card-soft), nicht als vollflaechige Farbe wie
-// bei den Kartenpins, siehe Design-Vorschlag.
-const STATUS_FRAME: Record<VorgangStatus, string> = {
-  neu: "#60a5fa",
-  geplant: "#c084fc",
-  in_arbeit: "#fbbf24",
-  wartet_kunde: "#fb923c",
-  abgeschlossen: "#4ade80",
-  abgerechnet: "#94a3b8",
-  storniert: "#cbd5e1",
-};
 
 const LEISTUNGSTYP_LABEL: Record<string, string> = {
   installation: "Installation",
@@ -60,30 +44,13 @@ function heuteIso(offsetTage = 0): string {
   return d.toISOString().slice(0, 10);
 }
 
-const STATUS_LABEL: Record<VorgangStatus, string> = {
-  neu: "Neu",
-  geplant: "Geplant",
-  in_arbeit: "In Arbeit",
-  wartet_kunde: "Wartet auf Kunde",
-  abgeschlossen: "Abgeschlossen",
-  abgerechnet: "Abgerechnet",
-  storniert: "Storniert",
-};
-
-const STATUS_BADGE: Record<VorgangStatus, string> = {
-  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
-  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
-};
-
-const AMPEL_COLOR: Record<string, string> = {
-  gruen: "border-green-500",
-  gelb: "border-amber-500",
-  rot: "border-red-500",
+// Ampel-Symbol der Story-Kacheln -- kein Vorgangs-Status, sondern eine
+// eigene Dringlichkeits-Ampel (siehe stories-Endpoint), deshalb ueber die
+// Status-Kreis-Farben (nicht -Token) abgebildet statt eigener Paletten.
+const AMPEL_VAR: Record<string, string> = {
+  gruen: "var(--st-erledigt-dot)",
+  gelb: "var(--st-arbeit-dot)",
+  rot: "var(--st-fehlt-dot)",
 };
 
 const STORY_ZIEL_PFAD: Record<StoryItem["ziel_typ"], (id: string) => string> = {
@@ -99,127 +66,230 @@ function StoryChip({ item }: { item: StoryItem }) {
   const navigate = useNavigate();
   const path = STORY_ZIEL_PFAD[item.ziel_typ](item.ziel_id);
   return (
-    <button
-      onClick={() => navigate(path)}
-      className={`card-interactive btn-touch flex w-40 shrink-0 flex-col items-start rounded-lg border-l-4 bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
-        item.ampel ? AMPEL_COLOR[item.ampel] : "border-slate-300 dark:border-stone-600"
-      }`}
-    >
-      <span className="line-clamp-2 text-sm font-semibold text-slate-800 dark:text-stone-100">
-        {item.titel}
-      </span>
-      {item.subtitel && (
-        <span className="mt-1 text-xs text-slate-500 dark:text-stone-400">{item.subtitel}</span>
-      )}
+    <button onClick={() => navigate(path)} className="btn-touch w-[120px] shrink-0 text-left">
+      <Blueprint
+        className="px-2.5 py-2.5"
+        // .card-ap setzt den Rahmen als CSS-Shorthand (alle vier Seiten)
+        // ausserhalb jedes @layer -- eine Tailwind-Randfarb-/-breiten-
+        // Utility fuer nur die linke Kante koennte das nicht ueberschreiben.
+        style={{ borderLeftWidth: 2, borderLeftColor: item.ampel ? AMPEL_VAR[item.ampel] : "var(--sepstrong)" }}
+      >
+        <span className="line-clamp-2 text-xs font-semibold leading-tight text-label">{item.titel}</span>
+        {item.subtitel && <span className="mt-0.5 block text-[11px] text-label2">{item.subtitel}</span>}
+      </Blueprint>
     </button>
   );
 }
 
 function faelligkeitsFarbe(iso: string): string {
   const heute = heuteIso();
-  if (iso < heute) return "text-red-600 dark:text-red-400";
-  if (iso <= heuteIso(3)) return "text-amber-600 dark:text-amber-400";
-  return "text-slate-500 dark:text-stone-400";
+  if (iso < heute) return "text-st-fehlt";
+  if (iso <= heuteIso(3)) return "text-st-arbeit";
+  return "text-label2";
 }
+
+// "3 Tage überfällig" statt reinem Datum -- auf einen Blick erfassbar ohne
+// Kopfrechnen (siehe Design-Vorschlag "Feed neu gedacht").
+function tageUeberfaellig(iso: string): number {
+  const heute = new Date(heuteIso());
+  const faellig = new Date(iso);
+  return Math.round((heute.getTime() - faellig.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+const OFFENE_STATUS: VorgangStatus[] = ["neu", "geplant"];
 
 function FeedCardView({ card }: { card: FeedCard }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const faelligkeitIso = card.faelligkeit_am?.slice(0, 10);
+
+  const invalidateFeed = () => queryClient.invalidateQueries({ queryKey: ["feed"] });
+  const zuweisenMutation = useMutation({
+    mutationFn: () => vorgaengeApi.uebernehmen(card.id),
+    onSuccess: invalidateFeed,
+  });
+  const statusMutation = useMutation({
+    mutationFn: (status: VorgangStatus) => vorgaengeApi.update(card.id, { status }),
+    onSuccess: invalidateFeed,
+  });
+
+  // Genau eine Schnellaktion pro Karte -- der naechste sinnvolle Schritt im
+  // Ablauf Uebernehmen -> Starten -> Fertig melden, statt aller theoretisch
+  // moeglichen Optionen auf einmal (siehe Design-Vorschlag). "Starten" nur
+  // bei bereits zugewiesenen Karten -- ein noch niemandem zugewiesener
+  // Vorgang soll erst uebernommen werden, bevor jemand "startet".
+  const zeigeUebernehmen = !card.zugewiesener_name && OFFENE_STATUS.includes(card.status);
+  const zeigeStarten = !!card.zugewiesener_name && OFFENE_STATUS.includes(card.status);
+  const zeigeFertigMelden = card.status === "in_arbeit";
+  const zeigeNachfragen = card.status === "wartet_kunde";
+  const aktionLaeuft = zuweisenMutation.isPending || statusMutation.isPending;
+  const aktionFehlerQuelle = zuweisenMutation.error ?? statusMutation.error;
+  const aktionFehlerText =
+    zuweisenMutation.isError || statusMutation.isError
+      ? aktionFehlerQuelle instanceof ApiError
+        ? aktionFehlerQuelle.message
+        : "Keine Verbindung — bitte erneut versuchen"
+      : null;
+
   return (
-    <div
-      className={`card-soft ${card.status === "storniert" ? "opacity-60 grayscale" : ""}`}
-      style={{ "--frame-color": STATUS_FRAME[card.status] } as CSSProperties}
-    >
-    <button
-      onClick={() => navigate(`/vorgaenge/${card.id}`)}
-      className="card-soft-inner btn-touch flex w-full flex-col gap-2 bg-white p-4 text-left dark:bg-stone-900"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-xs text-slate-400 dark:text-stone-500">{card.vorgangsnummer}</div>
-          <div className="font-semibold text-slate-800 dark:text-stone-100">{card.titel}</div>
-          <div className="text-sm text-slate-500 dark:text-stone-400">{card.kunde_name}</div>
-          {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
-            <div className="text-xs text-slate-400 dark:text-stone-500">
-              {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
-            </div>
-          )}
-          {card.anlage_kurzadresse && (
-            <div className="text-xs text-slate-400 dark:text-stone-500">{card.anlage_kurzadresse}</div>
-          )}
-          {card.ersteller_name && (
-            <div className="text-xs text-slate-400 dark:text-stone-500">von {card.ersteller_name}</div>
-          )}
-          {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
-            <div className="text-xs text-slate-400 dark:text-stone-500">
-              {card.zugewiesener_name ? `Zugewiesen: ${card.zugewiesener_name}` : "Nicht zugewiesen"}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {card.timer_laeuft && (
-            <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" title="Timer läuft" />
-          )}
-          {card.dauerauftrag_id && (
-            <span title="Dauerauftrag" className="text-amber-500">
-              <Repeat size={14} strokeWidth={2} />
+    <Blueprint className={card.status === "storniert" ? "opacity-60 grayscale" : ""}>
+      <button
+        onClick={() => navigate(`/vorgaenge/${card.id}`)}
+        className="btn-touch flex w-full flex-col gap-2 p-3 text-left"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="text-[10px] tracking-wide text-label2">{card.vorgangsnummer}</div>
+            <div className="mt-0.5 font-semibold text-label">{card.titel}</div>
+            <div className="text-xs text-label2">{card.kunde_name}</div>
+            {(card.anlage_bezeichnung || card.standort_bezeichnung) && (
+              <div className="text-xs text-label2">
+                {[card.anlage_bezeichnung, card.standort_bezeichnung].filter(Boolean).join(" · ")}
+              </div>
+            )}
+            {card.anlage_kurzadresse && <div className="text-xs text-label2">{card.anlage_kurzadresse}</div>}
+            {card.ersteller_name && <div className="text-xs text-label2">von {card.ersteller_name}</div>}
+            {!["abgeschlossen", "abgerechnet", "storniert"].includes(card.status) && (
+              <div className="text-xs text-label2">
+                {card.zugewiesener_name ? `Zugewiesen: ${card.zugewiesener_name}` : "Nicht zugewiesen"}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-none flex-col items-end gap-1">
+            {card.timer_laeuft && (
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-st-fehlt-dot" title="Timer läuft" />
+            )}
+            {card.dauerauftrag_id && (
+              <span title="Dauerauftrag" className="text-st-arbeit">
+                <Repeat size={14} strokeWidth={1.5} aria-hidden="true" />
+              </span>
+            )}
+            <StatusPille status={vorgangStatusZuToken(card.status)} label={STATUS_LABEL[card.status]} />
+            <span className="whitespace-nowrap text-xs text-label2">
+              {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
             </span>
-          )}
-          <span className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[card.status]}`}>
-            {STATUS_LABEL[card.status]}
-          </span>
-          <span className="whitespace-nowrap text-xs text-slate-400 dark:text-stone-500">
-            {LEISTUNGSTYP_LABEL[card.leistungstyp] ?? card.leistungstyp}
-          </span>
-          {faelligkeitIso && (
-            <span className={`whitespace-nowrap text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
-              Fällig: {new Date(faelligkeitIso).toLocaleDateString("de-DE")}
-            </span>
-          )}
+          </div>
         </div>
-      </div>
-      {card.letztes_event_vorschau && (
-        <p className="line-clamp-2 rounded-md bg-slate-50 px-2 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300">
-          {card.letztes_event_vorschau}
-        </p>
-      )}
-      {card.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {card.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+        {card.status === "wartet_kunde" ? (
+          <span className="flex items-center gap-1 text-xs text-label2">
+            <MessageCircle size={13} strokeWidth={1.5} aria-hidden="true" /> Wartet auf Rückmeldung
+          </span>
+        ) : (
+          faelligkeitIso && (
+            <span className={`flex items-center gap-1 text-xs font-medium ${faelligkeitsFarbe(faelligkeitIso)}`}>
+              {faelligkeitIso < heuteIso() ? (
+                <>
+                  <Clock size={13} strokeWidth={1.5} aria-hidden="true" /> {tageUeberfaellig(faelligkeitIso)}{" "}
+                  {tageUeberfaellig(faelligkeitIso) === 1 ? "Tag" : "Tage"} überfällig
+                </>
+              ) : (
+                <>Fällig: {new Date(faelligkeitIso).toLocaleDateString("de-DE")}</>
+              )}
+            </span>
+          )
+        )}
+        {card.letztes_event_vorschau && (
+          <p className="line-clamp-2 rounded-[var(--radius-ap-sm)] bg-fill px-2 py-1.5 text-sm text-label">
+            {card.letztes_event_vorschau}
+          </p>
+        )}
+        {card.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {card.tags.map((tag) => (
+              <span key={tag} className="rounded-[var(--radius-ap-sm)] bg-fill px-2 py-0.5 text-xs text-label2">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+      {(zeigeUebernehmen || zeigeStarten || zeigeFertigMelden || zeigeNachfragen) && (
+        <div className="flex items-center justify-end gap-1.5 border-t-[0.5px] border-sep px-3 py-2">
+          {aktionFehlerText && <span className="mr-auto text-xs text-st-fehlt">{aktionFehlerText}</span>}
+          {zeigeUebernehmen && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                zuweisenMutation.mutate();
+              }}
+              disabled={aktionLaeuft}
+              className="btn-ap text-xs"
             >
-              #{tag}
-            </span>
-          ))}
+              <UserPlus size={13} strokeWidth={1.5} aria-hidden="true" /> Übernehmen
+            </button>
+          )}
+          {zeigeStarten && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                statusMutation.mutate("in_arbeit");
+              }}
+              disabled={aktionLaeuft}
+              className="btn-ap text-xs"
+            >
+              <Play size={13} strokeWidth={1.5} aria-hidden="true" /> Starten
+            </button>
+          )}
+          {zeigeFertigMelden && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                statusMutation.mutate("abgeschlossen");
+              }}
+              disabled={aktionLaeuft}
+              className="btn-ap text-xs"
+            >
+              <CheckCircle2 size={13} strokeWidth={1.5} aria-hidden="true" /> Fertig melden
+            </button>
+          )}
+          {zeigeNachfragen && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/vorgaenge/${card.id}#email`);
+              }}
+              className="btn-ap text-xs"
+            >
+              <Bell size={13} strokeWidth={1.5} aria-hidden="true" /> Nachfragen
+            </button>
+          )}
         </div>
       )}
-    </button>
-    </div>
+    </Blueprint>
   );
 }
 
 const LEER_FILTER: Record<string, string> = {};
 
 // Erledigte Vorgänge (abgeschlossen/abgerechnet/storniert) verdrängen sonst
-// die offenen aus dem oberen Feed-Bereich; sie bleiben per Umschalter oder
+// die offenen aus dem oberen Feed-Bereich; sie bleiben per Chip oder
 // explizitem Status-Filter erreichbar.
-const OFFENE_STATUS = "neu,geplant,in_arbeit,wartet_kunde";
+const OFFENE_STATUS_FILTER = "neu,geplant,in_arbeit,wartet_kunde";
 
 export function FeedPage() {
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
-  const kannErstellen = hatRecht("vorgaenge", "erstellen");
-  const [zeigeScanner, setZeigeScanner] = useState(false);
-  const [scanFehler, setScanFehler] = useState<string | null>(null);
-  const [erledigteZeigen, setErledigteZeigen] = useState(false);
-  const [filter, setFilter] = useState<Record<string, string>>(LEER_FILTER);
+  // Einstiegsfilter aus der URL (z. B. von der mobilen Projekte-Uebersicht
+  // per Tippen auf ein Projekt, oder vom "Heute"-Tab der Tab-Bar) -- nur
+  // beim ersten Rendern gelesen, danach lebt der Filter ausschliesslich im
+  // lokalen State wie zuvor.
+  const [searchParams] = useSearchParams();
+  const [filter, setFilter] = useState<Record<string, string>>(() => {
+    const uebernommen: Record<string, string> = {};
+    for (const key of ["projekt_id", "faellig_von", "faellig_bis"]) {
+      const wert = searchParams.get(key);
+      if (wert) uebernommen[key] = wert;
+    }
+    return Object.keys(uebernommen).length > 0 ? uebernommen : LEER_FILTER;
+  });
   const [zeigeFilter, setZeigeFilter] = useState(false);
   const [ansicht, setAnsicht] = useState<"liste" | "karte">("liste");
+  const [erledigteZeigen, setErledigteZeigen] = useState(false);
+  const [zeigeScanner, setZeigeScanner] = useState(false);
+  const [scanFehler, setScanFehler] = useState<string | null>(null);
 
   const { data: stories } = useQuery({ queryKey: ["stories"], queryFn: storiesApi.get });
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
 
   function setField(key: string, value: string) {
     setFilter((f) => {
@@ -241,11 +311,11 @@ export function FeedPage() {
   const anwendenFilter = useCallback((neu: Record<string, string>) => setFilter(neu), []);
 
   const wirksamerFilter = useMemo(
-    () => (erledigteZeigen || filter.status ? filter : { ...filter, status: OFFENE_STATUS }),
+    () => (erledigteZeigen || filter.status ? filter : { ...filter, status: OFFENE_STATUS_FILTER }),
     [filter, erledigteZeigen],
   );
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError, refetch } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error: ladeFehler, refetch: neuLaden } =
     useVorgangsListe(wirksamerFilter);
 
   async function handleScan(code: string) {
@@ -269,77 +339,63 @@ export function FeedPage() {
     ? [...stories.wartet_kunde, ...stories.heute, ...stories.fristen]
     : [];
   const cards = data?.pages.flatMap((p) => p.items) ?? [];
-  const aktiveFilterAnzahl = Object.keys(filter).length;
+  // "nur_meine" hat mit den Tabs oben eine eigene, immer sichtbare Steuerung
+  // -- soll den Filter-Zaehler des Filter-Panels darunter nicht mitzaehlen.
+  const aktiveFilterAnzahl = Object.keys(filter).filter((k) => k !== "nur_meine").length;
+  const nurMeine = filter.nur_meine === "true";
+  // Kompakte Chip-Zusammenfassung der aktiven Filter -- ersetzt das immer
+  // sichtbare volle Formular durch eine schmale Leiste, die nur erscheint,
+  // wenn tatsaechlich etwas aktiv ist (siehe Design-Vorschlag "Filterleiste
+  // Varianten", Richtung B).
+  const filterChips = Object.entries(filter)
+    .filter(([key, value]) => key !== "nur_meine" && value)
+    .map(([key, value]) => ({ key, label: filterChipLabel(key, value, kunden) }));
   const punkte: FeedMapPunkt[] = cards
     .filter((c) => c.geo_lat != null && c.geo_lng != null)
-    .map((c) => ({ id: c.id, lng: c.geo_lng as number, lat: c.geo_lat as number, farbe: STATUS_HEX[c.status] }));
+    .map((c) => ({
+      id: c.id,
+      lng: c.geo_lng as number,
+      lat: c.geo_lat as number,
+      farbe: statusDotFarbe(vorgangStatusZuToken(c.status)),
+    }));
   const ohneKoordinatenAnzahl = cards.length - punkte.length;
 
   const keinKundeZugewiesen =
     !!currentUser?.nur_zugewiesene_kunden && kunden !== undefined && kunden.length === 0;
 
-  const leerZustand = keinKundeZugewiesen ? (
-    <EmptyState
-      icon={Users}
-      text="Dir sind noch keine Kunden zugewiesen. Sobald das Büro dir Kunden zuweist, erscheinen hier deren Vorgänge."
-    />
-  ) : aktiveFilterAnzahl > 0 ? (
-    <div className="flex flex-col items-center">
-      <EmptyState icon={Inbox} text="Keine Vorgänge zu diesem Filter." />
-      <button
-        onClick={() => setFilter(LEER_FILTER)}
-        className="btn-touch rounded-full bg-slate-100 px-4 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-      >
-        Filter zurücksetzen
-      </button>
-    </div>
-  ) : !erledigteZeigen ? (
-    <div className="flex flex-col items-center">
-      <EmptyState icon={Inbox} text="Keine offenen Vorgänge. Erledigte und stornierte sind ausgeblendet." />
-      <button
-        onClick={() => setErledigteZeigen(true)}
-        className="btn-touch rounded-full bg-slate-100 px-4 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-      >
-        Erledigte anzeigen
-      </button>
-    </div>
-  ) : (
-    <EmptyState icon={Inbox} text="Noch keine Vorgänge angelegt." />
-  );
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Vorgänge</h1>
-        <div className="flex items-center gap-1.5">
+        {hatRecht("vorgaenge", "erstellen") ? (
+          <button onClick={() => navigate("/neu")} className="btn-touch btn-ap-primary px-4">
+            <Plus size={16} strokeWidth={2} aria-hidden="true" /> Neuer Vorgang
+          </button>
+        ) : (
+          <span />
+        )}
+        <div className="flex items-center gap-1">
           <button
             onClick={() => navigate("/suche")}
             aria-label="Suchen"
-            className="btn-touch flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+            title="Suchen"
+            className="btn-touch btn-ap-toolbar"
           >
-            <Search size={18} strokeWidth={2} />
+            <Search size={18} strokeWidth={2} aria-hidden="true" />
           </button>
           <button
             onClick={() => setZeigeScanner(true)}
             aria-label="QR-Code scannen"
-            className="btn-touch flex h-11 w-11 items-center justify-center rounded-full bg-white text-slate-600 shadow-xs dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+            title="QR-Code scannen"
+            className="btn-touch btn-ap-toolbar"
           >
-            <ScanLine size={18} strokeWidth={2} />
+            <ScanLine size={18} strokeWidth={2} aria-hidden="true" />
           </button>
-          {kannErstellen && (
-            <button
-              onClick={() => navigate("/neu")}
-              className="btn-touch btn-clay flex items-center gap-1.5 rounded-full bg-linear-to-r from-cyan-500 to-blue-600 px-4 text-sm font-semibold text-white"
-            >
-              <Plus size={16} strokeWidth={2.5} /> Neuer Vorgang
-            </button>
-          )}
         </div>
       </div>
 
       {zeigeScanner && <QrScanner onScan={handleScan} onClose={() => setZeigeScanner(false)} />}
       {scanFehler && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="text-sm text-st-fehlt">
           {scanFehler}
         </p>
       )}
@@ -347,11 +403,23 @@ export function FeedPage() {
       {istModulAktiv(currentUser, "highlights") && (
         <button
           onClick={() => navigate("/highlights")}
-          className="btn-touch flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-amber-700 shadow-xs dark:bg-stone-900 dark:text-amber-400 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+          className="btn-touch flex w-full items-center justify-center gap-2 rounded-[var(--radius-ap-input)] bg-fill py-2.5 text-sm font-medium text-st-arbeit"
         >
-          <Star size={15} strokeWidth={2} /> Highlights ansehen
+          <Star size={15} strokeWidth={1.5} aria-hidden="true" /> Highlights ansehen
         </button>
       )}
+
+      <SegmentedControl
+        ariaLabel="Vorgänge filtern"
+        groesse="mobil"
+        volleBreite
+        wert={nurMeine ? "meine" : "alle"}
+        optionen={[
+          { wert: "meine", label: "Meine Vorgänge" },
+          { wert: "alle", label: "Alle" },
+        ]}
+        onChange={(wert) => setField("nur_meine", wert === "meine" ? "true" : "")}
+      />
 
       {storyGroups.length > 0 && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1">
@@ -361,81 +429,105 @@ export function FeedPage() {
         </div>
       )}
 
-      <div className="space-y-3 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <div className="flex items-center justify-between">
+      {/* Filterleiste "Richtung B": Filter ist im Ruhezustand nur ein
+          Icon-Button neben Liste/Karte, keine eigene Karte mehr -- die wird
+          erst sichtbar, sobald tatsaechlich etwas aktiv ist oder das
+          Formular explizit geoeffnet wird (siehe Design-Vorschlag
+          "Filterleiste Varianten"). */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          <FilterChip
+            label="Überfällig"
+            aktiv={filter.faellig_bis === heuteIso() && !filter.faellig_von}
+            onClick={() => setField("faellig_bis", filter.faellig_bis === heuteIso() ? "" : heuteIso())}
+          />
+          <FilterChip
+            label="Diese Woche fällig"
+            aktiv={filter.faellig_bis === heuteIso(7)}
+            onClick={() => setField("faellig_bis", filter.faellig_bis === heuteIso(7) ? "" : heuteIso(7))}
+          />
+          {!filter.status && (
+            <FilterChip
+              label="Erledigte anzeigen"
+              aktiv={erledigteZeigen}
+              onClick={() => setErledigteZeigen((v) => !v)}
+            />
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => setZeigeFilter((v) => !v)}
-            className="btn-touch flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-stone-200"
+            title="Filter"
+            aria-label="Filter"
+            className={`btn-ap-toolbar relative ${zeigeFilter || aktiveFilterAnzahl > 0 ? "text-tint" : ""}`}
           >
-            <Search size={14} strokeWidth={2} /> Filter
+            <Filter size={14} strokeWidth={2} aria-hidden="true" />
             {aktiveFilterAnzahl > 0 && (
-              <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-semibold text-white">
+              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-tint-solid text-[9px] font-bold text-white">
                 {aktiveFilterAnzahl}
               </span>
             )}
           </button>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setField("faellig_bis", heuteIso())}
-              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-            >
-              Überfällig
-            </button>
-            <button
-              onClick={() => setField("faellig_bis", heuteIso(7))}
-              className="btn-touch rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-            >
-              Diese Woche fällig
-            </button>
-          </div>
+          <SegmentedControl
+            ariaLabel="Ansicht"
+            groesse="mobil"
+            wert={ansicht}
+            optionen={[
+              { wert: "liste", label: "Liste" },
+              { wert: "karte", label: "Karte" },
+            ]}
+            onChange={setAnsicht}
+          />
         </div>
+      </div>
 
-        {!filter.status && (
-          <button
-            type="button"
-            aria-pressed={erledigteZeigen}
-            onClick={() => setErledigteZeigen((v) => !v)}
-            className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
-              erledigteZeigen
-                ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-            }`}
-          >
-            Erledigte anzeigen
+      {filterChips.length > 0 && !zeigeFilter && (
+        <div className="card-ap flex flex-wrap items-center gap-1.5 p-2.5">
+          {filterChips.map((c) => (
+            <span
+              key={c.key}
+              className="flex items-center gap-1.5 rounded-[13px] bg-fill py-1 pr-1.5 pl-2.5 text-xs font-medium text-label"
+            >
+              {c.label}
+              <button
+                onClick={() => setField(c.key, "")}
+                aria-label={`${c.label} entfernen`}
+                className="flex h-4 w-4 items-center justify-center rounded-full bg-fill2 text-label2"
+              >
+                <X size={9} strokeWidth={2.5} aria-hidden="true" />
+              </button>
+            </span>
+          ))}
+          <button onClick={() => setZeigeFilter(true)} className="ml-auto text-xs font-semibold text-tint">
+            Bearbeiten
           </button>
-        )}
+        </div>
+      )}
 
-        {zeigeFilter && (
-          <div className="space-y-2">
-            <div>
-              <div className="mb-1 text-xs font-medium text-slate-500 dark:text-stone-400">
-                Status (Mehrfachauswahl möglich)
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(STATUS_LABEL).map(([value, label]) => {
-                  const aktiv = aktiveStatus.includes(value);
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => toggleStatus(value)}
-                      className={`btn-touch rounded-full px-3 py-1.5 text-xs font-medium ${
-                        aktiv
-                          ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                          : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
+      {zeigeFilter && (
+        <div className="card-ap space-y-2 p-3">
+          <div>
+            <div className="mb-1 text-xs font-medium text-label2">Status (Mehrfachauswahl möglich)</div>
+            <div className="flex flex-wrap gap-1.5">
+              {(Object.keys(STATUS_LABEL) as VorgangStatus[]).map((value) => {
+                const aktiv = aktiveStatus.includes(value);
+                return (
+                  <FilterChip
+                    key={value}
+                    label={STATUS_LABEL[value]}
+                    status={vorgangStatusZuToken(value)}
+                    aktiv={aktiv}
+                    onClick={() => toggleStatus(value)}
+                  />
+                );
+              })}
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <select
               value={filter.kunde_id ?? ""}
               onChange={(e) => setField("kunde_id", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="field-ap"
             >
               <option value="">Alle Kunden</option>
               {(kunden ?? []).map((k) => (
@@ -447,7 +539,7 @@ export function FeedPage() {
             <select
               value={filter.leistungstyp ?? ""}
               onChange={(e) => setField("leistungstyp", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="field-ap"
             >
               <option value="">Alle Leistungstypen</option>
               {Object.entries(LEISTUNGSTYP_LABEL).map(([value, label]) => (
@@ -462,81 +554,47 @@ export function FeedPage() {
                 value={filter.faellig_von ?? ""}
                 onChange={(e) => setField("faellig_von", e.target.value)}
                 title="Fällig ab"
-                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="field-ap"
               />
-              <span className="text-xs text-slate-400 dark:text-stone-500">bis</span>
+              <span className="text-xs text-label2">bis</span>
               <input
                 type="date"
                 value={filter.faellig_bis ?? ""}
                 onChange={(e) => setField("faellig_bis", e.target.value)}
                 title="Fällig bis"
-                className="btn-touch w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="field-ap"
               />
             </div>
             <input
               value={filter.tag ?? ""}
               onChange={(e) => setField("tag", e.target.value)}
               placeholder="#Tag"
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="field-ap"
             />
             <select
               value={filter.sort ?? "last_activity_at"}
               onChange={(e) => setField("sort", e.target.value)}
-              className="btn-touch rounded-md border border-slate-300 bg-white px-2 py-2 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="field-ap"
             >
               <option value="last_activity_at">Sortiert nach Aktivität</option>
               <option value="prioritaet">Sortiert nach Priorität</option>
             </select>
-            </div>
           </div>
-        )}
-
-        <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
-      </div>
-
-      <div className="flex justify-end gap-1">
-        <button
-          onClick={() => setAnsicht("liste")}
-          className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-            ansicht === "liste"
-              ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-          }`}
-        >
-          <List size={13} strokeWidth={2} /> Liste
-        </button>
-        <button
-          onClick={() => setAnsicht("karte")}
-          className={`btn-touch flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-            ansicht === "karte"
-              ? "btn-clay bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-              : "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-          }`}
-        >
-          <MapIcon size={13} strokeWidth={2} /> Karte
-        </button>
-      </div>
-
-      {isError ? (
-        <div className="flex flex-col items-center">
-          <EmptyState icon={TriangleAlert} text="Vorgänge konnten nicht geladen werden." />
-          <button
-            onClick={() => refetch()}
-            className="btn-touch rounded-full bg-slate-100 px-4 text-sm font-medium text-slate-600 dark:bg-stone-800 dark:text-stone-300"
-          >
-            Erneut versuchen
-          </button>
         </div>
-      ) : ansicht === "karte" ? (
+      )}
+
+      <FilterVorlagenLeiste entitaet="vorgaenge" filter={filter} onApply={anwendenFilter} />
+
+      {ansicht === "karte" ? (
         isLoading ? (
-          <div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-stone-700/60" />
+          <div className="h-[65vh] w-full animate-pulse rounded-lg bg-fill" />
+        ) : ladeFehler && !data ? (
+          <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
         ) : punkte.length === 0 ? (
-          cards.length === 0 ? leerZustand : <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
+          <EmptyState icon={MapIcon} text="Keine Vorgänge mit Standort gefunden." />
         ) : (
           <>
-            <Suspense
-              fallback={<div className="h-[65vh] w-full animate-pulse rounded-lg bg-slate-200 dark:bg-stone-700/60" />}
-            >
+            <Suspense fallback={<div className="h-[65vh] w-full animate-pulse rounded-lg bg-fill" />}>
               <MapboxFeedMap
                 punkte={punkte}
                 onPunktClick={(id) => navigate(`/vorgaenge/${id}`)}
@@ -544,25 +602,75 @@ export function FeedPage() {
               />
             </Suspense>
             {ohneKoordinatenAnzahl > 0 && (
-              <p className="text-center text-xs text-slate-400 dark:text-stone-500">
+              <p className="text-center text-xs text-label2">
                 {ohneKoordinatenAnzahl} von {cards.length} Vorgängen ohne Standort nicht auf der Karte angezeigt.
               </p>
             )}
-            {hasNextPage && (
-              <p className="text-center text-xs text-slate-400 dark:text-stone-500">Lädt weitere Vorgänge…</p>
-            )}
+            {hasNextPage && <p className="text-center text-xs text-label2">Lädt weitere Vorgänge…</p>}
           </>
         )
       ) : (
         <>
           {isLoading ? (
             <SkeletonList count={4} />
+          ) : ladeFehler && !data ? (
+            <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
+          ) : cards.length === 0 && keinKundeZugewiesen ? (
+            <EmptyState
+              icon={Users}
+              text="Dir sind noch keine Kunden zugewiesen. Sobald das Büro dir Kunden zuweist, erscheinen hier deren Vorgänge."
+            />
           ) : cards.length === 0 ? (
-            leerZustand
+            <EmptyState
+              icon={Inbox}
+              text={
+                aktiveFilterAnzahl > 0
+                  ? "Keine Vorgänge für die aktuellen Filter."
+                  : !erledigteZeigen
+                    ? "Keine offenen Vorgänge. Erledigte und stornierte sind ausgeblendet."
+                    : "Noch keine Vorgänge angelegt."
+              }
+              action={
+                aktiveFilterAnzahl === 0 && !erledigteZeigen ? (
+                  <button onClick={() => setErledigteZeigen(true)} className="btn-touch btn-ap mt-1">
+                    Erledigte anzeigen
+                  </button>
+                ) : (
+                  aktiveFilterAnzahl > 0 && (
+                  <button
+                    onClick={() => setFilter((f) => (f.nur_meine ? { nur_meine: f.nur_meine } : LEER_FILTER))}
+                    className="btn-ap mt-1 text-xs"
+                  >
+                    Filter zurücksetzen
+                  </button>
+                  )
+                )
+              }
+            />
           ) : (
-            <div className="space-y-3">
-              {cards.map((card) => (
-                <FeedCardView key={card.id} card={card} />
+            <div className="space-y-5">
+              {gruppiereNachFaelligkeit(cards).map(({ gruppe, cards: gruppenCards }) => (
+                <div key={gruppe} className="space-y-3">
+                  <div className="flex items-baseline gap-1.5 px-1">
+                    <h3
+                      className={`text-[10px] font-medium tracking-[0.14em] uppercase ${
+                        gruppe === "ueberfaellig"
+                          ? "text-st-fehlt"
+                          : gruppe === "heute"
+                            ? "text-st-arbeit"
+                            : "text-label2"
+                      }`}
+                    >
+                      {GRUPPEN_LABEL[gruppe]}
+                    </h3>
+                    <span className="text-xs text-label2">{gruppenCards.length}</span>
+                  </div>
+                  <div className="space-y-3">
+                    {gruppenCards.map((card) => (
+                      <FeedCardView key={card.id} card={card} />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -571,7 +679,7 @@ export function FeedPage() {
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="btn-touch w-full rounded-md bg-white py-2 text-sm font-medium text-slate-600 shadow-xs disabled:opacity-50 dark:bg-stone-900 dark:text-stone-300 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+              className="btn-ap w-full disabled:opacity-50"
             >
               {isFetchingNextPage ? "Lädt…" : "Mehr laden"}
             </button>

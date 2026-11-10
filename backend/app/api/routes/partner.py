@@ -1,12 +1,19 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import AuthContext, get_current_user, get_db, require_module, require_roles
+from app.api.deps import (
+    AuthContext,
+    get_current_user,
+    get_db,
+    require_module,
+    require_recht,
+    require_roles,
+)
 from app.core.security import hash_password
 from app.models.einladung import Einladung
 from app.models.partner import Partner
@@ -19,22 +26,40 @@ from app.schemas.partner import (
     PartnerNachweisCreate,
     PartnerNachweisRead,
     PartnerNachweisUpdate,
+    PartnerNachweisUploadResponse,
+    PartnerNachweisUrl,
     PartnerRead,
     PartnerUpdate,
     PartnerZugangRead,
     PartnerZugangUpdate,
 )
+from app.services.token_widerruf_service import widerrufe_tokens
+from app.services import storage_service
 from app.services.einladung_service import (
     create_einladung,
     registrierungslink_erzeugen,
     to_read_model,
     versende_einladung,
 )
+from app.schemas.user import MIN_PASSWORT_LAENGE
 
+_NACHWEIS_MAX_BYTES = 15 * 1024 * 1024
+
+# Eigener Rechte-Bereich "partner" (Migration 0070) statt der vormaligen
+# require_roles(..., "disponent", "techniker") -- diese Rollen-Literale gibt
+# es seit der Rechte-Matrix/account_typ-Umstellung als tatsaechlichen
+# User.role-Wert nicht mehr (jeder Mitarbeiter-Account laeuft ueber
+# role="custom"), der Bereich war dadurch fuer keinen account_typ-basierten
+# Nutzer erreichbar. loesch_operativ hat ueberall dieselben Rechte wie
+# mandant_admin (siehe app/api/deps.py:require_roles()) und braucht daher wie
+# dieser Zugriff auf diesen Router.
 router = APIRouter(
     prefix="/api/partner",
     tags=["partner"],
-    dependencies=[Depends(require_module("nachunternehmer"))],
+    dependencies=[
+        Depends(require_module("nachunternehmer")),
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+    ],
 )
 
 
@@ -55,10 +80,16 @@ def _nachweis_to_read(nachweis: PartnerNachweis) -> PartnerNachweisRead:
 @router.get(
     "",
     response_model=list[PartnerRead],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[Depends(require_recht("partner", "sehen"))],
 )
-async def list_partner(session: AsyncSession = Depends(get_db)) -> list[Partner]:
-    result = await session.execute(select(Partner).order_by(Partner.name))
+async def list_partner(
+    q: str | None = Query(default=None, description="Suche in Name/Gewerk"),
+    session: AsyncSession = Depends(get_db),
+) -> list[Partner]:
+    stmt = select(Partner).order_by(Partner.name)
+    if q:
+        stmt = stmt.where(Partner.name.ilike(f"%{q}%") | Partner.gewerk.ilike(f"%{q}%"))
+    result = await session.execute(stmt)
     return list(result.scalars().all())
 
 
@@ -66,14 +97,21 @@ async def list_partner(session: AsyncSession = Depends(get_db)) -> list[Partner]
     "",
     response_model=PartnerRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "erstellen")),
+    ],
 )
 async def create_partner(
     body: PartnerCreate,
     auth: AuthContext = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Partner:
-    partner = Partner(mandant_id=auth.mandant_id, **body.model_dump())
+    # mode="json" statt des Standard-model_dump(): ansprechpartner enthaelt
+    # verschachtelte AnsprechpartnerEintrag-Objekte, deren id ein UUID-Objekt
+    # ist -- die JSONB-Spalte braucht dafuer JSON-taugliche Werte, siehe
+    # create_kunde in app/api/routes/kunden.py fuer dasselbe Muster.
+    partner = Partner(mandant_id=auth.mandant_id, **body.model_dump(mode="json"))
     session.add(partner)
     await session.flush()
     return partner
@@ -82,7 +120,7 @@ async def create_partner(
 @router.get(
     "/{partner_id}",
     response_model=PartnerRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent", "techniker"))],
+    dependencies=[Depends(require_recht("partner", "sehen"))],
 )
 async def get_partner(partner_id: UUID, session: AsyncSession = Depends(get_db)) -> Partner:
     partner = await session.get(Partner, partner_id)
@@ -94,7 +132,10 @@ async def get_partner(partner_id: UUID, session: AsyncSession = Depends(get_db))
 @router.patch(
     "/{partner_id}",
     response_model=PartnerRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "bearbeiten")),
+    ],
 )
 async def update_partner(
     partner_id: UUID, body: PartnerUpdate, session: AsyncSession = Depends(get_db)
@@ -103,7 +144,8 @@ async def update_partner(
     if partner is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner nicht gefunden")
 
-    changes = body.model_dump(exclude_unset=True)
+    # mode="json" -- siehe create_partner oben.
+    changes = body.model_dump(exclude_unset=True, mode="json")
     for field, value in changes.items():
         setattr(partner, field, value)
     await session.flush()
@@ -115,7 +157,10 @@ async def update_partner(
 @router.delete(
     "/{partner_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("partner", "loeschen")),
+    ],
 )
 async def delete_partner(partner_id: UUID, session: AsyncSession = Depends(get_db)) -> None:
     partner = await session.get(Partner, partner_id)
@@ -139,7 +184,7 @@ async def delete_partner(partner_id: UUID, session: AsyncSession = Depends(get_d
 @router.get(
     "/{partner_id}/nachweise",
     response_model=list[PartnerNachweisRead],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[Depends(require_recht("partner", "sehen"))],
 )
 async def list_nachweise(partner_id: UUID, session: AsyncSession = Depends(get_db)) -> list[PartnerNachweisRead]:
     if await session.get(Partner, partner_id) is None:
@@ -154,7 +199,10 @@ async def list_nachweise(partner_id: UUID, session: AsyncSession = Depends(get_d
     "/{partner_id}/nachweise",
     response_model=PartnerNachweisRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "erstellen")),
+    ],
 )
 async def create_nachweis(
     partner_id: UUID,
@@ -173,7 +221,10 @@ async def create_nachweis(
 @router.patch(
     "/{partner_id}/nachweise/{nachweis_id}",
     response_model=PartnerNachweisRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "bearbeiten")),
+    ],
 )
 async def update_nachweis(
     partner_id: UUID,
@@ -197,7 +248,10 @@ async def update_nachweis(
 @router.delete(
     "/{partner_id}/nachweise/{nachweis_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("partner", "loeschen")),
+    ],
 )
 async def delete_nachweis(
     partner_id: UUID, nachweis_id: UUID, session: AsyncSession = Depends(get_db)
@@ -209,10 +263,66 @@ async def delete_nachweis(
     await session.flush()
 
 
+@router.post(
+    "/{partner_id}/nachweise/{nachweis_id}/upload",
+    response_model=PartnerNachweisUploadResponse,
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "bearbeiten")),
+    ],
+)
+async def upload_nachweis_dokument(
+    partner_id: UUID,
+    nachweis_id: UUID,
+    file: UploadFile,
+    session: AsyncSession = Depends(get_db),
+) -> PartnerNachweisUploadResponse:
+    # Object-Key wird serverseitig generiert statt vom Client entgegengenommen
+    # -- ein clientseitig frei waehlbarer Key haette sonst ohne Aufwand auf
+    # ein fremdes Objekt (z.B. eines anderen Mandanten) zeigen koennen,
+    # sobald ein Download dafuer existiert. Analog zu app/api/routes/
+    # boards.py:upload_board_anhang.
+    nachweis = await session.get(PartnerNachweis, nachweis_id)
+    if nachweis is None or nachweis.partner_id != partner_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nachweis nicht gefunden")
+
+    data = await file.read()
+    if len(data) > _NACHWEIS_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Datei zu groß (max. 15 MB)"
+        )
+
+    alter_key = nachweis.dokument_s3_key
+    key = storage_service.new_partner_nachweis_key(nachweis.mandant_id, partner_id, file.filename or "nachweis")
+    await storage_service.upload_bytes(key, data, file.content_type or "application/octet-stream")
+    nachweis.dokument_s3_key = key
+    await session.flush()
+
+    if alter_key is not None:
+        await storage_service.delete_object(alter_key)
+    return PartnerNachweisUploadResponse(dokument_s3_key=key)
+
+
+@router.get(
+    "/{partner_id}/nachweise/{nachweis_id}/url",
+    response_model=PartnerNachweisUrl,
+    dependencies=[Depends(require_recht("partner", "sehen"))],
+)
+async def get_nachweis_url(
+    partner_id: UUID,
+    nachweis_id: UUID,
+    session: AsyncSession = Depends(get_db),
+) -> PartnerNachweisUrl:
+    nachweis = await session.get(PartnerNachweis, nachweis_id)
+    if nachweis is None or nachweis.partner_id != partner_id or nachweis.dokument_s3_key is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kein Dokument hinterlegt")
+    return PartnerNachweisUrl(url=storage_service.presigned_get_url(nachweis.dokument_s3_key))
+
+
 @router.get(
     "/{partner_id}/zugaenge",
     response_model=list[PartnerZugangRead],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[Depends(require_recht("partner", "sehen"))],
 )
 async def list_zugaenge(partner_id: UUID, session: AsyncSession = Depends(get_db)) -> list[PartnerZugang]:
     if await session.get(Partner, partner_id) is None:
@@ -224,7 +334,7 @@ async def list_zugaenge(partner_id: UUID, session: AsyncSession = Depends(get_db
 @router.get(
     "/{partner_id}/einladungen",
     response_model=list[EinladungRead],
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[Depends(require_recht("partner", "sehen"))],
 )
 async def list_partner_einladungen(
     partner_id: UUID, session: AsyncSession = Depends(get_db)
@@ -250,7 +360,10 @@ async def list_partner_einladungen(
     "/{partner_id}/einladungen",
     response_model=EinladungRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "erstellen")),
+    ],
 )
 async def partner_einladen(
     partner_id: UUID,
@@ -284,7 +397,10 @@ async def partner_einladen(
 @router.post(
     "/{partner_id}/einladungen/{einladung_id}/erneut-senden",
     response_model=EinladungRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "erstellen")),
+    ],
 )
 async def partner_einladung_erneut_senden(
     partner_id: UUID,
@@ -315,7 +431,10 @@ async def partner_einladung_erneut_senden(
 @router.delete(
     "/{partner_id}/einladungen/{einladung_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom", "loesch_operativ")),
+        Depends(require_recht("partner", "loeschen")),
+    ],
 )
 async def partner_einladung_widerrufen(
     partner_id: UUID, einladung_id: UUID, session: AsyncSession = Depends(get_db)
@@ -335,7 +454,10 @@ async def partner_einladung_widerrufen(
 @router.patch(
     "/{partner_id}/zugaenge/{zugang_id}",
     response_model=PartnerZugangRead,
-    dependencies=[Depends(require_roles("mandant_admin", "disponent"))],
+    dependencies=[
+        Depends(require_roles("mandant_admin", "custom")),
+        Depends(require_recht("partner", "bearbeiten")),
+    ],
 )
 async def update_zugang(
     partner_id: UUID,
@@ -348,18 +470,21 @@ async def update_zugang(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Zugang nicht gefunden")
 
     changes = body.model_dump(exclude_unset=True, exclude={"password"})
+    tokens_widerrufen = (changes.get("aktiv") is False and zugang.aktiv) or body.password is not None
     for field, value in changes.items():
         setattr(zugang, field, value)
     if body.password is not None:
-        if len(body.password) < 10:
+        if len(body.password) < MIN_PASSWORT_LAENGE:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Passwort muss mindestens 10 Zeichen haben",
+                detail=f"Passwort muss mindestens {MIN_PASSWORT_LAENGE} Zeichen haben",
             )
         zugang.password_hash = hash_password(body.password)
         changes["password_hash"] = zugang.password_hash
 
     await session.flush()
+    if tokens_widerrufen:
+        await widerrufe_tokens(session, zugang)
     if changes:
         await session.refresh(zugang)
     return zugang

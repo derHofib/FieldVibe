@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
 import { ApiError } from "../api/client";
-import { vorgaengeApi, zeiterfassungApi } from "../api/endpoints";
+import { leistungsverzeichnisApi, vorgaengeApi, zeiterfassungApi } from "../api/endpoints";
 import type { ZeiterfassungKategorie } from "../types";
 import { SearchableSelect } from "./SearchableSelect";
 
@@ -14,7 +14,7 @@ const KATEGORIE_OPTIONEN: { value: ZeiterfassungKategorie; label: string }[] = [
   { value: "urlaub", label: "Urlaub" },
   { value: "krankheit", label: "Krankheit" },
   { value: "sonstiges", label: "Sonstiges" },
-  { value: "auftrag", label: "Auftrag (nachgetragen)" },
+  { value: "auftrag", label: "Vorgang (nachgetragen)" },
 ];
 
 function heuteAlsInput(): string {
@@ -31,23 +31,38 @@ function alsIso(datum: string, uhrzeit: string): string {
 export function ZeiterfassungManuellForm({
   onClose,
   onGespeichert,
+  vorbelegtesDatum,
 }: {
   onClose: () => void;
   onGespeichert: () => void;
+  /** YYYY-MM-DD; ohne Angabe wie bisher "heute". */
+  vorbelegtesDatum?: string;
 }) {
-  const [datum, setDatum] = useState(heuteAlsInput());
+  const [datum, setDatum] = useState(vorbelegtesDatum ?? heuteAlsInput());
   const [startZeit, setStartZeit] = useState("08:00");
   const [endeZeit, setEndeZeit] = useState("16:00");
   const [kategorie, setKategorie] = useState<ZeiterfassungKategorie>("verwaltung");
   const [vorgangId, setVorgangId] = useState("");
   const [taetigkeit, setTaetigkeit] = useState("");
   const [abrechenbar, setAbrechenbar] = useState(false);
+  const [lvPositionId, setLvPositionId] = useState("");
   const [fehler, setFehler] = useState<string | null>(null);
 
   const { data: vorgaenge } = useQuery({
     queryKey: ["vorgaenge-fuer-zeiterfassung"],
     queryFn: () => vorgaengeApi.list(),
     enabled: kategorie === "auftrag",
+  });
+
+  const ausgewaehlterVorgang = (vorgaenge ?? []).find((v) => v.id === vorgangId);
+
+  // SVS-Kopplung: der Stundenverrechnungssatz kommt aus dem Leistungs-
+  // verzeichnis des Kunden des gewaehlten Vorgangs -- nur relevant, wenn
+  // diese Zeit ueberhaupt abrechenbar ist.
+  const { data: stundensaetze } = useQuery({
+    queryKey: ["leistungsverzeichnis", ausgewaehlterVorgang?.kunde_id, "stundensaetze"],
+    queryFn: () => leistungsverzeichnisApi.list(ausgewaehlterVorgang!.kunde_id, true),
+    enabled: kategorie === "auftrag" && abrechenbar && !!ausgewaehlterVorgang,
   });
 
   const mutation = useMutation({
@@ -59,6 +74,7 @@ export function ZeiterfassungManuellForm({
         vorgang_id: kategorie === "auftrag" ? vorgangId || undefined : undefined,
         taetigkeit: taetigkeit || undefined,
         abrechenbar: kategorie === "auftrag" ? abrechenbar : false,
+        lv_position_id: kategorie === "auftrag" && abrechenbar ? lvPositionId || undefined : undefined,
       }),
     onSuccess: onGespeichert,
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Speichern fehlgeschlagen"),
@@ -81,11 +97,11 @@ export function ZeiterfassungManuellForm({
   return (
     <form
       onSubmit={submit}
-      className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+      className="space-y-3 card-ap p-4"
     >
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 sm:col-span-1">
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-label">
             Datum
           </label>
           <input
@@ -93,11 +109,11 @@ export function ZeiterfassungManuellForm({
             value={datum}
             onChange={(e) => setDatum(e.target.value)}
             required
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-label">
             Von
           </label>
           <input
@@ -105,11 +121,11 @@ export function ZeiterfassungManuellForm({
             value={startZeit}
             onChange={(e) => setStartZeit(e.target.value)}
             required
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-label">
             Bis
           </label>
           <input
@@ -117,19 +133,19 @@ export function ZeiterfassungManuellForm({
             value={endeZeit}
             onChange={(e) => setEndeZeit(e.target.value)}
             required
-            className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+        <label className="mb-1 block text-xs font-medium text-label">
           Kategorie
         </label>
         <select
           value={kategorie}
           onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
-          className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         >
           {KATEGORIE_OPTIONEN.map((o) => (
             <option key={o.value} value={o.value}>
@@ -141,7 +157,7 @@ export function ZeiterfassungManuellForm({
 
       {kategorie === "auftrag" && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+          <label className="mb-1 block text-xs font-medium text-label">
             Vorgang
           </label>
           <SearchableSelect
@@ -153,20 +169,36 @@ export function ZeiterfassungManuellForm({
             onChange={setVorgangId}
             placeholder="Vorgang suchen…"
           />
-          <label className="mt-2 flex items-center gap-1.5 text-sm text-slate-600 dark:text-stone-300">
+          <label className="mt-2 flex items-center gap-1.5 text-sm text-label">
             <input
               type="checkbox"
               checked={abrechenbar}
               onChange={(e) => setAbrechenbar(e.target.checked)}
-              className="h-4 w-4 rounded-xs border-slate-300 dark:border-stone-600"
+              className="h-4 w-4 rounded-xs border-sep "
             />
             Abrechenbar
           </label>
+          {abrechenbar && (stundensaetze ?? []).length > 0 && (
+            <div className="mt-2">
+              <label className="mb-1 block text-xs font-medium text-label">
+                Stundenverrechnungssatz (optional)
+              </label>
+              <SearchableSelect
+                options={(stundensaetze ?? []).map((s) => ({
+                  value: s.id,
+                  label: `${s.bezeichnung} – ${s.einzelpreis} €/${s.einheit}`,
+                }))}
+                value={lvPositionId}
+                onChange={setLvPositionId}
+                placeholder="Kein Stundensatz"
+              />
+            </div>
+          )}
         </div>
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-stone-400">
+        <label className="mb-1 block text-xs font-medium text-label">
           Notiz (optional)
         </label>
         <input
@@ -174,24 +206,24 @@ export function ZeiterfassungManuellForm({
           value={taetigkeit}
           onChange={(e) => setTaetigkeit(e.target.value)}
           placeholder="z.B. Materialbestellung, Ersatzteile abholen…"
-          className="btn-touch w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
 
-      {fehler && <p className="text-sm text-red-600 dark:text-red-400">{fehler}</p>}
+      {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="btn-touch rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+          className="btn-touch rounded-md bg-fill px-3 py-1.5 text-sm text-label "
         >
           Abbrechen
         </button>
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="btn-touch btn-clay rounded-md bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch btn-ap-primary px-3 py-1.5 text-sm"
         >
           Speichern
         </button>

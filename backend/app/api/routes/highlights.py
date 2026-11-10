@@ -17,8 +17,8 @@ from app.models.highlight import Highlight
 from app.models.vorgang import Vorgang
 from app.models.vorgang_event import VorgangEvent
 from app.schemas.highlight import HighlightCreate, HighlightRead
-from app.services import storage_service
-from app.services.rechte_service import hat_recht
+from app.services import berechtigung_service, storage_service
+from app.services.zuweisung_service import erlaubte_kunde_ids, require_kunde_zugriff
 
 router = APIRouter(
     prefix="/api/highlights",
@@ -59,8 +59,18 @@ async def _to_read_model(session: AsyncSession, highlight: Highlight) -> Highlig
 
 
 @router.get("", response_model=list[HighlightRead])
-async def list_highlights(session: AsyncSession = Depends(get_db)) -> list[HighlightRead]:
-    result = await session.execute(select(Highlight).order_by(Highlight.created_at.desc()))
+async def list_highlights(
+    auth: AuthContext = Depends(get_current_user), session: AsyncSession = Depends(get_db)
+) -> list[HighlightRead]:
+    stmt = select(Highlight).order_by(Highlight.created_at.desc())
+    erlaubte_kunden = await erlaubte_kunde_ids(session, auth)
+    if erlaubte_kunden is not None:
+        stmt = (
+            stmt.join(VorgangEvent, VorgangEvent.id == Highlight.vorgang_event_id)
+            .join(Vorgang, Vorgang.id == VorgangEvent.vorgang_id)
+            .where(Vorgang.kunde_id.in_(erlaubte_kunden))
+        )
+    result = await session.execute(stmt)
     return [await _to_read_model(session, h) for h in result.scalars().all()]
 
 
@@ -76,6 +86,13 @@ async def create_highlight(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Nur Foto-Events können als Highlight markiert werden",
         )
+    event_vorgang = await session.get(Vorgang, event.vorgang_id)
+    await require_kunde_zugriff(
+        session,
+        auth,
+        event_vorgang.kunde_id if event_vorgang else None,
+        "Foto-Event nicht gefunden",
+    )
 
     highlight = Highlight(
         mandant_id=auth.mandant_id,
@@ -106,14 +123,17 @@ async def delete_highlight(
     highlight = await session.get(Highlight, highlight_id)
     if highlight is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Highlight nicht gefunden")
+    highlight_event = await session.get(VorgangEvent, highlight.vorgang_event_id)
+    highlight_vorgang = await session.get(Vorgang, highlight_event.vorgang_id) if highlight_event else None
+    await require_kunde_zugriff(
+        session,
+        auth,
+        highlight_vorgang.kunde_id if highlight_vorgang else None,
+        "Highlight nicht gefunden",
+    )
     # Account-Typen mit vorgaenge:loeschen duerfen jedes Highlight entfernen
     # (Moderation); alle anderen nur ihr eigenes.
-    darf_alle_loeschen = auth.role == "mandant_admin" or (
-        auth.role == "custom"
-        and await hat_recht(
-            session, account_typ_id=auth.account_typ_id, bereich="vorgaenge", aktion="loeschen"
-        )
-    )
+    darf_alle_loeschen = await berechtigung_service.hat_recht(session, auth, "vorgaenge", "loeschen")
     if not darf_alle_loeschen and highlight.erstellt_von != auth.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Nur eigene Highlights können entfernt werden"

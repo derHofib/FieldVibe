@@ -11,18 +11,18 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 import { useNavigate } from "react-router-dom";
 
-import { termineApi, usersApi } from "../../api/endpoints";
+import { ApiError } from "../../api/client";
+import { projekteApi, termineApi, usersApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
-
-const BACKLOG_FILTER = { unbisponiert: "true", sort: "faelligkeit_am" };
+import { useAuth } from "../../context/AuthContext";
 
 const START_STUNDE = 7;
 const ENDE_STUNDE = 19;
@@ -86,7 +86,7 @@ interface Techniker {
 
 /** Gantt-Dispo: Zeilen = Techniker, Spalten = Tagesstunden. Bestehende
  * Termine sind per react-rnd verschieb-/verlaengerbar (dieselbe Bibliothek
- * wie FormularRasterEditor -- volle Kontrolle, keine neue Abhaengigkeit).
+ * wie ein freihaendiger Pointer-Handler -- volle Kontrolle, keine neue Abhaengigkeit).
  * Unbisponierte Vorgaenge (kein aktiver Termin, siehe app/models/termin.py)
  * sammeln sich links nach Faelligkeit sortiert und werden per natives
  * Drag&Drop (gleiche Technik wie DispoBoardPage.tsx) in die Zeitachse
@@ -96,31 +96,54 @@ export function OfficeDispoPage() {
   const queryClient = useQueryClient();
   const [tag, setTag] = useState(() => new Date());
   const [warnungen, setWarnungen] = useState<TerminWarnung[]>([]);
+  const [fehler, setFehler] = useState<string | null>(null);
+  const meldeFehler = (err: unknown) =>
+    setFehler(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.");
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
+  const [projektId, setProjektId] = useState("");
+  const [planenVorgang, setPlanenVorgang] = useState<FeedCard | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   const beginn = useMemo(() => tagsBeginn(tag), [tag]);
   const ende = useMemo(() => tagsEnde(tag), [tag]);
   const heute = istGleicherTag(tag, new Date());
 
-  const { data: technikerListe } = useQuery({ queryKey: ["users"], queryFn: usersApi.list });
+  const { hatRecht } = useAuth();
+  const { data: technikerListe } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   // Spiegelt app/api/routes/termine.py:_load_vorgang_and_techniker -- jeder
   // aktive mandant_admin/custom-Account kann als Techniker eingeplant werden.
   const technikers: Techniker[] = (technikerListe ?? []).filter(
     (u) => u.aktiv && (u.role === "mandant_admin" || u.role === "custom"),
   );
 
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+
   const { data: termine } = useQuery({
-    queryKey: ["termine", beginn.toISOString()],
-    queryFn: () => termineApi.list({ von: beginn.toISOString(), bis: ende.toISOString() }),
+    queryKey: ["termine", beginn.toISOString(), projektId],
+    queryFn: () =>
+      termineApi.list({
+        von: beginn.toISOString(),
+        bis: ende.toISOString(),
+        ...(projektId ? { projekt_id: projektId } : {}),
+      }),
   });
 
+  // Ein Projekt-Filter grenzt neben der Zeitachse auch den "Nicht
+  // disponiert"-Backlog links ein.
+  const backlogFilter = useMemo(
+    () => ({
+      unbisponiert: "true",
+      sort: "faelligkeit_am",
+      ...(projektId ? { projekt_id: projektId } : {}),
+    }),
+    [projektId],
+  );
   const {
     data: backlogData,
     fetchNextPage,
     hasNextPage,
     isLoading: backlogLaedt,
-  } = useVorgangsListe(BACKLOG_FILTER);
+  } = useVorgangsListe(backlogFilter);
   useAlleSeitenLaden(true, hasNextPage, fetchNextPage);
   const backlog: FeedCard[] = backlogData?.pages.flatMap((p) => p.items) ?? [];
 
@@ -132,6 +155,7 @@ export function OfficeDispoPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeFehler,
   });
 
   const updateMutation = useMutation({
@@ -141,6 +165,7 @@ export function OfficeDispoPage() {
       setWarnungen(result.warnungen);
       queryClient.invalidateQueries({ queryKey: ["termine"] });
     },
+    onError: meldeFehler,
   });
 
   const deleteMutation = useMutation({
@@ -150,6 +175,7 @@ export function OfficeDispoPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
       queryClient.invalidateQueries({ queryKey: ["feed"] });
     },
+    onError: meldeFehler,
   });
 
   const technikerIndex = new Map(technikers.map((t, i) => [t.id, i]));
@@ -216,10 +242,35 @@ export function OfficeDispoPage() {
 
   return (
     <div>
-      <SeitenKopf titel="Dispo" />
+      <SeitenKopf titel="Dispo">
+        <select
+          value={projektId}
+          onChange={(e) => setProjektId(e.target.value)}
+          aria-label="Nach Projekt filtern"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+        >
+          <option value="">Alle Projekte</option>
+          {(projekte ?? []).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </SeitenKopf>
+
+      {fehler && (
+        <div className="mb-4 flex items-center justify-between gap-2 border border-st-fehlt px-3 py-2 text-sm text-st-fehlt">
+          <span className="flex items-center gap-1.5">
+            <AlertTriangle size={14} strokeWidth={1.5} /> {fehler}
+          </span>
+          <button onClick={() => setFehler(null)} className="text-xs underline">
+            Ausblenden
+          </button>
+        </div>
+      )}
 
       {warnungen.length > 0 && (
-        <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+        <div className="mb-4 border border-st-arbeit p-3 text-sm text-st-arbeit">
           {warnungen.map((w, i) => (
             <p key={i} className="flex items-center gap-1">
               <AlertTriangle size={13} strokeWidth={2} /> {w.meldung}
@@ -234,15 +285,15 @@ export function OfficeDispoPage() {
       <div className="flex items-start gap-4">
         <div className="w-64 shrink-0 space-y-2">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-slate-500 dark:text-stone-400">
+            <span className="text-xs font-bold text-label2">
               Nicht disponiert
             </span>
-            <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-400 dark:bg-stone-800 dark:text-stone-500">
+            <span className="rounded-full bg-fill px-1.5 text-[10px] font-bold text-label2">
               {backlog.length}
             </span>
           </div>
           {backlogLaedt ? (
-            <p className="py-6 text-center text-xs text-slate-400 dark:text-stone-500">Lädt…</p>
+            <p className="py-6 text-center text-xs text-label2">Lädt…</p>
           ) : backlog.length === 0 ? (
             <EmptyState icon={Inbox} text="Alles disponiert." />
           ) : (
@@ -258,33 +309,42 @@ export function OfficeDispoPage() {
                       e.dataTransfer.setData("application/x-vorgang-titel", v.titel);
                       e.dataTransfer.effectAllowed = "copy";
                     }}
-                    className={`card-interactive cursor-grab rounded-xl border bg-white p-2.5 dark:bg-stone-900 ${
+                    className={`card-interactive cursor-grab rounded-xl border bg-card p-2.5 ${
                       ueberfaellig
-                        ? "border-rose-300 dark:border-rose-500/40"
-                        : "border-slate-200 dark:border-stone-800"
+                        ? "border-st-fehlt "
+                        : "border-sep"
                     }`}
                   >
-                    <div className="flex items-start gap-1.5">
+                    {/* Als Button: per Drag&Drop auf die Zeitachse ziehen bleibt
+                        der Hauptweg, aber per Tastatur/Screenreader ist die Karte
+                        sonst nicht erreichbar -- Klick/Enter öffnet dieselbe
+                        Terminplanung als Formular (BacklogPlanenPanel). */}
+                    <button
+                      type="button"
+                      onClick={() => setPlanenVorgang(v)}
+                      disabled={technikers.length === 0}
+                      className="flex w-full items-start gap-1.5 text-left disabled:cursor-not-allowed"
+                    >
                       <GripVertical
                         size={14}
-                        className="mt-0.5 shrink-0 text-slate-300 dark:text-stone-600"
+                        className="mt-0.5 shrink-0 text-label2"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10.5px] font-bold text-slate-400 dark:text-stone-500">
+                        <p className="text-[10.5px] font-bold text-label2">
                           {v.vorgangsnummer}
                         </p>
-                        <p className="truncate text-[13px] font-semibold text-slate-800 dark:text-stone-100">
+                        <p className="truncate text-[13px] font-semibold text-label">
                           {v.titel}
                         </p>
-                        <p className="truncate text-[11.5px] text-slate-500 dark:text-stone-400">
+                        <p className="truncate text-[11.5px] text-label2">
                           {v.kunde_name}
                         </p>
                         {v.faelligkeit_am && (
                           <span
                             className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                               ueberfaellig
-                                ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-                                : "bg-slate-100 text-slate-500 dark:bg-stone-800 dark:text-stone-400"
+                                ? "bg-st-fehlt-bg text-st-fehlt  "
+                                : "bg-fill text-label2 "
                             }`}
                           >
                             {ueberfaellig
@@ -293,7 +353,7 @@ export function OfficeDispoPage() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </button>
                   </div>
                 );
               })}
@@ -302,22 +362,22 @@ export function OfficeDispoPage() {
         </div>
 
         <Karte className="min-w-0 flex-1 overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-200 p-3 dark:border-stone-800">
+          <div className="flex items-center justify-between border-b border-sep p-3 ">
             <button
               onClick={() => setTag((d) => addTage(d, -1))}
-              className="btn-touch rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-fill"
               aria-label="Vorheriger Tag"
             >
               <ChevronLeft size={16} />
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-slate-700 dark:text-stone-200">
+              <span className="text-sm font-semibold text-label">
                 {formatTag(tag)}
               </span>
               {!heute && (
                 <button
                   onClick={() => setTag(new Date())}
-                  className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 hover:bg-slate-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"
+                  className="rounded-full bg-fill px-2 py-0.5 text-[11px] font-medium text-label2 hover:bg-fill2"
                 >
                   Heute
                 </button>
@@ -325,7 +385,7 @@ export function OfficeDispoPage() {
             </div>
             <button
               onClick={() => setTag((d) => addTage(d, 1))}
-              className="btn-touch rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-stone-400 dark:hover:bg-stone-800"
+              className="btn-touch rounded-md p-1.5 text-label2 hover:bg-fill"
               aria-label="Nächster Tag"
             >
               <ChevronRight size={16} />
@@ -337,15 +397,15 @@ export function OfficeDispoPage() {
           ) : (
             <div className="overflow-x-auto">
               <div style={{ width: LABEL_BREITE + GESAMT_BREITE }}>
-                <div className="flex border-b border-slate-200 dark:border-stone-800">
+                <div className="flex border-b border-sep">
                   <div
-                    className="sticky left-0 z-10 shrink-0 bg-white dark:bg-stone-900"
+                    className="sticky left-0 z-10 shrink-0 bg-card"
                     style={{ width: LABEL_BREITE }}
                   />
                   {STUNDEN.map((h) => (
                     <div
                       key={h}
-                      className="shrink-0 border-l border-slate-100 py-1.5 pl-1.5 text-[11px] font-medium text-slate-400 dark:border-stone-800 dark:text-stone-500"
+                      className="shrink-0 border-l border-sep py-1.5 pl-1.5 text-[11px] font-medium text-label2"
                       style={{ width: PX_PRO_STUNDE }}
                     >
                       {h}:00
@@ -355,13 +415,13 @@ export function OfficeDispoPage() {
 
                 <div className="relative" style={{ height: technikers.length * ROW_HOEHE }}>
                   <div
-                    className="sticky left-0 z-10 shrink-0 bg-white dark:bg-stone-900"
+                    className="sticky left-0 z-10 shrink-0 bg-card"
                     style={{ width: LABEL_BREITE }}
                   >
                     {technikers.map((t, i) => (
                       <div
                         key={t.id}
-                        className="absolute inset-x-0 flex items-center border-b border-slate-100 px-2 text-[13px] font-medium text-slate-700 dark:border-stone-800 dark:text-stone-300"
+                        className="absolute inset-x-0 flex items-center border-b border-sep px-2 text-[13px] font-medium text-label "
                         style={{ top: i * ROW_HOEHE, height: ROW_HOEHE }}
                       >
                         <span className="truncate">{t.name}</span>
@@ -383,20 +443,20 @@ export function OfficeDispoPage() {
                     {technikers.map((_, i) => (
                       <div
                         key={i}
-                        className="absolute inset-x-0 border-b border-slate-100 dark:border-stone-800"
+                        className="absolute inset-x-0 border-b border-sep "
                         style={{ top: (i + 1) * ROW_HOEHE - 1 }}
                       />
                     ))}
                     {STUNDEN.map((h, i) => (
                       <div
                         key={h}
-                        className="absolute inset-y-0 border-l border-slate-100 dark:border-stone-800"
+                        className="absolute inset-y-0 border-l border-sep "
                         style={{ left: i * PX_PRO_STUNDE }}
                       />
                     ))}
                     {jetztOffsetPx !== null && (
                       <div
-                        className="absolute inset-y-0 z-20 w-px bg-rose-400 dark:bg-rose-500"
+                        className="absolute inset-y-0 z-20 w-px bg-st-fehlt-dot "
                         style={{ left: jetztOffsetPx }}
                       />
                     )}
@@ -414,7 +474,7 @@ export function OfficeDispoPage() {
                           {!!termin.fahrzeit_minuten && (
                             <div
                               title={`${termin.fahrzeit_minuten} Min. Fahrzeit`}
-                              className="absolute flex items-center justify-center rounded-l-md bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500"
+                              className="absolute flex items-center justify-center rounded-l-md bg-fill text-label2"
                               style={{
                                 left: (startMin - termin.fahrzeit_minuten) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -428,7 +488,7 @@ export function OfficeDispoPage() {
                           {!!termin.pause_minuten && (
                             <div
                               title={`${termin.pause_minuten} Min. Pause`}
-                              className="absolute flex items-center justify-center rounded-r-md bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500"
+                              className="absolute flex items-center justify-center rounded-r-md bg-fill text-label2"
                               style={{
                                 left: (startMin + dauerMin) * PX_PRO_MINUTE,
                                 top: rowIndex * ROW_HOEHE + BAR_PAD,
@@ -455,10 +515,10 @@ export function OfficeDispoPage() {
                             <button
                               onClick={() => setBearbeitenId(termin.id)}
                               title={termin.titel}
-                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden rounded-md px-2 text-left text-xs shadow-xs ${
+                              className={`btn-touch flex h-full w-full flex-col justify-center overflow-hidden border border-sep px-2 text-left text-xs ${
                                 abgesagt
-                                  ? "bg-slate-100 text-slate-400 line-through dark:bg-stone-800 dark:text-stone-500"
-                                  : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
+                                  ? "text-label2 line-through"
+                                  : "bg-fill text-label"
                               }`}
                             >
                               <span className="truncate font-semibold">{termin.titel}</span>
@@ -485,7 +545,24 @@ export function OfficeDispoPage() {
           onClose={() => setBearbeitenId(null)}
           onSave={(body) => updateMutation.mutate({ id: bearbeitenTermin.id, body })}
           onDelete={() => deleteMutation.mutate(bearbeitenTermin.id)}
-          onZumVorgang={() => navigate(`/vorgaenge/${bearbeitenTermin.vorgang_id}`)}
+          onZumVorgang={() => navigate(`/vorgaenge/${bearbeitenTermin.vorgang_id}/vollbild`)}
+        />
+      )}
+
+      {planenVorgang && (
+        <BacklogPlanenPanel
+          vorgang={planenVorgang}
+          technikers={technikers}
+          beginn={beginn}
+          onClose={() => setPlanenVorgang(null)}
+          onErstellen={(body) => {
+            createMutation.mutate({
+              vorgang_id: planenVorgang.id,
+              titel: planenVorgang.titel,
+              ...body,
+            });
+            setPlanenVorgang(null);
+          }}
         />
       )}
     </div>
@@ -514,6 +591,16 @@ function TerminBearbeitenPanel({
   const [fahrzeit, setFahrzeit] = useState(termin.fahrzeit_minuten?.toString() ?? "");
   const [pause, setPause] = useState(termin.pause_minuten?.toString() ?? "");
   const [notiz, setNotiz] = useState(termin.notiz ?? "");
+  const titelRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    titelRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   const speichern = () => {
     onSave({
@@ -521,8 +608,11 @@ function TerminBearbeitenPanel({
       techniker_id: technikerId,
       start_at: new Date(start).toISOString(),
       ende_at: new Date(endeWert).toISOString(),
-      fahrzeit_minuten: fahrzeit === "" ? null : Number(fahrzeit),
-      pause_minuten: pause === "" ? null : Number(pause),
+      // Math.max statt einer eigenen Fehlermeldung -- ein negativer Wert ist
+      // hier so gut wie immer ein Vertipper (Minus statt Loeschen), kein
+      // absichtlicher Eingabewert, den man dem Nutzer erst erklaeren muesste.
+      fahrzeit_minuten: fahrzeit === "" ? null : Math.max(0, Number(fahrzeit)),
+      pause_minuten: pause === "" ? null : Math.max(0, Number(pause)),
       notiz: notiz === "" ? null : notiz,
     });
   };
@@ -530,14 +620,17 @@ function TerminBearbeitenPanel({
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Termin bearbeiten"
         onClick={(e) => e.stopPropagation()}
-        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-white p-4 shadow-xl dark:bg-stone-900"
+        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-card p-4 shadow-xl"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-stone-100">Termin bearbeiten</h2>
+          <h2 className="text-sm font-bold text-label">Termin bearbeiten</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+            className="rounded-md p-1 text-label2 hover:bg-fill"
           >
             <X size={16} />
           </button>
@@ -551,20 +644,21 @@ function TerminBearbeitenPanel({
         </button>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Titel</label>
+          <label className="mb-1 block text-xs font-medium text-label2">Titel *</label>
           <input
+            ref={titelRef}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Techniker</label>
+          <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
           <select
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           >
             {technikers.map((t) => (
               <option key={t.id} value={t.id}>
@@ -576,28 +670,28 @@ function TerminBearbeitenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Start</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Start</label>
             <input
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Ende</label>
+            <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
             <input
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
               <Car size={12} /> Fahrzeit (Min.)
             </label>
             <input
@@ -606,11 +700,11 @@ function TerminBearbeitenPanel({
               value={fahrzeit}
               onChange={(e) => setFahrzeit(e.target.value)}
               placeholder="0"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-slate-500 dark:text-stone-400">
+            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
               <Coffee size={12} /> Pause danach (Min.)
             </label>
             <input
@@ -619,18 +713,18 @@ function TerminBearbeitenPanel({
               value={pause}
               onChange={(e) => setPause(e.target.value)}
               placeholder="0"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Notiz</label>
+          <label className="mb-1 block text-xs font-medium text-label2">Notiz</label>
           <textarea
             value={notiz}
             onChange={(e) => setNotiz(e.target.value)}
             rows={2}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
           />
         </div>
 
@@ -639,15 +733,126 @@ function TerminBearbeitenPanel({
             onClick={() => {
               if (window.confirm("Termin wirklich löschen?")) onDelete();
             }}
-            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+            className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >
             <Trash2 size={14} /> Löschen
           </button>
           <button
             onClick={speichern}
-            className="btn-touch rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-1.5 text-sm font-medium text-white"
+            disabled={!titel.trim()}
+            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
           >
             Speichern
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Tastatur-/Screenreader-Alternative zum Drag&Drop eines Backlog-Vorgangs
+ * auf die Zeitachse (siehe Klick-Handler an der Backlog-Karte oben) -- selbe
+ * Felder wie TerminBearbeitenPanel, aber fuer die Neuanlage aus dem Backlog. */
+function BacklogPlanenPanel({
+  vorgang,
+  technikers,
+  beginn,
+  onClose,
+  onErstellen,
+}: {
+  vorgang: FeedCard;
+  technikers: Techniker[];
+  beginn: Date;
+  onClose: () => void;
+  onErstellen: (body: { techniker_id: string; start_at: string; ende_at: string }) => void;
+}) {
+  const [technikerId, setTechnikerId] = useState(technikers[0]?.id ?? "");
+  const [start, setStart] = useState(toLocalInputValue(beginn));
+  const [endeWert, setEndeWert] = useState(toLocalInputValue(new Date(beginn.getTime() + 60 * 60000)));
+  const technikerRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    technikerRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Termin für ${vorgang.titel} planen`}
+        onClick={(e) => e.stopPropagation()}
+        className="h-full w-full max-w-sm space-y-3 overflow-y-auto bg-card p-4 shadow-xl"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-label">Termin planen</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-label2 hover:bg-fill"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="text-xs text-label2">
+          {vorgang.vorgangsnummer} — {vorgang.titel}
+        </p>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
+          <select
+            ref={technikerRef}
+            value={technikerId}
+            onChange={(e) => setTechnikerId(e.target.value)}
+            className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+          >
+            {technikers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-label2">Start</label>
+            <input
+              type="datetime-local"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
+            <input
+              type="datetime-local"
+              value={endeWert}
+              onChange={(e) => setEndeWert(e.target.value)}
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={() =>
+              onErstellen({
+                techniker_id: technikerId,
+                start_at: new Date(start).toISOString(),
+                ende_at: new Date(endeWert).toISOString(),
+              })
+            }
+            disabled={!technikerId}
+            className="btn-touch rounded-md btn-ap-primary px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+          >
+            Termin anlegen
           </button>
         </div>
       </div>

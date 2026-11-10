@@ -3,6 +3,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useRef } from "react";
 
 import { useTheme } from "../context/ThemeContext";
+import { richteMapboxEin } from "./mapboxSetup";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -22,7 +23,7 @@ export function MapboxMap({
   zoom?: number;
   className?: string;
 }) {
-  const { theme } = useTheme();
+  const { angewandtesTheme: theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   // Verhindert ein redundantes setStyle() direkt nach dem Aufbau -- die
@@ -32,7 +33,7 @@ export function MapboxMap({
 
   useEffect(() => {
     if (!MAPBOX_TOKEN || !containerRef.current) return;
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    richteMapboxEin(MAPBOX_TOKEN);
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE_URL[theme],
@@ -74,12 +75,12 @@ export function MapboxMap({
   if (!MAPBOX_TOKEN) {
     return (
       <div
-        className={`flex items-center justify-center border border-dashed border-slate-300 bg-slate-50 text-center text-xs text-slate-400 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-500 ${className}`}
+        className={`flex items-center justify-center border border-dashed border-sepstrong text-center text-xs text-label2 ${className}`}
       >
         Karte nicht verfügbar (kein Mapbox-Token konfiguriert)
       </div>
     );
   }
 
-  return <div ref={containerRef} className={`bg-slate-100 dark:bg-stone-800 ${className}`} />;
+  return <div ref={containerRef} className={`bg-fill ${className}`} />;
 }

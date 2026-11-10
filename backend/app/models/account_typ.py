@@ -4,6 +4,14 @@ from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, Text, Uniq
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.rechte_registry import (
+    BASIS_AKTIONEN,
+    SCOPES,
+    alle_aktionen,
+    alle_bereich_keys,
+    alle_bereiche,
+    aktionen_fuer_bereich,
+)
 from app.db.base import Base, TimestampMixin
 
 # Bereiche/Aktionen der Rechte-Matrix -- gemeinsam fuer alle Account-Typen
@@ -12,17 +20,16 @@ from app.db.base import Base, TimestampMixin
 # ebensowenig -- die bleiben aus Compliance-Gruenden bewusst ausserhalb der
 # mandant_admin-Kontrolle (nur super_admin darf sie vergeben, siehe
 # app/api/routes/users.py).
-RECHTE_BEREICHE = (
-    "vorgaenge",
-    "kunden",
-    "material",
-    "dispo",
-    "abrechnung",
-    "statistik",
-    "mitarbeiterverwaltung",
-    "formulare",
-)
-RECHTE_AKTIONEN = ("sehen", "erstellen", "bearbeiten", "loeschen")
+RECHTE_BEREICHE = alle_bereich_keys()
+RECHTE_AKTIONEN = BASIS_AKTIONEN
+# Zusatzaktionen, die nur fuer einzelne Bereiche existieren (z.B. projekte.
+# zeitplan_*, abrechnung.freigeben) -- aus der Registry abgeleitet.
+RECHTE_BEREICH_AKTIONEN: dict[str, tuple[str, ...]] = {
+    b.key: tuple(a for a in b.aktionen if a not in BASIS_AKTIONEN)
+    for b in alle_bereiche()
+    if any(a not in BASIS_AKTIONEN for a in b.aktionen)
+}
+RECHTE_ALLE_AKTIONEN = alle_aktionen()
 
 
 class AccountTyp(TimestampMixin, Base):
@@ -58,6 +65,19 @@ class AccountTyp(TimestampMixin, Base):
     darf_vorgaenge_selbst_uebernehmen: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
+    # Einzelrecht "Zeiten buchen" (docs/konzepte/ZEITERFASSUNG.md, Abschnitt
+    # 5.4) -- bewusst kein Teil der (bereich, aktion)-Rechte-Matrix, sondern
+    # ein einzelner Ja/Nein-Schalter wie darf_vorgaenge_selbst_uebernehmen.
+    # An keine Rolle und kein Geraet gebunden: auch ein Techniker in der
+    # Feld-App kann buchen duerfen (siehe app/services/rechte_service.py:
+    # darf_zeiten_buchen). mandant_admin/super_admin duerfen immer buchen,
+    # unabhaengig von diesem Schalter.
+    darf_zeiten_buchen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Einzelrecht "Abwesenheiten verwalten": Soll-Arbeitszeit, Feiertage und
+    # Bundesland pflegen sowie fremdes Soll/Saldo lesen (app/api/routes/
+    # arbeitszeit.py). Gleiches Muster wie darf_zeiten_buchen; mandant_admin/
+    # super_admin duerfen immer.
+    darf_abwesenheiten_verwalten: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class AccountTypRecht(Base):
@@ -72,16 +92,18 @@ class AccountTypRecht(Base):
         UniqueConstraint(
             "account_typ_id", "bereich", "aktion", name="uq_account_typ_rechte"
         ),
-        CheckConstraint(
-            f"bereich IN {RECHTE_BEREICHE}", name="ck_account_typ_rechte_bereich_valid"
-        ),
-        CheckConstraint(
-            f"aktion IN {RECHTE_AKTIONEN}", name="ck_account_typ_rechte_aktion_valid"
-        ),
+        # bereich/aktion bewusst ohne DB-Check: Validierung gegen die Registry
+        # (app/core/rechte_registry.py), ein Test prueft DB-Werte <= Registry.
+        CheckConstraint(f"scope IN {SCOPES}", name="scope_valid"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    # Fuer die eigene RLS-Policy; ein DB-Trigger fuellt NULL aus dem Account-Typ,
+    # damit Insert-Pfade ohne explizite mandant_id weiter funktionieren.
+    mandant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
     account_typ_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("account_typen.id"), nullable=False
@@ -89,3 +111,6 @@ class AccountTypRecht(Base):
     bereich: Mapped[str] = mapped_column(Text, nullable=False)
     aktion: Mapped[str] = mapped_column(Text, nullable=False)
     erlaubt: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Reichweite der Berechtigung (Registry: SCOPES); wird erst von der
+    # Rechte-Engine (Schritt 2) ausgewertet.
+    scope: Mapped[str] = mapped_column(Text, nullable=False, default="mandant", server_default="mandant")

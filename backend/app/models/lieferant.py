@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import ForeignKey, Text
+from sqlalchemy import CheckConstraint, ForeignKey, Index, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,6 +17,18 @@ class Lieferant(SoftDeleteMixin, TimestampMixin, Base):
     app/models/integration.py."""
 
     __tablename__ = "lieferanten"
+    __table_args__ = (
+        CheckConstraint(
+            "kreditorenkonto IS NULL OR kreditorenkonto ~ '^[0-9]{5,9}$'", name="ck_lieferanten_kreditorenkonto_format"
+        ),
+        Index(
+            "uq_lieferanten_mandant_kreditorenkonto",
+            "mandant_id",
+            "kreditorenkonto",
+            unique=True,
+            postgresql_where=text("kreditorenkonto IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -25,6 +37,8 @@ class Lieferant(SoftDeleteMixin, TimestampMixin, Base):
         UUID(as_uuid=True), ForeignKey("mandanten.id"), nullable=False
     )
     name: Mapped[str] = mapped_column(Text, nullable=False)
+    # DATEV-Personenkonto, Vergabe wie Kunde.debitorenkonto (Bereich ab 70000).
+    kreditorenkonto: Mapped[str | None] = mapped_column(Text)
     email: Mapped[str | None] = mapped_column(Text)
     telefon: Mapped[str | None] = mapped_column(Text)
     notiz: Mapped[str | None] = mapped_column(Text)

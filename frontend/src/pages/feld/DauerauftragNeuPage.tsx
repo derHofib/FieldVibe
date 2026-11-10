@@ -66,7 +66,8 @@ export function DauerauftragNeuPage() {
         toleranz_spaet_tage: toleranzSpaet ? Number(toleranzSpaet) : undefined,
       }),
     onSuccess: (dauerauftrag) => navigate(`/dauerauftraege/${dauerauftrag.id}`),
-    onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler"),
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen."),
   });
 
   function handleSubmit(e: FormEvent) {
@@ -89,28 +90,28 @@ export function DauerauftragNeuPage() {
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
-      <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">Neuer Dauer-Auftrag</h1>
-      <p className="text-sm text-slate-500 dark:text-stone-400">
+      <h1 className="text-lg font-bold text-label">Neuer Dauer-Auftrag</h1>
+      <p className="text-sm text-label2">
         Erzeugt automatisch einen neuen Vorgang, sobald das eingestellte Intervall ab dem Abschluss
         des jeweils letzten erzeugten Vorgangs erreicht ist.
       </p>
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+        className="space-y-3 card-ap p-4"
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Kunde</label>
+          <label className="mb-1 block text-sm font-medium text-label">Kunde</label>
           <select
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
               setAnlageIds([]);
             }}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="">Bitte wählen…</option>
             {kunden?.map((k) => (
@@ -123,22 +124,22 @@ export function DauerauftragNeuPage() {
 
         {kundeId && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-label">
               Anlagen (optional, mehrfach möglich)
             </label>
-            <p className="mb-1 text-xs text-slate-400 dark:text-stone-500">
+            <p className="mb-1 text-xs text-label2">
               Keine Anlage ausgewählt: der Dauer-Auftrag gilt direkt für den Kunden. Mehrere Anlagen
               ausgewählt: ein Buendel, das für jede Anlage einen eigenen, unabhängig laufenden Zyklus
               anlegt -- statt einen Dauer-Auftrag je Anlage anlegen zu müssen.
             </p>
             {!anlagenListe || anlagenListe.length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-stone-500">Keine Anlagen für diesen Kunden vorhanden.</p>
+              <p className="text-sm text-label2">Keine Anlagen für diesen Kunden vorhanden.</p>
             ) : (
-              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-slate-200 p-2 dark:border-stone-800">
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-md border border-sep p-2 ">
                 {anlagenListe.map((a) => (
                   <label
                     key={a.id}
-                    className="flex items-center gap-2 py-1 text-sm text-slate-700 dark:text-stone-300"
+                    className="flex items-center gap-2 py-1 text-sm text-label"
                   >
                     <input
                       type="checkbox"
@@ -158,33 +159,33 @@ export function DauerauftragNeuPage() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
+          <label className="mb-1 block text-sm font-medium text-label">Titel</label>
           <input
             required
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
             placeholder="z.B. Monatliche Wartung Lüftungsanlage"
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Beschreibung</label>
+          <label className="mb-1 block text-sm font-medium text-label">Beschreibung</label>
           <textarea
             value={beschreibung}
             onChange={(e) => setBeschreibung(e.target.value)}
             rows={3}
-            className="w-full resize-none rounded-md border border-slate-300 p-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full resize-none border border-sep bg-transparent p-2 text-label"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Leistungstyp</label>
+            <label className="mb-1 block text-sm font-medium text-label">Leistungstyp</label>
             <select
               value={leistungstyp}
               onChange={(e) => setLeistungstyp(e.target.value as Leistungstyp)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {LEISTUNGSTYPEN.map((l) => (
                 <option key={l.value} value={l.value}>
@@ -194,11 +195,11 @@ export function DauerauftragNeuPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Abrechnungsart</label>
+            <label className="mb-1 block text-sm font-medium text-label">Abrechnungsart</label>
             <select
               value={abrechnungsart}
               onChange={(e) => setAbrechnungsart(e.target.value as VorgangAbrechnungsart)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             >
               {ABRECHNUNGSARTEN.map((a) => (
                 <option key={a.value} value={a.value}>
@@ -211,7 +212,7 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-label">
               Intervall (Tage)
             </label>
             <input
@@ -220,11 +221,11 @@ export function DauerauftragNeuPage() {
               required
               value={intervallTage}
               onChange={(e) => setIntervallTage(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-label">
               Erste Fälligkeit
             </label>
             <input
@@ -232,26 +233,26 @@ export function DauerauftragNeuPage() {
               required
               value={naechsteFaelligkeit}
               onChange={(e) => setNaechsteFaelligkeit(e.target.value)}
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+          <label className="mb-1 block text-sm font-medium text-label">
             Wann wird die nächste Fälligkeit berechnet?
           </label>
           <select
             value={modus}
             onChange={(e) => setModus(e.target.value as DauerauftragModus)}
-            className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
           >
             <option value="rollierend">
               Rollierend -- ab dem tatsächlichen Abschlussdatum (empfohlen)
             </option>
             <option value="fest">Fest -- ab dem ursprünglich geplanten Termin</option>
           </select>
-          <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
+          <p className="mt-1 text-xs text-label2">
             {modus === "rollierend"
               ? "Wird ein Vorgang früher oder später abgeschlossen, verschiebt sich die nächste Fälligkeit entsprechend mit."
               : "Der Kalenderrhythmus bleibt fest, unabhängig davon, wann tatsächlich abgeschlossen wird."}
@@ -260,7 +261,7 @@ export function DauerauftragNeuPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-label">
               Toleranz zu früh (Tage)
             </label>
             <input
@@ -269,11 +270,11 @@ export function DauerauftragNeuPage() {
               value={toleranzFrueh}
               onChange={(e) => setToleranzFrueh(e.target.value)}
               placeholder="kein Limit"
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            <label className="mb-1 block text-sm font-medium text-label">
               Toleranz zu spät (Tage)
             </label>
             <input
@@ -282,21 +283,21 @@ export function DauerauftragNeuPage() {
               value={toleranzSpaet}
               onChange={(e) => setToleranzSpaet(e.target.value)}
               placeholder="kein Limit"
-              className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"
             />
           </div>
         </div>
-        <p className="-mt-2 text-xs text-slate-400 dark:text-stone-500">
+        <p className="-mt-2 text-xs text-label2">
           Wird außerhalb dieser Toleranz abgeschlossen, entsteht dazu nur ein Hinweis im
           Vorgangs-Chat -- der Abschluss selbst wird nie blockiert.
         </p>
 
-        {error && <p className="text-sm text-red-700 dark:text-red-400">{error}</p>}
+        {error && <p className="text-sm text-st-fehlt ">{error}</p>}
 
         <button
           type="submit"
           disabled={createMutation.isPending}
-          className="btn-touch w-full rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-2 font-medium text-white disabled:opacity-50"
+          className="btn-touch w-full rounded-md btn-ap-primary py-2 font-medium disabled:opacity-50"
         >
           Dauer-Auftrag anlegen
         </button>

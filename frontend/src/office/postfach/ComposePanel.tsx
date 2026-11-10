@@ -64,12 +64,12 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5 dark:border-stone-800">
-        <p className="text-sm font-semibold text-slate-800 dark:text-stone-100">{titel}</p>
+      <div className="flex items-center justify-between border-b border-sep px-4 py-2.5 ">
+        <p className="text-sm font-semibold text-label">{titel}</p>
         <button
           onClick={onAbbrechen}
           aria-label="Schließen"
-          className="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 dark:text-stone-500 dark:hover:bg-stone-800"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-label2 hover:bg-fill"
         >
           <X size={15} strokeWidth={2} />
         </button>
@@ -80,14 +80,14 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
           value={an}
           onChange={(e) => setAn(e.target.value)}
           placeholder="An (mehrere durch Komma trennen)"
-          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
         />
         {modus.art !== "weiterleiten" && (
           <input
             value={cc}
             onChange={(e) => setCc(e.target.value)}
             placeholder="Cc (optional)"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         )}
         {modus.art === "neu" && (
@@ -95,7 +95,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             value={bcc}
             onChange={(e) => setBcc(e.target.value)}
             placeholder="Bcc (optional)"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         )}
         {modus.art === "neu" && (
@@ -103,7 +103,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
             value={betreff}
             onChange={(e) => setBetreff(e.target.value)}
             placeholder="Betreff"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+            className="w-full rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
           />
         )}
         <textarea
@@ -111,23 +111,23 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
           onChange={(e) => setText(e.target.value)}
           placeholder="Nachricht…"
           rows={12}
-          className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full resize-none rounded-lg border border-sep bg-white px-3 py-2 text-sm text-label dark:bg-stone-800 "
         />
         {fehler && (
-          <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+          <p className="rounded-lg bg-st-fehlt-bg px-3 py-2 text-xs font-medium text-st-fehlt ">
             {fehler}
           </p>
         )}
       </div>
 
-      <div className="flex justify-end border-t border-slate-200 p-3 dark:border-stone-800">
+      <div className="flex justify-end border-t border-sep p-3 ">
         <button
           onClick={() => {
             setFehler(null);
             senden.mutate();
           }}
           disabled={!parseAdressen(an).length || (modus.art === "neu" && !betreff.trim()) || senden.isPending}
-          className="btn-clay flex items-center gap-1.5 rounded-lg bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          className="btn-ap-primary flex items-center gap-1.5 px-4 py-2 text-xs"
         >
           {senden.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} strokeWidth={2.25} />}
           Senden

@@ -22,7 +22,7 @@ describe("VorgangStatusAktionen", () => {
 
   it("bietet 'abgerechnet' nie als setzbaren Status an", () => {
     render(<VorgangStatusAktionen status="neu" darfAendern pending={false} onWaehle={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "Status ändern" }));
+    fireEvent.click(screen.getByRole("button", { name: /Status ändern/ }));
     expect(screen.queryByRole("menuitem", { name: /Abgerechnet/ })).toBeNull();
     expect(screen.getByRole("menuitem", { name: /Vorgang stornieren/ })).toBeTruthy();
   });

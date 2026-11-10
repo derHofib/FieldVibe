@@ -16,6 +16,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
+import { FehlerZustand } from "../../components/FehlerZustand";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -25,22 +26,22 @@ const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  geplant: "bg-purple-100 text-purple-800 dark:bg-purple-500/15 dark:text-purple-300",
-  in_arbeit: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  wartet_kunde: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  abgeschlossen: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300",
-  abgerechnet: "bg-slate-200 text-slate-700 dark:bg-stone-700 dark:text-stone-300",
-  storniert: "bg-slate-100 text-slate-400 dark:bg-stone-800 dark:text-stone-500",
+  neu: "border border-tint text-tint ",
+  geplant: "border border-purple-400 text-purple-700 dark:border-purple-600 dark:text-purple-300",
+  in_arbeit: "border border-st-arbeit text-st-arbeit ",
+  wartet_kunde: "border border-st-wartet text-st-wartet",
+  abgeschlossen: "border border-st-erledigt text-st-erledigt ",
+  abgerechnet: "border border-sep text-label ",
+  storniert: "border border-sep text-label2",
 };
 
 function faelligkeitsFarbe(datum: string): string {
   const heute = new Date().toISOString().slice(0, 10);
-  if (datum < heute) return "text-red-600 dark:text-red-400";
+  if (datum < heute) return "text-st-fehlt ";
   const in7Tagen = new Date();
   in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-amber-600 dark:text-amber-400";
-  return "text-slate-500 dark:text-stone-400";
+  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
+  return "text-label2";
 }
 
 function AdresseBearbeiten({
@@ -79,9 +80,9 @@ function AdresseBearbeiten({
     return (
       <div className="mt-1 flex items-center gap-2">
         {zeile ? (
-          <p className="text-sm text-slate-500 dark:text-stone-400">{zeile}</p>
+          <p className="text-sm text-label2">{zeile}</p>
         ) : (
-          kannVerwalten && <p className="text-sm text-slate-400 dark:text-stone-500">Keine Adresse hinterlegt.</p>
+          kannVerwalten && <p className="text-sm text-label2">Keine Adresse hinterlegt.</p>
         )}
         {kannVerwalten && (
           <button
@@ -89,7 +90,7 @@ function AdresseBearbeiten({
               setForm({ strasse: adresse.strasse ?? "", plz: adresse.plz ?? "", ort: adresse.ort ?? "" });
               setBearbeiten(true);
             }}
-            className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+            className="btn-touch text-xs font-medium text-tint "
           >
             Bearbeiten
           </button>
@@ -99,38 +100,38 @@ function AdresseBearbeiten({
   }
 
   return (
-    <div className="mt-2 space-y-2 rounded-md bg-slate-50 p-2 dark:bg-stone-800/60">
+    <div className="mt-2 space-y-2 border border-sepstrong p-2">
       <input
         value={form.strasse}
         onChange={(e) => setForm({ ...form, strasse: e.target.value })}
         placeholder="Straße + Hausnr."
-        className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.plz}
           onChange={(e) => setForm({ ...form, plz: e.target.value })}
           placeholder="PLZ"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.ort}
           onChange={(e) => setForm({ ...form, ort: e.target.value })}
           placeholder="Ort"
-          className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <div className="flex gap-2">
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -190,33 +191,33 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
   if (!bearbeiten) {
     const hatDetails = universelleZeilen.length > 0 || zusatzZeilen.length > 0 || profil.notiz;
     return (
-      <div className="mt-3 border-t border-slate-100 pt-3 dark:border-stone-800">
+      <div className="mt-3 border-t border-sep pt-3 ">
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="text-xs font-semibold text-slate-500 dark:text-stone-400">Details</h3>
+          <h3 className="text-xs font-semibold text-label2">Details</h3>
           {kannVerwalten && (
-            <button onClick={() => setBearbeiten(true)} className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400">
+            <button onClick={() => setBearbeiten(true)} className="btn-touch text-xs font-medium text-tint ">
               Bearbeiten
             </button>
           )}
         </div>
         {!hatDetails ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Keine Details hinterlegt.</p>
+          <p className="text-sm text-label2">Keine Details hinterlegt.</p>
         ) : (
           <dl className="space-y-1 text-sm">
             {universelleZeilen.map(([label, wert]) => (
               <div key={label} className="flex justify-between gap-2">
-                <dt className="text-slate-500 dark:text-stone-400">{label}</dt>
-                <dd className="text-right text-slate-800 dark:text-stone-100">{wert}</dd>
+                <dt className="text-label2">{label}</dt>
+                <dd className="text-right text-label">{wert}</dd>
               </div>
             ))}
             {zusatzZeilen.map(([label, wert]) => (
               <div key={label} className="flex justify-between gap-2">
-                <dt className="text-slate-500 dark:text-stone-400">{label}</dt>
-                <dd className="text-right text-slate-800 dark:text-stone-100">{String(wert)}</dd>
+                <dt className="text-label2">{label}</dt>
+                <dd className="text-right text-label">{String(wert)}</dd>
               </div>
             ))}
             {profil.notiz && (
-              <div className="pt-1 text-slate-600 dark:text-stone-300">{profil.notiz}</div>
+              <div className="pt-1 text-label">{profil.notiz}</div>
             )}
           </dl>
         )}
@@ -225,32 +226,32 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
   }
 
   return (
-    <div className="mt-3 space-y-2 rounded-md border-t border-slate-100 bg-slate-50 p-3 dark:border-stone-800 dark:bg-stone-800/60">
+    <div className="mt-3 space-y-2 rounded-md border-t border-sep bg-fill p-3">
       <div className="grid grid-cols-2 gap-2">
         <input
           value={form.hersteller}
           onChange={(e) => setForm({ ...form, hersteller: e.target.value })}
           placeholder="Hersteller"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.modell}
           onChange={(e) => setForm({ ...form, modell: e.target.value })}
           placeholder="Modell"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           value={form.seriennummer}
           onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
           placeholder="Seriennummer"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
         <input
           type="date"
           value={form.anschaffungsdatum}
           onChange={(e) => setForm({ ...form, anschaffungsdatum: e.target.value })}
           title="Anschaffungsdatum"
-          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+          className="border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
         />
       </div>
       <textarea
@@ -258,21 +259,21 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         onChange={(e) => setForm({ ...form, notiz: e.target.value })}
         placeholder="Notiz"
         rows={2}
-        className="w-full resize-none rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+        className="w-full resize-none border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
       />
       {(felder ?? []).length > 0 && (
-        <div className="space-y-2 border-t border-slate-200 pt-2 dark:border-stone-700">
-          <p className="text-xs font-medium text-slate-500 dark:text-stone-400">
+        <div className="space-y-2 border-t border-sep pt-2 ">
+          <p className="text-xs font-medium text-label2">
             Zusatzfelder für „{profil.anlagentyp}"
           </p>
           {felder!.map((f) => (
             <div key={f.id}>
-              <label className="mb-0.5 block text-xs text-slate-500 dark:text-stone-400">{f.feld_name}</label>
+              <label className="mb-0.5 block text-xs text-label2">{f.feld_name}</label>
               <input
                 type={FELD_TYP_INPUT[f.feld_typ]}
                 value={zusatzwerte[f.feld_name] ?? ""}
                 onChange={(e) => setZusatzwerte({ ...zusatzwerte, [f.feld_name]: e.target.value })}
-                className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
           ))}
@@ -282,13 +283,13 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
         <button
           onClick={() => speichernMutation.mutate()}
           disabled={speichernMutation.isPending}
-          className="btn-touch flex-1 rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          className="btn-touch flex-1 rounded-md btn-ap-primary py-1.5 text-sm font-medium disabled:opacity-50"
         >
           Speichern
         </button>
         <button
           onClick={() => setBearbeiten(false)}
-          className="btn-touch flex-1 rounded-md border border-slate-300 py-1.5 text-sm font-medium text-slate-700 dark:border-stone-700 dark:text-stone-300"
+          className="btn-touch flex-1 rounded-md border border-sep py-1.5 text-sm font-medium text-label "
         >
           Abbrechen
         </button>
@@ -305,9 +306,9 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
 
   return (
     <div>
-      <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Material an diesem Lagerort</h2>
+      <h2 className="mb-2 text-sm font-semibold text-label2">Material an diesem Lagerort</h2>
       {!material || material.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-stone-500">Kein Material an diesem Lagerort.</p>
+        <p className="text-sm text-label2">Kein Material an diesem Lagerort.</p>
       ) : (
         <div className="space-y-2">
           {material.map((m) => {
@@ -316,12 +317,12 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
             return (
               <div
                 key={m.id}
-                className="flex items-center justify-between rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="flex items-center justify-between card-ap p-3"
               >
-                <span className="text-sm font-medium text-slate-800 dark:text-stone-100">{m.bezeichnung}</span>
+                <span className="text-sm font-medium text-label">{m.bezeichnung}</span>
                 <span
                   className={`text-sm font-medium ${
-                    unterbestand ? "text-red-600 dark:text-red-400" : "text-slate-700 dark:text-stone-300"
+                    unterbestand ? "text-st-fehlt " : "text-label"
                   }`}
                 >
                   {bestand?.menge ?? "0"} {m.einheit}
@@ -348,7 +349,7 @@ export function AnlageProfilePage() {
   const [intervallEinheit, setIntervallEinheit] = useState<PruefzyklusEinheit>("monat");
   const [inventurIntervallTage, setInventurIntervallTage] = useState("90");
 
-  const { data: profil, isLoading } = useQuery({
+  const { data: profil, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["anlage-profil", id],
     queryFn: () => anlagenApi.profil(id!),
     enabled: !!id,
@@ -422,21 +423,23 @@ export function AnlageProfilePage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
     mutationFn: () => anlagenApi.remove(id!),
-    onSuccess: () => navigate(profil?.kunde ? `/kunden/${profil.kunde.id}` : "/geschaeft"),
+    onSuccess: () => navigate(profil?.kunde ? `/kunden/${profil.kunde.id}` : "/material"),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
-  if (isLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (ladeFehler && !profil) return <FehlerZustand fehler={ladeFehler} was="Die Anlage" zurueck onErneut={() => void neuLaden()} className="py-6" />;
+  if (isLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
+
 
   return (
     <div className="space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
+      <button onClick={() => navigate(-1)} className="text-sm text-label2">
         ← Zurück
       </button>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+      <div className="card-ap p-4">
         <div className="flex items-start justify-between">
-          <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.bezeichnung}</h1>
+          <h1 className="text-lg font-bold text-label">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
               onClick={() => {
@@ -448,34 +451,34 @@ export function AnlageProfilePage() {
                   deleteMutation.mutate();
                 }
               }}
-              className="btn-touch shrink-0 rounded-md bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20"
+              className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
             >
               Löschen
             </button>
           )}
         </div>
-        {deleteError && <p className="mt-1 text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
+        {deleteError && <p className="mt-1 text-sm text-st-fehlt ">{deleteError}</p>}
         {profil.kunde ? (
           <button
             onClick={() => navigate(`/kunden/${profil.kunde!.id}`)}
-            className="text-sm text-blue-700 underline-offset-2 hover:underline dark:text-blue-400"
+            className="text-sm text-tint underline-offset-2 hover:underline "
           >
             {profil.kunde.name}
           </button>
         ) : (
-          <p className="text-sm text-slate-500 dark:text-stone-400">Internes Objekt (kein Kundenbezug)</p>
+          <p className="text-sm text-label2">Internes Objekt (kein Kundenbezug)</p>
         )}
         <AdresseBearbeiten anlageId={id!} adresse={profil.adresse} kannVerwalten={kannVerwalten} />
-        {profil.anlagentyp && <p className="text-xs text-slate-400 dark:text-stone-500">{profil.anlagentyp}</p>}
+        {profil.anlagentyp && <p className="text-xs text-label2">{profil.anlagentyp}</p>}
         {profil.qr_code && (
-          <p className="mt-2 text-xs text-slate-400 dark:text-stone-500">QR-Code: {profil.qr_code}</p>
+          <p className="mt-2 text-xs text-label2">QR-Code: {profil.qr_code}</p>
         )}
         {profil.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
             {profil.tags.map((t) => (
               <span
                 key={t.id}
-                className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+                className="border border-sep px-2 py-0.5 text-xs text-label"
               >
                 #{t.label}
               </span>
@@ -485,21 +488,21 @@ export function AnlageProfilePage() {
         <DetailsBearbeiten profil={profil} kannVerwalten={kannVerwalten} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Auswertung</h2>
+      <div className="card-ap p-4">
+        <h2 className="mb-2 text-sm font-semibold text-label2">Auswertung</h2>
         <div className="flex flex-wrap gap-2">
           {Object.entries(profil.vorgaenge_nach_status).map(([status, anzahl]) => (
             <span
               key={status}
-              className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                STATUS_BADGE[status] ?? "bg-slate-100 text-slate-600 dark:bg-stone-800 dark:text-stone-300"
+              className={`px-2 py-1 text-xs font-semibold ${
+                STATUS_BADGE[status] ?? "border border-sep text-label"
               }`}
             >
               {anzahl}× {status}
             </span>
           ))}
         </div>
-        <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">
+        <p className="mt-2 text-sm text-label">
           Erfasste Zeit gesamt:{" "}
           <span className="font-medium">
             {formatStundenAlsHHMM(Number(profil.zeiterfassung_stunden_gesamt))} Std.
@@ -510,7 +513,7 @@ export function AnlageProfilePage() {
       {profil.objekttyp !== "kundenanlage" && materialAktiv && <MaterialInLager lagerId={id!} />}
 
       <div>
-        <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Vorgänge</h2>
+        <h2 className="mb-2 text-sm font-semibold text-label2">Vorgänge</h2>
         {profil.vorgaenge.length === 0 ? (
           <EmptyState icon={Inbox} text="Keine Vorgänge." className="py-4" />
         ) : (
@@ -519,23 +522,23 @@ export function AnlageProfilePage() {
               <button
                 key={v.id}
                 onClick={() => navigate(`/vorgaenge/${v.id}`)}
-                className={`card-interactive btn-touch flex w-full items-center justify-between rounded-lg bg-white p-3 text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800 ${
+                className={`card-interactive btn-touch flex w-full items-center justify-between card-ap p-3 text-left ${
                   v.status === "storniert" ? "opacity-60 grayscale" : ""
                 }`}
               >
                 <div>
-                  <div className="text-xs text-slate-400 dark:text-stone-500">
+                  <div className="text-xs text-label2">
                     {v.vorgangsnummer}
                     {v.dauerauftrag_id && (
                       <>
                         {" · "}
-                        <Repeat size={11} strokeWidth={2} className="inline text-amber-500" />
+                        <Repeat size={11} strokeWidth={2} className="inline text-st-arbeit" />
                       </>
                     )}
                   </div>
-                  <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{v.titel}</div>
+                  <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
+                <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
                   {v.status}
                 </span>
               </button>
@@ -547,11 +550,11 @@ export function AnlageProfilePage() {
       {pruefzyklenAktiv && (
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-500 dark:text-stone-400">Prüfzyklen</h2>
+          <h2 className="text-sm font-semibold text-label2">Prüfzyklen</h2>
           {kannVerwalten && (
             <button
               onClick={() => setShowForm((v) => !v)}
-              className="btn-touch text-xs font-medium text-blue-700 dark:text-blue-400"
+              className="btn-touch text-xs font-medium text-tint "
             >
               {showForm ? "Abbrechen" : "+ Neuer Zyklus"}
             </button>
@@ -559,26 +562,26 @@ export function AnlageProfilePage() {
         </div>
 
         {showForm && (
-          <div className="mb-2 space-y-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+          <div className="mb-2 space-y-2 card-ap p-3">
             <input
               value={bezeichnung}
               onChange={(e) => setBezeichnung(e.target.value)}
               placeholder="z.B. E-Check ortsveränderliche Geräte"
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+              className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
             <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-500 dark:text-stone-400">Intervall</label>
+              <label className="text-xs text-label2">Intervall</label>
               <input
                 type="number"
                 min={1}
                 value={intervallWert}
                 onChange={(e) => setIntervallWert(e.target.value)}
-                className="w-16 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="w-16 border border-sep bg-transparent px-2 py-1 text-sm text-label"
               />
               <select
                 value={intervallEinheit}
                 onChange={(e) => setIntervallEinheit(e.target.value as PruefzyklusEinheit)}
-                className="rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                className="border border-sep bg-transparent px-2 py-1 text-sm text-label"
               >
                 {Object.entries(EINHEIT_LABEL).map(([value, label]) => (
                   <option key={value} value={value}>
@@ -596,7 +599,7 @@ export function AnlageProfilePage() {
                     intervall_einheit: intervallEinheit,
                   })
                 }
-                className="btn-touch ml-auto rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                className="btn-touch ml-auto rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
               >
                 Anlegen
               </button>
@@ -605,16 +608,16 @@ export function AnlageProfilePage() {
         )}
 
         {(pruefzyklen ?? []).length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-stone-500">Keine Prüfzyklen erfasst.</p>
+          <p className="text-sm text-label2">Keine Prüfzyklen erfasst.</p>
         ) : (
           <div className="space-y-2">
             {pruefzyklen!.map((z) => (
               <div
                 key={z.id}
-                className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
+                className="card-ap p-3"
               >
-                <div className="text-sm font-medium text-slate-800 dark:text-stone-100">{z.bezeichnung}</div>
-                <div className="text-xs text-slate-400 dark:text-stone-500">
+                <div className="text-sm font-medium text-label">{z.bezeichnung}</div>
+                <div className="text-xs text-label2">
                   Alle {z.intervall_wert} {EINHEIT_LABEL[z.intervall_einheit]}
                 </div>
                 <div className="mt-1 flex items-center justify-between">
@@ -628,7 +631,7 @@ export function AnlageProfilePage() {
                     <button
                       onClick={() => markiereGeprueftMutation.mutate(z.id)}
                       disabled={markiereGeprueftMutation.isPending}
-                      className="btn-touch rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+                      className="btn-touch rounded-md bg-fill px-3 py-1 text-xs font-medium text-label disabled:opacity-50 "
                     >
                       Prüfung erfolgt (heute)
                     </button>
@@ -642,7 +645,7 @@ export function AnlageProfilePage() {
                       }
                     }}
                     disabled={deletePruefzyklusMutation.isPending}
-                    className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                    className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1 text-xs font-medium text-st-fehlt disabled:opacity-50 "
                   >
                     Löschen
                   </button>
@@ -656,48 +659,48 @@ export function AnlageProfilePage() {
 
       {profil.objekttyp !== "kundenanlage" && fahrzeugeAktiv && (
         <div>
-          <h2 className="mb-2 text-sm font-semibold text-slate-500 dark:text-stone-400">Inventur</h2>
+          <h2 className="mb-2 text-sm font-semibold text-label2">Inventur</h2>
           {!inventurzyklus ? (
             kannVerwalten ? (
-              <div className="space-y-2 rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
-                <p className="text-sm text-slate-400 dark:text-stone-500">
+              <div className="space-y-2 card-ap p-3">
+                <p className="text-sm text-label2">
                   Noch kein Inventurzyklus für diesen Lagerort eingerichtet.
                 </p>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 dark:text-stone-400">Intervall (Tage)</label>
+                  <label className="text-xs text-label2">Intervall (Tage)</label>
                   <input
                     type="number"
                     min={1}
                     value={inventurIntervallTage}
                     onChange={(e) => setInventurIntervallTage(e.target.value)}
-                    className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+                    className="w-20 border border-sep bg-transparent px-2 py-1 text-sm text-label"
                   />
                   <button
                     disabled={inventurAnlegenMutation.isPending}
                     onClick={() => inventurAnlegenMutation.mutate()}
-                    className="btn-touch ml-auto rounded-md btn-clay bg-linear-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+                    className="btn-touch ml-auto rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
                   >
                     Einrichten
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-slate-400 dark:text-stone-500">Kein Inventurzyklus eingerichtet.</p>
+              <p className="text-sm text-label2">Kein Inventurzyklus eingerichtet.</p>
             )
           ) : (
-            <div className="rounded-lg bg-white p-3 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+            <div className="card-ap p-3">
               <div className="flex items-center justify-between">
                 <span className={`text-sm font-medium ${faelligkeitsFarbe(inventurzyklus.naechste_inventur_am)}`}>
                   Fällig: {new Date(inventurzyklus.naechste_inventur_am).toLocaleDateString("de-DE")}
                 </span>
                 {!inventurzyklus.aktiv && (
-                  <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600 dark:bg-stone-700 dark:text-stone-300">
+                  <span className="border border-sep px-2 py-0.5 text-xs text-label">
                     pausiert
                   </span>
                 )}
               </div>
               {inventurzyklus.letzte_inventur_am && (
-                <p className="mt-1 text-xs text-slate-400 dark:text-stone-500">
+                <p className="mt-1 text-xs text-label2">
                   Zuletzt durchgeführt: {new Date(inventurzyklus.letzte_inventur_am).toLocaleDateString("de-DE")}
                 </p>
               )}
@@ -706,14 +709,14 @@ export function AnlageProfilePage() {
                   <button
                     onClick={() => inventurDurchgefuehrtMutation.mutate()}
                     disabled={inventurDurchgefuehrtMutation.isPending || !inventurzyklus.aktiv}
-                    className="btn-touch flex-1 rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"
+                    className="btn-touch flex-1 rounded-md bg-fill px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 "
                   >
                     Inventur durchgeführt (heute)
                   </button>
                   <button
                     onClick={() => inventurAktivMutation.mutate()}
                     disabled={inventurAktivMutation.isPending}
-                    className="btn-touch flex-1 rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300"
+                    className="btn-touch flex-1 rounded-md border border-sep px-3 py-1.5 text-xs font-medium text-label disabled:opacity-50 "
                   >
                     {inventurzyklus.aktiv ? "Deaktivieren" : "Reaktivieren"}
                   </button>
@@ -727,7 +730,7 @@ export function AnlageProfilePage() {
                     }
                   }}
                   disabled={deleteInventurzyklusMutation.isPending}
-                  className="btn-touch mt-2 w-full rounded-md border border-red-300 py-1.5 text-xs font-medium text-red-700 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400"
+                  className="btn-touch mt-2 w-full rounded-md border border-st-fehlt py-1.5 text-xs font-medium text-st-fehlt disabled:opacity-50 "
                 >
                   Löschen
                 </button>
