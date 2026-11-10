@@ -91,9 +91,13 @@ Noch nicht begonnen.
 
 Kein Bug, nur verwirrend — historisch gewachsener Name.
 
+**Teilweise erledigt (UX-Überarbeitung Nov. 2026):** Menüpunkt heißt jetzt „Arbeitszeit" (`docs/BEGRIFFE.md`). Offen: Team-Kennzahlen obenauf in der Arbeitszeit-Seite (neues Feature, keine Umbenennung).
+
 ## 7. Seitenname „Geschäft" ist vage
 
 Bündelt Kunden/Material/Abrechnung, aber der Name verrät das nicht.
+
+**Erledigt:** `GeschaeftPage` entfällt; Kunden, Material und Rechnungen haben eigene Seiten (im Office als Desktop-Seiten mit Tabelle und Detailpanel).
 
 ## 8. Mandanten-eigene Rechtstexte im Kundenportal — Teilweise erledigt
 
@@ -232,6 +236,26 @@ Deploy mit Backup/Gate/Rollback, GHCR-Images, Dependabot, Audits.
   gegen das neue Schema laufen.
 - **Repository-Standardbranch/Remote-HEAD**: Sache des Repository-Besitzers (GitHub → Settings →
   Branches); `GITHUB_BRANCH` steuert nur die Update-Anzeige.
+
+## 15. UX-Überarbeitung Nov. 2026: Rest und neu Entdecktes
+
+Erledigt: Rechte-Gates für Menü/Routen (zentraler `RouteGuard`), Fehlerzustände, ErrorBoundary je Shell, 404-Seite,
+Abfragen nur mit Recht, Toast/Bestätigungsdialog/Anlegen-Panel/Skeletons/Labels (Paket 4), Office-Navigation aus
+der Route, Kunden/Material als Desktop-Seiten, lokale Datumsfunktionen statt UTC.
+
+Offen bzw. neu entdeckt:
+- **Office-Seiten im Handy-Spaltenlayout**: Einstellungen, Partner und weitere eingebettete Feld-Seiten sind noch
+  nicht als Desktop-Seiten gebaut (Paket 5.1 nur Kunden/Material).
+- **Anlegeformulare doppelt**: Office-Kunden-/Material-Anlegen ist ein kompakter Nachbau des Feld-Formulars
+  (E-Rechnungs-/13b-Felder fehlen dort); später zu einem gemeinsamen Formular zusammenführen.
+- **Tooltips im Office**: nur native `title`-Attribute (verzögert, nicht bei Tastaturfokus).
+- **Rohe Status** in Termin, Material und Bestellung (`VorgangDetailPage`); Anlagentyp ist Freitext, bestehende
+  Datenbanken behalten Rohwerte (z. B. „niederspannung").
+- **Backend-Fehlermeldungen** (`detail=`) nicht auf ASCII-Umlaute geprüft.
+- **Mobiles Termin-Verschieben** in der Dispo-Tagesansicht fehlt (nur Anzeige).
+- **Fehlerzustände**: nicht alle `useQuery`-Seiten ausgewertet (Dispo, Postfach, einige Office-Panels, Super-Admin-Übersicht).
+- **Papierkorb-Rolle `loesch_ansicht`**: Frontend-Rechtekommentar und Backend weichen ab; der Guard sperrt sie
+  auf `/papierkorb`, `/profil`, `/mehr`.
 
 ## Erledigt, zur Einordnung
 
