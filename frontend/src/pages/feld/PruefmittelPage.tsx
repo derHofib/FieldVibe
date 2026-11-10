@@ -5,6 +5,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { pruefmittelApi, usersApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { Pruefmittel, PruefmittelStatus } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_LABEL: Record<PruefmittelStatus, string> = {
   aktiv: "Aktiv",
@@ -33,6 +34,7 @@ interface NeuesForm {
 }
 
 export function PruefmittelPage() {
+  const bestaetigen = useBestaetigung();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -213,8 +215,8 @@ export function PruefmittelPage() {
               </div>
               {kannLoeschen && (
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Prüfmittel "${mittel.bezeichnung}" wirklich löschen?`)) {
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: `Prüfmittel "${mittel.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
                       deleteMutation.mutate(mittel.id);
                     }
                   }}

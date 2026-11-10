@@ -29,6 +29,7 @@ import type {
   MaterialBedarfZweck,
   Tag,
 } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 type GeschaeftTab = "kunden" | "angebote" | "rechnungen" | "material" | "bestellwesen";
 
@@ -335,6 +336,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
 }
 
 export function GeschaeftPage() {
+  const bestaetigen = useBestaetigung();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -1128,8 +1130,8 @@ export function GeschaeftPage() {
                     </div>
                     {kannLieferantenLoeschen && (
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Lieferant "${l.name}" wirklich löschen?`)) {
+                        onClick={async () => {
+                          if (await bestaetigen({ titel: `Lieferant "${l.name}" löschen?`, bestaetigenLabel: "Löschen" })) {
                             deleteLieferantMutation.mutate(l.id);
                           }
                         }}

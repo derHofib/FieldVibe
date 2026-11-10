@@ -21,6 +21,7 @@ import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const BACKLOG_FILTER = { unbisponiert: "true", sort: "faelligkeit_am" };
 
@@ -507,6 +508,7 @@ function TerminBearbeitenPanel({
   onDelete: () => void;
   onZumVorgang: () => void;
 }) {
+  const bestaetigen = useBestaetigung();
   const [titel, setTitel] = useState(termin.titel);
   const [technikerId, setTechnikerId] = useState(termin.techniker_id);
   const [start, setStart] = useState(toLocalInputValue(new Date(termin.start_at)));
@@ -636,8 +638,8 @@ function TerminBearbeitenPanel({
 
         <div className="flex items-center justify-between gap-2 pt-2">
           <button
-            onClick={() => {
-              if (window.confirm("Termin wirklich löschen?")) onDelete();
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Termin löschen?", bestaetigenLabel: "Löschen" })) onDelete();
             }}
             className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
           >

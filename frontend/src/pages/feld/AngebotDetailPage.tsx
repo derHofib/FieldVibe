@@ -8,6 +8,7 @@ import { EmailSection } from "../../components/EmailSection";
 import { useAuth } from "../../context/AuthContext";
 import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotPositionstyp, AngebotStatus } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_LABEL: Record<AngebotStatus, string> = {
   entwurf: "Entwurf",
@@ -34,6 +35,7 @@ interface NeuePosition {
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
 export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
+  const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -113,8 +115,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Angebot wirklich löschen? Es wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Angebot löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}

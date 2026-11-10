@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { mandantenApi } from "../api/endpoints";
+import { useBestaetigung } from "../components/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantModul, MandantStatus } from "../types";
@@ -39,6 +40,7 @@ const MODUL_LABEL: Record<MandantModul, string> = {
 const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];
 
 export function MandantDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -93,9 +95,12 @@ export function MandantDetailPage() {
     stammdatenMutation.mutate();
   }
 
-  function handleStatusChange(status: MandantStatus) {
+  async function handleStatusChange(status: MandantStatus) {
     const frage = STATUS_BESTAETIGUNG[status];
-    if (frage && !window.confirm(frage)) return;
+    if (frage) {
+      const [titel, text] = frage.split("? ");
+      if (!(await bestaetigen({ titel: titel + "?", text, bestaetigenLabel: status === "pausiert" ? "Pausieren" : "Kündigen" }))) return;
+    }
     statusMutation.mutate(status);
   }
 

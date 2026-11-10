@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
@@ -16,6 +17,7 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function DauerauftragDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -297,8 +299,8 @@ export function DauerauftragDetailPage() {
               {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("Dauer-Auftrag wirklich löschen? Bereits erzeugte Vorgänge bleiben erhalten.")) {
+              onClick={async () => {
+                if (await bestaetigen({ titel: "Dauer-Auftrag löschen?", text: "Bereits erzeugte Vorgänge bleiben erhalten.", bestaetigenLabel: "Löschen" })) {
                   deleteMutation.mutate();
                 }
               }}

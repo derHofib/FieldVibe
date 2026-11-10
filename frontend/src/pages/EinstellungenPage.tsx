@@ -3,8 +3,10 @@ import { useState } from "react";
 
 import { plattformIntegrationenApi } from "../api/endpoints";
 import type { PlattformIntegration } from "../types";
+import { useBestaetigung } from "../components/ConfirmDialog";
 
 function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
   const [port, setPort] = useState(String(integration.config.port ?? "587"));
@@ -91,8 +93,8 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("Globale SMTP-Konfiguration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen({ titel: "Globale SMTP-Konfiguration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50"

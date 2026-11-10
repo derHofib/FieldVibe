@@ -13,6 +13,7 @@ import {
   FORMULARFELD_TYP_LABEL,
   FORMULARFELD_TYPEN_MIT_DATENQUELLE,
 } from "../../utils/formular";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const FELD_TYP_OPTIONEN = Object.entries(FORMULARFELD_TYP_LABEL) as [FormularfeldTyp, string][];
 
@@ -467,6 +468,7 @@ export function FormularRasterEditor({
   formular: Formular;
   vollbreiteAusbruch?: boolean;
 }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [aktiveSeite, setAktiveSeite] = useState(0);
   const [neuesFeldOffen, setNeuesFeldOffen] = useState(false);
@@ -690,8 +692,8 @@ export function FormularRasterEditor({
         </button>
         {formular.anzahl_seiten > 1 && aktiveSeite === formular.anzahl_seiten - 1 && (
           <button
-            onClick={() => {
-              if (window.confirm(`Seite ${aktiveSeite + 1} wirklich entfernen?`)) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: `Seite ${aktiveSeite + 1} entfernen?`, bestaetigenLabel: "Entfernen" })) {
                 setAktiveSeite(aktiveSeite - 1);
                 seitenMutation.mutate(formular.anzahl_seiten - 1);
               }
@@ -821,8 +823,8 @@ export function FormularRasterEditor({
                       <Pencil size={13} />
                     </button>
                     <button
-                      onClick={() => {
-                        if (window.confirm(`Feld "${feld.label}" wirklich entfernen?`)) {
+                      onClick={async () => {
+                        if (await bestaetigen({ titel: `Feld "${feld.label}" entfernen?`, bestaetigenLabel: "Entfernen" })) {
                           deleteFeldMutation.mutate(feld.id);
                         }
                       }}

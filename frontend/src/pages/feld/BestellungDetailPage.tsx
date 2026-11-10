@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { openPdfBlob } from "../../utils/pdf";
 import type { BestellungStatus } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -16,6 +17,7 @@ const STATUS_LABEL: Record<BestellungStatus, string> = {
 };
 
 export function BestellungDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -72,8 +74,8 @@ export function BestellungDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Bestellung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Bestellung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}

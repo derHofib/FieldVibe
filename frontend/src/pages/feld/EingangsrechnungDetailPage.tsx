@@ -7,6 +7,7 @@ import { ApiError } from "../../api/client";
 import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -26,6 +27,7 @@ const KATEGORIE_LABEL: Record<EingangsrechnungKategorie, string> = {
 };
 
 function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingangsrechnung }) {
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [lieferantId, setLieferantId] = useState("");
@@ -167,8 +169,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
               <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("Entwurf verwerfen (z.B. keine echte Rechnung)? Wandert in den Papierkorb.")) {
+              onClick={async () => {
+                if (await bestaetigen({ titel: "Entwurf verwerfen (z.B. keine echte Rechnung)?", text: "Wandert in den Papierkorb.", bestaetigenLabel: "Verwerfen" })) {
                   verwerfenMutation.mutate();
                 }
               }}
@@ -185,6 +187,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
 }
 
 export function EingangsrechnungDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -270,8 +273,8 @@ export function EingangsrechnungDetailPage() {
         </button>
         {kannLoeschen && eingangsrechnung.status === "offen" && (
           <button
-            onClick={() => {
-              if (window.confirm("Eingangsrechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Eingangsrechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}
@@ -518,8 +521,8 @@ export function EingangsrechnungDetailPage() {
 
       {eingangsrechnung.status === "offen" && (
         <button
-          onClick={() => {
-            if (window.confirm("Diese Eingangsrechnung stornieren?")) statusMutation.mutate("storniert");
+          onClick={async () => {
+            if (await bestaetigen({ titel: "Diese Eingangsrechnung stornieren?", bestaetigenLabel: "Stornieren" })) statusMutation.mutate("storniert");
           }}
           disabled={statusMutation.isPending}
           className="btn-touch w-full rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50 dark:bg-stone-800 dark:text-stone-300"

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { accountTypenApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { AccountTyp, RechteAktion, RechteBereich } from "../types";
+import { useBestaetigung } from "../components/ConfirmDialog";
 
 const BEREICHE: RechteBereich[] = [
   "vorgaenge",
@@ -100,6 +101,7 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
 }
 
 export function AccountTypenPage() {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { data: typen, isLoading } = useQuery({
     queryKey: ["account-typen"],
@@ -244,12 +246,10 @@ export function AccountTypenPage() {
                   </span>
                 </span>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
                     if (
-                      window.confirm(
-                        `Account-Typ "${typ.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.`,
-                      )
+                      await bestaetigen({ titel: `Account-Typ "${typ.name}" löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })
                     ) {
                       setDeleteError(null);
                       deleteMutation.mutate(typ.id);

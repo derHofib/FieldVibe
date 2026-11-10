@@ -6,6 +6,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
@@ -314,6 +315,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
 }
 
 function SmtpZeile({ integration }: { integration: MandantIntegration }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
   const [port, setPort] = useState(String(integration.config.port ?? "587"));
@@ -402,8 +404,8 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("SMTP-Integration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen({ titel: "SMTP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400"
@@ -416,6 +418,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
 }
 
 function ImapZeile({ integration }: { integration: MandantIntegration }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
   const [port, setPort] = useState(String(integration.config.port ?? "993"));
@@ -506,8 +509,8 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("IMAP-Integration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen({ titel: "IMAP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch rounded-md bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 disabled:opacity-50 dark:bg-red-500/10 dark:text-red-400"

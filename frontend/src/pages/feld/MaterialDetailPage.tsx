@@ -4,8 +4,10 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 export function MaterialDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -108,8 +110,8 @@ export function MaterialDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Material wirklich löschen? Es wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Material löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}

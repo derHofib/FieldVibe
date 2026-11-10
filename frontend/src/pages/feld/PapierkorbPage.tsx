@@ -6,6 +6,7 @@ import { papierkorbApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
@@ -43,6 +44,7 @@ function anzeigeName(eintrag: PapierkorbEintrag): string {
 }
 
 export function PapierkorbPage() {
+  const bestaetigen = useBestaetigung();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -163,11 +165,9 @@ export function PapierkorbPage() {
                     Wiederherstellen
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
-                          `„${anzeigeName(eintrag)}“ endgültig löschen? Das kann nicht rückgängig gemacht werden.`,
-                        )
+                        await bestaetigen({ titel: `„${anzeigeName(eintrag)}“ endgültig löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Endgültig löschen" })
                       ) {
                         purgeMutation.mutate(eintrag);
                       }

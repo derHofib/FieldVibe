@@ -27,6 +27,7 @@ import type {
   Standort,
   User,
 } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
   1: "Stufe 1 – Erstkontakt",
@@ -1100,6 +1101,7 @@ function DauerauftraegeUebersicht({ kundeId }: { kundeId: string }) {
 }
 
 export function KundeProfilePage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser, hatRecht } = useAuth();
@@ -1193,11 +1195,9 @@ export function KundeProfilePage() {
                 Datenexport
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
-                      `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
-                    )
+                    await bestaetigen({ titel: `${profil.name} löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })
                   ) {
                     deleteMutation.mutate();
                   }

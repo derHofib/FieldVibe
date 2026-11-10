@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { dsgvoApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { DsgvoDokument, DsgvoDokumentTyp } from "../types";
+import { useBestaetigung } from "../components/ConfirmDialog";
 
 // Muss mit DSGVO_DOKUMENT_TYPEN in backend/app/models/dsgvo_dokument.py
 // uebereinstimmen.
@@ -24,6 +25,7 @@ function formatGroesse(bytes: number): string {
 }
 
 function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: DsgvoDokument }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,8 +87,8 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
                 Herunterladen
               </button>
               <button
-                onClick={() => {
-                  if (window.confirm(`"${DOKUMENT_LABEL[typ]}" wirklich löschen?`)) removeMutation.mutate();
+                onClick={async () => {
+                  if (await bestaetigen({ titel: `"${DOKUMENT_LABEL[typ]}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
                 }}
                 disabled={removeMutation.isPending}
                 className="btn-touch rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"

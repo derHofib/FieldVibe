@@ -16,6 +16,7 @@ import { useAuth } from "../../context/AuthContext";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -336,6 +337,7 @@ function MaterialInLager({ lagerId }: { lagerId: string }) {
 }
 
 export function AnlageProfilePage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -439,11 +441,9 @@ export function AnlageProfilePage() {
           <h1 className="text-lg font-bold text-slate-800 dark:text-stone-100">{profil.bezeichnung}</h1>
           {kannVerwalten && (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (
-                  window.confirm(
-                    `${profil.bezeichnung} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
-                  )
+                  await bestaetigen({ titel: `${profil.bezeichnung} löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })
                 ) {
                   deleteMutation.mutate();
                 }
@@ -636,8 +636,8 @@ export function AnlageProfilePage() {
                 </div>
                 {kannPapierkorbLoeschen && (
                   <button
-                    onClick={() => {
-                      if (window.confirm(`Prüfzyklus "${z.bezeichnung}" wirklich löschen?`)) {
+                    onClick={async () => {
+                      if (await bestaetigen({ titel: `Prüfzyklus "${z.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
                         deletePruefzyklusMutation.mutate(z.id);
                       }
                     }}
@@ -721,8 +721,8 @@ export function AnlageProfilePage() {
               )}
               {kannPapierkorbLoeschen && (
                 <button
-                  onClick={() => {
-                    if (window.confirm("Inventurzyklus wirklich löschen?")) {
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: "Inventurzyklus löschen?", bestaetigenLabel: "Löschen" })) {
                       deleteInventurzyklusMutation.mutate();
                     }
                   }}

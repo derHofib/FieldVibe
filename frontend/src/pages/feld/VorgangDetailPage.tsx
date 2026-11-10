@@ -43,6 +43,7 @@ import type {
   VorgangEvent,
   VorgangStatus,
 } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -238,6 +239,7 @@ function adresseAlsZeile(adresse: Adresse | null | undefined): string {
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
 export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
+  const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -783,8 +785,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Vorgang löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteVorgangMutation.mutate();
               }
             }}
@@ -1144,13 +1146,11 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
             </span>
             {currentUser?.darf_vorgaenge_selbst_uebernehmen && (
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (
                     vorgang.zugewiesener_user_id &&
                     vorgang.zugewiesener_user_id !== currentUser.id &&
-                    !window.confirm(
-                      `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`,
-                    )
+                    !(await bestaetigen({ titel: "Vorgang übernehmen?", text: `Er ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`, bestaetigenLabel: "Übernehmen", destruktiv: false }))
                   ) {
                     return;
                   }
@@ -1460,8 +1460,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                   </span>
                   {kannPapierkorbLoeschen && (
                     <button
-                      onClick={() => {
-                        if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                      onClick={async () => {
+                        if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
                           deleteTerminMutation.mutate(t.id);
                         }
                       }}
@@ -1565,8 +1565,8 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
                     )}
                     {kannPapierkorbLoeschen && (
                       <button
-                        onClick={() => {
-                          if (window.confirm("Mangel wirklich löschen?")) {
+                        onClick={async () => {
+                          if (await bestaetigen({ titel: "Mangel löschen?", bestaetigenLabel: "Löschen" })) {
                             deleteMangelMutation.mutate(m.id);
                           }
                         }}

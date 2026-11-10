@@ -6,6 +6,7 @@ import { accountTypenApi, mandantenApi, usersApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { Einladung, EinladungRolle, Role } from "../types";
+import { useBestaetigung } from "../components/ConfirmDialog";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -51,6 +52,7 @@ function LinkKopierenButton({ link }: { link: string }) {
 }
 
 export function UsersPage() {
+  const bestaetigen = useBestaetigung();
   const { currentUser } = useAuth();
   const queryClient = useQueryClient();
   const isSuperAdmin = currentUser?.role === "super_admin";
@@ -337,8 +339,8 @@ export function UsersPage() {
                           Erneut senden
                         </button>
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Einladung an ${e.email} widerrufen?`)) {
+                          onClick={async () => {
+                            if (await bestaetigen({ titel: `Einladung an ${e.email} widerrufen?`, bestaetigenLabel: "Widerrufen" })) {
                               revokeMutation.mutate(e.id);
                             }
                           }}
@@ -407,8 +409,8 @@ export function UsersPage() {
                         {u.aktiv ? "Deaktivieren" : "Aktivieren"}
                       </button>
                       <button
-                        onClick={() => {
-                          if (window.confirm(`${u.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
+                        onClick={async () => {
+                          if (await bestaetigen({ titel: `${u.name} löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })) {
                             setDeleteError(null);
                             deleteMutation.mutate(u.id);
                           }

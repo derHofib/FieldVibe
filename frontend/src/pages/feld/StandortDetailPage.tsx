@@ -8,6 +8,7 @@ import { ApiError } from "../../api/client";
 import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
@@ -277,6 +278,7 @@ function AnlagenVerwaltung({
 }
 
 export function StandortDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -313,8 +315,8 @@ export function StandortDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Standort wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Standort löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}

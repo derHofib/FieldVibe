@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gespeicherteFilterApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { GespeicherterFilter, GespeicherterFilterEntitaet } from "../types";
+import { useBestaetigung } from "./ConfirmDialog";
 
 function filtersEqual(a: Record<string, string>, b: Record<string, string>): boolean {
   const aKeys = Object.keys(a).filter((k) => a[k]);
@@ -26,6 +27,7 @@ export function FilterVorlagenLeiste({
   filter: Record<string, string>;
   onApply: (filterJson: Record<string, string>) => void;
 }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const appliedDefault = useRef(false);
   const [zeigeSpeichern, setZeigeSpeichern] = useState(false);
@@ -102,8 +104,8 @@ export function FilterVorlagenLeiste({
                   {v.ist_standard ? "★" : "☆"}
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Filter-Vorlage "${v.name}" löschen?`)) deleteMutation.mutate(v.id);
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: `Filter-Vorlage "${v.name}" löschen?`, bestaetigenLabel: "Löschen" })) deleteMutation.mutate(v.id);
                   }}
                   className={`btn-touch px-1 ${aktiv ? "text-white/80" : "text-slate-400 dark:text-stone-500"}`}
                 >

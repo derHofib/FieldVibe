@@ -11,6 +11,7 @@ import { downloadBlob } from "../../utils/download";
 import { heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import type { RechnungZahlungsart } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const ZAHLUNGSART_OPTIONEN: { value: RechnungZahlungsart; label: string }[] = [
   { value: "ueberweisung", label: "Überweisung" },
@@ -24,6 +25,7 @@ const ZAHLUNGSART_OPTIONEN: { value: RechnungZahlungsart; label: string }[] = [
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
 export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
+  const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -133,8 +135,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Rechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Rechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}
@@ -402,8 +404,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       </span>
                       {Number(z.betrag) > 0 && rechnung.status !== "storniert" && !bereitsStorniert.has(z.id) && (
                         <button
-                          onClick={() => {
-                            if (window.confirm("Diese Zahlung stornieren?")) stornoZahlungMutation.mutate(z.id);
+                          onClick={async () => {
+                            if (await bestaetigen({ titel: "Diese Zahlung stornieren?", bestaetigenLabel: "Stornieren" })) stornoZahlungMutation.mutate(z.id);
                           }}
                           disabled={stornoZahlungMutation.isPending}
                           className="btn-touch text-xs text-slate-400 underline-offset-2 hover:underline disabled:opacity-50 dark:text-stone-500"
@@ -457,8 +459,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             Als bezahlt markieren
           </button>
           <button
-            onClick={() => {
-              if (window.confirm("Diese Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Diese Rechnung stornieren?", text: "Es wird eine Stornorechnung mit eigener Nummer erzeugt.", bestaetigenLabel: "Stornieren" }))
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
@@ -470,8 +472,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       )}
       {rechnung.status === "bezahlt" && !rechnung.ist_storno && (
         <button
-          onClick={() => {
-            if (window.confirm("Diese bereits bezahlte Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+          onClick={async () => {
+            if (await bestaetigen({ titel: "Diese bereits bezahlte Rechnung stornieren?", text: "Es wird eine Stornorechnung mit eigener Nummer erzeugt.", bestaetigenLabel: "Stornieren" }))
               stornoMutation.mutate();
           }}
           disabled={stornoMutation.isPending}
