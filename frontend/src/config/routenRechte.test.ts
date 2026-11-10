@@ -27,8 +27,11 @@ describe("routeErlaubt", () => {
     for (const pfad of ["/accounts", "/integrationen", "/anlagen-felder", "/techniker-zuweisungen"]) {
       expect(routeErlaubt(pfad, techniker), pfad).toBe(false);
     }
-    // Custom darf Account-Typen/Einstellungen oeffnen; ohne Recht aber nicht die Zusatzfelder.
-    expect(routeErlaubt("/account-typen", techniker)).toBe(true);
+    // Account-Typen nur mit rechte_verwalten (Backend _verwalter).
+    expect(routeErlaubt("/account-typen", techniker)).toBe(false);
+    expect(routeErlaubt("/einstellungen", techniker)).toBe(false);
+    expect(routeErlaubt("/form-schemas", techniker)).toBe(false);
+    expect(routeErlaubt("/plan-symbole", techniker)).toBe(false);
     const namen = sichtbareNavSeiten(techniker.currentUser, techniker.hatRecht).map((s) => s.key);
     expect(namen).not.toContain("nutzer");
     expect(namen).not.toContain("integrationen");
@@ -46,7 +49,8 @@ describe("routeErlaubt", () => {
     const custom = kontext("custom", { kunden: ["sehen"] });
     expect(routeErlaubt("/einstellungen", custom)).toBe(true);
     expect(routeErlaubt("/einstellungen/seitenleiste", custom)).toBe(true);
-    expect(routeErlaubt("/account-typen", custom)).toBe(true);
+    expect(routeErlaubt("/account-typen", custom)).toBe(false);
+    expect(routeErlaubt("/account-typen", kontext("custom", { organigramm: ["rechte_verwalten"] }))).toBe(true);
     expect(routeErlaubt("/anlagen-felder", custom)).toBe(true);
     expect(routeErlaubt("/einstellungen/export", custom)).toBe(false);
     expect(routeErlaubt("/integrationen", custom)).toBe(false);
@@ -87,8 +91,53 @@ describe("routeErlaubt", () => {
 
   it("Pfade ohne Regel bleiben offen", () => {
     const ohne = kontext("custom", {});
-    for (const pfad of ["/mehr", "/neu", "/suche", "/vorgaenge/1", "/dauerauftraege", "/unbekannt"]) {
+    for (const pfad of ["/mehr", "/neu", "/suche", "/vorgaenge/1", "/unbekannt"]) {
       expect(routeErlaubt(pfad, ohne), pfad).toBe(true);
     }
+  });
+
+  it("Dauerauftraege: Modul, dispo.sehen, /neu braucht dispo.erstellen", () => {
+    const sehen = kontext("custom", { dispo: ["sehen"] });
+    expect(routeErlaubt("/dauerauftraege", sehen)).toBe(true);
+    expect(routeErlaubt("/dauerauftraege/1", sehen)).toBe(true);
+    expect(routeErlaubt("/dauerauftraege/neu", sehen)).toBe(false);
+    expect(routeErlaubt("/dauerauftraege/neu", kontext("custom", { dispo: ["sehen", "erstellen"] }))).toBe(true);
+    expect(routeErlaubt("/dauerauftraege", kontext("custom", {}))).toBe(false);
+    const ohneModul = kontext("mandant_admin", {}, { deaktivierte_module: ["dauerauftrag"] });
+    expect(routeErlaubt("/dauerauftraege", ohneModul)).toBe(false);
+  });
+
+  it("/standorte/:id braucht kunden.sehen", () => {
+    expect(routeErlaubt("/standorte/1", kontext("custom", {}))).toBe(false);
+    expect(routeErlaubt("/standorte/1", kontext("custom", { kunden: ["sehen"] }))).toBe(true);
+  });
+
+  it("loesch_ansicht darf nur Papierkorb, Profil und Mehr", () => {
+    const la = kontext("loesch_ansicht");
+    for (const pfad of ["/papierkorb", "/profil", "/mehr"]) expect(routeErlaubt(pfad, la), pfad).toBe(true);
+    for (const pfad of ["/feed", "/vorgaenge/1", "/neu", "/suche", "/kunden", "/dauerauftraege"]) {
+      expect(routeErlaubt(pfad, la), pfad).toBe(false);
+    }
+  });
+
+  it("Techniker (custom ohne Rechte) sieht die Admin-Seiten nicht", () => {
+    const t = kontext("custom", { vorgaenge: ["sehen"] });
+    for (const pfad of ["/accounts", "/form-schemas", "/plan-symbole", "/techniker-zuweisungen", "/integrationen"]) {
+      expect(routeErlaubt(pfad, t), pfad).toBe(false);
+    }
+  });
+
+  it("Seed-Techniker: Admin-Seiten gesperrt, Einstellungen nur wegen Anlagen-Zusatzfeldern offen", () => {
+    const t = kontext("custom", {
+      vorgaenge: ["sehen", "erstellen", "bearbeiten"],
+      kunden: ["sehen"],
+      material: ["sehen"],
+      dispo: ["sehen"],
+      projekte: ["zeitplan_sehen"],
+    });
+    for (const pfad of ["/accounts", "/account-typen", "/form-schemas", "/plan-symbole", "/techniker-zuweisungen", "/integrationen"]) {
+      expect(routeErlaubt(pfad, t), pfad).toBe(false);
+    }
+    expect(routeErlaubt("/einstellungen", t)).toBe(true);
   });
 });

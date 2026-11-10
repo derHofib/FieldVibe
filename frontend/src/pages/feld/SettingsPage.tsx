@@ -17,7 +17,7 @@ import { IconBadge, type IconTone } from "../../components/IconBadge";
 import { useAuth } from "../../context/AuthContext";
 import { istOfficeHost } from "../../office/hostname";
 import { istModulAktiv } from "../../utils/module";
-import { istAdminRolle } from "../../utils/rollen";
+import { darfRechteVerwalten, istAdminRolle } from "../../utils/rollen";
 
 function SettingsLink({
   icon,
@@ -77,13 +77,15 @@ export function SettingsPage() {
             onClick={() => navigate("/accounts")}
           />
         )}
-        <SettingsLink
-          icon={UserCog}
-          tone="violet"
-          label="Account-Typen & Rechte"
-          beschreibung="Eigene Account-Typen definieren und ihre Rechte-Matrix einstellen"
-          onClick={() => navigate("/account-typen")}
-        />
+        {darfRechteVerwalten(currentUser, hatRecht) && (
+          <SettingsLink
+            icon={UserCog}
+            tone="violet"
+            label="Account-Typen & Rechte"
+            beschreibung="Eigene Account-Typen definieren und ihre Rechte-Matrix einstellen"
+            onClick={() => navigate("/account-typen")}
+          />
+        )}
         {hatRecht("dispo", "bearbeiten") && hatRecht("kunden", "bearbeiten") && (
           <SettingsLink
             icon={Wrench}

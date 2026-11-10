@@ -36,7 +36,7 @@ import {
 
 import type { IconTone } from "../components/IconBadge";
 import { istModulAktiv } from "../utils/module";
-import { istAdminOderCustom, istAdminRolle } from "../utils/rollen";
+import { darfRechteVerwalten, istAdminOderCustom, istAdminRolle } from "../utils/rollen";
 import type { CurrentUser, NavKategorienRead, RechteAktion, RechteBereich } from "../types";
 
 // Einzige Quelle der Wahrheit fuer jede Seite in der Office-Seitenleiste
@@ -342,8 +342,8 @@ export const NAV_SEITEN: NavSeite[] = [
     tone: "violet",
     route: "/account-typen",
     kategorie: "Verwaltung",
-    // Backend: /api/account-typen = mandant_admin|custom.
-    sichtbar: ({ currentUser }) => istAdminOderCustom(currentUser),
+    // Backend: /api/account-typen = mandant_admin, oder custom mit Recht "rechte_verwalten".
+    sichtbar: ({ currentUser, hatRecht }) => darfRechteVerwalten(currentUser, hatRecht),
   },
   {
     key: "organigramm",

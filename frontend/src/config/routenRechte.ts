@@ -2,7 +2,7 @@ import { matchPath } from "react-router-dom";
 
 import type { CurrentUser, RechteAktion, RechteBereich } from "../types";
 import { istModulAktiv } from "../utils/module";
-import { istAdminOderCustom } from "../utils/rollen";
+import { darfRechteVerwalten, istAdminOderCustom, istAdminRolle } from "../utils/rollen";
 import { NAV_SEITEN } from "./navSeiten";
 
 export interface RoutenKontext {
@@ -47,6 +47,23 @@ const SONDERREGELN: RoutenRegel[] = [
     pruefe: ({ hatRecht }) => hatRecht("kunden", "sehen"),
   },
   {
+    muster: "/standorte/:id",
+    pruefe: ({ hatRecht }) => hatRecht("kunden", "sehen"),
+  },
+  // Backend dauerauftraege.py: Rolle mandant_admin|custom, Modul dauerauftrag, dispo.sehen
+  // (Anlegen zusaetzlich dispo.erstellen). Spezifisches /neu steht vor dem Praefix.
+  {
+    muster: "/dauerauftraege/neu",
+    pruefe: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) && istModulAktiv(currentUser, "dauerauftrag") && hatRecht("dispo", "erstellen"),
+  },
+  {
+    muster: "/dauerauftraege",
+    mitUnterpfaden: true,
+    pruefe: ({ currentUser, hatRecht }) =>
+      istAdminOderCustom(currentUser) && istModulAktiv(currentUser, "dauerauftrag") && hatRecht("dispo", "sehen"),
+  },
+  {
     muster: "/angebote",
     mitUnterpfaden: true,
     pruefe: (ctx) => nutzeNavRegel("rechnungen", ctx),
@@ -75,12 +92,20 @@ const SONDERREGELN: RoutenRegel[] = [
     pruefe: ({ currentUser }) =>
       !!currentUser?.darf_abwesenheiten_verwalten && istModulAktiv(currentUser, "zeiterfassung"),
   },
-  // Custom-Rolle darf die Einstellungsseite oeffnen; die Unterbereiche blendet
-  // SettingsPage selbst nach Rolle/Recht aus.
+  // Custom-Rolle nur, wenn SettingsPage fuer sie mindestens einen Link zeigt
+  // (gleiche Bedingungen wie dort), sonst waere die Seite leer.
   {
     muster: "/einstellungen",
     mitUnterpfaden: true,
-    pruefe: ({ currentUser }) => istAdminOderCustom(currentUser),
+    pruefe: ({ currentUser, hatRecht }) =>
+      istAdminRolle(currentUser) ||
+      (currentUser?.role === "custom" &&
+        (darfRechteVerwalten(currentUser, hatRecht) ||
+          (hatRecht("dispo", "bearbeiten") && hatRecht("kunden", "bearbeiten")) ||
+          (hatRecht("mitarbeiterverwaltung", "bearbeiten") && istModulAktiv(currentUser, "zeiterfassung")) ||
+          (!!currentUser.darf_abwesenheiten_verwalten && istModulAktiv(currentUser, "zeiterfassung")) ||
+          hatRecht("kunden", "sehen") ||
+          hatRecht("formulare", "sehen"))),
   },
 ];
 
@@ -98,8 +123,14 @@ const NAV_REGELN: RoutenRegel[] = NAV_SEITEN.filter((s) => s.key !== "zeitplaene
 
 export const ROUTEN_REGELN: RoutenRegel[] = [...SONDERREGELN, ...NAV_REGELN];
 
+const LOESCH_ANSICHT_PFADE = ["/papierkorb", "/profil", "/mehr"];
+
 /** Unbekannte Pfade ohne Regel (Detailseiten ohne eigenes Recht, /mehr, /neu ...) bleiben offen. */
 export function routeErlaubt(pfad: string, ctx: RoutenKontext): boolean {
+  // Das Backend laesst loesch_ansicht ausserhalb des Papierkorbs nirgends zu.
+  if (ctx.currentUser?.role === "loesch_ansicht") {
+    return LOESCH_ANSICHT_PFADE.some((p) => matchPath({ path: p, end: false }, pfad));
+  }
   const regel = ROUTEN_REGELN.find((r) => matchPath({ path: r.muster, end: !r.mitUnterpfaden }, pfad));
   return regel ? regel.pruefe(ctx) : true;
 }
