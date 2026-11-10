@@ -109,7 +109,7 @@ function NeueAnfrage() {
       <AnlegenPanel offen={zeigen} titel="Neue Anfrage" onClose={() => setZeigen(false)}>
         <form onSubmit={handleSubmit} className="space-y-3 p-4">
           <p className="text-xs text-label2">
-            Ihre Anfrage wird von uns geprüft und in einen Vorgang übernommen, sobald sie bestätigt ist.
+            Ihre Anfrage wird von uns geprüft und in einen Auftrag übernommen, sobald sie bestätigt ist.
           </p>
           <div>
             <label htmlFor="portal-anfrage-titel" className="mb-1 block text-sm font-medium text-label">
@@ -275,7 +275,7 @@ export function PortalAnfragenPage() {
 
   return (
     <div className="space-y-3">
-      <h1 className="text-lg font-bold text-label">Ihre Vorgangsanfragen</h1>
+      <h1 className="text-lg font-bold text-label">Ihre Anfragen</h1>
       <NeueAnfrage />
 
       {isLoading ? (

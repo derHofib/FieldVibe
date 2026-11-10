@@ -155,6 +155,7 @@ export function PortalAngebotDetailPage() {
   const b2cAblauf = !!angebot && angebot.status === "versendet" && angebot.verbraucherschutz && !!verbraucher?.belehrung;
 
   const antwortMutation = useMutation({
+    meta: { erfolg: "Antwort gesendet" },
     mutationFn: (status: "angenommen" | "abgelehnt") =>
       kundenportalApi.antwortAufAngebot(
         id!,

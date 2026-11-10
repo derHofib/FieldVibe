@@ -1,3 +1,4 @@
+import { SkeletonList } from "../components/Skeleton";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PartnerAuthProvider, usePartnerAuth } from "../context/PartnerAuthContext";
@@ -15,7 +16,11 @@ import { NichtGefunden } from "../components/NichtGefunden";
 function PartnerPortalRoutes() {
   const { isAuthenticated, isLoading } = usePartnerAuth();
 
-  if (isLoading) return <div className="p-6">Lädt…</div>;
+  if (isLoading) return (
+      <div className="p-6" role="status" aria-label="Lädt">
+        <SkeletonList count={3} />
+      </div>
+    );
 
   return (
     <Routes>

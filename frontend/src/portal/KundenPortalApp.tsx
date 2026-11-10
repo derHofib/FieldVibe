@@ -1,3 +1,4 @@
+import { SkeletonList } from "../components/Skeleton";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PortalLayout } from "../components/PortalLayout";
@@ -18,7 +19,11 @@ import { NichtGefunden } from "../components/NichtGefunden";
 function KundenPortalRoutes() {
   const { isAuthenticated, isLoading } = useKundenAuth();
 
-  if (isLoading) return <div className="p-6">Lädt…</div>;
+  if (isLoading) return (
+      <div className="p-6" role="status" aria-label="Lädt">
+        <SkeletonList count={3} />
+      </div>
+    );
 
   return (
     <Routes>
