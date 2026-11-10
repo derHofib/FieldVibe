@@ -6,6 +6,7 @@ import { auswertungApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import type { OffenerPostenEintrag } from "../../types";
 import { KennzahlKarte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
+import { SkeletonList } from "../../components/Skeleton";
 
 function euro(betrag: string): string {
   const zahl = Number(betrag);
@@ -32,7 +33,7 @@ export function OfficeBuchhaltungPage() {
       <SeitenKopf titel="Buchhaltung" />
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !data ? (
         <EmptyState icon={Receipt} text="Keine Auswertung verfügbar." />
       ) : (

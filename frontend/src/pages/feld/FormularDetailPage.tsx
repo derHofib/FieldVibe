@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import type { Formular, Leistungstyp } from "../../types";
 import { LEISTUNGSTYP_LABEL } from "../../utils/formular";
 import { FormularRasterEditor } from "./FormularRasterEditor";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const LEISTUNGSTYPEN: Leistungstyp[] = [
   "installation",
@@ -107,7 +108,7 @@ export function FormularDetailPage() {
   });
 
   if (isLoading) {
-    return <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
+    return <DetailSkeleton />;
   }
   if (!formular) {
     return <EmptyState icon={Pencil} text="Formular nicht gefunden." />;

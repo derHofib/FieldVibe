@@ -6,6 +6,7 @@ import { formulareApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FormularRasterEditor } from "../../pages/feld/FormularRasterEditor";
 import { SeitenKopf } from "../OfficeUi";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 /** Formular-Editor am Schreibtisch. Nutzt denselben Raster-Editor wie die
  * Feld-App -- nur ohne dessen CSS-Ausbruch aus dem engen Mobil-Rahmen, den es
@@ -21,7 +22,7 @@ export function OfficeFormularDetailPage() {
   });
 
   if (isLoading) {
-    return <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <DetailSkeleton />;
   }
   if (!formular) {
     return <EmptyState icon={Pencil} text="Formular nicht gefunden." />;

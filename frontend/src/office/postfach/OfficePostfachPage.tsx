@@ -6,6 +6,7 @@ import { mailApi } from "../../api/endpoints";
 import { SeitenKopf } from "../OfficeUi";
 import { MailClient } from "./MailClient";
 import { MailKontoFormular } from "./MailKontoFormular";
+import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = { art: "client" } | { art: "konto-neu" } | { art: "konto-bearbeiten" };
 
@@ -25,7 +26,7 @@ export function OfficePostfachPage() {
   const aktivesKonto = accounts?.find((a) => a.id === aktivesKontoId) ?? accounts?.[0];
 
   if (isLoading) {
-    return <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>;
+    return <SkeletonList count={4} />;
   }
 
   if (!accounts || accounts.length === 0 || ansicht.art === "konto-neu") {

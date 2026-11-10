@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, fahrzeugZuweisungenApi, technikerZuweisungenApi } from "../../api/endpoints";
+import { SkeletonList } from "../../components/Skeleton";
 
 function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktuellesFahrzeugId: string | null }) {
   const queryClient = useQueryClient();
@@ -55,7 +56,7 @@ export function TechnikerZuweisungenPage() {
       </p>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !uebersicht || uebersicht.length === 0 ? (
         <p className="text-sm text-slate-400 dark:text-stone-500">Keine Techniker in diesem Mandanten angelegt.</p>
       ) : (

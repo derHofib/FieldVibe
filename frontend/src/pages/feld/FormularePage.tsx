@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { formulareApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { SkeletonList } from "../../components/Skeleton";
 
 export function FormularePage() {
   const uid = useId();
@@ -109,7 +110,7 @@ export function FormularePage() {
       )}
 
       {isLoading ? (
-        <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !formulare || formulare.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Formulare angelegt." />
       ) : (

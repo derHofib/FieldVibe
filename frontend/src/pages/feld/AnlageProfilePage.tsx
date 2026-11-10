@@ -17,6 +17,7 @@ import { formatStundenAlsHHMM } from "../../utils/duration";
 import { istModulAktiv } from "../../utils/module";
 import type { AnlageProfil, Adresse, PruefzyklusEinheit } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const EINHEIT_LABEL: Record<PruefzyklusEinheit, string> = {
   tag: "Tage",
@@ -437,7 +438,7 @@ export function AnlageProfilePage() {
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
   });
 
-  if (isLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading || !profil) return <DetailSkeleton />;
 
   return (
     <div className="space-y-4">

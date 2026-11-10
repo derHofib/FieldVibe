@@ -9,6 +9,7 @@ import { AnsichtUmschalter, FilterChip, SeitenKopf } from "../OfficeUi";
 import { VorgaengeKanban } from "./VorgaengeKanban";
 import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
+import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = "liste" | "kanban" | "raster";
 
@@ -110,7 +111,7 @@ export function OfficeVorgaengePage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <SkeletonList count={4} />
       ) : vorgaenge.length === 0 ? (
         <EmptyState icon={Inbox} text="Keine Vorgänge gefunden." />
       ) : ansicht === "liste" ? (

@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import type { MailAccount, MailAttachment } from "../../types";
 import { ComposePanel, type ComposeModus } from "./ComposePanel";
+import { SkeletonList } from "../../components/Skeleton";
 
 function relativesDatum(iso: string | null): string {
   if (!iso) return "";
@@ -156,7 +157,7 @@ export function MailClient({ account }: { account: MailAccount }) {
         </div>
         <div className="flex-1 overflow-y-auto">
           {nachrichtenLaden ? (
-            <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+            <SkeletonList count={4} />
           ) : nachrichten.length === 0 ? (
             <EmptyState icon={Inbox} text="Keine Nachrichten." />
           ) : (

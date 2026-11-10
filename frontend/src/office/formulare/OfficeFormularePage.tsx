@@ -7,6 +7,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { IconBadge } from "../../components/IconBadge";
 import { LEISTUNGSTYP_LABEL } from "../../config/vorgangDarstellung";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { SkeletonList } from "../../components/Skeleton";
 
 /** Uebersicht aller Formular-Vorlagen als Raster. Am Schreibtisch will man
  * sehen, welche Vorlagen es gibt und wo sie greifen -- die Handy-App zeigt
@@ -31,7 +32,7 @@ export function OfficeFormularePage() {
       </SeitenKopf>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !formulare || formulare.length === 0 ? (
         <EmptyState icon={FileText} text="Noch keine Formulare angelegt." />
       ) : (

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { plattformIntegrationenApi } from "../api/endpoints";
 import type { PlattformIntegration } from "../types";
 import { useBestaetigung } from "../components/ConfirmDialog";
+import { DetailSkeleton } from "../components/Skeleton";
 
 function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   const bestaetigen = useBestaetigung();
@@ -141,7 +142,7 @@ export function EinstellungenPage() {
     },
   });
 
-  if (isLoading) return <p className="text-center text-slate-500">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
 

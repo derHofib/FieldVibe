@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { kundenportalApi } from "../../api/endpoints";
 import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotStatus } from "../../types";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<AngebotStatus, string> = {
   entwurf: "Entwurf",
@@ -37,7 +38,7 @@ export function PortalAngebotDetailPage() {
     onSuccess: openPdfBlob,
   });
 
-  if (!angebot) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!angebot) return <DetailSkeleton />;
 
   return (
     <div className="space-y-4">

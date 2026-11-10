@@ -22,6 +22,7 @@ import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsLis
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { SkeletonList } from "../../components/Skeleton";
 
 const BACKLOG_FILTER = { unbisponiert: "true", sort: "faelligkeit_am" };
 
@@ -246,7 +247,7 @@ export function OfficeDispoPage() {
             </span>
           </div>
           {backlogLaedt ? (
-            <p className="py-6 text-center text-xs text-slate-400 dark:text-stone-500">Lädt…</p>
+            <SkeletonList count={4} />
           ) : backlog.length === 0 ? (
             <EmptyState icon={Inbox} text="Alles disponiert." />
           ) : (

@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
@@ -308,7 +309,7 @@ export function StandortDetailPage() {
     },
   });
 
-  if (isLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading || !profil) return <DetailSkeleton />;
 
   return (
     <div className="space-y-4">

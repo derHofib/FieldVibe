@@ -7,6 +7,7 @@ import { useBestaetigung } from "../components/ConfirmDialog";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantModul, MandantStatus } from "../types";
+import { DetailSkeleton } from "../components/Skeleton";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -117,7 +118,7 @@ export function MandantDetailPage() {
     moduleMutation.mutate(naechste);
   }
 
-  if (isLoading) return <p className="text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
   if (!mandant) return <p className="text-slate-500 dark:text-stone-400">Mandant nicht gefunden.</p>;
 
   return (

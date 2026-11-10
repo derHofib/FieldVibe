@@ -8,6 +8,7 @@ import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -268,7 +269,7 @@ export function EingangsrechnungDetailPage() {
     },
   });
 
-  if (!eingangsrechnung) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!eingangsrechnung) return <DetailSkeleton />;
 
   if (eingangsrechnung.status === "entwurf") {
     return <EntwurfBestaetigenView eingangsrechnung={eingangsrechnung} />;

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { dauerauftraegeApi, kundenApi } from "../../api/endpoints";
+import { SkeletonList } from "../../components/Skeleton";
 
 export function DauerauftraegePage() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export function DauerauftraegePage() {
       </p>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !dauerauftraege || dauerauftraege.length === 0 ? (
         <p className="text-sm text-slate-400 dark:text-stone-500">Noch keine Dauer-Aufträge angelegt.</p>
       ) : (

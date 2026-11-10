@@ -7,6 +7,7 @@ import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
@@ -604,7 +605,7 @@ export function IntegrationenPage() {
 
   if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
     return <Navigate to="/feed" replace />;
-  if (isLoading) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
   const imap = integrationen?.find((i) => i.typ === "imap");

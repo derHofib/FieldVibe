@@ -9,6 +9,7 @@ import { downloadBlob } from "../../utils/download";
 import { openPdfBlob } from "../../utils/pdf";
 import type { BestellungStatus } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -60,7 +61,7 @@ export function BestellungDetailPage() {
     onSuccess: openPdfBlob,
   });
 
-  if (!bestellung) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!bestellung) return <DetailSkeleton />;
 
   const lieferant = lieferanten?.find((l) => l.id === bestellung.lieferant_id);
   const gesamtRichtwert = bestellung.positionen.reduce(

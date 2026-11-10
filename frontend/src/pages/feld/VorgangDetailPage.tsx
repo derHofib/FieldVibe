@@ -45,6 +45,7 @@ import type {
 } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { useToast } from "../../components/Toast";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -758,7 +759,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     },
   });
 
-  if (!vorgang) return <p className="text-center text-slate-500">Lädt…</p>;
+  if (!vorgang) return <DetailSkeleton />;
 
   // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
   // des zugeordneten Standorts bzw. ersatzweise der Anlage, damit die Karte

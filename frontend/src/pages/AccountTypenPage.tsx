@@ -6,6 +6,7 @@ import { accountTypenApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { AccountTyp, RechteAktion, RechteBereich } from "../types";
 import { useBestaetigung } from "../components/ConfirmDialog";
+import { SkeletonList } from "../components/Skeleton";
 
 const BEREICHE: RechteBereich[] = [
   "vorgaenge",
@@ -58,7 +59,7 @@ function RechteMatrixEditor({ accountTypId }: { accountTypId: string }) {
     return rechte?.find((e) => e.bereich === bereich && e.aktion === aktion)?.erlaubt ?? false;
   }
 
-  if (isLoading) return <p className="p-4 text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading) return <SkeletonList count={4} />;
 
   return (
     <div className="overflow-x-auto border-t border-slate-100 dark:border-stone-800">
@@ -229,7 +230,7 @@ export function AccountTypenPage() {
       <section className="space-y-3">
         {deleteError && <p className="text-sm text-red-700 dark:text-red-400">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+          <SkeletonList count={4} />
         ) : typen && typen.length > 0 ? (
           typen.map((typ) => (
             <div

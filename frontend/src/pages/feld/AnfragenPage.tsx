@@ -6,6 +6,7 @@ import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../a
 import { ApiError } from "../../api/client";
 import { useAuth } from "../../context/AuthContext";
 import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
+import { SkeletonList } from "../../components/Skeleton";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
   installation: "Installation",
@@ -212,7 +213,7 @@ export function AnfragenPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !anfragen || anfragen.length === 0 ? (
         <p className="text-center text-sm text-slate-400 dark:text-stone-500">Keine Anfragen vorhanden.</p>
       ) : (

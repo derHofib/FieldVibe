@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { kundenportalApi } from "../../api/endpoints";
 import type { VorgangEvent, VorgangStatus } from "../../types";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",
@@ -60,7 +61,7 @@ export function PortalVorgangDetailPage() {
     enabled: !!id,
   });
 
-  if (!vorgang) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!vorgang) return <DetailSkeleton />;
 
   const eventsChronological = [...(events ?? [])].reverse();
 

@@ -6,6 +6,7 @@ import { mandantenApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantStatus } from "../types";
+import { SkeletonList } from "../components/Skeleton";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -103,7 +104,7 @@ export function MandantenPage() {
       <section>
         <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-stone-100">Mandanten</h2>
         {isLoading ? (
-          <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+          <SkeletonList count={4} />
         ) : (
           <table className="w-full overflow-hidden rounded-lg bg-white text-left shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
             <thead className="bg-slate-50 text-sm text-slate-600 dark:bg-stone-800/60 dark:text-stone-400">

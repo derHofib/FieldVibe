@@ -28,6 +28,7 @@ import type {
   User,
 } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const ESKALATIONSSTUFE_LABEL: Record<Eskalationsstufe, string> = {
   1: "Stufe 1 – Erstkontakt",
@@ -1163,7 +1164,7 @@ export function KundeProfilePage() {
   });
 
   if (!kundenverwaltungAktiv) {
-    if (kundeLoading || !kunde) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+    if (kundeLoading || !kunde) return <DetailSkeleton />;
     return (
       <div className="space-y-4">
         <button onClick={() => navigate(-1)} className="text-sm text-slate-500 dark:text-stone-400">
@@ -1178,7 +1179,7 @@ export function KundeProfilePage() {
     );
   }
 
-  if (profilLoading || !profil) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (profilLoading || !profil) return <DetailSkeleton />;
 
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
 

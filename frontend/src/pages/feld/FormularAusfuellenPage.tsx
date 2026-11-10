@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { QrScanner } from "../../components/QrScanner";
 import type { Formularfeld } from "../../types";
 import { openPdfBlob } from "../../utils/pdf";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 interface FotoAntwort {
   key: string;
@@ -489,7 +490,7 @@ export function FormularAusfuellenPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Vorschau konnte nicht erzeugt werden"),
   });
 
-  if (isLoading) return <p className="text-center text-sm text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
   if (!vf) return <EmptyState icon={FileText} text="Formular nicht gefunden." />;
 
   const readOnly = vf.status === "abgeschlossen";

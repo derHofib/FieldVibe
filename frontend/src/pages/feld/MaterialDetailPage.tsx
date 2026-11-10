@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 export function MaterialDetailPage() {
   const uid = useId();
@@ -99,7 +100,7 @@ export function MaterialDetailPage() {
     },
   });
 
-  if (!material) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!material) return <DetailSkeleton />;
 
   const zugewieseneTags = (material.tag_ids ?? [])
     .map((tagId) => alleTags?.find((t) => t.id === tagId))

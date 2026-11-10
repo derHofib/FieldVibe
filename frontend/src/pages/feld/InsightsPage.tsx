@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { VorgangStatus } from "../../types";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",
@@ -55,7 +56,7 @@ export function InsightsPage() {
 
   if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
     return <Navigate to="/feed" replace />;
-  if (isLoading || !insights) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (isLoading || !insights) return <DetailSkeleton />;
 
   const gesamtVorgaenge = Object.values(insights.vorgaenge_nach_status).reduce((a, b) => a + b, 0);
 

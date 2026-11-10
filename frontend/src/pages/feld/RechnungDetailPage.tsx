@@ -12,6 +12,7 @@ import { heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import type { RechnungZahlungsart } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const ZAHLUNGSART_OPTIONEN: { value: RechnungZahlungsart; label: string }[] = [
   { value: "ueberweisung", label: "Überweisung" },
@@ -131,7 +132,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     },
   });
 
-  if (!rechnung) return <p className="text-center text-slate-500 dark:text-stone-400">Lädt…</p>;
+  if (!rechnung) return <DetailSkeleton />;
 
   return (
     <div className="space-y-4">

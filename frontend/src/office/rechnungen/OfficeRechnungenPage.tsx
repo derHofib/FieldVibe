@@ -9,6 +9,7 @@ import { AngebotDetailPage } from "../../pages/feld/AngebotDetailPage";
 import { RechnungDetailPage } from "../../pages/feld/RechnungDetailPage";
 import type { AngebotStatus, RechnungStatus } from "../../types";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
+import { SkeletonList } from "../../components/Skeleton";
 
 type Bereich = "rechnungen" | "angebote";
 
@@ -129,7 +130,7 @@ export function OfficeRechnungenPage() {
       )}
 
       {laedt ? (
-        <p className="py-10 text-center text-sm text-slate-400 dark:text-stone-500">Lädt…</p>
+        <SkeletonList count={4} />
       ) : eintraege.length === 0 ? (
         <EmptyState
           icon={bereich === "rechnungen" ? Receipt : FileCheck2}

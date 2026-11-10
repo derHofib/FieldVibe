@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { SkeletonList } from "../../components/Skeleton";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
@@ -132,7 +133,7 @@ export function PapierkorbPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-slate-500 dark:text-stone-400">Lädt…</p>
+        <SkeletonList count={4} />
       ) : !eintraege || eintraege.length === 0 ? (
         <p className="rounded-lg bg-white p-4 text-sm text-slate-500 shadow-xs dark:bg-stone-900 dark:text-stone-400">
           Der Papierkorb ist leer.

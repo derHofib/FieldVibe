@@ -20,10 +20,24 @@ export function SkeletonCard({ className = "" }: { className?: string }) {
 
 export function SkeletonList({ count = 3, className = "" }: { count?: number; className?: string }) {
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div role="status" aria-busy="true" className={`space-y-2 ${className}`}>
+      <span className="sr-only">Lädt…</span>
       {Array.from({ length: count }, (_, i) => (
         <SkeletonCard key={i} />
       ))}
+    </div>
+  );
+}
+
+/** Platzhalter für Detailseiten: Kopf + zwei Karten. Ansage für Screenreader über role=status. */
+export function DetailSkeleton({ className = "" }: { className?: string }) {
+  return (
+    <div role="status" aria-busy="true" className={`space-y-3 ${className}`}>
+      <span className="sr-only">Lädt…</span>
+      <Skeleton className="h-6 w-1/2" />
+      <Skeleton className="h-4 w-1/3" />
+      <SkeletonCard className="h-24" />
+      <SkeletonCard className="h-32" />
     </div>
   );
 }
