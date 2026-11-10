@@ -199,13 +199,16 @@ export function NewVorgangPage() {
     }
   }
 
+  const [feldFehler, setFeldFehler] = useState<{ kunde?: string; titel?: string }>({});
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!kundeId) {
-      setError("Bitte einen Kunden auswählen");
-      return;
-    }
+    const neu: { kunde?: string; titel?: string } = {};
+    if (!kundeId) neu.kunde = "Bitte einen Kunden auswählen.";
+    if (!titel.trim()) neu.titel = "Bitte einen Titel eingeben.";
+    setFeldFehler(neu);
+    if (neu.kunde || neu.titel) return;
     createMutation.mutate();
   }
 
@@ -254,11 +257,17 @@ export function NewVorgangPage() {
 
       <form
         onSubmit={handleSubmit}
+        noValidate
         className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800"
       >
         <div>
-          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Kunde</label>
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            Kunde <span aria-hidden="true" className="text-red-700 dark:text-red-400">*</span>
+          </label>
           <select id={`${uid}-0`}
+            required
+            aria-invalid={!!feldFehler.kunde}
+            aria-describedby={feldFehler.kunde ? `${uid}-kunde-fehler` : undefined}
             value={kundeId}
             onChange={(e) => {
               setKundeId(e.target.value);
@@ -274,6 +283,11 @@ export function NewVorgangPage() {
               </option>
             ))}
           </select>
+          {feldFehler.kunde && (
+            <p id={`${uid}-kunde-fehler`} role="alert" className="mt-1 text-xs text-red-700 dark:text-red-400">
+              {feldFehler.kunde}
+            </p>
+          )}
           {!showNewKunde && (
             <button
               type="button"
@@ -459,13 +473,22 @@ export function NewVorgangPage() {
         )}
 
         <div>
-          <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">Titel</label>
+          <label htmlFor={`${uid}-7`} className="mb-1 block text-sm font-medium text-slate-700 dark:text-stone-300">
+            Titel <span aria-hidden="true" className="text-red-700 dark:text-red-400">*</span>
+          </label>
           <input id={`${uid}-7`}
             required
+            aria-invalid={!!feldFehler.titel}
+            aria-describedby={feldFehler.titel ? `${uid}-titel-fehler` : undefined}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
             className="btn-touch w-full rounded-md border border-slate-300 px-3 py-2 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
           />
+          {feldFehler.titel && (
+            <p id={`${uid}-titel-fehler`} role="alert" className="mt-1 text-xs text-red-700 dark:text-red-400">
+              {feldFehler.titel}
+            </p>
+          )}
         </div>
 
         <div>
