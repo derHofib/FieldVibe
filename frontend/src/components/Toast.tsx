@@ -1,5 +1,5 @@
 import { CheckCircle2, Info, X, XCircle } from "lucide-react";
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { ApiError } from "../api/client";
 
@@ -35,6 +35,21 @@ export function fehlerText(err: unknown, fallback: string): string {
   return err instanceof ApiError && err.message ? err.message : fallback;
 }
 
+// Der QueryClient entsteht vor dem React-Baum (main.tsx); sein MutationCache
+// erreicht die Toasts deshalb über diese Brücke statt über einen Hook.
+let globaleToasts: ToastApi | null = null;
+
+/** Zentrale Rückmeldung für Mutationen: `meta.erfolg` zeigt einen Erfolgs-Toast, ein Fehler ohne eigenes onError einen Fehler-Toast (`meta.stumm` unterdrückt beides). */
+export const mutationToasts = {
+  erfolg(meta: Record<string, unknown> | undefined) {
+    if (typeof meta?.erfolg === "string" && !meta.stumm) globaleToasts?.erfolg(meta.erfolg);
+  },
+  fehler(err: unknown, hatEigenesOnError: boolean, meta: Record<string, unknown> | undefined) {
+    if (hatEigenesOnError || meta?.stumm) return;
+    globaleToasts?.fehler(fehlerText(err, "Aktion fehlgeschlagen. Bitte erneut versuchen."));
+  },
+};
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastEintrag[]>([]);
   const naechsteId = useRef(1);
@@ -60,6 +75,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }),
     [zeige],
   );
+
+  useEffect(() => {
+    globaleToasts = api;
+    return () => {
+      globaleToasts = null;
+    };
+  }, [api]);
 
   return (
     <ToastContext.Provider value={api}>

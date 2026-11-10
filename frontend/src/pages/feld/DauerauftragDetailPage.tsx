@@ -52,6 +52,7 @@ export function DauerauftragDetailPage() {
   });
 
   const intervallMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (intervall: number) => dauerauftraegeApi.update(id!, { intervall_tage: intervall }),
     onSuccess: () => {
       setEditIntervall(null);
@@ -60,6 +61,7 @@ export function DauerauftragDetailPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => dauerauftraegeApi.delete(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dauerauftraege"] });
@@ -68,6 +70,7 @@ export function DauerauftragDetailPage() {
   });
 
   const setAnlagenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       dauerauftraegeApi.setAnlagen(id!, {
         anlage_ids: ausgewaehlteAnlageIds,

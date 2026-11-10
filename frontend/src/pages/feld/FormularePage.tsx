@@ -21,6 +21,7 @@ export function FormularePage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => formulareApi.create({ name: name.trim(), beschreibung: beschreibung.trim() || undefined }),
     onSuccess: (formular) => {
       queryClient.invalidateQueries({ queryKey: ["formulare"] });

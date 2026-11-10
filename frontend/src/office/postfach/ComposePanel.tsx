@@ -36,6 +36,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const senden = useMutation({
+    meta: { erfolg: "Gesendet" },
     mutationFn: async () => {
       const anListe = parseAdressen(an);
       if (modus.art === "neu") {

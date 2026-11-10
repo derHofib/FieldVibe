@@ -47,12 +47,14 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["vorgang-anfragen"] });
 
   const annehmenMutation = useMutation({
+    meta: { erfolg: "Angenommen" },
     mutationFn: () => vorgangAnfragenApi.annehmen(anfrage.id, { abrechnungsart }),
     onSuccess: invalidate,
     onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler beim Annehmen"),
   });
 
   const ablehnenMutation = useMutation({
+    meta: { erfolg: "Abgelehnt" },
     mutationFn: () => vorgangAnfragenApi.ablehnen(anfrage.id, ablehnungsgrund || undefined),
     onSuccess: invalidate,
     onError: (err) => setError(err instanceof ApiError ? err.message : "Fehler beim Ablehnen"),

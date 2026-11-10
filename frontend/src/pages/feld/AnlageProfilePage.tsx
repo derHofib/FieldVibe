@@ -62,6 +62,7 @@ function AdresseBearbeiten({
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       anlagenApi.update(anlageId, {
         adresse: { strasse: form.strasse || undefined, plz: form.plz || undefined, ort: form.ort || undefined },
@@ -163,6 +164,7 @@ function DetailsBearbeiten({ profil, kannVerwalten }: { profil: AnlageProfil; ka
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       anlagenApi.update(profil.id, {
         hersteller: form.hersteller || null,
@@ -372,6 +374,7 @@ export function AnlageProfilePage() {
   const inventurzyklus = inventurzyklen?.[0];
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: pruefzyklenApi.create,
     onSuccess: () => {
       setShowForm(false);
@@ -391,6 +394,7 @@ export function AnlageProfilePage() {
   });
 
   const inventurAnlegenMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       inventurzyklenApi.create({ lager_id: id!, intervall_tage: Number(inventurIntervallTage) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
@@ -410,11 +414,13 @@ export function AnlageProfilePage() {
   });
 
   const deletePruefzyklusMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (pruefzyklusId: string) => pruefzyklenApi.remove(pruefzyklusId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefzyklen", id] }),
   });
 
   const deleteInventurzyklusMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => inventurzyklenApi.remove(inventurzyklus!.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventurzyklen", id] }),
   });
@@ -423,6 +429,7 @@ export function AnlageProfilePage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => anlagenApi.remove(id!),
     onSuccess: () => navigate(profil?.kunde ? `/kunden/${profil.kunde.id}` : "/geschaeft"),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),

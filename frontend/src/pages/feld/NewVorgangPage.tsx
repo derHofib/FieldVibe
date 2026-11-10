@@ -92,6 +92,7 @@ export function NewVorgangPage() {
   }, [standortAnlagen]);
 
   const createAnlageMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       anlagenApi.create({
         kunde_id: kundeId,
@@ -121,6 +122,7 @@ export function NewVorgangPage() {
   }
 
   const createKundeMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       kundenApi.create({ name: newKundeName, typ: newKundeTyp || undefined }),
     onSuccess: (kunde) => {
@@ -147,6 +149,7 @@ export function NewVorgangPage() {
   }
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: async () => {
       const payload = {
         kunde_id: kundeId,

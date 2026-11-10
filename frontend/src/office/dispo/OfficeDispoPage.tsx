@@ -126,6 +126,7 @@ export function OfficeDispoPage() {
   const backlog: FeedCard[] = backlogData?.pages.flatMap((p) => p.items) ?? [];
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: termineApi.create,
     onSuccess: (result) => {
       setWarnungen(result.warnungen);
@@ -136,6 +137,7 @@ export function OfficeDispoPage() {
   });
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof termineApi.update>[1] }) =>
       termineApi.update(id, body),
     onSuccess: (result) => {
@@ -145,6 +147,7 @@ export function OfficeDispoPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: termineApi.remove,
     onSuccess: () => {
       setBearbeitenId(null);

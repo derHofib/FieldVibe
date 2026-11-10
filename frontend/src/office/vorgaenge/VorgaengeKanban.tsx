@@ -26,6 +26,7 @@ export function VorgaengeKanban({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   const [fehler, setFehler] = useState<string | null>(null);
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: ({ id, status }: { id: string; status: VorgangStatus }) =>
       vorgaengeApi.update(id, { status }),
     onSuccess: () => {

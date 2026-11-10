@@ -54,6 +54,7 @@ function NeueAnfrage() {
   const anlagenFuerStandort = (anlagen ?? []).filter((a) => !standortId || a.standort_id === standortId);
 
   const neuerStandortMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => kundenportalApi.standortAnlegen({ bezeichnung: neuerStandortName }),
     onSuccess: (standort) => {
       queryClient.invalidateQueries({ queryKey: ["portal-standorte"] });
@@ -64,6 +65,7 @@ function NeueAnfrage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       kundenportalApi.anfrageAnlegen({
         titel,

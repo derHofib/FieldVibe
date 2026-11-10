@@ -25,6 +25,7 @@ export function BestellungDetailPage() {
   const kannLoeschen = currentUser?.role === "loesch_operativ";
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => bestellungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bestellungen"] });
@@ -40,6 +41,7 @@ export function BestellungDetailPage() {
   const { data: lieferanten } = useQuery({ queryKey: ["lieferanten"], queryFn: () => lieferantenApi.list() });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: BestellungStatus) => bestellungenApi.update(id!, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bestellung", id] });

@@ -59,6 +59,7 @@ export function PapierkorbPage() {
   });
 
   const restoreMutation = useMutation({
+    meta: { erfolg: "Wiederhergestellt" },
     mutationFn: (eintrag: PapierkorbEintrag) =>
       papierkorbApi.wiederherstellen(eintrag.entity_typ, eintrag.id),
     onSuccess: () => {
@@ -69,6 +70,7 @@ export function PapierkorbPage() {
   });
 
   const purgeMutation = useMutation({
+    meta: { erfolg: "Endgültig gelöscht" },
     mutationFn: (eintrag: PapierkorbEintrag) =>
       papierkorbApi.endgueltigLoeschen(eintrag.entity_typ, eintrag.id),
     onSuccess: () => {

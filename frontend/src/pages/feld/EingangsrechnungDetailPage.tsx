@@ -45,6 +45,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
   });
 
   const bestaetigenMutation = useMutation({
+    meta: { erfolg: "Bestätigt" },
     mutationFn: () =>
       eingangsrechnungenApi.update(eingangsrechnung.id, {
         lieferant_id: lieferantId || null,
@@ -64,6 +65,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
   });
 
   const verwerfenMutation = useMutation({
+    meta: { erfolg: "Verworfen" },
     mutationFn: () => eingangsrechnungenApi.remove(eingangsrechnung.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
@@ -206,6 +208,7 @@ export function EingangsrechnungDetailPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => eingangsrechnungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
@@ -214,11 +217,13 @@ export function EingangsrechnungDetailPage() {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: string) => eingangsrechnungenApi.update(id!, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", id] }),
   });
 
   const addPositionMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       eingangsrechnungenApi.addPosition(id!, {
         beschreibung: form.beschreibung,
@@ -234,11 +239,13 @@ export function EingangsrechnungDetailPage() {
   });
 
   const belegUploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: (file: File) => eingangsrechnungenApi.belegUpload(id!, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", id] }),
   });
 
   const belegRemoveMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => eingangsrechnungenApi.belegRemove(id!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", id] }),
   });
@@ -251,6 +258,7 @@ export function EingangsrechnungDetailPage() {
   });
 
   const addZahlungMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => eingangsrechnungenApi.addZahlung(id!, { betrag: zahlungBetrag }),
     onSuccess: () => {
       setShowZahlungForm(false);

@@ -83,6 +83,7 @@ function MaterialZeile({
   };
 
   const bestandSetzenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (lagerId: string) => materialApi.bestandSetzen(material.id, lagerId, neueMenge),
     onSuccess: () => {
       setEditingLagerId(null);
@@ -262,6 +263,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   const [objekttyp, setObjekttyp] = useState<AnlagenObjekttyp>("fahrzeug");
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => anlagenApi.create({ bezeichnung, objekttyp }),
     onSuccess: () => {
       setShowForm(false);
@@ -481,6 +483,7 @@ export function GeschaeftPage() {
     });
 
   const bestellungErstellenMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       bestellungenApi.createFromBedarfe(Array.from(ausgewaehlteBedarfe), bestellLieferantId || undefined),
     onSuccess: (bestellung) => {
@@ -492,6 +495,7 @@ export function GeschaeftPage() {
   });
 
   const angebotAusBedarfenMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => angeboteApi.createFromMaterialBedarfe(Array.from(ausgewaehlteBedarfe)),
     onSuccess: (angebot) => {
       setAusgewaehlteBedarfe(new Set());
@@ -501,6 +505,7 @@ export function GeschaeftPage() {
   });
 
   const createLieferantMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => lieferantenApi.create({ name: lieferantName, email: lieferantEmail || undefined }),
     onSuccess: () => {
       setLieferantName("");
@@ -511,6 +516,7 @@ export function GeschaeftPage() {
   });
 
   const deleteLieferantMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => lieferantenApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lieferanten"] }),
   });
@@ -518,6 +524,7 @@ export function GeschaeftPage() {
   const kannLieferantenLoeschen = currentUser?.role === "loesch_operativ";
 
   const createAngebotMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => angeboteApi.create({ kunde_id: kundeId }),
     onSuccess: (angebot) => {
       queryClient.invalidateQueries({ queryKey: ["angebote"] });
@@ -526,6 +533,7 @@ export function GeschaeftPage() {
   });
 
   const createRechnungMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       rechnungenApi.create({
         kunde_id: kundeId,
@@ -539,6 +547,7 @@ export function GeschaeftPage() {
   });
 
   const createKundeMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => {
       const adresse =
         neuerKunde.strasse || neuerKunde.plz || neuerKunde.ort
@@ -562,6 +571,7 @@ export function GeschaeftPage() {
   });
 
   const createMaterialMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       materialApi.create({
         bezeichnung: materialForm.bezeichnung,

@@ -505,6 +505,7 @@ export function FormularRasterEditor({
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["formular", formular.id] });
 
   const seitenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (anzahlSeiten: number) => formulareApi.update(formular.id, { anzahl_seiten: anzahlSeiten }),
     onSuccess: invalidate,
   });
@@ -515,6 +516,7 @@ export function FormularRasterEditor({
   });
 
   const createFeldMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (values: FeldFormValues) =>
       formulareApi.createFeld(formular.id, {
         feld_typ: values.feld_typ,
@@ -532,6 +534,7 @@ export function FormularRasterEditor({
   });
 
   const updateFeldMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ feldId, values }: { feldId: string; values: FeldFormValues }) =>
       formulareApi.updateFeld(formular.id, feldId, {
         feld_typ: values.feld_typ,
@@ -548,6 +551,7 @@ export function FormularRasterEditor({
   });
 
   const deleteFeldMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (feldId: string) => formulareApi.deleteFeld(formular.id, feldId),
     onSuccess: (_daten, feldId) => {
       if (markiertId === feldId) setMarkiertId(null);
@@ -561,6 +565,7 @@ export function FormularRasterEditor({
     );
 
   const positionenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (alleFelder: Formularfeld[]) =>
       formulareApi.updatePositionen(
         formular.id,

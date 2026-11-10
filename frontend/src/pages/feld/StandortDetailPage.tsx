@@ -38,6 +38,7 @@ function AdresseBearbeiten({
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       standorteApi.update(standortId, {
         adresse: { strasse: form.strasse || undefined, plz: form.plz || undefined, ort: form.ort || undefined },
@@ -153,6 +154,7 @@ function AnlagenVerwaltung({
     queryClient.invalidateQueries({ queryKey: ["standort-profil", standortId] });
 
   const neuMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       anlagenApi.create({ kunde_id: kundeId, standort_id: standortId, bezeichnung, anlagentyp: anlagentyp || undefined }),
     onSuccess: () => {
@@ -298,6 +300,7 @@ export function StandortDetailPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => standorteApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["standorte"] });

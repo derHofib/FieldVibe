@@ -31,6 +31,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
   const [error, setError] = useState<string | null>(null);
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: (file: File) => dsgvoApi.upload(typ, file),
     onSuccess: () => {
       setError(null);
@@ -40,6 +41,7 @@ function DokumentKarte({ typ, dokument }: { typ: DsgvoDokumentTyp; dokument?: Ds
   });
 
   const removeMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => dsgvoApi.remove(typ),
     onSuccess: () => {
       setError(null);

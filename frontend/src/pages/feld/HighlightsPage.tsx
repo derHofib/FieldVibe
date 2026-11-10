@@ -18,6 +18,7 @@ export function HighlightsPage() {
   });
 
   const removeMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => highlightsApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["highlights"] }),
   });

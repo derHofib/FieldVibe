@@ -38,6 +38,7 @@ export function MandantenPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: mandantenApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandanten"] });

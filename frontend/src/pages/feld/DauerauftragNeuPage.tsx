@@ -51,6 +51,7 @@ export function DauerauftragNeuPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       dauerauftraegeApi.create({
         kunde_id: kundeId,

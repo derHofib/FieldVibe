@@ -22,15 +22,18 @@ function AuftragstypZuordnungen({ formular }: { formular: Formular }) {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["formular", formular.id] });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (leistungstyp: Leistungstyp) => formulareApi.createZuordnung(formular.id, { leistungstyp }),
     onSuccess: invalidate,
   });
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ zuordnungId, pflicht }: { zuordnungId: string; pflicht: boolean }) =>
       formulareApi.updateZuordnung(formular.id, zuordnungId, pflicht),
     onSuccess: invalidate,
   });
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (zuordnungId: string) => formulareApi.deleteZuordnung(formular.id, zuordnungId),
     onSuccess: invalidate,
   });
@@ -97,6 +100,7 @@ export function FormularDetailPage() {
   });
 
   const updateFormularMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: Partial<{ name: string; beschreibung: string; aktiv: boolean }>) =>
       formulareApi.update(id!, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["formular", id] }),

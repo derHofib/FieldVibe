@@ -53,6 +53,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => angeboteApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["angebote"] });
@@ -72,6 +73,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const addPositionMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       angeboteApi.addPosition(id!, {
         artikelnummer: form.artikelnummer || undefined,
@@ -96,6 +98,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: string) => angeboteApi.updateStatus(id!, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["angebot", id] }),
   });

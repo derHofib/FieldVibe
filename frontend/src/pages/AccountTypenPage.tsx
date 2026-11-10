@@ -116,6 +116,7 @@ export function AccountTypenPage() {
   const [darfSelbstUebernehmen, setDarfSelbstUebernehmen] = useState(false);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: accountTypenApi.create,
     onSuccess: (typ: AccountTyp) => {
       queryClient.invalidateQueries({ queryKey: ["account-typen"] });
@@ -129,6 +130,7 @@ export function AccountTypenPage() {
   });
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ id, ...body }: { id: string; darf_vorgaenge_selbst_uebernehmen: boolean }) =>
       accountTypenApi.update(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["account-typen"] }),
@@ -136,6 +138,7 @@ export function AccountTypenPage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: accountTypenApi.remove,
     onSuccess: () => {
       setDeleteError(null);

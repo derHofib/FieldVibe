@@ -53,6 +53,7 @@ export function VorgaengeRaster({ vorgaenge }: { vorgaenge: FeedCard[] }) {
   }, [vorgaenge, fokus, navigate]);
 
   const statusSetzen = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: async (status: "geplant" | "in_arbeit") => {
       for (const id of ausgewaehlt) {
         await vorgaengeApi.update(id, { status });

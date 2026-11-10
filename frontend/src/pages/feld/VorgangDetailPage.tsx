@@ -44,6 +44,7 @@ import type {
   VorgangStatus,
 } from "../../types";
 import { useBestaetigung } from "../../components/ConfirmDialog";
+import { useToast } from "../../components/Toast";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -240,6 +241,7 @@ function adresseAlsZeile(adresse: Adresse | null | undefined): string {
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
 export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const bestaetigen = useBestaetigung();
+  const toast = useToast();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -363,6 +365,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     },
   });
   const anlageEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (anlageId: string) => vorgaengeApi.anlageEntfernen(id!, anlageId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] }),
   });
@@ -389,6 +392,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     onError: (err) => setZuordnungError(err instanceof ApiError ? err.message : "Fehler"),
   });
   const adresseMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       vorgaengeApi.update(id!, {
         adresse:
@@ -477,6 +481,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const mangelStatusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: ({ mangelId, status }: { mangelId: string; status: MangelStatus }) =>
       maengelApi.update(mangelId, { status }),
     onSuccess: () => {
@@ -486,11 +491,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const deleteMangelMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (mangelId: string) => maengelApi.remove(mangelId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] }),
   });
 
   const deleteTerminMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (terminId: string) => termineApi.remove(terminId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] }),
   });
@@ -498,11 +505,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
 
   const angebotAusMaengelnMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
   });
 
   const angebotAusVorgangMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => angeboteApi.createFromVorgang(id!),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
   });
@@ -516,7 +525,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
     mutationFn: (eventId: number) => highlightsApi.create(eventId),
     onError: (err) => {
       if (err instanceof ApiError && err.status === 409) {
-        window.alert("Dieses Foto ist bereits als Highlight markiert.");
+        toast.info("Dieses Foto ist bereits als Highlight markiert.");
       }
     },
   });
@@ -605,11 +614,13 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const bedarfEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (bedarfId: string) => materialBedarfeApi.remove(bedarfId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
   });
 
   const deleteVorgangMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => vorgaengeApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
@@ -618,6 +629,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: async ({
       status,
       wiedervorlageTage,
@@ -644,6 +656,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const folgeAuftragMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (leistungstyp: Leistungstyp) => vorgaengeApi.folgeAuftrag(id!, leistungstyp),
     onSuccess: (result) => {
       setFolgeVorgangId(result.id);
@@ -653,6 +666,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const uebernehmenMutation = useMutation({
+    meta: { erfolg: "Übernommen" },
     mutationFn: () => vorgaengeApi.uebernehmen(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
@@ -661,6 +675,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const prioritaetMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (prioritaet: number) => vorgaengeApi.update(id!, { prioritaet }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
   });

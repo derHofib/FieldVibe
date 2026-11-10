@@ -15,12 +15,14 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   const [secret, setSecret] = useState("");
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean }) =>
       plattformIntegrationenApi.update(integration.id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["plattform-integrationen"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => plattformIntegrationenApi.delete(integration.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["plattform-integrationen"] }),
   });
@@ -121,6 +123,7 @@ export function EinstellungenPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       plattformIntegrationenApi.create({
         typ: "smtp",

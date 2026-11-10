@@ -75,6 +75,7 @@ export function MailKontoFormular({ bestehendesKonto, onFertig, onAbbrechen }: P
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       bearbeiten
         ? mailApi.accounts.update(bestehendesKonto.id, {

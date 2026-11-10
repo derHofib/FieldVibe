@@ -53,6 +53,7 @@ export function FilterVorlagenLeiste({
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["gespeicherte-filter", entitaet] });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       gespeicherteFilterApi.create({ entitaet, name, filter_json: filter, ist_standard: alsStandard }),
     onSuccess: () => {
@@ -66,11 +67,13 @@ export function FilterVorlagenLeiste({
   });
 
   const standardMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (v: GespeicherterFilter) => gespeicherteFilterApi.update(v.id, { ist_standard: !v.ist_standard }),
     onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => gespeicherteFilterApi.remove(id),
     onSuccess: invalidate,
   });

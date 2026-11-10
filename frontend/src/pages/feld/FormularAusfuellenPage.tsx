@@ -441,11 +441,13 @@ export function FormularAusfuellenPage() {
   }, [vf]);
 
   const saveMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => vorgangFormulareApi.updateAntworten(id!, antworten),
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Speichern fehlgeschlagen"),
   });
 
   const abschliessenMutation = useMutation({
+    meta: { erfolg: "Abgeschlossen" },
     mutationFn: async () => {
       await vorgangFormulareApi.updateAntworten(id!, antworten);
       return vorgangFormulareApi.abschliessen(id!);
@@ -459,6 +461,7 @@ export function FormularAusfuellenPage() {
   });
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: ({ feldId, file, filename }: { feldId: string; file: Blob; filename: string }) =>
       vorgangFormulareApi.uploadDatei(id!, feldId, file, filename),
     onSuccess: (result) =>

@@ -34,6 +34,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.firmendatenSpeichern({
         adresse: { strasse, plz, ort, land },
@@ -54,6 +55,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const logoUploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: (file: File) => mandantEinstellungenApi.logoUpload(file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] });
@@ -62,6 +64,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const logoRemoveMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => mandantEinstellungenApi.logoRemove(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] });
@@ -220,6 +223,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   const [mahnung3, setMahnung3] = useState(fd.mahnung_3_automatisch ?? false);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.firmendatenSpeichern({
         mahnung_1_automatisch: mahnung1,
@@ -273,6 +277,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
   const [tage, setTage] = useState(einstellungen.wiedervorlage_standard_tage?.toString() ?? "");
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.update({
         wiedervorlage_standard_tage: tage === "" ? null : Number(tage),
@@ -324,12 +329,14 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   const [secret, setSecret] = useState("");
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean }) =>
       integrationenApi.update(integration.id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => integrationenApi.delete(integration.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
@@ -427,12 +434,14 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
   const [secret, setSecret] = useState("");
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean }) =>
       integrationenApi.update(integration.id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => integrationenApi.delete(integration.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
@@ -556,6 +565,7 @@ export function IntegrationenPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       integrationenApi.create({
         typ: "smtp",
@@ -574,6 +584,7 @@ export function IntegrationenPage() {
   });
 
   const createImapMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       integrationenApi.create({
         typ: "imap",

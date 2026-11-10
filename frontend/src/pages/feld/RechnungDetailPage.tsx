@@ -40,6 +40,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   const [zahlungsart, setZahlungsart] = useState<RechnungZahlungsart | "">("");
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => rechnungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
@@ -64,11 +65,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: string) => rechnungenApi.updateStatus(id!, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
   });
 
   const stornoMutation = useMutation({
+    meta: { erfolg: "Storniert" },
     mutationFn: () => rechnungenApi.storno(id!),
     onSuccess: (storno) => {
       queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
@@ -77,6 +80,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const addPositionMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       rechnungenApi.addPosition(id!, {
         beschreibung: form.beschreibung,
@@ -102,6 +106,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const addZahlungMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       rechnungenApi.addZahlung(id!, {
         betrag: zahlungBetrag,
@@ -118,6 +123,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const stornoZahlungMutation = useMutation({
+    meta: { erfolg: "Storniert" },
     mutationFn: (zahlungId: string) => rechnungenApi.stornoZahlung(id!, zahlungId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rechnung", id] });

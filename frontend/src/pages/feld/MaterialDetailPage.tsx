@@ -15,6 +15,7 @@ export function MaterialDetailPage() {
   const kannLoeschen = hatRecht("material", "loeschen");
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => materialApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material"] });
@@ -56,6 +57,7 @@ export function MaterialDetailPage() {
   }, [material]);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       materialApi.update(id!, {
         bezeichnung: form.bezeichnung,
@@ -88,6 +90,7 @@ export function MaterialDetailPage() {
   });
 
   const tagEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (tagId: string) => tagsApi.unassign(tagId, "material", id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material-detail", id] });

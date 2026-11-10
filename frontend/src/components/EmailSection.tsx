@@ -37,6 +37,7 @@ export function EmailSection({
   const { data: emails } = useQuery({ queryKey, queryFn: listEmails });
 
   const sendMutation = useMutation({
+    meta: { erfolg: "Gesendet" },
     mutationFn: () =>
       sendEmail({
         empfaenger,

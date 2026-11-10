@@ -83,6 +83,7 @@ export function UsersPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: usersApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -94,6 +95,7 @@ export function UsersPage() {
   });
 
   const einladenMutation = useMutation({
+    meta: { erfolg: "Einladung gesendet" },
     mutationFn: usersApi.einladen,
     onSuccess: (einladung) => {
       queryClient.invalidateQueries({ queryKey: ["users", "einladungen"] });
@@ -104,6 +106,7 @@ export function UsersPage() {
   });
 
   const resendMutation = useMutation({
+    meta: { erfolg: "Einladung erneut gesendet" },
     mutationFn: usersApi.einladungErneutSenden,
     onSuccess: (einladung) => {
       queryClient.invalidateQueries({ queryKey: ["users", "einladungen"] });
@@ -112,6 +115,7 @@ export function UsersPage() {
   });
 
   const revokeMutation = useMutation({
+    meta: { erfolg: "Einladung widerrufen" },
     mutationFn: usersApi.einladungWiderrufen,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users", "einladungen"] }),
   });
@@ -124,6 +128,7 @@ export function UsersPage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: usersApi.remove,
     onSuccess: () => {
       setDeleteError(null);

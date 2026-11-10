@@ -46,6 +46,7 @@ export function AnlagenFelderPage() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["anlagen-feld-definitionen"] });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       anlagenFeldDefinitionenApi.create({
         anlagentyp: anlagentyp.trim(),
@@ -62,6 +63,7 @@ export function AnlagenFelderPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => anlagenFeldDefinitionenApi.remove(id),
     onSuccess: invalidate,
   });

@@ -91,6 +91,7 @@ export function DispoBoardPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: termineApi.create,
     onSuccess: (result) => {
       setWarnungen(result.warnungen);
@@ -101,6 +102,7 @@ export function DispoBoardPage() {
   });
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof termineApi.update>[1] }) =>
       termineApi.update(id, body),
     onSuccess: (result) => {

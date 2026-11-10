@@ -69,6 +69,7 @@ export function MandantDetailPage() {
   }, [mandant?.id]);
 
   const stammdatenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => mandantenApi.update(id!, { name, branche: branche || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandanten"] });
@@ -80,11 +81,13 @@ export function MandantDetailPage() {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: MandantStatus) => mandantenApi.update(id!, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandanten"] }),
   });
 
   const moduleMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (deaktivierteModule: MandantModul[]) =>
       mandantenApi.update(id!, { deaktivierte_module: deaktivierteModule }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandanten"] }),

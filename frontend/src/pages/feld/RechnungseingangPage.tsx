@@ -61,6 +61,7 @@ export function RechnungseingangPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       eingangsrechnungenApi.create({
         lieferant_id: form.lieferantId || null,

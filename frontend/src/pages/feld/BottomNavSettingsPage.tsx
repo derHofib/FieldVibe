@@ -37,6 +37,7 @@ export function BottomNavSettingsPage() {
   const belegteKeys = new Set([...linksKeys, ...rotundeKeys]);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (praeferenz: BottomNavPraeferenz) => usersApi.updateOwnBottomNav(praeferenz),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["me"] });

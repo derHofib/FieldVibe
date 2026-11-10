@@ -54,6 +54,7 @@ export function PruefmittelPage() {
   const zuweisbareNutzer = (users ?? []).filter((u) => u.aktiv);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: pruefmittelApi.create,
     onSuccess: () => {
       setShowForm(false);
@@ -63,12 +64,14 @@ export function PruefmittelPage() {
   });
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof pruefmittelApi.update>[1] }) =>
       pruefmittelApi.update(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => pruefmittelApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
   });
