@@ -16,6 +16,7 @@ import {
   tagsApi,
 } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
+import { SeitenPanel } from "../../components/SeitenPanel";
 import { SkeletonList } from "../../components/Skeleton";
 import { useAuth } from "../../context/AuthContext";
 import { RECHNUNG_STATUS_LABEL } from "../../utils/buchhaltung";
@@ -648,23 +649,34 @@ export function GeschaeftPage() {
 
       {tab !== "bestellwesen" && (
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => setShowForm(true)}
           className="btn-touch rounded-md bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 dark:bg-stone-800 dark:text-stone-300"
         >
-          {showForm
-            ? "Abbrechen"
-            : tab === "kunden"
-              ? "+ Neuer Kunde"
-              : tab === "angebote"
-                ? "+ Neues Angebot"
-                : tab === "rechnungen"
-                  ? "+ Neue Rechnung"
-                  : "+ Neues Material"}
+          {tab === "kunden"
+            ? "+ Neuer Kunde"
+            : tab === "angebote"
+              ? "+ Neues Angebot"
+              : tab === "rechnungen"
+                ? "+ Neue Rechnung"
+                : "+ Neues Material"}
         </button>
       )}
 
+      <SeitenPanel
+        offen={showForm}
+        onClose={() => setShowForm(false)}
+        titel={
+          tab === "kunden"
+            ? "Neuer Kunde"
+            : tab === "angebote"
+              ? "Neues Angebot"
+              : tab === "rechnungen"
+                ? "Neue Rechnung"
+                : "Neues Material"
+        }
+      >
       {showForm && tab === "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3">
           <div>
             <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Name *</label>
             <input id={`${uid}-0`}
@@ -761,7 +773,7 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab !== "material" && tab !== "kunden" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3">
           <div>
             <label htmlFor={`${uid}-8`} className="mb-1 block text-xs font-medium text-slate-500 dark:text-stone-400">Kunde</label>
             <select id={`${uid}-8`}
@@ -824,7 +836,7 @@ export function GeschaeftPage() {
       )}
 
       {showForm && tab === "material" && (
-        <div className="space-y-3 rounded-lg bg-white p-4 shadow-xs dark:bg-stone-900 dark:shadow-none dark:ring-1 dark:ring-stone-800">
+        <div className="space-y-3">
           <input
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
@@ -918,6 +930,7 @@ export function GeschaeftPage() {
           </button>
         </div>
       )}
+      </SeitenPanel>
 
       {tab === "kunden" && (
         <div className="space-y-2">
