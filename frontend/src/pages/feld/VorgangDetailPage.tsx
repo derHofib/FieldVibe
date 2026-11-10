@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, PenLine, Star, UserCheck } from "lucide-react";
+import { AlertTriangle, Camera, Clock, Eye, EyeOff, FileText, MoreHorizontal, PenLine, Star, Trash2, UserCheck } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -22,12 +22,14 @@ import {
   vorgaengeApi,
   zeiterfassungApi,
 } from "../../api/endpoints";
+import { AktionsMenue } from "../../components/AktionsMenue";
 import { EmailSection } from "../../components/EmailSection";
 import { FormularAbschnitt } from "../../components/FormularAbschnitt";
 import { MentionText } from "../../components/MentionText";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { SignaturePad } from "../../components/SignaturePad";
 import { useAuth } from "../../context/AuthContext";
+import { VorgangStatusAktionen, VORGANG_STATUS_LABEL } from "./vorgang/VorgangStatusAktionen";
 import { cacheEvents, cacheKunde, getCachedEvents, getCachedKunde } from "../../offline/cache";
 import { discardOutboxItem, getOutboxItems, queueFoto, queueKommentar, queueStatusChange } from "../../offline/outbox";
 import { formatSekundenAlsHHMM } from "../../utils/duration";
@@ -65,25 +67,7 @@ const LEISTUNGSTYPEN: { value: Leistungstyp; label: string }[] = [
   { value: "planung", label: "Planung" },
 ];
 
-const STATUS_OPTIONS: VorgangStatus[] = [
-  "neu",
-  "geplant",
-  "in_arbeit",
-  "wartet_kunde",
-  "abgeschlossen",
-  "abgerechnet",
-  "storniert",
-];
-
-const STATUS_LABEL: Record<VorgangStatus, string> = {
-  neu: "Neu",
-  geplant: "Geplant",
-  in_arbeit: "In Arbeit",
-  wartet_kunde: "Wartet auf Kunde",
-  abgeschlossen: "Abgeschlossen",
-  abgerechnet: "Abgerechnet",
-  storniert: "Storniert",
-};
+const STATUS_LABEL = VORGANG_STATUS_LABEL;
 
 // Spiegelt app/services/vorgang_completion_service.py:VORGANG_STATUS_GESCHLOSSEN
 // -- "Ticket übernehmen" ergibt fuer bereits geschlossene Vorgaenge keinen
@@ -782,17 +766,27 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           ← Zurück
         </button>
         {kannLoeschen && (
-          <button
-            onClick={() => {
-              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
-                deleteVorgangMutation.mutate();
-              }
-            }}
-            disabled={deleteVorgangMutation.isPending}
-            className="btn-touch text-sm font-medium text-red-700 disabled:opacity-50 dark:text-red-400"
-          >
-            Vorgang löschen
-          </button>
+          <AktionsMenue
+            label="Weitere Aktionen"
+            eintraege={[
+              {
+                label: "Vorgang löschen",
+                icon: Trash2,
+                destruktiv: true,
+                disabled: deleteVorgangMutation.isPending,
+                onClick: () => {
+                  if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+                    deleteVorgangMutation.mutate();
+                  }
+                },
+              },
+            ]}
+            ausloeser={() => (
+              <span className="btn-touch flex items-center justify-center text-slate-500 dark:text-stone-400">
+                <MoreHorizontal size={20} strokeWidth={2} />
+              </span>
+            )}
+          />
         )}
       </div>
 
@@ -1075,27 +1069,27 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           <p className="mt-2 text-sm text-slate-600 dark:text-stone-300">{vorgang.beschreibung}</p>
         )}
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <label className="text-sm text-slate-500 dark:text-stone-400">Status:</label>
-          <select
-            value={vorgang.status}
-            onChange={(e) => {
-              const status = e.target.value as VorgangStatus;
-              if (status === "wartet_kunde") {
-                setWiedervorlageTage("");
-                setShowWartetKundeDialog(true);
-                return;
-              }
-              statusMutation.mutate({ status });
-            }}
-            className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </option>
-            ))}
-          </select>
+        <VorgangStatusAktionen
+          status={vorgang.status}
+          darfAendern={kannDisponieren}
+          pending={statusMutation.isPending}
+          onWaehle={(status) => {
+            if (status === "wartet_kunde") {
+              setWiedervorlageTage("");
+              setShowWartetKundeDialog(true);
+              return;
+            }
+            statusMutation.mutate({ status });
+          }}
+        />
+
+        {statusMutation.error instanceof ApiError && (
+          <p role="alert" className="mt-1 text-sm text-red-600 dark:text-red-400">
+            {statusMutation.error.message}
+          </p>
+        )}
+
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           {vorgang.dauerauftrag_id ? (
             <span
               title="Wird beim Dauerauftrag automatisch anhand der Fälligkeit berechnet"
@@ -1108,7 +1102,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               Priorität
               <select
                 value={vorgang.prioritaet}
-                disabled={VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) || prioritaetMutation.isPending}
+                disabled={!kannDisponieren || VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) || prioritaetMutation.isPending}
                 onChange={(e) => prioritaetMutation.mutate(Number(e.target.value))}
                 className="btn-touch rounded-md border border-slate-300 px-2 py-1 text-sm dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
               >
@@ -1120,6 +1114,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
               </select>
             </label>
           )}
+          {hatRecht("vorgaenge", "erstellen") && (
           <button
             onClick={() => {
               setFolgeAuftragLeistungstyp("stoerung");
@@ -1129,6 +1124,7 @@ export function VorgangDetailPage({ id: idProp }: { id?: string } = {}) {
           >
             + Folge-Vorgang
           </button>
+          )}
         </div>
 
         {!VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status) && (
