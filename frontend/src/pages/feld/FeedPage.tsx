@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { Bell, CheckCircle2, Clock, Filter, Inbox, Map as MapIcon, MessageCircle, Play, Plus, Repeat, ScanLine, Search, Star, UserPlus, Users, X } from "lucide-react";
 import { Suspense, lazy, useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -37,12 +38,6 @@ const LEISTUNGSTYP_LABEL: Record<string, string> = {
   beratung: "Beratung",
   planung: "Planung",
 };
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
-}
 
 // Ampel-Symbol der Story-Kacheln -- kein Vorgangs-Status, sondern eine
 // eigene Dringlichkeits-Ampel (siehe stories-Endpoint), deshalb ueber die

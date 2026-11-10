@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../utils/format";
 import { CalendarDays, ClipboardCheck, Folder, MoreHorizontal, type LucideIcon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { notificationsApi } from "../api/endpoints";
 import { useAuth } from "../context/AuthContext";
-
-function heuteIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 interface Tab {
   key: string;

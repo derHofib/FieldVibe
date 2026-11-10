@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -44,7 +45,7 @@ export function RechnungseingangPage() {
     lieferantId: "",
     lieferantName: "",
     rechnungsnummerLieferant: "",
-    rechnungsdatum: new Date().toISOString().slice(0, 10),
+    rechnungsdatum: heuteIso(),
     faelligAm: "",
     betragNetto: "",
     kategorie: "",
@@ -85,7 +86,7 @@ export function RechnungseingangPage() {
         lieferantId: "",
         lieferantName: "",
         rechnungsnummerLieferant: "",
-        rechnungsdatum: new Date().toISOString().slice(0, 10),
+        rechnungsdatum: heuteIso(),
         skontoProzent: "",
         skontoTage: "",
         faelligAm: "",

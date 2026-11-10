@@ -5,6 +5,17 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Position } from "../../types/organigramm";
 import { OrganigrammDiagramm } from "./OrganigrammDiagramm";
 
+// Nur die Vermessung und fitView werden ersetzt: jsdom kann keine Knotengroessen messen.
+const flow = vi.hoisted(() => ({ vermessen: false, fitView: vi.fn() }));
+vi.mock("@xyflow/react", async (orig) => {
+  const echt = await orig<typeof import("@xyflow/react")>();
+  return {
+    ...echt,
+    useNodesInitialized: () => flow.vermessen,
+    useReactFlow: () => ({ ...echt.useReactFlow(), fitView: flow.fitView }),
+  };
+});
+
 // React Flow misst Knoten per ResizeObserver; jsdom kennt ihn nicht.
 beforeAll(() => {
   class RO {
@@ -15,7 +26,11 @@ beforeAll(() => {
   vi.stubGlobal("ResizeObserver", RO);
   vi.stubGlobal("DOMMatrixReadOnly", class { m22 = 1; constructor() {} });
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  flow.vermessen = false;
+  flow.fitView.mockClear();
+});
 
 const p = (id: string, parent: string | null, titel: string, extra: Partial<Position> = {}): Position => ({
   id,
@@ -94,5 +109,22 @@ describe("OrganigrammDiagramm", () => {
     const knoten = container.querySelectorAll<HTMLElement>(".react-flow__node");
     expect(knoten.length).toBe(4);
     knoten.forEach((k) => expect(k.style.pointerEvents).toBe("all"));
+  });
+
+  it("passt erst nach der Vermessung der Knoten und nur einmal auf den Inhalt ein", async () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => frames.push(cb));
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    const { rerender } = rendere();
+    frames.splice(0).forEach((cb) => cb(0));
+    expect(flow.fitView).not.toHaveBeenCalled();
+
+    flow.vermessen = true;
+    rerender(<div />);
+    cleanup();
+    rendere();
+    frames.splice(0).forEach((cb) => cb(0));
+    expect(flow.fitView).toHaveBeenCalledTimes(1);
+    expect(flow.fitView).toHaveBeenCalledWith({ padding: 0.2, maxZoom: 1 });
   });
 });
