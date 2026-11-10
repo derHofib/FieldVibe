@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState, type FormEvent } from "react";
+import { type FormEvent, useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, anlagenFeldDefinitionenApi } from "../../api/endpoints";
@@ -13,6 +13,7 @@ const FELD_TYP_LABEL: Record<AnlagenFeldTyp, string> = {
 };
 
 export function AnlagenFelderPage() {
+  const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [anlagentyp, setAnlagentyp] = useState("");
@@ -46,6 +47,7 @@ export function AnlagenFelderPage() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["anlagen-feld-definitionen"] });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       anlagenFeldDefinitionenApi.create({
         anlagentyp: anlagentyp.trim(),
@@ -62,6 +64,7 @@ export function AnlagenFelderPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => anlagenFeldDefinitionenApi.remove(id),
     onSuccess: invalidate,
   });
@@ -95,8 +98,8 @@ export function AnlagenFelderPage() {
         className="space-y-2 card-ap p-4"
       >
         <div>
-          <label className="mb-1 block text-sm font-medium text-label">Anlagentyp</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Anlagentyp</label>
+          <input id={`${uid}-0`}
             list="bekannte-anlagentypen"
             value={anlagentyp}
             onChange={(e) => setAnlagentyp(e.target.value)}

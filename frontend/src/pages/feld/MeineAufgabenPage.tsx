@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { datumZuIso, heuteIso } from "../../utils/format";
 import {
   Building2,
   CheckCircle2,
@@ -18,6 +19,7 @@ import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { ProjektAufgabeDetailPanel } from "../../office/projekte/ProjektAufgabeDetailPanel";
 import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-slate-100 text-label dark:bg-stone-500/15 ",
@@ -31,14 +33,10 @@ const PRIORITAET_LABEL: Record<ProjektAufgabePrioritaet, string> = {
   hoch: "Hoch",
 };
 
-function heuteIso(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function inTagenIso(n: number): string {
   const datum = new Date();
   datum.setDate(datum.getDate() + n);
-  return datum.toISOString().slice(0, 10);
+  return datumZuIso(datum);
 }
 
 type Gruppe = "ueberfaellig" | "heute" | "woche" | "spaeter" | "ohne";
@@ -146,7 +144,7 @@ export function MeineAufgabenPage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !aufgaben ? (
         <FehlerZustand fehler={ladeFehler} was="Die Aufgaben" onErneut={() => void neuLaden()} />
       ) : offen.length === 0 ? (

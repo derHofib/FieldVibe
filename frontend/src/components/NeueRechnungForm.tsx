@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ListChecks } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { kundenApi, rechnungenApi } from "../api/endpoints";
@@ -22,6 +22,7 @@ export function NeueRechnungForm({
   onAbbrechen: () => void;
   onErfolg: (rechnungId: string) => void;
 }) {
+  const uid = useId();
   const [modus, setModus] = useState<Modus>("einzelposten");
   const [kundeId, setKundeId] = useState("");
   const [betragNetto, setBetragNetto] = useState("");
@@ -42,7 +43,7 @@ export function NeueRechnungForm({
   });
 
   return (
-    <div className="space-y-3 card-ap p-4">
+    <div className="space-y-3 p-4">
       <div className="flex rounded-full bg-fill p-1">
         {(["pauschal", "einzelposten"] as const).map((m) => (
           <button
@@ -60,8 +61,8 @@ export function NeueRechnungForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
-        <SearchableSelect
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+        <SearchableSelect id={`${uid}-0`}
           value={kundeId}
           onChange={setKundeId}
           placeholder="Kunde wählen…"
@@ -72,10 +73,10 @@ export function NeueRechnungForm({
       {modus === "pauschal" ? (
         <>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">
               Betrag netto (EUR)
             </label>
-            <input
+            <input id={`${uid}-1`}
               type="number"
               step="0.01"
               min="0"
@@ -85,10 +86,10 @@ export function NeueRechnungForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">
               Leistungsdatum (optional)
             </label>
-            <input
+            <input id={`${uid}-2`}
               type="date"
               value={leistungsdatum}
               onChange={(e) => setLeistungsdatum(e.target.value)}

@@ -11,6 +11,8 @@ import { aktionsSpalten, bereichKennt } from "../office/organigramm/rechteMatrix
 import type { AccountTyp } from "../types";
 import type { RechteRegistry } from "../types/organigramm";
 import { AccountTypVorlageSheet } from "./AccountTypVorlageSheet";
+import { useBestaetigung } from "../components/ConfirmDialog";
+import { SkeletonList } from "../components/Skeleton";
 
 // Hinweise zu Aktionen, die nicht selbsterklaerend sind (Spaltenkopf-Tooltip).
 const AKTION_HINWEIS: Record<string, string> = {
@@ -47,7 +49,7 @@ function RechteMatrixEditor({ accountTypId, registry }: { accountTypId: string; 
     return rechte?.find((e) => e.bereich === bereich && e.aktion === aktion)?.erlaubt ?? false;
   }
 
-  if (isLoading) return <p className="p-4 text-sm text-label2">Lädt…</p>;
+  if (isLoading) return <SkeletonList count={4} />;
 
   return (
     <div className="border-t border-sep">
@@ -118,6 +120,7 @@ function FlagZeile({ checked, onChange, children }: { checked: boolean; onChange
 }
 
 export function AccountTypenPage() {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { hatRecht } = useAuth();
   const { data: typen, isLoading } = useQuery({
@@ -148,6 +151,7 @@ export function AccountTypenPage() {
   const [darfAbwesenheiten, setDarfAbwesenheiten] = useState(false);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: accountTypenApi.create,
     onSuccess: (typ: AccountTyp) => {
       queryClient.invalidateQueries({ queryKey: ["account-typen"] });
@@ -165,6 +169,7 @@ export function AccountTypenPage() {
 
   const [updateError, setUpdateError] = useState<string | null>(null);
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({
       id,
       ...body
@@ -185,6 +190,7 @@ export function AccountTypenPage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: accountTypenApi.remove,
     onSuccess: () => {
       setDeleteError(null);
@@ -281,7 +287,7 @@ export function AccountTypenPage() {
           </p>
         )}
         {isLoading ? (
-          <p className="text-label2">Lädt…</p>
+          <SkeletonList count={4} />
         ) : typen && typen.length > 0 ? (
           typen.map((typ) => {
             const offen = expandedId === typ.id;
@@ -318,8 +324,8 @@ export function AccountTypenPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm(`Account-Typ "${typ.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden.`)) {
+                    onClick={async () => {
+                      if (await bestaetigen({ titel: `Account-Typ "${typ.name}" löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })) {
                         setDeleteError(null);
                         deleteMutation.mutate(typ.id);
                       }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Layers, Plus } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { auftraegeApi, kundenApi, projekteApi } from "../../api/endpoints";
 import { SearchableSelect } from "../../components/SearchableSelect";
@@ -10,12 +10,14 @@ import { Karte, SeitenKopf } from "../OfficeUi";
 import { AuftraegeTabelle } from "./AuftraegeTabelle";
 import { AuftragDetailPanel } from "./AuftragDetailPanel";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 /** Tabellen-Ansicht aller Auftraege (Projekt->Auftrag->Vorgang, siehe
  * app/models/auftrag.py) -- analog zu OfficeVorgaengePage.tsx, aber ohne
  * die dortigen Ansichts-Umschalter (Liste/Kanban/Raster): bei der
  * erwarteten Auftrags-Anzahl reicht eine einzelne Tabelle. */
 export function OfficeAuftraegePage() {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [zeigeNeuerAuftrag, setZeigeNeuerAuftrag] = useState(false);
   const [neuerTitel, setNeuerTitel] = useState("");
@@ -69,8 +71,8 @@ export function OfficeAuftraegePage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-label2">Titel</label>
-              <input
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Titel</label>
+              <input id={`${uid}-0`}
                 autoFocus
                 value={neuerTitel}
                 onChange={(e) => setNeuerTitel(e.target.value)}
@@ -80,8 +82,8 @@ export function OfficeAuftraegePage() {
               />
             </div>
             <div className="min-w-[200px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-label2">Projekt (optional)</label>
-              <SearchableSelect
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Projekt (optional)</label>
+              <SearchableSelect id={`${uid}-1`}
                 value={neuerProjektId}
                 onChange={setNeuerProjektId}
                 placeholder="Kein Projekt"
@@ -89,8 +91,8 @@ export function OfficeAuftraegePage() {
               />
             </div>
             <div className="min-w-[200px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-label2">Kunde (optional)</label>
-              <SearchableSelect
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Kunde (optional)</label>
+              <SearchableSelect id={`${uid}-2`}
                 value={neuerKundeId}
                 onChange={setNeuerKundeId}
                 placeholder="Kein Kunde"
@@ -112,7 +114,7 @@ export function OfficeAuftraegePage() {
       )}
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !auftraege ? (
         <FehlerZustand fehler={ladeFehler} was="Die Aufträge" onErneut={() => void neuLaden()} />
       ) : !auftraege || auftraege.length === 0 ? (

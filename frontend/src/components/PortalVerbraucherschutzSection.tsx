@@ -24,6 +24,7 @@ export function PortalVerbraucherschutzSection({ einstellungen }: { einstellunge
   const hatFehler = Object.keys(fehler).length > 0;
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => mandantEinstellungenApi.firmendatenSpeichern(firmendatenAusFormular(form)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });

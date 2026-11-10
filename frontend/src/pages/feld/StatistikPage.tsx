@@ -31,8 +31,10 @@ function TechnikerBalken({ name, anzahl, max }: { name: string; anzahl: number; 
 }
 
 export function TeamKennzahlen() {
+  const { hatRecht } = useAuth();
+  const darfProjekte = hatRecht("projekte", "sehen");
   const [projektId, setProjektId] = useState("");
-  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: darfProjekte });
   const { data: kennzahlen, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["vorgang-kennzahlen", projektId],
     queryFn: () => statistikApi.vorgangKennzahlen(projektId ? { projekt_id: projektId } : {}),
@@ -46,7 +48,7 @@ export function TeamKennzahlen() {
         <h2 className="flex items-center gap-1.5 text-sm font-bold text-label">
           <Users size={15} strokeWidth={2} /> Team-Kennzahlen
         </h2>
-        <select
+        {darfProjekte && <select
           value={projektId}
           onChange={(e) => setProjektId(e.target.value)}
           className="border border-sep bg-transparent px-2 py-1 text-xs text-label"
@@ -57,7 +59,7 @@ export function TeamKennzahlen() {
               {p.name}
             </option>
           ))}
-        </select>
+        </select>}
       </div>
 
       {ladeFehler && !kennzahlen ? (

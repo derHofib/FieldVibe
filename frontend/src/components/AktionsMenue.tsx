@@ -7,7 +7,7 @@ import { PulldownMenu, type PulldownItem } from "./apple/PulldownMenu";
 export interface AktionsMenueEintrag {
   label: string;
   icon?: LucideIcon;
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
   /** Destruktive Aktionen stehen am Ende und sind rot gekennzeichnet. */
   destruktiv?: boolean;
   disabled?: boolean;

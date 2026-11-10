@@ -28,6 +28,8 @@ import {
 import { formatIsoTag, heuteIso } from "../../utils/format";
 import { openPdfBlob } from "../../utils/pdf";
 import type { AngebotMwstSatz, AngebotPosition, AngebotPositionstyp } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const POSITIONSTYP_LABEL: Record<AngebotPositionstyp, string> = {
   material: "Material",
@@ -70,6 +72,7 @@ function PositionInhalt({ p }: { p: AngebotPosition }) {
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
 export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
+  const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -92,6 +95,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   const [gueltigkeitOffen, setGueltigkeitOffen] = useState(false);
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => angeboteApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["angebote"] });
@@ -124,6 +128,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   });
   const kleinunternehmer = einstellungen?.firmendaten.ist_kleinunternehmer === true;
   const addPositionMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       angeboteApi.addPosition(id!, {
         artikelnummer: form.artikelnummer || undefined,
@@ -148,6 +153,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const addTitelMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (ebene: 1 | 2) =>
       angeboteApi.addPosition(id!, {
         beschreibung: titelText!.trim(),
@@ -164,6 +170,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: string) => angeboteApi.updateStatus(id!, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["angebot", id] }),
   });
@@ -174,6 +181,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
   };
 
   const neuOrdnenMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (positionIds: string[]) => angeboteApi.positionenNeuOrdnen(id!, positionIds),
     onSuccess: aktualisiert,
   });
@@ -205,7 +213,7 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
     );
   }
-  if (!angebot) return <p className="text-center text-label2">Lädt…</p>;
+  if (!angebot) return <DetailSkeleton />;
 
   const istEntwurf = angebot.status === "entwurf";
   const ablauf = ablaufAnzeige(angebot, heuteIso());
@@ -222,8 +230,8 @@ export function AngebotDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Angebot wirklich löschen? Es wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Angebot löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}

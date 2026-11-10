@@ -10,6 +10,8 @@ import { downloadBlob } from "../../utils/download";
 import { openPdfBlob } from "../../utils/pdf";
 import type { BestellungStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<BestellungStatus, string> = {
   entwurf: "Entwurf",
@@ -18,6 +20,7 @@ const STATUS_LABEL: Record<BestellungStatus, string> = {
 };
 
 export function BestellungDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -25,6 +28,7 @@ export function BestellungDetailPage() {
   const kannLoeschen = currentUser?.role === "loesch_operativ";
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => bestellungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bestellungen"] });
@@ -47,6 +51,7 @@ export function BestellungDetailPage() {
   const [preise, setPreise] = useState<Record<string, string>>({});
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (vars: { status: BestellungStatus; positionen_preise?: Record<string, string> }) =>
       bestellungenApi.update(id!, vars),
     onSuccess: () => {
@@ -78,7 +83,7 @@ export function BestellungDetailPage() {
   });
 
   if (ladeFehler && !bestellung) return <FehlerZustand fehler={ladeFehler} was="Die Bestellung" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (!bestellung) return <p className="text-center text-label2">Lädt…</p>;
+  if (!bestellung) return <DetailSkeleton />;
 
 
   const lieferant = lieferanten?.find((l) => l.id === bestellung.lieferant_id);
@@ -104,8 +109,8 @@ export function BestellungDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Bestellung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Bestellung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}

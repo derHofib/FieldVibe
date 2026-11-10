@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -8,6 +8,8 @@ import { App } from "./App";
 import { authStore } from "./api/authStore";
 import { initFehlerbericht } from "./bugreport";
 import { installFehlerweiterleitung } from "./bugreport/fehlerweiterleitung";
+import { BestaetigungProvider } from "./components/ConfirmDialog";
+import { mutationToasts, ToastProvider } from "./components/Toast";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { pruefeGeraeteWeiche } from "./office/geraeteWeiche";
@@ -72,6 +74,11 @@ if (!istOffice && !wirdUmgeleitet) {
 }
 
 const queryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    onSuccess: (_data, _vars, _ctx, mutation) => mutationToasts.erfolg(mutation.meta),
+    onError: (err, _vars, _ctx, mutation) =>
+      mutationToasts.fehler(err, mutation.options.onError !== undefined, mutation.meta),
+  }),
   defaultOptions: {
     queries: {
       retry: 1,
@@ -86,9 +93,13 @@ if (!wirdUmgeleitet) {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <ThemeProvider>
-            <AuthProvider>
-              <App istOffice={istOffice} />
-            </AuthProvider>
+            <ToastProvider>
+              <BestaetigungProvider>
+                <AuthProvider>
+                  <App istOffice={istOffice} />
+                </AuthProvider>
+              </BestaetigungProvider>
+            </ToastProvider>
           </ThemeProvider>
         </BrowserRouter>
       </QueryClientProvider>

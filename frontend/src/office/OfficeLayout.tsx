@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../utils/format";
 import {
   Bug,
   CalendarDays,
@@ -58,12 +59,6 @@ function geladeneEingeklappteKategorien(): Record<string, boolean> {
   } catch {
     return {};
   }
-}
-
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
 }
 
 const ROLLE_LABEL: Record<string, string> = {
@@ -188,7 +183,7 @@ export function OfficeLayout() {
     if (route) navigate(route);
   };
 
-  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: hatRecht("projekte", "sehen") });
   const aktiveProjekte = (projekte ?? []).filter((p) => !p.archiviert).slice(0, 6);
 
   // Exakte Zaehlung nur fuer "Alle" (aus dem bereits vorhandenen Kennzahlen-

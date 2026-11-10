@@ -9,6 +9,7 @@ import { Sheet } from "../../../components/apple/Sheet";
 import { SearchableSelect } from "../../../components/SearchableSelect";
 import type { Zeitplan, ZeitplanElement } from "../../../types";
 import { formatBereich, formatStraffenDelta, heuteTag, parseTag, standardBasisplanName, standardVorlagenStart } from "./zeitplanLogik";
+import { useBestaetigung } from "../../../components/ConfirmDialog";
 
 function fehlerText(e: unknown): string {
   return e instanceof ApiError ? e.message : "Die Aktion ist fehlgeschlagen.";
@@ -49,6 +50,7 @@ export function BasisplanSpeichernSheet({ projektId, onClose }: { projektId: str
   const queryClient = useQueryClient();
   const [name, setName] = useState(() => standardBasisplanName(heuteTag()));
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => zeitplanApi.createBasisplan(projektId, name.trim()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projekt-basisplaene", projektId] });
@@ -92,6 +94,7 @@ export function BasisplaeneVerwaltenSheet({
   onClose: () => void;
   onGeloescht: (id: string) => void;
 }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["projekt-basisplaene", projektId], queryFn: () => zeitplanApi.basisplaene(projektId) });
   const loeschen = useMutation({
@@ -130,8 +133,8 @@ export function BasisplaeneVerwaltenSheet({
                   type="button"
                   aria-label={`Basisplan ${b.name} löschen`}
                   disabled={loeschen.isPending}
-                  onClick={() => {
-                    if (window.confirm(`Basisplan „${b.name}“ wirklich löschen?`)) loeschen.mutate(b.id);
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: `Basisplan „${b.name}“ löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate(b.id);
                   }}
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] text-st-fehlt hover:bg-st-fehlt-bg"
                 >
@@ -172,6 +175,7 @@ export function StraffenSheet({
     retry: false,
   });
   const uebernehmen = useMutation({
+    meta: { erfolg: "Übernommen" },
     mutationFn: () => zeitplanApi.straffen(projektId, { phase_id: phaseId || null, vorschau: false }),
     onSuccess: (antwort) => {
       if (antwort.zeitplan) onUebernommen(antwort.zeitplan);
@@ -301,6 +305,7 @@ export function VorlageSpeichernSheet({ projektId, onClose }: { projektId: strin
   const [name, setName] = useState("");
   const [beschreibung, setBeschreibung] = useState("");
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => projektVorlagenApi.ausProjekt(projektId, { name: name.trim(), beschreibung: beschreibung.trim() || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projekt-vorlagen"] });

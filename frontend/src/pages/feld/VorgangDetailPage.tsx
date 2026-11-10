@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { datumZuIso, heuteIso } from "../../utils/format";
 import { AlertTriangle, Ban, Building2, Camera, Clock, Eye, EyeOff, FileText, Mail, Package, Paperclip, PenLine, Star, UserCheck, UserPlus } from "lucide-react";
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -66,6 +67,8 @@ import type {
   VorgangStatus,
   Zeiterfassung,
 } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -422,7 +425,7 @@ function addTage(d: Date, n: number): Date {
 }
 
 function tagesSchluessel(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 function leereAdresse(adresse: Adresse | null | undefined): { strasse: string; plz: string; ort: string } {
@@ -460,6 +463,7 @@ export function VorgangDetailPage({
   ansicht?: "voll" | "zeit" | "verlauf" | "positionen";
   breit?: boolean;
 } = {}) {
+  const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -639,6 +643,7 @@ export function VorgangDetailPage({
     onError: meldeAktionsFehler,
   });
   const anlageEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (anlageId: string) => vorgaengeApi.anlageEntfernen(id!, anlageId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] }),
     onError: meldeAktionsFehler,
@@ -669,6 +674,7 @@ export function VorgangDetailPage({
       ),
   });
   const adresseMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       vorgaengeApi.update(id!, {
         adresse:
@@ -717,7 +723,7 @@ export function VorgangDetailPage({
     queryFn: () => getOutboxItems(id!),
     enabled: !!id,
   });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const { data: laufenderTimer } = useQuery({
     queryKey: ["zeiterfassung-laufend"],
     queryFn: zeiterfassungApi.laufend,
@@ -790,6 +796,7 @@ export function VorgangDetailPage({
   };
 
   const mangelStatusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: ({ mangelId, status }: { mangelId: string; status: MangelStatus }) =>
       maengelApi.update(mangelId, { status }),
     onSuccess: () => {
@@ -800,12 +807,14 @@ export function VorgangDetailPage({
   });
 
   const deleteMangelMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (mangelId: string) => maengelApi.remove(mangelId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] }),
     onError: meldeAktionsFehler,
   });
 
   const deleteTerminMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (terminId: string) => termineApi.remove(terminId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] }),
     onError: meldeAktionsFehler,
@@ -814,12 +823,14 @@ export function VorgangDetailPage({
   const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
 
   const angebotAusMaengelnMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
     onError: meldeAktionsFehler,
   });
 
   const angebotAusVorgangMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => angeboteApi.createFromVorgang(id!),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
     onError: meldeAktionsFehler,
@@ -848,7 +859,7 @@ export function VorgangDetailPage({
     },
   });
 
-  const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list() });
+  const { data: materialListe } = useQuery({ queryKey: ["material"], queryFn: () => materialApi.list(), enabled: hatRecht("material", "sehen") });
   const { data: alleAnlagenFuerLager } = useQuery({
     queryKey: ["lagerorte"],
     queryFn: () => anlagenApi.list(),
@@ -896,6 +907,7 @@ export function VorgangDetailPage({
   });
 
   const lvVerwendungEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (verwendungId: string) => leistungsverzeichnisApi.verwendungEntfernen(verwendungId),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] }),
@@ -1004,12 +1016,14 @@ export function VorgangDetailPage({
   });
 
   const bedarfEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (bedarfId: string) => materialBedarfeApi.remove(bedarfId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
     onError: meldeAktionsFehler,
   });
 
   const deleteVorgangMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => vorgaengeApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
@@ -1019,6 +1033,7 @@ export function VorgangDetailPage({
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: async ({
       status,
       wiedervorlageTage,
@@ -1046,6 +1061,7 @@ export function VorgangDetailPage({
   });
 
   const folgeAuftragMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (leistungstyp: Leistungstyp) => vorgaengeApi.folgeAuftrag(id!, leistungstyp),
     onSuccess: (result) => {
       setFolgeVorgangId(result.id);
@@ -1056,6 +1072,7 @@ export function VorgangDetailPage({
   });
 
   const uebernehmenMutation = useMutation({
+    meta: { erfolg: "Übernommen" },
     mutationFn: () => vorgaengeApi.uebernehmen(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
@@ -1065,6 +1082,7 @@ export function VorgangDetailPage({
   });
 
   const prioritaetMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (prioritaet: number) => vorgaengeApi.update(id!, { prioritaet }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
     onError: meldeAktionsFehler,
@@ -1240,7 +1258,7 @@ export function VorgangDetailPage({
       </div>
     );
   }
-  if (!vorgang) return <p className="text-center text-label2">Lädt…</p>;
+  if (!vorgang) return <DetailSkeleton />;
 
   // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
   // des zugeordneten Standorts bzw. ersatzweise der Anlage, damit die Karte
@@ -1369,7 +1387,7 @@ export function VorgangDetailPage({
       return neu;
     });
   }
-  function handleBuchen() {
+  async function handleBuchen() {
     const stunden = formatSekundenAlsHHMM(
       ausgewaehlteEintraege.reduce(
         (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
@@ -1377,9 +1395,7 @@ export function VorgangDetailPage({
       ),
     );
     if (
-      window.confirm(
-        `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen? Gebuchte Einträge kannst du danach nicht mehr ändern.`,
-      )
+      await bestaetigen({ titel: `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen?`, text: `Gebuchte Einträge kannst du danach nicht mehr ändern.`, bestaetigenLabel: "Buchen", destruktiv: false })
     ) {
       buchenMutation.mutate([...ausgewaehlteZeitIds]);
     }
@@ -2364,7 +2380,7 @@ export function VorgangDetailPage({
       >
       <div className="card-ap p-4">
         <div className="text-xs text-label2">{vorgang.vorgangsnummer}</div>
-        <h1 className="font-heading text-lg font-semibold uppercase tracking-wide text-label">{vorgang.titel}</h1>
+        <h1 className="font-heading text-lg font-semibold text-label">{vorgang.titel}</h1>
         {parentVorgang && (
           <button
             onClick={() => navigate(`/vorgaenge/${parentVorgang.id}`)}
@@ -2713,13 +2729,11 @@ export function VorgangDetailPage({
             </span>
             {currentUser?.darf_vorgaenge_selbst_uebernehmen && (
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (
                     vorgang.zugewiesener_user_id &&
                     vorgang.zugewiesener_user_id !== currentUser.id &&
-                    !window.confirm(
-                      `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`,
-                    )
+                    !(await bestaetigen({ titel: `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`, bestaetigenLabel: "Übernehmen", destruktiv: false }))
                   ) {
                     return;
                   }
@@ -3026,8 +3040,8 @@ export function VorgangDetailPage({
                                 {kannPapierkorbLoeschen && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                                    onClick={async () => {
+                                      if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
                                         deleteTerminMutation.mutate(t.id);
                                       }
                                     }}
@@ -3078,8 +3092,8 @@ export function VorgangDetailPage({
                       </span>
                       {kannPapierkorbLoeschen && (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                          onClick={async () => {
+                            if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
                               deleteTerminMutation.mutate(t.id);
                             }
                           }}
@@ -3198,8 +3212,8 @@ export function VorgangDetailPage({
                     )}
                     {kannPapierkorbLoeschen && (
                       <button
-                        onClick={() => {
-                          if (window.confirm("Mangel wirklich löschen?")) {
+                        onClick={async () => {
+                          if (await bestaetigen({ titel: "Mangel löschen?", bestaetigenLabel: "Löschen" })) {
                             deleteMangelMutation.mutate(m.id);
                           }
                         }}
@@ -3476,8 +3490,8 @@ export function VorgangDetailPage({
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Vorgang löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteVorgangMutation.mutate();
               }
             }}
@@ -3513,14 +3527,14 @@ export function VorgangDetailPage({
           {vorgang.faelligkeit_am && (
             <span
               className={`flex items-center gap-1.5 border px-2.5 py-1 text-xs font-medium ${
-                vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+                vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
                 !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
                   ? "border-st-fehlt text-st-fehlt"
                   : "border-sep text-label"
               }`}
             >
               <Clock size={13} strokeWidth={1.5} />
-              {vorgang.faelligkeit_am.slice(0, 10) < new Date().toISOString().slice(0, 10) &&
+              {vorgang.faelligkeit_am.slice(0, 10) < heuteIso() &&
               !VORGANG_STATUS_GESCHLOSSEN.includes(vorgang.status)
                 ? `${Math.round(
                     (new Date().setHours(0, 0, 0, 0) - new Date(vorgang.faelligkeit_am).setHours(0, 0, 0, 0)) /

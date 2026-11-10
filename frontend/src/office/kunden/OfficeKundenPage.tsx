@@ -9,7 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { SkeletonList } from "../../components/Skeleton";
 import { FilterChip } from "../../components/apple/FilterChip";
 import { SearchField } from "../../components/apple/SearchField";
-import { SeitenPanel } from "../../components/apple/SeitenPanel";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useAuth } from "../../context/AuthContext";
 import { KundeProfilePage } from "../../pages/feld/KundeProfilePage";
@@ -135,7 +135,7 @@ export function OfficeKundenPage() {
         }
       />
 
-      <SeitenPanel offen={neu} onClose={() => setNeu(false)} titel="Neuer Kunde">
+      <AnlegenPanel offen={neu} onClose={() => setNeu(false)} titel="Neuer Kunde">
         <NeuerKundeFormular
           onAbbrechen={() => setNeu(false)}
           onAngelegt={(kunde) => {
@@ -143,7 +143,7 @@ export function OfficeKundenPage() {
             navigate(`/kunden/${kunde.id}`);
           }}
         />
-      </SeitenPanel>
+      </AnlegenPanel>
     </div>
   );
 }

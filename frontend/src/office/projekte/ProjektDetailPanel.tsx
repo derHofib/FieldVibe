@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { datumZuIso } from "../../utils/format";
 import { KanbanSquare } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { auftraegeApi, materialBedarfeApi, projekteApi, termineApi, usersApi, vorgaengeApi, zeiterfassungApi } from "../../api/endpoints";
@@ -37,7 +38,7 @@ function addTage(d: Date, n: number): Date {
   return date;
 }
 function tagesSchluessel(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return datumZuIso(d);
 }
 
 const TABS: { key: "uebersicht" | "zeit" | "termine" | "positionen" | "zeitplan"; label: string }[] = [
@@ -67,6 +68,7 @@ export function ProjektDetailPanel({
   onClose: () => void;
   onKanbanOeffnen: () => void;
 }) {
+  const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [name, setName] = useState(projekt.name);
@@ -119,6 +121,7 @@ export function ProjektDetailPanel({
   });
 
   const bedarfEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => materialBedarfeApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "projekt", projekt.id] }),
   });
@@ -176,8 +179,8 @@ export function ProjektDetailPanel({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label3 uppercase">Name</label>
+            <input id={`${uid}-0`}
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => name.trim() && name !== aktuell?.name && aktualisieren.mutate({ name: name.trim() })}

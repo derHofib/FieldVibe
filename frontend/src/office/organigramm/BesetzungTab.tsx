@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 
 import { organigrammApi, usersApi } from "../../api/endpoints";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import type { Besetzung, BesetzungArt, PositionDetail } from "../../types/organigramm";
 import { besetzungZeitraum, istUnterbesetzt, verstaendlicherFehler } from "./darstellung";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const ART_LABEL: Record<BesetzungArt, string> = { regulaer: "Regulär", vertretung: "Vertretung" };
 
@@ -49,6 +50,8 @@ export function BesetzungTab({
   darfBearbeiten: boolean;
   onGeaendert: () => void;
 }) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: darfBearbeiten });
   const [userId, setUserId] = useState("");
@@ -145,8 +148,8 @@ export function BesetzungTab({
                 b={b}
                 darfBeenden={darfBearbeiten && !archiviert}
                 beendenLaeuft={beenden.isPending}
-                onBeenden={() => {
-                  if (window.confirm(`${b.name ?? "Die Person"} von dieser Position freistellen? Die Besetzung endet sofort und bleibt in der Historie.`)) {
+                onBeenden={async () => {
+                  if (await bestaetigen({ titel: `${b.name ?? "Die Person"} von dieser Position freistellen?`, text: "Die Besetzung endet sofort und bleibt in der Historie.", bestaetigenLabel: "Freistellen" })) {
                     beenden.mutate(b.id);
                   }
                 }}
@@ -165,8 +168,8 @@ export function BesetzungTab({
           <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-label2 uppercase">Person zuweisen</h3>
           <form onSubmit={absenden} className="card-ap space-y-3 p-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Mitarbeiter</label>
-              <SearchableSelect options={optionen} value={userId} onChange={setUserId} placeholder="Mitarbeiter suchen…" />
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Mitarbeiter</label>
+              <SearchableSelect id={`${uid}-0`} options={optionen} value={userId} onChange={setUserId} placeholder="Mitarbeiter suchen…" />
             </div>
             <SegmentedControl
               ariaLabel="Art der Besetzung"

@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { heuteIso } from "../../utils/format";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { pruefmittelApi, usersApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { Pruefmittel, PruefmittelStatus } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 
 const STATUS_LABEL: Record<PruefmittelStatus, string> = {
   aktiv: "Aktiv",
@@ -13,11 +16,9 @@ const STATUS_LABEL: Record<PruefmittelStatus, string> = {
 };
 
 function faelligkeitsFarbe(datum: string): string {
-  const heute = new Date().toISOString().slice(0, 10);
+  const heute = heuteIso();
   if (datum < heute) return "text-st-fehlt ";
-  const in7Tagen = new Date();
-  in7Tagen.setDate(in7Tagen.getDate() + 7);
-  if (datum <= in7Tagen.toISOString().slice(0, 10)) return "text-st-arbeit ";
+  if (datum <= heuteIso(7)) return "text-st-arbeit ";
   return "text-label2";
 }
 
@@ -33,7 +34,9 @@ interface NeuesForm {
 }
 
 export function PruefmittelPage() {
-  const { currentUser } = useAuth();
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
+  const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -48,10 +51,11 @@ export function PruefmittelPage() {
     queryKey: ["pruefmittel"],
     queryFn: () => pruefmittelApi.list(),
   });
-  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl });
+  const { data: users } = useQuery({ queryKey: ["users", "auswahl"], queryFn: usersApi.auswahl, enabled: hatRecht("mitarbeiterverwaltung", "sehen") });
   const zuweisbareNutzer = (users ?? []).filter((u) => u.aktiv);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: pruefmittelApi.create,
     onSuccess: () => {
       setShowForm(false);
@@ -61,12 +65,14 @@ export function PruefmittelPage() {
   });
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof pruefmittelApi.update>[1] }) =>
       pruefmittelApi.update(id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => pruefmittelApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["pruefmittel"] }),
   });
@@ -82,7 +88,7 @@ export function PruefmittelPage() {
   const markiereKalibriert = (mittel: Pruefmittel) => {
     updateMutation.mutate({
       id: mittel.id,
-      body: { letzte_kalibrierung_am: new Date().toISOString().slice(0, 10) },
+      body: { letzte_kalibrierung_am: heuteIso() },
     });
   };
 
@@ -97,19 +103,19 @@ export function PruefmittelPage() {
       </div>
 
       <button
-        onClick={() => setShowForm((v) => !v)}
+        onClick={() => setShowForm(true)}
         className="btn-touch rounded-md btn-ap-primary px-4 py-2 text-sm font-medium"
       >
-        {showForm ? "Abbrechen" : "+ Neues Prüfmittel"}
+        + Neues Prüfmittel
       </button>
 
-      {showForm && (
-        <div className="space-y-3 card-ap p-4">
+      <AnlegenPanel offen={showForm} titel="Neues Prüfmittel" onClose={() => setShowForm(false)}>
+        <div className="space-y-3 p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
               Bezeichnung
             </label>
-            <input
+            <input id={`${uid}-0`}
               value={form.bezeichnung}
               onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -117,20 +123,20 @@ export function PruefmittelPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">
               Seriennummer
             </label>
-            <input
+            <input id={`${uid}-1`}
               value={form.seriennummer}
               onChange={(e) => setForm({ ...form, seriennummer: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">
               Zugewiesen an
             </label>
-            <select
+            <select id={`${uid}-2`}
               value={form.zugewiesenAn}
               onChange={(e) => setForm({ ...form, zugewiesenAn: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -144,10 +150,10 @@ export function PruefmittelPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">
               Kalibrierintervall (Monate)
             </label>
-            <input
+            <input id={`${uid}-3`}
               type="number"
               min={1}
               value={form.intervallMonate}
@@ -170,7 +176,7 @@ export function PruefmittelPage() {
             Anlegen
           </button>
         </div>
-      )}
+      </AnlegenPanel>
 
       <div className="space-y-2">
         {sortiert.length === 0 ? (
@@ -211,8 +217,8 @@ export function PruefmittelPage() {
               </div>
               {kannLoeschen && (
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Prüfmittel "${mittel.bezeichnung}" wirklich löschen?`)) {
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: `Prüfmittel "${mittel.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) {
                       deleteMutation.mutate(mittel.id);
                     }
                   }}

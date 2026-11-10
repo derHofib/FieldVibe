@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { Columns3, Filter, Inbox, LayoutGrid, List, Plus, Table2, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +15,7 @@ import {
   STATUS_LABEL,
   filterChipLabel,
 } from "../../config/vorgangDarstellung";
+import { useAuth } from "../../context/AuthContext";
 import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsListe";
 import type { FeedCard, VorgangStatus } from "../../types";
 import { AnsichtUmschalter, SeitenKopf } from "../OfficeUi";
@@ -22,6 +24,7 @@ import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
 import { VorgaengeTabelle } from "./VorgaengeTabelle";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
 
@@ -44,12 +47,6 @@ function gespeicherteAnsicht(): Ansicht {
   return "liste";
 }
 
-function heuteIso(offsetTage = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetTage);
-  return d.toISOString().slice(0, 10);
-}
-
 const LEER_FILTER: Record<string, string> = {};
 
 /** Dieselbe Filterleiste wie im Feed der Feld-App (Status-Mehrfachauswahl,
@@ -60,13 +57,14 @@ const LEER_FILTER: Record<string, string> = {};
  * kein Platzproblem wie auf dem Handy. */
 export function OfficeVorgaengePage() {
   const navigate = useNavigate();
+  const { hatRecht } = useAuth();
   const [ansicht, setAnsicht] = useState<Ansicht>(gespeicherteAnsicht);
   const [suche, setSuche] = useState("");
   const [filter, setFilter] = useState<Record<string, string>>(LEER_FILTER);
   const [zeigeFilter, setZeigeFilter] = useState(false);
 
-  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
-  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list() });
+  const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list(), enabled: hatRecht("kunden", "sehen") });
+  const { data: projekte } = useQuery({ queryKey: ["projekte"], queryFn: () => projekteApi.list(), enabled: hatRecht("projekte", "sehen") });
   // Wie beim Leistungsverzeichnis abhaengiger Picker: erst ab gewaehltem
   // Kunden laden, sonst waere die Liste ueber alle Mandanten-Anlagen hinweg
   // fuer einen reinen Filter unnoetig gross.
@@ -294,7 +292,7 @@ export function OfficeVorgaengePage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !data ? (
         <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
       ) : vorgaenge.length === 0 ? (

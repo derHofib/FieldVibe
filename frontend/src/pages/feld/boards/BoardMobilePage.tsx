@@ -15,6 +15,7 @@ import type {
 } from "../../../office/boards/types";
 import { leeresInhalt } from "../../../office/boards/types";
 import { NeueNotizSheet, NotizAktionSheet } from "./NotizSheet";
+import { useBestaetigung } from "../../../components/ConfirmDialog";
 
 // @xyflow/react ist eine schwere Desktop-Bibliothek -- wird nur geladen,
 // wenn tatsaechlich zur Canvas-Ansicht gewechselt wird (Liste ist der
@@ -84,6 +85,7 @@ function notizDaten(node: BoardNode): KlebezettelDaten | null {
  * Prozessschritte) lassen sich nur ansehen, nicht anlegen -- dafuer bleibt
  * es bei der Desktop-Ansicht. */
 export function BoardMobilePage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -110,6 +112,7 @@ export function BoardMobilePage() {
   }, [board, geladen]);
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (inhalt: BoardInhalt) => boardsApi.update(id!, { inhalt_json: inhalt }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["boards"] }),
   });
@@ -198,8 +201,8 @@ export function BoardMobilePage() {
             <ChevronLeft size={16} strokeWidth={2.25} /> Boards
           </button>
           <button
-            onClick={() => {
-              if (window.confirm(`Board "${board.name}" wirklich löschen?`)) boardLoeschen.mutate();
+            onClick={async () => {
+              if (await bestaetigen({ titel: `Board "${board.name}" löschen?`, bestaetigenLabel: "Löschen" })) boardLoeschen.mutate();
             }}
             disabled={boardLoeschen.isPending}
             aria-label="Board löschen"

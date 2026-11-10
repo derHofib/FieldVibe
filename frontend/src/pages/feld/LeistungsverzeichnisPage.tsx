@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, ClipboardList, Copy, Plus, Settings2, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { kundenApi, leistungsverzeichnisseApi, mandantEinstellungenApi } from "../../api/endpoints";
@@ -11,6 +11,7 @@ import { useAuth } from "../../context/AuthContext";
 import { SeitenKopf, TabellenRahmen } from "../../office/OfficeUi";
 import type { Leistungsverzeichnis } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 /** Mehrfachauswahl von Kunden -- SearchableSelect kennt nur Einzelauswahl,
  * deshalb hier: gewaehlte Kunden als entfernbare Chips, darunter dieselbe
@@ -58,6 +59,7 @@ export function KundenZuweisung({ kundenIds, onChange }: { kundenIds: string[]; 
 }
 
 function LvFormular({ onClose }: { onClose: () => void }) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [beschreibung, setBeschreibung] = useState("");
@@ -91,10 +93,10 @@ function LvFormular({ onClose }: { onClose: () => void }) {
         </div>
         <div className="space-y-4 px-5 py-4">
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+            <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
               Name
             </label>
-            <input
+            <input id={`${uid}-0`}
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -103,10 +105,10 @@ function LvFormular({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+            <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
               Beschreibung
             </label>
-            <textarea
+            <textarea id={`${uid}-1`}
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               rows={2}
@@ -247,16 +249,21 @@ function LvZeile({ lv, kannVerwalten }: { lv: Leistungsverzeichnis; kannVerwalte
 }
 
 function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
+  const uid = useId();
   const queryClient = useQueryClient();
+  const { currentUser } = useAuth();
   const { data: einstellungen } = useQuery({
     queryKey: ["mandant-einstellungen"],
     queryFn: mandantEinstellungenApi.get,
+    // Backend: /api/mandant-einstellungen nur mandant_admin.
+    enabled: currentUser?.role === "mandant_admin",
   });
   const [offen, setOffen] = useState(false);
   const [gemeinkosten, setGemeinkosten] = useState(einstellungen?.standard_lohn_gemeinkosten_prozent ?? "0");
   const [gewinnWagnis, setGewinnWagnis] = useState(einstellungen?.standard_gewinn_wagnis_prozent ?? "0");
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.update({
         standard_lohn_gemeinkosten_prozent: gemeinkosten,
@@ -297,10 +304,10 @@ function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
           </p>
           <div className={layout === "dicht" ? "flex flex-wrap items-end gap-3" : "grid grid-cols-2 gap-2"}>
             <div className={layout === "dicht" ? "w-48" : undefined}>
-              <label className="mb-1 block text-[10.5px] font-medium text-label2">
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-[10.5px] font-medium text-label2">
                 Lohn-Gemeinkosten (%)
               </label>
-              <input
+              <input id={`${uid}-0`}
                 type="number"
                 step="0.1"
                 value={gemeinkosten}
@@ -309,8 +316,8 @@ function StandardKalkulation({ layout }: { layout: "kompakt" | "dicht" }) {
               />
             </div>
             <div className={layout === "dicht" ? "w-48" : undefined}>
-              <label className="mb-1 block text-[10.5px] font-medium text-label2">Gewinn/Wagnis (%)</label>
-              <input
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-[10.5px] font-medium text-label2">Gewinn/Wagnis (%)</label>
+              <input id={`${uid}-1`}
                 type="number"
                 step="0.1"
                 value={gewinnWagnis}
@@ -373,7 +380,7 @@ export function LeistungsverzeichnisPage({ layout = "kompakt" }: { layout?: "kom
       {kannVerwalten && <StandardKalkulation layout={layout} />}
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !lvs ? (
         <FehlerZustand fehler={ladeFehler} was="Das Leistungsverzeichnis" onErneut={() => void neuLaden()} />
       ) : !lvs || lvs.length === 0 ? (

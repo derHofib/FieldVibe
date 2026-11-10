@@ -1,10 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { heuteIso } from "../../utils/format";
+import { statusLabel } from "../../config/vorgangDarstellung";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -17,6 +21,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function DauerauftragDetailPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -26,7 +32,7 @@ export function DauerauftragDetailPage() {
   const [editIntervall, setEditIntervall] = useState<string | null>(null);
   const [anlagenBearbeiten, setAnlagenBearbeiten] = useState(false);
   const [ausgewaehlteAnlageIds, setAusgewaehlteAnlageIds] = useState<string[]>([]);
-  const [neueFaelligkeit, setNeueFaelligkeit] = useState(new Date().toISOString().slice(0, 10));
+  const [neueFaelligkeit, setNeueFaelligkeit] = useState(heuteIso());
 
   const { data: dauerauftrag, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({
     queryKey: ["dauerauftrag", id],
@@ -51,6 +57,7 @@ export function DauerauftragDetailPage() {
   });
 
   const intervallMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (intervall: number) => dauerauftraegeApi.update(id!, { intervall_tage: intervall }),
     onSuccess: () => {
       setEditIntervall(null);
@@ -59,6 +66,7 @@ export function DauerauftragDetailPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => dauerauftraegeApi.delete(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dauerauftraege"] });
@@ -67,6 +75,7 @@ export function DauerauftragDetailPage() {
   });
 
   const setAnlagenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       dauerauftraegeApi.setAnlagen(id!, {
         anlage_ids: ausgewaehlteAnlageIds,
@@ -86,7 +95,7 @@ export function DauerauftragDetailPage() {
   }
 
   if (ladeFehler && !dauerauftrag) return <FehlerZustand fehler={ladeFehler} was="Der Dauerauftrag" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading || !dauerauftrag) return <p className="text-center text-label2">Lädt…</p>;
+  if (isLoading || !dauerauftrag) return <DetailSkeleton />;
 
 
   return (
@@ -198,7 +207,7 @@ export function DauerauftragDetailPage() {
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-label2">
-              Anlagen im Buendel ({dauerauftrag.anzahl_ziele})
+              Anlagen im Bündel ({dauerauftrag.anzahl_ziele})
             </h2>
             {kannVerwalten && !anlagenBearbeiten && (
               <button
@@ -261,10 +270,10 @@ export function DauerauftragDetailPage() {
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-medium text-label">
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
                   Fälligkeit für neu hinzugefügte Anlagen
                 </label>
-                <input
+                <input id={`${uid}-0`}
                   type="date"
                   value={neueFaelligkeit}
                   onChange={(e) => setNeueFaelligkeit(e.target.value)}
@@ -300,8 +309,8 @@ export function DauerauftragDetailPage() {
               {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("Dauer-Auftrag wirklich löschen? Bereits erzeugte Vorgänge bleiben erhalten.")) {
+              onClick={async () => {
+                if (await bestaetigen({ titel: "Dauer-Auftrag löschen?", text: "Bereits erzeugte Vorgänge bleiben erhalten.", bestaetigenLabel: "Löschen" })) {
                   deleteMutation.mutate();
                 }
               }}
@@ -335,7 +344,7 @@ export function DauerauftragDetailPage() {
                   <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

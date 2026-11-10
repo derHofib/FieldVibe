@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Briefcase, Link2, ShieldAlert } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { partnerApi, vorgaengeApi } from "../../api/endpoints";
@@ -11,6 +11,8 @@ import { istModulAktiv } from "../../utils/module";
 import { einladungFehlerText, partnerPortalLink, portalZugangStatus } from "../../utils/partnerZugang";
 import type { Adresse, PartnerFreigabeStatus, PartnerNachweisTyp } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const NACHWEIS_TYP_LABEL: Record<PartnerNachweisTyp, string> = {
   freistellungsbescheinigung: "Freistellungsbescheinigung (§48 EStG)",
@@ -55,6 +57,7 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       partnerApi.update(partnerId, {
         gewerk: form.gewerk || null,
@@ -201,6 +204,7 @@ function Stammdaten({ partnerId }: { partnerId: string }) {
 }
 
 function NeuerNachweis({ partnerId }: { partnerId: string }) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [zeigen, setZeigen] = useState(false);
   const [typ, setTyp] = useState<PartnerNachweisTyp>("freistellungsbescheinigung");
@@ -209,6 +213,7 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       partnerApi.nachweisAnlegen(partnerId, {
         typ,
@@ -253,8 +258,8 @@ function NeuerNachweis({ partnerId }: { partnerId: string }) {
         ))}
       </select>
       <div>
-        <label className="mb-1 block text-xs text-label2">Gültig bis (optional)</label>
-        <input
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Gültig bis (optional)</label>
+        <input id={`${uid}-0`}
           type="date"
           value={gueltigBis}
           onChange={(e) => setGueltigBis(e.target.value)}
@@ -296,11 +301,13 @@ function NachweiseVerwaltung({ partnerId, kannVerwalten }: { partnerId: string; 
   });
 
   const removeMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (nachweisId: string) => partnerApi.nachweisEntfernen(partnerId, nachweisId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partner-nachweise", partnerId] }),
   });
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: ({ nachweisId, file }: { nachweisId: string; file: File }) =>
       partnerApi.nachweisHochladen(partnerId, nachweisId, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["partner-nachweise", partnerId] }),
@@ -391,6 +398,7 @@ function datumKurz(iso: string): string {
 }
 
 function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerEmail: string | null }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { hatRecht } = useAuth();
   const [formOffen, setFormOffen] = useState(false);
@@ -420,6 +428,7 @@ function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerE
   }
 
   const einladen = useMutation({
+    meta: { erfolg: "Einladung gesendet" },
     mutationFn: () => partnerApi.einladen(partnerId, email.trim()),
     onSuccess: () => {
       setFehler(null);
@@ -528,8 +537,8 @@ function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerE
         )}
         {einladungKopf && kannWiderrufen && (
           <button
-            onClick={() => {
-              if (window.confirm(`Einladung an ${einladungKopf.email} widerrufen?`)) widerrufen.mutate(einladungKopf.id);
+            onClick={async () => {
+              if (await bestaetigen({ titel: `Einladung an ${einladungKopf.email} widerrufen?`, bestaetigenLabel: "Widerrufen" })) widerrufen.mutate(einladungKopf.id);
             }}
             disabled={arbeitet}
             className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt"
@@ -539,10 +548,10 @@ function PortalZugang({ partnerId, partnerEmail }: { partnerId: string; partnerE
         )}
         {(status.art === "aktiv" || status.art === "gesperrt") && kannSperren && (
           <button
-            onClick={() => {
+            onClick={async () => {
               if (
                 status.art === "gesperrt" ||
-                window.confirm("Zugang sperren? Der Partner kann sich danach nicht mehr anmelden.")
+                await bestaetigen({ titel: "Zugang sperren?", text: "Der Partner kann sich danach nicht mehr anmelden.", bestaetigenLabel: "Sperren" })
               ) {
                 sperren.mutate({ zugangId: status.zugang.id, aktiv: status.art === "gesperrt" });
               }
@@ -654,6 +663,7 @@ function ZugewieseneVorgaenge({ partnerId }: { partnerId: string }) {
 }
 
 export function PartnerProfilePage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -668,6 +678,7 @@ export function PartnerProfilePage() {
   const kannVerwalten = hatRecht("partner", "bearbeiten");
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => partnerApi.remove(id!),
     onSuccess: () => navigate("/partner"),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
@@ -675,7 +686,7 @@ export function PartnerProfilePage() {
 
   if (!istModulAktiv(currentUser, "nachunternehmer")) return null;
   if (ladeFehler && !partner) return <FehlerZustand fehler={ladeFehler} was="Der Partner" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading || !partner) return <p className="text-center text-label2">Lädt…</p>;
+  if (isLoading || !partner) return <DetailSkeleton />;
 
 
   return (
@@ -696,8 +707,8 @@ export function PartnerProfilePage() {
             </div>
           </div>
           <button
-            onClick={() => {
-              if (window.confirm(`${partner.name} wirklich löschen?`)) deleteMutation.mutate();
+            onClick={async () => {
+              if (await bestaetigen({ titel: `${partner.name} löschen?`, bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
             }}
             className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >

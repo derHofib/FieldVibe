@@ -64,6 +64,7 @@ export function OfficeNavKategorienPage() {
   }, [data, initialisiert]);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: NavKategorienRead) => navKategorienApi.set(body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["nav-kategorien"] });

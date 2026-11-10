@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lock } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { anlagenApi, fahrzeugZuweisungenApi, zeiterfassungApi } from "../api/endpoints";
@@ -9,6 +9,7 @@ import type { Zeiterfassung, ZeiterfassungKategorie } from "../types";
 import { BUCHUNGSSTATUS_LABEL, buchungsstatusGesperrt, buchungsstatusZuToken } from "../utils/zeiterfassung";
 import { StatusPille } from "./apple/StatusPille";
 import { Sheet } from "./apple/Sheet";
+import { useBestaetigung } from "./ConfirmDialog";
 
 // Lokale Kopie von toLocalInputValue aus VorgangDetailPage.tsx -- dort eine
 // seiten-lokale Hilfsfunktion, kein geteiltes Modul (siehe dortiger
@@ -83,6 +84,8 @@ export function ZeiteintragSheet({
   eintrag?: Zeiterfassung | null;
   onGespeichert: () => void;
 }) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const istBearbeiten = !!eintrag;
@@ -356,8 +359,8 @@ export function ZeiteintragSheet({
           {error && <p className="text-sm text-st-fehlt">{error}</p>}
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Kategorie</label>
-            <select
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Kategorie</label>
+            <select id={`${uid}-0`}
               value={kategorie}
               onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
               className="field-ap"
@@ -371,8 +374,8 @@ export function ZeiteintragSheet({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Tätigkeit</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Tätigkeit</label>
+            <input id={`${uid}-1`}
               value={taetigkeit}
               onChange={(e) => setTaetigkeit(e.target.value)}
               placeholder="Was wurde gemacht?"
@@ -382,8 +385,8 @@ export function ZeiteintragSheet({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-label2">Start</label>
-              <input
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Start</label>
+              <input id={`${uid}-2`}
                 type="datetime-local"
                 value={startAt}
                 onChange={(e) => setStartAt(e.target.value)}
@@ -392,8 +395,8 @@ export function ZeiteintragSheet({
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">Ende</label>
+              <input id={`${uid}-3`}
                 type="datetime-local"
                 value={endeAt}
                 onChange={(e) => setEndeAt(e.target.value)}
@@ -406,10 +409,10 @@ export function ZeiteintragSheet({
           {zeigtFahrtFelder && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-label2">
+                <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-label2">
                   km {kategorie === "auftrag" && <span className="font-normal text-label3">(optional)</span>}
                 </label>
-                <input
+                <input id={`${uid}-4`}
                   type="number"
                   step="0.1"
                   min="0"
@@ -424,8 +427,8 @@ export function ZeiteintragSheet({
                 )}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-label2">Fahrzeug</label>
-                <select
+                <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-label2">Fahrzeug</label>
+                <select id={`${uid}-5`}
                   value={fahrzeugId}
                   onChange={(e) => setFahrzeugId(e.target.value)}
                   className="field-ap"
@@ -453,10 +456,10 @@ export function ZeiteintragSheet({
 
           {istFremd && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-label2">
+              <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label2">
                 Grund (Pflicht bei fremden Einträgen)
               </label>
-              <input
+              <input id={`${uid}-6`}
                 value={grund}
                 onChange={(e) => setGrund(e.target.value)}
                 placeholder="z. B. Techniker vergaß Tätigkeit"
@@ -468,8 +471,8 @@ export function ZeiteintragSheet({
           {istBearbeiten && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm("Zeiteintrag wirklich löschen?")) {
+              onClick={async () => {
+                if (await bestaetigen({ titel: "Zeiteintrag löschen?", bestaetigenLabel: "Löschen" })) {
                   loeschenMutation.mutate();
                 }
               }}

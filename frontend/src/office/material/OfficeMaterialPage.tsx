@@ -7,7 +7,7 @@ import { ApiError } from "../../api/client";
 import { anlagenApi, lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
 import { FilterChip } from "../../components/apple/FilterChip";
 import { SearchField } from "../../components/apple/SearchField";
-import { SeitenPanel } from "../../components/apple/SeitenPanel";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { SkeletonList } from "../../components/Skeleton";
@@ -239,14 +239,14 @@ export function OfficeMaterialPage() {
         </>
       )}
 
-      <SeitenPanel offen={neu} onClose={() => setNeu(false)} titel="Neues Material">
+      <AnlegenPanel offen={neu} onClose={() => setNeu(false)} titel="Neues Material">
         <NeuesMaterialFormular
           lagerorte={lagerorte.map((l) => ({ id: l.id, bezeichnung: l.bezeichnung }))}
           lieferanten={lieferanten ?? []}
           onAbbrechen={() => setNeu(false)}
           onAngelegt={() => setNeu(false)}
         />
-      </SeitenPanel>
+      </AnlegenPanel>
     </div>
   );
 }

@@ -1,17 +1,19 @@
 // Uebersicht der Formular-Modul-v2-Schemas, gegen /api/form-schemas.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, Plus, Shapes } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { formModulApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<string, string> = { draft: "Entwurf", published: "Veröffentlicht", archived: "Archiviert" };
 
 export function FormSchemasPage() {
+  const uid = useId();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [formOffen, setFormOffen] = useState(false);
@@ -25,6 +27,7 @@ export function FormSchemasPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => formModulApi.createSchema({ name: name.trim(), beschreibung: beschreibung.trim() || undefined }),
     onSuccess: (schema) => {
       queryClient.invalidateQueries({ queryKey: ["form-schemas"] });
@@ -68,8 +71,8 @@ export function FormSchemasPage() {
       {formOffen ? (
         <form onSubmit={submit} className="space-y-3 card-ap p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-label">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Name</label>
+            <input id={`${uid}-0`}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="z.B. Wartungsprotokoll Heizung"
@@ -78,8 +81,8 @@ export function FormSchemasPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label">Beschreibung (optional)</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label">Beschreibung (optional)</label>
+            <input id={`${uid}-1`}
               value={beschreibung}
               onChange={(e) => setBeschreibung(e.target.value)}
               className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-sm text-label"
@@ -102,7 +105,7 @@ export function FormSchemasPage() {
       )}
 
       {isLoading ? (
-        <p className="text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !schemas ? (
         <FehlerZustand fehler={ladeFehler} was="Die Formulare" onErneut={() => void neuLaden()} />
       ) : !schemas || schemas.length === 0 ? (

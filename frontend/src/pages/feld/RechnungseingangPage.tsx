@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { heuteIso } from "../../utils/format";
 import { FileUp } from "lucide-react";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +12,7 @@ import { pruefeERechnungDatei } from "../../utils/eRechnung";
 import { istModulAktiv } from "../../utils/module";
 import type { EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf",
@@ -44,7 +46,7 @@ export function RechnungseingangPage() {
     lieferantId: "",
     lieferantName: "",
     rechnungsnummerLieferant: "",
-    rechnungsdatum: new Date().toISOString().slice(0, 10),
+    rechnungsdatum: heuteIso(),
     faelligAm: "",
     betragNetto: "",
     kategorie: "",
@@ -67,6 +69,7 @@ export function RechnungseingangPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       eingangsrechnungenApi.create({
         lieferant_id: form.lieferantId || null,
@@ -85,7 +88,7 @@ export function RechnungseingangPage() {
         lieferantId: "",
         lieferantName: "",
         rechnungsnummerLieferant: "",
-        rechnungsdatum: new Date().toISOString().slice(0, 10),
+        rechnungsdatum: heuteIso(),
         skontoProzent: "",
         skontoTage: "",
         faelligAm: "",
@@ -144,10 +147,10 @@ export function RechnungseingangPage() {
               {eRechnungMutation.isPending ? "Importiert…" : "E-Rechnung importieren"}
             </button>
             <button
-              onClick={() => setShowForm((v) => !v)}
+              onClick={() => setShowForm(true)}
               className="btn-touch rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium"
             >
-              {showForm ? "Abbrechen" : "+ Neu"}
+              + Neue Eingangsrechnung
             </button>
           </div>
         )}
@@ -159,8 +162,8 @@ export function RechnungseingangPage() {
         </Hinweiskasten>
       )}
 
-      {showForm && (
-        <div className="space-y-2 card-ap p-4">
+      <AnlegenPanel offen={showForm} titel="Neue Eingangsrechnung" onClose={() => setShowForm(false)}>
+        <div className="space-y-2 p-4">
           <select
             value={form.lieferantId}
             onChange={(e) => setForm({ ...form, lieferantId: e.target.value })}
@@ -261,7 +264,7 @@ export function RechnungseingangPage() {
             Anlegen
           </button>
         </div>
-      )}
+      </AnlegenPanel>
 
       <div className="flex gap-2 text-xs">
         {(["", "entwurf", "offen", "bezahlt", "storniert"] as const).map((s) => (

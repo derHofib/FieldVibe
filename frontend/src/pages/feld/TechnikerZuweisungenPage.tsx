@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, fahrzeugZuweisungenApi, technikerZuweisungenApi } from "../../api/endpoints";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktuellesFahrzeugId: string | null }) {
   const queryClient = useQueryClient();
@@ -51,12 +52,12 @@ export function TechnikerZuweisungenPage() {
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-label">Techniker-Zuweisungen</h1>
       <p className="text-sm text-label2">
-        Welcher Techniker betreut welche Kunden und faehrt welches Fahrzeug. Kunden zuweisen/ändern
+        Welcher Techniker betreut welche Kunden und fährt welches Fahrzeug. Kunden zuweisen/ändern
         geht über das Kunden-Profil, das Fahrzeug direkt hier.
       </p>
 
       {isLoading ? (
-        <p className="text-center text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !uebersicht ? (
         <FehlerZustand fehler={ladeFehler} was="Die Techniker" onErneut={() => void neuLaden()} />
       ) : !uebersicht || uebersicht.length === 0 ? (

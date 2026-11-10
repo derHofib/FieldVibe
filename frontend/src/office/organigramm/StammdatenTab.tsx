@@ -50,6 +50,7 @@ export function StammdatenTab({
   const istWurzel = detail.parent_id === null;
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => organigrammApi.updatePosition(detail.id, aenderung),
     onSuccess: () => {
       setFehler(null);

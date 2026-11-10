@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clock, Hourglass } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -19,6 +19,7 @@ import {
   formatUhrzeit,
 } from "../../utils/zeiterfassung";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const BUCHUNGSSTATUS_OPTIONEN: ZeiterfassungBuchungsstatus[] = ["vermerkt", "vorgemerkt", "gebucht", "abgerechnet"];
 
@@ -77,6 +78,8 @@ function gruppenSumme(gruppe: Gruppe): number {
  * Abschnitt 7.1/7.3, darf_zeiten_buchen in types/index.ts). Reiht sich per
  * navSeiten.ts in Feld-App und Office ein. */
 export function ZeitenBuchenPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
@@ -201,7 +204,7 @@ export function ZeitenBuchenPage() {
       return neu;
     });
   }
-  function handleBuchen() {
+  async function handleBuchen() {
     const stunden = formatSekundenAlsHHMM(
       ausgewaehlteEintraege.reduce(
         (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
@@ -209,9 +212,7 @@ export function ZeitenBuchenPage() {
       ),
     );
     if (
-      window.confirm(
-        `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen? Gebuchte Einträge kannst du danach nicht mehr ändern.`,
-      )
+      await bestaetigen({ titel: `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen?`, text: `Gebuchte Einträge kannst du danach nicht mehr ändern.`, bestaetigenLabel: "Buchen", destruktiv: false })
     ) {
       buchenMutation.mutate([...ausgewaehlteIds]);
     }
@@ -228,8 +229,8 @@ export function ZeitenBuchenPage() {
 
       <div className="card-ap grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select value={technikerId} onChange={(e) => setTechnikerId(e.target.value)} className="field-ap">
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
+          <select id={`${uid}-0`} value={technikerId} onChange={(e) => setTechnikerId(e.target.value)} className="field-ap">
             <option value="">Alle</option>
             {techniker.map((t) => (
               <option key={t.id} value={t.id}>
@@ -239,8 +240,8 @@ export function ZeitenBuchenPage() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Status</label>
-          <select
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Status</label>
+          <select id={`${uid}-1`}
             value={buchungsstatus}
             onChange={(e) => setBuchungsstatus(e.target.value as ZeiterfassungBuchungsstatus | "")}
             className="field-ap"
@@ -254,8 +255,8 @@ export function ZeitenBuchenPage() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Vermerkt älter als (Tage)</label>
-          <input
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Vermerkt älter als (Tage)</label>
+          <input id={`${uid}-2`}
             type="number"
             min="0"
             inputMode="numeric"
@@ -266,16 +267,16 @@ export function ZeitenBuchenPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Von</label>
-          <input type="date" value={von} onChange={(e) => setVon(e.target.value)} className="field-ap" />
+          <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">Von</label>
+          <input id={`${uid}-3`} type="date" value={von} onChange={(e) => setVon(e.target.value)} className="field-ap" />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Bis</label>
-          <input type="date" value={bis} onChange={(e) => setBis(e.target.value)} className="field-ap" />
+          <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-label2">Bis</label>
+          <input id={`${uid}-4`} type="date" value={bis} onChange={(e) => setBis(e.target.value)} className="field-ap" />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
-          <SearchableSelect
+          <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+          <SearchableSelect id={`${uid}-5`}
             value={kundeId}
             onChange={setKundeId}
             placeholder="Alle"
@@ -283,8 +284,8 @@ export function ZeitenBuchenPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Auftrag</label>
-          <SearchableSelect
+          <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label2">Auftrag</label>
+          <SearchableSelect id={`${uid}-6`}
             value={auftragId}
             onChange={setAuftragId}
             placeholder="Alle"
@@ -292,8 +293,8 @@ export function ZeitenBuchenPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Projekt</label>
-          <SearchableSelect
+          <label htmlFor={`${uid}-7`} className="mb-1 block text-xs font-medium text-label2">Projekt</label>
+          <SearchableSelect id={`${uid}-7`}
             value={projektId}
             onChange={setProjektId}
             placeholder="Alle"

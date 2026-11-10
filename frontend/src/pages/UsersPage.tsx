@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, LogOut, Send, ShieldOff, Trash2, UserCheck, UserX } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -12,6 +12,8 @@ import type { Einladung, EinladungRolle, Role, User } from "../types";
 import { istVersteckteTastenkombi, klickFolge } from "../utils/verstecktFreischalten";
 import { MIN_PASSWORT_LAENGE } from "../utils/passwort";
 import { FehlerZustand } from "../components/FehlerZustand";
+import { useBestaetigung } from "../components/ConfirmDialog";
+import { SkeletonList } from "../components/Skeleton";
 
 export const ROLE_LABEL: Record<Role, string> = {
   super_admin: "Super-Admin",
@@ -57,6 +59,8 @@ function LinkKopierenButton({ link }: { link: string }) {
 }
 
 export function UsersPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { currentUser } = useAuth();
   const queryClient = useQueryClient();
   const isSuperAdmin = currentUser?.role === "super_admin";
@@ -117,6 +121,7 @@ export function UsersPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: usersApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -128,6 +133,7 @@ export function UsersPage() {
   });
 
   const einladenMutation = useMutation({
+    meta: { erfolg: "Einladung gesendet" },
     mutationFn: usersApi.einladen,
     onSuccess: (einladung) => {
       queryClient.invalidateQueries({ queryKey: ["users", "einladungen"] });
@@ -138,6 +144,7 @@ export function UsersPage() {
   });
 
   const resendMutation = useMutation({
+    meta: { erfolg: "Einladung erneut gesendet" },
     mutationFn: usersApi.einladungErneutSenden,
     onSuccess: (einladung) => {
       queryClient.invalidateQueries({ queryKey: ["users", "einladungen"] });
@@ -146,6 +153,7 @@ export function UsersPage() {
   });
 
   const revokeMutation = useMutation({
+    meta: { erfolg: "Einladung widerrufen" },
     mutationFn: usersApi.einladungWiderrufen,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["users", "einladungen"] }),
   });
@@ -167,6 +175,7 @@ export function UsersPage() {
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: usersApi.remove,
     onSuccess: () => {
       setDeleteError(null);
@@ -236,8 +245,10 @@ export function UsersPage() {
             label: "Abmelden erzwingen",
             icon: LogOut,
             disabled: abmeldenMutation.isPending,
-            onClick: () => {
-              if (window.confirm(`${u.name} auf allen Geräten abmelden?`)) abmeldenMutation.mutate(u.id);
+            onClick: async () => {
+              if (await bestaetigen({ titel: `${u.name} auf allen Geräten abmelden?`, bestaetigenLabel: "Abmelden" })) {
+                abmeldenMutation.mutate(u.id);
+              }
             },
           },
           ...(u.mfa_aktiv
@@ -246,8 +257,8 @@ export function UsersPage() {
                   label: "MFA zurücksetzen",
                   icon: ShieldOff,
                   disabled: mfaResetMutation.isPending,
-                  onClick: () => {
-                    if (window.confirm(`Zwei-Faktor-Anmeldung von ${u.name} zurücksetzen? Der Nutzer wird überall abgemeldet.`)) {
+                  onClick: async () => {
+                    if (await bestaetigen({ titel: `Zwei-Faktor-Anmeldung von ${u.name} zurücksetzen?`, text: "Der Nutzer wird überall abgemeldet.", bestaetigenLabel: "Zurücksetzen" })) {
                       mfaResetMutation.mutate(u.id);
                     }
                   },
@@ -282,8 +293,8 @@ export function UsersPage() {
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Name</label>
-              <input
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+              <input id={`${uid}-0`}
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -292,8 +303,8 @@ export function UsersPage() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">E-Mail</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">E-Mail</label>
+            <input id={`${uid}-1`}
               type="email"
               required
               value={email}
@@ -303,8 +314,8 @@ export function UsersPage() {
           </div>
           {!kannEingeladenWerden && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Passwort</label>
-              <input
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Passwort</label>
+              <input id={`${uid}-2`}
                 type="password"
                 required
                 minLength={MIN_PASSWORT_LAENGE}
@@ -316,8 +327,8 @@ export function UsersPage() {
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Rolle</label>
-            <select
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-sm font-medium text-label">Rolle</label>
+            <select id={`${uid}-3`}
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
               className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
@@ -363,8 +374,8 @@ export function UsersPage() {
           )}
           {isSuperAdmin && role !== "super_admin" && (
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">Mandant</label>
-              <select
+              <label htmlFor={`${uid}-4`} className="mb-1 block text-sm font-medium text-label">Mandant</label>
+              <select id={`${uid}-4`}
                 required
                 value={mandantId}
                 onChange={(e) => setMandantId(e.target.value)}
@@ -444,8 +455,8 @@ export function UsersPage() {
                               label: "Widerrufen",
                               icon: Ban,
                               destruktiv: true,
-                              onClick: () => {
-                                if (window.confirm(`Einladung an ${e.email} widerrufen?`)) {
+                              onClick: async () => {
+                                if (await bestaetigen({ titel: `Einladung an ${e.email} widerrufen?`, bestaetigenLabel: "Widerrufen" })) {
                                   revokeMutation.mutate(e.id);
                                 }
                               },
@@ -475,7 +486,7 @@ export function UsersPage() {
         )}
         {deleteError && <p className="mb-2 text-sm text-st-fehlt ">{deleteError}</p>}
         {isLoading ? (
-          <p className="text-label2">Lädt…</p>
+          <SkeletonList count={4} />
         ) : ladeFehler && !users ? (
           <FehlerZustand fehler={ladeFehler} was="Die Nutzer" onErneut={() => void neuLaden()} />
         ) : (
@@ -578,10 +589,10 @@ export function UsersPage() {
               „Gelöschter Nutzer“ angezeigt.
             </p>
             <div>
-              <label className="mb-1 block text-sm font-medium text-label">
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-sm font-medium text-label">
                 Zur Bestätigung „{loeschErwartet}“ eintippen
               </label>
-              <input
+              <input id={`${uid}-5`}
                 value={loeschBestaetigung}
                 onChange={(e) => setLoeschBestaetigung(e.target.value)}
                 autoComplete="off"

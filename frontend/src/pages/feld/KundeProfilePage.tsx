@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { kundeTypLabel } from "../../config/kundeDarstellung";
+import { statusLabel } from "../../config/vorgangDarstellung";
 import { Boxes, ClipboardList, Inbox, MapPin, Repeat } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -36,6 +38,8 @@ import type {
 } from "../../types";
 import { MIN_PASSWORT_LAENGE } from "../../utils/passwort";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 function leereAdresse(adresse: Adresse | null): { strasse: string; plz: string; ort: string } {
   return { strasse: adresse?.strasse ?? "", plz: adresse?.plz ?? "", ort: adresse?.ort ?? "" };
@@ -79,6 +83,7 @@ function Stammdaten({
   const brauchtUstIdnr = typ === "gewerbe" || typ === "oeffentlich";
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       kundenApi.update(kundeId, {
         adresse:
@@ -281,6 +286,7 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
   const techniker = alleUser?.filter((u) => u.nur_zugewiesene_kunden) ?? [];
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => kundenApi.technikerSetzen(kundeId, auswahl),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kundeId] });
@@ -371,6 +377,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
   const [error, setError] = useState<string | null>(null);
 
   const neuerStandortMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => standorteApi.create({ kunde_id: kundeId, bezeichnung: neuerStandortName }),
     onSuccess: (standort) => {
       queryClient.invalidateQueries({ queryKey: ["standorte", kundeId] });
@@ -382,6 +389,7 @@ function NeueAnlage({ kundeId, standorte }: { kundeId: string; standorte: Stando
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       anlagenApi.create({
         kunde_id: kundeId,
@@ -515,6 +523,7 @@ function NeuerStandort({ kundeId }: { kundeId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       standorteApi.create({
         kunde_id: kundeId,
@@ -677,6 +686,7 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
   const [error, setError] = useState<string | null>(null);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     // Ohne bestehendes kundenspezifisches LV wird eines still angelegt --
     // die Seite bietet bewusst weiterhin das Anlegen "in einem Schritt", die
     // Zwei-Stufen-Struktur (erst LV, dann Position) ist nur auf der
@@ -795,8 +805,10 @@ function NeueLvPosition({ kundeId, kundeName, zielLvId }: { kundeId: string; kun
 }
 
 function LvPositionZeile({ position, kundeId }: { position: LeistungsverzeichnisPosition; kundeId: string }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const removeMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => leistungsverzeichnisApi.remove(position.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis", kundeId] }),
   });
@@ -817,8 +829,8 @@ function LvPositionZeile({ position, kundeId }: { position: Leistungsverzeichnis
         </div>
       </div>
       <button
-        onClick={() => {
-          if (window.confirm(`"${position.bezeichnung}" wirklich löschen?`)) removeMutation.mutate();
+        onClick={async () => {
+          if (await bestaetigen({ titel: `"${position.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) removeMutation.mutate();
         }}
         disabled={removeMutation.isPending}
         className="btn-touch shrink-0 rounded-md bg-st-fehlt-bg px-3 py-1.5 text-xs font-semibold text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
@@ -944,6 +956,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
   });
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: (file: File) => kundenApi.logoUpload(kunde.id, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kunde.id] });
@@ -952,6 +965,7 @@ function KundenPortalLinkUndLogo({ kunde }: { kunde: Kunde }) {
   });
 
   const removeMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => kundenApi.logoRemove(kunde.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["kunde-profil", kunde.id] });
@@ -1040,6 +1054,7 @@ function NeuerPortalZugang({ kundeId }: { kundeId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => kundenportalZugaengeApi.create(kundeId, { name, email, password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["portal-zugaenge", kundeId] });
@@ -1200,6 +1215,7 @@ export function KundeProfilePage({
 }: { id?: string; eingebettet?: boolean } = {}) {
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentUser, hatRecht } = useAuth();
@@ -1239,6 +1255,7 @@ export function KundeProfilePage({
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => kundenApi.remove(id!),
     onSuccess: () => navigate("/kunden"),
     onError: (err) => setDeleteError(err instanceof ApiError ? err.message : "Löschen fehlgeschlagen"),
@@ -1250,7 +1267,7 @@ export function KundeProfilePage({
   });
 
   if (!kundenverwaltungAktiv) {
-    if (kundeLoading || !kunde) return <p className="text-center text-label2">Lädt…</p>;
+    if (kundeLoading || !kunde) return <DetailSkeleton />;
     return (
       <div className="space-y-4">
         {!eingebettet && (
@@ -1261,7 +1278,7 @@ export function KundeProfilePage({
         <div className="card-ap p-4">
           <div className="text-xs text-label2">{kunde.kundennummer}</div>
           <h1 className="text-lg font-bold text-label">{kunde.name}</h1>
-          {kunde.typ && <span className="text-sm text-label2">{kunde.typ}</span>}
+          {kunde.typ && <span className="text-sm text-label2">{kundeTypLabel(kunde.typ)}</span>}
         </div>
       </div>
     );
@@ -1269,7 +1286,7 @@ export function KundeProfilePage({
 
   if (profilFehler && !profil)
     return <FehlerZustand fehler={profilFehler} was="Der Kunde" zurueck onErneut={() => void profilNeu()} className="py-6" />;
-  if (profilLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
+  if (profilLoading || !profil) return <DetailSkeleton />;
 
   const kannVerwalten = hatRecht("kunden", "bearbeiten");
 
@@ -1286,7 +1303,7 @@ export function KundeProfilePage({
           <div>
             <div className="text-xs text-label2">{profil.kundennummer}</div>
             <h1 className="text-lg font-bold text-label">{profil.name}</h1>
-            {profil.typ && <span className="text-sm text-label2">{profil.typ}</span>}
+            {profil.typ && <span className="text-sm text-label2">{kundeTypLabel(profil.typ)}</span>}
           </div>
           {kannVerwalten && (
             <div className="flex shrink-0 gap-2">
@@ -1299,11 +1316,9 @@ export function KundeProfilePage({
                 Datenexport
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (
-                    window.confirm(
-                      `${profil.name} wirklich löschen? Das kann nicht rückgängig gemacht werden.`
-                    )
+                    await bestaetigen({ titel: `${profil.name} löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Löschen" })
                   ) {
                     deleteMutation.mutate();
                   }
@@ -1457,7 +1472,7 @@ export function KundeProfilePage({
                   <div className="text-sm font-medium text-label">{v.titel}</div>
                 </div>
                 <span className={`px-2 py-1 text-xs font-semibold ${STATUS_BADGE[v.status]}`}>
-                  {v.status}
+                  {statusLabel(v.status)}
                 </span>
               </button>
             ))}

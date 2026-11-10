@@ -39,6 +39,7 @@ export function ComposePanel({ modus, onGesendet, onAbbrechen }: Props) {
   useEscapeSchliesst(onAbbrechen, text.trim() === "");
 
   const senden = useMutation({
+    meta: { erfolg: "Gesendet" },
     mutationFn: async () => {
       const anListe = parseAdressen(an);
       if (modus.art === "neu") {

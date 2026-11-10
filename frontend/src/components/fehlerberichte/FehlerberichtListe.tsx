@@ -7,6 +7,7 @@ import { fehlerberichteApi, mandantenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import type { FehlerberichtListItem, FehlerberichtSchweregrad, FehlerberichtZaehler } from "../../types";
 import { EmptyState } from "../EmptyState";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { SearchField } from "../apple/SearchField";
 import { SegmentedControl } from "../apple/SegmentedControl";
 import { STATUS_KREIS_KLASSE } from "../apple/status";
@@ -22,6 +23,7 @@ import {
   statusLabel,
 } from "./darstellung";
 import { STANDARD_FILTER, ladeBerichte, type ArtReiter, type ListenFilter, type StatusFilter, type Zeitraum } from "./liste";
+import { SkeletonList } from "../Skeleton";
 
 function offenAnzahl(z: FehlerberichtZaehler): number {
   return OFFENE_STATUS.reduce((summe, s) => summe + z[s], 0);
@@ -169,9 +171,11 @@ export function FehlerberichtListe({
     queryKey: ["fehlerberichte", "zaehler", mandantId, art],
     queryFn: () => fehlerberichteApi.zaehler(mandantId || undefined, artFilter),
   });
+  const qVerzoegert = useDebouncedValue(filter.q);
+  const abfrageFilter = { ...filter, q: qVerzoegert, mandantId };
   const { data: berichte, isLoading, isError } = useQuery({
-    queryKey: ["fehlerberichte", "liste", { ...filter, mandantId }],
-    queryFn: () => ladeBerichte({ ...filter, mandantId }),
+    queryKey: ["fehlerberichte", "liste", abfrageFilter],
+    queryFn: () => ladeBerichte(abfrageFilter),
   });
 
   // Erneuter Klick auf die aktive Kachel kehrt zum Standard "offen" zurueck.
@@ -261,7 +265,7 @@ export function FehlerberichtListe({
       )}
 
       {isLoading ? (
-        <p className="text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : isError ? (
         <p className="text-st-fehlt">Meldungen konnten nicht geladen werden.</p>
       ) : berichte && berichte.length > 0 ? (
