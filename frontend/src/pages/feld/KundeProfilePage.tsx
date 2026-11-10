@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { kundeTypLabel } from "../../config/kundeDarstellung";
 import { statusLabel } from "../../config/vorgangDarstellung";
 import { Boxes, ClipboardList, Download, Inbox, MapPin, MoreHorizontal, Repeat, Trash2 } from "lucide-react";
-import { useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import {
@@ -17,6 +17,7 @@ import {
 } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 import { AnsprechpartnerVerwaltung } from "../../components/AnsprechpartnerVerwaltung";
 import { PulldownMenu, type PulldownItem } from "../../components/apple/PulldownMenu";
 import { SegmentedControl } from "../../components/apple/SegmentedControl";
@@ -365,44 +366,6 @@ function TechnikerZuweisung({ kundeId, zugewiesen }: { kundeId: string; zugewies
           Abbrechen
         </button>
       </div>
-    </div>
-  );
-}
-
-const FELD_KLASSE = "btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label";
-const NEU_BUTTON_KLASSE = "btn-touch btn-ap px-4 py-2 text-sm font-medium";
-
-interface FeldProps {
-  id: string;
-  "aria-invalid": boolean;
-  "aria-describedby"?: string;
-}
-
-/** Beschriftetes Formularfeld mit Pflichtstern und Feldfehler; das Eingabeelement bekommt id/aria über Render-Prop. */
-function Feld({
-  label,
-  pflicht = false,
-  fehler,
-  children,
-}: {
-  label: string;
-  pflicht?: boolean;
-  fehler?: string | null;
-  children: (props: FeldProps) => ReactNode;
-}) {
-  const id = useId();
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-label">
-        {label}
-        {pflicht && <span aria-hidden="true" className="text-st-fehlt"> *</span>}
-      </label>
-      {children({ id, "aria-invalid": !!fehler, "aria-describedby": fehler ? `${id}-fehler` : undefined })}
-      {fehler && (
-        <p id={`${id}-fehler`} role="alert" className="mt-1 text-xs text-st-fehlt">
-          {fehler}
-        </p>
-      )}
     </div>
   );
 }

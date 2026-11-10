@@ -14,6 +14,7 @@ import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBeda
 import { FehlerZustand } from "../../components/FehlerZustand";
 import { useBestaetigung } from "../../components/ConfirmDialog";
 import { AnlegenPanel } from "../../components/AnlegenPanel";
+import { Feld, FELD_KLASSE, NEU_BUTTON_KLASSE } from "../../components/FormularFeld";
 
 type MaterialTab = "material" | "bestellwesen";
 
@@ -349,6 +350,7 @@ export function MaterialPage() {
   const [bestellLiefertermin, setBestellLiefertermin] = useState("");
   const [showLieferantForm, setShowLieferantForm] = useState(false);
   const [lieferantName, setLieferantName] = useState("");
+  const [lieferantNameFehler, setLieferantNameFehler] = useState<string | null>(null);
   const [lieferantEmail, setLieferantEmail] = useState("");
 
   const bestellwesenAktiv = tab === "bestellwesen" && materialAktiv;
@@ -686,36 +688,35 @@ export function MaterialPage() {
           <div className="card-ap p-3">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-label2">Lieferanten</h2>
-              <button
-                onClick={() => setShowLieferantForm((v) => !v)}
-                className="btn-touch text-xs font-medium text-tint "
-              >
-                {showLieferantForm ? "Abbrechen" : "+ Neuer Lieferant"}
+              <button onClick={() => setShowLieferantForm(true)} className={NEU_BUTTON_KLASSE}>
+                + Neuer Lieferant
               </button>
             </div>
-            {showLieferantForm && (
-              <div className="mb-2 space-y-2 border border-sepstrong p-2">
-                <input
-                  value={lieferantName}
-                  onChange={(e) => setLieferantName(e.target.value)}
-                  placeholder="Name"
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                />
-                <input
-                  value={lieferantEmail}
-                  onChange={(e) => setLieferantEmail(e.target.value)}
-                  placeholder="E-Mail (optional)"
-                  className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
-                />
-                <button
-                  disabled={!lieferantName.trim() || createLieferantMutation.isPending}
-                  onClick={() => createLieferantMutation.mutate()}
-                  className="btn-touch w-full rounded-md btn-ap-primary px-3 py-1.5 text-sm font-medium disabled:opacity-50"
-                >
+            <AnlegenPanel offen={showLieferantForm} titel="Neuer Lieferant" onClose={() => setShowLieferantForm(false)}>
+              <form
+                noValidate
+                className="space-y-3 p-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!lieferantName.trim()) {
+                    setLieferantNameFehler("Bitte einen Namen eingeben.");
+                    return;
+                  }
+                  setLieferantNameFehler(null);
+                  createLieferantMutation.mutate();
+                }}
+              >
+                <Feld label="Name" pflicht fehler={lieferantNameFehler}>
+                  {(p) => <input {...p} autoFocus value={lieferantName} onChange={(e) => setLieferantName(e.target.value)} className={FELD_KLASSE} />}
+                </Feld>
+                <Feld label="E-Mail (optional)">
+                  {(p) => <input {...p} type="email" value={lieferantEmail} onChange={(e) => setLieferantEmail(e.target.value)} className={FELD_KLASSE} />}
+                </Feld>
+                <button type="submit" disabled={createLieferantMutation.isPending} className="btn-touch btn-ap-primary w-full rounded-md py-2 text-sm font-medium">
                   Anlegen
                 </button>
-              </div>
-            )}
+              </form>
+            </AnlegenPanel>
             {(lieferanten ?? []).length === 0 ? (
               <p className="text-sm text-label2">Noch keine Lieferanten angelegt.</p>
             ) : (
