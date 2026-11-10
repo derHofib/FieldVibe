@@ -1,10 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
 
 import { anlagenApi, kundenApi, standorteApi, vorgangAnfragenApi } from "../../api/endpoints";
 import { ApiError } from "../../api/client";
-import { useAuth } from "../../context/AuthContext";
 import type { Leistungstyp, VorgangAbrechnungsart, VorgangAnfrage } from "../../types";
 
 const LEISTUNGSTYP_LABEL: Record<Leistungstyp, string> = {
@@ -177,17 +175,12 @@ function AnfrageKarte({ anfrage }: { anfrage: VorgangAnfrage }) {
 }
 
 export function AnfragenPage() {
-  const { currentUser, hatRecht } = useAuth();
   const [statusFilter, setStatusFilter] = useState<"offen" | "alle">("offen");
 
   const { data: anfragen, isLoading } = useQuery({
     queryKey: ["vorgang-anfragen", statusFilter],
     queryFn: () => vorgangAnfragenApi.list(statusFilter === "offen" ? "offen" : undefined),
   });
-
-  if (currentUser && !hatRecht("vorgaenge", "bearbeiten")) {
-    return <Navigate to="/feed" replace />;
-  }
 
   return (
     <div className="space-y-4">

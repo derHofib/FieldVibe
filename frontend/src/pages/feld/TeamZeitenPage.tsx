@@ -43,10 +43,6 @@ export function TeamZeitenPage() {
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
 
-  if (!darf) {
-    return <EmptyState icon={Clock} text="Keine Berechtigung für diese Seite." />;
-  }
-
   return (
     <div className="space-y-4">
       <h1 className="text-lg font-bold text-label">Team-Zeiten</h1>

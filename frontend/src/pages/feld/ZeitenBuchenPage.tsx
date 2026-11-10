@@ -177,10 +177,6 @@ export function ZeitenBuchenPage() {
     onError: meldeAktionsFehler,
   });
 
-  if (!darfZeitenBuchen) {
-    return <EmptyState icon={Hourglass} text="Keine Berechtigung für diese Seite." />;
-  }
-
   // Laufende Eintraege (ende_at noch nicht gesetzt) gehoeren in den Abschnitt
   // "Laufende Timer" unten, nicht in die buchbare Liste -- analog zum
   // Zeit-Tab in VorgangDetailPage.tsx.

@@ -14,7 +14,6 @@ import {
   kalenderRaster,
   offeneAntraege,
 } from "../../utils/abwesenheit";
-import { istModulAktiv } from "../../utils/module";
 import { monatsGrenzen, toDateInput } from "../../utils/zeiterfassung";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { AbwesenheitSheet } from "./AbwesenheitSheet";
@@ -37,14 +36,9 @@ function fehlerText(err: unknown): string {
 }
 
 export function OfficeAbwesenheitenPage() {
-  const { currentUser } = useAuth();
   const [tab, setTab] = useState<Tab>("offen");
   const [eintragen, setEintragen] = useState(false);
   const queryClient = useQueryClient();
-
-  if (!istModulAktiv(currentUser, "zeiterfassung") || !currentUser?.darf_abwesenheiten_verwalten) {
-    return <EmptyState icon={CalendarCheck} text="Dafür fehlt die Berechtigung „Abwesenheiten verwalten“." />;
-  }
 
   return (
     <div className="space-y-4">

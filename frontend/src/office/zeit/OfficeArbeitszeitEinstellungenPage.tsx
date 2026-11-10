@@ -1,17 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clock, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { arbeitszeitApi, usersApi } from "../../api/endpoints";
-import { EmptyState } from "../../components/EmptyState";
 import { SearchableSelect } from "../../components/SearchableSelect";
 import { useAuth } from "../../context/AuthContext";
 import { SOLL_WOCHENTAG_FELDER, type ArbeitszeitSoll, type Bundesland, type SollWochentagFeld } from "../../types";
 import { BUNDESLAND_LABEL, parseStunden, sollWochensumme, stundenFuerApi } from "../../utils/arbeitszeit";
 import { formatStundenAlsHHMM } from "../../utils/duration";
-import { istModulAktiv } from "../../utils/module";
 import { toDateInput } from "../../utils/zeiterfassung";
 import { Karte, SeitenKopf } from "../OfficeUi";
 
@@ -38,12 +36,6 @@ function formatDatum(iso: string): string {
 }
 
 export function OfficeArbeitszeitEinstellungenPage() {
-  const { currentUser } = useAuth();
-
-  if (!currentUser?.darf_abwesenheiten_verwalten || !istModulAktiv(currentUser, "zeiterfassung")) {
-    return <EmptyState icon={Clock} text="Dafür fehlt das Recht „Abwesenheiten verwalten“." />;
-  }
-
   return (
     <div className="space-y-4">
       <Link to="/einstellungen" className="text-sm font-medium text-tint-text hover:underline">

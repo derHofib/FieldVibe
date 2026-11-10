@@ -1,9 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { BarChart3, Download } from "lucide-react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { exportApi, insightsApi } from "../../api/endpoints";
-import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { VorgangStatus } from "../../types";
@@ -28,7 +27,6 @@ function Kachel({ label, wert }: { label: string; wert: string }) {
 }
 
 export function InsightsPage() {
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   const { data: insights, isLoading } = useQuery({
@@ -53,8 +51,6 @@ export function InsightsPage() {
     onSuccess: (blob) => downloadBlob(blob, "Eingangsrechnungen.csv"),
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
-    return <Navigate to="/feed" replace />;
   if (isLoading || !insights) return <p className="text-center text-label2">Lädt…</p>;
 
   const gesamtVorgaenge = Object.values(insights.vorgaenge_nach_status).reduce((a, b) => a + b, 0);

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
@@ -56,7 +56,7 @@ interface NeuerTerminForm {
 }
 
 export function DispoBoardPage() {
-  const { currentUser, hatRecht } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -108,8 +108,6 @@ export function DispoBoardPage() {
       queryClient.invalidateQueries({ queryKey: ["termine"] });
     },
   });
-
-  if (currentUser && !hatRecht("dispo", "sehen")) return <Navigate to="/feed" replace />;
 
   const terminenNachTechnikerUndTag = new Map<string, Map<string, Termin[]>>();
   for (const t of termine ?? []) {

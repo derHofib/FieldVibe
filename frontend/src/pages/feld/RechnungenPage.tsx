@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { FileCheck2, Receipt } from "lucide-react";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
 import { FilterChip } from "../../components/apple/FilterChip";
@@ -140,8 +140,6 @@ export function RechnungenPage() {
     queryFn: () => rechnungenApi.list(filter),
     enabled: abrechnungAktiv && kannSehen && bereich === "rechnungen",
   });
-
-  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
   const toggleStatus = (s: RechnungStatus) => {
     setSeiten(1);

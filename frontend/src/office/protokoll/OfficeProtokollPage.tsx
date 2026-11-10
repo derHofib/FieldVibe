@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Download, ShieldCheck } from "lucide-react";
-import { Navigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { protokollApi } from "../../api/endpoints";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
-import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import {
@@ -25,7 +23,6 @@ function fehlerText(err: unknown): string {
 }
 
 export function OfficeProtokollPage() {
-  const { currentUser } = useAuth();
   const [filter, setFilter] = useState<ProtokollFilter>({});
   const [offset, setOffset] = useState(0);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -41,10 +38,6 @@ export function OfficeProtokollPage() {
     onError: (err) => setFehler(fehlerText(err)),
     onSuccess: () => setFehler(null),
   });
-
-  if (currentUser && currentUser.role !== "mandant_admin") {
-    return <Navigate to="/vorgaenge" replace />;
-  }
 
   function filterSetzen(neu: ProtokollFilter) {
     setFilter(neu);

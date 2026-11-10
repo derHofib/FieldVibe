@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Users } from "lucide-react";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { kundenApi } from "../../api/endpoints";
@@ -92,8 +92,6 @@ export function KundenPage() {
     onError: (err) =>
       setKundeFehler(err instanceof ApiError ? err.message : "Kunde konnte nicht angelegt werden."),
   });
-
-  if (!kannSehen) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Package } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { angeboteApi, anlagenApi, bestellungenApi, lieferantenApi, materialApi, materialBedarfeApi, tagsApi } from "../../api/endpoints";
@@ -468,8 +468,6 @@ export function MaterialPage() {
       queryClient.invalidateQueries({ queryKey: ["stories"] });
     },
   });
-
-  if (!materialAktiv) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">

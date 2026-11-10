@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileUp } from "lucide-react";
 import { useRef, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { eingangsrechnungenApi, lieferantenApi } from "../../api/endpoints";
@@ -120,8 +120,6 @@ export function RechnungseingangPage() {
     setImportFehler(null);
     eRechnungMutation.mutate(datei);
   }
-
-  if (!abrechnungAktiv || !kannSehen) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">

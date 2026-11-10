@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HardHat } from "lucide-react";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { partnerApi } from "../../api/endpoints";
 import { EmptyState } from "../../components/EmptyState";
@@ -79,8 +79,6 @@ export function PartnerPage() {
       navigate(`/partner/${p.id}`);
     },
   });
-
-  if (!kannSehen) return <Navigate to="/feed" replace />;
 
   return (
     <div className="space-y-4">

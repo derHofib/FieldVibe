@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { papierkorbApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
@@ -80,16 +80,6 @@ export function PapierkorbPage() {
           : "Endgültiges Löschen fehlgeschlagen -- vermutlich verweisen noch andere Daten darauf.",
       ),
   });
-
-  // Nur die beiden Papierkorb-Rollen duerfen diese Seite sehen (siehe
-  // app/api/routes/papierkorb.py) -- alle anderen landen wieder im Feed.
-  if (
-    currentUser &&
-    currentUser.role !== "loesch_ansicht" &&
-    currentUser.role !== "loesch_operativ"
-  ) {
-    return <Navigate to="/feed" replace />;
-  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-4">

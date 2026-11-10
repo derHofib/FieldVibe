@@ -1,13 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileUp, Undo2 } from "lucide-react";
-import { Navigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
 import { datenimportApi } from "../../api/endpoints";
 import { FilterChip } from "../../components/apple/FilterChip";
 import { Hinweiskasten } from "../../components/Hinweiskasten";
-import { useAuth } from "../../context/AuthContext";
 import { downloadBlob } from "../../utils/download";
 import { KennzahlKarte, Karte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import {
@@ -57,7 +55,6 @@ function fehlerText(err: unknown): string {
 }
 
 export function OfficeDatenimportPage() {
-  const { currentUser } = useAuth();
   const queryClient = useQueryClient();
 
   const [schritt, setSchritt] = useState<Schritt>(1);
@@ -130,10 +127,6 @@ export function OfficeDatenimportPage() {
     },
     onError: (err) => setFehler(fehlerText(err)),
   });
-
-  if (currentUser && currentUser.role !== "mandant_admin") {
-    return <Navigate to="/vorgaenge" replace />;
-  }
 
   async function herunterladen(laden: () => Promise<Blob>, name: string) {
     try {

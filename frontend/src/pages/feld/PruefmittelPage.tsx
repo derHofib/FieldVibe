@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { pruefmittelApi, usersApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
@@ -33,7 +33,7 @@ interface NeuesForm {
 }
 
 export function PruefmittelPage() {
-  const { currentUser, hatRecht } = useAuth();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -72,8 +72,6 @@ export function PruefmittelPage() {
   });
 
   const kannLoeschen = currentUser?.role === "loesch_operativ";
-
-  if (currentUser && !hatRecht("material", "sehen")) return <Navigate to="/feed" replace />;
 
   const sortiert = [...(pruefmittel ?? [])].sort((a, b) =>
     a.naechste_kalibrierung_am.localeCompare(b.naechste_kalibrierung_am),

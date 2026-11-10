@@ -1,14 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Mail, Plug } from "lucide-react";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { integrationenApi, mandantEinstellungenApi } from "../../api/endpoints";
 import { DatevSection } from "../../components/DatevSection";
 import { ErloeskontenSection } from "../../components/ErloeskontenSection";
 import { MfaPflichtSection } from "../../components/MfaPflichtSection";
 import { PortalVerbraucherschutzSection } from "../../components/PortalVerbraucherschutzSection";
-import { useAuth } from "../../context/AuthContext";
 import type { MandantEinstellungen, MandantIntegration } from "../../types";
 import { E_RECHNUNG_MODI, type ERechnungModus, eRechnungModus } from "../../utils/eRechnungVersand";
 import { istHttpUrl } from "../../utils/rechtliches";
@@ -703,7 +702,6 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
 }
 
 export function IntegrationenPage() {
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -771,8 +769,6 @@ export function IntegrationenPage() {
     },
   });
 
-  if (currentUser && currentUser.role !== "mandant_admin" && currentUser.role !== "loesch_operativ")
-    return <Navigate to="/feed" replace />;
   if (isLoading) return <p className="text-center text-label2">Lädt…</p>;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
