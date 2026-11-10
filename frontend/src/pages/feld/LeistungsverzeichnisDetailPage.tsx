@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ChevronRight, ClipboardList, Copy, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { leistungsverzeichnisApi, leistungsverzeichnisseApi, mandantEinstellungenApi, materialApi } from "../../api/endpoints";
@@ -11,6 +11,8 @@ import { SeitenPanel } from "../../components/SeitenPanel";
 import { useAuth } from "../../context/AuthContext";
 import type { LeistungsverzeichnisPosition, LvKalkulationsmodus, LvMaterialPosten } from "../../types";
 import { KundenZuweisung } from "./LeistungsverzeichnisPage";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 function euro(wert: string | number): string {
   return `${Number(wert).toFixed(2)} €`;
@@ -29,15 +31,16 @@ function MaterialPostenZeile({
   onChange: (posten: LvMaterialPosten) => void;
   onEntfernen: () => void;
 }) {
+  const uid = useId();
   const { data: material } = useQuery({ queryKey: ["material-alle"], queryFn: () => materialApi.list() });
 
   return (
     <div className="flex flex-wrap items-end gap-2 border border-sepstrong p-2">
       <div className="min-w-[160px] flex-1">
-        <label className="mb-1 block text-[10.5px] font-medium text-label2">
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-[10.5px] font-medium text-label2">
           Bezeichnung
         </label>
-        <SearchableSelect
+        <SearchableSelect id={`${uid}-0`}
           value=""
           onChange={(materialId) => {
             const gewaehlt = material?.find((m) => m.id === materialId);
@@ -62,8 +65,8 @@ function MaterialPostenZeile({
         )}
       </div>
       <div className="w-20">
-        <label className="mb-1 block text-[10.5px] font-medium text-label2">Menge</label>
-        <input
+        <label htmlFor={`${uid}-1`} className="mb-1 block text-[10.5px] font-medium text-label2">Menge</label>
+        <input id={`${uid}-1`}
           type="number"
           step="0.01"
           value={posten.menge}
@@ -72,10 +75,10 @@ function MaterialPostenZeile({
         />
       </div>
       <div className="w-24">
-        <label className="mb-1 block text-[10.5px] font-medium text-label2">
+        <label htmlFor={`${uid}-2`} className="mb-1 block text-[10.5px] font-medium text-label2">
           Einzelpreis
         </label>
-        <input
+        <input id={`${uid}-2`}
           type="number"
           step="0.01"
           value={posten.einzelpreis}
@@ -114,6 +117,8 @@ function LvPositionFelder({
   elternPositionId?: string;
   onFertig: () => void;
 }) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const { currentUser } = useAuth();
   const istNeu = position === null;
@@ -174,6 +179,7 @@ function LvPositionFelder({
   const invalidieren = () => queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis"] });
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => {
       const body = {
         bezeichnung,
@@ -216,10 +222,10 @@ function LvPositionFelder({
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-2">
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+          <label htmlFor={`${uid}-0`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
             Bezeichnung
           </label>
-          <input
+          <input id={`${uid}-0`}
             autoFocus
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
@@ -228,10 +234,10 @@ function LvPositionFelder({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+          <label htmlFor={`${uid}-1`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
             Einheit
           </label>
-          <input
+          <input id={`${uid}-1`}
             value={einheit}
             onChange={(e) => setEinheit(e.target.value)}
             className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -281,10 +287,10 @@ function LvPositionFelder({
 
           {kalkulationsmodus === "festpreis" ? (
             <div>
-              <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+              <label htmlFor={`${uid}-2`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
                 Einzelpreis (€)
               </label>
-              <input
+              <input id={`${uid}-2`}
                 type="number"
                 step="0.01"
                 value={einzelpreis}
@@ -298,10 +304,10 @@ function LvPositionFelder({
                 <p className="mb-2 text-xs font-bold text-label">Lohn</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="mb-1 block text-[10.5px] font-medium text-label2">
+                    <label htmlFor={`${uid}-3`} className="mb-1 block text-[10.5px] font-medium text-label2">
                       Zeit (Minuten)
                     </label>
-                    <input
+                    <input id={`${uid}-3`}
                       type="number"
                       value={lohnMinuten}
                       onChange={(e) => setLohnMinuten(e.target.value)}
@@ -309,10 +315,10 @@ function LvPositionFelder({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-[10.5px] font-medium text-label2">
+                    <label htmlFor={`${uid}-4`} className="mb-1 block text-[10.5px] font-medium text-label2">
                       Stundensatz (€)
                     </label>
-                    <input
+                    <input id={`${uid}-4`}
                       type="number"
                       step="0.01"
                       value={lohnStundensatz}
@@ -338,10 +344,10 @@ function LvPositionFelder({
                   </div>
                 )}
                 <div className="mt-2">
-                  <label className="mb-1 block text-[10.5px] font-medium text-label2">
+                  <label htmlFor={`${uid}-5`} className="mb-1 block text-[10.5px] font-medium text-label2">
                     Gemeinkosten (%)
                   </label>
-                  <input
+                  <input id={`${uid}-5`}
                     type="number"
                     step="0.1"
                     value={lohnGemeinkosten}
@@ -377,10 +383,10 @@ function LvPositionFelder({
                   </button>
                 </div>
                 <div className="mt-2">
-                  <label className="mb-1 block text-[10.5px] font-medium text-label2">
+                  <label htmlFor={`${uid}-6`} className="mb-1 block text-[10.5px] font-medium text-label2">
                     Materialaufschlag (%)
                   </label>
-                  <input
+                  <input id={`${uid}-6`}
                     type="number"
                     step="0.1"
                     value={materialAufschlag}
@@ -391,10 +397,10 @@ function LvPositionFelder({
               </div>
 
               <div className="border border-sepstrong p-3">
-                <label className="mb-1 block text-[10.5px] font-medium text-label2">
+                <label htmlFor={`${uid}-7`} className="mb-1 block text-[10.5px] font-medium text-label2">
                   Gewinn/Wagnis (%)
                 </label>
-                <input
+                <input id={`${uid}-7`}
                   type="number"
                   step="0.1"
                   value={gewinnWagnis}
@@ -408,10 +414,10 @@ function LvPositionFelder({
       )}
 
       <div>
-        <label className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
+        <label htmlFor={`${uid}-8`} className="mb-1.5 block text-[11px] font-bold tracking-wide text-label2 uppercase">
           Notiz
         </label>
-        <textarea
+        <textarea id={`${uid}-8`}
           value={notiz}
           onChange={(e) => setNotiz(e.target.value)}
           rows={2}
@@ -507,8 +513,8 @@ function LvPositionFelder({
           <span />
         ) : (
           <button
-            onClick={() => {
-              if (window.confirm(`"${position!.bezeichnung}" wirklich löschen?`)) loeschen.mutate();
+            onClick={async () => {
+              if (await bestaetigen({ titel: `"${position!.bezeichnung}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
             className="btn-touch text-xs font-medium text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
@@ -641,6 +647,7 @@ function LvHauptpunktZeile({
  * (eine Ebene tief) und "Duplizieren" -- kopiert das LV samt Positionen mit
  * eigener, zunaechst leerer Kunden-Zuweisung. */
 export function LeistungsverzeichnisDetailPage({ layout = "kompakt" }: { layout?: "kompakt" | "dicht" } = {}) {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -678,7 +685,7 @@ export function LeistungsverzeichnisDetailPage({ layout = "kompakt" }: { layout?
     },
   });
 
-  if (lvLaedt) return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
+  if (lvLaedt) return <DetailSkeleton />;
   if (!lv) return <EmptyState icon={ClipboardList} text="Leistungsverzeichnis nicht gefunden." />;
 
   const dicht = layout === "dicht";
@@ -708,8 +715,8 @@ export function LeistungsverzeichnisDetailPage({ layout = "kompakt" }: { layout?
               <Copy size={13} strokeWidth={1.5} /> Duplizieren
             </button>
             <button
-              onClick={() => {
-                if (window.confirm(`"${lv.name}" samt aller Positionen wirklich löschen?`)) loeschen.mutate();
+              onClick={async () => {
+                if (await bestaetigen({ titel: `"${lv.name}" samt aller Positionen löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
               }}
               disabled={loeschen.isPending}
               className="btn-touch btn-ap-toolbar text-label2 hover:text-st-fehlt disabled:opacity-50 dark:hover:text-st-fehlt"
@@ -748,7 +755,7 @@ export function LeistungsverzeichnisDetailPage({ layout = "kompakt" }: { layout?
       </div>
 
       {positionenLaden ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <DetailSkeleton />
       ) : !positionen || positionen.length === 0 ? (
         <EmptyState icon={ClipboardList} text="Noch keine Positionen in diesem Leistungsverzeichnis." />
       ) : (

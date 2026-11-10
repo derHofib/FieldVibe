@@ -30,6 +30,7 @@ export function ErloeskontenSection({ einstellungen }: { einstellungen: MandantE
   const standard7 = standardErloeskonto("S:7.00", kontenrahmen);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => mandantEinstellungenApi.firmendatenSpeichern(firmendatenMitKonten(einstellungen.firmendaten, konten)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });

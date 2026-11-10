@@ -92,6 +92,7 @@ export function PlanSymbolePage() {
   }
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: () => planSymboleApi.upload(ausgewaehlteDatei!, neuerName.trim(), ausgewaehlteDatei!.name),
     onSuccess: () => {
       setNeuerName("");
@@ -107,6 +108,7 @@ export function PlanSymbolePage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Symbol konnte nicht umbenannt werden"),
   });
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => planSymboleApi.remove(id),
     onSuccess: invalidate,
   });

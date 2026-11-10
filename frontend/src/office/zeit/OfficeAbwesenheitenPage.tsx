@@ -18,6 +18,7 @@ import { monatsGrenzen, toDateInput } from "../../utils/zeiterfassung";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { AbwesenheitSheet } from "./AbwesenheitSheet";
 import { AbwesenheitZeile, UrlaubskontoKacheln } from "./AbwesenheitUi";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 type Tab = "offen" | "kalender" | "alle" | "anspruch";
 
@@ -90,6 +91,7 @@ function useAntragAktionen() {
   };
   const genehmigen = useMutation({ mutationFn: (id: string) => abwesenheitenApi.genehmigen(id), ...optionen });
   const ablehnen = useMutation({
+    meta: { erfolg: "Abgelehnt" },
     mutationFn: ({ id, antwort }: { id: string; antwort: string }) => abwesenheitenApi.ablehnen(id, antwort.trim()),
     ...optionen,
   });
@@ -275,6 +277,7 @@ function KalenderAnsicht() {
 }
 
 function AlleAntraege() {
+  const bestaetigen = useBestaetigung();
   const [jahr, setJahr] = useState(new Date().getFullYear());
   const [status, setStatus] = useState<AbwesenheitStatus | "">("");
   const { data, isLoading } = useQuery({
@@ -328,8 +331,8 @@ function AlleAntraege() {
                     type="button"
                     className="text-sm font-medium text-st-fehlt disabled:opacity-50"
                     disabled={aktionen.ausstehend}
-                    onClick={() => {
-                      if (a.status === "offen" || window.confirm("Genehmigte Abwesenheit stornieren? Die automatisch erzeugten Zeiteinträge werden entfernt.")) {
+                    onClick={async () => {
+                      if (a.status === "offen" || await bestaetigen({ titel: "Genehmigte Abwesenheit stornieren?", text: "Die automatisch erzeugten Zeiteinträge werden entfernt.", bestaetigenLabel: "Stornieren" })) {
                         aktionen.stornieren.mutate(a.id);
                       }
                     }}
@@ -373,6 +376,7 @@ function AnspruchAbschnitt() {
   }, [konto]);
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       abwesenheitenApi.anspruchSetzen(userId, jahr, {
         tage: tage.trim().replace(",", ".") || "0",

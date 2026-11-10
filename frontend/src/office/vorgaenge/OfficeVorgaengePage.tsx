@@ -24,6 +24,7 @@ import { VorgaengeListe } from "./VorgaengeListe";
 import { VorgaengeRaster } from "./VorgaengeRaster";
 import { VorgaengeTabelle } from "./VorgaengeTabelle";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 type Ansicht = "liste" | "kanban" | "raster" | "tabelle";
 
@@ -291,7 +292,7 @@ export function OfficeVorgaengePage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !data ? (
         <FehlerZustand fehler={ladeFehler} was="Die Vorgänge" onErneut={() => void neuLaden()} />
       ) : vorgaenge.length === 0 ? (

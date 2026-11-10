@@ -55,6 +55,7 @@ export function AngebotPositionSheet({
     setFehler(err instanceof ApiError ? err.message : "Verbindung fehlgeschlagen — bitte erneut versuchen.");
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       istTitel
         ? angeboteApi.updatePosition(angebotId, position.id, { beschreibung: form.beschreibung.trim() })

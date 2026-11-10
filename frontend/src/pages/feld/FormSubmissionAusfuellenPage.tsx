@@ -14,8 +14,10 @@ import { CaptureRenderer } from "../../components/formModul/CaptureRenderer";
 import { SummaryRenderer } from "../../components/formModul/SummaryRenderer";
 import { EmptyState } from "../../components/EmptyState";
 import { openPdfBlob } from "../../utils/pdf";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 export function FormSubmissionAusfuellenPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -67,6 +69,7 @@ export function FormSubmissionAusfuellenPage() {
   }, [submission]);
 
   const saveMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => formSubmissionsApi.updateValues(id!, values),
     onSuccess: () => {
       setFehler(null);
@@ -77,6 +80,7 @@ export function FormSubmissionAusfuellenPage() {
   });
 
   const abschliessenMutation = useMutation({
+    meta: { erfolg: "Abgeschlossen" },
     mutationFn: async () => {
       await formSubmissionsApi.updateValues(id!, values);
       return formSubmissionsApi.abschliessen(id!);
@@ -90,6 +94,7 @@ export function FormSubmissionAusfuellenPage() {
   });
 
   const uploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: ({ fieldKey, file, filename }: { fieldKey: string; file: Blob; filename: string }) =>
       formSubmissionsApi.uploadDatei(id!, fieldKey, file, filename),
     onSuccess: (result) =>
@@ -187,8 +192,8 @@ export function FormSubmissionAusfuellenPage() {
             Speichern
           </button>
           <button
-            onClick={() => {
-              if (window.confirm("Formular abschließen? Danach nicht mehr bearbeitbar.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Formular abschließen?", text: "Danach nicht mehr bearbeitbar.", bestaetigenLabel: "Abschließen", destruktiv: false })) {
                 abschliessenMutation.mutate();
               }
             }}

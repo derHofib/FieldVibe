@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, FileCode, FileText, Inbox, Paperclip } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -11,6 +11,8 @@ import { useAuth } from "../../context/AuthContext";
 import type { Eingangsrechnung, EingangsrechnungKategorie, EingangsrechnungStatus } from "../../types";
 import { eRechnungSyntaxLabel, hinweisZeilen } from "../../utils/eRechnung";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<EingangsrechnungStatus, string> = {
   entwurf: "Entwurf (E-Mail-Import)",
@@ -46,6 +48,8 @@ function ImportHinweise({ hinweis }: { hinweis: string | null }) {
 }
 
 function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingangsrechnung }) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [lieferantId, setLieferantId] = useState("");
@@ -63,6 +67,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
   });
 
   const bestaetigenMutation = useMutation({
+    meta: { erfolg: "Bestätigt" },
     mutationFn: () =>
       eingangsrechnungenApi.update(eingangsrechnung.id, {
         lieferant_id: lieferantId || null,
@@ -82,6 +87,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
   });
 
   const verwerfenMutation = useMutation({
+    meta: { erfolg: "Verworfen" },
     mutationFn: () => eingangsrechnungenApi.remove(eingangsrechnung.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
@@ -117,8 +123,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
 
         <div className="space-y-3 card-ap p-4">
           <div>
-            <label className="mb-1 block text-xs text-label2">Lieferant</label>
-            <select value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Lieferant</label>
+            <select id={`${uid}-0`} value={lieferantId} onChange={(e) => setLieferantId(e.target.value)} className={inputClass}>
               <option value="">Name manuell eintragen…</option>
               {(lieferanten ?? []).map((l) => (
                 <option key={l.id} value={l.id}>
@@ -136,8 +142,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             />
           )}
           <div>
-            <label className="mb-1 block text-xs text-label2">Rechnungsnummer</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">Rechnungsnummer</label>
+            <input id={`${uid}-1`}
               value={rechnungsnummer}
               onChange={(e) => setRechnungsnummer(e.target.value)}
               placeholder="Rechnungsnummer (vom Aussteller)"
@@ -146,8 +152,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-label2">Rechnungsdatum</label>
-              <input
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Rechnungsdatum</label>
+              <input id={`${uid}-2`}
                 type="date"
                 value={rechnungsdatum}
                 onChange={(e) => setRechnungsdatum(e.target.value)}
@@ -155,8 +161,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-label2">Betrag netto</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">Betrag netto</label>
+              <input id={`${uid}-3`}
                 type="number"
                 step="0.01"
                 value={betragNetto}
@@ -166,8 +172,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs text-label2">Kategorie</label>
-            <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">Kategorie</label>
+            <select id={`${uid}-4`} value={kategorie} onChange={(e) => setKategorie(e.target.value)} className={inputClass}>
               <option value="">Kategorie…</option>
               {Object.entries(KATEGORIE_LABEL).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -188,8 +194,8 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
               <Check size={15} strokeWidth={2.25} /> Als Rechnung übernehmen
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("Entwurf verwerfen (z.B. keine echte Rechnung)? Wandert in den Papierkorb.")) {
+              onClick={async () => {
+                if (await bestaetigen({ titel: "Entwurf verwerfen (z.B. keine echte Rechnung)?", text: "Wandert in den Papierkorb.", bestaetigenLabel: "Verwerfen" })) {
                   verwerfenMutation.mutate();
                 }
               }}
@@ -206,6 +212,7 @@ function EntwurfBestaetigenView({ eingangsrechnung }: { eingangsrechnung: Eingan
 }
 
 export function EingangsrechnungDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -224,6 +231,7 @@ export function EingangsrechnungDetailPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => eingangsrechnungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["eingangsrechnungen"] });
@@ -232,11 +240,13 @@ export function EingangsrechnungDetailPage() {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: string) => eingangsrechnungenApi.update(id!, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", id] }),
   });
 
   const addPositionMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       eingangsrechnungenApi.addPosition(id!, {
         beschreibung: form.beschreibung,
@@ -252,11 +262,13 @@ export function EingangsrechnungDetailPage() {
   });
 
   const belegUploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: (file: File) => eingangsrechnungenApi.belegUpload(id!, file),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", id] }),
   });
 
   const belegRemoveMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => eingangsrechnungenApi.belegRemove(id!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["eingangsrechnung", id] }),
   });
@@ -276,6 +288,7 @@ export function EingangsrechnungDetailPage() {
   });
 
   const addZahlungMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => eingangsrechnungenApi.addZahlung(id!, { betrag: zahlungBetrag }),
     onSuccess: () => {
       setShowZahlungForm(false);
@@ -285,7 +298,7 @@ export function EingangsrechnungDetailPage() {
   });
 
   if (ladeFehler && !eingangsrechnung) return <FehlerZustand fehler={ladeFehler} was="Die Eingangsrechnung" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (!eingangsrechnung) return <p className="text-center text-label2">Lädt…</p>;
+  if (!eingangsrechnung) return <DetailSkeleton />;
 
 
   if (eingangsrechnung.status === "entwurf") {
@@ -302,8 +315,8 @@ export function EingangsrechnungDetailPage() {
         </button>
         {kannLoeschen && eingangsrechnung.status === "offen" && (
           <button
-            onClick={() => {
-              if (window.confirm("Eingangsrechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Eingangsrechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}
@@ -578,8 +591,8 @@ export function EingangsrechnungDetailPage() {
 
       {eingangsrechnung.status === "offen" && (
         <button
-          onClick={() => {
-            if (window.confirm("Diese Eingangsrechnung stornieren?")) statusMutation.mutate("storniert");
+          onClick={async () => {
+            if (await bestaetigen({ titel: "Diese Eingangsrechnung stornieren?", bestaetigenLabel: "Stornieren" })) statusMutation.mutate("storniert");
           }}
           disabled={statusMutation.isPending}
           className="btn-touch w-full rounded-md bg-fill px-4 py-2 text-sm font-medium text-label disabled:opacity-50 "

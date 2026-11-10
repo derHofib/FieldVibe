@@ -19,6 +19,7 @@ import { istUeberfaellig, tageSeit } from "../../config/vorgangDarstellung";
 import { ProjektAufgabeDetailPanel } from "../../office/projekte/ProjektAufgabeDetailPanel";
 import type { ProjektAufgabe, ProjektAufgabePrioritaet } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 const PRIORITAET_BADGE: Record<ProjektAufgabePrioritaet, string> = {
   niedrig: "bg-slate-100 text-label dark:bg-stone-500/15 ",
@@ -143,7 +144,7 @@ export function MeineAufgabenPage() {
       </div>
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !aufgaben ? (
         <FehlerZustand fehler={ladeFehler} was="Die Aufgaben" onErneut={() => void neuLaden()} />
       ) : offen.length === 0 ? (

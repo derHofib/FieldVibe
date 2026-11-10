@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { datumZuIso } from "../../utils/format";
 import { AlertTriangle, CalendarX, ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { termineApi, usersApi, vorgaengeApi } from "../../api/endpoints";
@@ -58,6 +58,7 @@ interface NeuerTerminForm {
 }
 
 export function DispoBoardPage() {
+  const uid = useId();
   const { currentUser, hatRecht } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -95,6 +96,7 @@ export function DispoBoardPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: termineApi.create,
     onSuccess: (result) => {
       setWarnungen(result.warnungen);
@@ -105,6 +107,7 @@ export function DispoBoardPage() {
   });
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof termineApi.update>[1] }) =>
       termineApi.update(id, body),
     onSuccess: (result) => {
@@ -278,8 +281,8 @@ export function DispoBoardPage() {
       {showForm && form && (
         <div className="space-y-3 card-ap p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Vorgang</label>
-            <select
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Vorgang</label>
+            <select id={`${uid}-0`}
               value={form.vorgangId}
               onChange={(e) => setForm({ ...form, vorgangId: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -293,8 +296,8 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-            <select
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
+            <select id={`${uid}-1`}
               value={form.technikerId}
               onChange={(e) => setForm({ ...form, technikerId: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -307,8 +310,8 @@ export function DispoBoardPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Titel</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Titel</label>
+            <input id={`${uid}-2`}
               value={form.titel}
               onChange={(e) => setForm({ ...form, titel: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -317,8 +320,8 @@ export function DispoBoardPage() {
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-label2">Start</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">Start</label>
+              <input id={`${uid}-3`}
                 type="datetime-local"
                 value={form.start}
                 onChange={(e) => setForm({ ...form, start: e.target.value })}
@@ -326,8 +329,8 @@ export function DispoBoardPage() {
               />
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
-              <input
+              <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-label2">Ende</label>
+              <input id={`${uid}-4`}
                 type="datetime-local"
                 value={form.ende}
                 onChange={(e) => setForm({ ...form, ende: e.target.value })}

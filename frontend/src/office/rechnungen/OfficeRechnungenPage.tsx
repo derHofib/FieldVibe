@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, FileCheck2, Plus, Receipt } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
@@ -20,6 +20,7 @@ import {
 } from "../../utils/rechnungsart";
 import { AnsichtUmschalter, Karte, SeitenKopf } from "../OfficeUi";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 type Bereich = "rechnungen" | "angebote";
 
@@ -61,6 +62,7 @@ const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
 };
 
 function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; onErfolg: (id: string) => void }) {
+  const uid = useId();
   const [kundeId, setKundeId] = useState("");
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
 
@@ -72,8 +74,8 @@ function NeuesAngebotForm({ onAbbrechen, onErfolg }: { onAbbrechen: () => void; 
   return (
     <Karte className="mb-4 space-y-3 p-4">
       <div>
-        <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
-        <SearchableSelect
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Kunde</label>
+        <SearchableSelect id={`${uid}-0`}
           value={kundeId}
           onChange={setKundeId}
           placeholder="Kunde wählen…"
@@ -223,7 +225,7 @@ export function OfficeRechnungenPage() {
       )}
 
       {laedt ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : aktuelleAbfrage.error && !aktuelleAbfrage.data ? (
         <FehlerZustand
           fehler={aktuelleAbfrage.error}

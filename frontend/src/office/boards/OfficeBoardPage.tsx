@@ -47,6 +47,7 @@ import type {
   KlebezettelFarbe,
 } from "./types";
 import { leeresInhalt } from "./types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const KLEBEZETTEL_FARBEN: KlebezettelFarbe[] = ["gelb", "blau", "gruen", "rosa"];
 
@@ -114,6 +115,7 @@ const HINZUFUEGEN_WERKZEUGE: { typ: BoardNodeTyp; label: string; icon: typeof Mo
 ];
 
 function OfficeBoardCanvas({ boardId }: { boardId: string }) {
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -170,6 +172,7 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
   // einzelnen Tastenanschlag -- sonst ein PATCH pro Zeichen beim Tippen in
   // einer Notiz.
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (inhalt: BoardInhalt) => boardsApi.update(boardId, { inhalt_json: inhalt }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["boards"] }),
   });
@@ -359,8 +362,8 @@ function OfficeBoardCanvas({ boardId }: { boardId: string }) {
             <Save size={13} strokeWidth={2} /> Speichern
           </button>
           <button
-            onClick={() => {
-              if (window.confirm(`Board "${board.name}" wirklich löschen?`)) loeschen.mutate();
+            onClick={async () => {
+              if (await bestaetigen({ titel: `Board "${board.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate();
             }}
             disabled={loeschen.isPending}
             className="flex items-center gap-1.5 rounded-lg border border-sep px-3 py-1.5 text-xs font-semibold text-st-fehlt disabled:opacity-50 "

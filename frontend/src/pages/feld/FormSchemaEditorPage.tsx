@@ -17,7 +17,7 @@
 // eine Handvoll Regeln hatte.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -81,6 +81,7 @@ function RegelForm({
   submitting: boolean;
   error: string | null;
 }) {
+  const uid = useId();
   const [effect, setEffect] = useState<FormLogicEffekt>(initial?.effect ?? "show");
   const [condition, setCondition] = useState<unknown>(initial?.condition ?? true);
   const [value, setValue] = useState<unknown>(initial?.value ?? "");
@@ -146,8 +147,8 @@ function RegelForm({
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">Gültig in</label>
-        <select value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Gültig in</label>
+        <select id={`${uid}-0`} value={viewId ?? ""} onChange={(e) => setViewId(e.target.value)} className={inputClass}>
           <option value="">Global (alle Views)</option>
           {views.map((v) => (
             <option key={v.id} value={v.id}>
@@ -354,6 +355,7 @@ export function FormSchemaEditorPage() {
   const [viewName, setViewName] = useState("");
 
   const createViewMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => formModulApi.createView(id!, { type: viewTyp, name: viewName.trim() }),
     onSuccess: () => {
       setViewName("");
@@ -362,6 +364,7 @@ export function FormSchemaEditorPage() {
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "View konnte nicht angelegt werden"),
   });
   const deleteViewMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (viewId: string) => formModulApi.deleteView(id!, viewId),
     onSuccess: invalidate,
   });
@@ -391,11 +394,13 @@ export function FormSchemaEditorPage() {
   const [zuPflicht, setZuPflicht] = useState(false);
 
   const createZuordnungMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => formModulApi.createZuordnung(id!, { leistungstyp: zuLeistungstyp, pflicht_vor_abschluss: zuPflicht }),
     onSuccess: invalidate,
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Zuordnung konnte nicht angelegt werden"),
   });
   const deleteZuordnungMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (zuordnungId: string) => formModulApi.deleteZuordnung(id!, zuordnungId),
     onSuccess: invalidate,
   });

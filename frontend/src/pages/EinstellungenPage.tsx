@@ -4,8 +4,11 @@ import { useState } from "react";
 import { plattformIntegrationenApi } from "../api/endpoints";
 import type { PlattformIntegration } from "../types";
 import { FehlerZustand } from "../components/FehlerZustand";
+import { useBestaetigung } from "../components/ConfirmDialog";
+import { DetailSkeleton } from "../components/Skeleton";
 
 function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
   const [port, setPort] = useState(String(integration.config.port ?? "587"));
@@ -14,12 +17,14 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
   const [secret, setSecret] = useState("");
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean }) =>
       plattformIntegrationenApi.update(integration.id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["plattform-integrationen"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => plattformIntegrationenApi.delete(integration.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["plattform-integrationen"] }),
   });
@@ -94,8 +99,8 @@ function SmtpZeile({ integration }: { integration: PlattformIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("Globale SMTP-Konfiguration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen({ titel: "Globale SMTP-Konfiguration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch border border-st-fehlt px-3 py-1.5 text-sm font-medium text-st-fehlt hover:bg-st-fehlt-bg disabled:opacity-50 dark:hover:bg-st-fehlt-dot"
@@ -122,6 +127,7 @@ export function EinstellungenPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       plattformIntegrationenApi.create({
         typ: "smtp",
@@ -140,7 +146,7 @@ export function EinstellungenPage() {
   });
 
   if (ladeFehler && !integrationen) return <FehlerZustand fehler={ladeFehler} was="Die Einstellungen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading) return <p className="text-center text-label2">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
 

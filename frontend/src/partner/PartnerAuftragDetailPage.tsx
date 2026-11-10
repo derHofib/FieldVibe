@@ -89,6 +89,7 @@ export function PartnerAuftragDetailPage() {
     onError: bei,
   });
   const statusWechsel = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: PartnerStatusSetzbar) => partnerPortalApi.statusSetzen(id, status),
     onSuccess: (neu) => {
       setFehler(null);
@@ -101,6 +102,7 @@ export function PartnerAuftragDetailPage() {
     },
   });
   const senden = useMutation({
+    meta: { erfolg: "Gesendet" },
     mutationFn: (text: string) => partnerPortalApi.kommentieren(id, text),
     onSuccess: () => {
       setFehler(null);

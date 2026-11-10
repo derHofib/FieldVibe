@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -12,6 +12,8 @@ import { formatDatum } from "../../utils/format";
 import { istModulAktiv } from "../../utils/module";
 import type { Anlage, AnlagenObjekttyp, BestellungStatus, Material, MaterialBedarfZweck, Tag } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 
 type MaterialTab = "material" | "bestellwesen";
 
@@ -58,6 +60,7 @@ function MaterialZeile({
   };
 
   const bestandSetzenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (lagerId: string) => materialApi.bestandSetzen(material.id, lagerId, neueMenge),
     onSuccess: () => {
       setEditingLagerId(null);
@@ -239,6 +242,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
   const [objekttyp, setObjekttyp] = useState<AnlagenObjekttyp>("fahrzeug");
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => anlagenApi.create({ bezeichnung, objekttyp }),
     onSuccess: () => {
       setShowForm(false);
@@ -252,10 +256,10 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-label2">Fahrzeuge & Lagerorte</h2>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => setShowForm(true)}
           className="btn-touch text-xs font-medium text-tint "
         >
-          {showForm ? "Abbrechen" : "+ Neu"}
+          + Neuer Eintrag
         </button>
       </div>
 
@@ -278,8 +282,8 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
         </div>
       )}
 
-      {showForm && (
-        <div className="mt-2 space-y-2 border-t border-sep pt-2 ">
+      <AnlegenPanel offen={showForm} titel="Neuer Lagerort" onClose={() => setShowForm(false)}>
+        <div className="space-y-2 p-4">
           <input
             value={bezeichnung}
             onChange={(e) => setBezeichnung(e.target.value)}
@@ -307,7 +311,7 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
             Anlegen
           </button>
         </div>
-      )}
+      </AnlegenPanel>
     </div>
   );
 }
@@ -316,6 +320,8 @@ function LagerorteVerwaltung({ lagerorte }: { lagerorte: Anlage[] }) {
  * und "bestellwesen" in der aufgeteilten GeschaeftPage. Kunden haben ihre
  * eigene Seite (KundenPage), Rechnungen/Angebote ihre bestehenden. */
 export function MaterialPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -405,6 +411,7 @@ export function MaterialPage() {
     });
 
   const bestellungErstellenMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       bestellungenApi.createFromBedarfe(Array.from(ausgewaehlteBedarfe), bestellLieferantId || undefined, undefined, bestellLiefertermin || undefined),
     onSuccess: (bestellung) => {
@@ -418,6 +425,7 @@ export function MaterialPage() {
   });
 
   const angebotAusBedarfenMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => angeboteApi.createFromMaterialBedarfe(Array.from(ausgewaehlteBedarfe)),
     onSuccess: (angebot) => {
       setAusgewaehlteBedarfe(new Set());
@@ -427,6 +435,7 @@ export function MaterialPage() {
   });
 
   const createLieferantMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => lieferantenApi.create({ name: lieferantName, email: lieferantEmail || undefined }),
     onSuccess: () => {
       setLieferantName("");
@@ -437,6 +446,7 @@ export function MaterialPage() {
   });
 
   const deleteLieferantMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => lieferantenApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lieferanten"] }),
   });
@@ -444,6 +454,7 @@ export function MaterialPage() {
   const kannLieferantenLoeschen = currentUser?.role === "loesch_operativ";
 
   const createMaterialMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       materialApi.create({
         bezeichnung: materialForm.bezeichnung,
@@ -495,15 +506,15 @@ export function MaterialPage() {
 
       {tab === "material" && (
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => setShowForm(true)}
           className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
         >
-          {showForm ? "Abbrechen" : "+ Neues Material"}
+          + Neues Material
         </button>
       )}
 
-      {showForm && tab === "material" && (
-        <div className="space-y-3 card-ap p-4">
+      <AnlegenPanel offen={showForm} titel="Neues Material" onClose={() => setShowForm(false)}>
+        <div className="space-y-3 p-4">
           <input
             value={materialForm.bezeichnung}
             onChange={(e) => setMaterialForm({ ...materialForm, bezeichnung: e.target.value })}
@@ -512,18 +523,18 @@ export function MaterialPage() {
           />
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs text-label2">Einheit</label>
-              <input
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Einheit</label>
+              <input id={`${uid}-0`}
                 value={materialForm.einheit}
                 onChange={(e) => setMaterialForm({ ...materialForm, einheit: e.target.value })}
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-label2">
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">
                 Einzelpreis (EUR, optional)
               </label>
-              <input
+              <input id={`${uid}-1`}
                 type="number"
                 step="0.01"
                 value={materialForm.einzelpreis}
@@ -532,8 +543,8 @@ export function MaterialPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-label2">Anfangsbestand</label>
-              <input
+              <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Anfangsbestand</label>
+              <input id={`${uid}-2`}
                 type="number"
                 step="0.01"
                 value={materialForm.menge}
@@ -542,8 +553,8 @@ export function MaterialPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-label2">Mindestbestand</label>
-              <input
+              <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">Mindestbestand</label>
+              <input id={`${uid}-3`}
                 type="number"
                 step="0.01"
                 value={materialForm.mindestbestand}
@@ -552,10 +563,10 @@ export function MaterialPage() {
               />
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-label2">
+              <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">
                 Standard-Lieferant (optional)
               </label>
-              <select
+              <select id={`${uid}-4`}
                 value={materialForm.lieferantId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lieferantId: e.target.value })}
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -569,10 +580,10 @@ export function MaterialPage() {
               </select>
             </div>
             <div className="col-span-2">
-              <label className="mb-1 block text-xs text-label2">
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">
                 Lagerort für Anfangsbestand
               </label>
-              <select
+              <select id={`${uid}-5`}
                 value={materialForm.lagerId}
                 onChange={(e) => setMaterialForm({ ...materialForm, lagerId: e.target.value })}
                 className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -596,7 +607,7 @@ export function MaterialPage() {
             Anlegen
           </button>
         </div>
-      )}
+      </AnlegenPanel>
 
       {tab === "material" && (
         <div className="space-y-2">
@@ -679,7 +690,7 @@ export function MaterialPage() {
                 onClick={() => setShowLieferantForm((v) => !v)}
                 className="btn-touch text-xs font-medium text-tint "
               >
-                {showLieferantForm ? "Abbrechen" : "+ Neu"}
+                {showLieferantForm ? "Abbrechen" : "+ Neuer Lieferant"}
               </button>
             </div>
             {showLieferantForm && (
@@ -720,8 +731,8 @@ export function MaterialPage() {
                     </div>
                     {kannLieferantenLoeschen && (
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Lieferant "${l.name}" wirklich löschen?`)) {
+                        onClick={async () => {
+                          if (await bestaetigen({ titel: `Lieferant "${l.name}" löschen?`, bestaetigenLabel: "Löschen" })) {
                             deleteLieferantMutation.mutate(l.id);
                           }
                         }}

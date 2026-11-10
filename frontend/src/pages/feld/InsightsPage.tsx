@@ -7,6 +7,7 @@ import { downloadBlob } from "../../utils/download";
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import type { VorgangStatus } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_LABEL: Record<VorgangStatus, string> = {
   neu: "Neu",
@@ -53,7 +54,7 @@ export function InsightsPage() {
   });
 
   if (ladeFehler && !insights) return <FehlerZustand fehler={ladeFehler} was="Die Kennzahlen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading || !insights) return <p className="text-center text-label2">Lädt…</p>;
+  if (isLoading || !insights) return <DetailSkeleton />;
 
   const gesamtVorgaenge = Object.values(insights.vorgaenge_nach_status).reduce((a, b) => a + b, 0);
 

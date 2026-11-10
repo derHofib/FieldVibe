@@ -1,12 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { heuteIso } from "../../utils/format";
 import { statusLabel } from "../../config/vorgangDarstellung";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { anlagenApi, dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -19,6 +21,8 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function DauerauftragDetailPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -53,6 +57,7 @@ export function DauerauftragDetailPage() {
   });
 
   const intervallMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (intervall: number) => dauerauftraegeApi.update(id!, { intervall_tage: intervall }),
     onSuccess: () => {
       setEditIntervall(null);
@@ -61,6 +66,7 @@ export function DauerauftragDetailPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => dauerauftraegeApi.delete(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dauerauftraege"] });
@@ -69,6 +75,7 @@ export function DauerauftragDetailPage() {
   });
 
   const setAnlagenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       dauerauftraegeApi.setAnlagen(id!, {
         anlage_ids: ausgewaehlteAnlageIds,
@@ -88,7 +95,7 @@ export function DauerauftragDetailPage() {
   }
 
   if (ladeFehler && !dauerauftrag) return <FehlerZustand fehler={ladeFehler} was="Der Dauerauftrag" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading || !dauerauftrag) return <p className="text-center text-label2">Lädt…</p>;
+  if (isLoading || !dauerauftrag) return <DetailSkeleton />;
 
 
   return (
@@ -263,10 +270,10 @@ export function DauerauftragDetailPage() {
                 </div>
               )}
               <div>
-                <label className="mb-1 block text-xs font-medium text-label">
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
                   Fälligkeit für neu hinzugefügte Anlagen
                 </label>
-                <input
+                <input id={`${uid}-0`}
                   type="date"
                   value={neueFaelligkeit}
                   onChange={(e) => setNeueFaelligkeit(e.target.value)}
@@ -302,8 +309,8 @@ export function DauerauftragDetailPage() {
               {dauerauftrag.aktiv ? "Dauer-Auftrag pausieren" : "Dauer-Auftrag reaktivieren"}
             </button>
             <button
-              onClick={() => {
-                if (window.confirm("Dauer-Auftrag wirklich löschen? Bereits erzeugte Vorgänge bleiben erhalten.")) {
+              onClick={async () => {
+                if (await bestaetigen({ titel: "Dauer-Auftrag löschen?", text: "Bereits erzeugte Vorgänge bleiben erhalten.", bestaetigenLabel: "Löschen" })) {
                   deleteMutation.mutate();
                 }
               }}

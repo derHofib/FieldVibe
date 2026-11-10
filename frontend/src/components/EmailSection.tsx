@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { ApiError } from "../api/client";
 import type { EmailLog } from "../types";
@@ -37,6 +37,7 @@ export function EmailSection({
   showHistory = true,
   defaultOpen = false,
 }: EmailSectionProps) {
+  const uid = useId();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(defaultOpen);
   const [empfaenger, setEmpfaenger] = useState(defaultEmpfaenger ?? "");
@@ -47,6 +48,7 @@ export function EmailSection({
   const { data: emails } = useQuery({ queryKey, queryFn: listEmails });
 
   const sendMutation = useMutation({
+    meta: { erfolg: "Gesendet" },
     mutationFn: () =>
       sendEmail({
         empfaenger,
@@ -85,10 +87,10 @@ export function EmailSection({
         <div className="mb-3 space-y-2 border border-sepstrong p-2">
           {hinweis && <p className="text-xs text-label2">{hinweis}</p>}
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
               Empfänger
             </label>
-            <input
+            <input id={`${uid}-0`}
               type="email"
               value={empfaenger}
               onChange={(e) => setEmpfaenger(e.target.value)}
@@ -96,20 +98,20 @@ export function EmailSection({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">
               Betreff {!betreffPflicht && "(optional)"}
             </label>
-            <input
+            <input id={`${uid}-1`}
               value={betreff}
               onChange={(e) => setBetreff(e.target.value)}
               className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">
               Nachricht {!betreffPflicht && "(optional)"}
             </label>
-            <textarea
+            <textarea id={`${uid}-2`}
               value={inhalt}
               onChange={(e) => setInhalt(e.target.value)}
               rows={3}

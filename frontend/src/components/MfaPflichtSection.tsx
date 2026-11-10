@@ -14,6 +14,7 @@ export function MfaPflichtSection({ einstellungen }: { einstellungen: MandantEin
   const an = einstellungen.firmendaten.mfa_pflicht === true;
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (wert: boolean) => mandantEinstellungenApi.firmendatenSpeichern({ mfa_pflicht: wert }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });

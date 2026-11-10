@@ -69,6 +69,8 @@ import type {
   VorgangStatus,
   Zeiterfassung,
 } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 // Lazy statt statisch importiert: mapbox-gl allein ist ~1.8 MB und wuerde
 // sonst in jedem Bundle landen, auch fuer Nutzer, die nie eine Karte sehen
@@ -453,6 +455,7 @@ export function VorgangDetailPage({
   ansicht?: "voll" | "zeit" | "verlauf" | "positionen";
   breit?: boolean;
 } = {}) {
+  const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -632,6 +635,7 @@ export function VorgangDetailPage({
     onError: meldeAktionsFehler,
   });
   const anlageEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (anlageId: string) => vorgaengeApi.anlageEntfernen(id!, anlageId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang-anlagen", id] }),
     onError: meldeAktionsFehler,
@@ -662,6 +666,7 @@ export function VorgangDetailPage({
       ),
   });
   const adresseMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       vorgaengeApi.update(id!, {
         adresse:
@@ -783,6 +788,7 @@ export function VorgangDetailPage({
   };
 
   const mangelStatusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: ({ mangelId, status }: { mangelId: string; status: MangelStatus }) =>
       maengelApi.update(mangelId, { status }),
     onSuccess: () => {
@@ -793,12 +799,14 @@ export function VorgangDetailPage({
   });
 
   const deleteMangelMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (mangelId: string) => maengelApi.remove(mangelId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["maengel", "vorgang", id] }),
     onError: meldeAktionsFehler,
   });
 
   const deleteTerminMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (terminId: string) => termineApi.remove(terminId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["termine", "vorgang", id] }),
     onError: meldeAktionsFehler,
@@ -807,12 +815,14 @@ export function VorgangDetailPage({
   const kannPapierkorbLoeschen = currentUser?.role === "loesch_operativ";
 
   const angebotAusMaengelnMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (mangelIds: string[]) => angeboteApi.createFromMaengel(mangelIds),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
     onError: meldeAktionsFehler,
   });
 
   const angebotAusVorgangMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () => angeboteApi.createFromVorgang(id!),
     onSuccess: (angebot) => navigate(`/angebote/${angebot.id}`),
     onError: meldeAktionsFehler,
@@ -889,6 +899,7 @@ export function VorgangDetailPage({
   });
 
   const lvVerwendungEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (verwendungId: string) => leistungsverzeichnisApi.verwendungEntfernen(verwendungId),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["leistungsverzeichnis-verwendungen", "vorgang", id] }),
@@ -997,12 +1008,14 @@ export function VorgangDetailPage({
   });
 
   const bedarfEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (bedarfId: string) => materialBedarfeApi.remove(bedarfId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["material-bedarfe", "vorgang", id] }),
     onError: meldeAktionsFehler,
   });
 
   const deleteVorgangMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => vorgaengeApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["feed"] });
@@ -1012,6 +1025,7 @@ export function VorgangDetailPage({
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: async ({
       status,
       wiedervorlageTage,
@@ -1039,6 +1053,7 @@ export function VorgangDetailPage({
   });
 
   const folgeAuftragMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (leistungstyp: Leistungstyp) => vorgaengeApi.folgeAuftrag(id!, leistungstyp),
     onSuccess: (result) => {
       setFolgeVorgangId(result.id);
@@ -1049,6 +1064,7 @@ export function VorgangDetailPage({
   });
 
   const uebernehmenMutation = useMutation({
+    meta: { erfolg: "Übernommen" },
     mutationFn: () => vorgaengeApi.uebernehmen(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vorgang", id] });
@@ -1058,6 +1074,7 @@ export function VorgangDetailPage({
   });
 
   const prioritaetMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (prioritaet: number) => vorgaengeApi.update(id!, { prioritaet }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["vorgang", id] }),
     onError: meldeAktionsFehler,
@@ -1233,7 +1250,7 @@ export function VorgangDetailPage({
       </div>
     );
   }
-  if (!vorgang) return <p className="text-center text-label2">Lädt…</p>;
+  if (!vorgang) return <DetailSkeleton />;
 
   // Eigene Adresse am Vorgang hat Vorrang; ohne sie zeigen wir die Adresse
   // des zugeordneten Standorts bzw. ersatzweise der Anlage, damit die Karte
@@ -1362,7 +1379,7 @@ export function VorgangDetailPage({
       return neu;
     });
   }
-  function handleBuchen() {
+  async function handleBuchen() {
     const stunden = formatSekundenAlsHHMM(
       ausgewaehlteEintraege.reduce(
         (summe, e) => summe + (new Date(e.ende_at!).getTime() - new Date(e.start_at).getTime()) / 1000,
@@ -1370,9 +1387,7 @@ export function VorgangDetailPage({
       ),
     );
     if (
-      window.confirm(
-        `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen? Gebuchte Einträge kannst du danach nicht mehr ändern.`,
-      )
+      await bestaetigen({ titel: `${ausgewaehlteEintraege.length} Eintrag/Einträge mit insgesamt ${stunden} Std. buchen?`, text: `Gebuchte Einträge kannst du danach nicht mehr ändern.`, bestaetigenLabel: "Buchen", destruktiv: false })
     ) {
       buchenMutation.mutate([...ausgewaehlteZeitIds]);
     }
@@ -2697,13 +2712,11 @@ export function VorgangDetailPage({
             </span>
             {currentUser?.darf_vorgaenge_selbst_uebernehmen && (
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (
                     vorgang.zugewiesener_user_id &&
                     vorgang.zugewiesener_user_id !== currentUser.id &&
-                    !window.confirm(
-                      `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`,
-                    )
+                    !(await bestaetigen({ titel: `Dieser Vorgang ist bereits "${vorgang.zugewiesener_name}" zugewiesen. Trotzdem an mich übernehmen?`, bestaetigenLabel: "Übernehmen", destruktiv: false }))
                   ) {
                     return;
                   }
@@ -3010,8 +3023,8 @@ export function VorgangDetailPage({
                                 {kannPapierkorbLoeschen && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                                    onClick={async () => {
+                                      if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
                                         deleteTerminMutation.mutate(t.id);
                                       }
                                     }}
@@ -3062,8 +3075,8 @@ export function VorgangDetailPage({
                       </span>
                       {kannPapierkorbLoeschen && (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Termin "${t.titel}" wirklich löschen?`)) {
+                          onClick={async () => {
+                            if (await bestaetigen({ titel: `Termin "${t.titel}" löschen?`, bestaetigenLabel: "Löschen" })) {
                               deleteTerminMutation.mutate(t.id);
                             }
                           }}
@@ -3182,8 +3195,8 @@ export function VorgangDetailPage({
                     )}
                     {kannPapierkorbLoeschen && (
                       <button
-                        onClick={() => {
-                          if (window.confirm("Mangel wirklich löschen?")) {
+                        onClick={async () => {
+                          if (await bestaetigen({ titel: "Mangel löschen?", bestaetigenLabel: "Löschen" })) {
                             deleteMangelMutation.mutate(m.id);
                           }
                         }}
@@ -3466,8 +3479,8 @@ export function VorgangDetailPage({
                 label: "Vorgang löschen",
                 icon: Trash2,
                 destruktiv: true,
-                onSelect: () => {
-                  if (window.confirm("Vorgang wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+                onSelect: async () => {
+                  if (await bestaetigen({ titel: "Vorgang löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                     deleteVorgangMutation.mutate();
                   }
                 },

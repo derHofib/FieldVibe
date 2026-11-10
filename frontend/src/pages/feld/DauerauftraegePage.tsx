@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { dauerauftraegeApi, kundenApi } from "../../api/endpoints";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 export function DauerauftraegePage() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export function DauerauftraegePage() {
       </p>
 
       {isLoading ? (
-        <p className="text-center text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !dauerauftraege ? (
         <FehlerZustand fehler={ladeFehler} was="Die Daueraufträge" onErneut={() => void neuLaden()} />
       ) : !dauerauftraege || dauerauftraege.length === 0 ? (

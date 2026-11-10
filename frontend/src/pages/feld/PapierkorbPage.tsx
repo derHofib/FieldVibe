@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { papierkorbApi } from "../../api/endpoints";
@@ -7,6 +7,8 @@ import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../api/client";
 import type { PapierkorbEintrag, PapierkorbEntityTyp } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { SkeletonList } from "../../components/Skeleton";
 
 // Muss mit ENTITY_REGISTRY in backend/app/services/papierkorb_service.py
 // uebereinstimmen.
@@ -44,6 +46,8 @@ function anzeigeName(eintrag: PapierkorbEintrag): string {
 }
 
 export function PapierkorbPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -58,6 +62,7 @@ export function PapierkorbPage() {
   });
 
   const restoreMutation = useMutation({
+    meta: { erfolg: "Wiederhergestellt" },
     mutationFn: (eintrag: PapierkorbEintrag) =>
       papierkorbApi.wiederherstellen(eintrag.entity_typ, eintrag.id),
     onSuccess: () => {
@@ -68,6 +73,7 @@ export function PapierkorbPage() {
   });
 
   const purgeMutation = useMutation({
+    meta: { erfolg: "Endgültig gelöscht" },
     mutationFn: (eintrag: PapierkorbEintrag) =>
       papierkorbApi.endgueltigLoeschen(eintrag.entity_typ, eintrag.id),
     onSuccess: () => {
@@ -100,10 +106,10 @@ export function PapierkorbPage() {
       {fehler && <p className="text-sm text-st-fehlt ">{fehler}</p>}
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-label">
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">
           Nach Typ filtern
         </label>
-        <select
+        <select id={`${uid}-0`}
           value={filter}
           onChange={(e) => setFilter(e.target.value as PapierkorbEntityTyp | "")}
           className="btn-touch border border-sep bg-transparent px-3 py-2 text-label text-label"
@@ -118,7 +124,7 @@ export function PapierkorbPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !eintraege ? (
         <FehlerZustand fehler={ladeFehler} was="Der Papierkorb" onErneut={() => void neuLaden()} />
       ) : !eintraege || eintraege.length === 0 ? (
@@ -156,11 +162,9 @@ export function PapierkorbPage() {
                     Wiederherstellen
                   </button>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        window.confirm(
-                          `„${anzeigeName(eintrag)}“ endgültig löschen? Das kann nicht rückgängig gemacht werden.`,
-                        )
+                        await bestaetigen({ titel: `„${anzeigeName(eintrag)}“ endgültig löschen?`, text: `Das kann nicht rückgängig gemacht werden.`, bestaetigenLabel: "Endgültig löschen" })
                       ) {
                         purgeMutation.mutate(eintrag);
                       }

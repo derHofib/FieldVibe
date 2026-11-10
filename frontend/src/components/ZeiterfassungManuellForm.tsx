@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { heuteIso } from "../utils/format";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 
 import { ApiError } from "../api/client";
 import { leistungsverzeichnisApi, vorgaengeApi, zeiterfassungApi } from "../api/endpoints";
@@ -39,6 +39,7 @@ export function ZeiterfassungManuellForm({
   /** YYYY-MM-DD; ohne Angabe wie bisher "heute". */
   vorbelegtesDatum?: string;
 }) {
+  const uid = useId();
   const [datum, setDatum] = useState(vorbelegtesDatum ?? heuteAlsInput());
   const [startZeit, setStartZeit] = useState("08:00");
   const [endeZeit, setEndeZeit] = useState("16:00");
@@ -102,10 +103,10 @@ export function ZeiterfassungManuellForm({
     >
       <div className="grid grid-cols-3 gap-2">
         <div className="col-span-3 sm:col-span-1">
-          <label className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
             Datum
           </label>
-          <input
+          <input id={`${uid}-0`}
             type="date"
             value={datum}
             onChange={(e) => setDatum(e.target.value)}
@@ -114,10 +115,10 @@ export function ZeiterfassungManuellForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label">
             Von
           </label>
-          <input
+          <input id={`${uid}-1`}
             type="time"
             value={startZeit}
             onChange={(e) => setStartZeit(e.target.value)}
@@ -126,10 +127,10 @@ export function ZeiterfassungManuellForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label">
             Bis
           </label>
-          <input
+          <input id={`${uid}-2`}
             type="time"
             value={endeZeit}
             onChange={(e) => setEndeZeit(e.target.value)}
@@ -140,10 +141,10 @@ export function ZeiterfassungManuellForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">
+        <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label">
           Kategorie
         </label>
-        <select
+        <select id={`${uid}-3`}
           value={kategorie}
           onChange={(e) => setKategorie(e.target.value as ZeiterfassungKategorie)}
           className="btn-touch w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -158,10 +159,10 @@ export function ZeiterfassungManuellForm({
 
       {kategorie === "auftrag" && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-label">
+          <label htmlFor={`${uid}-4`} className="mb-1 block text-xs font-medium text-label">
             Vorgang
           </label>
-          <SearchableSelect
+          <SearchableSelect id={`${uid}-4`}
             options={(vorgaenge ?? []).map((v) => ({
               value: v.id,
               label: `${v.vorgangsnummer} – ${v.titel}`,
@@ -181,10 +182,10 @@ export function ZeiterfassungManuellForm({
           </label>
           {abrechenbar && (stundensaetze ?? []).length > 0 && (
             <div className="mt-2">
-              <label className="mb-1 block text-xs font-medium text-label">
+              <label htmlFor={`${uid}-5`} className="mb-1 block text-xs font-medium text-label">
                 Stundenverrechnungssatz (optional)
               </label>
-              <SearchableSelect
+              <SearchableSelect id={`${uid}-5`}
                 options={(stundensaetze ?? []).map((s) => ({
                   value: s.id,
                   label: `${s.bezeichnung} – ${s.einzelpreis} €/${s.einheit}`,
@@ -199,10 +200,10 @@ export function ZeiterfassungManuellForm({
       )}
 
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">
+        <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label">
           Notiz (optional)
         </label>
-        <input
+        <input id={`${uid}-6`}
           type="text"
           value={taetigkeit}
           onChange={(e) => setTaetigkeit(e.target.value)}

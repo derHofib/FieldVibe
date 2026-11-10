@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { FileCheck2, Receipt } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { angeboteApi, kundenApi, rechnungenApi } from "../../api/endpoints";
@@ -23,6 +23,7 @@ import {
 } from "../../utils/rechnungsart";
 import type { AngebotStatus, RechnungStatus, Rechnungsart, RechnungenFilter } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { AnlegenPanel } from "../../components/AnlegenPanel";
 
 type Bereich = "rechnungen" | "angebote";
 
@@ -38,9 +39,11 @@ const ANGEBOT_STATUS_LABEL: Record<AngebotStatus, string> = {
 };
 
 function AngeboteListe() {
+  const uid = useId();
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [kundeId, setKundeId] = useState("");
+  const [kundeFehler, setKundeFehler] = useState<string | null>(null);
 
   const { data: kunden } = useQuery({ queryKey: ["kunden"], queryFn: () => kundenApi.list() });
   const { data: angebote, isLoading, error: ladeFehler, refetch: neuLaden } = useQuery({ queryKey: ["angebote"], queryFn: () => angeboteApi.list() });
@@ -55,32 +58,48 @@ function AngeboteListe() {
   return (
     <div className="space-y-4">
       <button
-        onClick={() => setShowForm((v) => !v)}
+        onClick={() => setShowForm(true)}
         className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
       >
-        {showForm ? "Abbrechen" : "+ Neues Angebot"}
+        + Neues Angebot
       </button>
 
-      {showForm && (
-        <div className="space-y-3 card-ap p-4">
+      <AnlegenPanel offen={showForm} titel="Neues Angebot" onClose={() => setShowForm(false)}>
+        <div className="space-y-3 p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-label2">Kunde</label>
-            <SearchableSelect
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">
+              Kunde <span aria-hidden="true" className="text-st-fehlt">*</span>
+            </label>
+            <SearchableSelect id={`${uid}-0`}
               value={kundeId}
-              onChange={setKundeId}
+              onChange={(v) => {
+                setKundeId(v);
+                setKundeFehler(null);
+              }}
               placeholder="Kunde wählen…"
               options={(kunden ?? []).map((k) => ({ value: k.id, label: `${k.name} (${k.kundennummer})` }))}
             />
+            {kundeFehler && (
+              <p role="alert" className="mt-1 text-xs text-st-fehlt">
+                {kundeFehler}
+              </p>
+            )}
           </div>
           <button
-            disabled={!kundeId || erstellen.isPending}
-            onClick={() => erstellen.mutate()}
+            disabled={erstellen.isPending}
+            onClick={() => {
+              if (!kundeId) {
+                setKundeFehler("Bitte einen Kunden auswählen.");
+                return;
+              }
+              erstellen.mutate();
+            }}
             className="btn-touch w-full rounded-md btn-ap-primary px-4 py-2 text-sm font-medium disabled:opacity-50"
           >
             Angebot anlegen
           </button>
         </div>
-      )}
+      </AnlegenPanel>
 
       <div className="space-y-2">
         {isLoading ? (
@@ -205,18 +224,18 @@ export function RechnungenPage() {
       ) : (
         <>
           <button
-            onClick={() => setZeigeNeu((v) => !v)}
+            onClick={() => setZeigeNeu(true)}
             className="btn-touch btn-ap px-4 py-2 text-sm font-medium"
           >
-            {zeigeNeu ? "Abbrechen" : "+ Neue Rechnung"}
+            + Neue Rechnung
           </button>
 
-          {zeigeNeu && (
+          <AnlegenPanel offen={zeigeNeu} titel="Neue Rechnung" onClose={() => setZeigeNeu(false)}>
             <NeueRechnungForm
               onAbbrechen={() => setZeigeNeu(false)}
               onErfolg={(id) => navigate(`/rechnungen/${id}`)}
             />
-          )}
+          </AnlegenPanel>
 
           <input
             value={q}

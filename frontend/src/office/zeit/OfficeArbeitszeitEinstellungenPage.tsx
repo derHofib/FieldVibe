@@ -12,6 +12,7 @@ import { BUNDESLAND_LABEL, parseStunden, sollWochensumme, stundenFuerApi } from 
 import { formatStundenAlsHHMM } from "../../utils/duration";
 import { toDateInput } from "../../utils/zeiterfassung";
 import { Karte, SeitenKopf } from "../OfficeUi";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 const WOCHENTAG_LABEL: Record<SollWochentagFeld, string> = {
   stunden_mo: "Mo",
@@ -99,6 +100,7 @@ function BundeslandAbschnitt() {
 }
 
 function FeiertageAbschnitt() {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [jahr, setJahr] = useState(new Date().getFullYear());
   const [datum, setDatum] = useState("");
@@ -151,13 +153,11 @@ function FeiertageAbschnitt() {
     onError: (err) => setFehler(fehlerText(err)),
   });
 
-  function handleGenerieren() {
+  async function handleGenerieren() {
     if (
       bundesland &&
       bundesland.bundesland === null &&
-      !window.confirm(
-        "Es ist kein Bundesland gesetzt. Es entstehen nur die bundesweiten Feiertage. Trotzdem generieren?",
-      )
+      !(await bestaetigen({ titel: "Es ist kein Bundesland gesetzt. Es entstehen nur die bundesweiten Feiertage. Trotzdem generieren?", bestaetigenLabel: "Trotzdem generieren", destruktiv: false }))
     ) {
       return;
     }
@@ -283,6 +283,7 @@ function SollAbschnitt() {
   }, [historie, userId]);
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       arbeitszeitApi.sollSetzen(userId, {
         gueltig_ab: form.gueltig_ab,

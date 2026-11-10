@@ -117,6 +117,7 @@ export function AnsprechpartnerVerwaltung({
   const [bearbeitenId, setBearbeitenId] = useState<string | null>(null);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: onSpeichern,
     onSuccess: () => {
       setNeuAnlegen(false);
@@ -142,7 +143,7 @@ export function AnsprechpartnerVerwaltung({
         <h2 className="text-sm font-semibold text-label2">Ansprechpartner</h2>
         {kannVerwalten && !neuAnlegen && (
           <button onClick={() => setNeuAnlegen(true)} className="btn-touch text-xs font-medium text-tint ">
-            + Neu
+            + Neuer Ansprechpartner
           </button>
         )}
       </div>

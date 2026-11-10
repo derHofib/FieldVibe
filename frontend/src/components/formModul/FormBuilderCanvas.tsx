@@ -31,7 +31,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, GripVertical, Layers, PenLine, Rows3, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -353,6 +353,7 @@ function InspectorFeld({
   planSymbole: PlanSymbol[];
   onSymbolIdsSpeichern: (ids: string[]) => void;
 }) {
+  const uid = useId();
   const [label, setLabel] = useState(feld.label.de ?? feld.key);
   const ausgewaehlteSymbolIds = Array.isArray(feld.optionen.symbol_ids) ? (feld.optionen.symbol_ids as string[]) : [];
 
@@ -370,8 +371,8 @@ function InspectorFeld({
         <p className="text-sm font-semibold text-label">{FELD_TYP_LABEL[feld.feld_typ]}</p>
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">Bezeichnung</label>
-        <input
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Bezeichnung</label>
+        <input id={`${uid}-0`}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onBlur={() => {
@@ -458,6 +459,7 @@ function InspectorGruppe({
   onMinMaxSpeichern: (minItems: number | null, maxItems: number | null) => void;
   onLoeschen: () => void;
 }) {
+  const uid = useId();
   const [label, setLabel] = useState(gruppe.label.de ?? gruppe.key);
   const [minItems, setMinItems] = useState(gruppe.min_items?.toString() ?? "");
   const [maxItems, setMaxItems] = useState(gruppe.max_items?.toString() ?? "");
@@ -473,8 +475,8 @@ function InspectorGruppe({
         <p className="text-sm font-semibold text-label">{gruppe.repeatable ? "Unterformular" : "Abschnitt"}</p>
       </div>
       <div>
-        <label className="mb-1 block text-xs font-medium text-label">Bezeichnung</label>
-        <input
+        <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">Bezeichnung</label>
+        <input id={`${uid}-0`}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           onBlur={() => {
@@ -771,14 +773,17 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
 
   // --- Mutations ---
   const createFieldMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (body: Parameters<typeof formModulApi.createField>[1]) => formModulApi.createField(schemaId, body),
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Feld konnte nicht angelegt werden"),
   });
   const updateFieldMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ fieldId, body }: { fieldId: string; body: Partial<FormField> }) => formModulApi.updateField(schemaId, fieldId, body),
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Feld konnte nicht gespeichert werden"),
   });
   const deleteFieldMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (fieldId: string) => formModulApi.deleteField(schemaId, fieldId),
     onSuccess: () => {
       setAusgewaehlt(null);
@@ -786,14 +791,17 @@ export function FormBuilderCanvas({ schemaId, schema, regelnAnzahl, onRegelnOeff
     },
   });
   const createGroupMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: (body: Parameters<typeof formModulApi.createGroup>[1]) => formModulApi.createGroup(schemaId, body),
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Gruppe konnte nicht angelegt werden"),
   });
   const updateGroupMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ groupId, body }: { groupId: string; body: Partial<FormGroup> }) => formModulApi.updateGroup(schemaId, groupId, body),
     onError: (err) => setFehler(err instanceof ApiError ? err.message : "Gruppe konnte nicht gespeichert werden"),
   });
   const deleteGroupMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (groupId: string) => formModulApi.deleteGroup(schemaId, groupId),
     onSuccess: () => {
       setAusgewaehlt(null);

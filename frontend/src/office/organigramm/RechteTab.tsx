@@ -154,6 +154,7 @@ export function RechteTab({
   };
 
   const speichern = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => organigrammApi.setPositionRechte(detail.id, overridesAusZustaenden(zustaende, registry)),
     onSuccess: () => {
       setFehler(null);

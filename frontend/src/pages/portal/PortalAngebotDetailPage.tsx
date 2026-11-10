@@ -13,6 +13,7 @@ import { openPdfBlob } from "../../utils/pdf";
 import type { PortalAngebot, PortalVerbraucherschutz } from "../../types";
 import { BelehrungBlock } from "./BelehrungBlock";
 import { ANGEBOT_STATUS_BADGE, ANGEBOT_STATUS_ERKLAERUNG, ANGEBOT_STATUS_LABEL } from "./status";
+import { useBestaetigung } from "../../components/ConfirmDialog";
 
 /** Button-Loesung (§ 312j Abs. 3 BGB): Zusammenfassung, Belehrung, Kenntnisnahme
  * und der Button mit dem gesetzlich vorgegebenen Wortlaut. */
@@ -126,6 +127,7 @@ function WiderrufBereich({ angebot, verbraucher }: { angebot: PortalAngebot; ver
 }
 
 export function PortalAngebotDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -176,8 +178,8 @@ export function PortalAngebotDetailPage() {
 
   if (!angebot) return <SkeletonCard />;
 
-  function ablehnen() {
-    if (window.confirm("Angebot wirklich ablehnen? Der Betrieb wird darüber benachrichtigt.")) {
+  async function ablehnen() {
+    if (await bestaetigen({ titel: "Angebot ablehnen?", text: "Der Betrieb wird darüber benachrichtigt.", bestaetigenLabel: "Ablehnen" })) {
       antwortMutation.mutate("abgelehnt");
     }
   }

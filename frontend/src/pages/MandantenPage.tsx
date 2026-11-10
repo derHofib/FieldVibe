@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantStatus } from "../types";
 import { FehlerZustand } from "../components/FehlerZustand";
+import { SkeletonList } from "../components/Skeleton";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -21,6 +22,7 @@ const STATUS_BADGE: Record<MandantStatus, string> = {
 };
 
 export function MandantenPage() {
+  const uid = useId();
   const queryClient = useQueryClient();
   const { isImpersonating } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export function MandantenPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: mandantenApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandanten"] });
@@ -60,8 +63,8 @@ export function MandantenPage() {
         <h2 className="mb-4 text-lg font-bold text-label">Neuen Mandanten anlegen</h2>
         <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+            <input id={`${uid}-0`}
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -69,10 +72,10 @@ export function MandantenPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">
               Slug (Subdomain)
             </label>
-            <input
+            <input id={`${uid}-1`}
               required
               pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
               value={slug}
@@ -81,8 +84,8 @@ export function MandantenPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Branche</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Branche</label>
+            <input id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
               className="btn-touch border border-sep bg-transparent px-3 py-2 text-label"
@@ -102,7 +105,7 @@ export function MandantenPage() {
       <section>
         <h2 className="mb-4 text-lg font-bold text-label">Mandanten</h2>
         {isLoading ? (
-          <p className="text-label2">Lädt…</p>
+          <SkeletonList count={4} />
         ) : ladeFehler && !mandanten ? (
           <FehlerZustand fehler={ladeFehler} was="Die Mandanten" onErneut={() => void neuLaden()} />
         ) : (

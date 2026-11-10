@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { anlagenApi, fahrzeugZuweisungenApi, technikerZuweisungenApi } from "../../api/endpoints";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 function FahrzeugAuswahl({ userId, aktuellesFahrzeugId }: { userId: string; aktuellesFahrzeugId: string | null }) {
   const queryClient = useQueryClient();
@@ -56,7 +57,7 @@ export function TechnikerZuweisungenPage() {
       </p>
 
       {isLoading ? (
-        <p className="text-center text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !uebersicht ? (
         <FehlerZustand fehler={ladeFehler} was="Die Techniker" onErneut={() => void neuLaden()} />
       ) : !uebersicht || uebersicht.length === 0 ? (

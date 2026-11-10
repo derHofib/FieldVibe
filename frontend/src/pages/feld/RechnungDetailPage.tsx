@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Ban, ChevronDown, FileText, ListChecks, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { ApiError } from "../../api/client";
@@ -46,6 +46,8 @@ import {
   type SteuerEingabe,
 } from "../../utils/steuer";
 import type { RechnungZahlungsart } from "../../types";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const VORSCHLAG_QUELLE_LABEL: Record<RechnungPositionQuelle, string> = {
   material: "Material",
@@ -71,6 +73,7 @@ function PositionsVorschlaege({ rechnungId, vorgangId }: { rechnungId: string; v
   });
 
   const uebernehmenMutation = useMutation({
+    meta: { erfolg: "Übernommen" },
     mutationFn: async () => {
       const gewaehlte = (vorschlaege ?? []).filter((_, i) => ausgewaehlt.has(i));
       for (const v of gewaehlte) {
@@ -186,6 +189,8 @@ const ZAHLUNGSART_OPTIONEN: { value: RechnungZahlungsart; label: string }[] = [
 // Detail-Panel einbetten kann, ohne dass es einen zweiten, parallel zu
 // pflegenden Nachbau braucht. Ohne Prop verhaelt sie sich wie bisher.
 export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { id: idParam } = useParams<{ id: string }>();
   const id = idProp ?? idParam;
   const navigate = useNavigate();
@@ -206,6 +211,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   const [zahlungsart, setZahlungsart] = useState<RechnungZahlungsart | "">("");
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => rechnungenApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
@@ -272,11 +278,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
     (rechnung?.positionen ?? []).some((p) => p.steuer_grund === "kleinunternehmer_19");
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: string) => rechnungenApi.updateStatus(id!, status),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
   });
 
   const stornoMutation = useMutation({
+    meta: { erfolg: "Storniert" },
     mutationFn: () => rechnungenApi.storno(id!),
     onSuccess: (storno) => {
       queryClient.invalidateQueries({ queryKey: ["rechnungen"] });
@@ -294,6 +302,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const addPositionMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       rechnungenApi.addPosition(id!, {
         beschreibung: form.beschreibung,
@@ -312,11 +321,13 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const removePositionMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (positionId: string) => rechnungenApi.removePosition(id!, positionId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
   });
 
   const updatePositionMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ positionId, einzelpreis }: { positionId: string; einzelpreis: string }) =>
       rechnungenApi.updatePosition(id!, positionId, { einzelpreis }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rechnung", id] }),
@@ -346,6 +357,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const addZahlungMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       rechnungenApi.addZahlung(id!, {
         betrag: zahlungBetrag,
@@ -362,6 +374,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
   });
 
   const stornoZahlungMutation = useMutation({
+    meta: { erfolg: "Storniert" },
     mutationFn: (zahlungId: string) => rechnungenApi.stornoZahlung(id!, zahlungId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rechnung", id] });
@@ -386,7 +399,7 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       </div>
     );
   }
-  if (!rechnung) return <p className="text-center text-label2">Lädt…</p>;
+  if (!rechnung) return <DetailSkeleton />;
 
   const art = rechnungsartVon(rechnung);
   const istGutschrift = art === "gutschrift";
@@ -548,8 +561,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Rechnung wirklich löschen? Sie wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Rechnung löschen?", text: "Sie wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}
@@ -766,10 +779,10 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
           <div className="mb-3 space-y-2 border border-sepstrong p-3">
             {(leistungsverzeichnis ?? []).length > 0 && (
               <div>
-                <label className="mb-1 block text-xs font-medium text-label">
+                <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label">
                   Aus Leistungsverzeichnis wählen (optional)
                 </label>
-                <SearchableSelect
+                <SearchableSelect id={`${uid}-0`}
                   value={lvAuswahl}
                   onChange={(v) => {
                     setLvAuswahl(v);
@@ -990,8 +1003,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
                       </span>
                       {Number(z.betrag) > 0 && rechnung.status !== "storniert" && !bereitsStorniert.has(z.id) && (
                         <button
-                          onClick={() => {
-                            if (window.confirm("Diese Zahlung stornieren?")) stornoZahlungMutation.mutate(z.id);
+                          onClick={async () => {
+                            if (await bestaetigen({ titel: "Diese Zahlung stornieren?", bestaetigenLabel: "Stornieren" })) stornoZahlungMutation.mutate(z.id);
                           }}
                           disabled={stornoZahlungMutation.isPending}
                           className="btn-touch text-xs text-label2 underline-offset-2 hover:underline disabled:opacity-50"
@@ -1085,8 +1098,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
             </button>
           )}
           <button
-            onClick={() => {
-              if (window.confirm("Diese Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Diese Rechnung stornieren?", text: "Es wird eine Stornorechnung mit eigener Nummer erzeugt.", bestaetigenLabel: "Stornieren" }))
                 stornoMutation.mutate();
             }}
             disabled={stornoMutation.isPending}
@@ -1100,8 +1113,8 @@ export function RechnungDetailPage({ id: idProp }: { id?: string } = {}) {
       )}
       {rechnung.status === "bezahlt" && !rechnung.ist_storno && (
         <button
-          onClick={() => {
-            if (window.confirm("Diese bereits bezahlte Rechnung stornieren? Es wird eine Stornorechnung mit eigener Nummer erzeugt."))
+          onClick={async () => {
+            if (await bestaetigen({ titel: "Diese bereits bezahlte Rechnung stornieren?", text: "Es wird eine Stornorechnung mit eigener Nummer erzeugt.", bestaetigenLabel: "Stornieren" }))
               stornoMutation.mutate();
           }}
           disabled={stornoMutation.isPending}

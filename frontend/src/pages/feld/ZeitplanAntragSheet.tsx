@@ -37,6 +37,7 @@ export function ZeitplanAntragSheet({
   const [fehler, setFehler] = useState<string | null>(null);
 
   const senden = useMutation({
+    meta: { erfolg: "Gesendet" },
     mutationFn: () => zeitplanApi.createAntrag(projektId, baueAntrag(element, art, daten, begruendung)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["zeitplan-antraege", projektId] });

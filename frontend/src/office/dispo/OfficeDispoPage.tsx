@@ -11,7 +11,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +23,8 @@ import { useAlleSeitenLaden, useVorgangsListe } from "../../hooks/useVorgangsLis
 import type { FeedCard, Termin, TerminWarnung } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { useAuth } from "../../context/AuthContext";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { SkeletonList } from "../../components/Skeleton";
 
 const START_STUNDE = 7;
 const ENDE_STUNDE = 19;
@@ -148,6 +150,7 @@ export function OfficeDispoPage() {
   const backlog: FeedCard[] = backlogData?.pages.flatMap((p) => p.items) ?? [];
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: termineApi.create,
     onSuccess: (result) => {
       setWarnungen(result.warnungen);
@@ -159,6 +162,7 @@ export function OfficeDispoPage() {
   });
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: ({ id, body }: { id: string; body: Parameters<typeof termineApi.update>[1] }) =>
       termineApi.update(id, body),
     onSuccess: (result) => {
@@ -169,6 +173,7 @@ export function OfficeDispoPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: termineApi.remove,
     onSuccess: () => {
       setBearbeitenId(null);
@@ -293,7 +298,7 @@ export function OfficeDispoPage() {
             </span>
           </div>
           {backlogLaedt ? (
-            <p className="py-6 text-center text-xs text-label2">Lädt…</p>
+            <SkeletonList count={4} />
           ) : backlog.length === 0 ? (
             <EmptyState icon={Inbox} text="Alles disponiert." />
           ) : (
@@ -584,6 +589,8 @@ function TerminBearbeitenPanel({
   onDelete: () => void;
   onZumVorgang: () => void;
 }) {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const [titel, setTitel] = useState(termin.titel);
   const [technikerId, setTechnikerId] = useState(termin.techniker_id);
   const [start, setStart] = useState(toLocalInputValue(new Date(termin.start_at)));
@@ -644,8 +651,8 @@ function TerminBearbeitenPanel({
         </button>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Titel *</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Titel *</label>
+          <input id={`${uid}-0`}
             ref={titelRef}
             value={titel}
             onChange={(e) => setTitel(e.target.value)}
@@ -654,8 +661,8 @@ function TerminBearbeitenPanel({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select
+          <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
+          <select id={`${uid}-1`}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
             className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -670,8 +677,8 @@ function TerminBearbeitenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-label2">Start</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Start</label>
+            <input id={`${uid}-2`}
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
@@ -679,8 +686,8 @@ function TerminBearbeitenPanel({
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
-            <input
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs font-medium text-label2">Ende</label>
+            <input id={`${uid}-3`}
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}
@@ -691,10 +698,10 @@ function TerminBearbeitenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-4`} className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
               <Car size={12} /> Fahrzeit (Min.)
             </label>
-            <input
+            <input id={`${uid}-4`}
               type="number"
               min={0}
               value={fahrzeit}
@@ -704,10 +711,10 @@ function TerminBearbeitenPanel({
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
+            <label htmlFor={`${uid}-5`} className="mb-1 flex items-center gap-1 text-xs font-medium text-label2">
               <Coffee size={12} /> Pause danach (Min.)
             </label>
-            <input
+            <input id={`${uid}-5`}
               type="number"
               min={0}
               value={pause}
@@ -719,8 +726,8 @@ function TerminBearbeitenPanel({
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Notiz</label>
-          <textarea
+          <label htmlFor={`${uid}-6`} className="mb-1 block text-xs font-medium text-label2">Notiz</label>
+          <textarea id={`${uid}-6`}
             value={notiz}
             onChange={(e) => setNotiz(e.target.value)}
             rows={2}
@@ -730,8 +737,8 @@ function TerminBearbeitenPanel({
 
         <div className="flex items-center justify-between gap-2 pt-2">
           <button
-            onClick={() => {
-              if (window.confirm("Termin wirklich löschen?")) onDelete();
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Termin löschen?", bestaetigenLabel: "Löschen" })) onDelete();
             }}
             className="btn-touch flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-st-fehlt hover:bg-st-fehlt-bg dark:hover:bg-st-fehlt-dot"
           >
@@ -766,6 +773,7 @@ function BacklogPlanenPanel({
   onClose: () => void;
   onErstellen: (body: { techniker_id: string; start_at: string; ende_at: string }) => void;
 }) {
+  const uid = useId();
   const [technikerId, setTechnikerId] = useState(technikers[0]?.id ?? "");
   const [start, setStart] = useState(toLocalInputValue(beginn));
   const [endeWert, setEndeWert] = useState(toLocalInputValue(new Date(beginn.getTime() + 60 * 60000)));
@@ -804,8 +812,8 @@ function BacklogPlanenPanel({
         </p>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-label2">Techniker</label>
-          <select
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Techniker</label>
+          <select id={`${uid}-0`}
             ref={technikerRef}
             value={technikerId}
             onChange={(e) => setTechnikerId(e.target.value)}
@@ -821,8 +829,8 @@ function BacklogPlanenPanel({
 
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-label2">Start</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Start</label>
+            <input id={`${uid}-1`}
               type="datetime-local"
               value={start}
               onChange={(e) => setStart(e.target.value)}
@@ -830,8 +838,8 @@ function BacklogPlanenPanel({
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs font-medium text-label2">Ende</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs font-medium text-label2">Ende</label>
+            <input id={`${uid}-2`}
               type="datetime-local"
               value={endeWert}
               onChange={(e) => setEndeWert(e.target.value)}

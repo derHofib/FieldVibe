@@ -28,6 +28,7 @@ export function DatevSection({ einstellungen }: { einstellungen: MandantEinstell
   const laengeGeaendert = Number(eingabe.sachkontenlaenge) !== gespeicherteLaenge;
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => mandantEinstellungenApi.firmendatenSpeichern(firmendatenMitDatev(einstellungen.firmendaten, eingabe)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] }),
   });

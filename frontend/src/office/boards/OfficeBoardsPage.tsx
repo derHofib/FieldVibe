@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Compass, LayoutGrid, Plus, StickyNote, Trash2, Workflow } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { boardsApi } from "../../api/endpoints";
@@ -8,6 +8,8 @@ import { EmptyState } from "../../components/EmptyState";
 import type { BoardTyp } from "../../types";
 import { Karte, SeitenKopf } from "../OfficeUi";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { SkeletonList } from "../../components/Skeleton";
 
 const TYP_ICON: Record<BoardTyp, typeof LayoutGrid> = {
   frei: LayoutGrid,
@@ -38,6 +40,8 @@ function relativeZeit(iso: string): string {
 }
 
 export function OfficeBoardsPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [zeigeNeu, setZeigeNeu] = useState(false);
@@ -73,8 +77,8 @@ export function OfficeBoardsPage() {
         <Karte className="mb-4 p-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1">
-              <label className="mb-1 block text-xs font-medium text-label2">Name</label>
-              <input
+              <label htmlFor={`${uid}-0`} className="mb-1 block text-xs font-medium text-label2">Name</label>
+              <input id={`${uid}-0`}
                 autoFocus
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -83,8 +87,8 @@ export function OfficeBoardsPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-label2">Art</label>
-              <select
+              <label htmlFor={`${uid}-1`} className="mb-1 block text-xs font-medium text-label2">Art</label>
+              <select id={`${uid}-1`}
                 value={typ}
                 onChange={(e) => setTyp(e.target.value as BoardTyp)}
                 className="border border-sep bg-transparent px-3 py-2 text-sm text-label"
@@ -114,7 +118,7 @@ export function OfficeBoardsPage() {
       )}
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !boards ? (
         <FehlerZustand fehler={ladeFehler} was="Die Boards" onErneut={() => void neuLaden()} />
       ) : !boards || boards.length === 0 ? (
@@ -136,9 +140,9 @@ export function OfficeBoardsPage() {
                     <span
                       role="button"
                       tabIndex={0}
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        if (window.confirm(`Board "${b.name}" wirklich löschen?`)) loeschen.mutate(b.id);
+                        if (await bestaetigen({ titel: `Board "${b.name}" löschen?`, bestaetigenLabel: "Löschen" })) loeschen.mutate(b.id);
                       }}
                       className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-card/90 text-label2 hover:text-st-fehlt dark:hover:text-st-fehlt"
                     >

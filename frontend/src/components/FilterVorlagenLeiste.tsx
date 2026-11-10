@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gespeicherteFilterApi } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { GespeicherterFilter, GespeicherterFilterEntitaet } from "../types";
+import { useBestaetigung } from "./ConfirmDialog";
 
 function filtersEqual(a: Record<string, string>, b: Record<string, string>): boolean {
   const aKeys = Object.keys(a).filter((k) => a[k]);
@@ -26,6 +27,7 @@ export function FilterVorlagenLeiste({
   filter: Record<string, string>;
   onApply: (filterJson: Record<string, string>) => void;
 }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const appliedDefault = useRef(false);
   const [zeigeSpeichern, setZeigeSpeichern] = useState(false);
@@ -51,6 +53,7 @@ export function FilterVorlagenLeiste({
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["gespeicherte-filter", entitaet] });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       gespeicherteFilterApi.create({ entitaet, name, filter_json: filter, ist_standard: alsStandard }),
     onSuccess: () => {
@@ -64,11 +67,13 @@ export function FilterVorlagenLeiste({
   });
 
   const standardMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (v: GespeicherterFilter) => gespeicherteFilterApi.update(v.id, { ist_standard: !v.ist_standard }),
     onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (id: string) => gespeicherteFilterApi.remove(id),
     onSuccess: invalidate,
   });
@@ -102,8 +107,8 @@ export function FilterVorlagenLeiste({
                   {v.ist_standard ? "★" : "☆"}
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Filter-Vorlage "${v.name}" löschen?`)) deleteMutation.mutate(v.id);
+                  onClick={async () => {
+                    if (await bestaetigen({ titel: `Filter-Vorlage "${v.name}" löschen?`, bestaetigenLabel: "Löschen" })) deleteMutation.mutate(v.id);
                   }}
                   className={`px-1.5 ${aktiv ? "text-white/80" : "text-label2"}`}
                 >

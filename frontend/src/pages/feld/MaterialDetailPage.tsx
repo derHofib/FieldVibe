@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { lieferantenApi, materialApi, tagsApi } from "../../api/endpoints";
 import { useAuth } from "../../context/AuthContext";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 export function MaterialDetailPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -14,6 +18,7 @@ export function MaterialDetailPage() {
   const kannLoeschen = hatRecht("material", "loeschen");
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => materialApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material"] });
@@ -55,6 +60,7 @@ export function MaterialDetailPage() {
   }, [material]);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       materialApi.update(id!, {
         bezeichnung: form.bezeichnung,
@@ -87,6 +93,7 @@ export function MaterialDetailPage() {
   });
 
   const tagEntfernenMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: (tagId: string) => tagsApi.unassign(tagId, "material", id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["material-detail", id] });
@@ -95,7 +102,7 @@ export function MaterialDetailPage() {
   });
 
   if (ladeFehler && !material) return <FehlerZustand fehler={ladeFehler} was="Das Material" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (!material) return <p className="text-center text-label2">Lädt…</p>;
+  if (!material) return <DetailSkeleton />;
 
 
   const zugewieseneTags = (material.tag_ids ?? [])
@@ -111,8 +118,8 @@ export function MaterialDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Material wirklich löschen? Es wandert in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Material löschen?", text: "Es wandert in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}
@@ -146,8 +153,8 @@ export function MaterialDetailPage() {
       <div className="space-y-3 card-ap p-4">
         <h2 className="text-sm font-semibold text-label2">Stammdaten</h2>
         <div>
-          <label className="mb-1 block text-xs text-label2">Bezeichnung</label>
-          <input
+          <label htmlFor={`${uid}-0`} className="mb-1 block text-xs text-label2">Bezeichnung</label>
+          <input id={`${uid}-0`}
             value={form.bezeichnung}
             onChange={(e) => setForm({ ...form, bezeichnung: e.target.value })}
             className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -155,16 +162,16 @@ export function MaterialDetailPage() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="mb-1 block text-xs text-label2">Einheit</label>
-            <input
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-xs text-label2">Einheit</label>
+            <input id={`${uid}-1`}
               value={form.einheit}
               onChange={(e) => setForm({ ...form, einheit: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-label2">Mindestbestand</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-xs text-label2">Mindestbestand</label>
+            <input id={`${uid}-2`}
               type="number"
               step="0.01"
               value={form.mindestbestand}
@@ -173,8 +180,8 @@ export function MaterialDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-label2">Artikelnummer</label>
-            <input
+            <label htmlFor={`${uid}-3`} className="mb-1 block text-xs text-label2">Artikelnummer</label>
+            <input id={`${uid}-3`}
               value={form.artikelnummer}
               onChange={(e) => setForm({ ...form, artikelnummer: e.target.value })}
               placeholder="z.B. 5SY4116-7"
@@ -182,10 +189,10 @@ export function MaterialDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-label2">
+            <label htmlFor={`${uid}-4`} className="mb-1 block text-xs text-label2">
               Einkaufspreis (EUR, Richtwert)
             </label>
-            <input
+            <input id={`${uid}-4`}
               type="number"
               step="0.01"
               value={form.einzelpreis}
@@ -194,8 +201,8 @@ export function MaterialDetailPage() {
             />
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-xs text-label2">Lieferant</label>
-            <select
+            <label htmlFor={`${uid}-5`} className="mb-1 block text-xs text-label2">Lieferant</label>
+            <select id={`${uid}-5`}
               value={form.lieferant_id}
               onChange={(e) => setForm({ ...form, lieferant_id: e.target.value })}
               className="w-full border border-sep bg-transparent px-2 py-1.5 text-sm text-label"
@@ -209,10 +216,10 @@ export function MaterialDetailPage() {
             </select>
           </div>
           <div className="col-span-2">
-            <label className="mb-1 block text-xs text-label2">
+            <label htmlFor={`${uid}-6`} className="mb-1 block text-xs text-label2">
               Bestell-Link (Lieferanten-/Produktseite)
             </label>
-            <input
+            <input id={`${uid}-6`}
               type="url"
               value={form.bestell_url}
               onChange={(e) => setForm({ ...form, bestell_url: e.target.value })}

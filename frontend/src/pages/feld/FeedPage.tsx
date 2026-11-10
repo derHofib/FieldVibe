@@ -104,6 +104,7 @@ function FeedCardView({ card }: { card: FeedCard }) {
     onSuccess: invalidateFeed,
   });
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: VorgangStatus) => vorgaengeApi.update(card.id, { status }),
     onSuccess: invalidateFeed,
   });

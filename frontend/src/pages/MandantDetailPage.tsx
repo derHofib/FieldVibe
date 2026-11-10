@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -7,6 +7,8 @@ import { useAuth } from "../context/AuthContext";
 import { ApiError } from "../api/client";
 import type { MandantModul, MandantStatus } from "../types";
 import { FehlerZustand } from "../components/FehlerZustand";
+import { useBestaetigung } from "../components/ConfirmDialog";
+import { DetailSkeleton } from "../components/Skeleton";
 
 const STATUS_LABEL: Record<MandantStatus, string> = {
   aktiv: "Aktiv",
@@ -42,6 +44,8 @@ const MODUL_LABEL: Record<MandantModul, string> = {
 const ALLE_MODULE = Object.keys(MODUL_LABEL) as MandantModul[];
 
 export function MandantDetailPage() {
+  const uid = useId();
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -70,6 +74,7 @@ export function MandantDetailPage() {
   }, [mandant?.id]);
 
   const stammdatenMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () => mandantenApi.update(id!, { name, branche: branche || null }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandanten"] });
@@ -81,11 +86,13 @@ export function MandantDetailPage() {
   });
 
   const statusMutation = useMutation({
+    meta: { erfolg: "Status geändert" },
     mutationFn: (status: MandantStatus) => mandantenApi.update(id!, { status }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandanten"] }),
   });
 
   const moduleMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (deaktivierteModule: MandantModul[]) =>
       mandantenApi.update(id!, { deaktivierte_module: deaktivierteModule }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["mandanten"] }),
@@ -96,9 +103,12 @@ export function MandantDetailPage() {
     stammdatenMutation.mutate();
   }
 
-  function handleStatusChange(status: MandantStatus) {
+  async function handleStatusChange(status: MandantStatus) {
     const frage = STATUS_BESTAETIGUNG[status];
-    if (frage && !window.confirm(frage)) return;
+    if (frage) {
+      const [titel, text] = frage.split("? ");
+      if (!(await bestaetigen({ titel: titel + "?", text, bestaetigenLabel: status === "pausiert" ? "Pausieren" : "Kündigen" }))) return;
+    }
     statusMutation.mutate(status);
   }
 
@@ -112,7 +122,7 @@ export function MandantDetailPage() {
   }
 
   if (ladeFehler && !mandant) return <FehlerZustand fehler={ladeFehler} was="Der Mandant" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading) return <p className="text-label2">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
   if (!mandant) return <p className="text-label2">Mandant nicht gefunden.</p>;
 
   return (
@@ -125,8 +135,8 @@ export function MandantDetailPage() {
         <h2 className="mb-4 text-lg font-bold text-label">Stammdaten</h2>
         <form onSubmit={handleSaveStammdaten} className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Name</label>
-            <input
+            <label htmlFor={`${uid}-0`} className="mb-1 block text-sm font-medium text-label">Name</label>
+            <input id={`${uid}-0`}
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -134,10 +144,10 @@ export function MandantDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">
+            <label htmlFor={`${uid}-1`} className="mb-1 block text-sm font-medium text-label">
               Slug (Subdomain)
             </label>
-            <input
+            <input id={`${uid}-1`}
               disabled
               value={mandant.slug}
               title="Der Slug ist mit dem Kundenportal-Link verknüpft und kann nachträglich nicht geändert werden."
@@ -145,8 +155,8 @@ export function MandantDetailPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-label">Branche</label>
-            <input
+            <label htmlFor={`${uid}-2`} className="mb-1 block text-sm font-medium text-label">Branche</label>
+            <input id={`${uid}-2`}
               value={branche}
               onChange={(e) => setBranche(e.target.value)}
               className="btn-touch w-full border border-sep bg-transparent px-3 py-2 text-label"

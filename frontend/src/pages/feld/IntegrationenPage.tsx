@@ -12,6 +12,8 @@ import type { MandantEinstellungen, MandantIntegration } from "../../types";
 import { E_RECHNUNG_MODI, type ERechnungModus, eRechnungModus } from "../../utils/eRechnungVersand";
 import { istHttpUrl } from "../../utils/rechtliches";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstellungen }) {
   const queryClient = useQueryClient();
@@ -44,6 +46,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.firmendatenSpeichern({
         // Unbekannte/anderswo gepflegte Keys (z. B. buchhaltung) bleiben erhalten.
@@ -70,6 +73,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const logoUploadMutation = useMutation({
+    meta: { erfolg: "Hochgeladen" },
     mutationFn: (file: File) => mandantEinstellungenApi.logoUpload(file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] });
@@ -78,6 +82,7 @@ function FirmenprofilSection({ einstellungen }: { einstellungen: MandantEinstell
   });
 
   const logoRemoveMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => mandantEinstellungenApi.logoRemove(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mandant-einstellungen"] });
@@ -313,6 +318,7 @@ function MahnwesenSection({ einstellungen }: { einstellungen: MandantEinstellung
   const [mahnung3, setMahnung3] = useState(fd.mahnung_3_automatisch ?? false);
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.firmendatenSpeichern({
         mahnung_1_automatisch: mahnung1,
@@ -366,6 +372,7 @@ function WiedervorlageSection({ einstellungen }: { einstellungen: MandantEinstel
   const [tage, setTage] = useState(einstellungen.wiedervorlage_standard_tage?.toString() ?? "");
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.update({
         wiedervorlage_standard_tage: tage === "" ? null : Number(tage),
@@ -426,6 +433,7 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
   const [fahrzeitSatz, setFahrzeitSatz] = useState(einstellungen.fahrzeit_satz_netto ?? "");
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       mandantEinstellungenApi.update({
         fahrzeit_abrechnung: modus,
@@ -497,6 +505,7 @@ function FahrzeitAbrechnungSection({ einstellungen }: { einstellungen: MandantEi
 }
 
 function SmtpZeile({ integration }: { integration: MandantIntegration }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
   const [port, setPort] = useState(String(integration.config.port ?? "587"));
@@ -505,12 +514,14 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
   const [secret, setSecret] = useState("");
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean }) =>
       integrationenApi.update(integration.id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => integrationenApi.delete(integration.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
@@ -585,8 +596,8 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("SMTP-Integration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen({ titel: "SMTP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
@@ -599,6 +610,7 @@ function SmtpZeile({ integration }: { integration: MandantIntegration }) {
 }
 
 function ImapZeile({ integration }: { integration: MandantIntegration }) {
+  const bestaetigen = useBestaetigung();
   const queryClient = useQueryClient();
   const [host, setHost] = useState(String(integration.config.host ?? ""));
   const [port, setPort] = useState(String(integration.config.port ?? "993"));
@@ -607,12 +619,14 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
   const [secret, setSecret] = useState("");
 
   const updateMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: (body: { config?: Record<string, unknown>; secret?: string | null; aktiv?: boolean }) =>
       integrationenApi.update(integration.id, body),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => integrationenApi.delete(integration.id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["integrationen"] }),
   });
@@ -689,8 +703,8 @@ function ImapZeile({ integration }: { integration: MandantIntegration }) {
           {integration.aktiv ? "Deaktivieren" : "Aktivieren"}
         </button>
         <button
-          onClick={() => {
-            if (window.confirm("IMAP-Integration wirklich löschen?")) deleteMutation.mutate();
+          onClick={async () => {
+            if (await bestaetigen({ titel: "IMAP-Integration löschen?", bestaetigenLabel: "Löschen" })) deleteMutation.mutate();
           }}
           disabled={deleteMutation.isPending}
           className="btn-touch rounded-md bg-st-fehlt-bg px-3 py-1.5 text-sm font-medium text-st-fehlt disabled:opacity-50 "
@@ -735,6 +749,7 @@ export function IntegrationenPage() {
   });
 
   const createMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       integrationenApi.create({
         typ: "smtp",
@@ -753,6 +768,7 @@ export function IntegrationenPage() {
   });
 
   const createImapMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       integrationenApi.create({
         typ: "imap",
@@ -771,7 +787,7 @@ export function IntegrationenPage() {
   });
 
   if (ladeFehler && !integrationen) return <FehlerZustand fehler={ladeFehler} was="Die Integrationen" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading) return <p className="text-center text-label2">Lädt…</p>;
+  if (isLoading) return <DetailSkeleton />;
 
   const smtp = integrationen?.find((i) => i.typ === "smtp");
   const imap = integrationen?.find((i) => i.typ === "imap");

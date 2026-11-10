@@ -8,6 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import type { OffenerPostenEintrag } from "../../types";
 import { KennzahlKarte, SeitenKopf, TabellenRahmen } from "../OfficeUi";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { SkeletonList } from "../../components/Skeleton";
 
 function euro(betrag: string): string {
   const zahl = Number(betrag);
@@ -49,7 +50,7 @@ export function OfficeBuchhaltungPage() {
       <SeitenKopf titel="Buchhaltung" />
 
       {isLoading ? (
-        <p className="py-10 text-center text-sm text-label2">Lädt…</p>
+        <SkeletonList count={4} />
       ) : ladeFehler && !data ? (
         <FehlerZustand fehler={ladeFehler} was="Die Auswertung" onErneut={() => void neuLaden()} />
       ) : !data ? (

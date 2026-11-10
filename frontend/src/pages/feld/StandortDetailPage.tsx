@@ -10,6 +10,8 @@ import { EmptyState } from "../../components/EmptyState";
 import { useAuth } from "../../context/AuthContext";
 import type { Adresse } from "../../types";
 import { FehlerZustand } from "../../components/FehlerZustand";
+import { useBestaetigung } from "../../components/ConfirmDialog";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 const STATUS_BADGE: Record<string, string> = {
   neu: "border border-tint text-tint ",
@@ -39,6 +41,7 @@ function AdresseBearbeiten({
   });
 
   const speichernMutation = useMutation({
+    meta: { erfolg: "Gespeichert" },
     mutationFn: () =>
       standorteApi.update(standortId, {
         adresse: { strasse: form.strasse || undefined, plz: form.plz || undefined, ort: form.ort || undefined },
@@ -154,6 +157,7 @@ function AnlagenVerwaltung({
     queryClient.invalidateQueries({ queryKey: ["standort-profil", standortId] });
 
   const neuMutation = useMutation({
+    meta: { erfolg: "Angelegt" },
     mutationFn: () =>
       anlagenApi.create({ kunde_id: kundeId, standort_id: standortId, bezeichnung, anlagentyp: anlagentyp || undefined }),
     onSuccess: () => {
@@ -187,12 +191,12 @@ function AnlagenVerwaltung({
   if (modus === "keine") {
     return (
       <div className="flex gap-3">
-        <button onClick={() => setModus("neu")} className="btn-touch text-xs text-tint underline ">
-          + Neue Anlage anlegen
+        <button onClick={() => setModus("neu")} className="btn-touch text-xs font-medium text-tint ">
+          + Neue Anlage
         </button>
         <button
           onClick={() => setModus("zuordnen")}
-          className="btn-touch text-xs text-tint underline "
+          className="btn-touch text-xs font-medium text-tint "
         >
           Bestehende Anlage zuordnen
         </button>
@@ -279,6 +283,7 @@ function AnlagenVerwaltung({
 }
 
 export function StandortDetailPage() {
+  const bestaetigen = useBestaetigung();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -298,6 +303,7 @@ export function StandortDetailPage() {
   });
 
   const deleteMutation = useMutation({
+    meta: { erfolg: "Gelöscht" },
     mutationFn: () => standorteApi.remove(id!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["standorte"] });
@@ -306,7 +312,7 @@ export function StandortDetailPage() {
   });
 
   if (ladeFehler && !profil) return <FehlerZustand fehler={ladeFehler} was="Der Standort" zurueck onErneut={() => void neuLaden()} className="py-6" />;
-  if (isLoading || !profil) return <p className="text-center text-label2">Lädt…</p>;
+  if (isLoading || !profil) return <DetailSkeleton />;
 
 
   return (
@@ -317,8 +323,8 @@ export function StandortDetailPage() {
         </button>
         {kannLoeschen && (
           <button
-            onClick={() => {
-              if (window.confirm("Standort wirklich löschen? Verknüpfte Daten wandern in den Papierkorb.")) {
+            onClick={async () => {
+              if (await bestaetigen({ titel: "Standort löschen?", text: "Verknüpfte Daten wandern in den Papierkorb.", bestaetigenLabel: "Löschen" })) {
                 deleteMutation.mutate();
               }
             }}

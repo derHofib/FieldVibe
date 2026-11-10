@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { mailApi } from "../../api/endpoints";
 import { ComposePanel } from "../../office/postfach/ComposePanel";
+import { DetailSkeleton } from "../../components/Skeleton";
 
 /** Zeigt entweder eine bestehende Nachricht (inkl. "Antworten" -- kein
  * "Allen antworten"/Weiterleiten auf dem Handy, siehe PHASE_10) oder, bei
@@ -56,7 +57,7 @@ export function PostfachNachrichtPage() {
   }
 
   if (!detail) {
-    return <p className="py-10 text-center text-sm text-label2">Lädt…</p>;
+    return <DetailSkeleton />;
   }
 
   return (
